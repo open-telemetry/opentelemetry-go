@@ -33,6 +33,7 @@ func TestLoggerEmit(t *testing.T) {
 	p2WithError.Err = errors.New("error")
 
 	r := log.Record{}
+	r.SetEventName("testing.name")
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
 	r.SetBody(log.StringValue("testing body value"))
 	r.SetSeverity(log.SeverityInfo)
@@ -78,6 +79,7 @@ func TestLoggerEmit(t *testing.T) {
 			record: r,
 			expectedRecords: []Record{
 				{
+					eventName:                 r.EventName(),
 					timestamp:                 r.Timestamp(),
 					body:                      r.Body(),
 					severity:                  r.Severity(),
@@ -118,6 +120,7 @@ func TestLoggerEmit(t *testing.T) {
 			record: r,
 			expectedRecords: []Record{
 				{
+					eventName:                 r.EventName(),
 					timestamp:                 r.Timestamp(),
 					body:                      r.Body(),
 					severity:                  r.Severity(),
@@ -151,6 +154,7 @@ func TestLoggerEmit(t *testing.T) {
 			record: r,
 			expectedRecords: []Record{
 				{
+					eventName:                 r.EventName(),
 					timestamp:                 r.Timestamp(),
 					body:                      r.Body(),
 					severity:                  r.Severity(),
@@ -181,6 +185,7 @@ func TestLoggerEmit(t *testing.T) {
 			record: rWithNoObservedTimestamp,
 			expectedRecords: []Record{
 				{
+					eventName:                 rWithNoObservedTimestamp.EventName(),
 					timestamp:                 rWithNoObservedTimestamp.Timestamp(),
 					body:                      rWithNoObservedTimestamp.Body(),
 					severity:                  rWithNoObservedTimestamp.Severity(),
