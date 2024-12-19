@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 
-go 1.22.7
+go 1.22.0
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.33.0
 	go.opentelemetry.io/otel/sdk v1.33.0
 	go.opentelemetry.io/otel/trace v1.33.0
-	go.opentelemetry.io/proto/otlp v1.4.0
+	go.opentelemetry.io/proto/otlp v1.4.1-0.20241219173800-a68c716b8e98
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.0
 )
@@ -19,7 +19,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.1-0.20241217191332-ad43171ba0b7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.33.0 // indirect

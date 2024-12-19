@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix invalid exemplar keys in `go.opentelemetry.io/otel/exporters/prometheus`. (#5995)
 - Fix attribute value truncation in `go.opentelemetry.io/otel/sdk/trace`. (#5997)
 - Fix attribute value truncation in `go.opentelemetry.io/otel/sdk/log`. (#6032)
+- Minimum go version dependency downgraded back to 1.22.0 in various packages. (#6073)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
