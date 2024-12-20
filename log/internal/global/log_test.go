@@ -99,7 +99,7 @@ func (p *testLoggerProvider) Logger(name string, _ ...log.LoggerOption) log.Logg
 }
 
 type testLogger struct {
-	embedded.Logger
+	log.Logger
 
 	emitN, enabledN int
 }
