@@ -183,7 +183,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tdakkota/asciicheck v0.3.0 // indirect
 	github.com/tetafro/godot v1.4.18 // indirect
-	github.com/timakin/bodyclose v0.0.0-20241017074824-adbc21e6bf36 // indirect
+	github.com/timakin/bodyclose v0.0.0-20241222091800-1db5c5ca4d67 // indirect
 	github.com/timonwong/loggercheck v0.10.1 // indirect
 	github.com/tomarrell/wrapcheck/v2 v2.10.0 // indirect
 	github.com/tommy-muehle/go-mnd/v2 v2.5.1 // indirect
@@ -209,7 +209,7 @@ require (
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/telemetry v0.0.0-20241216164550-738f4b2315e6 // indirect
+	golang.org/x/telemetry v0.0.0-20241220003058-cc96b6e0d3d9 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.36.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
