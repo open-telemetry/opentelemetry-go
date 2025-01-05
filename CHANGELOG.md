@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.33.0/0.55.0/0.9.0/0.0.12] 2024-12-12
 
 ### Added
@@ -36,9 +39,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix invalid exemplar keys in `go.opentelemetry.io/otel/exporters/prometheus`. (#5995)
 - Fix attribute value truncation in `go.opentelemetry.io/otel/sdk/trace`. (#5997)
 - Fix attribute value truncation in `go.opentelemetry.io/otel/sdk/log`. (#6032)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.32.0/0.54.0/0.8.0/0.0.11] 2024-11-08
 
