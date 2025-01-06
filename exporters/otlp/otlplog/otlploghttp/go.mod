@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.33.0
 	go.opentelemetry.io/otel/sdk/log v0.9.0
 	go.opentelemetry.io/otel/trace v1.33.0
-	go.opentelemetry.io/proto/otlp v1.4.0
+	go.opentelemetry.io/proto/otlp v1.5.0
 	google.golang.org/protobuf v1.36.1
 )
 
