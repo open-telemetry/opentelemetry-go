@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Relax minimum Go version to 1.22.0 in various modules. (#6073)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
