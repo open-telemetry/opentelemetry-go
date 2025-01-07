@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Minimum go version dependency relaxed to 1.22.0 in various packages. (#6073)
+- Relax minimum Go version to 1.22.0 in various modules. (#6073)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
