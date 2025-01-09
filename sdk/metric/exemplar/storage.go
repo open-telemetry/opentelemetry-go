@@ -30,7 +30,8 @@ func newStorage(n int) *storage {
 func (r *storage) Collect(dest *[]Exemplar) {
 	*dest = reset(*dest, len(r.store), len(r.store))
 	var n int
-	for _, m := range r.store {
+	for i := range r.store {
+		m := &r.store[i]
 		if !m.valid {
 			continue
 		}
