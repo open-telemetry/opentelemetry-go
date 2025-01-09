@@ -276,7 +276,7 @@ func (d *client) MarshalLog() interface{} {
 		Endpoint string
 		Insecure bool
 	}{
-		Type:     "otlphttphttp",
+		Type:     "otlptracehttp",
 		Endpoint: d.cfg.Endpoint,
 		Insecure: d.cfg.Insecure,
 	}
