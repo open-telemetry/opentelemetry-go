@@ -5,13 +5,19 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -63,8 +69,9 @@ type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
 
-	queue   chan ReadOnlySpan
-	dropped uint32
+	queue                chan ReadOnlySpan
+	dropped              uint32
+	callbackRegistration metric.Registration
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -111,6 +118,8 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		stopCh: make(chan struct{}),
 	}
 
+	bsp.configureSelfObservability()
+
 	bsp.stopWait.Add(1)
 	go func() {
 		defer bsp.stopWait.Done()
@@ -119,6 +128,38 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}()
 
 	return bsp
+}
+
+func (bsp *batchSpanProcessor) configureSelfObservability() {
+	mp := otel.GetMeterProvider()
+	if !x.SelfObservability.Enabled() {
+		mp = metric.MeterProvider(noop.NewMeterProvider())
+	}
+	meter := mp.Meter(
+		selfObsScopeName,
+		metric.WithInstrumentationVersion(version()),
+	)
+
+	queueSizeCounter, err := meter.Int64ObservableUpDownCounter("otel.sdk.span.processor.queue_size",
+		metric.WithUnit("{span}"),
+		metric.WithDescription("The number of spans in the queue of a given instance of an SDK span processor."),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	attrsOpt := metric.WithAttributes(
+		attribute.String("otel.sdk.component.name", fmt.Sprintf("batching_span_processor/%p", bsp)),
+	)
+	bsp.callbackRegistration, err = meter.RegisterCallback(
+		func(ctx context.Context, o metric.Observer) error {
+			o.ObserveInt64(queueSizeCounter, int64(len(bsp.queue)), attrsOpt)
+			return nil
+		},
+		queueSizeCounter)
+	if err != nil {
+		otel.Handle(err)
+	}
 }
 
 // OnStart method does nothing.
@@ -162,7 +203,7 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 			err = ctx.Err()
 		}
 	})
-	return err
+	return errors.Join(err, bsp.callbackRegistration.Unregister())
 }
 
 type forceFlushSpan struct {

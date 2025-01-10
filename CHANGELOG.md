@@ -10,6 +10,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add OTEL_GO_X_SELF_OBSERVABILITY environment variable to control whether self-observability metrics and traces are produced by SDKs.
+- Add experimental otel.sdk.batch_span_processor.queue_size metric to the trace batch span processor.
+
+### Fixed
+
 - Add `ValueFromAttribute` and `KeyValueFromAttribute` in `go.opentelemetry.io/otel/log`. (#6180)
 - Add `EventName` and `SetEventName` to `Record` in `go.opentelemetry.io/otel/log`. (#6187)
 - Add `EventName` to `RecordFactory` in `go.opentelemetry.io/otel/log/logtest`. (#6187)
