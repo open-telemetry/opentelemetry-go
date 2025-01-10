@@ -8,10 +8,10 @@ require (
 	github.com/golangci/golangci-lint v1.63.4
 	github.com/jcchavezs/porto v0.6.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.15.0
-	go.opentelemetry.io/build-tools/gotmpl v0.15.0
-	go.opentelemetry.io/build-tools/multimod v0.15.0
-	go.opentelemetry.io/build-tools/semconvgen v0.15.0
+	go.opentelemetry.io/build-tools/crosslink v0.16.0
+	go.opentelemetry.io/build-tools/gotmpl v0.16.0
+	go.opentelemetry.io/build-tools/multimod v0.16.0
+	go.opentelemetry.io/build-tools/semconvgen v0.16.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	golang.org/x/tools v0.29.0
 	golang.org/x/vuln v1.1.3
@@ -204,7 +204,7 @@ require (
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.13.0 // indirect
 	go-simpler.org/sloglint v0.7.2 // indirect
-	go.opentelemetry.io/build-tools v0.15.0 // indirect
+	go.opentelemetry.io/build-tools v0.16.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
