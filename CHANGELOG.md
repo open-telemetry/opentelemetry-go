@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add OTEL_GO_X_SELF_OBSERVABILITY envirionment variable to control whether self-observability metrics and traces are produced by SDKs.
+- Add experimental otel.sdk.batch_span_processor.queue_size metric to the trace batch span processor.
+
 ### Fixed
 
 - Relax minimum Go version to 1.22.0 in various modules. (#6073)
