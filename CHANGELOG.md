@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Relax minimum Go version to 1.22.0 in various modules. (#6073)
+- The `Type` name logged for the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` client is corrected from `otlphttpgrpc` to `otlptracegrpc`. (#6143)
+- The `Type` name logged for the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlphttpgrpc` client is corrected from `otlphttphttp` to `otlptracehttp`. (#6143)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
