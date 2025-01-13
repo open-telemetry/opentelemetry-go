@@ -131,5 +131,5 @@ Importantly, bump any package versions referenced to be the latest one you just 
 Bump the dependencies in the following Go services:
 
 - [`accounting`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/accounting)
-- [`checkoutservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/checkoutservice)
-- [`productcatalogservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/productcatalogservice)
+- [`checkoutservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/checkout)
+- [`productcatalogservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/product-catalog)
