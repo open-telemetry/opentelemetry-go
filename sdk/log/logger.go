@@ -58,6 +58,31 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, param, fltrs)
 }
 
+func (l *logger) EmitEvent(ctx context.Context, eventName string, r log.Event) {
+	newRecord := l.newEvent(ctx, eventName, r)
+	for _, p := range l.provider.processors {
+		if err := p.OnEmit(ctx, &newRecord); err != nil {
+			otel.Handle(err)
+		}
+	}
+}
+
+// EnabledEvent returns true if at least one Processor held by the LoggerProvider
+// that created the logger will process param for the provided context and param.
+//
+// If it is not possible to definitively determine the param will be
+// processed, true will be returned by default. A value of false will only be
+// returned if it can be positively verified that no Processor will process.
+func (l *logger) EnabledEvent(ctx context.Context, eventName string, param log.EnabledEventParameters) bool {
+	fltrs := l.provider.filterProcessors()
+	// If there are more Processors than FilterProcessors we cannot be sure
+	// that all Processors will drop the record. Therefore, return true.
+	//
+	// If all Processors are FilterProcessors, check if any is enabled.
+
+	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, log.EnabledParameters(param), fltrs)
+}
+
 func anyEnabled(ctx context.Context, param log.EnabledParameters, fltrs []x.FilterProcessor) bool {
 	for _, f := range fltrs {
 		if f.Enabled(ctx, param) {
@@ -95,6 +120,41 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	}
 
 	r.WalkAttributes(func(kv log.KeyValue) bool {
+		newRecord.AddAttributes(kv)
+		return true
+	})
+
+	return newRecord
+}
+
+func (l *logger) newEvent(ctx context.Context, name string, e log.Event) Record {
+	sc := trace.SpanContextFromContext(ctx)
+
+	newRecord := Record{
+		eventName: name,
+
+		timestamp:         e.Timestamp(),
+		observedTimestamp: e.ObservedTimestamp(),
+		severity:          e.Severity(),
+		severityText:      e.SeverityText(),
+		body:              e.Body(),
+
+		traceID:    sc.TraceID(),
+		spanID:     sc.SpanID(),
+		traceFlags: sc.TraceFlags(),
+
+		resource:                  l.provider.resource,
+		scope:                     &l.instrumentationScope,
+		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
+		attributeCountLimit:       l.provider.attributeCountLimit,
+	}
+
+	// This field SHOULD be set once the event is observed by OpenTelemetry.
+	if newRecord.observedTimestamp.IsZero() {
+		newRecord.observedTimestamp = now()
+	}
+
+	e.WalkAttributes(func(kv log.KeyValue) bool {
 		newRecord.AddAttributes(kv)
 		return true
 	})

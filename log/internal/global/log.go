@@ -102,6 +102,20 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	return enabled
 }
 
+func (l *logger) EmitEvent(ctx context.Context, eventName string, e log.Event) {
+	if del, ok := l.delegate.Load().(log.Logger); ok {
+		del.EmitEvent(ctx, eventName, e)
+	}
+}
+
+func (l *logger) EnabledEvent(ctx context.Context, eventName string, param log.EnabledEventParameters) bool {
+	var enabled bool
+	if del, ok := l.delegate.Load().(log.Logger); ok {
+		enabled = del.EnabledEvent(ctx, eventName, param)
+	}
+	return enabled
+}
+
 func (l *logger) setDelegate(provider log.LoggerProvider) {
 	l.delegate.Store(provider.Logger(l.name, l.options...))
 }
