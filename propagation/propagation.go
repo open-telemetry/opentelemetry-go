@@ -131,7 +131,7 @@ func (p compositeTextMapPropagator) Fields() []string {
 
 // NewCompositeTextMapPropagator returns a unified TextMapPropagator from the
 // group of passed TextMapPropagator. This allows different cross-cutting
-// concerns to be propagates in a unified manner.
+// concerns to be propagated in a unified manner.
 //
 // The returned TextMapPropagator will inject and extract cross-cutting
 // concerns in the order the TextMapPropagators were provided. Additionally,
