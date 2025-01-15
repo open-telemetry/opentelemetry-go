@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlplogfile ` experimental logs exporter. (#5743)
 ### Fixed
 
 - Relax minimum Go version to 1.22.0 in various modules. (#6073)
