@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Remove the notices fom `Logger` to make the whole Logs API user-facing in `go.opentelemetry.io/otel/log`. (#6167)
+
 ### Fixed
 
 - Relax minimum Go version to 1.22.0 in various modules. (#6073)
