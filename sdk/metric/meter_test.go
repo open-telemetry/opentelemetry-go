@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -388,6 +389,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -407,6 +411,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -452,6 +459,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -471,6 +481,9 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(context.Background()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -528,6 +541,78 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			require.Len(t, sm.Metrics, 1)
 			got := sm.Metrics[0]
 			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
+func TestMeterWithDropView(t *testing.T) {
+	dropView := NewView(
+		Instrument{Name: "*"},
+		Stream{Aggregation: AggregationDrop{}},
+	)
+	m := NewMeterProvider(WithView(dropView)).Meter(t.Name())
+
+	testCases := []struct {
+		name string
+		fn   func(*testing.T) (any, error)
+	}{
+		{
+			name: "Int64Counter",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64Counter("sint")
+			},
+		},
+		{
+			name: "Int64UpDownCounter",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64UpDownCounter("sint")
+			},
+		},
+		{
+			name: "Int64Gauge",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64Gauge("sint")
+			},
+		},
+		{
+			name: "Int64Histogram",
+			fn: func(*testing.T) (any, error) {
+				return m.Int64Histogram("histogram")
+			},
+		},
+		{
+			name: "Float64Counter",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64Counter("sfloat")
+			},
+		},
+		{
+			name: "Float64UpDownCounter",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64UpDownCounter("sfloat")
+			},
+		},
+		{
+			name: "Float64Gauge",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64Gauge("sfloat")
+			},
+		},
+		{
+			name: "Float64Histogram",
+			fn: func(*testing.T) (any, error) {
+				return m.Float64Histogram("histogram")
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.fn(t)
+			require.NoError(t, err)
+			c, ok := got.(x.EnabledInstrument)
+			require.True(t, ok)
+			assert.False(t, c.Enabled(context.Background()))
 		})
 	}
 }

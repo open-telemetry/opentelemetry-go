@@ -2,6 +2,8 @@ name: Links (Fail Fast)
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -13,16 +15,24 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Restore lychee cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
+        id: cache-restore
         with:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v2.1.0
+        uses: lycheeverse/lychee-action@v2.2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           fail: true
-          args: --max-concurrency 5 --cache --max-cache-age 1d .
+          args: --max-concurrency 5 --cache --max-cache-age 1d --cache-exclude-status 300..=599 .
+
+      - name: Save lychee cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .lycheecache
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}

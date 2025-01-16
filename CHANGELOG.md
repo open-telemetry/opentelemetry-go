@@ -8,9 +8,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Relax minimum Go version to 1.22.0 in various modules. (#6073)
+- The `Type` name logged for the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` client is corrected from `otlphttpgrpc` to `otlptracegrpc`. (#6143)
+- The `Type` name logged for the `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlphttpgrpc` client is corrected from `otlphttphttp` to `otlptracehttp`. (#6143)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.33.0/0.55.0/0.9.0/0.0.12] 2024-12-12
+
 ### Added
 
 - Add `Reset` method to `SpanRecorder` in `go.opentelemetry.io/otel/sdk/trace/tracetest`. (#5994)
+- Add `EnabledInstrument` interface in `go.opentelemetry.io/otel/sdk/metric/internal/x`.
+  This is an experimental interface that is implemented by synchronous instruments provided by `go.opentelemetry.io/otel/sdk/metric`.
+  Users can use it to avoid performing computationally expensive operations when recording measurements.
+  It does not fall within the scope of the OpenTelemetry Go versioning and stability [policy](./VERSIONING.md) and it may be changed in backwards incompatible ways or removed in feature releases. (#6016)
 
 ### Changed
 
@@ -29,9 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix inconsistent request body closing in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#5954)
 - Fix invalid exemplar keys in `go.opentelemetry.io/otel/exporters/prometheus`. (#5995)
 - Fix attribute value truncation in `go.opentelemetry.io/otel/sdk/trace`. (#5997)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+- Fix attribute value truncation in `go.opentelemetry.io/otel/sdk/log`. (#6032)
 
 ## [1.32.0/0.54.0/0.8.0/0.0.11] 2024-11-08
 
@@ -3178,7 +3191,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.32.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.33.0...HEAD
+[1.33.0/0.55.0/0.9.0/0.0.12]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.33.0
 [1.32.0/0.54.0/0.8.0/0.0.11]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.32.0
 [1.31.0/0.53.0/0.7.0/0.0.10]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.31.0
 [1.30.0/0.52.0/0.6.0/0.0.9]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.30.0
