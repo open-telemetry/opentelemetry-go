@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Remove the notices fom `Logger` to make the whole Logs API user-facing in `go.opentelemetry.io/otel/log`. (#6167)
+- Remove the notices from `Logger` to make the whole Logs API user-facing in `go.opentelemetry.io/otel/log`. (#6167)
 
 ### Fixed
 
