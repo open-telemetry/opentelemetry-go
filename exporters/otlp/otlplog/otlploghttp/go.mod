@@ -23,6 +23,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.25.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	go.opentelemetry.io/otel/cmplxattr v1.33.0 // indirect
 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
@@ -44,3 +45,5 @@ replace go.opentelemetry.io/otel/sdk => ../../../../sdk
 replace go.opentelemetry.io/otel/metric => ../../../../metric
 
 replace go.opentelemetry.io/otel/log => ../../../../log
+
+replace go.opentelemetry.io/otel/cmplxattr => ../../../../cmplxattr

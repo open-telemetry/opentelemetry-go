@@ -1,25 +1,25 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log_test
+package cmplxattr_test
 
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/cmplxattr"
 )
 
 // Store results in a file scope var to ensure compiler does not optimize the
 // test away.
 var (
-	outV  log.Value
-	outKV log.KeyValue
+	outV  cmplxattr.Value
+	outKV cmplxattr.KeyValue
 
 	outBool    bool
 	outFloat64 float64
 	outInt64   int64
-	outMap     []log.KeyValue
-	outSlice   []log.Value
+	outMap     []cmplxattr.KeyValue
+	outSlice   []cmplxattr.Value
 	outStr     string
 )
 
@@ -29,17 +29,17 @@ func BenchmarkBool(b *testing.B) {
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.BoolValue(v)
+			outV = cmplxattr.BoolValue(v)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.Bool(k, v)
+			outKV = cmplxattr.Bool(k, v)
 		}
 	})
 
-	kv := log.Bool(k, v)
+	kv := cmplxattr.Bool(k, v)
 	b.Run("AsBool", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -54,17 +54,17 @@ func BenchmarkFloat64(b *testing.B) {
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.Float64Value(v)
+			outV = cmplxattr.Float64Value(v)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.Float64(k, v)
+			outKV = cmplxattr.Float64(k, v)
 		}
 	})
 
-	kv := log.Float64(k, v)
+	kv := cmplxattr.Float64(k, v)
 	b.Run("AsFloat64", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -79,17 +79,17 @@ func BenchmarkInt(b *testing.B) {
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.IntValue(v)
+			outV = cmplxattr.IntValue(v)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.Int(k, v)
+			outKV = cmplxattr.Int(k, v)
 		}
 	})
 
-	kv := log.Int(k, v)
+	kv := cmplxattr.Int(k, v)
 	b.Run("AsInt64", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -104,17 +104,17 @@ func BenchmarkInt64(b *testing.B) {
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.Int64Value(v)
+			outV = cmplxattr.Int64Value(v)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.Int64(k, v)
+			outKV = cmplxattr.Int64(k, v)
 		}
 	})
 
-	kv := log.Int64(k, v)
+	kv := cmplxattr.Int64(k, v)
 	b.Run("AsInt64", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -125,22 +125,22 @@ func BenchmarkInt64(b *testing.B) {
 
 func BenchmarkMap(b *testing.B) {
 	const k = "map"
-	v := []log.KeyValue{log.Bool("b", true), log.Int("i", 1)}
+	v := []cmplxattr.KeyValue{cmplxattr.Bool("b", true), cmplxattr.Int("i", 1)}
 
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.MapValue(v...)
+			outV = cmplxattr.MapValue(v...)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.Map(k, v...)
+			outKV = cmplxattr.Map(k, v...)
 		}
 	})
 
-	kv := log.Map(k, v...)
+	kv := cmplxattr.Map(k, v...)
 	b.Run("AsMap", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -151,22 +151,22 @@ func BenchmarkMap(b *testing.B) {
 
 func BenchmarkSlice(b *testing.B) {
 	const k = "slice"
-	v := []log.Value{log.BoolValue(true), log.IntValue(1)}
+	v := []cmplxattr.Value{cmplxattr.BoolValue(true), cmplxattr.IntValue(1)}
 
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.SliceValue(v...)
+			outV = cmplxattr.SliceValue(v...)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.Slice(k, v...)
+			outKV = cmplxattr.Slice(k, v...)
 		}
 	})
 
-	kv := log.Slice(k, v...)
+	kv := cmplxattr.Slice(k, v...)
 	b.Run("AsSlice", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -181,17 +181,17 @@ func BenchmarkString(b *testing.B) {
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outV = log.StringValue(v)
+			outV = cmplxattr.StringValue(v)
 		}
 	})
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outKV = log.String(k, v)
+			outKV = cmplxattr.String(k, v)
 		}
 	})
 
-	kv := log.String(k, v)
+	kv := cmplxattr.String(k, v)
 	b.Run("AsString", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -201,24 +201,24 @@ func BenchmarkString(b *testing.B) {
 }
 
 func BenchmarkValueEqual(b *testing.B) {
-	vals := []log.Value{
+	vals := []cmplxattr.Value{
 		{},
-		log.Int64Value(1),
-		log.Int64Value(2),
-		log.Float64Value(3.5),
-		log.Float64Value(3.7),
-		log.BoolValue(true),
-		log.BoolValue(false),
-		log.StringValue("hi"),
-		log.StringValue("bye"),
-		log.BytesValue([]byte{1, 3, 5}),
-		log.SliceValue(log.StringValue("foo")),
-		log.SliceValue(log.IntValue(3), log.StringValue("foo")),
-		log.MapValue(log.Bool("b", true), log.Int("i", 3)),
-		log.MapValue(
-			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-			log.Bytes("b", []byte{3, 5, 7}),
-			log.Empty("e"),
+		cmplxattr.Int64Value(1),
+		cmplxattr.Int64Value(2),
+		cmplxattr.Float64Value(3.5),
+		cmplxattr.Float64Value(3.7),
+		cmplxattr.BoolValue(true),
+		cmplxattr.BoolValue(false),
+		cmplxattr.StringValue("hi"),
+		cmplxattr.StringValue("bye"),
+		cmplxattr.BytesValue([]byte{1, 3, 5}),
+		cmplxattr.SliceValue(cmplxattr.StringValue("foo")),
+		cmplxattr.SliceValue(cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+		cmplxattr.MapValue(cmplxattr.Bool("b", true), cmplxattr.Int("i", 3)),
+		cmplxattr.MapValue(
+			cmplxattr.Slice("l", cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+			cmplxattr.Bytes("b", []byte{3, 5, 7}),
+			cmplxattr.Empty("e"),
 		),
 	}
 	for _, v1 := range vals {

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -42,7 +43,7 @@ func TestRecordSeverityText(t *testing.T) {
 }
 
 func TestRecordBody(t *testing.T) {
-	body := log.StringValue("testing body value")
+	body := cmplxattr.StringValue("testing body value")
 
 	var r log.Record
 	r.SetBody(body)
@@ -50,21 +51,21 @@ func TestRecordBody(t *testing.T) {
 }
 
 func TestRecordAttributes(t *testing.T) {
-	attrs := []log.KeyValue{
-		log.String("k1", "str"),
-		log.Float64("k2", 1.0),
-		log.Int("k3", 2),
-		log.Bool("k4", true),
-		log.Bytes("k5", []byte{1}),
-		log.Slice("k6", log.IntValue(3)),
-		log.Map("k7", log.Bool("sub1", true)),
-		log.String("k8", "str"),
-		log.Float64("k9", 1.0),
-		log.Int("k10", 2),
-		log.Bool("k11", true),
-		log.Bytes("k12", []byte{1}),
-		log.Slice("k13", log.IntValue(3)),
-		log.Map("k14", log.Bool("sub1", true)),
+	attrs := []cmplxattr.KeyValue{
+		cmplxattr.String("k1", "str"),
+		cmplxattr.Float64("k2", 1.0),
+		cmplxattr.Int("k3", 2),
+		cmplxattr.Bool("k4", true),
+		cmplxattr.Bytes("k5", []byte{1}),
+		cmplxattr.Slice("k6", cmplxattr.IntValue(3)),
+		cmplxattr.Map("k7", cmplxattr.Bool("sub1", true)),
+		cmplxattr.String("k8", "str"),
+		cmplxattr.Float64("k9", 1.0),
+		cmplxattr.Int("k10", 2),
+		cmplxattr.Bool("k11", true),
+		cmplxattr.Bytes("k12", []byte{1}),
+		cmplxattr.Slice("k13", cmplxattr.IntValue(3)),
+		cmplxattr.Map("k14", cmplxattr.Bool("sub1", true)),
 		{}, // Empty.
 	}
 
@@ -74,7 +75,7 @@ func TestRecordAttributes(t *testing.T) {
 
 	t.Run("Correctness", func(t *testing.T) {
 		var i int
-		r.WalkAttributes(func(kv log.KeyValue) bool {
+		r.WalkAttributes(func(kv cmplxattr.KeyValue) bool {
 			assert.Equal(t, attrs[i], kv)
 			i++
 			return true
@@ -84,7 +85,7 @@ func TestRecordAttributes(t *testing.T) {
 	t.Run("WalkAttributes/Filtering", func(t *testing.T) {
 		for i := 1; i <= len(attrs); i++ {
 			var j int
-			r.WalkAttributes(func(log.KeyValue) bool {
+			r.WalkAttributes(func(cmplxattr.KeyValue) bool {
 				j++
 				return j < i
 			})
@@ -102,9 +103,9 @@ func TestRecordAllocationLimits(t *testing.T) {
 		tStamp time.Time
 		sev    log.Severity
 		text   string
-		body   log.Value
+		body   cmplxattr.Value
 		n      int
-		attr   log.KeyValue
+		attr   cmplxattr.KeyValue
 	)
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
@@ -131,19 +132,19 @@ func TestRecordAllocationLimits(t *testing.T) {
 		text = r.SeverityText()
 	}), "SeverityText")
 
-	bodyVal := log.BoolValue(true)
+	bodyVal := cmplxattr.BoolValue(true)
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		var r log.Record
 		r.SetBody(bodyVal)
 		body = r.Body()
 	}), "Body")
 
-	attrVal := []log.KeyValue{log.Bool("k", true), log.Int("i", 1)}
+	attrVal := []cmplxattr.KeyValue{cmplxattr.Bool("k", true), cmplxattr.Int("i", 1)}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		var r log.Record
 		r.AddAttributes(attrVal...)
 		n = r.AttributesLen()
-		r.WalkAttributes(func(kv log.KeyValue) bool {
+		r.WalkAttributes(func(kv cmplxattr.KeyValue) bool {
 			attr = kv
 			return true
 		})

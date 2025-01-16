@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -17,11 +18,11 @@ func TestRecordFactory(t *testing.T) {
 	observed := now.Add(time.Second)
 	severity := log.SeverityDebug
 	severityText := "DBG"
-	body := log.StringValue("Message")
-	attrs := []log.KeyValue{
-		log.Int("int", 1),
-		log.String("str", "foo"),
-		log.Float64("flt", 3.14),
+	body := cmplxattr.StringValue("Message")
+	attrs := []cmplxattr.KeyValue{
+		cmplxattr.Int("int", 1),
+		cmplxattr.String("str", "foo"),
+		cmplxattr.Float64("flt", 3.14),
 	}
 
 	got := RecordFactory{
@@ -43,10 +44,10 @@ func TestRecordFactory(t *testing.T) {
 
 func TestRecordFactoryMultiple(t *testing.T) {
 	now := time.Now()
-	attrs := []log.KeyValue{
-		log.Int("int", 1),
-		log.String("str", "foo"),
-		log.Float64("flt", 3.14),
+	attrs := []cmplxattr.KeyValue{
+		cmplxattr.Int("int", 1),
+		cmplxattr.String("str", "foo"),
+		cmplxattr.Float64("flt", 3.14),
 	}
 
 	f := RecordFactory{
@@ -55,11 +56,11 @@ func TestRecordFactoryMultiple(t *testing.T) {
 	}
 
 	record1 := f.NewRecord()
-	f.Attributes = append(f.Attributes, log.Bool("added", true))
+	f.Attributes = append(f.Attributes, cmplxattr.Bool("added", true))
 
 	record2 := f.NewRecord()
 	assert.Equal(t, now, record2.Timestamp())
-	assertAttributes(t, append(attrs, log.Bool("added", true)), record2)
+	assertAttributes(t, append(attrs, cmplxattr.Bool("added", true)), record2)
 
 	// Previously returned record is unharmed by the builder changes.
 	assert.Equal(t, now, record1.Timestamp())

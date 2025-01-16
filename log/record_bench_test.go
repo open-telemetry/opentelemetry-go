@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -15,8 +16,8 @@ func BenchmarkRecord(b *testing.B) {
 		tStamp time.Time
 		sev    log.Severity
 		text   string
-		body   log.Value
-		attr   log.KeyValue
+		body   cmplxattr.Value
+		attr   cmplxattr.KeyValue
 		n      int
 	)
 
@@ -56,7 +57,7 @@ func BenchmarkRecord(b *testing.B) {
 		}
 	})
 
-	bodyVal := log.BoolValue(true)
+	bodyVal := cmplxattr.BoolValue(true)
 	b.Run("Body", func(b *testing.B) {
 		b.ReportAllocs()
 		for n := 0; n < b.N; n++ {
@@ -66,20 +67,20 @@ func BenchmarkRecord(b *testing.B) {
 		}
 	})
 
-	attrs10 := []log.KeyValue{
-		log.Bool("b1", true),
-		log.Int("i1", 324),
-		log.Float64("f1", -230.213),
-		log.String("s1", "value1"),
-		log.Map("m1", log.Slice("slice1", log.BoolValue(true))),
-		log.Bool("b2", false),
-		log.Int("i2", 39847),
-		log.Float64("f2", 0.382964329),
-		log.String("s2", "value2"),
-		log.Map("m2", log.Slice("slice2", log.BoolValue(false))),
+	attrs10 := []cmplxattr.KeyValue{
+		cmplxattr.Bool("b1", true),
+		cmplxattr.Int("i1", 324),
+		cmplxattr.Float64("f1", -230.213),
+		cmplxattr.String("s1", "value1"),
+		cmplxattr.Map("m1", cmplxattr.Slice("slice1", cmplxattr.BoolValue(true))),
+		cmplxattr.Bool("b2", false),
+		cmplxattr.Int("i2", 39847),
+		cmplxattr.Float64("f2", 0.382964329),
+		cmplxattr.String("s2", "value2"),
+		cmplxattr.Map("m2", cmplxattr.Slice("slice2", cmplxattr.BoolValue(false))),
 	}
 	attrs5 := attrs10[:5]
-	walk := func(kv log.KeyValue) bool {
+	walk := func(kv cmplxattr.KeyValue) bool {
 		attr = kv
 		return true
 	}

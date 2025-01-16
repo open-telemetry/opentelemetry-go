@@ -6,6 +6,8 @@ package log // import "go.opentelemetry.io/otel/log"
 import (
 	"slices"
 	"time"
+
+	"go.opentelemetry.io/otel/cmplxattr"
 )
 
 // attributesInlineCount is the number of attributes that are efficiently
@@ -23,7 +25,7 @@ type Record struct {
 	observedTimestamp time.Time
 	severity          Severity
 	severityText      string
-	body              Value
+	body              cmplxattr.Value
 
 	// The fields below are for optimizing the implementation of Attributes and
 	// AddAttributes. This design is borrowed from the slog Record type:
@@ -32,7 +34,7 @@ type Record struct {
 	// Allocation optimization: an inline array sized to hold
 	// the majority of log calls (based on examination of open-source
 	// code). It holds the start of the list of attributes.
-	front [attributesInlineCount]KeyValue
+	front [attributesInlineCount]cmplxattr.KeyValue
 
 	// The number of attributes in front.
 	nFront int
@@ -41,7 +43,7 @@ type Record struct {
 	// Invariants:
 	//   - len(back) > 0 if nFront == len(front)
 	//   - Unused array elements are zero-ed. Used to detect mistakes.
-	back []KeyValue
+	back []cmplxattr.KeyValue
 }
 
 // Timestamp returns the time when the log record occurred.
@@ -87,18 +89,18 @@ func (r *Record) SetSeverityText(text string) {
 }
 
 // Body returns the body of the log record.
-func (r *Record) Body() Value {
+func (r *Record) Body() cmplxattr.Value {
 	return r.body
 }
 
 // SetBody sets the body of the log record.
-func (r *Record) SetBody(v Value) {
+func (r *Record) SetBody(v cmplxattr.Value) {
 	r.body = v
 }
 
 // WalkAttributes walks all attributes the log record holds by calling f for
 // each on each [KeyValue] in the [Record]. Iteration stops if f returns false.
-func (r *Record) WalkAttributes(f func(KeyValue) bool) {
+func (r *Record) WalkAttributes(f func(cmplxattr.KeyValue) bool) {
 	for i := 0; i < r.nFront; i++ {
 		if !f(r.front[i]) {
 			return
@@ -112,7 +114,7 @@ func (r *Record) WalkAttributes(f func(KeyValue) bool) {
 }
 
 // AddAttributes adds attributes to the log record.
-func (r *Record) AddAttributes(attrs ...KeyValue) {
+func (r *Record) AddAttributes(attrs ...cmplxattr.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]

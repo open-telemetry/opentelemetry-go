@@ -5,7 +5,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package log_test
+package cmplxattr_test
 
 import (
 	"testing"
@@ -15,24 +15,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/log"
 )
 
 func TestKind(t *testing.T) {
 	testCases := []struct {
-		kind  log.Kind
+		kind  cmplxattr.Kind
 		str   string
 		value int
 	}{
-		{log.KindBool, "Bool", 1},
-		{log.KindBytes, "Bytes", 5},
-		{log.KindEmpty, "Empty", 0},
-		{log.KindFloat64, "Float64", 2},
-		{log.KindInt64, "Int64", 3},
-		{log.KindSlice, "Slice", 6},
-		{log.KindMap, "Map", 7},
-		{log.KindString, "String", 4},
+		{cmplxattr.KindBool, "Bool", 1},
+		{cmplxattr.KindBytes, "Bytes", 5},
+		{cmplxattr.KindEmpty, "Empty", 0},
+		{cmplxattr.KindFloat64, "Float64", 2},
+		{cmplxattr.KindInt64, "Int64", 3},
+		{cmplxattr.KindSlice, "Slice", 6},
+		{cmplxattr.KindMap, "Map", 7},
+		{cmplxattr.KindString, "String", 4},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.str, func(t *testing.T) {
@@ -43,25 +43,25 @@ func TestKind(t *testing.T) {
 }
 
 func TestValueEqual(t *testing.T) {
-	vals := []log.Value{
+	vals := []cmplxattr.Value{
 		{},
-		log.Int64Value(1),
-		log.Int64Value(2),
-		log.Int64Value(-2),
-		log.Float64Value(3.5),
-		log.Float64Value(3.7),
-		log.BoolValue(true),
-		log.BoolValue(false),
-		log.StringValue("hi"),
-		log.StringValue("bye"),
-		log.BytesValue([]byte{1, 3, 5}),
-		log.SliceValue(log.StringValue("foo")),
-		log.SliceValue(log.IntValue(3), log.StringValue("foo")),
-		log.MapValue(log.Bool("b", true), log.Int("i", 3)),
-		log.MapValue(
-			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-			log.Bytes("b", []byte{3, 5, 7}),
-			log.Empty("e"),
+		cmplxattr.Int64Value(1),
+		cmplxattr.Int64Value(2),
+		cmplxattr.Int64Value(-2),
+		cmplxattr.Float64Value(3.5),
+		cmplxattr.Float64Value(3.7),
+		cmplxattr.BoolValue(true),
+		cmplxattr.BoolValue(false),
+		cmplxattr.StringValue("hi"),
+		cmplxattr.StringValue("bye"),
+		cmplxattr.BytesValue([]byte{1, 3, 5}),
+		cmplxattr.SliceValue(cmplxattr.StringValue("foo")),
+		cmplxattr.SliceValue(cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+		cmplxattr.MapValue(cmplxattr.Bool("b", true), cmplxattr.Int("i", 3)),
+		cmplxattr.MapValue(
+			cmplxattr.Slice("l", cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+			cmplxattr.Bytes("b", []byte{3, 5, 7}),
+			cmplxattr.Empty("e"),
 		),
 	}
 	for i, v1 := range vals {
@@ -73,19 +73,19 @@ func TestValueEqual(t *testing.T) {
 
 func TestSortedValueEqual(t *testing.T) {
 	testCases := []struct {
-		value  log.Value
-		value2 log.Value
+		value  cmplxattr.Value
+		value2 cmplxattr.Value
 	}{
 		{
-			value: log.MapValue(
-				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-				log.Bytes("b", []byte{3, 5, 7}),
-				log.Empty("e"),
+			value: cmplxattr.MapValue(
+				cmplxattr.Slice("l", cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+				cmplxattr.Bytes("b", []byte{3, 5, 7}),
+				cmplxattr.Empty("e"),
 			),
-			value2: log.MapValue(
-				log.Bytes("b", []byte{3, 5, 7}),
-				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-				log.Empty("e"),
+			value2: cmplxattr.MapValue(
+				cmplxattr.Bytes("b", []byte{3, 5, 7}),
+				cmplxattr.Slice("l", cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+				cmplxattr.Empty("e"),
 			),
 		},
 	}
@@ -97,46 +97,46 @@ func TestSortedValueEqual(t *testing.T) {
 }
 
 func TestValueEmpty(t *testing.T) {
-	v := log.Value{}
+	v := cmplxattr.Value{}
 	t.Run("Value.Empty", func(t *testing.T) {
 		assert.True(t, v.Empty())
 	})
 
 	t.Run("Bytes", func(t *testing.T) {
-		assert.Nil(t, log.Bytes("b", nil).Value.AsBytes())
+		assert.Nil(t, cmplxattr.Bytes("b", nil).Value.AsBytes())
 	})
 	t.Run("Slice", func(t *testing.T) {
-		assert.Nil(t, log.Slice("s").Value.AsSlice())
+		assert.Nil(t, cmplxattr.Slice("s").Value.AsSlice())
 	})
 	t.Run("Map", func(t *testing.T) {
-		assert.Nil(t, log.Map("m").Value.AsMap())
+		assert.Nil(t, cmplxattr.Map("m").Value.AsMap())
 	})
 }
 
 func TestEmptyGroupsPreserved(t *testing.T) {
 	t.Run("Map", func(t *testing.T) {
-		assert.Equal(t, []log.KeyValue{
-			log.Int("a", 1),
-			log.Map("g1", log.Map("g2")),
-			log.Map("g3", log.Map("g4", log.Int("b", 2))),
-		}, log.MapValue(
-			log.Int("a", 1),
-			log.Map("g1", log.Map("g2")),
-			log.Map("g3", log.Map("g4", log.Int("b", 2))),
+		assert.Equal(t, []cmplxattr.KeyValue{
+			cmplxattr.Int("a", 1),
+			cmplxattr.Map("g1", cmplxattr.Map("g2")),
+			cmplxattr.Map("g3", cmplxattr.Map("g4", cmplxattr.Int("b", 2))),
+		}, cmplxattr.MapValue(
+			cmplxattr.Int("a", 1),
+			cmplxattr.Map("g1", cmplxattr.Map("g2")),
+			cmplxattr.Map("g3", cmplxattr.Map("g4", cmplxattr.Int("b", 2))),
 		).AsMap())
 	})
 
 	t.Run("Slice", func(t *testing.T) {
-		assert.Equal(t, []log.Value{{}}, log.SliceValue(log.Value{}).AsSlice())
+		assert.Equal(t, []cmplxattr.Value{{}}, cmplxattr.SliceValue(cmplxattr.Value{}).AsSlice())
 	})
 }
 
 func TestBool(t *testing.T) {
 	const key, val = "boolKey", true
-	kv := log.Bool(key, val)
+	kv := cmplxattr.Bool(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindBool
+	v, k := kv.Value, cmplxattr.KindBool
 	t.Run("AsBool", func(t *testing.T) {
 		assert.Equal(t, val, kv.Value.AsBool(), "AsBool")
 	})
@@ -150,10 +150,10 @@ func TestBool(t *testing.T) {
 
 func TestFloat64(t *testing.T) {
 	const key, val = "float64Key", 3.0
-	kv := log.Float64(key, val)
+	kv := cmplxattr.Float64(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindFloat64
+	v, k := kv.Value, cmplxattr.KindFloat64
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", func(t *testing.T) {
 		assert.Equal(t, val, v.AsFloat64(), "AsFloat64")
@@ -167,10 +167,10 @@ func TestFloat64(t *testing.T) {
 
 func TestInt(t *testing.T) {
 	const key, val = "intKey", 1
-	kv := log.Int(key, val)
+	kv := cmplxattr.Int(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindInt64
+	v, k := kv.Value, cmplxattr.KindInt64
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", func(t *testing.T) {
@@ -184,10 +184,10 @@ func TestInt(t *testing.T) {
 
 func TestInt64(t *testing.T) {
 	const key, val = "int64Key", 1
-	kv := log.Int64(key, val)
+	kv := cmplxattr.Int64(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindInt64
+	v, k := kv.Value, cmplxattr.KindInt64
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", func(t *testing.T) {
@@ -201,10 +201,10 @@ func TestInt64(t *testing.T) {
 
 func TestString(t *testing.T) {
 	const key, val = "stringKey", "test string value"
-	kv := log.String(key, val)
+	kv := cmplxattr.String(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindString
+	v, k := kv.Value, cmplxattr.KindString
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
@@ -219,10 +219,10 @@ func TestString(t *testing.T) {
 func TestBytes(t *testing.T) {
 	const key = "bytesKey"
 	val := []byte{3, 2, 1}
-	kv := log.Bytes(key, val)
+	kv := cmplxattr.Bytes(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindBytes
+	v, k := kv.Value, cmplxattr.KindBytes
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
@@ -236,11 +236,11 @@ func TestBytes(t *testing.T) {
 
 func TestSlice(t *testing.T) {
 	const key = "sliceKey"
-	val := []log.Value{log.IntValue(3), log.StringValue("foo")}
-	kv := log.Slice(key, val...)
+	val := []cmplxattr.Value{cmplxattr.IntValue(3), cmplxattr.StringValue("foo")}
+	kv := cmplxattr.Slice(key, val...)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindSlice
+	v, k := kv.Value, cmplxattr.KindSlice
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
@@ -254,14 +254,14 @@ func TestSlice(t *testing.T) {
 
 func TestMap(t *testing.T) {
 	const key = "mapKey"
-	val := []log.KeyValue{
-		log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-		log.Bytes("b", []byte{3, 5, 7}),
+	val := []cmplxattr.KeyValue{
+		cmplxattr.Slice("l", cmplxattr.IntValue(3), cmplxattr.StringValue("foo")),
+		cmplxattr.Bytes("b", []byte{3, 5, 7}),
 	}
-	kv := log.Map(key, val...)
+	kv := cmplxattr.Map(key, val...)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindMap
+	v, k := kv.Value, cmplxattr.KindMap
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
@@ -275,12 +275,12 @@ func TestMap(t *testing.T) {
 
 func TestEmpty(t *testing.T) {
 	const key = "key"
-	kv := log.Empty(key)
+	kv := cmplxattr.Empty(key)
 
 	assert.Equal(t, key, kv.Key, "incorrect key")
 	assert.True(t, kv.Value.Empty(), "value not empty")
 
-	v, k := kv.Value, log.KindEmpty
+	v, k := kv.Value, cmplxattr.KindEmpty
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
@@ -292,17 +292,17 @@ func TestEmpty(t *testing.T) {
 
 func TestValueString(t *testing.T) {
 	for _, test := range []struct {
-		v    log.Value
+		v    cmplxattr.Value
 		want string
 	}{
-		{log.Int64Value(-3), "-3"},
-		{log.Float64Value(.15), "0.15"},
-		{log.BoolValue(true), "true"},
-		{log.StringValue("foo"), "foo"},
-		{log.BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
-		{log.SliceValue(log.IntValue(3), log.StringValue("foo")), "[3 foo]"},
-		{log.MapValue(log.Int("a", 1), log.Bool("b", true)), "[a:1 b:true]"},
-		{log.Value{}, "<nil>"},
+		{cmplxattr.Int64Value(-3), "-3"},
+		{cmplxattr.Float64Value(.15), "0.15"},
+		{cmplxattr.BoolValue(true), "true"},
+		{cmplxattr.StringValue("foo"), "foo"},
+		{cmplxattr.BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
+		{cmplxattr.SliceValue(cmplxattr.IntValue(3), cmplxattr.StringValue("foo")), "[3 foo]"},
+		{cmplxattr.MapValue(cmplxattr.Int("a", 1), cmplxattr.Bool("b", true)), "[a:1 b:true]"},
+		{cmplxattr.Value{}, "<nil>"},
 	} {
 		got := test.v.String()
 		assert.Equal(t, test.want, got)
@@ -322,7 +322,7 @@ func (l *logSink) Error(err error, msg string, keysAndValues ...interface{}) {
 	l.LogSink.Error(err, msg, keysAndValues...)
 }
 
-func testErrKind[T any](f func() T, msg string, k log.Kind) func(*testing.T) {
+func testErrKind[T any](f func() T, msg string, k cmplxattr.Kind) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Cleanup(func(l logr.Logger) func() {
 			return func() { global.SetLogger(l) }
@@ -340,7 +340,7 @@ func testErrKind[T any](f func() T, msg string, k log.Kind) func(*testing.T) {
 	}
 }
 
-func testKV(t *testing.T, key string, kv log.KeyValue) {
+func testKV(t *testing.T, key string, kv cmplxattr.KeyValue) {
 	t.Helper()
 
 	assert.Equal(t, key, kv.Key, "incorrect key")
@@ -361,43 +361,43 @@ func TestAllocationLimits(t *testing.T) {
 		b     bool
 		by    []byte
 		s     string
-		slice []log.Value
-		m     []log.KeyValue
+		slice []cmplxattr.Value
+		m     []cmplxattr.KeyValue
 	)
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		b = log.Bool(key, true).Value.AsBool()
+		b = cmplxattr.Bool(key, true).Value.AsBool()
 	}), "Bool.AsBool")
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		f = log.Float64(key, 3.0).Value.AsFloat64()
+		f = cmplxattr.Float64(key, 3.0).Value.AsFloat64()
 	}), "Float.AsFloat64")
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		i = log.Int(key, 9).Value.AsInt64()
+		i = cmplxattr.Int(key, 9).Value.AsInt64()
 	}), "Int.AsInt64")
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		i = log.Int64(key, 8).Value.AsInt64()
+		i = cmplxattr.Int64(key, 8).Value.AsInt64()
 	}), "Int64.AsInt64")
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		s = log.String(key, "value").Value.AsString()
+		s = cmplxattr.String(key, "value").Value.AsString()
 	}), "String.AsString")
 
 	byteVal := []byte{1, 3, 4}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		by = log.Bytes(key, byteVal).Value.AsBytes()
+		by = cmplxattr.Bytes(key, byteVal).Value.AsBytes()
 	}), "Byte.AsBytes")
 
-	sliceVal := []log.Value{log.BoolValue(true), log.IntValue(32)}
+	sliceVal := []cmplxattr.Value{cmplxattr.BoolValue(true), cmplxattr.IntValue(32)}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		slice = log.Slice(key, sliceVal...).Value.AsSlice()
+		slice = cmplxattr.Slice(key, sliceVal...).Value.AsSlice()
 	}), "Slice.AsSlice")
 
-	mapVal := []log.KeyValue{log.Bool("b", true), log.Int("i", 32)}
+	mapVal := []cmplxattr.KeyValue{cmplxattr.Bool("b", true), cmplxattr.Int("i", 32)}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		m = log.Map(key, mapVal...).Value.AsMap()
+		m = cmplxattr.Map(key, mapVal...).Value.AsMap()
 	}), "Map.AsMap")
 
 	// Convince the linter these values are used.

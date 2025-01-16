@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -35,15 +36,15 @@ func AssertRecordEqual(t testing.TB, want, got log.Record) bool {
 		return false
 	}
 
-	var attrs []log.KeyValue
-	want.WalkAttributes(func(kv log.KeyValue) bool {
+	var attrs []cmplxattr.KeyValue
+	want.WalkAttributes(func(kv cmplxattr.KeyValue) bool {
 		attrs = append(attrs, kv)
 		return true
 	})
 	return assertAttributes(t, attrs, got)
 }
 
-func assertBody(t testing.TB, want log.Value, r log.Record) bool {
+func assertBody(t testing.TB, want cmplxattr.Value, r log.Record) bool {
 	t.Helper()
 	got := r.Body()
 	if !got.Equal(want) {
@@ -54,14 +55,14 @@ func assertBody(t testing.TB, want log.Value, r log.Record) bool {
 	return true
 }
 
-func assertAttributes(t testing.TB, want []log.KeyValue, r log.Record) bool {
+func assertAttributes(t testing.TB, want []cmplxattr.KeyValue, r log.Record) bool {
 	t.Helper()
-	var got []log.KeyValue
-	r.WalkAttributes(func(kv log.KeyValue) bool {
+	var got []cmplxattr.KeyValue
+	r.WalkAttributes(func(kv cmplxattr.KeyValue) bool {
 		got = append(got, kv)
 		return true
 	})
-	if !slices.EqualFunc(want, got, log.KeyValue.Equal) {
+	if !slices.EqualFunc(want, got, cmplxattr.KeyValue.Equal) {
 		t.Errorf("Attributes are not equal:\nwant: %v\ngot:  %v", want, got)
 		return false
 	}

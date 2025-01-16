@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -25,9 +26,9 @@ func TestAssertRecord(t *testing.T) {
 	r2.SetSeverity(log.SeverityTrace1)
 	r1.SetSeverityText("trace")
 	r2.SetSeverityText("trace")
-	r1.SetBody(log.StringValue("log body"))
-	r2.SetBody(log.StringValue("log body"))
-	r1.AddAttributes(log.Bool("attr", true))
-	r2.AddAttributes(log.Bool("attr", true))
+	r1.SetBody(cmplxattr.StringValue("log body"))
+	r2.SetBody(cmplxattr.StringValue("log body"))
+	r1.AddAttributes(cmplxattr.Bool("attr", true))
+	r2.AddAttributes(cmplxattr.Bool("attr", true))
 	AssertRecordEqual(t, r1, r2)
 }

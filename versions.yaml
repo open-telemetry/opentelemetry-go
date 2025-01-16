@@ -29,6 +29,7 @@ module-sets:
   experimental-logs:
     version: v0.9.0
     modules:
+      - go.opentelemetry.io/otel/cmplxattr
       - go.opentelemetry.io/otel/log
       - go.opentelemetry.io/otel/sdk/log
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc

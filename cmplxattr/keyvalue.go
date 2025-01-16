@@ -3,7 +3,7 @@
 
 //go:generate stringer -type=Kind -trimprefix=Kind
 
-package log // import "go.opentelemetry.io/otel/log"
+package cmplxattr // import "go.opentelemetry.io/otel/cmplxattr"
 
 import (
 	"bytes"

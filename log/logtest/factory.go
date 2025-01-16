@@ -6,6 +6,7 @@ package logtest // import "go.opentelemetry.io/otel/log/logtest"
 import (
 	"time"
 
+	"go.opentelemetry.io/otel/cmplxattr"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -18,8 +19,8 @@ type RecordFactory struct {
 	ObservedTimestamp time.Time
 	Severity          log.Severity
 	SeverityText      string
-	Body              log.Value
-	Attributes        []log.KeyValue
+	Body              cmplxattr.Value
+	Attributes        []cmplxattr.KeyValue
 }
 
 // NewRecord returns a log record.
