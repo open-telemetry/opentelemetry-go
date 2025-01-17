@@ -405,10 +405,8 @@ var unitSuffixes = map[string]string{
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := m.Name
-	if model.NameValidationScheme != model.UTF8Validation {
-		// Only sanitize if prometheus does not support UTF-8.
-		name = model.EscapeName(name, model.NameEscapingScheme)
-	}
+	name = model.EscapeName(name, model.NameEscapingScheme)
+
 	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
 	if addCounterSuffix {
 		// Remove the _total suffix here, as we will re-add the total suffix
