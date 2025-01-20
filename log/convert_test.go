@@ -19,7 +19,14 @@ func TestConvertAttributeValue(t *testing.T) {
 		want log.Value
 	}{
 		{
-			desc: "",
+			desc: "Empty",
+			v:    attribute.Value{},
+			want: log.Value{},
+		},
+		{
+			desc: "Bool",
+			v:    attribute.BoolValue(true),
+			want: log.BoolValue(true),
 		},
 	}
 	for _, tc := range testCases {
