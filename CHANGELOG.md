@@ -8,12 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
-
 ### Added
 
 - Add `ConvertAttributeValue` and `ConvertAttributeKeyValue` in `go.opentelemetry.io/otel/log`. (#6180)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
 
 ## [1.34.0/0.56.0/0.10.0] 2025-01-17
 
