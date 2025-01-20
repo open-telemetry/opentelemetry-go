@@ -40,9 +40,14 @@ func ConvertAttributeValue(value attribute.Value) Value {
 		}
 		return SliceValue(res...)
 	case attribute.STRING:
-		// return v.stringly
+		return StringValue(value.AsString())
 	case attribute.STRINGSLICE:
-		// return v.asStringSlice()
+		val := value.AsStringSlice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, StringValue(v))
+		}
+		return SliceValue(res...)
 	}
 	panic("unknown attribute type")
 }
