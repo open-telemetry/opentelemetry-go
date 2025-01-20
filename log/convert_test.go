@@ -41,6 +41,16 @@ func TestConvertAttributeValue(t *testing.T) {
 			v:    attribute.Int64SliceValue([]int64{12, 34}),
 			want: log.SliceValue(log.Int64Value(12), log.Int64Value(34)),
 		},
+		{
+			desc: "Float64",
+			v:    attribute.Float64Value(3.14),
+			want: log.Float64Value(3.14),
+		},
+		{
+			desc: "Float64Slice",
+			v:    attribute.Float64SliceValue([]float64{3.14, 2.72}),
+			want: log.SliceValue(log.Float64Value(3.14), log.Float64Value(2.72)),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {

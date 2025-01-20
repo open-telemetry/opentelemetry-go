@@ -31,9 +31,14 @@ func ConvertAttributeValue(value attribute.Value) Value {
 		}
 		return SliceValue(res...)
 	case attribute.FLOAT64:
-		// return v.AsFloat64()
+		return Float64Value(value.AsFloat64())
 	case attribute.FLOAT64SLICE:
-		// return v.asFloat64Slice()
+		val := value.AsFloat64Slice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, Float64Value(v))
+		}
+		return SliceValue(res...)
 	case attribute.STRING:
 		// return v.stringly
 	case attribute.STRINGSLICE:
