@@ -429,6 +429,8 @@ func ConvertAttributeValue(value attribute.Value) Value {
 		}
 		return SliceValue(res...)
 	}
+	// This code should never be reached
+	// as log attributes are a superset of standard attributes.
 	panic("unknown attribute type")
 }
 
