@@ -6,8 +6,6 @@ package log_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
@@ -33,11 +31,18 @@ func TestConvertAttributeValue(t *testing.T) {
 			v:    attribute.BoolSliceValue([]bool{true, false}),
 			want: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
 		},
+		{
+			desc: "Int64",
+			v:    attribute.Int64Value(13),
+			want: log.Int64Value(13),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := log.ConvertAttributeValue(tc.v)
-			assert.True(t, got.Equal(tc.want), "%v.Equal(%v)", got, tc.want)
+			if !got.Equal(tc.want) {
+				t.Errorf("got: %v; want:%v", got, tc.want)
+			}
 		})
 	}
 }
@@ -55,7 +60,9 @@ func TestConvertAttributeKeyValue(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := log.ConvertAttributeKeyValue(tc.kv)
-			assert.True(t, got.Equal(tc.want), "%v.Equal(%v)", got, tc.want)
+			if !got.Equal(tc.want) {
+				t.Errorf("got: %v; want:%v", got, tc.want)
+			}
 		})
 	}
 }

@@ -22,7 +22,7 @@ func ConvertAttributeValue(value attribute.Value) Value {
 		}
 		return SliceValue(res...)
 	case attribute.INT64:
-		// return v.AsInt64()
+		return Int64Value(value.AsInt64())
 	case attribute.INT64SLICE:
 		// return v.asInt64Slice()
 	case attribute.FLOAT64:
