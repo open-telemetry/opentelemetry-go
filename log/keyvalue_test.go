@@ -309,6 +309,7 @@ func TestValueString(t *testing.T) {
 		assert.Equal(t, test.want, got)
 	}
 }
+
 func TestConvertAttributeValue(t *testing.T) {
 	testCases := []struct {
 		desc string
