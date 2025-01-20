@@ -54,5 +54,8 @@ func ConvertAttributeValue(value attribute.Value) Value {
 
 // ConvertAttributeKeyValue converts [attribute.KeyValue) to [KeyValue].
 func ConvertAttributeKeyValue(kv attribute.KeyValue) KeyValue {
-	return KeyValue{}
+	return KeyValue{
+		Key:   string(kv.Key),
+		Value: ConvertAttributeValue(kv.Value),
+	}
 }
