@@ -28,6 +28,11 @@ func TestConvertAttributeValue(t *testing.T) {
 			v:    attribute.BoolValue(true),
 			want: log.BoolValue(true),
 		},
+		{
+			desc: "BoolSlice",
+			v:    attribute.BoolSliceValue([]bool{true, false}),
+			want: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {

@@ -8,14 +8,19 @@ import (
 )
 
 // ConvertAttributeValue converts [attribute.Value) to [Value].
-func ConvertAttributeValue(v attribute.Value) Value {
-	switch v.Type() {
+func ConvertAttributeValue(value attribute.Value) Value {
+	switch value.Type() {
 	case attribute.INVALID:
 		return Value{}
 	case attribute.BOOL:
-		return BoolValue(v.AsBool())
+		return BoolValue(value.AsBool())
 	case attribute.BOOLSLICE:
-		// return v.asBoolSlice()
+		val := value.AsBoolSlice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, BoolValue(v))
+		}
+		return SliceValue(res...)
 	case attribute.INT64:
 		// return v.AsInt64()
 	case attribute.INT64SLICE:
