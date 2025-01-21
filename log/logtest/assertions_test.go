@@ -16,8 +16,8 @@ func TestAssertRecord(t *testing.T) {
 	AssertRecordEqual(t, r1, r2)
 
 	now := time.Now()
-	r1.SetEventName("my event")
-	r2.SetEventName("my event")
+	r1.SetEventName("my_event")
+	r2.SetEventName("my_event")
 	r1.SetTimestamp(now)
 	r2.SetTimestamp(now)
 	r1.SetObservedTimestamp(now)

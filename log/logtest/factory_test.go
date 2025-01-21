@@ -15,6 +15,7 @@ import (
 func TestRecordFactory(t *testing.T) {
 	now := time.Now()
 	observed := now.Add(time.Second)
+	evnt := "my_event"
 	severity := log.SeverityDebug
 	severityText := "DBG"
 	body := log.StringValue("Message")
@@ -25,6 +26,7 @@ func TestRecordFactory(t *testing.T) {
 	}
 
 	got := RecordFactory{
+		EventName:         evnt,
 		Timestamp:         now,
 		ObservedTimestamp: observed,
 		Severity:          severity,
@@ -33,6 +35,7 @@ func TestRecordFactory(t *testing.T) {
 		Attributes:        attrs,
 	}.NewRecord()
 
+	assert.Equal(t, evnt, got.EventName())
 	assert.Equal(t, now, got.Timestamp())
 	assert.Equal(t, observed, got.ObservedTimestamp())
 	assert.Equal(t, severity, got.Severity())
