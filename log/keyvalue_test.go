@@ -310,7 +310,7 @@ func TestValueString(t *testing.T) {
 	}
 }
 
-func TestConvertAttributeValue(t *testing.T) {
+func TestValueFromAttribute(t *testing.T) {
 	testCases := []struct {
 		desc string
 		v    attribute.Value
@@ -364,7 +364,7 @@ func TestConvertAttributeValue(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			got := log.ConvertAttributeValue(tc.v)
+			got := log.ValueFromAttribute(tc.v)
 			if !got.Equal(tc.want) {
 				t.Errorf("got: %v; want:%v", got, tc.want)
 			}
@@ -372,7 +372,7 @@ func TestConvertAttributeValue(t *testing.T) {
 	}
 }
 
-func TestConvertAttributeKeyValue(t *testing.T) {
+func TestKeyValueFromAttribute(t *testing.T) {
 	testCases := []struct {
 		desc string
 		kv   attribute.KeyValue
@@ -426,7 +426,7 @@ func TestConvertAttributeKeyValue(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			got := log.ConvertAttributeKeyValue(tc.kv)
+			got := log.KeyValueFromAttribute(tc.kv)
 			if !got.Equal(tc.want) {
 				t.Errorf("got: %v; want:%v", got, tc.want)
 			}

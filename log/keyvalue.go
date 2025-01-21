@@ -387,8 +387,8 @@ func (a KeyValue) String() string {
 	return fmt.Sprintf("%s:%s", a.Key, a.Value)
 }
 
-// ConvertAttributeValue converts [attribute.Value) to [Value].
-func ConvertAttributeValue(value attribute.Value) Value {
+// ValueFromAttribute converts [attribute.Value) to [Value].
+func ValueFromAttribute(value attribute.Value) Value {
 	switch value.Type() {
 	case attribute.INVALID:
 		return Value{}
@@ -434,10 +434,10 @@ func ConvertAttributeValue(value attribute.Value) Value {
 	panic("unknown attribute type")
 }
 
-// ConvertAttributeKeyValue converts [attribute.KeyValue) to [KeyValue].
-func ConvertAttributeKeyValue(kv attribute.KeyValue) KeyValue {
+// KeyValueFromAttribute converts [attribute.KeyValue) to [KeyValue].
+func KeyValueFromAttribute(kv attribute.KeyValue) KeyValue {
 	return KeyValue{
 		Key:   string(kv.Key),
-		Value: ConvertAttributeValue(kv.Value),
+		Value: ValueFromAttribute(kv.Value),
 	}
 }

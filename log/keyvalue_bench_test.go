@@ -234,7 +234,7 @@ func BenchmarkValueEqual(b *testing.B) {
 	}
 }
 
-func BenchmarkConvertAttributeKeyValue(b *testing.B) {
+func BenchmarkKeyValueFromAttribute(b *testing.B) {
 	testCases := []struct {
 		desc string
 		kv   attribute.KeyValue
@@ -290,7 +290,7 @@ func BenchmarkConvertAttributeKeyValue(b *testing.B) {
 		b.Run(tc.desc, func(b *testing.B) {
 			b.ReportAllocs()
 			for range b.N {
-				outKV = log.ConvertAttributeKeyValue(tc.kv)
+				outKV = log.KeyValueFromAttribute(tc.kv)
 			}
 		})
 	}

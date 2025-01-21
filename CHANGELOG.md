@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `ConvertAttributeValue` and `ConvertAttributeKeyValue` in `go.opentelemetry.io/otel/log`. (#6180)
+- Add `ValueFromAttribute` and `KeyValueFromAttribute` in `go.opentelemetry.io/otel/log`. (#6180)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
