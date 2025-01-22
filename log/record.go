@@ -46,7 +46,7 @@ type Record struct {
 	back []KeyValue
 }
 
-// Event returns the event name.
+// EventName returns the event name.
 // A log record with non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
 	return r.eventName

@@ -49,7 +49,7 @@ func putIndex(index map[string]int) {
 // for testing purposes.
 type Record struct {
 	// Do not embed the log.Record. Attributes need to be overwrite-able and
-	// deep-copying needs
+	// deep-copying needs to be possible.
 
 	eventName         string
 	timestamp         time.Time
@@ -106,7 +106,7 @@ func (r *Record) setDropped(n int) {
 	r.dropped = n
 }
 
-// Event returns the event name.
+// EventName returns the event name.
 // A log record with non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
 	return r.eventName
