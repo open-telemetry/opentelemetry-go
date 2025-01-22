@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `EventName` and `SetEventName` to `Record` in `go.opentelemetry.io/otel/log`. (#6187)
 - Add `EventName` to `RecordFactory` in `go.opentelemetry.io/otel/log/logtest`. (#6187)
 - `AssertRecordEqual` in `go.opentelemetry.io/otel/log/logtest` checks `Record.EventName`. (#6187)
+- Add `EventName` and `SetEventName` to `Record` in `go.opentelemetry.io/otel/sdk/log`. (#6193)
+- Add `EventName` to `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest`. (#6193)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
