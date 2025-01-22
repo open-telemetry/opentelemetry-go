@@ -13,10 +13,11 @@ import (
 func TestAssertRecord(t *testing.T) {
 	r1 := log.Record{}
 	r2 := log.Record{}
-	now := time.Now()
-
 	AssertRecordEqual(t, r1, r2)
 
+	now := time.Now()
+	r1.SetEventName("my_event")
+	r2.SetEventName("my_event")
 	r1.SetTimestamp(now)
 	r2.SetTimestamp(now)
 	r1.SetObservedTimestamp(now)

@@ -14,6 +14,7 @@ import (
 //
 // Do not use RecordFactory to create records in production code.
 type RecordFactory struct {
+	EventName         string
 	Timestamp         time.Time
 	ObservedTimestamp time.Time
 	Severity          log.Severity
@@ -25,6 +26,7 @@ type RecordFactory struct {
 // NewRecord returns a log record.
 func (b RecordFactory) NewRecord() log.Record {
 	var record log.Record
+	record.SetEventName(b.EventName)
 	record.SetTimestamp(b.Timestamp)
 	record.SetObservedTimestamp(b.ObservedTimestamp)
 	record.SetSeverity(b.Severity)
