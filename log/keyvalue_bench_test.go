@@ -6,6 +6,7 @@ package log_test
 import (
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -230,5 +231,57 @@ func BenchmarkValueEqual(b *testing.B) {
 				}
 			})
 		}
+	}
+}
+
+func BenchmarkKeyValueFromAttribute(b *testing.B) {
+	testCases := []struct {
+		desc string
+		kv   attribute.KeyValue
+	}{
+		{
+			desc: "Empty",
+			kv:   attribute.KeyValue{},
+		},
+		{
+			desc: "Bool",
+			kv:   attribute.Bool("k", true),
+		},
+		{
+			desc: "BoolSlice",
+			kv:   attribute.BoolSlice("k", []bool{true, false}),
+		},
+		{
+			desc: "Int64",
+			kv:   attribute.Int64("k", 13),
+		},
+		{
+			desc: "Int64Slice",
+			kv:   attribute.Int64Slice("k", []int64{12, 34}),
+		},
+		{
+			desc: "Float64",
+			kv:   attribute.Float64("k", 3.14),
+		},
+		{
+			desc: "Float64Slice",
+			kv:   attribute.Float64Slice("k", []float64{3.14, 2.72}),
+		},
+		{
+			desc: "String",
+			kv:   attribute.String("k", "foo"),
+		},
+		{
+			desc: "StringSlice",
+			kv:   attribute.StringSlice("k", []string{"foo", "bar"}),
+		},
+	}
+	for _, tc := range testCases {
+		b.Run(tc.desc, func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				outKV = log.KeyValueFromAttribute(tc.kv)
+			}
+		})
 	}
 }
