@@ -22,6 +22,7 @@ import (
 //
 // Do not use RecordFactory to create records in production code.
 type RecordFactory struct {
+	EventName         string
 	Timestamp         time.Time
 	ObservedTimestamp time.Time
 	Severity          log.Severity
@@ -49,6 +50,7 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 	set(r, "attributeCountLimit", -1)
 	set(r, "attributeValueLengthLimit", -1)
 
+	r.SetEventName(f.EventName)
 	r.SetTimestamp(f.Timestamp)
 	r.SetObservedTimestamp(f.ObservedTimestamp)
 	r.SetSeverity(f.Severity)

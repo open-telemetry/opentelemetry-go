@@ -19,6 +19,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func TestRecordEventName(t *testing.T) {
+	const text = "testing text"
+
+	r := new(Record)
+	r.SetEventName(text)
+	assert.Equal(t, text, r.EventName())
+}
+
 func TestRecordTimestamp(t *testing.T) {
 	now := time.Now()
 	r := new(Record)
