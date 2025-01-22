@@ -42,14 +42,16 @@ func putIndex(index map[string]int) {
 }
 
 // Record is a log record emitted by the Logger.
+// A log record with non-empty event name is interpreted as an event record.
 //
 // Do not create instances of Record on your own in production code.
 // You can use [go.opentelemetry.io/otel/sdk/log/logtest.RecordFactory]
 // for testing purposes.
 type Record struct {
 	// Do not embed the log.Record. Attributes need to be overwrite-able and
-	// deep-copying needs to be possible.
+	// deep-copying needs
 
+	eventName         string
 	timestamp         time.Time
 	observedTimestamp time.Time
 	severity          log.Severity
@@ -102,6 +104,18 @@ func (r *Record) addDropped(n int) {
 func (r *Record) setDropped(n int) {
 	logAttrDropped()
 	r.dropped = n
+}
+
+// Event returns the event name.
+// A log record with non-empty event name is interpreted as an event record.
+func (r *Record) EventName() string {
+	return r.eventName
+}
+
+// SetEventName sets the event name.
+// A log record with non-empty event name is interpreted as an event record.
+func (r *Record) SetEventName(s string) {
+	r.eventName = s
 }
 
 // Timestamp returns the time when the log record occurred.
