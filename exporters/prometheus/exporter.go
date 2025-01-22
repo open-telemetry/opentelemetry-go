@@ -96,7 +96,7 @@ type collector struct {
 
 // prometheus counters MUST have a _total suffix by default:
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/compatibility/prometheus_and_openmetrics.md
-const counterSuffix = "_total"
+const counterSuffix = "total"
 
 // New returns a Prometheus Exporter.
 func New(opts ...Option) (*Exporter, error) {
@@ -368,38 +368,38 @@ func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, erro
 
 var unitSuffixes = map[string]string{
 	// Time
-	"d":   "_days",
-	"h":   "_hours",
-	"min": "_minutes",
-	"s":   "_seconds",
-	"ms":  "_milliseconds",
-	"us":  "_microseconds",
-	"ns":  "_nanoseconds",
+	"d":   "days",
+	"h":   "hours",
+	"min": "minutes",
+	"s":   "seconds",
+	"ms":  "milliseconds",
+	"us":  "microseconds",
+	"ns":  "nanoseconds",
 
 	// Bytes
-	"By":   "_bytes",
-	"KiBy": "_kibibytes",
-	"MiBy": "_mebibytes",
-	"GiBy": "_gibibytes",
-	"TiBy": "_tibibytes",
-	"KBy":  "_kilobytes",
-	"MBy":  "_megabytes",
-	"GBy":  "_gigabytes",
-	"TBy":  "_terabytes",
+	"By":   "bytes",
+	"KiBy": "kibibytes",
+	"MiBy": "mebibytes",
+	"GiBy": "gibibytes",
+	"TiBy": "tibibytes",
+	"KBy":  "kilobytes",
+	"MBy":  "megabytes",
+	"GBy":  "gigabytes",
+	"TBy":  "terabytes",
 
 	// SI
-	"m": "_meters",
-	"V": "_volts",
-	"A": "_amperes",
-	"J": "_joules",
-	"W": "_watts",
-	"g": "_grams",
+	"m": "meters",
+	"V": "volts",
+	"A": "amperes",
+	"J": "joules",
+	"W": "watts",
+	"g": "grams",
 
 	// Misc
-	"Cel": "_celsius",
-	"Hz":  "_hertz",
-	"1":   "_ratio",
-	"%":   "_percent",
+	"Cel": "celsius",
+	"Hz":  "hertz",
+	"1":   "ratio",
+	"%":   "percent",
 }
 
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
@@ -414,17 +414,29 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 		// Remove the _total suffix here, as we will re-add the total suffix
 		// later, and it needs to come after the unit suffix.
 		name = strings.TrimSuffix(name, counterSuffix)
+		// If the last character is an underscore, or would be converted to an underscore, trim it from the name.
+		// an underscore will be added back in later.
+		if convertsToUnderscore(rune(name[len(name)-1])) {
+			name = name[:len(name)-1]
+		}
 	}
 	if c.namespace != "" {
 		name = c.namespace + name
 	}
 	if suffix, ok := unitSuffixes[m.Unit]; ok && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
-		name += suffix
+		name += "_" + suffix
 	}
 	if addCounterSuffix {
-		name += counterSuffix
+		name += "_" + counterSuffix
 	}
 	return name
+}
+
+// convertsToUnderscore returns true if the character would be converted to an
+// underscore when the escaping scheme is underscore escaping. This is meant to
+// capture any character that should be considered a "delimiter".
+func convertsToUnderscore(b rune) bool {
+	return !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == ':' || (b >= '0' && b <= '9'))
 }
 
 func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {

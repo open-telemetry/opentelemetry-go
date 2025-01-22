@@ -133,7 +133,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			wantConfig: config{
 				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test_",
+				namespace:  "test/_",
 			},
 		},
 	}

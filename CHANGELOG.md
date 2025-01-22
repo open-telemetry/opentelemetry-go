@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Update `github.com/prometheus/common` to v0.62.0., which changes the `NameValidationScheme` to `NoEscaping`. This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores. This is controlled by the `Content-Type` header, or can be reverted by setting `NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model` (#6198)
+
 ### Added
 
 - Add `ValueFromAttribute` and `KeyValueFromAttribute` in `go.opentelemetry.io/otel/log`. (#6180)
