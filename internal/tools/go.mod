@@ -9,9 +9,9 @@ require (
 	github.com/jcchavezs/porto v0.6.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.17.0
-	go.opentelemetry.io/build-tools/gotmpl v0.16.0
-	go.opentelemetry.io/build-tools/multimod v0.16.0
-	go.opentelemetry.io/build-tools/semconvgen v0.16.0
+	go.opentelemetry.io/build-tools/gotmpl v0.17.0
+	go.opentelemetry.io/build-tools/multimod v0.17.0
+	go.opentelemetry.io/build-tools/semconvgen v0.17.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	golang.org/x/tools v0.29.0
 	golang.org/x/vuln v1.1.4
