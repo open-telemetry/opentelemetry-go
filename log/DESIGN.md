@@ -608,7 +608,7 @@ For bridges not developed by us,
 developers will likely look at our existing bridges for inspiration.
 Our correct use of these types will be a reference to them.
 
-At last, we provide `ValueFromAttribute` and `KeyValueFromAttribute` so that
+At last, we provide `ValueFromAttribute` and `KeyValueFromAttribute`
 to offer reuse of `attribute.Value` and `attribute.KeyValue`.
 
 [^1]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
