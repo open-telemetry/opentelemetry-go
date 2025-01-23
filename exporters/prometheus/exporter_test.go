@@ -35,7 +35,7 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
-		enableUTF8          bool
+		disableUTF8         bool
 	}{
 		{
 			name:         "counter",
@@ -195,6 +195,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
+			disableUTF8:  true,
 			options:      []Option{WithoutUnits()},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -404,7 +405,6 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter utf-8",
 			expectedFile: "testdata/counter_utf8.txt",
-			enableUTF8:   true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A.G").String("B"),
@@ -471,11 +471,11 @@ func TestPrometheusExporter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.enableUTF8 {
-				model.NameValidationScheme = model.UTF8Validation
+			if tc.disableUTF8 {
+				model.NameValidationScheme = model.LegacyValidation
 				defer func() {
 					// Reset to defaults
-					model.NameValidationScheme = model.LegacyValidation
+					model.NameValidationScheme = model.UTF8Validation
 				}()
 			}
 			ctx := context.Background()
