@@ -115,6 +115,14 @@ func (r *Record) ObservedTimestamp() time.Time
 func (r *Record) SetObservedTimestamp(t time.Time)
 ```
 
+[`EventName`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-eventname)
+is accessed using following methods:
+
+```go
+func (r *Record) EventName() string
+func (r *Record) SetEventName(s string)
+```
+
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
 is accessed using following methods:
 
