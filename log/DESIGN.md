@@ -431,10 +431,12 @@ One of the proposals[^6] was to have `Record` as a simple struct:
 type Record struct {
 	Timestamp         time.Time
 	ObservedTimestamp time.Time
+	EventName         string
 	Severity          Severity
 	SeverityText      string
 	Body              Value
 	Attributes        []KeyValue
+}
 ```
 
 The bridge implementations could use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
