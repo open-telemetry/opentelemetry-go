@@ -153,6 +153,7 @@ var (
 				out = append(out, logtest.RecordFactory{
 					Timestamp:            ts,
 					ObservedTimestamp:    obs,
+					EventName:            "evnt",
 					Severity:             sevC,
 					SeverityText:         "C",
 					Body:                 bodyC,
@@ -229,6 +230,7 @@ var (
 		{
 			TimeUnixNano:         uint64(ts.UnixNano()),
 			ObservedTimeUnixNano: uint64(obs.UnixNano()),
+			EventName:            "evnt",
 			SeverityNumber:       pbSevC,
 			SeverityText:         "C",
 			Body:                 pbBodyC,
