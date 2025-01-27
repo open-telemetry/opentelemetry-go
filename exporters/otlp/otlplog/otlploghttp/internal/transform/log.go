@@ -91,6 +91,7 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 	r := &lpb.LogRecord{
 		TimeUnixNano:         timeUnixNano(record.Timestamp()),
 		ObservedTimeUnixNano: timeUnixNano(record.ObservedTimestamp()),
+		EventName:            record.EventName(),
 		SeverityNumber:       SeverityNumber(record.Severity()),
 		SeverityText:         record.SeverityText(),
 		Body:                 LogAttrValue(record.Body()),
