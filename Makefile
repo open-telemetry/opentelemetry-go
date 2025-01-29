@@ -11,6 +11,10 @@ ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} 
 GO = go
 TIMEOUT = 60
 
+# User to run as in docker images.
+DOCKER_USER=$(shell id -u):$(shell id -g)
+DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
+
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
@@ -81,20 +85,20 @@ PIP := $(PYTOOLS)/pip
 WORKDIR := /workdir
 
 # The python image to use for the virtual environment.
-PYTHONIMAGE := python:3.11.3-slim-bullseye
+PYTHONIMAGE := $(shell awk '$$4=="python" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
 
 # Run the python image with the current directory mounted.
-DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
+DOCKERPY := docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
 
 # Create a virtual environment for Python tools.
 $(PYTOOLS):
 # The `--upgrade` flag is needed to ensure that the virtual environment is
 # created with the latest pip version.
-	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
+	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade --cache-dir=$(WORKDIR)/.cache/pip pip"
 
 # Install python packages into the virtual environment.
 $(PYTOOLS)/%: $(PYTOOLS)
-	@$(DOCKERPY) $(PIP) install -r requirements.txt
+	@$(DOCKERPY) $(PIP) install --cache-dir=$(WORKDIR)/.cache/pip -r requirements.txt
 
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell
