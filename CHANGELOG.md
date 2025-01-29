@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `EventName` to `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest`. (#6193)
 - Emit `Record.EventName` field in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#6211)
 - Emit `Record.EventName` field in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6211)
+- Emit `Record.EventName` field in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` (#6210)
 
 ### Changed
 
