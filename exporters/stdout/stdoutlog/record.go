@@ -79,6 +79,7 @@ type keyValue struct {
 type recordJSON struct {
 	Timestamp         *time.Time `json:",omitempty"`
 	ObservedTimestamp *time.Time `json:",omitempty"`
+	EventName         string     `json:",omitempty"`
 	Severity          log.Severity
 	SeverityText      string
 	Body              value
@@ -94,6 +95,7 @@ type recordJSON struct {
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	res := r.Resource()
 	newRecord := recordJSON{
+		EventName:    r.EventName(),
 		Severity:     r.Severity(),
 		SeverityText: r.SeverityText(),
 		Body:         newValue(r.Body()),
