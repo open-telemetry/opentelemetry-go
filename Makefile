@@ -269,13 +269,32 @@ check-clean-work-tree:
 	  exit 1; \
 	fi
 
+# The weaver docker image to use for semconv-generate.
+WEAVER_IMAGE := $(shell awk '$$4=="weaver" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
+
 SEMCONVPKG ?= "semconv/"
 .PHONY: semconv-generate
-semconv-generate: $(SEMCONVGEN) $(SEMCONVKIT)
+semconv-generate: $(SEMCONVKIT)
 	[ "$(TAG)" ] || ( echo "TAG unset: missing opentelemetry semantic-conventions tag"; exit 1 )
-	[ "$(OTEL_SEMCONV_REPO)" ] || ( echo "OTEL_SEMCONV_REPO unset: missing path to opentelemetry semantic-conventions repo"; exit 1 )
-	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=attribute_group -p conventionType=trace -f attribute_group.go -z "$(SEMCONVPKG)/capitalizations.txt" -t "$(SEMCONVPKG)/template.j2" -s "$(TAG)"
-	$(SEMCONVGEN) -i "$(OTEL_SEMCONV_REPO)/model/." --only=metric  -f metric.go -t "$(SEMCONVPKG)/metric_template.j2" -s "$(TAG)"
+	[ "$(SEMCONV_REPO)" ] || ( echo "SEMCONV_REPO unset: missing path to opentelemetry semantic-conventions repo"; exit 1 )
+	# Ensure the target directory for source code is available.
+	mkdir -p $(PWD)/$(SEMCONVPKG)/${TAG}
+	# Note: We mount a home directory for downloading/storing the semconv repository.
+	# Weaver will automatically clean the cache when finished, but the directories will remain.
+	mkdir -p ~/.weaver
+	docker run --rm \
+		-u $(DOCKER_USER) \
+		--env HOME=/tmp/weaver \
+		--mount 'type=bind,source=$(SEMCONV_REPO),target=/source,readonly' \
+		--mount 'type=bind,source=$(PWD)/semconv,target=/home/weaver/templates/registry/go,readonly' \
+		--mount 'type=bind,source=$(PWD)/semconv/${TAG},target=/home/weaver/target' \
+		--mount 'type=bind,source=$(HOME)/.weaver,target=/tmp/weaver/.weaver' \
+		$(WEAVER_IMAGE) registry generate \
+		--registry=/source/model \
+		--templates=/home/weaver/templates \
+		--param tag=$(TAG) \
+		go \
+		/home/weaver/target
 	$(SEMCONVKIT) -output "$(SEMCONVPKG)/$(TAG)" -tag "$(TAG)"
 
 .PHONY: gorelease
