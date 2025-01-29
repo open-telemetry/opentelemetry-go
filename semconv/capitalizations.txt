@@ -1,7 +1,0 @@
-JVM
-VCS
-GC
-CICD
-AI
-V8JS
-ASPNETCore
