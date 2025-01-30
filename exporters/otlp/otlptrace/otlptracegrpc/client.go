@@ -93,12 +93,12 @@ func newClient(opts ...Option) *client {
 	return c
 }
 
-var exporterID atomic.Uint64
+var exporterID atomic.Int64
 
 // nextExporterID returns an identifier for this otlp grpc trace exporter,
 // starting with 0 and incrementing by 1 each time it is called.
 func nextExporterID() int64 {
-	return int64(exporterID.Add(1) - 1)
+	return exporterID.Add(1) - 1
 }
 
 // configureSelfObservability configures metrics for the batch span processor.

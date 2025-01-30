@@ -134,12 +134,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	return tp
 }
 
-var providerID atomic.Uint64
+var providerID atomic.Int64
 
 // nextProviderID returns an identifier for this tracerprovider,
 // starting with 0 and incrementing by 1 each time it is called.
 func nextProviderID() int64 {
-	return int64(providerID.Add(1) - 1)
+	return providerID.Add(1) - 1
 }
 
 func (p *TracerProvider) configureSelfObservability() {

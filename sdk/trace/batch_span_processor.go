@@ -135,12 +135,12 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	return bsp
 }
 
-var processorID atomic.Uint64
+var processorID atomic.Int64
 
 // nextProcessorID returns an identifier for this batch span processor,
 // starting with 0 and incrementing by 1 each time it is called.
 func nextProcessorID() int64 {
-	return int64(processorID.Add(1) - 1)
+	return processorID.Add(1) - 1
 }
 
 // configureSelfObservability configures metrics for the batch span processor.
