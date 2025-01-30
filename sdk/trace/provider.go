@@ -84,7 +84,6 @@ type TracerProvider struct {
 	spanLimits  SpanLimits
 	resource    *resource.Resource
 
-	spanCreatedCount     metric.Int64Counter
 	spanEndedCount       metric.Int64Counter
 	spanLiveCount        metric.Int64UpDownCounter
 	sampledAttributes    metric.MeasurementOption
@@ -156,13 +155,6 @@ func (p *TracerProvider) configureSelfObservability() {
 	p.sampledAttributes = metric.WithAttributes(componentNameAttr, attribute.String("otel.span.is_sampled", "true"))
 	p.notSampledAttributes = metric.WithAttributes(componentNameAttr, attribute.String("otel.span.is_sampled", "false"))
 	var err error
-	p.spanCreatedCount, err = meter.Int64Counter("otel.sdk.span.created_count",
-		metric.WithUnit("{span}"),
-		metric.WithDescription("The number of spans which have been created."),
-	)
-	if err != nil {
-		otel.Handle(err)
-	}
 	p.spanEndedCount, err = meter.Int64Counter("otel.sdk.span.ended_count",
 		metric.WithUnit("{span}"),
 		metric.WithDescription("The number of created spans for which the end operation was called."),
