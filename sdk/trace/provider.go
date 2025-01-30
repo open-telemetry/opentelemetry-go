@@ -10,8 +10,12 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -79,6 +83,12 @@ type TracerProvider struct {
 	idGenerator IDGenerator
 	spanLimits  SpanLimits
 	resource    *resource.Resource
+
+	spanCreatedCount     metric.Int64Counter
+	spanEndedCount       metric.Int64Counter
+	spanLiveCount        metric.Int64UpDownCounter
+	sampledAttributes    metric.MeasurementOption
+	notSampledAttributes metric.MeasurementOption
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -120,7 +130,53 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	}
 	tp.spanProcessors.Store(&spss)
 
+	tp.configureSelfObservability()
+
 	return tp
+}
+
+var providerID atomic.Uint64
+
+// nextProviderID returns an identifier for this tracerprovider,
+// starting with 0 and incrementing by 1 each time it is called.
+func nextProviderID() int64 {
+	return int64(providerID.Add(1) - 1)
+}
+
+func (p *TracerProvider) configureSelfObservability() {
+	mp := otel.GetMeterProvider()
+	if !x.SelfObservability.Enabled() {
+		mp = metric.MeterProvider(metricnoop.NewMeterProvider())
+	}
+	meter := mp.Meter(
+		selfObsScopeName,
+		metric.WithInstrumentationVersion(version()),
+	)
+	componentNameAttr := attribute.String("otel.sdk.component.name", fmt.Sprintf("tracer_provider/%d", nextProviderID()))
+	p.sampledAttributes = metric.WithAttributes(componentNameAttr, attribute.String("otel.span.is_sampled", "true"))
+	p.notSampledAttributes = metric.WithAttributes(componentNameAttr, attribute.String("otel.span.is_sampled", "false"))
+	var err error
+	p.spanCreatedCount, err = meter.Int64Counter("otel.sdk.span.created_count",
+		metric.WithUnit("{span}"),
+		metric.WithDescription("The number of spans which have been created."),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+	p.spanEndedCount, err = meter.Int64Counter("otel.sdk.span.ended_count",
+		metric.WithUnit("{span}"),
+		metric.WithDescription("The number of created spans for which the end operation was called."),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+	p.spanLiveCount, err = meter.Int64UpDownCounter("otel.sdk.span.live_count",
+		metric.WithUnit("{span}"),
+		metric.WithDescription("The number of created spans for which the end operation has not been called yet."),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
 }
 
 // Tracer returns a Tracer with the given name and options. If a Tracer for

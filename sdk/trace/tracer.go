@@ -100,8 +100,12 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	}
 	if isSampled(samplingResult) {
 		scc.TraceFlags = psc.TraceFlags() | trace.FlagsSampled
+		tr.provider.spanLiveCount.Add(ctx, 1, tr.provider.sampledAttributes)
+		tr.provider.spanCreatedCount.Add(ctx, 1, tr.provider.sampledAttributes)
 	} else {
 		scc.TraceFlags = psc.TraceFlags() &^ trace.FlagsSampled
+		tr.provider.spanLiveCount.Add(ctx, 1, tr.provider.notSampledAttributes)
+		tr.provider.spanCreatedCount.Add(ctx, 1, tr.provider.notSampledAttributes)
 	}
 	sc := trace.NewSpanContext(scc)
 
