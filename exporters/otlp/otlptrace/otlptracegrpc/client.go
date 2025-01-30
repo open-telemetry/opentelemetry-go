@@ -6,7 +6,9 @@ package otlptracegrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -16,13 +18,19 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
+
+const selfObsScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 
 type client struct {
 	endpoint      string
@@ -45,6 +53,12 @@ type client struct {
 	conn    *grpc.ClientConn
 	tscMu   sync.RWMutex
 	tsc     coltracepb.TraceServiceClient
+
+	spansInflightUpDownCounter metric.Int64UpDownCounter
+	spansExportedCounter       metric.Int64Counter
+	baseAttributes             metric.MeasurementOption
+	successAttributes          metric.MeasurementOption
+	exportFailedAttributes     metric.MeasurementOption
 }
 
 // Compile time check *client implements otlptrace.Client.
@@ -74,7 +88,50 @@ func newClient(opts ...Option) *client {
 		c.metadata = metadata.New(cfg.Traces.Headers)
 	}
 
+	c.configureSelfObservability()
+
 	return c
+}
+
+var exporterID atomic.Uint64
+
+// nextExporterID returns an identifier for this otlp grpc trace exporter,
+// starting with 0 and incrementing by 1 each time it is called.
+func nextExporterID() int64 {
+	return int64(exporterID.Add(1) - 1)
+}
+
+// configureSelfObservability configures metrics for the batch span processor.
+func (c *client) configureSelfObservability() {
+	mp := otel.GetMeterProvider()
+	if !x.SelfObservability.Enabled() {
+		mp = metric.MeterProvider(noop.NewMeterProvider())
+	}
+	meter := mp.Meter(
+		selfObsScopeName,
+		metric.WithInstrumentationVersion(otlptrace.Version()),
+	)
+	var err error
+	c.spansInflightUpDownCounter, err = meter.Int64UpDownCounter("otel.sdk.span.exporter.spans_inflight",
+		metric.WithUnit("{span}"),
+		metric.WithDescription("The number of spans which were passed to the exporter, but that have not been exported yet (neither successful, nor failed)."),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+	c.spansExportedCounter, err = meter.Int64Counter("otel.sdk.span.exporter.spans_exported",
+		metric.WithUnit("{span}"),
+		metric.WithDescription("The number of spans for which the export has finished, either successful or failed."),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	componentTypeAttr := attribute.String("otel.sdk.component.type", "otlp_grpc_span_exporter")
+	componentNameAttr := attribute.String("otel.sdk.component.name", fmt.Sprintf("otlp_grpc_span_exporter/%d", nextExporterID()))
+	c.baseAttributes = metric.WithAttributes(componentNameAttr, componentTypeAttr)
+	c.successAttributes = metric.WithAttributes(componentNameAttr, componentTypeAttr, attribute.String("error.type", ""))
+	c.exportFailedAttributes = metric.WithAttributes(componentNameAttr, componentTypeAttr, attribute.String("error.type", "export_failed"))
 }
 
 // Start establishes a gRPC connection to the collector.
@@ -175,6 +232,16 @@ var errShutdown = errors.New("the client is shutdown")
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+	var numSpans int64
+	for _, rs := range protoSpans {
+		for _, ss := range rs.GetScopeSpans() {
+			numSpans += int64(len(ss.GetSpans()))
+		}
+	}
+	c.spansInflightUpDownCounter.Add(ctx, numSpans, c.baseAttributes)
+	defer func() {
+		c.spansInflightUpDownCounter.Add(ctx, -numSpans, c.baseAttributes)
+	}()
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
 	// write lock acquire (i.e. Stop), meaning if the client is shutting down
@@ -189,15 +256,17 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	return c.requestFunc(ctx, func(iCtx context.Context) error {
+	var partialRejected int64
+
+	err := c.requestFunc(ctx, func(iCtx context.Context) error {
 		resp, err := c.tsc.Export(iCtx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
-			n := resp.PartialSuccess.GetRejectedSpans()
-			if n != 0 || msg != "" {
-				err := internal.TracePartialSuccessError(n, msg)
+			partialRejected = resp.PartialSuccess.GetRejectedSpans()
+			if partialRejected != 0 || msg != "" {
+				err := internal.TracePartialSuccessError(partialRejected, msg)
 				otel.Handle(err)
 			}
 		}
@@ -208,6 +277,16 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		}
 		return err
 	})
+	if err == nil {
+		c.spansExportedCounter.Add(ctx, numSpans, c.successAttributes)
+	} else if partialRejected == 0 {
+		c.spansExportedCounter.Add(ctx, numSpans, c.exportFailedAttributes)
+	} else {
+		// partial success
+		c.spansExportedCounter.Add(ctx, partialRejected, c.exportFailedAttributes)
+		c.spansExportedCounter.Add(ctx, numSpans-partialRejected, c.successAttributes)
+	}
+	return err
 }
 
 // exportContext returns a copy of parent with an appropriate deadline and
