@@ -6095,28 +6095,6 @@ var (
 	NetworkTypeIpv6 = NetworkTypeKey.String("ipv6")
 )
 
-// Namespace: nodejs
-const (
-	// NodejsEventloopStateKey is the attribute Key conforming to the "nodejs.eventloop.state" semantic conventions. It represents the state of event loop time.
-	// 
-	// Type: Enum
-	// RequirementLevel: Recommended
-	// Stability: Experimental
-	// 
-	// Examples:
-	NodejsEventloopStateKey = attribute.Key("nodejs.eventloop.state")
-)
-
-// Enum values for nodejs.eventloop.state
-var (
-	// Active time.
-	// Stability: experimental
-	NodejsEventloopStateActive = NodejsEventloopStateKey.String("active")
-	// Idle time.
-	// Stability: experimental
-	NodejsEventloopStateIdle = NodejsEventloopStateKey.String("idle")
-)
-
 // Namespace: oci
 const (
 	// OciManifestDigestKey is the attribute Key conforming to the "oci.manifest.digest" semantic conventions. It represents the digest of the OCI image manifest. For container images specifically is the digest by which the container image is known.

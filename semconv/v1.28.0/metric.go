@@ -623,69 +623,6 @@ const (
   MessagingReceiveMessagesName = "messaging.receive.messages"
   MessagingReceiveMessagesUnit = "{message}"
   MessagingReceiveMessagesDescription = "Deprecated. Use `messaging.client.consumed.messages` instead."
-  // NodejsEventloopDelayMax is the metric conforming to the "nodejs.eventloop.delay.max" semantic conventions. It represents the event loop maximum delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayMaxName = "nodejs.eventloop.delay.max"
-  NodejsEventloopDelayMaxUnit = "s"
-  NodejsEventloopDelayMaxDescription = "Event loop maximum delay."
-  // NodejsEventloopDelayMean is the metric conforming to the "nodejs.eventloop.delay.mean" semantic conventions. It represents the event loop mean delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayMeanName = "nodejs.eventloop.delay.mean"
-  NodejsEventloopDelayMeanUnit = "s"
-  NodejsEventloopDelayMeanDescription = "Event loop mean delay."
-  // NodejsEventloopDelayMin is the metric conforming to the "nodejs.eventloop.delay.min" semantic conventions. It represents the event loop minimum delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayMinName = "nodejs.eventloop.delay.min"
-  NodejsEventloopDelayMinUnit = "s"
-  NodejsEventloopDelayMinDescription = "Event loop minimum delay."
-  // NodejsEventloopDelayP50 is the metric conforming to the "nodejs.eventloop.delay.p50" semantic conventions. It represents the event loop 50 percentile delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayP50Name = "nodejs.eventloop.delay.p50"
-  NodejsEventloopDelayP50Unit = "s"
-  NodejsEventloopDelayP50Description = "Event loop 50 percentile delay."
-  // NodejsEventloopDelayP90 is the metric conforming to the "nodejs.eventloop.delay.p90" semantic conventions. It represents the event loop 90 percentile delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayP90Name = "nodejs.eventloop.delay.p90"
-  NodejsEventloopDelayP90Unit = "s"
-  NodejsEventloopDelayP90Description = "Event loop 90 percentile delay."
-  // NodejsEventloopDelayP99 is the metric conforming to the "nodejs.eventloop.delay.p99" semantic conventions. It represents the event loop 99 percentile delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayP99Name = "nodejs.eventloop.delay.p99"
-  NodejsEventloopDelayP99Unit = "s"
-  NodejsEventloopDelayP99Description = "Event loop 99 percentile delay."
-  // NodejsEventloopDelayStddev is the metric conforming to the "nodejs.eventloop.delay.stddev" semantic conventions. It represents the event loop standard deviation delay.
-  // Instrument: gauge
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopDelayStddevName = "nodejs.eventloop.delay.stddev"
-  NodejsEventloopDelayStddevUnit = "s"
-  NodejsEventloopDelayStddevDescription = "Event loop standard deviation delay."
-  // NodejsEventloopTime is the metric conforming to the "nodejs.eventloop.time" semantic conventions. It represents the cumulative duration of time the event loop has been in each state.
-  // Instrument: counter
-  // Unit: s
-  // Stability: experimental
-  NodejsEventloopTimeName = "nodejs.eventloop.time"
-  NodejsEventloopTimeUnit = "s"
-  NodejsEventloopTimeDescription = "Cumulative duration of time the event loop has been in each state."
-  // NodejsEventloopUtilization is the metric conforming to the "nodejs.eventloop.utilization" semantic conventions. It represents the event loop utilization.
-  // Instrument: gauge
-  // Unit: 1
-  // Stability: experimental
-  NodejsEventloopUtilizationName = "nodejs.eventloop.utilization"
-  NodejsEventloopUtilizationUnit = "1"
-  NodejsEventloopUtilizationDescription = "Event loop utilization."
   // ProcessContextSwitches is the metric conforming to the "process.context_switches" semantic conventions. It represents the number of times the process has been context switched.
   // Instrument: counter
   // Unit: {count}
