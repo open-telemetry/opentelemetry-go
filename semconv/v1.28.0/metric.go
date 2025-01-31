@@ -1001,39 +1001,4 @@ const (
   SystemProcessCreatedName = "system.process.created"
   SystemProcessCreatedUnit = "{process}"
   SystemProcessCreatedDescription = "Total number of processes created over uptime of the host"
-  // V8JSGCDuration is the metric conforming to the "v8js.gc.duration" semantic conventions. It represents the garbage collection duration.
-  // Instrument: histogram
-  // Unit: s
-  // Stability: experimental
-  V8JSGCDurationName = "v8js.gc.duration"
-  V8JSGCDurationUnit = "s"
-  V8JSGCDurationDescription = "Garbage collection duration."
-  // V8JSHeapSpaceAvailableSize is the metric conforming to the "v8js.heap.space.available_size" semantic conventions. It represents the heap space available size.
-  // Instrument: updowncounter
-  // Unit: By
-  // Stability: experimental
-  V8JSHeapSpaceAvailableSizeName = "v8js.heap.space.available_size"
-  V8JSHeapSpaceAvailableSizeUnit = "By"
-  V8JSHeapSpaceAvailableSizeDescription = "Heap space available size."
-  // V8JSHeapSpacePhysicalSize is the metric conforming to the "v8js.heap.space.physical_size" semantic conventions. It represents the committed size of a heap space.
-  // Instrument: updowncounter
-  // Unit: By
-  // Stability: experimental
-  V8JSHeapSpacePhysicalSizeName = "v8js.heap.space.physical_size"
-  V8JSHeapSpacePhysicalSizeUnit = "By"
-  V8JSHeapSpacePhysicalSizeDescription = "Committed size of a heap space."
-  // V8JSMemoryHeapLimit is the metric conforming to the "v8js.memory.heap.limit" semantic conventions. It represents the total heap memory size pre-allocated.
-  // Instrument: updowncounter
-  // Unit: By
-  // Stability: experimental
-  V8JSMemoryHeapLimitName = "v8js.memory.heap.limit"
-  V8JSMemoryHeapLimitUnit = "By"
-  V8JSMemoryHeapLimitDescription = "Total heap memory size pre-allocated."
-  // V8JSMemoryHeapUsed is the metric conforming to the "v8js.memory.heap.used" semantic conventions. It represents the heap Memory size allocated.
-  // Instrument: updowncounter
-  // Unit: By
-  // Stability: experimental
-  V8JSMemoryHeapUsedName = "v8js.memory.heap.used"
-  V8JSMemoryHeapUsedUnit = "By"
-  V8JSMemoryHeapUsedDescription = "Heap Memory size allocated."
 )
