@@ -2890,37 +2890,6 @@ func DNSQuestionName(val string) attribute.KeyValue {
 	return DNSQuestionNameKey.String(val)
 }
 
-// Namespace: dotnet
-const (
-	// DotnetGCHeapGenerationKey is the attribute Key conforming to the "dotnet.gc.heap.generation" semantic conventions. It represents the name of the garbage collector managed heap generation.
-	// 
-	// Type: Enum
-	// RequirementLevel: Recommended
-	// Stability: Experimental
-	// 
-	// Examples: "gen0", "gen1", "gen2"
-	DotnetGCHeapGenerationKey = attribute.Key("dotnet.gc.heap.generation")
-)
-
-// Enum values for dotnet.gc.heap.generation
-var (
-	// Generation 0
-	// Stability: experimental
-	DotnetGCHeapGenerationGen0 = DotnetGCHeapGenerationKey.String("gen0")
-	// Generation 1
-	// Stability: experimental
-	DotnetGCHeapGenerationGen1 = DotnetGCHeapGenerationKey.String("gen1")
-	// Generation 2
-	// Stability: experimental
-	DotnetGCHeapGenerationGen2 = DotnetGCHeapGenerationKey.String("gen2")
-	// Large Object Heap
-	// Stability: experimental
-	DotnetGCHeapGenerationLoh = DotnetGCHeapGenerationKey.String("loh")
-	// Pinned Object Heap
-	// Stability: experimental
-	DotnetGCHeapGenerationPoh = DotnetGCHeapGenerationKey.String("poh")
-)
-
 // Namespace: error
 const (
 	// ErrorTypeKey is the attribute Key conforming to the "error.type" semantic conventions. It represents the describes a class of error the operation ended with.
