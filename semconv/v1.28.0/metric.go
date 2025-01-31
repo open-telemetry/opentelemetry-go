@@ -6,55 +6,6 @@
 package semconv // import "go.opentelemetry.io/otel/semconv/v1.28.0"
 
 const (
-  // ASPNETCoreDiagnosticsExceptions is the metric conforming to the "aspnetcore.diagnostics.exceptions" semantic conventions. It represents the number of exceptions caught by exception handling middleware.
-  // Instrument: counter
-  // Unit: {exception}
-  // Stability: stable
-  ASPNETCoreDiagnosticsExceptionsName = "aspnetcore.diagnostics.exceptions"
-  ASPNETCoreDiagnosticsExceptionsUnit = "{exception}"
-  ASPNETCoreDiagnosticsExceptionsDescription = "Number of exceptions caught by exception handling middleware."
-  // ASPNETCoreRateLimitingActiveRequestLeases is the metric conforming to the "aspnetcore.rate_limiting.active_request_leases" semantic conventions. It represents the number of requests that are currently active on the server that hold a rate limiting lease.
-  // Instrument: updowncounter
-  // Unit: {request}
-  // Stability: stable
-  ASPNETCoreRateLimitingActiveRequestLeasesName = "aspnetcore.rate_limiting.active_request_leases"
-  ASPNETCoreRateLimitingActiveRequestLeasesUnit = "{request}"
-  ASPNETCoreRateLimitingActiveRequestLeasesDescription = "Number of requests that are currently active on the server that hold a rate limiting lease."
-  // ASPNETCoreRateLimitingQueuedRequests is the metric conforming to the "aspnetcore.rate_limiting.queued_requests" semantic conventions. It represents the number of requests that are currently queued, waiting to acquire a rate limiting lease.
-  // Instrument: updowncounter
-  // Unit: {request}
-  // Stability: stable
-  ASPNETCoreRateLimitingQueuedRequestsName = "aspnetcore.rate_limiting.queued_requests"
-  ASPNETCoreRateLimitingQueuedRequestsUnit = "{request}"
-  ASPNETCoreRateLimitingQueuedRequestsDescription = "Number of requests that are currently queued, waiting to acquire a rate limiting lease."
-  // ASPNETCoreRateLimitingRequestTimeInQueue is the metric conforming to the "aspnetcore.rate_limiting.request.time_in_queue" semantic conventions. It represents the time the request spent in a queue waiting to acquire a rate limiting lease.
-  // Instrument: histogram
-  // Unit: s
-  // Stability: stable
-  ASPNETCoreRateLimitingRequestTimeInQueueName = "aspnetcore.rate_limiting.request.time_in_queue"
-  ASPNETCoreRateLimitingRequestTimeInQueueUnit = "s"
-  ASPNETCoreRateLimitingRequestTimeInQueueDescription = "The time the request spent in a queue waiting to acquire a rate limiting lease."
-  // ASPNETCoreRateLimitingRequestLeaseDuration is the metric conforming to the "aspnetcore.rate_limiting.request_lease.duration" semantic conventions. It represents the duration of rate limiting lease held by requests on the server.
-  // Instrument: histogram
-  // Unit: s
-  // Stability: stable
-  ASPNETCoreRateLimitingRequestLeaseDurationName = "aspnetcore.rate_limiting.request_lease.duration"
-  ASPNETCoreRateLimitingRequestLeaseDurationUnit = "s"
-  ASPNETCoreRateLimitingRequestLeaseDurationDescription = "The duration of rate limiting lease held by requests on the server."
-  // ASPNETCoreRateLimitingRequests is the metric conforming to the "aspnetcore.rate_limiting.requests" semantic conventions. It represents the number of requests that tried to acquire a rate limiting lease.
-  // Instrument: counter
-  // Unit: {request}
-  // Stability: stable
-  ASPNETCoreRateLimitingRequestsName = "aspnetcore.rate_limiting.requests"
-  ASPNETCoreRateLimitingRequestsUnit = "{request}"
-  ASPNETCoreRateLimitingRequestsDescription = "Number of requests that tried to acquire a rate limiting lease."
-  // ASPNETCoreRoutingMatchAttempts is the metric conforming to the "aspnetcore.routing.match_attempts" semantic conventions. It represents the number of requests that were attempted to be matched to an endpoint.
-  // Instrument: counter
-  // Unit: {match_attempt}
-  // Stability: stable
-  ASPNETCoreRoutingMatchAttemptsName = "aspnetcore.routing.match_attempts"
-  ASPNETCoreRoutingMatchAttemptsUnit = "{match_attempt}"
-  ASPNETCoreRoutingMatchAttemptsDescription = "Number of requests that were attempted to be matched to an endpoint."
   // ContainerCPUTime is the metric conforming to the "container.cpu.time" semantic conventions. It represents the total CPU time consumed.
   // Instrument: counter
   // Unit: s
