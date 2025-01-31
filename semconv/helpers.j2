@@ -1,0 +1,112 @@
+{%- macro repl(text) -%}
+{#- Copied from semconvgen: https://github.com/open-telemetry/opentelemetry-go-build-tools/blob/3e69152c51c56213b65c0fc6e5954293b522103c/semconvgen/generator.go#L419-L426 -#}
+{{ text | replace("RedisDatabase", "RedisDB") | replace("IPTCP", "TCP") | replace("IPUDP", "UDP") | replace("Lineno", "LineNumber") }}
+{%- endmacro -%}
+  
+{%- macro smart_title_case(text) -%}
+{%- for i in range(0, text | length) -%}
+    {%- if i == 0 or text[i-1] in ['.', '_'] -%}
+        {{ text[i] | upper }}
+    {%- elif not text[i] in ['.', '_'] -%}
+        {{ text[i] }}
+    {%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro to_go_name(fqn) -%}
+{{ repl(smart_title_case(fqn | replace(" ", "") | replace("_", ".") | acronym)) }}
+{%- endmacro -%}
+
+{%- macro deprecated_doc(attr) -%}
+{% if attr is deprecated %}Deprecated: {{ attr.deprecated }}{% endif %}
+{%- endmacro -%}
+
+{%- macro notes_doc(attr) -%}
+{% if attr.note %}Note: {{ attr.note }}{% endif %}
+{%- endmacro -%}
+
+{%- macro examples_doc(attr) -%}
+{%- if attr.examples is iterable %}
+Examples: {{ attr.examples | trim("[]") }}
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro it_reps(brief) -%}
+{%- set brief = brief | trim() -%}
+It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
+  {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+{%- else -%}
+  the {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro keydoc(attr) -%}
+{{ to_go_name(attr.name) }}Key is the attribute Key conforming to the "{{ attr.name }}" semantic conventions. {{ it_reps(attr.brief) }}
+
+{% if attr is enum -%}
+Type: Enum
+{%- else -%}
+Type: {{ attr.type }}
+{%- endif %}
+RequirementLevel: {{ attr.requirement_level | title }}
+Stability: {{ attr.stability | title }}
+{{ examples_doc(attr) }}
+{{ notes_doc(attr) }}
+{{ deprecated_doc(attr) }}
+{%- endmacro -%}
+
+{%- macro generate_consts(group) -%}
+{#- TODO: generate with group docs (i.e group by registry namespace) #}
+
+{{ ["Namespace: " ~ group.root_namespace] | comment(format="go") }}
+const (
+{%- for attribute in group.attributes if not attribute.deprecated %}
+{#- TODO: Handle template attributes. #}
+{%- if not attribute.type is template_type %}
+{{ keydoc(attribute) | comment(format="go_1tab") }}
+	{{to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
+{% endif -%}
+{%- endfor -%}
+)
+{%- endmacro -%}
+
+{%- macro generate_funcs(group) -%}
+{%- for attribute in group.attributes if not attribute is enum %}
+{#- TODO: Handle template attributes. #}
+{%- if not attribute.type is template_type %}
+
+{{ [to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
+func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return {{to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
+}
+{%- endif %}
+{%- endfor %}
+{%- endmacro -%}
+
+{%- macro generate_vars(group) -%}
+{#- Render values for enums #}
+{%- for attribute in group.attributes %}
+{%- if attribute is enum %}
+
+{{ ["Enum values for " ~ attribute.name] | comment(format="go") }}
+var (
+{%- for value in attribute.type.members %}
+{%- if value.deprecated %}
+{{ ["Deprecated: " ~ value.deprecated | trim(".") ~ "." ] | comment(format="go_1tab") }}
+{%- else %}
+{{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(format="go_1tab") }}
+{%- endif %}
+	{{to_go_name(attribute.name ~ "." ~ value.id)}} = {{ to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
+{%- endfor %}
+)
+{%- endif %}
+{%- endfor %}
+{%- endmacro -%}
+
+{%- macro metric_keydoc(metric) -%}
+{%- if not metric.brief -%}
+{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
+{%- else -%}
+{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{%- endif %}
+{%- endmacro -%}

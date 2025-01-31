@@ -1,0 +1,14 @@
+{% import 'helpers.j2' as h -%}
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+package semconv // import "go.opentelemetry.io/otel/semconv/{{params.tag}}"
+
+import "go.opentelemetry.io/otel/attribute"
+{%- for group in ctx %}
+{{- h.generate_consts(group) }}
+{{- h.generate_funcs(group) }}
+{{- h.generate_vars(group) }}
+{%- endfor %}
