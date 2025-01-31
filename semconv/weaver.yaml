@@ -1,5 +1,5 @@
 params:
-  excluded_namespaces: ["aspnetcore", "dotnet"]
+  excluded_namespaces: ["aspnetcore", "dotnet", "jvm"]
   excluded_attributes: ["messaging.client_id"]
 templates:
   - pattern: attribute_group.go.j2
