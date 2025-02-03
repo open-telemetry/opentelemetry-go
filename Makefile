@@ -276,7 +276,6 @@ SEMCONVPKG ?= "semconv/"
 .PHONY: semconv-generate
 semconv-generate: $(SEMCONVKIT)
 	[ "$(TAG)" ] || ( echo "TAG unset: missing opentelemetry semantic-conventions tag"; exit 1 )
-	[ "$(SEMCONV_REPO)" ] || ( echo "SEMCONV_REPO unset: missing path to opentelemetry semantic-conventions repo"; exit 1 )
 	# Ensure the target directory for source code is available.
 	mkdir -p $(PWD)/$(SEMCONVPKG)/${TAG}
 	# Note: We mount a home directory for downloading/storing the semconv repository.
@@ -285,12 +284,11 @@ semconv-generate: $(SEMCONVKIT)
 	docker run --rm \
 		-u $(DOCKER_USER) \
 		--env HOME=/tmp/weaver \
-		--mount 'type=bind,source=$(SEMCONV_REPO),target=/source,readonly' \
 		--mount 'type=bind,source=$(PWD)/semconv,target=/home/weaver/templates/registry/go,readonly' \
 		--mount 'type=bind,source=$(PWD)/semconv/${TAG},target=/home/weaver/target' \
 		--mount 'type=bind,source=$(HOME)/.weaver,target=/tmp/weaver/.weaver' \
 		$(WEAVER_IMAGE) registry generate \
-		--registry=/source/model \
+		--registry=https://github.com/open-telemetry/semantic-conventions/archive/refs/tags/$(TAG).zip[model] \
 		--templates=/home/weaver/templates \
 		--param tag=$(TAG) \
 		go \
