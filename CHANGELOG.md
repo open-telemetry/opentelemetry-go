@@ -19,6 +19,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Emit `Record.EventName` field in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#6211)
 - Emit `Record.EventName` field in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6211)
 - Emit `Record.EventName` field in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` (#6210)
+- The `go.opentelemetry.io/otel/semconv/v1.28.0` package.
+  The package contains semantic conventions from the `v1.28.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.28.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.27.0`(#6236)
 
 ### Changed
 
