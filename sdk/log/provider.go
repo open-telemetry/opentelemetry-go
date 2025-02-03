@@ -28,10 +28,11 @@ const (
 )
 
 type providerConfig struct {
-	resource      *resource.Resource
-	processors    []Processor
-	attrCntLim    setting[int]
-	attrValLenLim setting[int]
+	resource       *resource.Resource
+	processors     []Processor
+	fltrProcessors []x.FilterProcessor
+	attrCntLim     setting[int]
+	attrValLenLim  setting[int]
 }
 
 func newProviderConfig(opts []LoggerProviderOption) providerConfig {
@@ -64,11 +65,9 @@ type LoggerProvider struct {
 
 	resource                  *resource.Resource
 	processors                []Processor
+	fltrProcessors            []x.FilterProcessor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
-
-	fltrProcessorsOnce sync.Once
-	fltrProcessors     []x.FilterProcessor
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -92,20 +91,10 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	return &LoggerProvider{
 		resource:                  cfg.resource,
 		processors:                cfg.processors,
+		fltrProcessors:            cfg.fltrProcessors,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
 	}
-}
-
-func (p *LoggerProvider) filterProcessors() []x.FilterProcessor {
-	p.fltrProcessorsOnce.Do(func() {
-		for _, proc := range p.processors {
-			if f, ok := proc.(x.FilterProcessor); ok {
-				p.fltrProcessors = append(p.fltrProcessors, f)
-			}
-		}
-	})
-	return p.fltrProcessors
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
@@ -220,6 +209,9 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.processors = append(cfg.processors, processor)
+		if f, ok := processor.(x.FilterProcessor); ok {
+			cfg.fltrProcessors = append(cfg.fltrProcessors, f)
+		}
 		return cfg
 	})
 }
