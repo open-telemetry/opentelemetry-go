@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
-// autoTracerProvider returns an auto-instrumentable [trace.TracerProvider].
+// newAutoTracerProvider returns an auto-instrumentable [trace.TracerProvider].
 // If an [go.opentelemetry.io/auto.Instrumentation] is configured to instrument
 // the process using the returned TracerProvider, all of the telemetry it
 // produces will be processed and handled by that Instrumentation. By default,
