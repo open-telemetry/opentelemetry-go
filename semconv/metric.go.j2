@@ -1,0 +1,27 @@
+{% import 'helpers.j2' as h -%}
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+package semconv // import "go.opentelemetry.io/otel/semconv/{{params.tag}}"
+
+const (
+{%- for metric in ctx %}
+  {{ h.metric_keydoc(metric) | comment(indent=2) }}
+  // Instrument: {{ metric.instrument }}
+  // Unit: {{ metric.unit }}
+  // Stability: {{ metric.stability }}
+{%- if metric is deprecated %}
+  // Deprecated: {{ metric.deprecated }}
+{%- endif %}
+{%- if not metric.brief %}
+  // NOTE: The description (brief) for this metric is not defined in the semantic-conventions repository.
+{%- endif %}
+  {{ h.to_go_name(metric.metric_name) }}Name = "{{ metric.metric_name }}"
+  {{ h.to_go_name(metric.metric_name) }}Unit = "{{ metric.unit }}"
+{%- if metric.brief %}
+  {{ h.to_go_name(metric.metric_name) }}Description = "{{ metric.brief | trim }}"
+{%- endif %}
+{%- endfor %}
+)
