@@ -47,7 +47,7 @@ const (
 	// Drop will not record the span and all attributes/events will be dropped.
 	Drop SamplingDecision = iota
 
-	// Record indicates the span's `IsRecording() == true`, but `Sampled` flag
+	// RecordOnly indicates the span's `IsRecording() == true`, but `Sampled` flag
 	// *must not* be set.
 	RecordOnly
 
