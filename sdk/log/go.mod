@@ -10,6 +10,7 @@ require (
 	go.opentelemetry.io/otel v1.34.0
 	go.opentelemetry.io/otel/log v0.10.0
 	go.opentelemetry.io/otel/sdk v1.34.0
+	go.opentelemetry.io/otel/sdk/xlog v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel/trace v1.34.0
 )
 
@@ -28,6 +29,8 @@ replace go.opentelemetry.io/otel/metric => ../../metric
 replace go.opentelemetry.io/otel/trace => ../../trace
 
 replace go.opentelemetry.io/otel/sdk => ../
+
+replace go.opentelemetry.io/otel/sdk/xlog => ../xlog
 
 replace go.opentelemetry.io/otel/log => ../../log
 
