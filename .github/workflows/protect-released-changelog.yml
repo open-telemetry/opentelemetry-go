@@ -7,6 +7,10 @@ name: Protect released changelog
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   protect-released-changelog:
     runs-on: ubuntu-latest

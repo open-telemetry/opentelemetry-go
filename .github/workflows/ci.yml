@@ -13,6 +13,8 @@ env:
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
   DEFAULT_GO_VERSION: "~1.23.0"
+# Declare default permissions as read only.
+permissions: read-all
 jobs:
   lint:
     runs-on: ubuntu-latest
