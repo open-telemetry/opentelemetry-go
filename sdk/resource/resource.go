@@ -21,10 +21,19 @@ import (
 // Resources should be passed and stored as pointers
 // (`*resource.Resource`).  The `nil` value is equivalent to an empty
 // Resource.
+//
+// While Resource is comparable, its comparison should not be relied on when
+// checking equality. The [Resource.Equal] method should be used to check
+// equality between two resources and the [attribute.Distinct] returned from
+// [Resource.Equivalent] should be used for map keys instead. No guantee of the
+// correctness of direct comparisons is provided.
 type Resource struct {
 	attrs     attribute.Set
 	schemaURL string
 }
+
+// Compile-time check that the Resource remains comparable.
+var _ map[Resource]struct{} = nil
 
 var (
 	defaultResource     *Resource
