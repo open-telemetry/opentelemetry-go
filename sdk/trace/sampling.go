@@ -47,12 +47,12 @@ const (
 	// Drop will not record the span and all attributes/events will be dropped.
 	Drop SamplingDecision = iota
 
-	// RecordOnly indicates the span's IsRecording method returns true, but [trace.FlagsSampled] flag
-	// *must not* be set.
+	// RecordOnly indicates the span's IsRecording method returns true, but trace.FlagsSampled flag
+	// MUST NOT be set.
 	RecordOnly
 
-	// RecordAndSample indicates the span's IsRecording method returns true and [trace.FlagsSampled] flag
-	// *must* be set.
+	// RecordAndSample indicates the span's IsRecording method returns true and trace.FlagsSampled flag
+	// MUST be set.
 	RecordAndSample
 )
 
