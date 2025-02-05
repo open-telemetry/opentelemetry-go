@@ -22,11 +22,13 @@ import (
 // (`*resource.Resource`).  The `nil` value is equivalent to an empty
 // Resource.
 //
-// While Resource is comparable, its comparison should not be relied on when
-// checking equality. The [Resource.Equal] method should be used to check
-// equality between two resources and the [attribute.Distinct] returned from
-// [Resource.Equivalent] should be used for map keys instead. No guantee of the
-// correctness of direct comparisons is provided.
+// Note that the Go == operator compares not just the resource attributes but
+// also all other internals of the Resource type. Therefore, Resource values
+// should not be used as map or database keys. In general, the [Resource.Equal]
+// method should be used instead of direct comparison with ==, since that
+// method ensures the correct comparison of resource attributes, and the
+// [attribute.Distinct] returned from [Resource.Equivalent] should be used for
+// map and database keys instead.
 type Resource struct {
 	attrs     attribute.Set
 	schemaURL string
