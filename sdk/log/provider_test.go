@@ -65,6 +65,7 @@ type fltrProcessor struct {
 	*processor
 
 	enabled bool
+	params  []xlog.EnabledParameters
 }
 
 var _ xlog.FilterProcessor = (*fltrProcessor)(nil)
@@ -76,7 +77,8 @@ func newFltrProcessor(name string, enabled bool) *fltrProcessor {
 	}
 }
 
-func (p *fltrProcessor) Enabled(context.Context, xlog.EnabledParameters) bool {
+func (p *fltrProcessor) Enabled(_ context.Context, params xlog.EnabledParameters) bool {
+	p.params = append(p.params, params)
 	return p.enabled
 }
 
