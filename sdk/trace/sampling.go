@@ -48,11 +48,11 @@ const (
 	Drop SamplingDecision = iota
 
 	// RecordOnly indicates the span's IsRecording method returns true, but trace.FlagsSampled flag
-	// MUST NOT be set.
+	// must not be set.
 	RecordOnly
 
 	// RecordAndSample indicates the span's IsRecording method returns true and trace.FlagsSampled flag
-	// MUST be set.
+	// must be set.
 	RecordAndSample
 )
 
