@@ -14,7 +14,7 @@ import (
 // this concurrency.
 //
 // See [go.opentelemetry.io/otel/sdk/xlog.FilterProcessor] for information about how
-// a Processor can be extended to support experimental filtering feature.
+// a Processor can support experimental filtering feature.
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//

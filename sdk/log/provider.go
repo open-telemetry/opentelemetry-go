@@ -208,7 +208,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
 //
 // See [go.opentelemetry.io/otel/sdk/xlog.FilterProcessor] for information about how
-// a Processor can be extended to support experimental filtering feature.
+// a Processor can support experimental filtering feature.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.processors = append(cfg.processors, processor)
