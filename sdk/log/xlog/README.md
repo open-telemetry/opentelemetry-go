@@ -1,4 +1,4 @@
-# Experimental Features
+# Logs SDK Experimental Features
 
 The Logs SDK contains features that have not yet stabilized.
 These features are added to the OpenTelemetry Go Logs SDK prior to stabilization so that users can start experimenting with them and provide feedback.
