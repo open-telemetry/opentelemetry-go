@@ -227,11 +227,6 @@ func TestLoggerEnabled(t *testing.T) {
 
 	emptyResource := resource.Empty()
 	res := resource.NewSchemaless(attribute.String("key", "value"))
-	contextWithSpanContext := trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    trace.TraceID{0o1},
-		SpanID:     trace.SpanID{0o2},
-		TraceFlags: 0x1,
-	}))
 
 	testCases := []struct {
 		name             string
@@ -296,20 +291,6 @@ func TestLoggerEnabled(t *testing.T) {
 			expected:         true,
 			expectedP0Params: []xlog.EnabledParameters{{}},
 			expectedP1Params: nil,
-		},
-		{
-			name: "WithSpanContext",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithResource(emptyResource),
-			), instrumentation.Scope{}),
-			ctx:      contextWithSpanContext,
-			expected: true,
-			expectedP0Params: []xlog.EnabledParameters{{
-				TraceID:    trace.TraceID{0o1},
-				SpanID:     trace.SpanID{0o2},
-				TraceFlags: 0x1,
-			}},
 		},
 	}
 

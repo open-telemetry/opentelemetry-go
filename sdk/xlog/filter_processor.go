@@ -9,7 +9,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // FilterProcessor is a [go.opentelemetry.io/otel/sdk/log.Processor] that knows,
@@ -60,8 +59,5 @@ type FilterProcessor interface {
 type EnabledParameters struct {
 	Resource             resource.Resource
 	InstrumentationScope instrumentation.Scope
-	TraceID              trace.TraceID
-	SpanID               trace.SpanID
-	TraceFlags           trace.TraceFlags
 	Severity             log.Severity
 }
