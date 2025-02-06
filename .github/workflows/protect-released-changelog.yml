@@ -7,13 +7,17 @@ name: Protect released changelog
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   protect-released-changelog:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'Unlock Released Changelog')}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Protect the released changelog
         run: |

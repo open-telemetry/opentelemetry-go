@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   changedfiles:
     name: changed files
@@ -12,7 +15,7 @@ jobs:
       md: ${{ steps.changes.outputs.md }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
       - name: Get changed files
@@ -27,8 +30,8 @@ jobs:
     if: ${{needs.changedfiles.outputs.md}}
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
     - name: Run linter
-      uses: docker://avtodev/markdown-lint:v1
+      uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
       with:
         args: ${{needs.changedfiles.outputs.md}}

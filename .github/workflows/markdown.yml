@@ -7,16 +7,19 @@ on:
   # Everyday at 9:00 AM.
   - cron: "0 9 * * *"
 
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   lint-markdown:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Run linter
       id: markdownlint
-      uses: docker://avtodev/markdown-lint:v1
+      uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
       with:
         config: .markdownlint.yaml
         args: '**/*.md'
@@ -24,7 +27,7 @@ jobs:
 
     - name: Create Issue From File
       if: steps.markdownlint.outputs.exit_code != 0
-      uses: peter-evans/create-issue-from-file@v5
+      uses: peter-evans/create-issue-from-file@e8ef132d6df98ed982188e460ebb3b5d4ef3a9cd # v5
       with:
         title: Markdown Lint Report
         content-filepath: ./markdownlint.txt
