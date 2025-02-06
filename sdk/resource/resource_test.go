@@ -320,7 +320,7 @@ func TestMarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		`{"Attributes":[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}],"SchemaURL":"","Entity":{"Type":"","Id":[]}}`,
+		`{"Attributes":[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}],"SchemaURL":"","EntityRefs":null}`,
 		string(data),
 	)
 }

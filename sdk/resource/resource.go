@@ -33,6 +33,13 @@ import (
 // (`*resource.Resource`).  The `nil` value is equivalent to an empty
 // Resource.
 type Resource struct {
+	impl *resourceImpl
+}
+
+// Compile-time check that the Resource remains comparable.
+var _ map[Resource]struct{} = nil
+
+type resourceImpl struct {
 	attrs map[attribute.Key]attribute.Value
 
 	// attrSet is cached attribute.Set representation of attrs.
@@ -49,6 +56,10 @@ var (
 
 var errMergeConflictSchemaURL = errors.New("cannot merge resource due to conflicting Schema URL")
 
+func NewResource() *Resource {
+	return &Resource{impl: &resourceImpl{}}
+}
+
 // New returns a Resource combined from the user-provided detectors.
 func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	cfg := config{}
@@ -56,7 +67,7 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 		cfg = opt.apply(cfg)
 	}
 
-	r := &Resource{schemaURL: cfg.schemaURL}
+	r := &Resource{impl: &resourceImpl{schemaURL: cfg.schemaURL}}
 	return r, detect(ctx, r, cfg.detectors)
 }
 
@@ -66,7 +77,7 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 // in a schema identified by schemaURL.
 func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource {
 	resource := NewSchemaless(attrs...)
-	resource.schemaURL = schemaURL
+	resource.impl.schemaURL = schemaURL
 	return resource
 }
 
@@ -77,16 +88,18 @@ func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource 
 func NewWithEntities(
 	entities []Entity,
 ) (*Resource, error) {
-	resource := &Resource{}
+	resource := &Resource{impl: &resourceImpl{}}
 
 	for _, entity := range entities {
 		b := &Resource{
-			schemaURL:  entity.SchemaURL,
-			attrs:      map[attribute.Key]attribute.Value{},
-			entityRefs: []resourceEntityRef{{}},
+			impl: &resourceImpl{
+				schemaURL:  entity.SchemaURL,
+				attrs:      map[attribute.Key]attribute.Value{},
+				entityRefs: []resourceEntityRef{{}},
+			},
 		}
 
-		entityRef := &b.entityRefs[0]
+		entityRef := &b.impl.entityRefs[0]
 		entityRef.typ = entity.Type
 		entityRef.id = map[attribute.Key]bool{}
 		entityRef.attrs = map[attribute.Key]bool{}
@@ -99,7 +112,7 @@ func NewWithEntities(
 				continue
 			}
 			entityRef.id[attr.Key] = true
-			b.attrs[attr.Key] = attr.Value
+			b.impl.attrs[attr.Key] = attr.Value
 		}
 		attrs := entity.Attrs.Iter()
 		for attrs.Next() {
@@ -107,11 +120,11 @@ func NewWithEntities(
 			if !attr.Valid() {
 				continue
 			}
-			if _, exists := b.attrs[attr.Key]; exists {
+			if _, exists := b.impl.attrs[attr.Key]; exists {
 				return nil, fmt.Errorf("invalid Entity, key %q is both an id and Attr", attr.Key)
 			}
 			entityRef.attrs[attr.Key] = true
-			b.attrs[attr.Key] = attr.Value
+			b.impl.attrs[attr.Key] = attr.Value
 		}
 		entityRef.updateCache()
 
@@ -131,7 +144,7 @@ func NewWithEntities(
 // of the attrs is known use NewWithAttributes instead.
 func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 	if len(attrs) == 0 {
-		return &Resource{}
+		return &Resource{impl: &resourceImpl{}}
 	}
 
 	m := map[attribute.Key]attribute.Value{}
@@ -145,10 +158,10 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 
 	// If attrs only contains invalid entries do not allocate a new resource.
 	if len(m) == 0 {
-		return &Resource{}
+		return &Resource{impl: &resourceImpl{}}
 	}
 
-	r := &Resource{attrs: m}
+	r := &Resource{impl: &resourceImpl{attrs: m}}
 	r.updateCache()
 	return r
 }
@@ -179,7 +192,7 @@ func (r *Resource) String() string {
 	if r == nil {
 		return ""
 	}
-	s := mapAttrsToSet(r.attrs)
+	s := mapAttrsToSet(r.impl.attrs)
 	return s.Encoded(attribute.DefaultEncoder())
 }
 
@@ -189,8 +202,8 @@ func (r *Resource) MarshalLog() interface{} {
 		Attributes attribute.Set
 		SchemaURL  string
 	}{
-		Attributes: mapAttrsToSet(r.attrs),
-		SchemaURL:  r.schemaURL,
+		Attributes: mapAttrsToSet(r.impl.attrs),
+		SchemaURL:  r.impl.schemaURL,
 	}
 }
 
@@ -200,7 +213,7 @@ func (r *Resource) Attributes() []attribute.KeyValue {
 	if r == nil {
 		r = Empty()
 	}
-	return mapAttrsToSlice(r.attrs)
+	return mapAttrsToSlice(r.impl.attrs)
 }
 
 // SchemaURL returns the schema URL associated with Resource r.
@@ -208,7 +221,7 @@ func (r *Resource) SchemaURL() string {
 	if r == nil {
 		return ""
 	}
-	return r.schemaURL
+	return r.impl.schemaURL
 }
 
 // Iter returns an iterator of the Resource attributes.
@@ -217,7 +230,7 @@ func (r *Resource) Iter() attribute.Iterator {
 	if r == nil {
 		r = Empty()
 	}
-	return r.attrSet.Iter()
+	return r.impl.attrSet.Iter()
 }
 
 // Equal returns true when a Resource is equivalent to this Resource.
@@ -263,42 +276,47 @@ func merge(a, b *Resource, options mergeOptions) (*Resource, error) {
 	// Merge the schema URL.
 	var schemaURL string
 	switch true {
-	case a.schemaURL == "":
-		schemaURL = b.schemaURL
-	case b.schemaURL == "":
-		schemaURL = a.schemaURL
-	case a.schemaURL == b.schemaURL:
-		schemaURL = a.schemaURL
+	case a.impl.schemaURL == "":
+		schemaURL = b.impl.schemaURL
+	case b.impl.schemaURL == "":
+		schemaURL = a.impl.schemaURL
+	case a.impl.schemaURL == b.impl.schemaURL:
+		schemaURL = a.impl.schemaURL
 	default:
 		return Empty(), errMergeConflictSchemaURL
 	}
 
 	merged := &Resource{
-		attrs:      cloneAttrs(a.attrs),
-		schemaURL:  schemaURL,
-		entityRefs: make([]resourceEntityRef, len(a.entityRefs)),
+		impl: &resourceImpl{
+			attrs:     cloneAttrs(a.impl.attrs),
+			schemaURL: schemaURL,
+		},
 	}
-	for k, v := range b.attrs {
-		merged.attrs[k] = v
+	if len(a.impl.entityRefs) > 0 {
+		merged.impl.entityRefs = make([]resourceEntityRef, len(a.impl.entityRefs))
 	}
 
-	copy(merged.entityRefs, a.entityRefs)
+	for k, v := range b.impl.attrs {
+		merged.impl.attrs[k] = v
+	}
+
+	copy(merged.impl.entityRefs, a.impl.entityRefs)
 
 	entityTypes := map[string]resourceEntityRef{}
-	for _, er := range a.entityRefs {
+	for _, er := range a.impl.entityRefs {
 		entityTypes[er.typ] = er
 	}
 
-	for _, er := range b.entityRefs {
+	for _, er := range b.impl.entityRefs {
 		if existingEr, exists := entityTypes[er.typ]; !exists {
-			merged.entityRefs = append(merged.entityRefs, er)
+			merged.impl.entityRefs = append(merged.impl.entityRefs, er)
 			entityTypes[er.typ] = er
 
 			for k := range er.id {
-				merged.attrs[k] = b.attrs[k]
+				merged.impl.attrs[k] = b.impl.attrs[k]
 			}
 			for k := range er.attrs {
-				merged.attrs[k] = b.attrs[k]
+				merged.impl.attrs[k] = b.impl.attrs[k]
 			}
 
 		} else {
@@ -372,7 +390,7 @@ func mergeEntity(
 // Empty returns an instance of Resource with no attributes. It is
 // equivalent to a `nil` Resource.
 func Empty() *Resource {
-	return &Resource{}
+	return &Resource{impl: &resourceImpl{}}
 }
 
 // Default returns an instance of Resource with a default
@@ -392,7 +410,7 @@ func Default() *Resource {
 			}
 			// If Detect did not return a valid resource, fall back to emptyResource.
 			if defaultResource == nil {
-				defaultResource = &Resource{}
+				defaultResource = NewResource()
 			}
 		},
 	)
@@ -422,7 +440,7 @@ func (r *Resource) Set() *attribute.Set {
 	if r == nil {
 		r = Empty()
 	}
-	return &r.attrSet
+	return &r.impl.attrSet
 }
 
 // MarshalJSON encodes the resource attributes as a JSON list of { "Key":
@@ -444,10 +462,10 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		SchemaURL  string
 		EntityRefs []entityRef
 	}{
-		Attributes: r.attrSet.MarshalableToJSON(),
-		SchemaURL:  r.schemaURL,
+		Attributes: r.impl.attrSet.MarshalableToJSON(),
+		SchemaURL:  r.impl.schemaURL,
 	}
-	for _, er := range r.entityRefs {
+	for _, er := range r.impl.entityRefs {
 		rjson.EntityRefs = append(
 			rjson.EntityRefs, entityRef{
 				Type:      er.typ,
@@ -466,7 +484,7 @@ func (r *Resource) Len() int {
 	if r == nil {
 		return 0
 	}
-	return len(r.attrs)
+	return len(r.impl.attrs)
 }
 
 // Encoded returns an encoded representation of the resource.
@@ -474,7 +492,7 @@ func (r *Resource) Encoded(enc attribute.Encoder) string {
 	if r == nil {
 		return ""
 	}
-	return r.attrSet.Encoded(enc)
+	return r.impl.attrSet.Encoded(enc)
 }
 
 func (r *Resource) getEntityId(entity resourceEntityRef) (attribute.Set, error) {
@@ -488,7 +506,7 @@ func (r *Resource) getEntityDescr(entity resourceEntityRef) (attribute.Set, erro
 func (r *Resource) getAttrsByKeys(keys map[attribute.Key]bool) (attribute.Set, error) {
 	var id []attribute.KeyValue
 	for key := range keys {
-		val, exists := r.attrs[key]
+		val, exists := r.impl.attrs[key]
 		if !exists {
 			return attribute.NewSet(), fmt.Errorf(
 				"invalid resourceEntityRef, key %s not found in Resource attrs", key,
@@ -504,19 +522,19 @@ func (r *Resource) mergeEntity(entity resourceEntityRef, id, attrs attribute.Set
 	if idx < 0 {
 		return errors.New("invalid resourceEntityRef")
 	}
-	updateEnt := &r.entityRefs[idx]
+	updateEnt := &r.impl.entityRefs[idx]
 
 	iter := id.Iter()
 	for iter.Next() {
 		attr := iter.Attribute()
-		r.attrs[attr.Key] = attr.Value
+		r.impl.attrs[attr.Key] = attr.Value
 		updateEnt.id[attr.Key] = true
 	}
 
 	iter = attrs.Iter()
 	for iter.Next() {
 		attr := iter.Attribute()
-		r.attrs[attr.Key] = attr.Value
+		r.impl.attrs[attr.Key] = attr.Value
 		updateEnt.attrs[attr.Key] = true
 	}
 	return nil
@@ -527,19 +545,19 @@ func (r *Resource) mergeEntityDescr(entity resourceEntityRef, attrs attribute.Se
 	if idx < 0 {
 		return errors.New("invalid resourceEntityRef")
 	}
-	updateEnt := &r.entityRefs[idx]
+	updateEnt := &r.impl.entityRefs[idx]
 
 	iter := attrs.Iter()
 	for iter.Next() {
 		idAttr := iter.Attribute()
-		r.attrs[idAttr.Key] = idAttr.Value
+		r.impl.attrs[idAttr.Key] = idAttr.Value
 		updateEnt.attrs[idAttr.Key] = true
 	}
 	return nil
 }
 
 func (r *Resource) findEntity(entity resourceEntityRef) int {
-	for i, e := range r.entityRefs {
+	for i, e := range r.impl.entityRefs {
 		if e.typ == entity.typ && equalEntityIdKeys(e.id, entity.id) {
 			return i
 		}
@@ -554,7 +572,7 @@ func (r *Resource) overwriteEntity(
 	if idx < 0 {
 		return errors.New("invalid resourceEntityRef")
 	}
-	updateEnt := &r.entityRefs[idx]
+	updateEnt := &r.impl.entityRefs[idx]
 
 	updateEnt.typ = fromEnt.typ
 	updateEnt.schemaUrl = fromEnt.schemaUrl
@@ -580,7 +598,7 @@ func (r *Resource) setEntityId(ent *resourceEntityRef, id attribute.Set) {
 	for iter.Next() {
 		attr := iter.Attribute()
 		ent.id[attr.Key] = true
-		r.attrs[attr.Key] = attr.Value
+		r.impl.attrs[attr.Key] = attr.Value
 	}
 }
 
@@ -590,20 +608,20 @@ func (r *Resource) setEntityDescr(ent *resourceEntityRef, attrs attribute.Set) {
 	for iter.Next() {
 		attr := iter.Attribute()
 		ent.attrs[attr.Key] = true
-		r.attrs[attr.Key] = attr.Value
+		r.impl.attrs[attr.Key] = attr.Value
 	}
 
 }
 
 func (r *Resource) updateCache() {
-	r.attrSet = mapAttrsToSet(r.attrs)
-	for i := range r.entityRefs {
-		r.entityRefs[i].updateCache()
+	r.impl.attrSet = mapAttrsToSet(r.impl.attrs)
+	for i := range r.impl.entityRefs {
+		r.impl.entityRefs[i].updateCache()
 	}
 }
 
 func (r *Resource) EntityRefs() []resourceEntityRef {
-	return r.entityRefs
+	return r.impl.entityRefs
 }
 
 func equalEntityIdKeys(id1 map[attribute.Key]bool, id2 map[attribute.Key]bool) bool {

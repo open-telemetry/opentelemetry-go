@@ -44,7 +44,7 @@ type Detector interface {
 // Detect calls all input detectors sequentially and merges each result with the previous one.
 // It returns the merged error too.
 func Detect(ctx context.Context, detectors ...Detector) (*Resource, error) {
-	r := new(Resource)
+	r := NewResource()
 	return r, detect(ctx, r, detectors)
 }
 

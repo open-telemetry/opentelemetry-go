@@ -11,7 +11,7 @@ type compositeEntityDetector struct {
 }
 
 func (p compositeEntityDetector) Detect(ctx context.Context) (*Resource, error) {
-	merged := &Resource{}
+	merged := NewResource()
 	for _, detector := range p.detectors {
 		res, err := detector.Detect(ctx)
 		if err != nil {
