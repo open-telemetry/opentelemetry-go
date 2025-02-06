@@ -15,8 +15,8 @@ jobs:
     name: Benchmarks
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
@@ -24,14 +24,14 @@ jobs:
       - name: Run benchmarks
         run: make benchmark | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
         with:
           path: ./benchmarks
           # `github.event.before` means the commit before the push (i.e. the previous commit).
           # So we can fetch the exact benchmark data from the previous commit.
           key: ${{ runner.os }}-benchmark-${{ github.event.before }}
       - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@v1.20.4
+        uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
         with:
           name: Benchmarks
           tool: 'go'
@@ -44,7 +44,7 @@ jobs:
           # Add benchmark summary to GitHub workflow run report
           summary-always: true
       - name: Save benchmark data
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
         # The cache will be saved even if a step fails.
         if: always()
         with:

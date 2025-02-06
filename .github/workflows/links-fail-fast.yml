@@ -15,10 +15,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Restore lychee cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
         id: cache-restore
         with:
           path: .lycheecache
@@ -26,7 +26,7 @@ jobs:
           restore-keys: cache-lychee-
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v2.3.0
+        uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -35,7 +35,7 @@ jobs:
 
       - name: Save lychee cache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
         with:
           path: .lycheecache
           key: ${{ steps.cache-restore.outputs.cache-primary-key }}
