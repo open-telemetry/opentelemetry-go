@@ -7,6 +7,9 @@ on:
   # Everyday at 9:00 AM.
   - cron: "0 9 * * *"
 
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   check-links:
     runs-on: ubuntu-latest
