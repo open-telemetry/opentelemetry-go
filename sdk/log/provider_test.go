@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
+	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/xlog"
 )
 
 const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"

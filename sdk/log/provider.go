@@ -15,8 +15,8 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/xlog"
 )
 
 const (
@@ -207,7 +207,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // For production, use [NewBatchProcessor] to batch log records before they are exported.
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
 //
-// See [go.opentelemetry.io/otel/sdk/xlog.FilterProcessor] for information about how
+// See [go.opentelemetry.io/otel/sdk/log/xlog.FilterProcessor] for information about how
 // a Processor can support experimental filtering feature.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {

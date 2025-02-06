@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package xlog // import "go.opentelemetry.io/otel/sdk/xlog"
+package xlog // import "go.opentelemetry.io/otel/sdk/log/xlog"
 
 import (
 	"context"

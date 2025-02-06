@@ -12,7 +12,7 @@ import (
 	logapi "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/xlog"
+	"go.opentelemetry.io/otel/sdk/log/xlog"
 )
 
 // Initialize OpenTelemetry Logs SDK and setup logging using a log bridge.

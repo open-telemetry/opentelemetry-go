@@ -24,7 +24,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.34.0 // indirect
-	go.opentelemetry.io/otel/sdk/xlog v0.0.0-00010101000000-000000000000 // indirect
+	go.opentelemetry.io/otel/sdk/log/xlog v0.0.0-00010101000000-000000000000 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
@@ -46,4 +46,4 @@ replace go.opentelemetry.io/otel/metric => ../../../../metric
 
 replace go.opentelemetry.io/otel/log => ../../../../log
 
-replace go.opentelemetry.io/otel/sdk/xlog => ../../../../sdk/xlog
+replace go.opentelemetry.io/otel/sdk/log/xlog => ../../../../sdk/log/xlog

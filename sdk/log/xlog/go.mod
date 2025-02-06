@@ -1,4 +1,4 @@
-module go.opentelemetry.io/otel/sdk/xlog
+module go.opentelemetry.io/otel/sdk/log/xlog
 
 go 1.22.0
 
@@ -18,12 +18,12 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 )
 
-replace go.opentelemetry.io/otel/log => ../../log
+replace go.opentelemetry.io/otel/log => ../../../log
 
-replace go.opentelemetry.io/otel/sdk => ../../sdk
+replace go.opentelemetry.io/otel/sdk => ../../../sdk
 
-replace go.opentelemetry.io/otel/trace => ../../trace
+replace go.opentelemetry.io/otel/trace => ../../../trace
 
-replace go.opentelemetry.io/otel/metric => ../../metric
+replace go.opentelemetry.io/otel/metric => ../../../metric
 
-replace go.opentelemetry.io/otel => ../..
+replace go.opentelemetry.io/otel => ../../..
