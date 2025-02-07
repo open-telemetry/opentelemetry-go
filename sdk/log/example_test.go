@@ -90,7 +90,7 @@ type ContextFilterProcessor struct {
 	filter xlog.FilterProcessor
 }
 
-// Compile time check
+// Compile time check.
 var _ xlog.FilterProcessor = (*ContextFilterProcessor)(nil)
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
