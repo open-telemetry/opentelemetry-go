@@ -13,7 +13,7 @@ import (
 
 // FilterProcessor is a [go.opentelemetry.io/otel/sdk/log.Processor] that knows,
 // and can identify, what [go.opentelemetry.io/otel/sdk/log.Record]
-// it will process or drop when it is passed to OnEmit.
+// it will process or drop when it is passed to [go.opentelemetry.io/otel/sdk/log.Processor.OnEmit].
 //
 // This is useful for users that want to know if a [log.Record]
 // will be processed or dropped before they perform complex operations to
@@ -25,8 +25,9 @@ import (
 //
 // Processor implementations that choose to support this by satisfying this
 // interface are expected to re-evaluate the [go.opentelemetry.io/otel/sdk/log.Record]
-// passed to OnEmit, it is not expected that the caller to OnEmit
-// will use the functionality from this interface prior to calling OnEmit.
+// passed to [go.opentelemetry.io/otel/sdk/log.Processor.OnEmit],
+// it is not expected that the caller to OnEmit will use the functionality
+// from this interface prior to calling OnEmit.
 //
 // See the [go.opentelemetry.io/contrib/processors/minsev] for an example use-case.
 // It provides a Processor used to filter out [go.opentelemetry.io/otel/sdk/log.Record]
