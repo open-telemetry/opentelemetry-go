@@ -86,9 +86,12 @@ type ContextFilterProcessor struct {
 	log.Processor
 
 	lazyFilter sync.Once
-	// Support the experimental FilterProcessor interface.
+	// Support the experimental FilterProcessor interface for the embedded processor.
 	filter xlog.FilterProcessor
 }
+
+// Compile time check
+var _ xlog.FilterProcessor = (*ContextFilterProcessor)(nil)
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	if ignoreLogs(ctx) {
