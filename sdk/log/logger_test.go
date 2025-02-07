@@ -318,6 +318,9 @@ func TestReflectFilterProcessorPlayground(t *testing.T) {
 
 	// Type checking.
 	fp := reflect.ValueOf(p)
+	if fp.MethodByName("OnEmit") == (reflect.Value{}) {
+		t.Fatalf("MethodByName does not handle embedded methods")
+	}
 	m := fp.MethodByName("Enabled")
 	if m == (reflect.Value{}) {
 		t.Fatalf("no Enabled method")
