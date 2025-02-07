@@ -5,6 +5,9 @@ on:
       - main
   workflow_dispatch:
 
+# Declare default permissions as read only.
+permissions: read-all
+
 env:
   DEFAULT_GO_VERSION: "~1.23.0"
 jobs:
