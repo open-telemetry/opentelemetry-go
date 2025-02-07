@@ -40,21 +40,21 @@ func asFilterProccessor(p any) (filterProcessor, bool) {
 		return filterProcessor{}, false
 	}
 	if mty.In(0) != reflect.TypeFor[context.Context]() {
-		// Should have context.Context as first input paramater.
+		// Should have context.Context as first input parameter.
 		return filterProcessor{}, false
 	}
 	// Duck typing of EnabledParameters
 	pt := mty.In(1)
 	if res, ok := pt.FieldByName("Resource"); !ok || res.Type != reflect.TypeFor[resource.Resource]() {
-		// The second paramater should have Resource resource.Resource field.
+		// The second parameter should have Resource resource.Resource field.
 		return filterProcessor{}, false
 	}
 	if res, ok := pt.FieldByName("InstrumentationScope"); !ok || res.Type != reflect.TypeFor[instrumentation.Scope]() {
-		// The second paramater should have InstrumentationScope instrumentation.Scope field.
+		// The second parameter should have InstrumentationScope instrumentation.Scope field.
 		return filterProcessor{}, false
 	}
 	if res, ok := pt.FieldByName("Severity"); !ok || res.Type != reflect.TypeFor[log.Severity]() {
-		// The second paramater should have Severity log.Severity field.
+		// The second parameter should have Severity log.Severity field.
 		return filterProcessor{}, false
 	}
 
