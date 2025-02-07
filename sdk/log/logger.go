@@ -56,8 +56,10 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 		Severity:             param.Severity,
 	}
 
-	// If there are more Processors than FilterProcessors, which means not all Processors are FilterProcessors, we cannot be sure
-	// that all Processors will drop the record. Therefore, return true.
+	// If there are more Processors than FilterProcessors,
+	// which means not all Processors are FilterProcessors,
+	// we cannot be sure that all Processors will drop the record.
+	// Therefore, return true.
 	//
 	// If all Processors are FilterProcessors, check if any is enabled.
 	return len(l.provider.processors) > len(l.provider.fltrProcessors) || anyEnabled(ctx, p, l.provider.fltrProcessors)
