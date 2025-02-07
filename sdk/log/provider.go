@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
+	"go.opentelemetry.io/otel/sdk/log/internal"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -30,7 +30,7 @@ const (
 type providerConfig struct {
 	resource       *resource.Resource
 	processors     []Processor
-	fltrProcessors []xlog.FilterProcessor
+	fltrProcessors []internal.FilterProcessor
 	attrCntLim     setting[int]
 	attrValLenLim  setting[int]
 }
@@ -65,7 +65,7 @@ type LoggerProvider struct {
 
 	resource                  *resource.Resource
 	processors                []Processor
-	fltrProcessors            []xlog.FilterProcessor
+	fltrProcessors            []internal.FilterProcessor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
 
@@ -212,7 +212,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.processors = append(cfg.processors, processor)
-		if f, ok := processor.(xlog.FilterProcessor); ok {
+		if f, ok := processor.(internal.FilterProcessor); ok {
 			cfg.fltrProcessors = append(cfg.fltrProcessors, f)
 		}
 		return cfg
