@@ -6,7 +6,6 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -307,60 +306,5 @@ func TestLoggerEnabled(t *testing.T) {
 			assert.Equal(t, tc.expectedP1Params, p1.params)
 			assert.Equal(t, tc.expectedP2Params, p2WithDisabled.params)
 		})
-	}
-}
-
-func TestReflectFilterProcessorPlayground(t *testing.T) {
-	var p Processor = newFltrProcessor("0", true)
-	if _, ok := p.(xlog.FilterProcessor); !ok {
-		t.Errorf("is not xlog.FilterProcessor")
-	}
-
-	// Type checking.
-	fp := reflect.ValueOf(p)
-	if fp.MethodByName("OnEmit") == (reflect.Value{}) {
-		t.Fatalf("MethodByName does not handle embedded methods")
-	}
-	m := fp.MethodByName("Enabled")
-	if m == (reflect.Value{}) {
-		t.Fatalf("no Enabled method")
-	}
-	mty := m.Type()
-	if mty.NumOut() != 1 {
-		t.Fatalf("should return one output parameter")
-	}
-	if reflect.Bool != mty.Out(0).Kind() {
-		t.Fatalf("should return bool")
-	}
-	if mty.NumIn() != 2 {
-		t.Fatalf("should have two input parameters")
-	}
-	if mty.In(0) != reflect.TypeFor[context.Context]() {
-		t.Fatalf("should have context.Context as first input paramater")
-	}
-	// Duck typing of EnabledParameters
-	pt := mty.In(1)
-	if res, ok := pt.FieldByName("Resource"); !ok || res.Type != reflect.TypeFor[resource.Resource]() {
-		t.Fatal("the second paramater should have Resource resource.Resource field")
-	}
-	if res, ok := pt.FieldByName("InstrumentationScope"); !ok || res.Type != reflect.TypeFor[instrumentation.Scope]() {
-		t.Fatal("the second paramater should have InstrumentationScope instrumentation.Scope field")
-	}
-	if res, ok := pt.FieldByName("Severity"); !ok || res.Type != reflect.TypeFor[log.Severity]() {
-		t.Fatal("the second paramater should have Severity log.Severity field")
-	}
-
-	// m and pt variables must be stored by the provider in order to call the filterer processor.
-
-	// calling Enabled
-	param := reflect.New(pt).Elem()
-	res := resource.NewSchemaless(attribute.String("foo", "bar"))
-	param.FieldByName("Resource").Set(reflect.ValueOf(*res))
-	param.FieldByName("InstrumentationScope").Set(reflect.ValueOf(instrumentation.Scope{Name: "scope"}))
-	param.FieldByName("Severity").Set(reflect.ValueOf(log.SeverityDebug))
-
-	ret := m.Call([]reflect.Value{reflect.ValueOf(context.Background()), param})
-	if !ret[0].Bool() {
-		t.Fatalf("should return true")
 	}
 }
