@@ -27,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.30.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.28.0`(#6240)
 - Make the initial release of `go.opentelemetry.io/otel/sdk/log/xlog`.
   This new module contains experimental features of the OpenTelemetry Logs SDK.
+  It replaces `go.opentelemetry.io/otel/sdk/log/internal/x`.
   This module is unstable and breaking changes may be introduced.
   See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#6271)
 - Add `FilterProcessor` and `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log/xlog` .
