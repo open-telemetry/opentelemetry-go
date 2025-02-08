@@ -19,7 +19,7 @@ require (
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
-	4d63.com/gochecknoglobals v0.2.1 // indirect
+	4d63.com/gochecknoglobals v0.2.2 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/4meepo/tagalign v1.4.1 // indirect
 	github.com/Abirdcfly/dupword v0.1.3 // indirect
