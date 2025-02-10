@@ -495,6 +495,14 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
+	if s.spanContext.IsSampled() {
+		s.tracer.provider.spanLiveCount.Add(context.Background(), -1, s.tracer.provider.sampledAttributes)
+		s.tracer.provider.spanEndedCount.Add(context.Background(), 1, s.tracer.provider.sampledAttributes)
+	} else {
+		s.tracer.provider.spanLiveCount.Add(context.Background(), -1, s.tracer.provider.notSampledAttributes)
+		s.tracer.provider.spanEndedCount.Add(context.Background(), 1, s.tracer.provider.notSampledAttributes)
+	}
+
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
 		return
@@ -901,7 +909,11 @@ func (nonRecordingSpan) SetError(bool) {}
 func (nonRecordingSpan) SetAttributes(...attribute.KeyValue) {}
 
 // End does nothing.
-func (nonRecordingSpan) End(...trace.SpanEndOption) {}
+func (s nonRecordingSpan) End(...trace.SpanEndOption) {
+	// TODO: does adding instrumentation to non-recording spans have performance implications?
+	s.tracer.provider.spanEndedCount.Add(context.Background(), 1, s.tracer.provider.notSampledAttributes)
+	s.tracer.provider.spanLiveCount.Add(context.Background(), -1, s.tracer.provider.notSampledAttributes)
+}
 
 // RecordError does nothing.
 func (nonRecordingSpan) RecordError(error, ...trace.EventOption) {}
