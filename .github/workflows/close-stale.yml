@@ -11,7 +11,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
         with:
           stale-pr-message: 'This PR was marked stale due to lack of activity. It will be closed in 14 days.'
           close-pr-message: 'Closed as inactive. Feel free to reopen if this PR is still being worked on.'
