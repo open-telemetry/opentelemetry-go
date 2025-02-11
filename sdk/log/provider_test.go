@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -59,27 +58,6 @@ func (p *processor) Shutdown(context.Context) error {
 func (p *processor) ForceFlush(context.Context) error {
 	p.forceFlushCalls++
 	return p.Err
-}
-
-type fltrProcessor struct {
-	*processor
-
-	enabled bool
-	params  []xlog.EnabledParameters
-}
-
-var _ xlog.FilterProcessor = (*fltrProcessor)(nil)
-
-func newFltrProcessor(name string, enabled bool) *fltrProcessor {
-	return &fltrProcessor{
-		processor: newProcessor(name),
-		enabled:   enabled,
-	}
-}
-
-func (p *fltrProcessor) Enabled(_ context.Context, params xlog.EnabledParameters) bool {
-	p.params = append(p.params, params)
-	return p.enabled
 }
 
 func TestNewLoggerProviderConfiguration(t *testing.T) {

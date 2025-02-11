@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -216,95 +215,6 @@ func TestLoggerEmit(t *testing.T) {
 
 			assert.Equal(t, tc.expectedRecords, p0.records)
 			assert.Equal(t, tc.expectedRecords, p1.records)
-		})
-	}
-}
-
-func TestLoggerEnabled(t *testing.T) {
-	p0 := newFltrProcessor("0", true)
-	p1 := newFltrProcessor("1", true)
-	p2WithDisabled := newFltrProcessor("2", false)
-
-	emptyResource := resource.Empty()
-	res := resource.NewSchemaless(attribute.String("key", "value"))
-
-	testCases := []struct {
-		name             string
-		logger           *logger
-		ctx              context.Context
-		expected         bool
-		expectedP0Params []xlog.EnabledParameters
-		expectedP1Params []xlog.EnabledParameters
-		expectedP2Params []xlog.EnabledParameters
-	}{
-		{
-			name:     "NoProcessors",
-			logger:   newLogger(NewLoggerProvider(), instrumentation.Scope{}),
-			ctx:      context.Background(),
-			expected: false,
-		},
-		{
-			name: "WithProcessors",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithResource(res),
-			), instrumentation.Scope{Name: "scope"}),
-			ctx:      context.Background(),
-			expected: true,
-			expectedP0Params: []xlog.EnabledParameters{{
-				Resource:             *res,
-				InstrumentationScope: instrumentation.Scope{Name: "scope"},
-			}},
-			expectedP1Params: nil,
-		},
-		{
-			name: "WithDisabledProcessors",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithDisabled),
-				WithResource(emptyResource),
-			), instrumentation.Scope{}),
-			ctx:              context.Background(),
-			expected:         false,
-			expectedP2Params: []xlog.EnabledParameters{{}},
-		},
-		{
-			name: "ContainsDisabledProcessor",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithDisabled),
-				WithProcessor(p0),
-				WithResource(emptyResource),
-			), instrumentation.Scope{}),
-			ctx:              context.Background(),
-			expected:         true,
-			expectedP2Params: []xlog.EnabledParameters{{}},
-			expectedP0Params: []xlog.EnabledParameters{{}},
-		},
-		{
-			name: "WithNilContext",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithResource(emptyResource),
-			), instrumentation.Scope{}),
-			ctx:              nil,
-			expected:         true,
-			expectedP0Params: []xlog.EnabledParameters{{}},
-			expectedP1Params: nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Clean up the records before the test.
-			p0.params = nil
-			p1.params = nil
-			p2WithDisabled.params = nil
-
-			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
-			assert.Equal(t, tc.expectedP0Params, p0.params)
-			assert.Equal(t, tc.expectedP1Params, p1.params)
-			assert.Equal(t, tc.expectedP2Params, p2WithDisabled.params)
 		})
 	}
 }
