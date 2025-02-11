@@ -78,6 +78,24 @@ func IntSliceValue(v []int) Value {
 	}
 }
 
+// Int32Value creates an INT32 Value.
+func Int32Value(v int32) Value {
+	return Int64Value(int64(v))
+}
+
+// Int32SliceValue creates an INT32SLICE Value.
+func Int32SliceValue(v []int32) Value {
+	var int64Val int64
+	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(int64Val)))
+	for i, val := range v {
+		cp.Elem().Index(i).SetInt(int64(val))
+	}
+	return Value{
+		vtype: INT64SLICE,
+		slice: cp.Elem().Interface(),
+	}
+}
+
 // Int64Value creates an INT64 Value.
 func Int64Value(v int64) Value {
 	return Value{
