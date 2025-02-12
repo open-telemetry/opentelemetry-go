@@ -25,6 +25,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.30.0` package.
   The package contains semantic conventions from the `v1.30.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.30.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.28.0`(#6240)
+- Document the pitfalls of using `Resource` as a comparable type.
+  `Resource.Equal` and `Resource.Equivalent` should be used instead. (#6272)
 
 ### Changed
 
