@@ -28,7 +28,7 @@ The next release will require at least [Go 1.23].
 - The `go.opentelemetry.io/otel/semconv/v1.30.0` package.
   The package contains semantic conventions from the `v1.30.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.30.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.28.0`(#6240)
-- Support [Go 1.24]. (TBD)
+- Support [Go 1.24]. (#6304)
 
 ### Changed
 
