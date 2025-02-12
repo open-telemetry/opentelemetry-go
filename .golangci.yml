@@ -125,6 +125,12 @@ linters-settings:
         deny:
           - pkg: "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal"
             desc: Do not use cross-module internal packages.
+      otel-experimental:
+        files:
+          - "!$test"
+        deny:
+          - pkg: "go.opentelemetry.io/otel/sdk/log/xlog"
+            desc: Do not use xlog in non-test code.
       otel-internal:
         files:
           - "**/sdk/*.go"
