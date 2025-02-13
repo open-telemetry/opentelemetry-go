@@ -84,7 +84,7 @@ type ContextFilterProcessor struct {
 	log.Processor
 
 	lazyFilter sync.Once
-	// Support the experimental FilterProcessor interface for the embedded processor.
+	// Support the FilterProcessor interface for the embedded processor.
 	filter log.FilterProcessor
 }
 
