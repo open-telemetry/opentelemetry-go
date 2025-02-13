@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.22].
+The next release will require at least [Go 1.23].
+
 ### Added
 
 - Add `ValueFromAttribute` and `KeyValueFromAttribute` in `go.opentelemetry.io/otel/log`. (#6180)
@@ -25,6 +28,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.30.0` package.
   The package contains semantic conventions from the `v1.30.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.30.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.28.0`(#6240)
+- Document the pitfalls of using `Resource` as a comparable type.
+  `Resource.Equal` and `Resource.Equivalent` should be used instead. (#6272)
+- Support [Go 1.24]. (#6304)
 - Make the initial release of `go.opentelemetry.io/otel/sdk/log/xlog`.
   This new module contains experimental features of the OpenTelemetry Logs SDK.
   This module is unstable and breaking changes may be introduced.
@@ -3315,6 +3321,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
