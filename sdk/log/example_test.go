@@ -52,7 +52,6 @@ func Example() {
 }
 
 // Use a processor that filters out records based on the provided context.
-// It also demonstrates the use of experimental [FilterProcessor].
 func ExampleFilterProcessor() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
