@@ -5,7 +5,6 @@ package trace
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,7 +114,7 @@ func TestSettingSpanLimits(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, es.Restore()) })
 				for k, v := range test.env {
 					es.Record(k)
-					require.NoError(t, os.Setenv(k, v))
+					t.Setenv(k, v)
 				}
 			}
 

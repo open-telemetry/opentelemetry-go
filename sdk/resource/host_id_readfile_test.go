@@ -15,7 +15,7 @@ import (
 func TestReadFileExistent(t *testing.T) {
 	fileContents := "foo"
 
-	f, err := os.CreateTemp("", "readfile_")
+	f, err := os.CreateTemp(t.TempDir(), "readfile_")
 	require.NoError(t, err)
 
 	defer os.Remove(f.Name())
@@ -31,7 +31,7 @@ func TestReadFileExistent(t *testing.T) {
 
 func TestReadFileNonExistent(t *testing.T) {
 	// create unique filename
-	f, err := os.CreateTemp("", "readfile_")
+	f, err := os.CreateTemp(t.TempDir(), "readfile_")
 	require.NoError(t, err)
 
 	// make file non-existent
