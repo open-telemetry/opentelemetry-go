@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-func BenchmarkLoggerNewRecord(b *testing.B) {
+func BenchmarkLoggerEmit(b *testing.B) {
 	logger := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
 	r := log.Record{}
@@ -48,7 +48,7 @@ func BenchmarkLoggerNewRecord(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				logger.newRecord(context.Background(), r)
+				logger.Emit(context.Background(), r)
 			}
 		})
 	})
@@ -57,7 +57,7 @@ func BenchmarkLoggerNewRecord(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				logger.newRecord(context.Background(), r10)
+				logger.Emit(context.Background(), r10)
 			}
 		})
 	})
