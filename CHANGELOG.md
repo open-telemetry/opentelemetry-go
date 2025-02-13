@@ -31,12 +31,8 @@ The next release will require at least [Go 1.23].
 - Document the pitfalls of using `Resource` as a comparable type.
   `Resource.Equal` and `Resource.Equivalent` should be used instead. (#6272)
 - Support [Go 1.24]. (#6304)
-- Make the initial release of `go.opentelemetry.io/otel/sdk/log/xlog`.
-  This new module contains experimental features of the OpenTelemetry Logs SDK.
-  It replaces `go.opentelemetry.io/otel/sdk/log/internal/x`.
-  This module is unstable and breaking changes may be introduced.
-  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees. (#6271)
-- Add `FilterProcessor` and `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log/xlog` .
+- Add `FilterProcessor` and `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`.
+  It replaces `go.opentelemetry.io/otel/sdk/log/internal/x.FilterProcessor`.
   Compared to previous version it additionally gives the possibility to filter by resource and instrumentation scope. (#6271)
 
 ### Changed

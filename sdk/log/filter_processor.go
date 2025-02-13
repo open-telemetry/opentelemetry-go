@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package xlog // import "go.opentelemetry.io/otel/sdk/log/xlog"
+package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
@@ -11,9 +11,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// FilterProcessor is a [go.opentelemetry.io/otel/sdk/log.Processor] that knows,
-// and can identify, what [go.opentelemetry.io/otel/sdk/log.Record]
-// it will process or drop when it is passed to [go.opentelemetry.io/otel/sdk/log.Processor.OnEmit].
+// FilterProcessor is a [Processor] that knows, and can identify, what [Record]
+// it will process or drop when it is passed to [Processor.OnEmit].
 //
 // This is useful for users that want to know if a [log.Record]
 // will be processed or dropped before they perform complex operations to
@@ -24,13 +23,12 @@ import (
 // and they all return false.
 //
 // Processor implementations that choose to support this by satisfying this
-// interface are expected to re-evaluate the [go.opentelemetry.io/otel/sdk/log.Record]
-// passed to [go.opentelemetry.io/otel/sdk/log.Processor.OnEmit],
+// interface are expected to re-evaluate the [Record] passed to [Processor.OnEmit],
 // it is not expected that the caller to OnEmit will use the functionality
 // from this interface prior to calling OnEmit.
 //
 // See the [go.opentelemetry.io/contrib/processors/minsev] for an example use-case.
-// It provides a Processor used to filter out [go.opentelemetry.io/otel/sdk/log.Record]
+// It provides a Processor used to filter out [Record]
 // that has a [log.Severity] below a threshold.
 type FilterProcessor interface {
 	// Enabled returns whether the Processor will process for the given context

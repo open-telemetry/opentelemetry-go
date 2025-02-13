@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -65,10 +64,10 @@ type fltrProcessor struct {
 	*processor
 
 	enabled bool
-	params  []xlog.EnabledParameters
+	params  []EnabledParameters
 }
 
-var _ xlog.FilterProcessor = (*fltrProcessor)(nil)
+var _ FilterProcessor = (*fltrProcessor)(nil)
 
 func newFltrProcessor(name string, enabled bool) *fltrProcessor {
 	return &fltrProcessor{
@@ -77,7 +76,7 @@ func newFltrProcessor(name string, enabled bool) *fltrProcessor {
 	}
 }
 
-func (p *fltrProcessor) Enabled(_ context.Context, params xlog.EnabledParameters) bool {
+func (p *fltrProcessor) Enabled(_ context.Context, params EnabledParameters) bool {
 	p.params = append(p.params, params)
 	return p.enabled
 }

@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -233,9 +232,9 @@ func TestLoggerEnabled(t *testing.T) {
 		logger           *logger
 		ctx              context.Context
 		expected         bool
-		expectedP0Params []xlog.EnabledParameters
-		expectedP1Params []xlog.EnabledParameters
-		expectedP2Params []xlog.EnabledParameters
+		expectedP0Params []EnabledParameters
+		expectedP1Params []EnabledParameters
+		expectedP2Params []EnabledParameters
 	}{
 		{
 			name:     "NoProcessors",
@@ -252,7 +251,7 @@ func TestLoggerEnabled(t *testing.T) {
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:      context.Background(),
 			expected: true,
-			expectedP0Params: []xlog.EnabledParameters{{
+			expectedP0Params: []EnabledParameters{{
 				Resource:             *res,
 				InstrumentationScope: instrumentation.Scope{Name: "scope"},
 			}},
@@ -266,7 +265,7 @@ func TestLoggerEnabled(t *testing.T) {
 			), instrumentation.Scope{}),
 			ctx:              context.Background(),
 			expected:         false,
-			expectedP2Params: []xlog.EnabledParameters{{}},
+			expectedP2Params: []EnabledParameters{{}},
 		},
 		{
 			name: "ContainsDisabledProcessor",
@@ -277,8 +276,8 @@ func TestLoggerEnabled(t *testing.T) {
 			), instrumentation.Scope{}),
 			ctx:              context.Background(),
 			expected:         true,
-			expectedP2Params: []xlog.EnabledParameters{{}},
-			expectedP0Params: []xlog.EnabledParameters{{}},
+			expectedP2Params: []EnabledParameters{{}},
+			expectedP0Params: []EnabledParameters{{}},
 		},
 		{
 			name: "WithNilContext",
@@ -289,7 +288,7 @@ func TestLoggerEnabled(t *testing.T) {
 			), instrumentation.Scope{}),
 			ctx:              nil,
 			expected:         true,
-			expectedP0Params: []xlog.EnabledParameters{{}},
+			expectedP0Params: []EnabledParameters{{}},
 			expectedP1Params: nil,
 		},
 	}

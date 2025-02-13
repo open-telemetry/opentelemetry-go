@@ -12,7 +12,6 @@ import (
 	logapi "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
 )
 
 // Initialize OpenTelemetry Logs SDK and setup logging using a log bridge.
@@ -53,8 +52,8 @@ func Example() {
 }
 
 // Use a processor that filters out records based on the provided context.
-// It also demonstrates the use of experimental [xlog.FilterProcessor].
-func ExampleProcessor_filtering() {
+// It also demonstrates the use of experimental [FilterProcessor].
+func ExampleFilterProcessor() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
@@ -87,11 +86,11 @@ type ContextFilterProcessor struct {
 
 	lazyFilter sync.Once
 	// Support the experimental FilterProcessor interface for the embedded processor.
-	filter xlog.FilterProcessor
+	filter log.FilterProcessor
 }
 
 // Compile time check.
-var _ xlog.FilterProcessor = (*ContextFilterProcessor)(nil)
+var _ log.FilterProcessor = (*ContextFilterProcessor)(nil)
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	if ignoreLogs(ctx) {
@@ -100,9 +99,9 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 	return p.Processor.OnEmit(ctx, record)
 }
 
-func (p *ContextFilterProcessor) Enabled(ctx context.Context, param xlog.EnabledParameters) bool {
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	p.lazyFilter.Do(func() {
-		if f, ok := p.Processor.(xlog.FilterProcessor); ok {
+		if f, ok := p.Processor.(log.FilterProcessor); ok {
 			p.filter = f
 		}
 	})
@@ -115,7 +114,7 @@ func ignoreLogs(ctx context.Context) bool {
 }
 
 // Use a processor which redacts sensitive data from some attributes.
-func ExampleProcessor_redact() {
+func ExampleProcessor() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
 

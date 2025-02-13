@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/xlog"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -50,7 +49,7 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 // processed, true will be returned by default. A value of false will only be
 // returned if it can be positively verified that no Processor will process.
 func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
-	p := xlog.EnabledParameters{
+	p := EnabledParameters{
 		Resource:             *l.provider.resource,
 		InstrumentationScope: l.instrumentationScope,
 		Severity:             param.Severity,
@@ -65,7 +64,7 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	return len(l.provider.processors) > len(l.provider.fltrProcessors) || anyEnabled(ctx, p, l.provider.fltrProcessors)
 }
 
-func anyEnabled(ctx context.Context, param xlog.EnabledParameters, fltrs []xlog.FilterProcessor) bool {
+func anyEnabled(ctx context.Context, param EnabledParameters, fltrs []FilterProcessor) bool {
 	for _, f := range fltrs {
 		if f.Enabled(ctx, param) {
 			// At least one Processor will process the Record.
