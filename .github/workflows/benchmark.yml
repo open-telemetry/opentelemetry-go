@@ -9,7 +9,7 @@ on:
 permissions: read-all
 
 env:
-  DEFAULT_GO_VERSION: "~1.23.0"
+  DEFAULT_GO_VERSION: "~1.24.0"
 jobs:
   benchmark:
     name: Benchmarks
