@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -267,7 +266,7 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
 			for k, v := range option.envs {
-				require.NoError(t, os.Setenv(k, v))
+				t.Setenv(k, v)
 			}
 
 			te := testBatchExporter{}
