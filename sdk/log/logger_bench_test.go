@@ -11,11 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 func BenchmarkLoggerEmit(b *testing.B) {
-	logger := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+	logger := newTestLogger(b)
 
 	r := log.Record{}
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
@@ -64,11 +63,7 @@ func BenchmarkLoggerEmit(b *testing.B) {
 }
 
 func BenchmarkLoggerEnabled(b *testing.B) {
-	provider := NewLoggerProvider(
-		WithProcessor(newFltrProcessor("0", false)),
-		WithProcessor(newFltrProcessor("1", true)),
-	)
-	logger := provider.Logger(b.Name())
+	logger := newTestLogger(b)
 	ctx := context.Background()
 	param := log.EnabledParameters{Severity: log.SeverityDebug}
 	var enabled bool
@@ -81,4 +76,12 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 	}
 
 	_ = enabled
+}
+
+func newTestLogger(t testing.TB) log.Logger {
+	provider := NewLoggerProvider(
+		WithProcessor(newFltrProcessor("0", false)),
+		WithProcessor(newFltrProcessor("1", true)),
+	)
+	return provider.Logger(t.Name())
 }
