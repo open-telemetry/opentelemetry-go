@@ -33,9 +33,13 @@ type Logger interface {
 	// Enabled returns whether the Logger emits for the given context and
 	// param.
 	//
-	// The passed param is likely to be a partial record with only the
-	// bridge-relevant information being provided (e.g a param with only the
-	// Severity set). If a Logger needs more information than is provided, it
+	// This is useful for users that want to know if a [Record]
+	// will be processed or dropped before they perform complex operations to
+	// construct the [Record].
+	//
+	// The passed param is likely to be a partial record information being
+	// provided (e.g a param with only the Severity set).
+	// If a Logger needs more information than is provided, it
 	// is said to be in an indeterminate state (see below).
 	//
 	// The returned value will be true when the Logger will emit for the
@@ -46,7 +50,7 @@ type Logger interface {
 	// exist (e.g. performance, correctness).
 	//
 	// The param should not be held by the implementation. A copy should be
-	// made if the record needs to be held after the call returns.
+	// made if the param needs to be held after the call returns.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.

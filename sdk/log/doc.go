@@ -32,8 +32,5 @@ at a single endpoint their origin is decipherable.
 
 See [go.opentelemetry.io/otel/log] for more information about
 the OpenTelemetry Logs Bridge API.
-
-See [go.opentelemetry.io/otel/sdk/log/internal/x] for information about the
-experimental features.
 */
 package log // import "go.opentelemetry.io/otel/sdk/log"

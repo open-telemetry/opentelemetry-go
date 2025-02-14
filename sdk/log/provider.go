@@ -15,7 +15,6 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -30,7 +29,7 @@ const (
 type providerConfig struct {
 	resource       *resource.Resource
 	processors     []Processor
-	fltrProcessors []x.FilterProcessor
+	fltrProcessors []FilterProcessor
 	attrCntLim     setting[int]
 	attrValLenLim  setting[int]
 }
@@ -65,7 +64,7 @@ type LoggerProvider struct {
 
 	resource                  *resource.Resource
 	processors                []Processor
-	fltrProcessors            []x.FilterProcessor
+	fltrProcessors            []FilterProcessor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
 
@@ -206,10 +205,12 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 //
 // For production, use [NewBatchProcessor] to batch log records before they are exported.
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
+//
+// See [FilterProcessor] for information about how a Processor can support filtering.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.processors = append(cfg.processors, processor)
-		if f, ok := processor.(x.FilterProcessor); ok {
+		if f, ok := processor.(FilterProcessor); ok {
 			cfg.fltrProcessors = append(cfg.fltrProcessors, f)
 		}
 		return cfg

@@ -13,8 +13,7 @@ import (
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
 //
-// See [go.opentelemetry.io/otel/sdk/log/internal/x] for information about how
-// a Processor can be extended to support experimental features.
+// See [FilterProcessor] for information about how a Processor can support filtering.
 type Processor interface {
 	// OnEmit is called when a Record is emitted.
 	//
@@ -30,11 +29,11 @@ type Processor interface {
 	// Handler.
 	//
 	// The SDK invokes the processors sequentially in the same order as
-	// they were registered using [WithProcessor].
+	// they were registered using WithProcessor.
 	// Implementations may synchronously modify the record so that the changes
 	// are visible in the next registered processor.
-	// Notice that [Record] is not concurrent safe. Therefore, asynchronous
-	// processing may cause race conditions. Use [Record.Clone]
+	// Notice that Record is not concurrent safe. Therefore, asynchronous
+	// processing may cause race conditions. Use Record.Clone
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record *Record) error
 
