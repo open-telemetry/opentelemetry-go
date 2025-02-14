@@ -63,6 +63,18 @@ func TestValue(t *testing.T) {
 			wantValue: []int64{42, -3, 12},
 		},
 		{
+			name:      "Key.Int32() correctly returns keys's internal signed integral value",
+			value:     k.Int32(42).Value,
+			wantType:  attribute.INT64,
+			wantValue: int64(42),
+		},
+		{
+			name:      "Key.Int32Slice() correctly returns keys's internal []int32 value",
+			value:     k.Int32Slice([]int32{42, -3, 12}).Value,
+			wantType:  attribute.INT64SLICE,
+			wantValue: []int64{42, -3, 12},
+		},
+		{
 			name:      "Key.Float64() correctly returns keys's internal float64 value",
 			value:     k.Float64(42.1).Value,
 			wantType:  attribute.FLOAT64,
@@ -118,6 +130,14 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.IntSlice("IntSlice", []int{312, 1, -2}),
 			attribute.IntSlice("IntSlice", []int{312, 1, -2}),
+		},
+		{
+			attribute.Int32("Int32", 44),
+			attribute.Int32("Int32", 44),
+		},
+		{
+			attribute.Int32Slice("Int32Slice", []int32{212, 21, -2}),
+			attribute.Int32Slice("Int32Slice", []int32{212, 21, -2}),
 		},
 		{
 			attribute.Int64("Int64", 98),

@@ -51,6 +51,28 @@ func (k Key) IntSlice(v []int) KeyValue {
 	}
 }
 
+// Int32 creates a KeyValue instance with an INT64 Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int32(name, value).
+func (k Key) Int32(v int32) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Int32Value(v),
+	}
+}
+
+// Int32Slice creates a KeyValue instance with an INT64SLICE Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Int32Slice(name, value).
+func (k Key) Int32Slice(v []int32) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: Int32SliceValue(v),
+	}
+}
+
 // Int64 creates a KeyValue instance with an INT64 Value.
 //
 // If creating both a key and value at the same time, use the provided

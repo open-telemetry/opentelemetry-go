@@ -38,6 +38,16 @@ func IntSlice(k string, v []int) KeyValue {
 	return Key(k).IntSlice(v)
 }
 
+// Int32 creates a KeyValue with an INT64 Value type.
+func Int32(k string, v int32) KeyValue {
+	return Key(k).Int32(v)
+}
+
+// Int32Slice creates a KeyValue with an INT64 Value type.
+func Int32Slice(k string, v []int32) KeyValue {
+	return Key(k).Int32Slice(v)
+}
+
 // Int64 creates a KeyValue with an INT64 Value type.
 func Int64(k string, v int64) KeyValue {
 	return Key(k).Int64(v)
