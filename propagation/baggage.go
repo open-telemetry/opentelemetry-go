@@ -29,6 +29,19 @@ func (b Baggage) Inject(ctx context.Context, carrier TextMapCarrier) {
 
 // Extract returns a copy of parent with the baggage from the carrier added.
 func (b Baggage) Extract(parent context.Context, carrier TextMapCarrier) context.Context {
+	multiCarrier, isMultiCarrier := carrier.(MultiTextMapCarrier)
+	if isMultiCarrier {
+		return extractMultiBaggage(parent, multiCarrier)
+	}
+	return extractSingleBaggage(parent, carrier)
+}
+
+// Fields returns the keys who's values are set with Inject.
+func (b Baggage) Fields() []string {
+	return []string{baggageHeader}
+}
+
+func extractSingleBaggage(parent context.Context, carrier TextMapCarrier) context.Context {
 	bStr := carrier.Get(baggageHeader)
 	if bStr == "" {
 		return parent
@@ -41,7 +54,20 @@ func (b Baggage) Extract(parent context.Context, carrier TextMapCarrier) context
 	return baggage.ContextWithBaggage(parent, bag)
 }
 
-// Fields returns the keys who's values are set with Inject.
-func (b Baggage) Fields() []string {
-	return []string{baggageHeader}
+func extractMultiBaggage(parent context.Context, carrier MultiTextMapCarrier) context.Context {
+	bVals := carrier.GetAll(baggageHeader)
+	members := make([]baggage.Member, 0)
+	for _, bStr := range bVals {
+		currBag, err := baggage.Parse(bStr)
+		if err != nil {
+			continue
+		}
+		members = append(members, currBag.Members()...)
+	}
+
+	b, err := baggage.New(members...)
+	if err != nil || b.Len() == 0 {
+		return parent
+	}
+	return baggage.ContextWithBaggage(parent, b)
 }
