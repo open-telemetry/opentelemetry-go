@@ -13,6 +13,11 @@ The next release will require at least [Go 1.23].
 
 ### Added
 
+- Add `OTEL_GO_X_SELF_OBSERVABILITY` environment variable to control whether self-observability metrics and traces are produced by SDKs. (#TODO)
+- Add experimental `otel.sdk.processor.span.queue.size`, `otel.sdk.processor.span.queue.capacity`, and `otel.sdk.processor.span.processed.count` metrics to the trace batch span processor in `go.opentelemetry.io/otel/sdk/trace`. (#TODO)
+
+### Fixed
+
 - Add `ValueFromAttribute` and `KeyValueFromAttribute` in `go.opentelemetry.io/otel/log`. (#6180)
 - Add `EventName` and `SetEventName` to `Record` in `go.opentelemetry.io/otel/log`. (#6187)
 - Add `EventName` to `RecordFactory` in `go.opentelemetry.io/otel/log/logtest`. (#6187)
