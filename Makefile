@@ -123,7 +123,7 @@ vanity-import-fix: $(PORTO)
 # Generate go.work file for local development.
 .PHONY: go-work
 go-work: $(CROSSLINK)
-	$(CROSSLINK) work --root=$(shell pwd)
+	$(CROSSLINK) work --root=$(shell pwd) --go=1.22.7
 
 # Build
 
