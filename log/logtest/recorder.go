@@ -122,10 +122,10 @@ func (a *Record) Equal(b *Record) bool {
 	if a.EventName != b.EventName {
 		return false
 	}
-	if a.Timestamp != b.Timestamp { //nolint:revive // We want to indeed compare using !=.
+	if !a.Timestamp.Equal(b.Timestamp) {
 		return false
 	}
-	if a.ObservedTimestamp != b.ObservedTimestamp { //nolint:revive // We want to indeed compare using !=.
+	if !a.ObservedTimestamp.Equal(b.ObservedTimestamp) {
 		return false
 	}
 	if a.Severity != b.Severity {
