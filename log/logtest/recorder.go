@@ -231,12 +231,12 @@ type logger struct {
 }
 
 // Enabled indicates whether a specific record should be stored.
-func (l *logger) Enabled(ctx context.Context, opts log.EnabledParameters) bool {
+func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	if l.enabledFn == nil {
-		return defaultEnabledFunc(ctx, opts)
+		return defaultEnabledFunc(ctx, param)
 	}
 
-	return l.enabledFn(ctx, opts)
+	return l.enabledFn(ctx, param)
 }
 
 // Emit stores the log record.
