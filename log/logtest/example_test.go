@@ -16,7 +16,7 @@ func Example() {
 	// Create a recorder.
 	rec := logtest.NewRecorder()
 
-	// Emit a record).
+	// Emit a log record.
 	l := rec.Logger("Example")
 	ctx := context.Background()
 	r := log.Record{}
@@ -25,40 +25,19 @@ func Example() {
 	r.SetBody(log.StringValue("Hello there"))
 	l.Emit(ctx, r)
 
-	// Check what was recorded.
+	// Get the recorded log records.
 	got := rec.Result()
-	for _, records := range got {
-		for _, record := range records {
-			fmt.Printf("%s: %s\n", record.Severity, record.Body)
-		}
-	}
 
-	// Output:
-	// INFO: Hello there
-}
-
-func Example_ignoreTimestamp() {
-	// Create a recorder.
-	rec := logtest.NewRecorder()
-
-	// Emit a record).
-	l := rec.Logger("Example")
-	ctx := context.Background()
-	r := log.Record{}
-	r.SetTimestamp(time.Now())
-	r.SetSeverity(log.SeverityInfo)
-	r.SetBody(log.StringValue("Hello there"))
-	l.Emit(ctx, r)
-
-	// Ignore Timestamp.
-	got := rec.Result()
+	// Ignore timestamps.
 	for _, recs := range got {
 		for i, r := range recs {
 			r.Timestamp = time.Time{}
+			r.ObservedTimestamp = time.Time{}
 			recs[i] = r
 		}
 	}
 
+	// Print out.
 	for _, records := range got {
 		for _, record := range records {
 			fmt.Printf("%s: %s: %s\n", record.Timestamp, record.Severity, record.Body)
