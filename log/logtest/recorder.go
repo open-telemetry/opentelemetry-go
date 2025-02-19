@@ -4,13 +4,32 @@
 package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
+	"cmp"
 	"context"
+	"maps"
+	"slices"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 )
+
+// Recorder stores all received log records in-memory.
+// Recorder implements [log.LoggerProvider].
+type Recorder struct {
+	embedded.LoggerProvider
+
+	mu      sync.Mutex
+	loggers map[Scope]*logger
+
+	// enabledFn decides whether the recorder should enable logging of a record or not
+	enabledFn enabledFn
+}
+
+// Compile-time check Recorder implements log.LoggerProvider.
+var _ log.LoggerProvider = (*Recorder)(nil)
 
 type enabledFn func(context.Context, log.EnabledParameters) bool
 
@@ -55,13 +74,25 @@ func NewRecorder(options ...Option) *Recorder {
 	cfg := newConfig(options)
 
 	return &Recorder{
+		loggers:   make(map[Scope]*logger),
 		enabledFn: cfg.enabledFn,
 	}
 }
 
-// ScopeRecords represents the records for a single instrumentation scope.
-type ScopeRecords struct {
-	// Name is the name of the instrumentation scope.
+// Result represents the recordered log record.
+type Result map[Scope][]*Record
+
+// Equal returns if a is equal to b.
+func (a Result) Equal(b Result) bool {
+	return maps.EqualFunc(a, b, func(x, y []*Record) bool {
+		return slices.EqualFunc(x, y, func(a, b *Record) bool { return a.Equal(b) })
+	})
+}
+
+// Scope represents the instrumentation scope.
+type Scope struct {
+	// Name is the name of the instrumentation scope. This should be the
+	// Go package name of that scope.
 	Name string
 	// Version is the version of the instrumentation scope.
 	Version string
@@ -69,73 +100,114 @@ type ScopeRecords struct {
 	SchemaURL string
 	// Attributes of the telemetry emitted by the scope.
 	Attributes attribute.Set
-
-	// Records are the log records, and their associated context this
-	// instrumentation scope recorded.
-	Records []EmittedRecord
 }
 
-// EmittedRecord holds a log record the instrumentation received, alongside its
-// context.
-type EmittedRecord struct {
-	log.Record
-
-	ctx context.Context
+// Record represents the record alongside its context.
+type Record struct {
+	Context           context.Context
+	EventName         string
+	Timestamp         time.Time
+	ObservedTimestamp time.Time
+	Severity          log.Severity
+	SeverityText      string
+	Body              log.Value
+	Attributes        []log.KeyValue
 }
 
-// Context provides the context emitted with the record.
-func (rwc EmittedRecord) Context() context.Context {
-	return rwc.ctx
+// Equal returns if a is equal to b.
+func (a *Record) Equal(b *Record) bool {
+	if a.Context != b.Context {
+		return false
+	}
+	if a.EventName != b.EventName {
+		return false
+	}
+	if a.Timestamp != b.Timestamp { //nolint:revive // We want to indeed compare using !=.
+		return false
+	}
+	if a.ObservedTimestamp != b.ObservedTimestamp { //nolint:revive // We want to indeed compare using !=.
+		return false
+	}
+	if a.Severity != b.Severity {
+		return false
+	}
+	if a.SeverityText != b.SeverityText {
+		return false
+	}
+	if !a.Body.Equal(b.Body) {
+		return false
+	}
+	aAttrs := sortKVs(a.Attributes)
+	bAttrs := sortKVs(b.Attributes)
+	if !slices.EqualFunc(aAttrs, bAttrs, log.KeyValue.Equal) { //nolint:gosimple // We want to use the same pattern.
+		return false
+	}
+	return true
 }
 
-// Recorder is a recorder that stores all received log records
-// in-memory.
-type Recorder struct {
-	embedded.LoggerProvider
+// Clone returns a deep copy.
+func (a *Record) Clone() *Record {
+	b := *a
+	attrs := make([]log.KeyValue, len(a.Attributes))
+	copy(attrs, a.Attributes)
+	b.Attributes = attrs
+	return &b
+}
 
-	mu      sync.Mutex
-	loggers []*logger
-
-	// enabledFn decides whether the recorder should enable logging of a record or not
-	enabledFn enabledFn
+func sortKVs(kvs []log.KeyValue) []log.KeyValue {
+	s := make([]log.KeyValue, len(kvs))
+	copy(s, kvs)
+	slices.SortFunc(s, func(a, b log.KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+	return s
 }
 
 // Logger returns a copy of Recorder as a [log.Logger] with the provided scope
 // information.
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
-
-	nl := &logger{
-		scopeRecord: &ScopeRecords{
-			Name:       name,
-			Version:    cfg.InstrumentationVersion(),
-			SchemaURL:  cfg.SchemaURL(),
-			Attributes: cfg.InstrumentationAttributes(),
-		},
-		enabledFn: r.enabledFn,
+	scope := Scope{
+		Name:       name,
+		Version:    cfg.InstrumentationVersion(),
+		SchemaURL:  cfg.SchemaURL(),
+		Attributes: cfg.InstrumentationAttributes(),
 	}
-	r.addChildLogger(nl)
 
-	return nl
-}
-
-func (r *Recorder) addChildLogger(nl *logger) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.loggers = append(r.loggers, nl)
+	if r.loggers == nil {
+		r.loggers = make(map[Scope]*logger)
+	}
+
+	l, ok := r.loggers[scope]
+	if ok {
+		return l
+	}
+	l = &logger{
+		enabledFn: r.enabledFn,
+	}
+	r.loggers[scope] = l
+	return l
 }
 
 // Result returns the current in-memory recorder log records.
-func (r *Recorder) Result() []*ScopeRecords {
+func (r *Recorder) Result() Result {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	ret := []*ScopeRecords{}
-	for _, l := range r.loggers {
-		ret = append(ret, l.scopeRecord)
+	res := make(Result, len(r.loggers))
+	for s, l := range r.loggers {
+		l.mu.Lock()
+		recs := make([]*Record, len(l.records))
+		for i, r := range l.records {
+			recs[i] = r.Clone()
+		}
+		res[s] = recs
+		l.mu.Unlock()
 	}
-	return ret
+	return res
 }
 
 // Reset clears the in-memory log records for all loggers.
@@ -151,8 +223,8 @@ func (r *Recorder) Reset() {
 type logger struct {
 	embedded.Logger
 
-	mu          sync.Mutex
-	scopeRecord *ScopeRecords
+	mu      sync.Mutex
+	records []*Record
 
 	// enabledFn decides whether the recorder should enable logging of a record or not.
 	enabledFn enabledFn
@@ -172,7 +244,24 @@ func (l *logger) Emit(ctx context.Context, record log.Record) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.scopeRecord.Records = append(l.scopeRecord.Records, EmittedRecord{record, ctx})
+	attrs := make([]log.KeyValue, 0, record.AttributesLen())
+	record.WalkAttributes(func(kv log.KeyValue) bool {
+		attrs = append(attrs, kv)
+		return true
+	})
+
+	r := &Record{
+		Context:           ctx,
+		EventName:         record.EventName(),
+		Timestamp:         record.Timestamp(),
+		ObservedTimestamp: record.ObservedTimestamp(),
+		Severity:          record.Severity(),
+		SeverityText:      record.SeverityText(),
+		Body:              record.Body(),
+		Attributes:        attrs,
+	}
+
+	l.records = append(l.records, r)
 }
 
 // Reset clears the in-memory log records.
@@ -180,5 +269,5 @@ func (l *logger) Reset() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.scopeRecord.Records = nil
+	l.records = nil
 }
