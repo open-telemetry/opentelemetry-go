@@ -69,10 +69,10 @@ func TestRecorderEmitAndReset(t *testing.T) {
 
 	got := rec.Result()
 	// Ignore Timestamp.
-	for _, v := range got {
-		for i, r := range v {
+	for _, recs := range got {
+		for i, r := range recs {
 			r.Timestamp = time.Time{}
-			v[i] = r
+			recs[i] = r
 		}
 	}
 	want := Result{
