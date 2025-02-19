@@ -192,7 +192,7 @@ func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	return l
 }
 
-// Result returns the current in-memory recorder log records.
+// Result returns a deep copy of the current in-memory recorded log records.
 func (r *Recorder) Result() Result {
 	r.mu.Lock()
 	defer r.mu.Unlock()
