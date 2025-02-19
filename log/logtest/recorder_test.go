@@ -65,6 +65,8 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	r.SetSeverity(log.SeverityInfo)
 	r.SetTimestamp(time.Now())
 	r.SetBody(log.StringValue("Hello there"))
+	r.AddAttributes(log.Int("n", 1))
+	r.AddAttributes(log.String("foo", "bar"))
 	l.Emit(ctx, r)
 
 	got := rec.Result()
@@ -81,6 +83,10 @@ func TestRecorderEmitAndReset(t *testing.T) {
 				Context:  ctx,
 				Severity: log.SeverityInfo,
 				Body:     log.StringValue("Hello there"),
+				Attributes: []log.KeyValue{
+					log.String("foo", "bar"),
+					log.Int("n", 1),
+				},
 			},
 		},
 	}
