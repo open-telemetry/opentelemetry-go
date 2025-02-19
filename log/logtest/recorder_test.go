@@ -75,7 +75,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 			recs[i] = r
 		}
 	}
-	want := Result{
+	want := RecordedRecords{
 		Scope{Name: t.Name()}: []Record{
 			{
 				Context:  ctx,
@@ -91,7 +91,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	rec.Reset()
 
 	got = rec.Result()
-	want = Result{
+	want = RecordedRecords{
 		Scope{Name: t.Name()}: nil,
 	}
 	if !got.Equal(want) {

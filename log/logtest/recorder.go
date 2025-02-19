@@ -79,11 +79,11 @@ func NewRecorder(options ...Option) *Recorder {
 	}
 }
 
-// Result represents the recordered log records.
-type Result map[Scope][]Record
+// RecordedRecords represents the recorded log records snapshot.
+type RecordedRecords map[Scope][]Record
 
 // Equal returns if a is equal to b.
-func (a Result) Equal(b Result) bool {
+func (a RecordedRecords) Equal(b RecordedRecords) bool {
 	return maps.EqualFunc(a, b, func(x, y []Record) bool {
 		return slices.EqualFunc(x, y, func(a, b Record) bool { return a.Equal(b) })
 	})
@@ -193,11 +193,11 @@ func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 }
 
 // Result returns a deep copy of the current in-memory recorded log records.
-func (r *Recorder) Result() Result {
+func (r *Recorder) Result() RecordedRecords {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	res := make(Result, len(r.loggers))
+	res := make(RecordedRecords, len(r.loggers))
 	for s, l := range r.loggers {
 		l.mu.Lock()
 		recs := make([]Record, len(l.records))
