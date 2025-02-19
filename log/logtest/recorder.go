@@ -79,7 +79,7 @@ func NewRecorder(options ...Option) *Recorder {
 	}
 }
 
-// Result represents the recordered log record.
+// Result represents the recordered log records.
 type Result map[Scope][]Record
 
 // Equal returns if a is equal to b.
