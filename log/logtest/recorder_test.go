@@ -95,7 +95,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 		Scope{Name: t.Name()}: nil,
 	}
 	if !got.Equal(want) {
-		t.Errorf("Records should be cleared\ngot:\n%#v\nwant:\n%#v", got, want)
+		t.Errorf("Records should be cleared\ngot:\n%+v\nwant:\n%+v", got, want)
 	}
 }
 
