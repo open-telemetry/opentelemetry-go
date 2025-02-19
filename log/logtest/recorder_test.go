@@ -70,12 +70,13 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	got := rec.Result()
 	// Ignore Timestamp.
 	for _, v := range got {
-		for _, r := range v {
+		for i, r := range v {
 			r.Timestamp = time.Time{}
+			v[i] = r
 		}
 	}
 	want := Result{
-		Scope{Name: t.Name()}: []*Record{
+		Scope{Name: t.Name()}: []Record{
 			{
 				Context:  ctx,
 				Severity: log.SeverityInfo,
@@ -84,7 +85,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 		},
 	}
 	if !got.Equal(want) {
-		t.Errorf("Recorded records mismatch\ngot:\n%#v\nwant:\n%#v", got, want)
+		t.Errorf("Recorded records mismatch\ngot:\n%+v\nwant:\n%+v", got, want)
 	}
 
 	rec.Reset()

@@ -80,12 +80,12 @@ func NewRecorder(options ...Option) *Recorder {
 }
 
 // Result represents the recordered log record.
-type Result map[Scope][]*Record
+type Result map[Scope][]Record
 
 // Equal returns if a is equal to b.
 func (a Result) Equal(b Result) bool {
-	return maps.EqualFunc(a, b, func(x, y []*Record) bool {
-		return slices.EqualFunc(x, y, func(a, b *Record) bool { return a.Equal(b) })
+	return maps.EqualFunc(a, b, func(x, y []Record) bool {
+		return slices.EqualFunc(x, y, func(a, b Record) bool { return a.Equal(b) })
 	})
 }
 
@@ -115,7 +115,7 @@ type Record struct {
 }
 
 // Equal returns if a is equal to b.
-func (a *Record) Equal(b *Record) bool {
+func (a Record) Equal(b Record) bool {
 	if a.Context != b.Context {
 		return false
 	}
@@ -146,12 +146,12 @@ func (a *Record) Equal(b *Record) bool {
 }
 
 // Clone returns a deep copy.
-func (a *Record) Clone() *Record {
-	b := *a
+func (a Record) Clone() Record {
+	b := a
 	attrs := make([]log.KeyValue, len(a.Attributes))
 	copy(attrs, a.Attributes)
 	b.Attributes = attrs
-	return &b
+	return b
 }
 
 func sortKVs(kvs []log.KeyValue) []log.KeyValue {
@@ -200,7 +200,7 @@ func (r *Recorder) Result() Result {
 	res := make(Result, len(r.loggers))
 	for s, l := range r.loggers {
 		l.mu.Lock()
-		recs := make([]*Record, len(l.records))
+		recs := make([]Record, len(l.records))
 		for i, r := range l.records {
 			recs[i] = r.Clone()
 		}
