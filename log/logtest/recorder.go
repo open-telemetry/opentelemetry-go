@@ -212,13 +212,19 @@ func (r *Recorder) Result() Recording {
 
 	res := make(Recording, len(r.loggers))
 	for s, l := range r.loggers {
-		l.mu.Lock()
-		recs := make([]Record, len(l.records))
-		for i, r := range l.records {
-			recs[i] = r.Clone()
-		}
-		res[s] = recs
-		l.mu.Unlock()
+		func() {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			if l.records == nil {
+				res[s] = nil
+				return
+			}
+			recs := make([]Record, len(l.records))
+			for i, r := range l.records {
+				recs[i] = r.Clone()
+			}
+			res[s] = recs
+		}()
 	}
 	return res
 }
