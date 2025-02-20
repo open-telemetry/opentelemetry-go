@@ -90,7 +90,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 			},
 		},
 	}
-	if !got.Equal(want) {
+	if !Equal(got, want) {
 		t.Errorf("Recorded records mismatch\ngot:\n%+v\nwant:\n%+v", got, want)
 	}
 
@@ -100,7 +100,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	want = Recording{
 		Scope{Name: t.Name()}: nil,
 	}
-	if !got.Equal(want) {
+	if !Equal(got, want) {
 		t.Errorf("Records should be cleared\ngot:\n%+v\nwant:\n%+v", got, want)
 	}
 }

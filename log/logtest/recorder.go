@@ -6,6 +6,7 @@ package logtest // import "go.opentelemetry.io/otel/log/logtest"
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"maps"
 	"slices"
 	"sync"
@@ -79,13 +80,26 @@ func NewRecorder(options ...Option) *Recorder {
 	}
 }
 
+// Equal returns if a is equal to b.
+func Equal[T Recording | Record](a, b T) bool {
+	switch atyped := interface{}(a).(type) {
+	case Recording:
+		return equalRecording(atyped, any(b).(Recording))
+	case Record:
+		return equalRecord(atyped, any(b).(Record))
+	}
+
+	// We control all types passed to this, panic to signal developers
+	// early they changed things in an incompatible way.
+	panic(fmt.Sprintf("unknown type: %T, %T", a, b))
+}
+
 // Recording represents the recorded log records snapshot.
 type Recording map[Scope][]Record
 
-// Equal returns if a is equal to b.
-func (a Recording) Equal(b Recording) bool {
+func equalRecording(a, b Recording) bool {
 	return maps.EqualFunc(a, b, func(x, y []Record) bool {
-		return slices.EqualFunc(x, y, func(a, b Record) bool { return a.Equal(b) })
+		return slices.EqualFunc(x, y, func(a, b Record) bool { return equalRecord(a, b) })
 	})
 }
 
@@ -114,8 +128,7 @@ type Record struct {
 	Attributes        []log.KeyValue
 }
 
-// Equal returns if a is equal to b.
-func (a Record) Equal(b Record) bool {
+func equalRecord(a, b Record) bool {
 	if a.Context != b.Context {
 		return false
 	}
