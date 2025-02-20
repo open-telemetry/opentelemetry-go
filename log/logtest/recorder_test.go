@@ -106,7 +106,6 @@ func TestRecordingEqualWithTestify(t *testing.T) {
 				Severity:  log.SeverityInfo,
 				Body:      log.StringValue("Hello there"),
 				Attributes: []log.KeyValue{
-
 					log.Int("n", 1),
 					log.String("foo", "bar"),
 				},
