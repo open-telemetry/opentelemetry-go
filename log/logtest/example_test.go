@@ -40,10 +40,10 @@ func Example() {
 	// Print out.
 	for _, records := range got {
 		for _, record := range records {
-			fmt.Printf("%s: %s: %s\n", record.Timestamp, record.Severity, record.Body)
+			fmt.Printf("%s: %s: %s\n", record.Timestamp.Format(time.RFC3339Nano), record.Severity, record.Body)
 		}
 	}
 
 	// Output:
-	// 0001-01-01 00:00:00 +0000 UTC: INFO: Hello there
+	// 0001-01-01T00:00:00Z: INFO: Hello there
 }
