@@ -235,7 +235,7 @@ func TestRecorderEmitAndReset(t *testing.T) {
 
 	got = rec.Result()
 	want = Recording{
-		// For testify nil and empty slice is imporant.
+		// For testify nil and empty slice is important.
 		Scope{Name: t.Name()}: nil,
 	}
 	assert.Equal(t, want, got)
