@@ -211,7 +211,7 @@ require (
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/telemetry v0.0.0-20250220152412-165e2f84edbc // indirect
+	golang.org/x/telemetry v0.0.0-20250221144447-d58820209c11 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
