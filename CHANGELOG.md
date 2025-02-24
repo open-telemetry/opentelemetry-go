@@ -38,6 +38,13 @@ The next release will require at least [Go 1.23].
 ### Changed
 
 - Update `github.com/prometheus/common` to v0.62.0., which changes the `NameValidationScheme` to `NoEscaping`. This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores. This is controlled by the `Content-Type` header, or can be reverted by setting `NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6198)
+- Redesign `go.opentelemetry.io/otel/log/logtest`. (#6342)
+  - Change `Recorder.Result` to return `Recording`.
+  - Add `Recording`, `Scope`, `Record` types.
+  - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types.
+  - Remove `AssertRecordEqual` function.
+  - Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used.
+  
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
