@@ -19,24 +19,23 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	rec := NewRecorder()
 	ts := time.Now()
 
-	// Emit a record.
 	l := rec.Logger(t.Name())
 	ctx := context.Background()
 	r := log.Record{}
-	r.SetSeverity(log.SeverityInfo)
 	r.SetTimestamp(ts)
+	r.SetSeverity(log.SeverityInfo)
 	r.SetBody(log.StringValue("Hello there"))
 	r.AddAttributes(log.Int("n", 1))
 	r.AddAttributes(log.String("foo", "bar"))
 	l.Emit(ctx, r)
 
-	got := rec.Result()
 	want := Recording{
 		Scope{Name: t.Name()}: []Record{
 			{
-				Context:  ctx,
-				Severity: log.SeverityInfo,
-				Body:     log.StringValue("Hello there"),
+				Context:   ctx,
+				Timestamp: ts,
+				Severity:  log.SeverityInfo,
+				Body:      log.StringValue("Hello there"),
 				Attributes: []log.KeyValue{
 					log.Int("n", 1),
 					log.String("foo", "bar"),
@@ -46,18 +45,18 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	}
 	cmpCtx := cmpopts.EquateComparable(context.Background())
 	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
 	cmpEpty := cmpopts.EquateEmpty()
-	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpStmps, cmpEpty); diff != "" {
+	got := rec.Result()
+	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpEpty); diff != "" {
 		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
 
 	rec.Reset()
 
-	got = rec.Result()
 	want = Recording{
 		Scope{Name: t.Name()}: nil,
 	}
+	got = rec.Result()
 	if diff := cmp.Diff(want, got, cmpEpty); diff != "" {
 		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
