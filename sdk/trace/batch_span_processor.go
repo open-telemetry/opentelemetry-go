@@ -201,7 +201,7 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 			}
 		}
 
-		wait := make(chan error)
+		wait := make(chan error, 1)
 		go func() {
 			wait <- bsp.exportSpans(ctx)
 			close(wait)
