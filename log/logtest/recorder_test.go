@@ -168,10 +168,10 @@ func TestEqualRecordingWithGoCmp(t *testing.T) {
 		},
 		Scope{Name: "Empty"}: []Record{},
 	}
-	seq := cmpopts.EquateComparable(context.Background())
-	ordattr := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	ignstamp := cmpopts.IgnoreTypes(time.Time{}) // ignore Timestamps
-	if diff := cmp.Diff(want, got, seq, ordattr, ignstamp, cmpopts.EquateEmpty()); diff != "" {
+	cmpCtx := cmpopts.EquateComparable(context.Background())
+	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
+	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
+	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpStmps, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
 }
