@@ -635,6 +635,28 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
+	t.Run("WithHeadersProvider", func(t *testing.T) {
+		key := http.CanonicalHeaderKey("my-custom-header")
+		key2 := http.CanonicalHeaderKey("my-provided-custom-header")
+		headers := map[string]string{key: "custom-value"}
+		providedHeaders := map[string]string{key: "custom-value-override", key2: "provided-custom-value"}
+		headersProvider := func() (map[string]string, error) { return providedHeaders, nil }
+		exp, coll := factoryFunc("", nil, WithHeaders(headers), WithHeadersProvider(headersProvider))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Regexp(t, "OTel Go OTLP over HTTP/protobuf logs exporter/[01]\\..*", got)
+		require.Contains(t, got, key)
+		// HeadersProviderFunc overrides Headers
+		assert.Equal(t, []string{providedHeaders[key]}, got[key])
+		// HeaderProviderFunc values merged with Headers
+		assert.Equal(t, []string{providedHeaders[key2]}, got[key2])
+	})
+
 	t.Run("WithTimeout", func(t *testing.T) {
 		// Do not send on rCh so the Collector never responds to the client.
 		rCh := make(chan exportResult)
