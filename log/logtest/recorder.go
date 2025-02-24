@@ -4,11 +4,7 @@
 package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
-	"cmp"
 	"context"
-	"fmt"
-	"maps"
-	"slices"
 	"sync"
 	"time"
 
@@ -80,28 +76,8 @@ func NewRecorder(options ...Option) *Recorder {
 	}
 }
 
-// Equal returns if a is equal to b.
-func Equal[T Recording | Record](a, b T) bool {
-	switch atyped := interface{}(a).(type) {
-	case Recording:
-		return equalRecording(atyped, any(b).(Recording))
-	case Record:
-		return equalRecord(atyped, any(b).(Record))
-	}
-
-	// We control all types passed to this, panic to signal developers
-	// early they changed things in an incompatible way.
-	panic(fmt.Sprintf("unknown type: %T, %T", a, b))
-}
-
 // Recording represents the recorded log records snapshot.
 type Recording map[Scope][]Record
-
-func equalRecording(a, b Recording) bool {
-	return maps.EqualFunc(a, b, func(x, y []Record) bool {
-		return slices.EqualFunc(x, y, func(a, b Record) bool { return equalRecord(a, b) })
-	})
-}
 
 // Scope represents the instrumentation scope.
 type Scope struct {
@@ -128,36 +104,6 @@ type Record struct {
 	Attributes        []log.KeyValue
 }
 
-func equalRecord(a, b Record) bool {
-	if a.Context != b.Context {
-		return false
-	}
-	if a.EventName != b.EventName {
-		return false
-	}
-	if !a.Timestamp.Equal(b.Timestamp) {
-		return false
-	}
-	if !a.ObservedTimestamp.Equal(b.ObservedTimestamp) {
-		return false
-	}
-	if a.Severity != b.Severity {
-		return false
-	}
-	if a.SeverityText != b.SeverityText {
-		return false
-	}
-	if !a.Body.Equal(b.Body) {
-		return false
-	}
-	aAttrs := sortKVs(a.Attributes)
-	bAttrs := sortKVs(b.Attributes)
-	if !slices.EqualFunc(aAttrs, bAttrs, log.KeyValue.Equal) { //nolint:gosimple // We want to use the same pattern.
-		return false
-	}
-	return true
-}
-
 // Clone returns a deep copy.
 func (a Record) Clone() Record {
 	b := a
@@ -165,15 +111,6 @@ func (a Record) Clone() Record {
 	copy(attrs, a.Attributes)
 	b.Attributes = attrs
 	return b
-}
-
-func sortKVs(kvs []log.KeyValue) []log.KeyValue {
-	s := make([]log.KeyValue, len(kvs))
-	copy(s, kvs)
-	slices.SortFunc(s, func(a, b log.KeyValue) int {
-		return cmp.Compare(a.Key, b.Key)
-	})
-	return s
 }
 
 // Logger returns a copy of Recorder as a [log.Logger] with the provided scope
