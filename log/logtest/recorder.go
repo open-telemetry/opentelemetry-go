@@ -16,6 +16,9 @@ import (
 // Recorder stores all received log records in-memory.
 // Recorder implements [log.LoggerProvider].
 type Recorder struct {
+	// Ensure forward compatibility by explicitly making this not comparable.
+	_ [0]func()
+
 	embedded.LoggerProvider
 
 	mu      sync.Mutex
@@ -94,6 +97,9 @@ type Scope struct {
 
 // Record represents the record alongside its context.
 type Record struct {
+	// Ensure forward compatibility by explicitly making this not comparable.
+	_ [0]func()
+
 	Context           context.Context
 	EventName         string
 	Timestamp         time.Time
