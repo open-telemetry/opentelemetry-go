@@ -15,97 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestLoggerEnabled(t *testing.T) {
-	for _, tt := range []struct {
-		name          string
-		options       []Option
-		ctx           context.Context
-		enabledParams log.EnabledParameters
-		want          bool
-	}{
-		{
-			name: "the default option enables every log entry",
-			ctx:  context.Background(),
-			want: true,
-		},
-		{
-			name: "with everything disabled",
-			options: []Option{
-				WithEnabledFunc(func(context.Context, log.EnabledParameters) bool {
-					return false
-				}),
-			},
-			ctx:  context.Background(),
-			want: false,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			got := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
-			if got != tt.want {
-				t.Errorf("got: %v, want: %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestRecordingEqual(t *testing.T) {
-	a := Recording{
-		Scope{Name: t.Name()}: []Record{
-			{
-				Severity: log.SeverityInfo,
-				Body:     log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.String("foo", "bar"),
-					log.Int("n", 1),
-				},
-			},
-		},
-		Scope{Name: "Empty"}: nil,
-	}
-
-	b := Recording{
-		Scope{Name: t.Name()}: []Record{
-			{
-				Severity: log.SeverityInfo,
-				Body:     log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.Int("n", 1),
-					log.String("foo", "bar"),
-				},
-			},
-		},
-		Scope{Name: "Empty"}: []Record{},
-	}
-
-	if !Equal(b, a) {
-		t.Errorf("Recording mismatch\na:\n%+v\nb:\n%+v", b, a)
-	}
-}
-
-func TestEqualRecord(t *testing.T) {
-	a := Record{
-		Severity: log.SeverityInfo,
-		Body:     log.StringValue("Hello there"),
-		Attributes: []log.KeyValue{
-			log.Int("n", 1),
-			log.String("foo", "bar"),
-		},
-	}
-	b := Record{
-		Severity: log.SeverityInfo,
-		Body:     log.StringValue("Hello there"),
-		Attributes: []log.KeyValue{
-			// Order of attributes is not important.
-			log.String("foo", "bar"),
-			log.Int("n", 1),
-		},
-	}
-	if !Equal(a, b) {
-		t.Errorf("Record mismatch\na:\n%+v\nb:\n%+v", a, b)
-	}
-}
-
-func TestRecorderEmitAndReset(t *testing.T) {
+func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	rec := NewRecorder()
 	ts := time.Now()
 
@@ -153,6 +63,39 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	}
 }
 
+func TestRecorderLoggerEnabled(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		options       []Option
+		ctx           context.Context
+		enabledParams log.EnabledParameters
+		want          bool
+	}{
+		{
+			name: "the default option enables every log entry",
+			ctx:  context.Background(),
+			want: true,
+		},
+		{
+			name: "with everything disabled",
+			options: []Option{
+				WithEnabledFunc(func(context.Context, log.EnabledParameters) bool {
+					return false
+				}),
+			},
+			ctx:  context.Background(),
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
+			if got != tt.want {
+				t.Errorf("got: %v, want: %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRecorderConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
@@ -175,4 +118,61 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestRecordingEqual(t *testing.T) {
+	a := Recording{
+		Scope{Name: t.Name()}: []Record{
+			{
+				Severity: log.SeverityInfo,
+				Body:     log.StringValue("Hello there"),
+				Attributes: []log.KeyValue{
+					log.String("foo", "bar"),
+					log.Int("n", 1),
+				},
+			},
+		},
+		Scope{Name: "Empty"}: nil,
+	}
+
+	b := Recording{
+		Scope{Name: t.Name()}: []Record{
+			{
+				Severity: log.SeverityInfo,
+				Body:     log.StringValue("Hello there"),
+				Attributes: []log.KeyValue{
+					log.Int("n", 1),
+					log.String("foo", "bar"),
+				},
+			},
+		},
+		Scope{Name: "Empty"}: []Record{},
+	}
+
+	if !Equal(b, a) {
+		t.Errorf("Recording mismatch\na:\n%+v\nb:\n%+v", b, a)
+	}
+}
+
+func TestRecordEqual(t *testing.T) {
+	a := Record{
+		Severity: log.SeverityInfo,
+		Body:     log.StringValue("Hello there"),
+		Attributes: []log.KeyValue{
+			log.Int("n", 1),
+			log.String("foo", "bar"),
+		},
+	}
+	b := Record{
+		Severity: log.SeverityInfo,
+		Body:     log.StringValue("Hello there"),
+		Attributes: []log.KeyValue{
+			// Order of attributes is not important.
+			log.String("foo", "bar"),
+			log.Int("n", 1),
+		},
+	}
+	if !Equal(a, b) {
+		t.Errorf("Record mismatch\na:\n%+v\nb:\n%+v", a, b)
+	}
 }
