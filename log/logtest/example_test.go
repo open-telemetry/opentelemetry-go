@@ -26,7 +26,7 @@ func Example() {
 	r.SetTimestamp(time.Now())
 	r.SetSeverity(log.SeverityInfo)
 	r.SetBody(log.StringValue("Hello there"))
-	r.AddAttributes(log.String("fizz", "buzz"))
+	r.AddAttributes(log.String("foo", "bar"))
 	r.AddAttributes(log.Int("n", 1))
 	l.Emit(ctx, r)
 
@@ -59,19 +59,5 @@ func Example() {
 	}
 
 	// Output:
-	// Recorded records mismatch (-want +got):
-	//   logtest.Recording{
-	//   	{Name: "Example"}: {
-	//   		{
-	//   			... // 3 ignored and 2 identical fields
-	//   			SeverityText: "",
-	//   			Body:         s"Hello there",
-	//   			Attributes: []log.KeyValue(Inverse(cmpopts.SortSlices, []log.KeyValue{
-	// - 				s"fizz:buzz",
-	// + 				s"foo:bar",
-	//   				s"n:1",
-	//   			})),
-	//   		},
-	//   	},
-	//   }
+	//
 }
