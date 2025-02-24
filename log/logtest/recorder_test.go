@@ -11,15 +11,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
 )
-
-func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
-	r := &Recorder{}
-	assert.NotEqual(t, r, r.Logger("test"))
-}
 
 func TestLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
@@ -46,24 +40,20 @@ func TestLoggerEnabled(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
-			assert.Equal(t, tt.want, e)
+			got := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
+			if got != tt.want {
+				t.Errorf("got: %v, want: %v", got, tt.want)
+			}
 		})
 	}
 }
 
-func TestLoggerEnabledFnUnset(t *testing.T) {
-	r := &logger{}
-	assert.True(t, r.Enabled(context.Background(), log.EnabledParameters{}))
-}
-
-func TestRecordingEqualWithStdLib(t *testing.T) {
-	got := Recording{
+func TestRecordingEqual(t *testing.T) {
+	a := Recording{
 		Scope{Name: t.Name()}: []Record{
 			{
-				Timestamp: time.Now(),
-				Severity:  log.SeverityInfo,
-				Body:      log.StringValue("Hello there"),
+				Severity: log.SeverityInfo,
+				Body:     log.StringValue("Hello there"),
 				Attributes: []log.KeyValue{
 					log.String("foo", "bar"),
 					log.Int("n", 1),
@@ -73,7 +63,7 @@ func TestRecordingEqualWithStdLib(t *testing.T) {
 		Scope{Name: "Empty"}: nil,
 	}
 
-	want := Recording{
+	b := Recording{
 		Scope{Name: t.Name()}: []Record{
 			{
 				Severity: log.SeverityInfo,
@@ -86,93 +76,9 @@ func TestRecordingEqualWithStdLib(t *testing.T) {
 		},
 		Scope{Name: "Empty"}: []Record{},
 	}
-	// Ignore Timestamp.
-	for _, recs := range got {
-		for i, r := range recs {
-			r.Timestamp = time.Time{}
-			recs[i] = r
-		}
-	}
-	if !Equal(want, got) {
-		t.Errorf("Recording mismatch\na:\n%+v\nb:\n%+v", want, got)
-	}
-}
 
-func TestRecordingEqualWithTestify(t *testing.T) {
-	got := Recording{
-		Scope{Name: t.Name()}: []Record{
-			{
-				Timestamp: time.Now(),
-				Severity:  log.SeverityInfo,
-				Body:      log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.Int("n", 1),
-					log.String("foo", "bar"),
-				},
-			},
-		},
-		Scope{Name: "Empty"}: nil,
-	}
-
-	want := Recording{
-		Scope{Name: t.Name()}: []Record{
-			{
-				Severity: log.SeverityInfo,
-				Body:     log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					// Attributes order has to be the same.
-					log.Int("n", 1),
-					log.String("foo", "bar"),
-				},
-			},
-		},
-		// Nil and empty slices are different for testify.
-		Scope{Name: "Empty"}: nil,
-	}
-	// Ignore Timestamp.
-	for _, recs := range got {
-		for i, r := range recs {
-			r.Timestamp = time.Time{}
-			recs[i] = r
-		}
-	}
-	assert.Equal(t, want, got)
-}
-
-func TestEqualRecordingWithGoCmp(t *testing.T) {
-	got := Recording{
-		Scope{Name: t.Name()}: []Record{
-			{
-				Timestamp: time.Now(),
-				Severity:  log.SeverityInfo,
-				Body:      log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.String("foo", "bar"),
-					log.Int("n", 1),
-				},
-			},
-		},
-		Scope{Name: "Empty"}: nil,
-	}
-
-	want := Recording{
-		Scope{Name: t.Name()}: []Record{
-			{
-				Severity: log.SeverityInfo,
-				Body:     log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.Int("n", 1),
-					log.String("foo", "bar"),
-				},
-			},
-		},
-		Scope{Name: "Empty"}: []Record{},
-	}
-	cmpCtx := cmpopts.EquateComparable(context.Background())
-	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
-	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpStmps, cmpopts.EquateEmpty()); diff != "" {
-		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
+	if !Equal(b, a) {
+		t.Errorf("Recording mismatch\na:\n%+v\nb:\n%+v", b, a)
 	}
 }
 
@@ -218,10 +124,9 @@ func TestRecorderEmitAndReset(t *testing.T) {
 	want := Recording{
 		Scope{Name: t.Name()}: []Record{
 			{
-				Context:   ctx,
-				Severity:  log.SeverityInfo,
-				Timestamp: ts,
-				Body:      log.StringValue("Hello there"),
+				Context:  ctx,
+				Severity: log.SeverityInfo,
+				Body:     log.StringValue("Hello there"),
 				Attributes: []log.KeyValue{
 					log.Int("n", 1),
 					log.String("foo", "bar"),
@@ -229,16 +134,23 @@ func TestRecorderEmitAndReset(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(t, want, got)
+	cmpCtx := cmpopts.EquateComparable(context.Background())
+	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
+	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
+	cmpEpty := cmpopts.EquateEmpty()
+	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpStmps, cmpEpty); diff != "" {
+		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
+	}
 
 	rec.Reset()
 
 	got = rec.Result()
 	want = Recording{
-		// For testify nil and empty slice is important.
 		Scope{Name: t.Name()}: nil,
 	}
-	assert.Equal(t, want, got)
+	if diff := cmp.Diff(want, got, cmpEpty); diff != "" {
+		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
+	}
 }
 
 func TestRecorderConcurrentSafe(t *testing.T) {
