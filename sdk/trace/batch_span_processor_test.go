@@ -530,11 +530,20 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 	}
 }
 
-type indefiniteExporter struct{}
+type indefiniteExporter struct {
+	stop chan (struct{})
+}
 
-func (indefiniteExporter) Shutdown(context.Context) error { return nil }
-func (indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
-	<-ctx.Done()
+func newIndefiniteExporter() indefiniteExporter {
+	return indefiniteExporter{stop: make(chan struct{})}
+}
+
+func (e indefiniteExporter) Shutdown(context.Context) error {
+	close(e.stop)
+	return nil
+}
+func (e indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
+	<-e.stop
 	return ctx.Err()
 }
 
@@ -543,7 +552,7 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	// Cancel the context
 	cancel()
 
-	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	bsp := sdktrace.NewBatchSpanProcessor(newIndefiniteExporter())
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
@@ -555,7 +564,7 @@ func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
 	defer cancel()
 	<-ctx.Done()
 
-	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	bsp := sdktrace.NewBatchSpanProcessor(newIndefiniteExporter())
 	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
