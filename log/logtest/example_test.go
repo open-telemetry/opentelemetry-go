@@ -54,7 +54,7 @@ func Example() {
 
 	// Get the recorded log records.
 	got := rec.Result()
-	if diff := cmp.Diff(got, want, cmpCtx, cmpKVs, cmpStmps, cmpEpty); diff != "" {
+	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpStmps, cmpEpty); diff != "" {
 		fmt.Printf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
 
