@@ -649,6 +649,9 @@ func BenchmarkSpanProcessorOnEnd(b *testing.B) {
 				tracetest.NewNoopExporter(),
 				sdktrace.WithMaxExportBatchSize(bb.batchSize),
 			)
+			b.Cleanup(func() {
+				_ = bsp.Shutdown(context.Background())
+			})
 			snap := tracetest.SpanStub{}.Snapshot()
 
 			b.ResetTimer()
@@ -673,6 +676,9 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			tracetest.NewNoopExporter(),
 			sdktrace.WithMaxExportBatchSize(10),
 		))
+	b.Cleanup(func() {
+		_ = tp.Shutdown(context.Background())
+	})
 	tracer := tp.Tracer("bench")
 	ctx := context.Background()
 
