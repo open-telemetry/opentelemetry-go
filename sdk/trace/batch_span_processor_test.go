@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -534,14 +534,18 @@ type indefiniteExporter struct {
 	stop chan (struct{})
 }
 
-func newIndefiniteExporter() indefiniteExporter {
-	return indefiniteExporter{stop: make(chan struct{})}
+func newIndefiniteExporter(t *testing.T) indefiniteExporter {
+	e := indefiniteExporter{stop: make(chan struct{})}
+	t.Cleanup(func() {
+		go close(e.stop)
+	})
+	return e
 }
 
 func (e indefiniteExporter) Shutdown(context.Context) error {
-	close(e.stop)
 	return nil
 }
+
 func (e indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
 	<-e.stop
 	return ctx.Err()
@@ -552,19 +556,27 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	// Cancel the context
 	cancel()
 
-	bsp := sdktrace.NewBatchSpanProcessor(newIndefiniteExporter())
+	bsp := sdktrace.NewBatchSpanProcessor(newIndefiniteExporter(t))
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
 }
 
 func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
-	// Add timeout to context to test deadline
-	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
-	defer cancel()
-	<-ctx.Done()
+	t.Cleanup(func() { goleak.VerifyNone(t) })
 
-	bsp := sdktrace.NewBatchSpanProcessor(newIndefiniteExporter())
+	tp := basicTracerProvider(t)
+	exp := newIndefiniteExporter(t)
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer(t.Name())
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+
+	// Add timeout to context to test deadline
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+
 	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
