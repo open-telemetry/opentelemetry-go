@@ -41,7 +41,7 @@ The next release will require at least [Go 1.23].
 
 ### Fixes
 
-- Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#TODO)
+- Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#6368)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
