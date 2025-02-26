@@ -29,6 +29,15 @@ type TextMapCarrier interface {
 	// must never be done outside of a new major release.
 }
 
+// MultiTextMapCarrier is a TextMapCarrier that can return multiple values for a single key.
+type MultiTextMapCarrier interface {
+	TextMapCarrier
+	// GetAll returns all values associated with the passed key.
+	GetAll(key string) []string
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+}
+
 // MapCarrier is a TextMapCarrier that uses a map held in memory as a storage
 // medium for propagated key-value pairs.
 type MapCarrier map[string]string
@@ -58,9 +67,14 @@ func (c MapCarrier) Keys() []string {
 // HeaderCarrier adapts http.Header to satisfy the TextMapCarrier interface.
 type HeaderCarrier http.Header
 
-// Get returns the value associated with the passed key.
+// Get returns the first value associated with the passed key.
 func (hc HeaderCarrier) Get(key string) string {
 	return http.Header(hc).Get(key)
+}
+
+// GetAll returns all values associated with the passed key.
+func (hc HeaderCarrier) GetAll(key string) []string {
+	return http.Header(hc).Values(key)
 }
 
 // Set stores the key-value pair.
