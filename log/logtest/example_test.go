@@ -43,18 +43,15 @@ func Example() {
 			},
 		},
 	}
-	// Ignore Context.
-	cmpCtx := cmpopts.IgnoreFields(logtest.Record{}, "Context")
-	// Ignore Timestamps.
-	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
-	// Unordered compare of the key values.
-	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	// Empty and nil collections are equal.
-	cmpEpty := cmpopts.EquateEmpty()
-
+	opts := []cmpopts.Options{ 
+		cmpopts.IgnoreFields(logtest.Record{}, "Context"), // Ignore Context.
+		cmpopts.IgnoreTypes(time.Time{}), // Ignore Timestamps.
+		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
+		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
+	}
 	// Get the recorded log records.
 	got := rec.Result()
-	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpStmps, cmpEpty); diff != "" {
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		fmt.Printf("recording mismatch (-want +got):\n%s", diff)
 	}
 
