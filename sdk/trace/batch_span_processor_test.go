@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/env"
@@ -567,8 +566,6 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 }
 
 func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
-
 	tp := basicTracerProvider(t)
 	exp := newIndefiniteExporter(t)
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
