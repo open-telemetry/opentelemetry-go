@@ -43,11 +43,13 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 			},
 		},
 	}
-	cmpCtx := cmpopts.EquateComparable(context.Background())
-	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	cmpEpty := cmpopts.EquateEmpty()
+	opts := []cmp.Option{
+		cmpopts.EquateComparable(context.Background()),                            // Compare context.
+		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
+		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
+	}
 	got := rec.Result()
-	if diff := cmp.Diff(want, got, cmpCtx, cmpKVs, cmpEpty); diff != "" {
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
 
@@ -57,7 +59,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 		Scope{Name: t.Name()}: nil,
 	}
 	got = rec.Result()
-	if diff := cmp.Diff(want, got, cmpEpty); diff != "" {
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
 }

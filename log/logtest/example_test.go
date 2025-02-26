@@ -43,11 +43,11 @@ func Example() {
 			},
 		},
 	}
-	opts := []cmpopts.Options{ 
-		cmpopts.IgnoreFields(logtest.Record{}, "Context"), // Ignore Context.
-		cmpopts.IgnoreTypes(time.Time{}), // Ignore Timestamps.
+	opts := []cmp.Option{
+		cmpopts.IgnoreFields(logtest.Record{}, "Context"),                         // Ignore Context.
+		cmpopts.IgnoreTypes(time.Time{}),                                          // Ignore Timestamps.
 		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
-		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
+		cmpopts.EquateEmpty(),                                                     // Empty and nil collections are equal.
 	}
 	// Get the recorded log records.
 	got := rec.Result()
