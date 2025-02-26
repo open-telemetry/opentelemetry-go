@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
-
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -544,6 +543,9 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	cancel()
 
 	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	t.Cleanup(func() {
+		assert.NoError(t, bsp.Shutdown(context.Background()))
+	})
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
@@ -556,6 +558,9 @@ func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
 	<-ctx.Done()
 
 	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	t.Cleanup(func() {
+		assert.NoError(t, bsp.Shutdown(context.Background()))
+	})
 	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
@@ -569,6 +574,9 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
 	)
+	t.Cleanup(func() {
+		assert.NoError(t, tp.Shutdown(context.Background()))
+	})
 
 	tracer := tp.Tracer("tracer")
 
@@ -641,6 +649,9 @@ func BenchmarkSpanProcessorOnEnd(b *testing.B) {
 				tracetest.NewNoopExporter(),
 				sdktrace.WithMaxExportBatchSize(bb.batchSize),
 			)
+			b.Cleanup(func() {
+				_ = bsp.Shutdown(context.Background())
+			})
 			snap := tracetest.SpanStub{}.Snapshot()
 
 			b.ResetTimer()
@@ -665,6 +676,9 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			tracetest.NewNoopExporter(),
 			sdktrace.WithMaxExportBatchSize(10),
 		))
+	b.Cleanup(func() {
+		_ = tp.Shutdown(context.Background())
+	})
 	tracer := tp.Tracer("bench")
 	ctx := context.Background()
 
