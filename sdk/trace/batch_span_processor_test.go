@@ -529,11 +529,24 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 	}
 }
 
-type indefiniteExporter struct{}
+type indefiniteExporter struct {
+	stop chan (struct{})
+}
 
-func (indefiniteExporter) Shutdown(context.Context) error { return nil }
-func (indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
-	<-ctx.Done()
+func newIndefiniteExporter(t *testing.T) indefiniteExporter {
+	e := indefiniteExporter{stop: make(chan struct{})}
+	t.Cleanup(func() {
+		go close(e.stop)
+	})
+	return e
+}
+
+func (e indefiniteExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (e indefiniteExporter) ExportSpans(ctx context.Context, _ []sdktrace.ReadOnlySpan) error {
+	<-e.stop
 	return ctx.Err()
 }
 
@@ -542,25 +555,29 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	// Cancel the context
 	cancel()
 
-	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
+	bsp := sdktrace.NewBatchSpanProcessor(newIndefiniteExporter(t))
 	t.Cleanup(func() {
 		assert.NoError(t, bsp.Shutdown(context.Background()))
 	})
+
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
 }
 
 func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
-	// Add timeout to context to test deadline
-	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
-	defer cancel()
-	<-ctx.Done()
+	tp := basicTracerProvider(t)
+	exp := newIndefiniteExporter(t)
+	bsp := sdktrace.NewBatchSpanProcessor(exp)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer(t.Name())
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
 
-	bsp := sdktrace.NewBatchSpanProcessor(indefiniteExporter{})
-	t.Cleanup(func() {
-		assert.NoError(t, bsp.Shutdown(context.Background()))
-	})
+	// Add timeout to context to test deadline
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+
 	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
