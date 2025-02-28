@@ -7,66 +7,64 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestRecorderLogger(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		options []Option
+func TestRecorderLoggerEmitAndReset(t *testing.T) {
+	rec := NewRecorder()
+	ts := time.Now()
 
-		loggerName    string
-		loggerOptions []log.LoggerOption
+	l := rec.Logger(t.Name())
+	ctx := context.Background()
+	r := log.Record{}
+	r.SetTimestamp(ts)
+	r.SetSeverity(log.SeverityInfo)
+	r.SetBody(log.StringValue("Hello there"))
+	r.AddAttributes(log.Int("n", 1))
+	r.AddAttributes(log.String("foo", "bar"))
+	l.Emit(ctx, r)
 
-		wantLogger log.Logger
-	}{
-		{
-			name: "provides a default logger",
-
-			wantLogger: &logger{
-				scopeRecord: &ScopeRecords{},
-			},
-		},
-		{
-			name: "provides a logger with a configured scope",
-
-			loggerName: "test",
-			loggerOptions: []log.LoggerOption{
-				log.WithInstrumentationVersion("logtest v42"),
-				log.WithSchemaURL("https://example.com"),
-				log.WithInstrumentationAttributes(attribute.String("foo", "bar")),
-			},
-
-			wantLogger: &logger{
-				scopeRecord: &ScopeRecords{
-					Name:       "test",
-					Version:    "logtest v42",
-					SchemaURL:  "https://example.com",
-					Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+	want := Recording{
+		Scope{Name: t.Name()}: []Record{
+			{
+				Context:   ctx,
+				Timestamp: ts,
+				Severity:  log.SeverityInfo,
+				Body:      log.StringValue("Hello there"),
+				Attributes: []log.KeyValue{
+					log.Int("n", 1),
+					log.String("foo", "bar"),
 				},
 			},
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
-			// unset enabledFn to allow comparison
-			l.(*logger).enabledFn = nil
+	}
+	opts := []cmp.Option{
+		cmpopts.EquateComparable(context.Background()),                            // Compare context.
+		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
+		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
+	}
+	got := rec.Result()
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
+	}
 
-			assert.Equal(t, tt.wantLogger, l)
-		})
+	rec.Reset()
+
+	want = Recording{
+		Scope{Name: t.Name()}: nil,
+	}
+	got = rec.Result()
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
-	r := &Recorder{}
-	assert.NotEqual(t, r, r.Logger("test"))
-}
-
-func TestLoggerEnabled(t *testing.T) {
+func TestRecorderLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		options       []Option
@@ -91,52 +89,12 @@ func TestLoggerEnabled(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
-			assert.Equal(t, tt.want, e)
+			got := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
+			if got != tt.want {
+				t.Errorf("got: %v, want: %v", got, tt.want)
+			}
 		})
 	}
-}
-
-func TestLoggerEnabledFnUnset(t *testing.T) {
-	r := &logger{}
-	assert.True(t, r.Enabled(context.Background(), log.EnabledParameters{}))
-}
-
-func TestRecorderEmitAndReset(t *testing.T) {
-	r := NewRecorder()
-	l := r.Logger("test")
-	assert.Empty(t, r.Result()[0].Records)
-
-	r1 := log.Record{}
-	r1.SetSeverity(log.SeverityInfo)
-	ctx := context.Background()
-
-	l.Emit(ctx, r1)
-	assert.Equal(t, []EmittedRecord{
-		{r1, ctx},
-	}, r.Result()[0].Records)
-
-	nl := r.Logger("test")
-	assert.Empty(t, r.Result()[1].Records)
-
-	r2 := log.Record{}
-	r2.SetSeverity(log.SeverityError)
-	// We want a non-background context here so it's different from `ctx`.
-	ctx2, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	nl.Emit(ctx2, r2)
-	assert.Len(t, r.Result()[0].Records, 1)
-	AssertRecordEqual(t, r.Result()[0].Records[0].Record, r1)
-	assert.Equal(t, r.Result()[0].Records[0].Context(), ctx)
-
-	assert.Len(t, r.Result()[1].Records, 1)
-	AssertRecordEqual(t, r.Result()[1].Records[0].Record, r2)
-	assert.Equal(t, r.Result()[1].Records[0].Context(), ctx2)
-
-	r.Reset()
-	assert.Empty(t, r.Result()[0].Records)
-	assert.Empty(t, r.Result()[1].Records)
 }
 
 func TestRecorderConcurrentSafe(t *testing.T) {
