@@ -660,5 +660,5 @@ honnef.co/go/tools v0.6.0 h1:TAODvD3knlq75WCp2nyGJtT4LeRV/o7NN9nYPeVJXf8=
 honnef.co/go/tools v0.6.0/go.mod h1:3puzxxljPCe8RGJX7BIy1plGbxEOZni5mR2aXe3/uk4=
 mvdan.cc/gofumpt v0.7.0 h1:bg91ttqXmi9y2xawvkuMXyvAA/1ZGJqYAEGjXuP0JXU=
 mvdan.cc/gofumpt v0.7.0/go.mod h1:txVFJy/Sc/mvaycET54pV8SW8gWxTlUuGHVEcncmNUo=
-mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3 h1:OPdLMIX29kquQXSiXmnwzHP1bc+JlH0S2l8SfVK9yWE=
-mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3/go.mod h1:VQc4l9ccF55E7EwPxcGqwierxEf0KG8MRR8hJ9tpngw=
+mvdan.cc/unparam v0.0.0-20250301125049-0df0534333a4 h1:WjUu4yQoT5BHT1w8Zu56SP8367OuBV5jvo+4Ulppyf8=
+mvdan.cc/unparam v0.0.0-20250301125049-0df0534333a4/go.mod h1:rthT7OuvRbaGcd5ginj6dA2oLE7YNlta9qhBNNdCaLE=
