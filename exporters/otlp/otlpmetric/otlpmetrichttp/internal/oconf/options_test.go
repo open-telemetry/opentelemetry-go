@@ -395,6 +395,44 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 
+		// Headers Provider tests
+		{
+			name: " Test with Headers Provider",
+			opts: []GenericOption{
+				WithHeadersProvider(func() (map[string]string, error) {
+					return map[string]string{"key": "value"}, nil
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Metrics.HeadersProvider)
+				headers, err := c.Metrics.HeadersProvider()
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"key": "value"}, headers)
+			},
+		},
+		{
+			name: " Test with Headers and Headers Provider",
+			opts: []GenericOption{
+				WithHeaders(map[string]string{"key": "value"}),
+				WithHeadersProvider(func() (map[string]string, error) {
+					return map[string]string{"key": "value-override"}, nil
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Metrics.HeadersProvider)
+				headers, err := c.Metrics.HeadersProvider()
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"key": "value-override"}, headers)
+			},
+		},
+		{
+			name: " Test without Headers Provider",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Metrics.HeadersProvider)
+			},
+		},
+
 		// Compression Tests
 		{
 			name: "Test With Compression",
