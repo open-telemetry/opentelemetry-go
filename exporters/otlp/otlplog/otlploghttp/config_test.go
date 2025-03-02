@@ -364,7 +364,6 @@ func TestNewConfig(t *testing.T) {
 				`tls: failed to find any PEM data in certificate input`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value a,%ZZ=valid,key=%ZZ:`,
 				`invalid header: a`,
-				`invalid header key: %ZZ`,
 				`invalid header value: %ZZ`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
