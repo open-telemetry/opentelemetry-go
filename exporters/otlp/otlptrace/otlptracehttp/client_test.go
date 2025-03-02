@@ -169,6 +169,17 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: customProxyHeader,
 			},
 		},
+		{
+			name: "with headers proivder",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithHeadersProvider(func() (map[string]string, error) {
+					return testHeaders, nil
+				}),
+			},
+			mcCfg: mockCollectorConfig{
+				ExpectedHeaders: testHeaders,
+			},
+		},
 	}
 
 	for _, tc := range tests {
