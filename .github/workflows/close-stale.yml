@@ -23,3 +23,4 @@ jobs:
           days-before-issue-close: 744
           exempt-issue-labels: 'never stale'
           exempt-pr-labels: 'never stale'
+          ascending: true
