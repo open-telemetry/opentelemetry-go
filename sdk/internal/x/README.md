@@ -22,6 +22,13 @@ All other values are ignored.
 [OpenTelemetry resource semantic conventions]: https://opentelemetry.io/docs/specs/semconv/resource/
 [resource detectors]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Detector
 
+### SDK Self-Observability
+
+To enable experimental metric and trace instrumentation in SDKs, set the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable.
+If enabled, this instrumentation uses the global `TracerProvider` and `MeterProvider`.
+The value set must be the case-insensitive string of `"true"` to enable the feature.
+All other values are ignored.
+
 #### Examples
 
 Enable experimental resource semantic conventions.
