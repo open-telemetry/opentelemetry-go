@@ -127,6 +127,24 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
+	t.Run("WithHeadersProvider", func(t *testing.T) {
+		key := http.CanonicalHeaderKey("my-custom-header")
+		headers := map[string]string{key: "custom-value"}
+		exp, coll := factoryFunc("", nil, WithHeadersProvider(func() (map[string]string, error) {
+			return headers, nil
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Regexp(t, "OTel Go OTLP over HTTP/protobuf metrics exporter/[01]\\..*", got)
+		require.Contains(t, got, key)
+		assert.Equal(t, []string{headers[key]}, got[key])
+	})
+
 	t.Run("WithTimeout", func(t *testing.T) {
 		// Do not send on rCh so the Collector never responds to the client.
 		rCh := make(chan otest.ExportResult)

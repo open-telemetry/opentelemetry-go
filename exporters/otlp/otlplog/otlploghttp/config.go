@@ -22,11 +22,12 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint                        = "localhost:4318"
-	defaultPath                            = "/v1/logs"
-	defaultTimeout                         = 10 * time.Second
-	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                        = retry.DefaultConfig
+	defaultEndpoint                               = "localhost:4318"
+	defaultPath                                   = "/v1/logs"
+	defaultTimeout                                = 10 * time.Second
+	defaultProxy           HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg                               = retry.DefaultConfig
+	defaultHeadersProvider HeadersProviderFunc    = func() (map[string]string, error) { return map[string]string{}, nil }
 )
 
 // Environment variable keys.
@@ -85,15 +86,16 @@ type fnOpt func(config) config
 func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
 
 type config struct {
-	endpoint    setting[string]
-	path        setting[string]
-	insecure    setting[bool]
-	tlsCfg      setting[*tls.Config]
-	headers     setting[map[string]string]
-	compression setting[Compression]
-	timeout     setting[time.Duration]
-	proxy       setting[HTTPTransportProxyFunc]
-	retryCfg    setting[retry.Config]
+	endpoint        setting[string]
+	path            setting[string]
+	insecure        setting[bool]
+	tlsCfg          setting[*tls.Config]
+	headers         setting[map[string]string]
+	headersProvider setting[HeadersProviderFunc]
+	compression     setting[Compression]
+	timeout         setting[time.Duration]
+	proxy           setting[HTTPTransportProxyFunc]
+	retryCfg        setting[retry.Config]
 }
 
 func newConfig(options []Option) config {
@@ -116,6 +118,9 @@ func newConfig(options []Option) config {
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
 		loadEnvTLS[*tls.Config](),
+	)
+	c.headersProvider = c.headersProvider.Resolve(
+		fallback[HeadersProviderFunc](defaultHeadersProvider),
 	)
 	c.headers = c.headers.Resolve(
 		getenv[map[string]string](envHeaders, convHeaders),
@@ -282,6 +287,16 @@ func WithInsecure() Option {
 func WithHeaders(headers map[string]string) Option {
 	return fnOpt(func(c config) config {
 		c.headers = newSetting(headers)
+		return c
+	})
+}
+
+type HeadersProviderFunc func() (map[string]string, error)
+
+// WithHeadersProvider will be called to set the provided headers with each HTTP requests.
+func WithHeadersProvider(providerFunc HeadersProviderFunc) Option {
+	return fnOpt(func(c config) config {
+		c.headersProvider = newSetting(providerFunc)
 		return c
 	})
 }
