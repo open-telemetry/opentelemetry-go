@@ -439,6 +439,7 @@ func convHeaders(s string) (map[string]string, error) {
 	for _, header := range strings.Split(s, ",") {
 		rawKey, rawVal, found := strings.Cut(header, "=")
 		if !found {
+			global.Error(errors.New("missing '="), "parse headers", "input", header)
 			err = errors.Join(err, fmt.Errorf("invalid header: %s", header))
 			continue
 		}
@@ -447,6 +448,7 @@ func convHeaders(s string) (map[string]string, error) {
 
 		// Validate the key.
 		if !isValidHeaderKey(key) {
+			global.Error(errors.New("invalid header key"), "parse headers", "key", key)
 			err = errors.Join(err, fmt.Errorf("invalid header key: %s", rawKey))
 			continue
 		}
@@ -454,12 +456,17 @@ func convHeaders(s string) (map[string]string, error) {
 		// Only decode the value.
 		escVal, e := url.PathUnescape(rawVal)
 		if e != nil {
+			global.Error(err, "escape header value", "value", rawVal)
 			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
 			continue
 		}
 		val := strings.TrimSpace(escVal)
 
 		out[key] = val
+	}
+	// If at least one valid header exists, reset err to nil
+	if len(out) > 0 {
+		err = nil
 	}
 	return out, err
 }
