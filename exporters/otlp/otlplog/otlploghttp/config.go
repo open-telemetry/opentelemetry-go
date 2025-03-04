@@ -556,7 +556,6 @@ func convHeaders(s string) (map[string]string, error) {
 		// Only decode the value.
 		escVal, e := url.PathUnescape(rawVal)
 		if e != nil {
-			global.Error(e, "escape header value", "value", rawVal)
 			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
 			continue
 		}
