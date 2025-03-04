@@ -541,7 +541,6 @@ func convHeaders(s string) (map[string]string, error) {
 	for _, header := range strings.Split(s, ",") {
 		rawKey, rawVal, found := strings.Cut(header, "=")
 		if !found {
-			global.Error(errors.New("missing '="), "parse headers", "input", header)
 			err = errors.Join(err, fmt.Errorf("invalid header: %s", header))
 			continue
 		}
