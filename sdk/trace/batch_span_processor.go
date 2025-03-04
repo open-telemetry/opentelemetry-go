@@ -75,6 +75,9 @@ type BatchSpanProcessorOptions struct {
 	// Blocking option should be used carefully as it can severely affect the performance of an
 	// application.
 	BlockOnQueueFull bool
+
+	// meterProvider is the meterProvider used to record self-observability metrics.
+	meterProvider metric.MeterProvider
 }
 
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
@@ -344,6 +347,16 @@ func WithExportTimeout(timeout time.Duration) BatchSpanProcessorOption {
 func WithBlocking() BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		o.BlockOnQueueFull = true
+	}
+}
+
+// withMeterProvider allows configuring the meterProvider used for recording
+// self-observability metrics during testing.
+func withMeterProvider(provider metric.MeterProvider) BatchSpanProcessorOption {
+	return func(o *BatchSpanProcessorOptions) {
+		if provider != nil {
+			o.meterProvider = provider
+		}
 	}
 }
 
