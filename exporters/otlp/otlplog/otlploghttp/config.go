@@ -549,7 +549,6 @@ func convHeaders(s string) (map[string]string, error) {
 
 		// Validate the key.
 		if !isValidHeaderKey(key) {
-			global.Error(errors.New("invalid header key"), "parse headers", "key", key)
 			err = errors.Join(err, fmt.Errorf("invalid header key: %s", rawKey))
 			continue
 		}
