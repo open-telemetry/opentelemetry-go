@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.35.0/0.57.0/0.11.0] 2025-03-04
+
 This release is the last to support [Go 1.22].
 The next release will require at least [Go 1.23].
 
@@ -43,9 +48,6 @@ The next release will require at least [Go 1.23].
 
 - Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#6368)
 - Eliminate goroutine leak for the processor returned by `NewBatchSpanProcessor` when `ForceFlush` is called and the passed `ctx` is canceled and `SpanExporter.Export` has not returned. (#6369)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.34.0/0.56.0/0.10.0] 2025-01-17
 
@@ -3233,7 +3235,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.34.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.35.0...HEAD
+[1.35.0/0.57.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.35.0
 [1.34.0/0.56.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.34.0
 [1.33.0/0.55.0/0.9.0/0.0.12]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.33.0
 [1.32.0/0.54.0/0.8.0/0.0.11]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.32.0
