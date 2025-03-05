@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
-## [1.35.0/0.57.0/0.11.0] 2025-03-04
+## [1.35.0/0.57.0/0.11.0] 2025-03-05
 
 This release is the last to support [Go 1.22].
 The next release will require at least [Go 1.23].
