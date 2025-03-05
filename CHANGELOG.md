@@ -8,6 +8,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Redesign `go.opentelemetry.io/otel/log/logtest`. (#6342)
+  - Change `Recorder.Result` to return `Recording`.
+  - Add `Recording`, `Scope`, `Record` types.
+  - `Recorder` no longer separately stores records emitted by loggers with the same instrumentation scope.
+  - Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used.
+  - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types.
+  - Remove `AssertRecordEqual` function.
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.35.0/0.57.0/0.11.0] 2025-03-05
+
 This release is the last to support [Go 1.22].
 The next release will require at least [Go 1.23].
 
@@ -37,17 +52,14 @@ The next release will require at least [Go 1.23].
 
 ### Changed
 
-- Update `github.com/prometheus/common` to v0.62.0., which changes the `NameValidationScheme` to `NoEscaping`. This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores. This is controlled by the `Content-Type` header, or can be reverted by setting `NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6198)
-- Redesign `go.opentelemetry.io/otel/log/logtest`. (#6342)
-  - Change `Recorder.Result` to return `Recording`.
-  - Add `Recording`, `Scope`, `Record` types.
-  - `Recorder` no longer separately stores records emitted by loggers with the same instrumentation scope.
-  - Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used.
-  - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types.
-  - Remove `AssertRecordEqual` function.
+- Update `github.com/prometheus/common` to `v0.62.0`, which changes the `NameValidationScheme` to `NoEscaping`.
+  This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
+  This is controlled by the `Content-Type` header, or can be reverted by setting `NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6198)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Fixes
+
+- Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#6368)
+- Eliminate goroutine leak for the processor returned by `NewBatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` when `ForceFlush` is called and the passed `ctx` is canceled and `SpanExporter.Export` has not returned. (#6369)
 
 ## [1.34.0/0.56.0/0.10.0] 2025-01-17
 
@@ -3235,7 +3247,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.34.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.35.0...HEAD
+[1.35.0/0.57.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.35.0
 [1.34.0/0.56.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.34.0
 [1.33.0/0.55.0/0.9.0/0.0.12]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.33.0
 [1.32.0/0.54.0/0.8.0/0.0.11]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.32.0
