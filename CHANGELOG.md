@@ -46,8 +46,8 @@ The next release will require at least [Go 1.23].
 
 ### Fixes
 
-- Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#6368)
-- Eliminate goroutine leak for the processor returned by `NewBatchSpanProcessor` when `ForceFlush` is called and the passed `ctx` is canceled and `SpanExporter.Export` has not returned. (#6369)
+- Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#6368)
+- Eliminate goroutine leak for the processor returned by `NewBatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` when `ForceFlush` is called and the passed `ctx` is canceled and `SpanExporter.Export` has not returned. (#6369)
 
 ## [1.34.0/0.56.0/0.10.0] 2025-01-17
 
