@@ -483,6 +483,43 @@ func TestConfigs(t *testing.T) {
 				assert.Nil(t, c.Traces.Proxy)
 			},
 		},
+		// Headers Provider Tests
+		{
+			name: "Test With HeadersProvider",
+			opts: []GenericOption{
+				WithHeaderProvider(func() (map[string]string, error) {
+					return map[string]string{"key": "value"}, nil
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Traces.HeadersProvider)
+				headers, err := c.Traces.HeadersProvider()
+				assert.NoError(t, err)
+				assert.Equal(t, headers["key"], "value")
+			},
+		},
+		{
+			name: "Test With Headers and HeadersProvider",
+			opts: []GenericOption{
+				WithHeaders(map[string]string{"key": "value"}),
+				WithHeaderProvider(func() (map[string]string, error) {
+					return map[string]string{"key": "value-override"}, nil
+				}),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.NotNil(t, c.Traces.HeadersProvider)
+				headers, err := c.Traces.HeadersProvider()
+				assert.NoError(t, err)
+				assert.Equal(t, headers["key"], "value-override")
+			},
+		},
+		{
+			name: "Test Without HeadersProvider",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Traces.HeadersProvider)
+			},
+		},
 	}
 
 	for _, tt := range tests {
