@@ -42,7 +42,9 @@ The next release will require at least [Go 1.23].
 
 ### Changed
 
-- Update `github.com/prometheus/common` to v0.62.0., which changes the `NameValidationScheme` to `NoEscaping`. This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores. This is controlled by the `Content-Type` header, or can be reverted by setting `NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6198)
+- Update `github.com/prometheus/common` to `v0.62.0`, which changes the `NameValidationScheme` to `NoEscaping`.
+  This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
+  This is controlled by the `Content-Type` header, or can be reverted by setting `NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6198)
 
 ### Fixes
 
