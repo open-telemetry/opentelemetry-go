@@ -563,11 +563,6 @@ func convHeaders(s string) (map[string]string, error) {
 
 		out[key] = val
 	}
-	// If at least one valid header exists, reset err to nil
-	if len(out) > 0 {
-		global.Warn("Some headers were invalid but at least one valid header exists: %v", err)
-		err = nil
-	}
 	return out, err
 }
 

@@ -81,7 +81,6 @@ func TestNewConfig(t *testing.T) {
 
 	headers := map[string]string{"a": "A"}
 	percentDecodedHeaders := map[string]string{"user%2Did": "42", "user%20name": "alice smith"}
-	validHeaders := map[string]string{"valid-key": "value"}
 	rc := retry.Config{}
 
 	dialOptions := []grpc.DialOption{grpc.WithUserAgent("test-agent")}
@@ -475,7 +474,6 @@ func TestNewConfig(t *testing.T) {
 				endpoint:    newSetting("env.endpoint:8080"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
-				headers:     newSetting(validHeaders),
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),

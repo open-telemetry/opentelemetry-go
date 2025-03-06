@@ -81,7 +81,6 @@ func TestNewConfig(t *testing.T) {
 
 	headers := map[string]string{"a": "A"}
 	percentDecodedHeaders := map[string]string{"user%2Did": "42", "user%20name": "alice smith"}
-	validHeaders := map[string]string{"valid-key": "value"}
 	rc := retry.Config{}
 
 	testcases := []struct {
@@ -407,7 +406,6 @@ func TestNewConfig(t *testing.T) {
 				path:        newSetting("/prefix"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
-				headers:     newSetting(validHeaders),
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
