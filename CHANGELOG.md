@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `ForceFlush` of the `NewBatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` calls `SpanExporter.ExportSpans` synchronously. (#TODO)
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381)
