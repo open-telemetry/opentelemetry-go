@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types.
   - Remove `AssertRecordEqual` function.
 
+### Removed
+
+- Drop support for [Go 1.22]. (#6381)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
