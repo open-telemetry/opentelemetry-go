@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `ForceFlush` of the `NewBatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` calls `SpanExporter.ExportSpans` synchronously. (#TODO)
+- `ForceFlush` of the `NewBatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` calls `SpanExporter.ExportSpans` synchronously. (#6416)
 
 ### Removed
 
