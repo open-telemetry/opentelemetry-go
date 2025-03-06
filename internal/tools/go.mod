@@ -12,7 +12,7 @@ require (
 	go.opentelemetry.io/build-tools/gotmpl v0.20.0
 	go.opentelemetry.io/build-tools/multimod v0.20.0
 	go.opentelemetry.io/build-tools/semconvgen v0.20.0
-	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	golang.org/x/tools v0.31.0
 	golang.org/x/vuln v1.1.4
 )
@@ -206,12 +206,12 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20250228200357-dead58393ab7 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/telemetry v0.0.0-20250221144447-d58820209c11 // indirect
+	golang.org/x/telemetry v0.0.0-20250305155315-2a181eac97a3 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
