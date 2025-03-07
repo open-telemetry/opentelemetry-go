@@ -28,6 +28,8 @@ import (
 )
 
 func TestPrometheusExporter(t *testing.T) {
+	model.NameValidationScheme = model.LegacyValidation
+
 	testCases := []struct {
 		name                string
 		emptyResource       bool
