@@ -69,7 +69,7 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 		{
 			name:         "counter that already has the unit suffix",
-			expectedFile: "testdata/counter.txt",
+			expectedFile: "testdata/counter_already_unit_suffix.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -515,16 +515,13 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if tc.name != `expontential histogram` {
-			continue
-		}
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.disableUTF8 {
 				model.NameValidationScheme = model.LegacyValidation
-				defer func() {
+				t.Cleanup(func() {
 					// Reset to defaults
 					model.NameValidationScheme = model.UTF8Validation
-				}()
+				})
 			}
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
