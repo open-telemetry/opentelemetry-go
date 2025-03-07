@@ -8,19 +8,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `Recording`, `Scope`, `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6342)
+- Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used. (#6342)
+
 ### Changed
 
-- Redesign `go.opentelemetry.io/otel/log/logtest`. (#6342)
-  - Change `Recorder.Result` to return `Recording`.
-  - Add `Recording`, `Scope`, `Record` types.
-  - `Recorder` no longer separately stores records emitted by loggers with the same instrumentation scope.
-  - Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used.
-  - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types.
-  - Remove `AssertRecordEqual` function.
+- Change `Recorder.Result` to return `Recording`. (#6342)
+- `Recorder` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6342)
 
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381)
+- Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6342)
+- Remove `AssertRecordEqual` function from `go.opentelemetry.io/otel/log/logtest`. (#6342)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
