@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v5"
 )
 
 // DefaultConfig are the recommended defaults to use.
@@ -77,11 +77,11 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			RandomizationFactor: backoff.DefaultRandomizationFactor,
 			Multiplier:          backoff.DefaultMultiplier,
 			MaxInterval:         c.MaxInterval,
-			MaxElapsedTime:      c.MaxElapsedTime,
-			Stop:                backoff.Stop,
-			Clock:               backoff.SystemClock,
 		}
 		b.Reset()
+
+		maxElapsedTime := c.MaxElapsedTime
+		startTime := time.Now()
 
 		for {
 			err := fn(ctx)
@@ -104,8 +104,8 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			if bOff > throttle {
 				delay = bOff
 			} else {
-				elapsed := b.GetElapsedTime()
-				if b.MaxElapsedTime != 0 && elapsed+throttle > b.MaxElapsedTime {
+				elapsed := time.Since(startTime)
+				if maxElapsedTime > 0 && elapsed+throttle > maxElapsedTime {
 					return fmt.Errorf("max retry time would elapse: %w", err)
 				}
 				delay = throttle
