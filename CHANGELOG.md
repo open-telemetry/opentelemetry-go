@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Performance improvements for `attribute.NewSet`. (#TODO)
+- Performance improvements for `attribute.NewSet`. (#6422)
 
 ### Removed
 
