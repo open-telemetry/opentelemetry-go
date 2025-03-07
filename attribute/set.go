@@ -374,11 +374,7 @@ func computeDistinctFixed(kvs []KeyValue) interface{} {
 // computeDistinctReflect computes a Distinct using reflection, works for any
 // size input.
 func computeDistinctReflect(kvs []KeyValue) interface{} {
-	at := reflect.New(reflect.ArrayOf(len(kvs), keyValueType)).Elem()
-	for i, keyValue := range kvs {
-		*(at.Index(i).Addr().Interface().(*KeyValue)) = keyValue
-	}
-	return at.Interface()
+	return reflect.ValueOf(kvs).Convert(reflect.ArrayOf(len(kvs), keyValueType)).Interface()
 }
 
 // MarshalJSON returns the JSON encoding of the Set.
