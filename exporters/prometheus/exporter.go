@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"sync"
@@ -261,12 +262,20 @@ func addExponentialHistogramMetric[N int64 | float64](ch chan<- prometheus.Metri
 		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
 		positiveBuckets := make(map[int]int64)
 		for i, c := range dp.PositiveBucket.Counts {
-			positiveBuckets[int(dp.PositiveBucket.Offset)+i+1] = int64(c)
+			if c > math.MaxInt64 {
+				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", c))
+				continue
+			}
+			positiveBuckets[int(dp.PositiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
 		negativeBuckets := make(map[int]int64)
 		for i, c := range dp.NegativeBucket.Counts {
-			negativeBuckets[int(dp.NegativeBucket.Offset)+i+1] = int64(c)
+			if c > math.MaxInt64 {
+				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", c))
+				continue
+			}
+			negativeBuckets[int(dp.NegativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
 		m, err := prometheus.NewConstNativeHistogram(desc, dp.Count, float64(dp.Sum), positiveBuckets, negativeBuckets, dp.ZeroCount, dp.Scale, dp.ZeroThreshold, dp.StartTime, values...)
