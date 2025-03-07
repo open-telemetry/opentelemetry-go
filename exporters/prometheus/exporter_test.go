@@ -174,7 +174,7 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "expontential histogram",
+			name:         "exponential histogram",
 			expectedFile: "testdata/exponential_histogram.txt",
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				var hist *dto.MetricFamily
@@ -197,7 +197,6 @@ func TestPrometheusExporter(t *testing.T) {
 				require.Equal(t, []int64{1, -1, 1, -1, 2}, m.PositiveDelta)
 				require.Equal(t, uint32(5), *m.PositiveSpan[0].Length)
 				require.Equal(t, int32(3), *m.PositiveSpan[0].Offset)
-
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				// NOTE(GiedriusS): there is no text format for exponential (native)
