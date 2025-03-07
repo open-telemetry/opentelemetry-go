@@ -80,7 +80,6 @@ func TestNewConfig(t *testing.T) {
 	require.NoError(t, err, "testing TLS config")
 
 	headers := map[string]string{"a": "A"}
-	percentDecodedHeaders := map[string]string{"user%2Did": "42", "user%20name": "alice smith"}
 	rc := retry.Config{}
 
 	testcases := []struct {
@@ -384,7 +383,7 @@ func TestNewConfig(t *testing.T) {
 				path:        newSetting("/prefix"),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
-				headers:     newSetting(percentDecodedHeaders),
+				headers:     newSetting(map[string]string{"user%2Did": "42", "user%20name": "alice smith"}),
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
@@ -480,24 +479,28 @@ func TestWithProxy(t *testing.T) {
 
 func TestConvHeaders(t *testing.T) {
 	tests := []struct {
-		name  string
-		value string
-		want  map[string]string
+		name    string
+		value   string
+		want    map[string]string
+		wantErr bool
 	}{
 		{
-			name:  "simple test",
-			value: "userId=alice",
-			want:  map[string]string{"userId": "alice"},
+			name:    "simple test",
+			value:   "userId=alice",
+			want:    map[string]string{"userId": "alice"},
+			wantErr: false,
 		},
 		{
-			name:  "simple test with spaces",
-			value: " userId = alice  ",
-			want:  map[string]string{"userId": "alice"},
+			name:    "simple test with spaces",
+			value:   " userId = alice  ",
+			want:    map[string]string{"userId": "alice"},
+			wantErr: false,
 		},
 		{
-			name:  "simple header conforms to RFC 3986 spec",
-			value: " userId = alice+test ",
-			want:  map[string]string{"userId": "alice+test"},
+			name:    "simple header conforms to RFC 3986 spec",
+			value:   " userId = alice+test ",
+			want:    map[string]string{"userId": "alice+test"},
+			wantErr: false,
 		},
 		{
 			name:  "multiple headers encoded",
@@ -507,6 +510,7 @@ func TestConvHeaders(t *testing.T) {
 				"serverNode":   "DF:28",
 				"isProduction": "false",
 			},
+			wantErr: false,
 		},
 		{
 			name:  "multiple headers encoded per RFC 3986 spec",
@@ -517,11 +521,13 @@ func TestConvHeaders(t *testing.T) {
 				"isProduction": "false",
 				"namespace":    "localhost/test",
 			},
+			wantErr: false,
 		},
 		{
-			name:  "invalid headers format",
-			value: "userId:alice",
-			want:  map[string]string{},
+			name:    "invalid headers format",
+			value:   "userId:alice",
+			want:    map[string]string{},
+			wantErr: true,
 		},
 		{
 			name:  "invalid key",
@@ -530,6 +536,7 @@ func TestConvHeaders(t *testing.T) {
 				"%XX":    "missing",
 				"userId": "alice",
 			},
+			wantErr: false,
 		},
 		{
 			name:  "invalid value",
@@ -537,13 +544,20 @@ func TestConvHeaders(t *testing.T) {
 			want: map[string]string{
 				"userId": "alice",
 			},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keyValues, _ := convHeaders(tt.value)
+			keyValues, err := convHeaders(tt.value)
 			assert.Equal(t, tt.want, keyValues)
+
+			if tt.wantErr {
+				assert.Error(t, err, "expected an error but got nil")
+			} else {
+				assert.NoError(t, err, "expected no error but got one")
+			}
 		})
 	}
 }
