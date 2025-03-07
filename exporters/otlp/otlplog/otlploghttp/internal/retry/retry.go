@@ -79,10 +79,10 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			MaxInterval:         c.MaxInterval,
 		}
 		b.Reset()
-		
+
 		maxElapsedTime := c.MaxElapsedTime
 		startTime := time.Now()
-		
+
 		for {
 			err := fn(ctx)
 			if err == nil {

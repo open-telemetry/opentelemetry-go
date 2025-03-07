@@ -79,9 +79,9 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			MaxInterval:         c.MaxInterval,
 		}
 		b.Reset()
-		
+
 		maxElapsedTime := c.MaxElapsedTime
-		startTime := time.Now()	
+		startTime := time.Now()
 
 		for {
 			err := fn(ctx)
@@ -98,6 +98,7 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			if (maxElapsedTime != 0 && time.Since(startTime) > maxElapsedTime) || bOff == backoff.Stop {
 				return fmt.Errorf("max retry time elapsed: %w", err)
 			}
+
 			// Wait for the greater of the backoff or throttle delay.
 			var delay time.Duration
 			if bOff > throttle {
@@ -106,7 +107,7 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 				elapsed := time.Since(startTime)
 				if maxElapsedTime > 0 && elapsed+throttle > maxElapsedTime {
 					return fmt.Errorf("max retry time would elapse: %w", err)
-				}	
+				}
 				delay = throttle
 			}
 

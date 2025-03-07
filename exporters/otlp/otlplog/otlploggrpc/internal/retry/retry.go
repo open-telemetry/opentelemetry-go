@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+
 	"github.com/cenkalti/backoff/v5"
 )
 
@@ -94,9 +95,6 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			}
 
 			bOff := b.NextBackOff()
-			
-			// InitialInterval > MaxElapsedTime means immediate return.
-			// boff == Stop means no more retries.
 			if (maxElapsedTime != 0 && time.Since(startTime) > maxElapsedTime) || bOff == backoff.Stop {
 				return fmt.Errorf("max retry time elapsed: %w", err)
 			}
@@ -107,7 +105,7 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 				delay = bOff
 			} else {
 				elapsed := time.Since(startTime)
-				if maxElapsedTime != 0 && elapsed+throttle > maxElapsedTime {
+				if maxElapsedTime > 0 && elapsed+throttle > maxElapsedTime {
 					return fmt.Errorf("max retry time would elapse: %w", err)
 				}
 				delay = throttle
