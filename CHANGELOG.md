@@ -52,6 +52,7 @@ The next release will require at least [Go 1.23].
 
 ### Fixes
 
+- Upgrade cenkalti/backoff from v4 to v5, fix the breaking changes in that version, and upgrade to it (#6417)
 - Eliminate goroutine leak for the processor returned by `NewSimpleSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` when `Shutdown` is called and the passed `ctx` is canceled and `SpanExporter.Shutdown` has not returned. (#6368)
 - Eliminate goroutine leak for the processor returned by `NewBatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` when `ForceFlush` is called and the passed `ctx` is canceled and `SpanExporter.Export` has not returned. (#6369)
 
