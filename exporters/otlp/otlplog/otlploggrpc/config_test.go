@@ -338,7 +338,7 @@ func TestNewConfig(t *testing.T) {
 			name: "InvalidEnvironmentVariables",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "%invalid",
-				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "a,%ZZ=valid,key=%ZZ",
+				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "invalid key=value",
 				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "xz",
 				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "100 seconds",
 				"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE":        "invalid_cert",
@@ -355,10 +355,7 @@ func TestNewConfig(t *testing.T) {
 				`failed to load TLS:`,
 				`certificate not added`,
 				`tls: failed to find any PEM data in certificate input`,
-				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value a,%ZZ=valid,key=%ZZ:`,
-				`invalid header: a`,
-				`invalid header key: %ZZ`,
-				`invalid header value: %ZZ`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value invalid key=value: invalid header key: invalid key`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
 			},
@@ -440,6 +437,47 @@ func TestNewConfig(t *testing.T) {
 				timeout:  newSetting(defaultTimeout),
 			},
 		},
+		{
+			name: "with percent-encoded headers",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "https://env.endpoint:8080/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "user%2Did=42,user%20name=alice%20smith",
+				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "gzip",
+				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "15000",
+				"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE":        "cert_path",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "cert_path",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "key_path",
+			},
+			want: config{
+				endpoint:    newSetting("env.endpoint:8080"),
+				insecure:    newSetting(false),
+				tlsCfg:      newSetting(tlsCfg),
+				headers:     newSetting(map[string]string{"user%2Did": "42", "user%20name": "alice smith"}),
+				compression: newSetting(GzipCompression),
+				timeout:     newSetting(15 * time.Second),
+				retryCfg:    newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "with invalid header key",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "https://env.endpoint:8080/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "valid-key=value,invalid key=value",
+				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "gzip",
+				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "15000",
+				"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE":        "cert_path",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "cert_path",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "key_path",
+			},
+			want: config{
+				endpoint:    newSetting("env.endpoint:8080"),
+				insecure:    newSetting(false),
+				tlsCfg:      newSetting(tlsCfg),
+				compression: newSetting(GzipCompression),
+				timeout:     newSetting(15 * time.Second),
+				retryCfg:    newSetting(defaultRetryCfg),
+			},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -493,4 +531,89 @@ func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
 		}
 	}
 	assert.Equal(t, want.Value.Certificates, got.Value.Certificates, "Certificates")
+}
+
+func TestConvHeaders(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		want    map[string]string
+		wantErr bool
+	}{
+		{
+			name:    "simple test",
+			value:   "userId=alice",
+			want:    map[string]string{"userId": "alice"},
+			wantErr: false,
+		},
+		{
+			name:    "simple test with spaces",
+			value:   " userId = alice  ",
+			want:    map[string]string{"userId": "alice"},
+			wantErr: false,
+		},
+		{
+			name:    "simple header conforms to RFC 3986 spec",
+			value:   " userId = alice+test ",
+			want:    map[string]string{"userId": "alice+test"},
+			wantErr: false,
+		},
+		{
+			name:  "multiple headers encoded",
+			value: "userId=alice,serverNode=DF%3A28,isProduction=false",
+			want: map[string]string{
+				"userId":       "alice",
+				"serverNode":   "DF:28",
+				"isProduction": "false",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "multiple headers encoded per RFC 3986 spec",
+			value: "userId=alice+test,serverNode=DF%3A28,isProduction=false,namespace=localhost/test",
+			want: map[string]string{
+				"userId":       "alice+test",
+				"serverNode":   "DF:28",
+				"isProduction": "false",
+				"namespace":    "localhost/test",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "invalid headers format",
+			value:   "userId:alice",
+			want:    map[string]string{},
+			wantErr: true,
+		},
+		{
+			name:  "invalid key",
+			value: "%XX=missing,userId=alice",
+			want: map[string]string{
+				"%XX":    "missing",
+				"userId": "alice",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "invalid value",
+			value: "missing=%XX,userId=alice",
+			want: map[string]string{
+				"userId": "alice",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keyValues, err := convHeaders(tt.value)
+			assert.Equal(t, tt.want, keyValues)
+
+			if tt.wantErr {
+				assert.Error(t, err, "expected an error but got nil")
+			} else {
+				assert.NoError(t, err, "expected no error but got one")
+			}
+		})
+	}
 }
