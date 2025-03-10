@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add exponential histogram support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6421)
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
