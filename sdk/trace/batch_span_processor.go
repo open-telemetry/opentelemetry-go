@@ -186,33 +186,23 @@ func (bsp *batchSpanProcessor) ForceFlush(ctx context.Context) error {
 		return nil
 	}
 
-	var err error
-	if bsp.e != nil {
-		flushCh := make(chan struct{})
-		if bsp.enqueueBlockOnQueueFull(ctx, forceFlushSpan{flushed: flushCh}) {
-			select {
-			case <-bsp.stopCh:
-				// The batchSpanProcessor is Shutdown.
-				return nil
-			case <-flushCh:
-				// Processed any items in queue prior to ForceFlush being called
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
+	if bsp.e == nil {
+		return nil
+	}
 
-		wait := make(chan error, 1)
-		go func() {
-			wait <- bsp.exportSpans(ctx)
-		}()
-		// Wait until the export is finished or the context is cancelled/timed out
+	flushCh := make(chan struct{})
+	if bsp.enqueueBlockOnQueueFull(ctx, forceFlushSpan{flushed: flushCh}) {
 		select {
-		case err = <-wait:
+		case <-bsp.stopCh:
+			// The batchSpanProcessor is Shutdown.
+			return nil
+		case <-flushCh:
+			// Processed any items in queue prior to ForceFlush being called
 		case <-ctx.Done():
-			err = ctx.Err()
+			return ctx.Err()
 		}
 	}
-	return err
+	return bsp.exportSpans(ctx)
 }
 
 // WithMaxQueueSize returns a BatchSpanProcessorOption that configures the
