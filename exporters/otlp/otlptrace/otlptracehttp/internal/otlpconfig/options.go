@@ -40,14 +40,18 @@ type (
 	// This type is compatible with `http.Transport.Proxy` and can be used to set a custom proxy function to the OTLP HTTP client.
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
+	// HeadersProviderFunc is a function which resolves to the headers to use for a given request.
+	HeadersProviderFunc func() (map[string]string, error)
+
 	SignalConfig struct {
-		Endpoint    string
-		Insecure    bool
-		TLSCfg      *tls.Config
-		Headers     map[string]string
-		Compression Compression
-		Timeout     time.Duration
-		URLPath     string
+		Endpoint        string
+		Insecure        bool
+		TLSCfg          *tls.Config
+		Headers         map[string]string
+		HeadersProvider HeadersProviderFunc
+		Compression     Compression
+		Timeout         time.Duration
+		URLPath         string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -332,6 +336,13 @@ func WithSecure() GenericOption {
 func WithHeaders(headers map[string]string) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Headers = headers
+		return cfg
+	})
+}
+
+func WithHeaderProvider(hpf HeadersProviderFunc) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Traces.HeadersProvider = hpf
 		return cfg
 	})
 }

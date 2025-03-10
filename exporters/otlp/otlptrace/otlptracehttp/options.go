@@ -22,6 +22,9 @@ type Compression otlpconfig.Compression
 // to the OTLP HTTP client.
 type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
+// HeadersProviderFunc is a function which resolves to the headers to use for a given request.
+type HeadersProviderFunc func() (map[string]string, error)
+
 const (
 	// NoCompression tells the driver to send payloads without
 	// compression.
@@ -130,6 +133,11 @@ func WithInsecure() Option {
 // Content-Encoding and Content-Type may result in a broken driver.
 func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{otlpconfig.WithHeaders(headers)}
+}
+
+// WithHeadersProvider will be called to set the provided headers with each HTTP requests.
+func WithHeadersProvider(headersProviderFunc HeadersProviderFunc) Option {
+	return wrappedOption{otlpconfig.WithHeaderProvider(otlpconfig.HeadersProviderFunc(headersProviderFunc))}
 }
 
 // WithTimeout tells the driver the max waiting time for the backend to process

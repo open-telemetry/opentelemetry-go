@@ -237,6 +237,16 @@ func (d *client) newRequest(body []byte) (request, error) {
 	for k, v := range d.cfg.Headers {
 		r.Header.Set(k, v)
 	}
+
+	if d.cfg.HeadersProvider != nil {
+		headers, err := d.cfg.HeadersProvider()
+		if err != nil {
+			return request{Request: r}, fmt.Errorf("failed to execute headers provider: %w", err)
+		}
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+	}
 	r.Header.Set("Content-Type", contentTypeProto)
 
 	req := request{Request: r}
