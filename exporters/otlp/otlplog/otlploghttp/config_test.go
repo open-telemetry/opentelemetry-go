@@ -109,7 +109,7 @@ func TestNewConfig(t *testing.T) {
 				WithHeaders(headers),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
-				// Do not test WithProxy. Requires func comparison.
+				// Do not test WithProxy or WithHeaderProvider. Requires func comparison.
 			},
 			want: config{
 				endpoint:    newSetting("test"),
@@ -395,6 +395,9 @@ func TestNewConfig(t *testing.T) {
 			// Cannot compare funcs, see TestWithProxy.
 			c.proxy = setting[HTTPTransportProxyFunc]{}
 
+			// Cannot compare funcs, see TestWithHeaderProvider
+			c.headersProvider = setting[HeadersProviderFunc]{}
+
 			assert.Equal(t, tc.want, c)
 
 			for _, errMsg := range tc.errs {
@@ -435,4 +438,22 @@ func TestWithProxy(t *testing.T) {
 
 	assert.True(t, c.proxy.Set)
 	assert.NotNil(t, c.proxy.Value)
+}
+
+func TestWithHeadersProvider(t *testing.T) {
+	key := "a"
+	expectedHeaders := map[string]string{key: "A"}
+	provider := func() (map[string]string, error) {
+		return expectedHeaders, nil
+	}
+	opts := []Option{WithHeadersProvider(provider)}
+	c := newConfig(opts)
+
+	assert.True(t, c.headersProvider.Set)
+	assert.NotNil(t, c.headersProvider.Value)
+
+	h, err := c.headersProvider.Value()
+
+	assert.Equal(t, h[key], expectedHeaders[key])
+	assert.Nil(t, err)
 }

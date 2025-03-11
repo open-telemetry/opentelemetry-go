@@ -30,10 +30,11 @@ import (
 
 type client struct {
 	// req is cloned for every upload the client makes.
-	req         *http.Request
-	compression Compression
-	requestFunc retry.RequestFunc
-	httpClient  *http.Client
+	req             *http.Request
+	compression     Compression
+	requestFunc     retry.RequestFunc
+	httpClient      *http.Client
+	headersProvider HeadersProviderFunc
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -97,10 +98,11 @@ func newClient(cfg oconf.Config) (*client, error) {
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	return &client{
-		compression: Compression(cfg.Metrics.Compression),
-		req:         req,
-		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
-		httpClient:  httpClient,
+		compression:     Compression(cfg.Metrics.Compression),
+		req:             req,
+		requestFunc:     cfg.RetryConfig.RequestFunc(evaluate),
+		httpClient:      httpClient,
+		headersProvider: HeadersProviderFunc(cfg.Metrics.HeadersProvider),
 	}, nil
 }
 
@@ -229,6 +231,16 @@ var gzPool = sync.Pool{
 func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
 	r := c.req.Clone(ctx)
 	req := request{Request: r}
+
+	if c.headersProvider != nil {
+		headers, err := c.headersProvider()
+		if err != nil {
+			return req, fmt.Errorf("failed to execute headers provider: %w", err)
+		}
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+	}
 
 	switch c.compression {
 	case NoCompression:
