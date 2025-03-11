@@ -6,8 +6,8 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
-	"sync"
 	"sync/atomic"
+	"unique"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
@@ -68,9 +68,6 @@ type LoggerProvider struct {
 	attributeCountLimit       int
 	attributeValueLengthLimit int
 
-	loggersMu sync.Mutex
-	loggers   map[instrumentation.Scope]*logger
-
 	stopped atomic.Bool
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -118,22 +115,10 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 		Attributes: cfg.InstrumentationAttributes(),
 	}
 
-	p.loggersMu.Lock()
-	defer p.loggersMu.Unlock()
+	l := newLogger(p, scope)
+	handle := unique.Make(l)
 
-	if p.loggers == nil {
-		l := newLogger(p, scope)
-		p.loggers = map[instrumentation.Scope]*logger{scope: l}
-		return l
-	}
-
-	l, ok := p.loggers[scope]
-	if !ok {
-		l = newLogger(p, scope)
-		p.loggers[scope] = l
-	}
-
-	return l
+	return handle.Value()
 }
 
 // Shutdown shuts down the provider and all processors.
