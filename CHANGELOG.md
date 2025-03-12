@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Drop support for [Go 1.22]. (#6381, #6418)
 
+### Fixes
+
+- Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

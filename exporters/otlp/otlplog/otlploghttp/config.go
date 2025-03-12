@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
@@ -544,13 +545,15 @@ func convHeaders(s string) (map[string]string, error) {
 			continue
 		}
 
-		escKey, e := url.PathUnescape(rawKey)
-		if e != nil {
+		key := strings.TrimSpace(rawKey)
+
+		// Validate the key.
+		if !isValidHeaderKey(key) {
 			err = errors.Join(err, fmt.Errorf("invalid header key: %s", rawKey))
 			continue
 		}
-		key := strings.TrimSpace(escKey)
 
+		// Only decode the value.
 		escVal, e := url.PathUnescape(rawVal)
 		if e != nil {
 			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
@@ -599,4 +602,23 @@ func fallback[T any](val T) resolver[T] {
 		}
 		return s
 	}
+}
+
+func isValidHeaderKey(key string) bool {
+	if key == "" {
+		return false
+	}
+	for _, c := range key {
+		if !isTokenChar(c) {
+			return false
+		}
+	}
+	return true
+}
+
+func isTokenChar(c rune) bool {
+	return c <= unicode.MaxASCII && (unicode.IsLetter(c) ||
+		unicode.IsDigit(c) ||
+		c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' ||
+		c == '+' || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '|' || c == '~')
 }
