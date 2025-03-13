@@ -90,13 +90,13 @@ func newTestLogger(t testing.TB) log.Logger {
 }
 
 func BenchmarkLoggerRetrieval(b *testing.B) {
-	prepopulatedValues := []int{0, 1000, 5000}
+	prepopulatedValues := []int{0, 100, 500}
 	for _, prepop := range prepopulatedValues {
-		b.Run(fmt.Sprintf("Retrieve same logger each time single-threaded with %d prepopulated values", prepop), func(b *testing.B) {
+		b.Run(fmt.Sprintf("Retrieve different logger each time single-threaded with %d prepopulated values", prepop), func(b *testing.B) {
 			benchmarkLoggerRetrieval(b, prepop)
 		})
 
-		b.Run(fmt.Sprintf("Retrieve same logger each time parallel with %d prepopulated values", prepop), func(b *testing.B) {
+		b.Run(fmt.Sprintf("Retrieve different logger each time parallel with %d prepopulated values", prepop), func(b *testing.B) {
 			benchmarkLoggerRetrievalParallel(b, prepop)
 		})
 
