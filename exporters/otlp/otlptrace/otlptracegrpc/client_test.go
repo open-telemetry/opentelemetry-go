@@ -255,7 +255,7 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 
 	unwrapped := errors.Unwrap(err)
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(unwrapped).Code())
-	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
+	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
 }
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {

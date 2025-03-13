@@ -565,7 +565,7 @@ func TestTraceStateImmutable(t *testing.T) {
 	ts1, err := ts0.Insert(k1, v1)
 	require.NoError(t, err)
 	assert.Equal(t, v0, ts0.Get(k0))
-	assert.Equal(t, "", ts0.Get(k1))
+	assert.Empty(t, ts0.Get(k1))
 	assert.Equal(t, v0, ts1.Get(k0))
 	assert.Equal(t, v1, ts1.Get(k1))
 
@@ -574,7 +574,7 @@ func TestTraceStateImmutable(t *testing.T) {
 	ts2, err := ts1.Insert(k1, v2)
 	require.NoError(t, err)
 	assert.Equal(t, v0, ts0.Get(k0))
-	assert.Equal(t, "", ts0.Get(k1))
+	assert.Empty(t, ts0.Get(k1))
 	assert.Equal(t, v0, ts1.Get(k0))
 	assert.Equal(t, v1, ts1.Get(k1))
 	assert.Equal(t, v0, ts2.Get(k0))
@@ -585,7 +585,7 @@ func TestTraceStateImmutable(t *testing.T) {
 	assert.Equal(t, v0, ts0.Get(k0))
 	assert.Equal(t, v0, ts1.Get(k0))
 	assert.Equal(t, v0, ts2.Get(k0))
-	assert.Equal(t, "", ts3.Get(k0))
+	assert.Empty(t, ts3.Get(k0))
 }
 
 func BenchmarkParseTraceState(b *testing.B) {
