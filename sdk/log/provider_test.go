@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"unique"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -310,6 +311,21 @@ func TestLoggerProviderLogger(t *testing.T) {
 		assert.Equal(t, l0, l3)
 		assert.Equal(t, l1, l4)
 		assert.Equal(t, l2, l5)
+	})
+
+	t.Run("UniqueComparation", func(t *testing.T) {
+		p := NewLoggerProvider()
+
+		l0, l1 := p.Logger("l0"), p.Logger("l0")
+		ul0, ul1 := unique.Make(l0), unique.Make(l1)
+
+		// Should contain different pointer but same values (shallow copy)
+		assert.Equal(t, ul0, ul1)
+		assert.NotSame(t, l0, l1)
+
+		l2 := p.Logger("l2")
+		assert.NotEqual(t, l0, l2)
+		assert.NotSame(t, l0, l2)
 	})
 }
 

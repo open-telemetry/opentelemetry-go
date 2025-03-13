@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -89,23 +90,88 @@ func newTestLogger(t testing.TB) log.Logger {
 }
 
 func BenchmarkLoggerRetrieval(b *testing.B) {
-	b.Run("Create different loggers single-threaded", func(b *testing.B) {
-		provider := NewLoggerProvider()
+	prepopulatedValues := []int{0, 1000, 5000}
+	for _, prepop := range prepopulatedValues {
+		b.Run(fmt.Sprintf("Retrieve same logger each time single-threaded with %d prepopulated values", prepop), func(b *testing.B) {
+			benchmarkLoggerRetrieval(b, prepop)
+		})
 
-		b.ReportAllocs()
-		for n := 0; n < b.N; n++ {
-			provider.Logger(fmt.Sprintf("test-%d", n))
+		b.Run(fmt.Sprintf("Retrieve same logger each time parallel with %d prepopulated values", prepop), func(b *testing.B) {
+			benchmarkLoggerRetrievalParallel(b, prepop)
+		})
+
+		b.Run(fmt.Sprintf("Retrieve same logger each time single-threaded with %d prepopulated values", prepop), func(b *testing.B) {
+			benchmarkLoggerRetrievalWithSameValues(b, prepop)
+		})
+
+		b.Run(fmt.Sprintf("Retrieve same logger each time parallel with %d prepopulated values", prepop), func(b *testing.B) {
+			benchmarkLoggerRetrievalWithSameValuesParallel(b, prepop)
+		})
+	}
+}
+
+func benchmarkLoggerRetrieval(b *testing.B, prepopulate int) {
+	provider := NewLoggerProvider()
+
+	// Prepopulate the provider before measuring
+	for i := 0; i < prepopulate; i++ {
+		provider.Logger(strconv.Itoa(i))
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			provider.Logger(strconv.Itoa(rand.Int()))
 		}
 	})
+}
 
-	b.Run("Create different loggers parallel", func(b *testing.B) {
-		provider := NewLoggerProvider()
+func benchmarkLoggerRetrievalParallel(b *testing.B, prepopulate int) {
+	provider := NewLoggerProvider()
 
-		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				provider.Logger(fmt.Sprintf("test-%d", rand.Int()))
-			}
-		})
+	// Prepopulate the provider before measuring
+	for i := 0; i < prepopulate; i++ {
+		provider.Logger(strconv.Itoa(i))
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			provider.Logger(strconv.Itoa(rand.Int()))
+		}
+	})
+}
+
+func benchmarkLoggerRetrievalWithSameValues(b *testing.B, prepopulate int) {
+	provider := NewLoggerProvider()
+
+	// Prepopulate the provider before measuring
+	for i := 0; i < prepopulate; i++ {
+		provider.Logger(strconv.Itoa(i))
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		provider.Logger("100") // Lookup a fixed logger
+	}
+}
+
+func benchmarkLoggerRetrievalWithSameValuesParallel(b *testing.B, prepopulate int) {
+	provider := NewLoggerProvider()
+
+	// Prepopulate the provider before starting parallel execution
+	for i := 0; i < prepopulate; i++ {
+		provider.Logger(strconv.Itoa(i))
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			provider.Logger("100") // Lookup a fixed logger
+		}
 	})
 }
