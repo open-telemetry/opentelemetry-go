@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -88,12 +89,23 @@ func newTestLogger(t testing.TB) log.Logger {
 }
 
 func BenchmarkLoggerRetrieval(b *testing.B) {
-	b.Run("Create different loggers", func(b *testing.B) {
+	b.Run("Create different loggers single-threaded", func(b *testing.B) {
 		provider := NewLoggerProvider()
 
 		b.ReportAllocs()
 		for n := 0; n < b.N; n++ {
 			provider.Logger(fmt.Sprintf("test-%d", n))
 		}
+	})
+
+	b.Run("Create different loggers parallel", func(b *testing.B) {
+		provider := NewLoggerProvider()
+
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				provider.Logger(fmt.Sprintf("test-%d", rand.Int()))
+			}
+		})
 	})
 }
