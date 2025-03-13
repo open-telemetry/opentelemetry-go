@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -84,4 +85,15 @@ func newTestLogger(t testing.TB) log.Logger {
 		WithProcessor(newFltrProcessor("1", true)),
 	)
 	return provider.Logger(t.Name())
+}
+
+func BenchmarkLoggerRetrieval(b *testing.B) {
+	b.Run("Create different loggers", func(b *testing.B) {
+		provider := NewLoggerProvider()
+
+		b.ReportAllocs()
+		for n := 0; n < b.N; n++ {
+			provider.Logger(fmt.Sprintf("test-%d", n))
+		}
+	})
 }
