@@ -95,15 +95,21 @@ func BenchmarkLoggerRetrieval(b *testing.B) {
 		b.Run(fmt.Sprintf("Retrieve different logger each time single-threaded with %d prepopulated values", prepop), func(b *testing.B) {
 			benchmarkLoggerRetrieval(b, prepop)
 		})
+	}
 
+	for _, prepop := range prepopulatedValues {
 		b.Run(fmt.Sprintf("Retrieve different logger each time parallel with %d prepopulated values", prepop), func(b *testing.B) {
 			benchmarkLoggerRetrievalParallel(b, prepop)
 		})
+	}
 
+	for _, prepop := range prepopulatedValues {
 		b.Run(fmt.Sprintf("Retrieve same logger each time single-threaded with %d prepopulated values", prepop), func(b *testing.B) {
 			benchmarkLoggerRetrievalWithSameValues(b, prepop)
 		})
+	}
 
+	for _, prepop := range prepopulatedValues {
 		b.Run(fmt.Sprintf("Retrieve same logger each time parallel with %d prepopulated values", prepop), func(b *testing.B) {
 			benchmarkLoggerRetrievalWithSameValuesParallel(b, prepop)
 		})
