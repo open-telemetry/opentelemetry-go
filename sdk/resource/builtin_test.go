@@ -60,6 +60,6 @@ func TestStringDetectorErrors(t *testing.T) {
 		for _, kv := range res.Attributes() {
 			m[string(kv.Key)] = kv.Value.Emit()
 		}
-		require.EqualValues(t, map[string]string{"A": "B"}, m)
+		require.Equal(t, map[string]string{"A": "B"}, m)
 	}
 }

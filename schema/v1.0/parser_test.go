@@ -17,7 +17,7 @@ func TestParseSchemaFile(t *testing.T) {
 	ts, err := ParseFile("testdata/valid-example.yaml")
 	assert.NoError(t, err)
 	assert.NotNil(t, ts)
-	assert.EqualValues(
+	assert.Equal(
 		t, &ast.Schema{
 			FileFormat: "1.0.0",
 			SchemaURL:  "https://opentelemetry.io/schemas/1.1.0",

@@ -243,8 +243,8 @@ func TestLogConflictName(t *testing.T) {
 				tc.existing, tc.name,
 			)
 		} else {
-			assert.Equalf(
-				t, "", msg,
+			assert.Emptyf(
+				t, msg,
 				"warning logged for non-conflicting names: %s, %s",
 				tc.existing, tc.name,
 			)

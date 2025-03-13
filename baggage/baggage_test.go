@@ -597,7 +597,7 @@ func TestBaggageParseValue(t *testing.T) {
 
 			val := b.Members()[0].Value()
 
-			assert.EqualValues(t, tc.valueWant, val)
+			assert.Equal(t, tc.valueWant, val)
 			assert.Equal(t, len(val), tc.valueWantSize)
 			assert.True(t, utf8.ValidString(val))
 		})
@@ -971,7 +971,7 @@ func TestBaggageMember(t *testing.T) {
 
 func TestMemberKey(t *testing.T) {
 	m := Member{}
-	assert.Equal(t, "", m.Key(), "even invalid values should be returned")
+	assert.Empty(t, m.Key(), "even invalid values should be returned")
 
 	key := "k"
 	m.key = key

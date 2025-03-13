@@ -307,7 +307,7 @@ func TestDefaultAggregationSelector(t *testing.T) {
 	}
 
 	for _, ik := range iKinds {
-		assert.NoError(t, DefaultAggregationSelector(ik).err(), ik)
+		assert.NoError(t, DefaultAggregationSelector(ik).err(), "%+v", ik)
 	}
 }
 

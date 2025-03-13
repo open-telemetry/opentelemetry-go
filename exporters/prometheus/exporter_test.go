@@ -1101,7 +1101,7 @@ func TestExemplars(t *testing.T) {
 			}
 			require.NotNil(t, exemplar)
 			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
-			require.Equal(t, len(tc.expectedLabels), len(exemplar.GetLabel()))
+			require.Len(t, exemplar.GetLabel(), len(tc.expectedLabels))
 			for _, label := range exemplar.GetLabel() {
 				val, ok := tc.expectedLabels[label.GetName()]
 				require.True(t, ok)
