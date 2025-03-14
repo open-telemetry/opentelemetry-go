@@ -133,7 +133,7 @@ func TestMetricProducer(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, len(output), len(tc.expected))
+			require.Len(t, tc.expected, len(output))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tc.expected[i], output[i])
 			}

@@ -285,7 +285,7 @@ func TestLoggerProviderLogger(t *testing.T) {
 		assert.Equal(t, 1, l.level, "logged level")
 		assert.Equal(t, "Invalid Logger name.", l.msg, "logged message")
 		require.Len(t, l.keysAndValues, 2, "logged key values")
-		assert.Equal(t, "", l.keysAndValues[1], "logged name")
+		assert.Empty(t, l.keysAndValues[1], "logged name")
 	})
 
 	t.Run("Stopped", func(t *testing.T) {
