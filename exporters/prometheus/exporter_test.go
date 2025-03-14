@@ -68,7 +68,7 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 		{
 			name:         "counter that already has the unit suffix",
-			expectedFile: "testdata/counter.txt",
+			expectedFile: "testdata/counter_with_unit_suffix.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
