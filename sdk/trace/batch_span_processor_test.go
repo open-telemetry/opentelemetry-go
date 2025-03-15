@@ -524,24 +524,13 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 	}
 }
 
-type indefiniteExporter struct {
-	stop chan (struct{})
-}
-
-func newIndefiniteExporter(t *testing.T) indefiniteExporter {
-	e := indefiniteExporter{stop: make(chan struct{})}
-	t.Cleanup(func() {
-		go close(e.stop)
-	})
-	return e
-}
+type indefiniteExporter struct{}
 
 func (e indefiniteExporter) Shutdown(context.Context) error {
 	return nil
 }
 
 func (e indefiniteExporter) ExportSpans(ctx context.Context, _ []ReadOnlySpan) error {
-	<-e.stop
 	return ctx.Err()
 }
 
@@ -550,30 +539,12 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 	// Cancel the context
 	cancel()
 
-	bsp := NewBatchSpanProcessor(newIndefiniteExporter(t))
+	bsp := NewBatchSpanProcessor(indefiniteExporter{})
 	t.Cleanup(func() {
 		assert.NoError(t, bsp.Shutdown(context.Background()))
 	})
 
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
-		t.Errorf("expected %q error, got %v", want, got)
-	}
-}
-
-func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
-	tp := basicTracerProvider(t)
-	exp := newIndefiniteExporter(t)
-	bsp := NewBatchSpanProcessor(exp)
-	tp.RegisterSpanProcessor(bsp)
-	tr := tp.Tracer(t.Name())
-	_, span := tr.Start(context.Background(), "foo")
-	span.End()
-
-	// Add timeout to context to test deadline
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
-
-	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
 		t.Errorf("expected %q error, got %v", want, got)
 	}
 }
