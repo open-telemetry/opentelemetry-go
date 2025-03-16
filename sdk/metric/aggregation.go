@@ -96,11 +96,14 @@ type AggregationExplicitBucketHistogram struct {
 	// (50.0, 75.0], (75.0, 100.0], (100.0, 250.0], (250.0, 500.0],
 	// (500.0, 1000.0], (1000.0, +∞)
 	//
-	// The default bucket boundaries provided by DefaultAggregationSelector
-	// are optimized for millisecond measurements. When using a different unit
-	// (e.g., metric.WithUnit("s") for seconds), the bucket boundaries do not
-	// automatically adjust. The appropriate bucket boundaries should be
-	// explicitly defined to match the chosen unit of measurement.
+	// The default bucket boundaries are designed to support a variety of
+        // common measurement units, including time-based and non-time-based metrics.
+        // They do not automatically adjust based on unit selection.
+        //
+        // Note: Using metric.WithUnit("s") for seconds does not automatically
+        // adjust the bucket boundaries. If a different unit is used, explicitly
+        // defining bucket boundaries to match the measurement unit is recommended.
+
 	Boundaries []float64
 	// NoMinMax indicates whether to not record the min and max of the
 	// distribution. By default, these extrema are recorded.
