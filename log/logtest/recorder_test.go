@@ -44,7 +44,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 		},
 	}
 	opts := []cmp.Option{
-		cmpopts.EquateComparable(context.Background()),                            // Compare context.
+		cmp.Comparer(func(x, y context.Context) bool { return x == y }),           // Compare context.
 		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
 		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
 	}

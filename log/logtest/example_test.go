@@ -34,6 +34,7 @@ func Example() {
 	want := logtest.Recording{
 		logtest.Scope{Name: "Example"}: []logtest.Record{
 			{
+				Context:  context.Background(),
 				Severity: log.SeverityInfo,
 				Body:     log.StringValue("Hello there"),
 				Attributes: []log.KeyValue{
@@ -44,10 +45,10 @@ func Example() {
 		},
 	}
 	opts := []cmp.Option{
-		cmpopts.IgnoreFields(logtest.Record{}, "Context"),                         // Ignore Context.
+		cmp.Comparer(func(x, y context.Context) bool { return x == y }),           // Compare context.
 		cmpopts.IgnoreTypes(time.Time{}),                                          // Ignore Timestamps.
 		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
-		cmpopts.EquateEmpty(),                                                     // Empty and nil collections are equal.
+		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
 	}
 	// Get the recorded log records.
 	got := rec.Result()
