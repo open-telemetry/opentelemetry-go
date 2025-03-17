@@ -162,7 +162,7 @@ var autoInstEnabled = new(bool)
 // uprobe to this code.
 //
 // Strictly speaking, the following "noinline" flag is not needed, the method's
-// complexity prevents it being inlined. This ensure that is the case going
+// complexity prevents it being inlined. This ensures that is the case going
 // forward by making the restriction explicit.
 //
 //go:noinline
