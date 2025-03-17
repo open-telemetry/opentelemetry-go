@@ -141,7 +141,7 @@ func TestNewConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := newConfig(tt.options...)
 			// only check the length of readerOpts, since they are not comparable
-			assert.Equal(t, len(tt.wantConfig.readerOpts), len(cfg.readerOpts))
+			assert.Len(t, cfg.readerOpts, len(tt.wantConfig.readerOpts))
 			cfg.readerOpts = nil
 			tt.wantConfig.readerOpts = nil
 

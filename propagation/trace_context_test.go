@@ -333,7 +333,7 @@ func TestInvalidSpanContextDropped(t *testing.T) {
 
 	header := http.Header{}
 	propagation.TraceContext{}.Inject(ctx, propagation.HeaderCarrier(header))
-	assert.Equal(t, "", header.Get("traceparent"), "injected invalid SpanContext")
+	assert.Empty(t, header.Get("traceparent"), "injected invalid SpanContext")
 }
 
 func TestTraceContextFields(t *testing.T) {

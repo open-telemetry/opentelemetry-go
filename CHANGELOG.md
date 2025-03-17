@@ -24,6 +24,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6342)
 - Remove `AssertRecordEqual` function from `go.opentelemetry.io/otel/log/logtest`. (#6342)
 
+### Fixes
+
+- Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

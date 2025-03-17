@@ -81,7 +81,7 @@ func TestDetect(t *testing.T) {
 			if c.wantErr != nil {
 				assert.ErrorIs(t, err, c.wantErr)
 				if errors.Is(c.wantErr, resource.ErrSchemaURLConflict) {
-					assert.Zero(t, r.SchemaURL())
+					assert.Empty(t, r.SchemaURL())
 				}
 			} else {
 				assert.NoError(t, err)

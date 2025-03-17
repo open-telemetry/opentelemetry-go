@@ -192,7 +192,7 @@ func TestSchemaURL(t *testing.T) {
 
 	// Verify that the SchemaURL of the constructed Tracer is correctly populated.
 	tracerStruct := tracerIface.(*tracer)
-	assert.EqualValues(t, schemaURL, tracerStruct.instrumentationScope.SchemaURL)
+	assert.Equal(t, schemaURL, tracerStruct.instrumentationScope.SchemaURL)
 }
 
 func TestRegisterAfterShutdownWithoutProcessors(t *testing.T) {
