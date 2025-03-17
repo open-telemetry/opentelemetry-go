@@ -104,23 +104,23 @@ func TestWithProcessFuncsErrors(t *testing.T) {
 }
 
 func TestCommandArgs(t *testing.T) {
-	require.EqualValues(t, os.Args, resource.CommandArgs())
+	require.Equal(t, os.Args, resource.CommandArgs())
 }
 
 func TestRuntimeName(t *testing.T) {
 	if runtime.Compiler == "gc" {
-		require.EqualValues(t, "go", resource.RuntimeName())
+		require.Equal(t, "go", resource.RuntimeName())
 	} else {
-		require.EqualValues(t, runtime.Compiler, resource.RuntimeName())
+		require.Equal(t, runtime.Compiler, resource.RuntimeName())
 	}
 }
 
 func TestRuntimeOS(t *testing.T) {
-	require.EqualValues(t, runtime.GOOS, resource.RuntimeOS())
+	require.Equal(t, runtime.GOOS, resource.RuntimeOS())
 }
 
 func TestRuntimeArch(t *testing.T) {
-	require.EqualValues(t, runtime.GOARCH, resource.RuntimeArch())
+	require.Equal(t, runtime.GOARCH, resource.RuntimeArch())
 }
 
 func testWithProcessExecutablePathError(t *testing.T) {
@@ -131,7 +131,7 @@ func testWithProcessExecutablePathError(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	require.EqualValues(t, map[string]string{}, toMap(res))
+	require.Equal(t, map[string]string{}, toMap(res))
 }
 
 func testWithProcessOwnerError(t *testing.T) {
@@ -142,5 +142,5 @@ func testWithProcessOwnerError(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	require.EqualValues(t, map[string]string{}, toMap(res))
+	require.Equal(t, map[string]string{}, toMap(res))
 }

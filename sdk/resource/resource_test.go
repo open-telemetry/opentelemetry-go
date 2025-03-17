@@ -184,7 +184,7 @@ func TestMerge(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.EqualValues(t, c.schemaURL, res.SchemaURL())
+			assert.Equal(t, c.schemaURL, res.SchemaURL())
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
@@ -197,8 +197,8 @@ func TestMerge(t *testing.T) {
 
 func TestEmpty(t *testing.T) {
 	var res *resource.Resource
-	assert.Equal(t, "", res.SchemaURL())
-	assert.Equal(t, "", res.String())
+	assert.Empty(t, res.SchemaURL())
+	assert.Empty(t, res.String())
 	assert.Equal(t, []attribute.KeyValue(nil), res.Attributes())
 
 	it := res.Iter()
@@ -441,12 +441,12 @@ func TestNew(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			require.EqualValues(t, tt.resourceValues, toMap(res))
+			require.Equal(t, tt.resourceValues, toMap(res))
 
 			// TODO: do we need to ensure that resource is never nil and eliminate the
 			// following if?
 			if res != nil {
-				assert.EqualValues(t, tt.schemaURL, res.SchemaURL())
+				assert.Equal(t, tt.schemaURL, res.SchemaURL())
 			}
 		})
 	}
@@ -482,7 +482,7 @@ func TestWithHostID(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"host.id": "f2c668b579780554f70f72a063dc0864",
 	}, toMap(res))
 }
@@ -498,7 +498,7 @@ func TestWithHostIDError(t *testing.T) {
 	)
 
 	assert.ErrorIs(t, err, assert.AnError)
-	require.EqualValues(t, map[string]string{}, toMap(res))
+	require.Equal(t, map[string]string{}, toMap(res))
 }
 
 func TestWithOSType(t *testing.T) {
@@ -512,7 +512,7 @@ func TestWithOSType(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"os.type": "linux",
 	}, toMap(res))
 }
@@ -528,7 +528,7 @@ func TestWithOSDescription(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"os.description": "Test",
 	}, toMap(res))
 }
@@ -544,7 +544,7 @@ func TestWithOS(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"os.type":        "linux",
 		"os.description": "Test",
 	}, toMap(res))
@@ -559,7 +559,7 @@ func TestWithProcessPID(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.pid": fmt.Sprint(fakePID),
 	}, toMap(res))
 }
@@ -573,7 +573,7 @@ func TestWithProcessExecutableName(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.executable.name": fakeExecutableName,
 	}, toMap(res))
 }
@@ -587,7 +587,7 @@ func TestWithProcessExecutablePath(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.executable.path": fakeExecutablePath,
 	}, toMap(res))
 }
@@ -602,7 +602,7 @@ func TestWithProcessCommandArgs(t *testing.T) {
 
 	require.NoError(t, err)
 	jsonCommandArgs, _ := json.Marshal(fakeCommandArgs)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.command_args": string(jsonCommandArgs),
 	}, toMap(res))
 }
@@ -616,7 +616,7 @@ func TestWithProcessOwner(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.owner": fakeOwner,
 	}, toMap(res))
 }
@@ -630,7 +630,7 @@ func TestWithProcessRuntimeName(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.runtime.name": fakeRuntimeName,
 	}, toMap(res))
 }
@@ -644,7 +644,7 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.runtime.version": fakeRuntimeVersion,
 	}, toMap(res))
 }
@@ -658,7 +658,7 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.runtime.description": fakeRuntimeDescription,
 	}, toMap(res))
 }
@@ -673,7 +673,7 @@ func TestWithProcess(t *testing.T) {
 
 	require.NoError(t, err)
 	jsonCommandArgs, _ := json.Marshal(fakeCommandArgs)
-	require.EqualValues(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"process.pid":                 fmt.Sprint(fakePID),
 		"process.executable.name":     fakeExecutableName,
 		"process.executable.path":     fakeExecutablePath,

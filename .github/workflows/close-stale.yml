@@ -19,8 +19,8 @@ jobs:
           close-issue-label: 'closed as inactive'
           days-before-pr-stale: 730
           days-before-issue-stale: 730
-          days-before-pr-close: 744
-          days-before-issue-close: 744
+          days-before-pr-close: 14
+          days-before-issue-close: 14
           exempt-issue-labels: 'never stale'
           exempt-pr-labels: 'never stale'
           ascending: true

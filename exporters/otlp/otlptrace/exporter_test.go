@@ -45,7 +45,7 @@ func TestExporterClientError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
-	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
+	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
 
 	assert.NoError(t, exp.Shutdown(ctx))
 }
