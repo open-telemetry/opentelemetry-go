@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Recording`, `Scope`, `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6342)
+- Add `AssertEqual` function along with `IgnoreTimestamp` option in `go.opentelemetry.io/otel/log/logtest`. (#6342)
 - Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used. (#6342)
 
 ### Changed

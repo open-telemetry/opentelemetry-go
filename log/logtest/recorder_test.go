@@ -9,9 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -43,15 +40,8 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 			},
 		},
 	}
-	opts := []cmp.Option{
-		cmp.Comparer(func(x, y context.Context) bool { return x == y }),           // Compare context.
-		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
-		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
-	}
 	got := rec.Result()
-	if diff := cmp.Diff(want, got, opts...); diff != "" {
-		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
-	}
+	AssertEqual(t, want, got)
 
 	rec.Reset()
 
@@ -59,9 +49,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 		Scope{Name: t.Name()}: nil,
 	}
 	got = rec.Result()
-	if diff := cmp.Diff(want, got, opts...); diff != "" {
-		t.Errorf("Recorded records mismatch (-want +got):\n%s", diff)
-	}
+	AssertEqual(t, want, got)
 }
 
 func TestRecorderLoggerEnabled(t *testing.T) {

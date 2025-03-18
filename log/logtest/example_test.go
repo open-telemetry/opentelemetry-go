@@ -5,17 +5,16 @@ package logtest_test
 
 import (
 	"context"
-	"fmt"
+	"testing"
 	"time"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/logtest"
 )
 
 func Example() {
+	t := &testing.T{} // Provided by testing framework.
+
 	// Create a recorder.
 	rec := logtest.NewRecorder()
 
@@ -30,7 +29,7 @@ func Example() {
 	r.AddAttributes(log.Int("n", 1))
 	l.Emit(ctx, r)
 
-	// Expected log records.
+	// Verify that the expected and actual log records match.
 	want := logtest.Recording{
 		logtest.Scope{Name: "Example"}: []logtest.Record{
 			{
@@ -44,17 +43,8 @@ func Example() {
 			},
 		},
 	}
-	opts := []cmp.Option{
-		cmp.Comparer(func(x, y context.Context) bool { return x == y }),           // Compare context.
-		cmpopts.IgnoreTypes(time.Time{}),                                          // Ignore Timestamps.
-		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
-		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
-	}
-	// Get the recorded log records.
 	got := rec.Result()
-	if diff := cmp.Diff(want, got, opts...); diff != "" {
-		fmt.Printf("recording mismatch (-want +got):\n%s", diff)
-	}
+	logtest.AssertEqual(t, want, got, logtest.IgnoreTimestamp())
 
 	// Output:
 	//
