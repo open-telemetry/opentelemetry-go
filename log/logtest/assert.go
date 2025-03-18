@@ -5,7 +5,6 @@ package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -38,7 +37,7 @@ func AssertEqual[T Recording | Record](t TestingT, want, got T, opts ...AssertOp
 	}
 
 	if diff := cmp.Diff(want, got, cmpOpts...); diff != "" {
-		fmt.Printf("mismatch (-want +got):\n%s", diff)
+		t.Errorf("mismatch (-want +got):\n%s", diff)
 		return false
 	}
 	return true
