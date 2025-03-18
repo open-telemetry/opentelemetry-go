@@ -16,24 +16,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- ⚠️ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
+  This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
+  This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
 - Change `Recorder.Result` to return `Recording`. (#6342)
 - `Recorder` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6342)
+
+### Fixes
+
+- Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
 
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
 - Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6342)
 - Remove `AssertRecordEqual` function from `go.opentelemetry.io/otel/log/logtest`. (#6342)
-
-### Changed
-
-- ⚠️ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
-  This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
-  This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
-
-### Fixes
-
-- Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
