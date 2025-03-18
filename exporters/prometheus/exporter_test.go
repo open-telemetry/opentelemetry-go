@@ -515,16 +515,13 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if tc.name != `expontential histogram` {
-			continue
-		}
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.disableUTF8 {
 				model.NameValidationScheme = model.LegacyValidation
-				defer func() {
+				t.Cleanup(func() {
 					// Reset to defaults
 					model.NameValidationScheme = model.UTF8Validation
-				}()
+				})
 			}
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
