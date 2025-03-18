@@ -30,6 +30,7 @@ module-sets:
     version: v0.11.0
     modules:
       - go.opentelemetry.io/otel/log
+      - go.opentelemetry.io/otel/log/logtest
       - go.opentelemetry.io/otel/sdk/log
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
