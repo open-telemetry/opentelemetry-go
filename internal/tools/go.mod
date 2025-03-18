@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/golangci/golangci-lint v1.64.7
+	github.com/golangci/golangci-lint v1.64.8
 	github.com/jcchavezs/porto v0.7.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.20.0
@@ -26,7 +26,7 @@ require (
 	github.com/Antonboom/errname v1.1.0 // indirect
 	github.com/Antonboom/nilnil v1.1.0 // indirect
 	github.com/Antonboom/testifylint v1.6.0 // indirect
-	github.com/BurntSushi/toml v1.4.1-0.20250317103630-d10101f4fed8 // indirect
+	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/Crocmagnon/fatcontext v0.7.1 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.1 // indirect
@@ -68,7 +68,7 @@ require (
 	github.com/firefart/nonamedreturns v1.0.5 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
-	github.com/ghostiam/protogetter v0.3.10 // indirect
+	github.com/ghostiam/protogetter v0.3.12 // indirect
 	github.com/go-critic/go-critic v0.12.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
@@ -141,10 +141,10 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/polyfloyd/go-errorlint v1.7.1 // indirect
-	github.com/prometheus/client_golang v1.20.5 // indirect
+	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.4 // indirect
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22 // indirect
 	github.com/quasilyte/gogrep v0.5.0 // indirect
