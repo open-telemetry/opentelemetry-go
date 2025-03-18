@@ -161,9 +161,7 @@ var autoInstEnabled = new(bool)
 // newSpan is called by tracer.Start so auto-instrumentation can attach an eBPF
 // uprobe to this code.
 //
-// Strictly speaking, the following "noinline" flag is not needed, the method's
-// complexity prevents it being inlined. This ensures that is the case going
-// forward by making the restriction explicit.
+// "noinline" pragma prevents the method from ever being inlined.
 //
 //go:noinline
 func (t *tracer) newSpan(ctx context.Context, autoSpan *bool, name string, opts []trace.SpanStartOption) (context.Context, trace.Span) {
