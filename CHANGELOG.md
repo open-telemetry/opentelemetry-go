@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#????)
+- `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
 
 ### Removed
 
