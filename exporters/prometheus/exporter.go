@@ -92,6 +92,7 @@ type collector struct {
 	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
 	resourceKeyVals   keyVals
+	metricsPool       sync.Pool
 }
 
 // prometheus counters MUST have a _total suffix by default:
@@ -118,6 +119,11 @@ func New(opts ...Option) (*Exporter, error) {
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                cfg.namespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
+		metricsPool: sync.Pool{
+			New: func() interface{} {
+				return &metricdata.ResourceMetrics{}
+			},
+		},
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -145,9 +151,10 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	// TODO (#3047): Use a sync.Pool instead of allocating metrics every Collect.
-	metrics := metricdata.ResourceMetrics{}
-	err := c.reader.Collect(context.TODO(), &metrics)
+	metrics := c.metricsPool.Get().(*metricdata.ResourceMetrics)
+	err := c.reader.Collect(context.TODO(), metrics)
 	if err != nil {
+		c.metricsPool.Put(metrics)
 		if errors.Is(err, metric.ErrReaderShutdown) {
 			return
 		}
@@ -244,6 +251,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 		}
 	}
+	c.metricsPool.Put(metrics)
 }
 
 func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, name string, kv keyVals) {
