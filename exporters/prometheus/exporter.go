@@ -150,7 +150,6 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 //
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	// TODO (#3047): Use a sync.Pool instead of allocating metrics every Collect.
 	metrics := c.metricsPool.Get().(*metricdata.ResourceMetrics)
 	err := c.reader.Collect(context.TODO(), metrics)
 	if err != nil {
