@@ -151,9 +151,9 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	metrics := c.metricsPool.Get().(*metricdata.ResourceMetrics)
+	defer c.metricsPool.Put(metrics)
 	err := c.reader.Collect(context.TODO(), metrics)
 	if err != nil {
-		c.metricsPool.Put(metrics)
 		if errors.Is(err, metric.ErrReaderShutdown) {
 			return
 		}
@@ -250,7 +250,6 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 		}
 	}
-	c.metricsPool.Put(metrics)
 }
 
 func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, name string, kv keyVals) {
