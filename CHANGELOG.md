@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
   This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
 - Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
+- `go.opentelemetry.io/otel/log/logtest` is now a separate Go module. (#6465)
 
 ### Fixes
 
