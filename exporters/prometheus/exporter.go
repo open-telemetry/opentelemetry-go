@@ -319,7 +319,7 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	values := make([]string, 0, attrs.Len())
 	itr := attrs.Iter()
 
-	if model.NameValidationScheme == model.UTF8Validation { // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+	if model.NameValidationScheme == model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Do not perform sanitization if prometheus supports UTF-8.
 		for itr.Next() {
 			kv := itr.Attribute()
@@ -405,7 +405,7 @@ var unitSuffixes = map[string]string{
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := m.Name
-	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Only sanitize if prometheus does not support UTF-8.
 		name = model.EscapeName(name, model.NameEscapingScheme)
 	}

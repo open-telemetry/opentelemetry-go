@@ -472,10 +472,10 @@ func TestPrometheusExporter(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.disableUTF8 {
-				model.NameValidationScheme = model.LegacyValidation // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+				model.NameValidationScheme = model.LegacyValidation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 				defer func() {
 					// Reset to defaults
-					model.NameValidationScheme = model.UTF8Validation // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+					model.NameValidationScheme = model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 				}()
 			}
 			ctx := context.Background()
@@ -1029,13 +1029,13 @@ func TestExemplars(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			originalEscapingScheme := model.NameEscapingScheme
-			originalValidationScheme := model.NameValidationScheme // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+			originalValidationScheme := model.NameValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 			model.NameEscapingScheme = tc.escapingScheme
-			model.NameValidationScheme = tc.validationScheme // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+			model.NameValidationScheme = tc.validationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 			// Restore original value after the test is complete
 			defer func() {
 				model.NameEscapingScheme = originalEscapingScheme
-				model.NameValidationScheme = originalValidationScheme // nolint:staticcheck // we need this check to keep supporting the legacy scheme
+				model.NameValidationScheme = originalValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 			}()
 			// initialize registry exporter
 			ctx := context.Background()
