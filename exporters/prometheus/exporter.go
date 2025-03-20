@@ -40,7 +40,15 @@ const (
 	spanIDExemplarKey  = "span_id"
 )
 
-var errScopeInvalid = errors.New("invalid scope")
+var (
+	errScopeInvalid = errors.New("invalid scope")
+
+	metricsPool = sync.Pool{
+		New: func() interface{} {
+			return &metricdata.ResourceMetrics{}
+		},
+	}
+)
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
@@ -92,7 +100,6 @@ type collector struct {
 	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
 	resourceKeyVals   keyVals
-	metricsPool       sync.Pool
 }
 
 // prometheus counters MUST have a _total suffix by default:
@@ -119,11 +126,6 @@ func New(opts ...Option) (*Exporter, error) {
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                cfg.namespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
-		metricsPool: sync.Pool{
-			New: func() interface{} {
-				return &metricdata.ResourceMetrics{}
-			},
-		},
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -150,8 +152,8 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 //
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	metrics := c.metricsPool.Get().(*metricdata.ResourceMetrics)
-	defer c.metricsPool.Put(metrics)
+	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
+	defer metricsPool.Put(metrics)
 	err := c.reader.Collect(context.TODO(), metrics)
 	if err != nil {
 		if errors.Is(err, metric.ErrReaderShutdown) {
