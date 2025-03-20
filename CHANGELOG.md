@@ -8,9 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Removed
+### Added
 
-- Drop support for [Go 1.22]. (#6381, #6418)
+- Add `Recording`, `Scope`, `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6342)
+- Add `AssertEqual` function along with `IgnoreTimestamp` option in `go.opentelemetry.io/otel/log/logtest`. (#6342)
+- Add a testable example showing how `go.opentelemetry.io/otel/log/logtest` can be used. (#6342)
 
 ### Changed
 
@@ -18,11 +20,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
   This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
 - Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
+- Change `Recorder.Result` to return `Recording`. (#6342)
+- `Recorder` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6342)
 
 ### Fixes
 
 - Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
 - Ensure the `noopSpan.tracerProvider` method is not inlined in `go.opentelemetry.io/otel/trace` so the `go.opentelemetry.io/auto` instrumentation can instrument non-recording spans. (#6456)
+
+### Removed
+
+- Drop support for [Go 1.22]. (#6381, #6418)
+- Remove `ScopeRecords`, `EmittedRecord`, `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6342)
+- Remove `AssertRecordEqual` function from `go.opentelemetry.io/otel/log/logtest`. (#6342)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
