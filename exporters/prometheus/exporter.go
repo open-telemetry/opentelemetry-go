@@ -284,7 +284,7 @@ func addExponentialHistogramMetric[N int64 | float64](ch chan<- prometheus.Metri
 			continue
 		}
 
-		// NOTE(GiedriusS): add exemplars here after https://github.com/prometheus/client_golang/pull/1654#pullrequestreview-2434669425 is done.
+		// TODO(GiedriusS): add exemplars here after https://github.com/prometheus/client_golang/pull/1654#pullrequestreview-2434669425 is done.
 		ch <- m
 	}
 }
