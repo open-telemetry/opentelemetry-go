@@ -21,8 +21,8 @@ import (
 )
 
 type instruction struct {
-	Record *[]Record
-	Flush  chan [][]Record
+	Record *[]*Record
+	Flush  chan [][]*Record
 }
 
 type testExporter struct {
@@ -59,7 +59,7 @@ func run(input chan instruction) chan struct{} {
 	go func() {
 		defer close(done)
 
-		var records [][]Record
+		var records [][]*Record
 		for in := range input {
 			if in.Record != nil {
 				records = append(records, *in.Record)
@@ -74,13 +74,13 @@ func run(input chan instruction) chan struct{} {
 	return done
 }
 
-func (e *testExporter) Records() [][]Record {
-	out := make(chan [][]Record, 1)
+func (e *testExporter) Records() [][]*Record {
+	out := make(chan [][]*Record, 1)
 	e.input <- instruction{Flush: out}
 	return <-out
 }
 
-func (e *testExporter) Export(ctx context.Context, r []Record) error {
+func (e *testExporter) Export(ctx context.Context, r []*Record) error {
 	atomic.AddInt32(e.exportN, 1)
 	if e.ExportTrigger != nil {
 		select {
@@ -136,7 +136,7 @@ func TestChunker(t *testing.T) {
 		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 0)
 		const size = 100
-		_ = c.Export(context.Background(), make([]Record, size))
+		_ = c.Export(context.Background(), make([]*Record, size))
 
 		assert.Equal(t, 1, exp.ExportN())
 		records := exp.Records()
@@ -164,8 +164,8 @@ func TestChunker(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 10)
-		assert.NoError(t, c.Export(context.Background(), make([]Record, 5)))
-		assert.NoError(t, c.Export(context.Background(), make([]Record, 25)))
+		assert.NoError(t, c.Export(context.Background(), make([]*Record, 5)))
+		assert.NoError(t, c.Export(context.Background(), make([]*Record, 25)))
 
 		wantLens := []int{5, 10, 10, 5}
 		records := exp.Records()
@@ -180,7 +180,7 @@ func TestChunker(t *testing.T) {
 		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 0)
 		ctx := context.Background()
-		records := make([]Record, 25)
+		records := make([]*Record, 25)
 		err := c.Export(ctx, records)
 		assert.ErrorIs(t, err, assert.AnError, "no chunking")
 
@@ -225,7 +225,7 @@ func TestExportSync(t *testing.T) {
 
 			in <- exportData{
 				ctx:     context.Background(),
-				records: make([]Record, 1),
+				records: make([]*Record, 1),
 			}
 		}()
 
@@ -255,7 +255,7 @@ func TestExportSync(t *testing.T) {
 				resp := make(chan error, 1)
 				in <- exportData{
 					ctx:     context.Background(),
-					records: []Record{r},
+					records: []*Record{&r},
 					respCh:  resp,
 				}
 
@@ -307,7 +307,7 @@ func TestTimeoutExporter(t *testing.T) {
 
 		out := make(chan error, 1)
 		go func() {
-			out <- e.Export(context.Background(), make([]Record, 1))
+			out <- e.Export(context.Background(), make([]*Record, 1))
 		}()
 
 		var err error
@@ -334,7 +334,7 @@ func TestBufferExporter(t *testing.T) {
 		e := newBufferExporter(exp, goRoutines)
 
 		ctx := context.Background()
-		records := make([]Record, 10)
+		records := make([]*Record, 10)
 
 		stop := make(chan struct{})
 		var wg sync.WaitGroup
@@ -394,7 +394,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			// Make sure there is something to flush.
-			require.True(t, e.EnqueueExport(make([]Record, 1)))
+			require.True(t, e.EnqueueExport(make([]*Record, 1)))
 
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -420,7 +420,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 2)
 
 			ctx := context.Background()
-			records := make([]Record, 1)
+			records := make([]*Record, 1)
 			require.NoError(t, e.enqueue(ctx, records, nil), "enqueue")
 
 			assert.NoError(t, e.ForceFlush(ctx), "ForceFlush records")
@@ -443,7 +443,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			ctx, cancel := context.WithCancel(context.Background())
-			require.True(t, e.EnqueueExport(make([]Record, 1)))
+			require.True(t, e.EnqueueExport(make([]*Record, 1)))
 
 			got := make(chan error, 1)
 			go func() { got <- e.ForceFlush(ctx) }()
@@ -496,18 +496,19 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			ctx := context.Background()
-			records := make([]Record, 1)
+			records := make([]*Record, 1)
+			records[0] = new(Record)
 			records[0].SetBody(log.BoolValue(true))
 
 			assert.NoError(t, e.Export(ctx, records))
 
 			n := exp.ExportN()
 			assert.Equal(t, 1, n, "first Export number")
-			assert.Equal(t, [][]Record{records}, exp.Records())
+			assert.Equal(t, [][]*Record{records}, exp.Records())
 
 			assert.NoError(t, e.Export(ctx, records))
 			assert.Equal(t, n+1, exp.ExportN(), "second Export number")
-			assert.Equal(t, [][]Record{records}, exp.Records())
+			assert.Equal(t, [][]*Record{records}, exp.Records())
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {
@@ -519,7 +520,7 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(func() { close(trigger) })
 			e := newBufferExporter(exp, 1)
 
-			records := make([]Record, 1)
+			records := make([]*Record, 1)
 			ctx, cancel := context.WithCancel(context.Background())
 
 			got := make(chan error, 1)
@@ -542,7 +543,7 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(exp.Stop)
 
 			e := newBufferExporter(exp, 1)
-			ctx, records := context.Background(), make([]Record, 1)
+			ctx, records := context.Background(), make([]*Record, 1)
 			assert.ErrorIs(t, e.Export(ctx, records), assert.AnError)
 		})
 
@@ -554,7 +555,7 @@ func TestBufferExporter(t *testing.T) {
 
 			ctx := context.Background()
 			_ = e.Shutdown(ctx)
-			assert.NoError(t, e.Export(ctx, make([]Record, 1)))
+			assert.NoError(t, e.Export(ctx, make([]*Record, 1)))
 			assert.Equal(t, 0, exp.ExportN(), "Export called")
 		})
 	})
@@ -575,7 +576,8 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(exp.Stop)
 			e := newBufferExporter(exp, 2)
 
-			records := make([]Record, 1)
+			records := make([]*Record, 1)
+			records[0] = new(Record)
 			records[0].SetBody(log.BoolValue(true))
 
 			assert.True(t, e.EnqueueExport(records))
@@ -584,7 +586,7 @@ func TestBufferExporter(t *testing.T) {
 
 			n := exp.ExportN()
 			assert.Equal(t, 2, n, "Export number")
-			assert.Equal(t, [][]Record{records, records}, exp.Records())
+			assert.Equal(t, [][]*Record{records, records}, exp.Records())
 		})
 
 		t.Run("Stopped", func(t *testing.T) {
@@ -593,7 +595,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			_ = e.Shutdown(context.Background())
-			assert.True(t, e.EnqueueExport(make([]Record, 1)))
+			assert.True(t, e.EnqueueExport(make([]*Record, 1)))
 		})
 	})
 }

@@ -21,8 +21,11 @@ func verifyRing(t *testing.T, r *ring, N int, sum int) {
 
 	// Iteration.
 	var n, s int
-	r.Do(func(v Record) {
+	r.Do(func(v *Record) {
 		n++
+		if v == nil {
+			return
+		}
 		body := v.Body()
 		if body.Kind() != log.KindEmpty {
 			s += int(body.AsInt64())
@@ -66,7 +69,7 @@ func TestNewRing(t *testing.T) {
 		for i := 1; i <= n; i++ {
 			var rec Record
 			rec.SetBody(log.IntValue(i))
-			r.Value = rec
+			r.Value = &rec
 			r = r.Next()
 		}
 
@@ -82,5 +85,5 @@ func TestEmptyRing(t *testing.T) {
 
 	var rLen, rDo *ring
 	assert.Equal(t, 0, rLen.Len(), "Len()")
-	rDo.Do(func(Record) { assert.Fail(t, "Do func arg called") })
+	rDo.Do(func(*Record) { assert.Fail(t, "Do func arg called") })
 }

@@ -615,7 +615,7 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
-		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -625,7 +625,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		require.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
@@ -649,7 +649,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		err := exp.Export(ctx, make([]log.Record, 1))
+		err := exp.Export(ctx, makeLogSlice(1))
 		assert.ErrorAs(t, err, new(retryableError))
 	})
 
@@ -658,7 +658,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -696,7 +696,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)), "failed retry")
+		assert.NoError(t, exp.Export(ctx, makeLogSlice(1)), "failed retry")
 		assert.Empty(t, rCh, "failed HTTP responses did not occur")
 	})
 
@@ -715,7 +715,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		err := exp.Export(ctx, make([]log.Record, 1))
+		err := exp.Export(ctx, makeLogSlice(1))
 		assert.ErrorContains(t, err, exporterErr.Error())
 
 		// To test the `Unwrap` and `As` function of retryable error
@@ -731,7 +731,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -742,7 +742,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
@@ -752,7 +752,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		require.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
@@ -770,7 +770,7 @@ func TestConfig(t *testing.T) {
 		}))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
-		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		require.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 
@@ -795,7 +795,7 @@ func TestConfig(t *testing.T) {
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-		err := exp.Export(ctx, make([]log.Record, 1))
+		err := exp.Export(ctx, makeLogSlice(1))
 		assert.ErrorContains(t, err, exporterErr.Error())
 	})
 }

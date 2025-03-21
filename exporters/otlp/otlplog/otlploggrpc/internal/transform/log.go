@@ -22,7 +22,7 @@ import (
 )
 
 // ResourceLogs returns an slice of OTLP ResourceLogs generated from records.
-func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
+func ResourceLogs(records []*log.Record) []*lpb.ResourceLogs {
 	if len(records) == 0 {
 		return nil
 	}
@@ -87,7 +87,7 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 }
 
 // LogRecord returns an OTLP LogRecord generated from record.
-func LogRecord(record log.Record) *lpb.LogRecord {
+func LogRecord(record *log.Record) *lpb.LogRecord {
 	r := &lpb.LogRecord{
 		TimeUnixNano:         timeUnixNano(record.Timestamp()),
 		ObservedTimeUnixNano: timeUnixNano(record.ObservedTimestamp()),

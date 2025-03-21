@@ -75,7 +75,7 @@ func TestExporter(t *testing.T) {
 			record := getRecord(now)
 
 			// Export a record
-			err = exporter.Export(context.Background(), []sdklog.Record{record})
+			err = exporter.Export(context.Background(), []*sdklog.Record{record})
 			assert.NoError(t, err)
 
 			// Check the writer
@@ -90,7 +90,7 @@ func TestExporter(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Export a record after shutdown, this should not be written
-			err = exporter.Export(context.Background(), []sdklog.Record{record})
+			err = exporter.Export(context.Background(), []*sdklog.Record{record})
 			assert.NoError(t, err)
 
 			// Check the writer
@@ -103,13 +103,13 @@ func TestExporterExport(t *testing.T) {
 	now := time.Now()
 
 	record := getRecord(now)
-	records := []sdklog.Record{record, record}
+	records := []*sdklog.Record{record, record}
 
 	testCases := []struct {
 		name       string
 		options    []Option
 		ctx        context.Context
-		records    []sdklog.Record
+		records    []*sdklog.Record
 		wantResult string
 		wantError  error
 	}{
@@ -290,7 +290,7 @@ func TestExporterForceFlush(t *testing.T) {
 	assert.NoError(t, exporter.ForceFlush(context.Background()))
 }
 
-func getRecord(now time.Time) sdklog.Record {
+func getRecord(now time.Time) *sdklog.Record {
 	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := trace.SpanIDFromHex("0102030405060708")
 
@@ -356,7 +356,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 			for i := 0; i < goroutines; i++ {
 				go func() {
 					defer wg.Done()
-					err := exporter.Export(context.Background(), []sdklog.Record{{}})
+					err := exporter.Export(context.Background(), []*sdklog.Record{&sdklog.Record{}})
 					assert.NoError(t, err)
 					err = exporter.ForceFlush(context.Background())
 					assert.NoError(t, err)

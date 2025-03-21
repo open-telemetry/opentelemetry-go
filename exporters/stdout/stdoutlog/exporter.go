@@ -38,7 +38,7 @@ func New(options ...Option) (*Exporter, error) {
 }
 
 // Export exports log records to writer.
-func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
+func (e *Exporter) Export(ctx context.Context, records []*log.Record) error {
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil

@@ -28,7 +28,7 @@ func ExampleRecordFactory() {
 	rf.Body = logapi.StringValue("bar")
 	r2 := rf.NewRecord()
 
-	_ = exp.Export(context.Background(), []log.Record{r1, r2})
+	_ = exp.Export(context.Background(), []*log.Record{r1, r2})
 
 	// Output:
 	// scope=myapp msg=foo
@@ -40,7 +40,7 @@ var _ log.Exporter = exporter{}
 
 type exporter struct{ io.Writer }
 
-func (e exporter) Export(ctx context.Context, records []log.Record) error {
+func (e exporter) Export(ctx context.Context, records []*log.Record) error {
 	for i, r := range records {
 		if i != 0 {
 			if _, err := e.Write([]byte("\n")); err != nil {

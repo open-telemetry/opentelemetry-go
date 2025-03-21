@@ -18,6 +18,14 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
+func makeLogSlice(l int) []*log.Record {
+	r := make([]*log.Record, l)
+	for i := range l {
+		r[i] = new(log.Record)
+	}
+	return r
+}
+
 func TestExporterExportErrors(t *testing.T) {
 	errUpload := errors.New("upload")
 	c := &client{
@@ -29,7 +37,7 @@ func TestExporterExportErrors(t *testing.T) {
 	e, err := newExporter(c, config{})
 	require.NoError(t, err, "New")
 
-	err = e.Export(context.Background(), make([]log.Record, 1))
+	err = e.Export(context.Background(), makeLogSlice(1))
 	assert.ErrorIs(t, err, errUpload)
 }
 
@@ -43,8 +51,8 @@ func TestExporterExport(t *testing.T) {
 	}
 
 	orig := transformResourceLogs
-	var got []log.Record
-	transformResourceLogs = func(r []log.Record) []*logpb.ResourceLogs {
+	var got []*log.Record
+	transformResourceLogs = func(r []*log.Record) []*logpb.ResourceLogs {
 		got = r
 		return make([]*logpb.ResourceLogs, 1)
 	}
@@ -54,7 +62,7 @@ func TestExporterExport(t *testing.T) {
 	require.NoError(t, err, "New")
 
 	ctx := context.Background()
-	want := make([]log.Record, 1)
+	want := makeLogSlice(1)
 	assert.NoError(t, e.Export(ctx, want))
 
 	assert.Equal(t, 1, uploads, "client UploadLogs calls")
@@ -69,7 +77,7 @@ func TestExporterShutdown(t *testing.T) {
 
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
 	// should perform no operation and return nil error.
-	r := make([]log.Record, 1)
+	r := makeLogSlice(1)
 	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
@@ -98,7 +106,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			r := make([]log.Record, 1)
+			r := makeLogSlice(1)
 			for {
 				select {
 				case <-ctx.Done():

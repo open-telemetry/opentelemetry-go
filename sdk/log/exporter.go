@@ -33,7 +33,7 @@ type Exporter interface {
 	//
 	// Export should never be called concurrently with other Export calls.
 	// However, it may be called concurrently with other methods.
-	Export(ctx context.Context, records []Record) error
+	Export(ctx context.Context, records []*Record) error
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
@@ -61,7 +61,7 @@ var defaultNoopExporter = &noopExporter{}
 
 type noopExporter struct{}
 
-func (noopExporter) Export(context.Context, []Record) error { return nil }
+func (noopExporter) Export(context.Context, []*Record) error { return nil }
 
 func (noopExporter) Shutdown(context.Context) error { return nil }
 
@@ -88,7 +88,7 @@ func newChunkExporter(exporter Exporter, size int) Exporter {
 }
 
 // Export exports records in chunks no larger than c.size.
-func (c chunkExporter) Export(ctx context.Context, records []Record) error {
+func (c chunkExporter) Export(ctx context.Context, records []*Record) error {
 	n := len(records)
 	for i, j := 0, min(c.size, n); i < n; i, j = i+c.size, min(j+c.size, n) {
 		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
@@ -118,7 +118,7 @@ func newTimeoutExporter(exp Exporter, timeout time.Duration) Exporter {
 }
 
 // Export sets the timeout of ctx before calling the Exporter e wraps.
-func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
+func (e *timeoutExporter) Export(ctx context.Context, records []*Record) error {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 	return e.Exporter.Export(ctx, records)
@@ -141,7 +141,7 @@ func exportSync(input <-chan exportData, exporter Exporter) (done chan struct{})
 // exportData is data related to an export.
 type exportData struct {
 	ctx     context.Context
-	records []Record
+	records []*Record
 
 	// respCh is the channel any error returned from the export will be sent
 	// on. If this is nil, and the export error is non-nil, the error will
@@ -152,7 +152,7 @@ type exportData struct {
 // DoExport calls exportFn with the data contained in e. The error response
 // will be returned on e's respCh if not nil. The error will be handled by the
 // default OTel error handle if it is not nil and respCh is nil or full.
-func (e exportData) DoExport(exportFn func(context.Context, []Record) error) {
+func (e exportData) DoExport(exportFn func(context.Context, []*Record) error) {
 	if len(e.records) == 0 {
 		e.respond(nil)
 		return
@@ -203,7 +203,7 @@ func newBufferExporter(exporter Exporter, size int) *bufferExporter {
 
 var errStopped = errors.New("exporter stopped")
 
-func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
+func (e *bufferExporter) enqueue(ctx context.Context, records []*Record, rCh chan<- error) error {
 	data := exportData{ctx, records, rCh}
 
 	e.inputMu.Lock()
@@ -228,7 +228,7 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 // successfully enqueued (or the bufferExporter is shut down), false otherwise.
 //
 // The passed records are held after this call returns.
-func (e *bufferExporter) EnqueueExport(records []Record) bool {
+func (e *bufferExporter) EnqueueExport(records []*Record) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
 		return true
@@ -255,7 +255,7 @@ func (e *bufferExporter) EnqueueExport(records []Record) bool {
 
 // Export synchronously exports records in the context of ctx. This will not
 // return until the export has been completed.
-func (e *bufferExporter) Export(ctx context.Context, records []Record) error {
+func (e *bufferExporter) Export(ctx context.Context, records []*Record) error {
 	if len(records) == 0 {
 		return nil
 	}

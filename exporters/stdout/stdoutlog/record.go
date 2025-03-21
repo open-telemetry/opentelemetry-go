@@ -92,7 +92,7 @@ type recordJSON struct {
 	DroppedAttributes int
 }
 
-func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
+func (e *Exporter) newRecordJSON(r *sdklog.Record) recordJSON {
 	res := r.Resource()
 	newRecord := recordJSON{
 		EventName:    r.EventName(),

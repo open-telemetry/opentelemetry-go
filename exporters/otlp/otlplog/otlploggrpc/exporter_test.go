@@ -22,16 +22,25 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
-var records []sdklog.Record
+func makeLogSlice(l int) []*sdklog.Record {
+	r := make([]*sdklog.Record, l)
+	for i := range l {
+		r[i] = new(sdklog.Record)
+	}
+	return r
+}
+
+var records []*sdklog.Record
 
 func init() {
-	var r sdklog.Record
-	r.SetTimestamp(ts)
-	r.SetBody(log.StringValue("A"))
-	records = append(records, r)
+	var r1, r2 sdklog.Record
+	r1.SetTimestamp(ts)
+	r1.SetBody(log.StringValue("A"))
+	records = append(records, &r1)
 
-	r.SetBody(log.StringValue("B"))
-	records = append(records, r)
+	r2.SetTimestamp(ts)
+	r2.SetBody(log.StringValue("B"))
+	records = append(records, &r2)
 }
 
 type mockClient struct {
@@ -54,20 +63,20 @@ func TestExporterExport(t *testing.T) {
 
 	testCases := []struct {
 		name string
-		logs []sdklog.Record
+		logs []*sdklog.Record
 		err  error
 
-		wantLogs []sdklog.Record
+		wantLogs []*sdklog.Record
 		wantErr  error
 	}{
 		{
 			name:     "NoError",
-			logs:     make([]sdklog.Record, 2),
-			wantLogs: make([]sdklog.Record, 2),
+			logs:     makeLogSlice(2),
+			wantLogs: makeLogSlice(2),
 		},
 		{
 			name:    "Error",
-			logs:    make([]sdklog.Record, 2),
+			logs:    makeLogSlice(2),
 			err:     errClient,
 			wantErr: errClient,
 		},
@@ -76,8 +85,8 @@ func TestExporterExport(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			orig := transformResourceLogs
-			var got []sdklog.Record
-			transformResourceLogs = func(r []sdklog.Record) []*logpb.ResourceLogs {
+			var got []*sdklog.Record
+			transformResourceLogs = func(r []*sdklog.Record) []*logpb.ResourceLogs {
 				got = r
 				return make([]*logpb.ResourceLogs, len(r))
 			}
@@ -103,7 +112,7 @@ func TestExporterShutdown(t *testing.T) {
 
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
 	// should perform no operation and return nil error.
-	r := make([]sdklog.Record, 1)
+	r := makeLogSlice(1)
 	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
@@ -130,7 +139,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			r := make([]sdklog.Record, 1)
+			r := makeLogSlice(1)
 			for {
 				select {
 				case <-ctx.Done():
@@ -160,7 +169,7 @@ func TestExporter(t *testing.T) {
 			c, _ := clientFactory(t, nil)
 			e := newExporter(c)
 			return func(ctx context.Context) error {
-				return e.Export(ctx, []sdklog.Record{{}})
+				return e.Export(ctx, []*sdklog.Record{{}})
 			}
 		}))
 

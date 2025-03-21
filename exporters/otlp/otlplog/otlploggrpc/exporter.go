@@ -57,7 +57,7 @@ var transformResourceLogs = transform.ResourceLogs
 //
 // This method returns nil and drops records if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
-func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
+func (e *Exporter) Export(ctx context.Context, records []*log.Record) error {
 	if e.stopped.Load() {
 		return nil
 	}
