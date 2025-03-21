@@ -1,4 +1,4 @@
-module go.opentelemetry.io/otel/exporters/stdout/stdoutlog
+module go.opentelemetry.io/otel/sdk/log/logtest
 
 go 1.23.0
 
@@ -8,7 +8,6 @@ require (
 	go.opentelemetry.io/otel/log v0.11.0
 	go.opentelemetry.io/otel/sdk v1.35.0
 	go.opentelemetry.io/otel/sdk/log v0.11.0
-	go.opentelemetry.io/otel/sdk/log/logtest v0.0.0-00000000000000-000000000000
 	go.opentelemetry.io/otel/trace v1.35.0
 )
 
@@ -24,16 +23,14 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace go.opentelemetry.io/otel/sdk/log => ../../../sdk/log
+replace go.opentelemetry.io/otel/metric => ../../../metric
 
-replace go.opentelemetry.io/otel/sdk/log/logtest => ../../../sdk/log/logtest
+replace go.opentelemetry.io/otel/trace => ../../../trace
+
+replace go.opentelemetry.io/otel/sdk => ../../
+
+replace go.opentelemetry.io/otel/sdk/log => ../
 
 replace go.opentelemetry.io/otel/log => ../../../log
 
 replace go.opentelemetry.io/otel => ../../..
-
-replace go.opentelemetry.io/otel/trace => ../../../trace
-
-replace go.opentelemetry.io/otel/sdk => ../../../sdk
-
-replace go.opentelemetry.io/otel/metric => ../../../metric

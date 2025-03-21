@@ -40,7 +40,15 @@ const (
 	spanIDExemplarKey  = "span_id"
 )
 
-var errScopeInvalid = errors.New("invalid scope")
+var (
+	errScopeInvalid = errors.New("invalid scope")
+
+	metricsPool = sync.Pool{
+		New: func() interface{} {
+			return &metricdata.ResourceMetrics{}
+		},
+	}
+)
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
@@ -144,9 +152,9 @@ func (c *collector) Describe(ch chan<- *prometheus.Desc) {
 //
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	// TODO (#3047): Use a sync.Pool instead of allocating metrics every Collect.
-	metrics := metricdata.ResourceMetrics{}
-	err := c.reader.Collect(context.TODO(), &metrics)
+	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
+	defer metricsPool.Put(metrics)
+	err := c.reader.Collect(context.TODO(), metrics)
 	if err != nil {
 		if errors.Is(err, metric.ErrReaderShutdown) {
 			return
