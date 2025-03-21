@@ -46,7 +46,7 @@ func TestCQueue(t *testing.T) {
 		assert.Equal(t, []*Record{&r1, &r2}, q.Flush(), "flushed Records")
 	})
 
-	t.Run("Enqueue Plus", func(t *testing.T) {
+	t.Run("TryDequeue", func(t *testing.T) {
 		const size = 100
 		q := newCQueue(size)
 
@@ -65,7 +65,15 @@ func TestCQueue(t *testing.T) {
 				assert.Equal(t, q.Cap(), q.Enqueue(r), "complete batch")
 				assert.Equal(t, q.Cap(), q.Len(), "length")
 			} else if i == 150 {
-				assert.Equal(t, records[50:150], q.Flush(), "flushed Records")
+				deuqued := make([]*Record, 200)
+				nilSlice := make([]*Record, 100)
+				w := func([]*Record) bool {
+					return true
+				}
+
+				assert.Equal(t, 0, q.TryDequeue(deuqued, w), "dequeue Records")
+				assert.Equal(t, records[50:150], deuqued[:100], "dequeued Records")
+				assert.Equal(t, nilSlice, deuqued[100:], "nil buf remainder")
 				assert.Equal(t, 0, q.Len(), "length")
 
 				assert.Equal(t, 1, q.Enqueue(r), "incomplete batch")
