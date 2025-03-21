@@ -145,8 +145,8 @@ var (
 		},
 	}
 
-	records = func() []log.Record {
-		var out []log.Record
+	records = func() []*log.Record {
+		var out []*log.Record
 
 		for _, r := range resList {
 			for _, s := range scopeList {

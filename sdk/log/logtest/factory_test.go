@@ -19,7 +19,7 @@ import (
 )
 
 func TestRecordFactoryEmpty(t *testing.T) {
-	assert.Equal(t, sdklog.Record{}, RecordFactory{}.NewRecord())
+	assert.Equal(t, sdklog.Record{}, *RecordFactory{}.NewRecord())
 }
 
 func TestRecordFactory(t *testing.T) {
@@ -110,7 +110,7 @@ func TestRecordFactoryMultiple(t *testing.T) {
 	assert.Equal(t, scope, record1.InstrumentationScope())
 }
 
-func assertBody(t *testing.T, want log.Value, r sdklog.Record) {
+func assertBody(t *testing.T, want log.Value, r *sdklog.Record) {
 	t.Helper()
 	got := r.Body()
 	if !got.Equal(want) {
@@ -118,7 +118,7 @@ func assertBody(t *testing.T, want log.Value, r sdklog.Record) {
 	}
 }
 
-func assertAttributes(t *testing.T, want []log.KeyValue, r sdklog.Record) {
+func assertAttributes(t *testing.T, want []log.KeyValue, r *sdklog.Record) {
 	t.Helper()
 	var got []log.KeyValue
 	r.WalkAttributes(func(kv log.KeyValue) bool {

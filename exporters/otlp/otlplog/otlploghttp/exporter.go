@@ -45,7 +45,7 @@ func newExporter(c *client, _ config) (*Exporter, error) {
 var transformResourceLogs = transform.ResourceLogs
 
 // Export transforms and transmits log records to an OTLP receiver.
-func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
+func (e *Exporter) Export(ctx context.Context, records []*log.Record) error {
 	if e.stopped.Load() {
 		return nil
 	}

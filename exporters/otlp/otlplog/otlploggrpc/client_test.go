@@ -587,7 +587,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		additionalKey := "additional-custom-header"
 		ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
-		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		require.NoError(t, exp.Export(ctx, makeLogSlice(1)))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))
 

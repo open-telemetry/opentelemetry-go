@@ -16,7 +16,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 // Value instead of any to avoid allocations.
 type ring struct {
 	next, prev *ring
-	Value      Record
+	Value      *Record
 }
 
 func (r *ring) init() *ring {
@@ -72,7 +72,7 @@ func (r *ring) Len() int {
 
 // Do calls function f on each element of the ring, in forward order. The
 // behavior of Do is undefined if f changes *r.
-func (r *ring) Do(f func(Record)) {
+func (r *ring) Do(f func(*Record)) {
 	if r != nil {
 		f(r.Value)
 		for p := r.Next(); p != r; p = p.next {

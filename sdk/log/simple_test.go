@@ -17,14 +17,14 @@ import (
 )
 
 type exporter struct {
-	records []log.Record
+	records []*log.Record
 
 	exportCalled     bool
 	shutdownCalled   bool
 	forceFlushCalled bool
 }
 
-func (e *exporter) Export(_ context.Context, r []log.Record) error {
+func (e *exporter) Export(_ context.Context, r []*log.Record) error {
 	e.records = r
 	e.exportCalled = true
 	return nil
@@ -49,7 +49,7 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 	_ = s.OnEmit(context.Background(), r)
 
 	require.True(t, e.exportCalled, "exporter Export not called")
-	assert.Equal(t, []log.Record{*r}, e.records)
+	assert.Equal(t, []*log.Record{r}, e.records)
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {
@@ -70,7 +70,7 @@ type writerExporter struct {
 	io.Writer
 }
 
-func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
+func (e *writerExporter) Export(_ context.Context, records []*log.Record) error {
 	for _, r := range records {
 		_, _ = io.WriteString(e.Writer, r.Body().String())
 	}

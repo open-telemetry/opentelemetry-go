@@ -35,7 +35,7 @@ func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimplePr
 
 var simpleProcRecordsPool = sync.Pool{
 	New: func() any {
-		records := make([]Record, 1)
+		records := make([]*Record, 1)
 		return &records
 	},
 }
@@ -49,8 +49,8 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	records := simpleProcRecordsPool.Get().(*[]Record)
-	(*records)[0] = *r
+	records := simpleProcRecordsPool.Get().(*[]*Record)
+	(*records)[0] = r
 	defer func() {
 		simpleProcRecordsPool.Put(records)
 	}()

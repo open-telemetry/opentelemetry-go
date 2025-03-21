@@ -42,7 +42,7 @@ type RecordFactory struct {
 }
 
 // NewRecord returns a [sdklog.Record] configured from the values of f.
-func (f RecordFactory) NewRecord() sdklog.Record {
+func (f RecordFactory) NewRecord() *sdklog.Record {
 	// r needs to be addressable for set() below.
 	r := new(sdklog.Record)
 
@@ -67,7 +67,7 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 	set(r, "attributeCountLimit", f.AttributeCountLimit)
 	set(r, "attributeValueLengthLimit", f.AttributeValueLengthLimit)
 
-	return *r
+	return r
 }
 
 func set(r *sdklog.Record, name string, value any) {
