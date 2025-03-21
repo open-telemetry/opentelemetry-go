@@ -128,7 +128,7 @@ func (q *cqueue) cp(buf []*Record) (n, head int) {
 		firstLim = n
 		secondLim = 0
 	} else {
-		firstLim = q.Cap() - q.head
+		firstLim = q.Cap() - q.head + 1
 		secondLim = q.tail
 
 		if firstLim >= len(buf) {
@@ -155,22 +155,31 @@ func (q *cqueue) Flush() []*Record {
 	q.Lock()
 	defer q.Unlock()
 
-	var ret []*Record
+	// var ret []*Record
 
 	if q.Empty() {
 		return nil
-	} else if q.tail > q.head {
-		ret = q.buf[q.head:q.tail]
-		q.head = 0
-		q.tail = 0
-	} else {
-		ret = make([]*Record, q.Len())
-		initLen := q.Len()
-		for i := 0; i < initLen; i++ {
-			ret[i] = q.buf[q.head]
-			q.head = q.incrPtr(q.head)
-		}
 	}
 
+	ret := make([]*Record, q.Len())
+	q.cp(ret)
+	q.head = 0
+	q.tail = 0
+
 	return ret
+
+	// if q.Empty() {
+	// 	return nil
+	// } else if q.tail > q.head {
+	// 	ret = q.buf[q.head:q.tail]
+	// 	q.head = 0
+	// 	q.tail = 0
+	// } else {
+	// 	ret = make([]*Record, q.Len())
+	// 	initLen := q.Len()
+	// 	for i := 0; i < initLen; i++ {
+	// 		ret[i] = q.buf[q.head]
+	// 		q.head = q.incrPtr(q.head)
+	// 	}
+	// }
 }

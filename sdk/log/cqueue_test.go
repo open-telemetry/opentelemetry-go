@@ -11,8 +11,9 @@ import (
 )
 
 func TestCQueue(t *testing.T) {
-	var r Record
-	r.SetBody(log.BoolValue(true))
+	var r1, r2 Record
+	r1.SetBody(log.IntValue(1))
+	r2.SetBody(log.IntValue(2))
 
 	t.Run("newQueue", func(t *testing.T) {
 		const size = 1
@@ -34,42 +35,76 @@ func TestCQueue(t *testing.T) {
 		assert.Equal(t, 1, q.Len(), "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, q.Enqueue(&r), "complete batch")
+		assert.Equal(t, 2, q.Enqueue(&r1), "complete batch")
 		assert.Equal(t, 2, q.Len(), "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, q.Enqueue(&r), "overflow batch")
+		assert.Equal(t, 2, q.Enqueue(&r2), "overflow batch")
 		assert.Equal(t, 2, q.Len(), "length")
 		assert.Equal(t, size, q.Cap(), "capacity")
 
-		assert.Equal(t, []*Record{&r, &r}, q.Flush(), "flushed Records")
+		assert.Equal(t, []*Record{&r1, &r2}, q.Flush(), "flushed Records")
+	})
+
+	t.Run("Enqueue Plus", func(t *testing.T) {
+		const size = 100
+		q := newCQueue(size)
+
+		records := make([]*Record, 200)
+		for i := range len(records) {
+			r := new(Record)
+			r.SetBody(log.IntValue(i + 1))
+			records[i] = r
+		}
+
+		for i, r := range records {
+			if i < 100 {
+				assert.Equal(t, i+1, q.Enqueue(r), "incomplete batch")
+				assert.Equal(t, i+1, q.Len(), "length")
+			} else if i < 150 {
+				assert.Equal(t, q.Cap(), q.Enqueue(r), "complete batch")
+				assert.Equal(t, q.Cap(), q.Len(), "length")
+			} else if i == 150 {
+				assert.Equal(t, records[50:150], q.Flush(), "flushed Records")
+				assert.Equal(t, 0, q.Len(), "length")
+
+				assert.Equal(t, 1, q.Enqueue(r), "incomplete batch")
+				assert.Equal(t, 1, q.Len(), "length")
+			} else {
+				assert.Equal(t, i-150+1, q.Enqueue(r), "incomplete batch")
+				assert.Equal(t, i-150+1, q.Len(), "length")
+			}
+		}
+
+		assert.Equal(t, records[150:], q.Flush(), "flushed Records")
+		assert.Equal(t, 0, q.Len(), "length")
 	})
 
 	t.Run("Dropped", func(t *testing.T) {
 		q := newCQueue(1)
 
-		_ = q.Enqueue(&r)
-		_ = q.Enqueue(&r)
+		_ = q.Enqueue(&r1)
+		_ = q.Enqueue(&r1)
 		assert.Equal(t, uint64(1), q.Dropped(), "fist")
 
-		_ = q.Enqueue(&r)
-		_ = q.Enqueue(&r)
+		_ = q.Enqueue(&r1)
+		_ = q.Enqueue(&r1)
 		assert.Equal(t, uint64(2), q.Dropped(), "second")
 	})
 
 	t.Run("Flush", func(t *testing.T) {
 		const size = 2
 		q := newCQueue(size)
-		q.Enqueue(&r)
+		q.Enqueue(&r1)
 
-		assert.Equal(t, []*Record{&r}, q.Flush(), "flushed")
+		assert.Equal(t, []*Record{&r1}, q.Flush(), "flushed")
 	})
 
 	t.Run("TryFlush", func(t *testing.T) {
 		const size = 3
 		q := newCQueue(size)
 		for i := 0; i < size-1; i++ {
-			q.Enqueue(&r)
+			q.Enqueue(&r1)
 		}
 
 		buf := make([]*Record, 1)
@@ -84,13 +119,13 @@ func TestCQueue(t *testing.T) {
 			return true
 		}
 		if assert.Equal(t, size-2, q.TryDequeue(buf, f), "did not flush len(buf)") {
-			assert.Equal(t, []*Record{&r}, flushed, "Records")
+			assert.Equal(t, []*Record{&r1}, flushed, "Records")
 		}
 
 		buf = slices.Grow(buf, size)
 		flushed = flushed[:0]
 		if assert.Equal(t, 0, q.TryDequeue(buf, f), "did not flush len(queue)") {
-			assert.Equal(t, []*Record{&r}, flushed, "Records")
+			assert.Equal(t, []*Record{&r1}, flushed, "Records")
 		}
 	})
 
