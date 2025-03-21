@@ -356,7 +356,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 			for i := 0; i < goroutines; i++ {
 				go func() {
 					defer wg.Done()
-					err := exporter.Export(context.Background(), []*sdklog.Record{&sdklog.Record{}})
+					err := exporter.Export(context.Background(), []*sdklog.Record{{}})
 					assert.NoError(t, err)
 					err = exporter.ForceFlush(context.Background())
 					assert.NoError(t, err)

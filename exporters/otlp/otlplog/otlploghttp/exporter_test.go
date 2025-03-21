@@ -18,6 +18,7 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
+//nolint:unparam // this is helper fn that is so happen to receive only 1 for l param
 func makeLogSlice(l int) []*log.Record {
 	r := make([]*log.Record, l)
 	for i := range l {
