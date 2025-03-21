@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+> [!WARNING]
+> This is the last version to support `model.LegacyValidation` for
+> `go.opentelemetry.io/otel/exporters/prometheus`.
+> The next version (v0.59.0) will only support the default `model.UTF8Validation`.
+>
+> See also [Change default validation scheme to UTF8Validation](https://github.com/prometheus/common/pull/724)
+> in the prometheus repository.
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
@@ -20,6 +28,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
 - `go.opentelemetry.io/otel/log/logtest` is now a separate Go module. (#6465)
 - `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
+
+### Deprecated
+
+- Deprecate support for `model.LegacyValidation` for `go.opentelemetry.io/otel/exporters/prometheus`. (#6449)
 
 ### Fixes
 
