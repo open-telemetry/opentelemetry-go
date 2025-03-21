@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package log
 
 import (
@@ -20,8 +23,6 @@ func TestCQueue(t *testing.T) {
 		q := newCQueue(size)
 		assert.Equal(t, 0, q.Len())
 		assert.Equal(t, size, q.Cap(), "capacity")
-		// assert.Equal(t, size, q.read.Len(), "read ring")
-		// assert.Same(t, q.read, q.write, "different rings")
 	})
 
 	t.Run("Enqueue", func(t *testing.T) {
@@ -119,7 +120,6 @@ func TestCQueue(t *testing.T) {
 		f := func([]*Record) bool { return false }
 		assert.Equal(t, size-1, q.TryDequeue(buf, f), "not flushed")
 		require.Equal(t, size-1, q.Len(), "length")
-		// require.NotSame(t, q.read, q.write, "read ring advanced")
 
 		var flushed []*Record
 		f = func(r []*Record) bool {

@@ -1,4 +1,7 @@
-package log
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"sync"
@@ -131,7 +134,6 @@ func (q *cqueue) cp(buf []*Record) (n, head int) {
 	// cp after looping back to start
 	copy(buf[firstLim:], q.buf[:secondLim])
 
-	// calling incr ptr every time is expensive
 	head = q.incrPtrN(head, n)
 
 	return n, head
