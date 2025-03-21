@@ -284,7 +284,7 @@ func (q *queue) Dropped() uint64 {
 //
 // If enqueueing r will exceed the capacity of q, the oldest Record held in q
 // will be dropped and r retained.
-func (q *queue) Enqueue(r Record) int {
+func (q *queue) Enqueue(r *Record) int {
 	q.Lock()
 	defer q.Unlock()
 
@@ -309,7 +309,7 @@ func (q *queue) Enqueue(r Record) int {
 //
 // When write is called the lock of q is held. The write function must not call
 // other methods of this q that acquire the lock.
-func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
+func (q *queue) TryDequeue(buf []*Record, write func([]*Record) bool) int {
 	q.Lock()
 	defer q.Unlock()
 
@@ -331,11 +331,11 @@ func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 
 // Flush returns all the Records held in the queue and resets it to be
 // empty.
-func (q *queue) Flush() []Record {
+func (q *queue) Flush() []*Record {
 	q.Lock()
 	defer q.Unlock()
 
-	out := make([]Record, q.len)
+	out := make([]*Record, q.len)
 	for i := range out {
 		out[i] = q.read.Value
 		q.read = q.read.Next()
