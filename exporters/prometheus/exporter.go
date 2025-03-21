@@ -415,6 +415,7 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := m.Name
 	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Only sanitize if prometheus does not support UTF-8.
+		logDeprecatedLegacyScheme()
 		name = model.EscapeName(name, model.NameEscapingScheme)
 	}
 	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
