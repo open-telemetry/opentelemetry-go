@@ -72,7 +72,7 @@ The next release will require at least [Go 1.23].
 
 ### Remove
 
-- Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#????)
+- Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
 
 ## [1.34.0/0.56.0/0.10.0] 2025-01-17
 
