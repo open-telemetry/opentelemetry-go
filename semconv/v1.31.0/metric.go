@@ -231,121 +231,6 @@ const (
   DBClientConnectionWaitTimeName = "db.client.connection.wait_time"
   DBClientConnectionWaitTimeUnit = "s"
   DBClientConnectionWaitTimeDescription = "The time it took to obtain an open connection from the pool"
-  // DBClientConnectionsCreateTime is the metric conforming to the
-  // "db.client.connections.create_time" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.create_time` instead. Note: the unit
-  // also changed from `ms` to `s`.
-  // Instrument: histogram
-  // Unit: ms
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.create_time`. Note: the unit also changed from `ms` to `s`.", "reason": "uncategorized"}
-  DBClientConnectionsCreateTimeName = "db.client.connections.create_time"
-  DBClientConnectionsCreateTimeUnit = "ms"
-  DBClientConnectionsCreateTimeDescription = "Deprecated, use `db.client.connection.create_time` instead. Note: the unit also changed from `ms` to `s`."
-  // DBClientConnectionsIdleMax is the metric conforming to the
-  // "db.client.connections.idle.max" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.idle.max` instead.
-  // Instrument: updowncounter
-  // Unit: {connection}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.idle.max`.", "reason": "uncategorized"}
-  DBClientConnectionsIdleMaxName = "db.client.connections.idle.max"
-  DBClientConnectionsIdleMaxUnit = "{connection}"
-  DBClientConnectionsIdleMaxDescription = "Deprecated, use `db.client.connection.idle.max` instead."
-  // DBClientConnectionsIdleMin is the metric conforming to the
-  // "db.client.connections.idle.min" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.idle.min` instead.
-  // Instrument: updowncounter
-  // Unit: {connection}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.idle.min`.", "reason": "uncategorized"}
-  DBClientConnectionsIdleMinName = "db.client.connections.idle.min"
-  DBClientConnectionsIdleMinUnit = "{connection}"
-  DBClientConnectionsIdleMinDescription = "Deprecated, use `db.client.connection.idle.min` instead."
-  // DBClientConnectionsMax is the metric conforming to the
-  // "db.client.connections.max" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.max` instead.
-  // Instrument: updowncounter
-  // Unit: {connection}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.max`.", "reason": "uncategorized"}
-  DBClientConnectionsMaxName = "db.client.connections.max"
-  DBClientConnectionsMaxUnit = "{connection}"
-  DBClientConnectionsMaxDescription = "Deprecated, use `db.client.connection.max` instead."
-  // DBClientConnectionsPendingRequests is the metric conforming to the
-  // "db.client.connections.pending_requests" semantic conventions. It represents
-  // the deprecated, use `db.client.connection.pending_requests` instead.
-  // Instrument: updowncounter
-  // Unit: {request}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.pending_requests`.", "reason": "uncategorized"}
-  DBClientConnectionsPendingRequestsName = "db.client.connections.pending_requests"
-  DBClientConnectionsPendingRequestsUnit = "{request}"
-  DBClientConnectionsPendingRequestsDescription = "Deprecated, use `db.client.connection.pending_requests` instead."
-  // DBClientConnectionsTimeouts is the metric conforming to the
-  // "db.client.connections.timeouts" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.timeouts` instead.
-  // Instrument: counter
-  // Unit: {timeout}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.timeouts`.", "reason": "uncategorized"}
-  DBClientConnectionsTimeoutsName = "db.client.connections.timeouts"
-  DBClientConnectionsTimeoutsUnit = "{timeout}"
-  DBClientConnectionsTimeoutsDescription = "Deprecated, use `db.client.connection.timeouts` instead."
-  // DBClientConnectionsUsage is the metric conforming to the
-  // "db.client.connections.usage" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.count` instead.
-  // Instrument: updowncounter
-  // Unit: {connection}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.count`.", "reason": "uncategorized"}
-  DBClientConnectionsUsageName = "db.client.connections.usage"
-  DBClientConnectionsUsageUnit = "{connection}"
-  DBClientConnectionsUsageDescription = "Deprecated, use `db.client.connection.count` instead."
-  // DBClientConnectionsUseTime is the metric conforming to the
-  // "db.client.connections.use_time" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.use_time` instead. Note: the unit also
-  // changed from `ms` to `s`.
-  // Instrument: histogram
-  // Unit: ms
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.use_time`. Note: the unit also changed from `ms` to `s`.", "reason": "uncategorized"}
-  DBClientConnectionsUseTimeName = "db.client.connections.use_time"
-  DBClientConnectionsUseTimeUnit = "ms"
-  DBClientConnectionsUseTimeDescription = "Deprecated, use `db.client.connection.use_time` instead. Note: the unit also changed from `ms` to `s`."
-  // DBClientConnectionsWaitTime is the metric conforming to the
-  // "db.client.connections.wait_time" semantic conventions. It represents the
-  // deprecated, use `db.client.connection.wait_time` instead. Note: the unit
-  // also changed from `ms` to `s`.
-  // Instrument: histogram
-  // Unit: ms
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `db.client.connection.wait_time`. Note: the unit also changed from `ms` to `s`.", "reason": "uncategorized"}
-  DBClientConnectionsWaitTimeName = "db.client.connections.wait_time"
-  DBClientConnectionsWaitTimeUnit = "ms"
-  DBClientConnectionsWaitTimeDescription = "Deprecated, use `db.client.connection.wait_time` instead. Note: the unit also changed from `ms` to `s`."
-  // DBClientCosmosDBActiveInstanceCount is the metric conforming to the
-  // "db.client.cosmosdb.active_instance.count" semantic conventions. It
-  // represents the deprecated, use `azure.cosmosdb.client.active_instance.count`
-  //  instead.
-  // Instrument: updowncounter
-  // Unit: {instance}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `azure.cosmosdb.client.active_instance.count`.", "reason": "uncategorized"}
-  DBClientCosmosDBActiveInstanceCountName = "db.client.cosmosdb.active_instance.count"
-  DBClientCosmosDBActiveInstanceCountUnit = "{instance}"
-  DBClientCosmosDBActiveInstanceCountDescription = "Deprecated, use `azure.cosmosdb.client.active_instance.count` instead."
-  // DBClientCosmosDBOperationRequestCharge is the metric conforming to the
-  // "db.client.cosmosdb.operation.request_charge" semantic conventions. It
-  // represents the deprecated, use
-  // `azure.cosmosdb.client.operation.request_charge` instead.
-  // Instrument: histogram
-  // Unit: {request_unit}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `azure.cosmosdb.client.operation.request_charge`.", "reason": "uncategorized"}
-  DBClientCosmosDBOperationRequestChargeName = "db.client.cosmosdb.operation.request_charge"
-  DBClientCosmosDBOperationRequestChargeUnit = "{request_unit}"
-  DBClientCosmosDBOperationRequestChargeDescription = "Deprecated, use `azure.cosmosdb.client.operation.request_charge` instead."
   // DBClientOperationDuration is the metric conforming to the
   // "db.client.operation.duration" semantic conventions. It represents the
   // duration of database client operations.
@@ -1012,28 +897,6 @@ const (
   K8SReplicaSetDesiredPodsUnit = "{pod}"
   K8SReplicaSetDesiredPodsDescription = "Number of desired replica pods in this replicaset"
   // K8SReplicationControllerAvailablePods is the metric conforming to the
-  // "k8s.replication_controller.available_pods" semantic conventions. It
-  // represents the deprecated, use `k8s.replicationcontroller.available_pods`
-  // instead.
-  // Instrument: updowncounter
-  // Unit: {pod}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `k8s.replicationcontroller.available_pods`.", "reason": "uncategorized"}
-  K8SReplicationControllerAvailablePodsName = "k8s.replication_controller.available_pods"
-  K8SReplicationControllerAvailablePodsUnit = "{pod}"
-  K8SReplicationControllerAvailablePodsDescription = "Deprecated, use `k8s.replicationcontroller.available_pods` instead."
-  // K8SReplicationControllerDesiredPods is the metric conforming to the
-  // "k8s.replication_controller.desired_pods" semantic conventions. It
-  // represents the deprecated, use `k8s.replicationcontroller.desired_pods`
-  // instead.
-  // Instrument: updowncounter
-  // Unit: {pod}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `k8s.replicationcontroller.desired_pods`.", "reason": "uncategorized"}
-  K8SReplicationControllerDesiredPodsName = "k8s.replication_controller.desired_pods"
-  K8SReplicationControllerDesiredPodsUnit = "{pod}"
-  K8SReplicationControllerDesiredPodsDescription = "Deprecated, use `k8s.replicationcontroller.desired_pods` instead."
-  // K8SReplicationControllerAvailablePods is the metric conforming to the
   // "k8s.replicationcontroller.available_pods" semantic conventions. It
   // represents the total number of available replica pods (ready for at least
   // minReadySeconds) targeted by this replication controller.
@@ -1182,16 +1045,6 @@ const (
   MessagingClientOperationDurationName = "messaging.client.operation.duration"
   MessagingClientOperationDurationUnit = "s"
   MessagingClientOperationDurationDescription = "Duration of messaging operation initiated by a producer or consumer client."
-  // MessagingClientPublishedMessages is the metric conforming to the
-  // "messaging.client.published.messages" semantic conventions. It represents
-  // the deprecated. Use `messaging.client.sent.messages` instead.
-  // Instrument: counter
-  // Unit: {message}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `messaging.client.sent.messages`.", "reason": "uncategorized"}
-  MessagingClientPublishedMessagesName = "messaging.client.published.messages"
-  MessagingClientPublishedMessagesUnit = "{message}"
-  MessagingClientPublishedMessagesDescription = "Deprecated. Use `messaging.client.sent.messages` instead."
   // MessagingClientSentMessages is the metric conforming to the
   // "messaging.client.sent.messages" semantic conventions. It represents the
   // number of messages producer attempted to send to the broker.
@@ -1210,56 +1063,6 @@ const (
   MessagingProcessDurationName = "messaging.process.duration"
   MessagingProcessDurationUnit = "s"
   MessagingProcessDurationDescription = "Duration of processing operation."
-  // MessagingProcessMessages is the metric conforming to the
-  // "messaging.process.messages" semantic conventions. It represents the
-  // deprecated. Use `messaging.client.consumed.messages` instead.
-  // Instrument: counter
-  // Unit: {message}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `messaging.client.consumed.messages`.", "reason": "uncategorized"}
-  MessagingProcessMessagesName = "messaging.process.messages"
-  MessagingProcessMessagesUnit = "{message}"
-  MessagingProcessMessagesDescription = "Deprecated. Use `messaging.client.consumed.messages` instead."
-  // MessagingPublishDuration is the metric conforming to the
-  // "messaging.publish.duration" semantic conventions. It represents the
-  // deprecated. Use `messaging.client.operation.duration` instead.
-  // Instrument: histogram
-  // Unit: s
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `messaging.client.operation.duration`.", "reason": "uncategorized"}
-  MessagingPublishDurationName = "messaging.publish.duration"
-  MessagingPublishDurationUnit = "s"
-  MessagingPublishDurationDescription = "Deprecated. Use `messaging.client.operation.duration` instead."
-  // MessagingPublishMessages is the metric conforming to the
-  // "messaging.publish.messages" semantic conventions. It represents the
-  // deprecated. Use `messaging.client.produced.messages` instead.
-  // Instrument: counter
-  // Unit: {message}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `messaging.client.produced.messages`.", "reason": "uncategorized"}
-  MessagingPublishMessagesName = "messaging.publish.messages"
-  MessagingPublishMessagesUnit = "{message}"
-  MessagingPublishMessagesDescription = "Deprecated. Use `messaging.client.produced.messages` instead."
-  // MessagingReceiveDuration is the metric conforming to the
-  // "messaging.receive.duration" semantic conventions. It represents the
-  // deprecated. Use `messaging.client.operation.duration` instead.
-  // Instrument: histogram
-  // Unit: s
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `messaging.client.operation.duration`.", "reason": "uncategorized"}
-  MessagingReceiveDurationName = "messaging.receive.duration"
-  MessagingReceiveDurationUnit = "s"
-  MessagingReceiveDurationDescription = "Deprecated. Use `messaging.client.operation.duration` instead."
-  // MessagingReceiveMessages is the metric conforming to the
-  // "messaging.receive.messages" semantic conventions. It represents the
-  // deprecated. Use `messaging.client.consumed.messages` instead.
-  // Instrument: counter
-  // Unit: {message}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `messaging.client.consumed.messages`.", "reason": "uncategorized"}
-  MessagingReceiveMessagesName = "messaging.receive.messages"
-  MessagingReceiveMessagesUnit = "{message}"
-  MessagingReceiveMessagesDescription = "Deprecated. Use `messaging.client.consumed.messages` instead."
   // OTelSDKExporterSpanExportedCount is the metric conforming to the
   // "otel.sdk.exporter.span.exported.count" semantic conventions. It represents
   // the number of spans for which the export has finished, either successful or
@@ -1530,16 +1333,6 @@ const (
   SignalrServerConnectionDurationName = "signalr.server.connection.duration"
   SignalrServerConnectionDurationUnit = "s"
   SignalrServerConnectionDurationDescription = "The duration of connections on the server."
-  // SystemCPUFrequency is the metric conforming to the "system.cpu.frequency"
-  // semantic conventions. It represents the deprecated. Use `cpu.frequency`
-  // instead.
-  // Instrument: gauge
-  // Unit: {Hz}
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `cpu.frequency`.", "reason": "uncategorized"}
-  SystemCPUFrequencyName = "system.cpu.frequency"
-  SystemCPUFrequencyUnit = "{Hz}"
-  SystemCPUFrequencyDescription = "Deprecated. Use `cpu.frequency` instead."
   // SystemCPULogicalCount is the metric conforming to the
   // "system.cpu.logical.count" semantic conventions. It represents the reports
   // the number of logical (virtual) processor cores created by the operating
@@ -1559,25 +1352,6 @@ const (
   SystemCPUPhysicalCountName = "system.cpu.physical.count"
   SystemCPUPhysicalCountUnit = "{cpu}"
   SystemCPUPhysicalCountDescription = "Reports the number of actual physical processor cores on the hardware"
-  // SystemCPUTime is the metric conforming to the "system.cpu.time" semantic
-  // conventions. It represents the deprecated. Use `cpu.time` instead.
-  // Instrument: counter
-  // Unit: s
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `cpu.time`.", "reason": "uncategorized"}
-  SystemCPUTimeName = "system.cpu.time"
-  SystemCPUTimeUnit = "s"
-  SystemCPUTimeDescription = "Deprecated. Use `cpu.time` instead."
-  // SystemCPUUtilization is the metric conforming to the
-  // "system.cpu.utilization" semantic conventions. It represents the deprecated.
-  // Use `cpu.utilization` instead.
-  // Instrument: gauge
-  // Unit: 1
-  // Stability: development
-  // Deprecated: {"note": "Replaced by `cpu.utilization`.", "reason": "uncategorized"}
-  SystemCPUUtilizationName = "system.cpu.utilization"
-  SystemCPUUtilizationUnit = "1"
-  SystemCPUUtilizationDescription = "Deprecated. Use `cpu.utilization` instead."
   // SystemDiskIo is the metric conforming to the "system.disk.io" semantic
   // conventions.
   // Instrument: counter
