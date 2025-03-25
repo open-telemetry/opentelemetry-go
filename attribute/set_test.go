@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"testing"
@@ -360,18 +361,17 @@ func BenchmarkFiltering(b *testing.B) {
 var sinkSet attribute.Set
 
 func BenchmarkNewSet(b *testing.B) {
-	attrs := []attribute.KeyValue{
-		attribute.String("B1", "2"),
-		attribute.String("C2", "5"),
-		attribute.String("B3", "2"),
-		attribute.String("C4", "1"),
-		attribute.String("A5", "4"),
-		attribute.String("C6", "3"),
-		attribute.String("A7", "1"),
+	attrs := make([]attribute.KeyValue, 20)
+	for i := range attrs {
+		attrs[i] = attribute.String(fmt.Sprint(i), "value")
 	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
+
+	for i := range attrs {
+		b.Run(fmt.Sprintf("len=%d", i+1), func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				sinkSet = attribute.NewSet(attrs[:i+1]...)
+			}
+		})
 	}
 }
