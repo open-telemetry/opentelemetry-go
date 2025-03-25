@@ -224,9 +224,6 @@ func TestLoggerEnabled(t *testing.T) {
 	p1 := newFltrProcessor("1", true)
 	p2WithDisabled := newFltrProcessor("2", false)
 
-	emptyResource := resource.Empty()
-	res := resource.NewSchemaless(attribute.String("key", "value"))
-
 	testCases := []struct {
 		name             string
 		logger           *logger
@@ -247,12 +244,10 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
-				WithResource(res),
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:      context.Background(),
 			expected: true,
 			expectedP0Params: []EnabledParameters{{
-				Resource:             *res,
 				InstrumentationScope: instrumentation.Scope{Name: "scope"},
 			}},
 			expectedP1Params: nil,
@@ -261,7 +256,6 @@ func TestLoggerEnabled(t *testing.T) {
 			name: "WithDisabledProcessors",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p2WithDisabled),
-				WithResource(emptyResource),
 			), instrumentation.Scope{}),
 			ctx:              context.Background(),
 			expected:         false,
@@ -272,7 +266,6 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p2WithDisabled),
 				WithProcessor(p0),
-				WithResource(emptyResource),
 			), instrumentation.Scope{}),
 			ctx:              context.Background(),
 			expected:         true,
@@ -284,7 +277,6 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
-				WithResource(emptyResource),
 			), instrumentation.Scope{}),
 			ctx:              nil,
 			expected:         true,
