@@ -50,7 +50,6 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 // returned if it can be positively verified that no Processor will process.
 func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	p := EnabledParameters{
-		Resource:             *l.provider.resource,
 		InstrumentationScope: l.instrumentationScope,
 		Severity:             param.Severity,
 	}

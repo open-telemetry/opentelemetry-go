@@ -25,6 +25,10 @@
     {
       "matchPackageNames": ["golang.org/x/**"],
       "groupName": "golang.org/x"
+    },
+    {
+      "matchPackageNames": ["go.opentelemetry.io/otel/sdk/log/logtest"],
+      "enabled": false
     }
   ]
 }
