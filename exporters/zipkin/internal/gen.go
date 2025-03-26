@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package internal provides internal functionality for the zipkin package.
 package internal // import "go.opentelemetry.io/otel/exporters/zipkin/internal"
 
 //go:generate gotmpl --body=../../../internal/shared/matchers/expectation.go.tmpl "--data={}" --out=matchers/expectation.go

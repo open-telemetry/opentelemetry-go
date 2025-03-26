@@ -18,19 +18,19 @@ import (
 type nonComparableErrorHandler struct {
 	ErrorHandler
 
-	nonComparable func() //nolint:structcheck,unused  // This is not called.
+	nonComparable func() //nolint:unused  // This is not called.
 }
 
 type nonComparableTracerProvider struct {
 	trace.TracerProvider
 
-	nonComparable func() //nolint:structcheck,unused  // This is not called.
+	nonComparable func() //nolint:unused  // This is not called.
 }
 
 type nonComparableMeterProvider struct {
 	metric.MeterProvider
 
-	nonComparable func() //nolint:structcheck,unused  // This is not called.
+	nonComparable func() //nolint:unused  // This is not called.
 }
 
 type fnErrHandler func(error)
