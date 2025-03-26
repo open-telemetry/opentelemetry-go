@@ -4,6 +4,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package envconfig provides functionality to parse configuration from
+// environment variables.
 package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/envconfig"
 
 import (
