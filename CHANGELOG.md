@@ -11,20 +11,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add exponential histogram support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6421)
+- The `go.opentelemetry.io/otel/semconv/v1.31.0` package.
+  The package contains semantic conventions from the `v1.31.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
 
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
+- Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
+- Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
 
 ### Changed
 
 - ⚠️ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
   This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
   This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
+- Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
+- `go.opentelemetry.io/otel/log/logtest` is now a separate Go module. (#6465)
+- `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
 
 ### Fixes
 
 - Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
+- Ensure the `noopSpan.tracerProvider` method is not inlined in `go.opentelemetry.io/otel/trace` so the `go.opentelemetry.io/auto` instrumentation can instrument non-recording spans. (#6456)
+- Use a `sync.Pool` instead of allocating `metricdata.ResourceMetrics` in `go.opentelemetry.io/otel/exporters/prometheus`. (#6472)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

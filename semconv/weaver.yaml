@@ -135,6 +135,8 @@ acronyms:
   - RHS
   - RPC
   - ReplicaSet
+  - ReplicationController
+  - ResourceQuota
   - SDK
   - SLA
   - SMTP
