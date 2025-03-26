@@ -1,5 +1,9 @@
 # Release Process
 
+## Create a `Version Release` issue
+
+Create a `Version Release` issue to track the release process.
+
 ## Semantic Convention Generation
 
 New versions of the [OpenTelemetry Semantic Conventions] mean new versions of the `semconv` package need to be generated.
@@ -139,3 +143,7 @@ Bump the dependencies in the following Go services:
 - [`accounting`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/accounting)
 - [`checkoutservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/checkout)
 - [`productcatalogservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/product-catalog)
+
+### Close the `Version Release` issue
+
+Once the todo list in the `Version Release` issue is complete, close the issue.
