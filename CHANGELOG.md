@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.31.0` package.
   The package contains semantic conventions from the `v1.31.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
+- Test zipkin exporter model conversion for bool, float64, and string slices in the `go.opentelemetry.io/otel/exporters/zipkin`. (#)
 
 ### Removed
 
