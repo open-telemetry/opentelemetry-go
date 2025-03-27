@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Drop support for [Go 1.22]. (#6381, #6418)
 - Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
 - Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
-- Remove `alignment.go` from `internal/internaltest`
+- Remove `alignment.go` from `internal/internaltest`. (#6500)
 
 ### Changed
 
