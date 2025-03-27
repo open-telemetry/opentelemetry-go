@@ -65,7 +65,7 @@ func TestSetLoggerProvider(t *testing.T) {
 
 		type nonComparableLoggerProvider struct {
 			log.LoggerProvider
-			noCmp [0]func() //nolint:structcheck,unused  // This is indeed used.
+			noCmp [0]func() //nolint:unused  // This is indeed used.
 		}
 
 		provider := nonComparableLoggerProvider{}
