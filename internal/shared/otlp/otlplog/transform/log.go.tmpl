@@ -257,7 +257,7 @@ func stringSliceValues(vals []string) []*cpb.AnyValue {
 	return converted
 }
 
-// Attrs transforms a slice of [api.KeyValue] into OTLP key-values.
+// LogAttrs transforms a slice of [api.KeyValue] into OTLP key-values.
 func LogAttrs(attrs []api.KeyValue) []*cpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil

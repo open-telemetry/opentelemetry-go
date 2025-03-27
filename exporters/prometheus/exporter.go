@@ -445,7 +445,7 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 // underscore when the escaping scheme is underscore escaping. This is meant to
 // capture any character that should be considered a "delimiter".
 func convertsToUnderscore(b rune) bool {
-	return !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == ':' || (b >= '0' && b <= '9'))
+	return (b < 'a' || b > 'z') && (b < 'A' || b > 'Z') && b != ':' && (b < '0' || b > '9')
 }
 
 func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {

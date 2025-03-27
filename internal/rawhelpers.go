@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package internal provides non-public functionality.
 package internal // import "go.opentelemetry.io/otel/internal"
 
 import (
