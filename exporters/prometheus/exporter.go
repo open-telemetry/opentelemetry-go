@@ -327,7 +327,7 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	values := make([]string, 0, attrs.Len())
 	itr := attrs.Iter()
 
-	if model.NameValidationScheme == model.UTF8Validation {
+	if model.NameValidationScheme == model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Do not perform sanitization if prometheus supports UTF-8.
 		for itr.Next() {
 			kv := itr.Attribute()
@@ -413,8 +413,9 @@ var unitSuffixes = map[string]string{
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := m.Name
-	if model.NameValidationScheme != model.UTF8Validation {
+	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Only sanitize if prometheus does not support UTF-8.
+		logDeprecatedLegacyScheme()
 		name = model.EscapeName(name, model.NameEscapingScheme)
 	}
 	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
@@ -444,7 +445,7 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 // underscore when the escaping scheme is underscore escaping. This is meant to
 // capture any character that should be considered a "delimiter".
 func convertsToUnderscore(b rune) bool {
-	return !((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == ':' || (b >= '0' && b <= '9'))
+	return (b < 'a' || b > 'z') && (b < 'A' || b > 'Z') && b != ':' && (b < '0' || b > '9')
 }
 
 func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {

@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package internal provides common semconv functionality.
 package internal // import "go.opentelemetry.io/otel/semconv/internal"
 
 import (
@@ -178,9 +179,10 @@ func (sc *SemanticConventions) httpBasicAttributesFromHTTPRequest(request *http.
 	}
 
 	flavor := ""
-	if request.ProtoMajor == 1 {
+	switch request.ProtoMajor {
+	case 1:
 		flavor = fmt.Sprintf("1.%d", request.ProtoMinor)
-	} else if request.ProtoMajor == 2 {
+	case 2:
 		flavor = "2"
 	}
 	if flavor != "" {

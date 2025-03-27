@@ -22,6 +22,8 @@ permissions: read-all
 
 jobs:
   CodeQL-Build:
+    permissions:
+      security-events: write
     runs-on: ubuntu-latest
 
     steps:

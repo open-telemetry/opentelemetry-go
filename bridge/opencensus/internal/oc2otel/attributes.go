@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package oc2otel provides conversion from OpenCensus to OpenTelemetry.
 package oc2otel // import "go.opentelemetry.io/otel/bridge/opencensus/internal/oc2otel"
 
 import (

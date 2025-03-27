@@ -141,9 +141,10 @@ func TestEnvConfig(t *testing.T) {
 			name: "with a bool config",
 			reader: EnvOptionsReader{
 				GetEnv: func(n string) string {
-					if n == "HELLO" {
+					switch n {
+					case "HELLO":
 						return "true"
-					} else if n == "WORLD" {
+					case "WORLD":
 						return "false"
 					}
 					return ""
