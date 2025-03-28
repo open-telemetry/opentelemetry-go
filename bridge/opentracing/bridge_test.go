@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -474,6 +475,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 		value    interface{}
 		expected attribute.KeyValue
 	}{
+		// span kind is ignored
 		{
 			name:  "span kind",
 			key:   string(ext.SpanKind),
@@ -739,6 +741,30 @@ func TestBridgeFiledEncoder(t *testing.T) {
 		encoder := &bridgeFieldEncoder{}
 		encoder.EmitInt("intKey", 123)
 		assert.Equal(t, attribute.Int("intKey", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit int32", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitInt32("int32Key", int32(123))
+		assert.Equal(t, attribute.Int("int32Key", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit int64", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitInt64("int64Key", int64(123))
+		assert.Equal(t, attribute.Int("int64Key", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit uint32", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitUint32("uint32Key", uint32(123))
+		assert.Equal(t, attribute.Int64("uint32Key", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit uint64", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitUint64("uint64Key", uint64(123))
+		assert.Equal(t, attribute.String("uint64Key", strconv.FormatUint(123, 10)), encoder.pairs[0])
 	})
 
 	t.Run("emit float32", func(t *testing.T) {
