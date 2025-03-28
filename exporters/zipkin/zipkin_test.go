@@ -17,8 +17,6 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
-
 	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
@@ -76,13 +74,7 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 	)
 
 	expectedEndpoint := "http://localhost:19411/api/v2/spans"
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envEndpoint: expectedEndpoint,
-	})
-	assert.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
+	t.Setenv(envEndpoint, expectedEndpoint)
 
 	exp, err = New("")
 
