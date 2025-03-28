@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/internal/env"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -246,16 +245,6 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 			},
 		},
 	}
-
-	envStore := ottest.NewEnvStore()
-	envStore.Record(env.BatchSpanProcessorScheduleDelayKey)
-	envStore.Record(env.BatchSpanProcessorExportTimeoutKey)
-	envStore.Record(env.BatchSpanProcessorMaxQueueSizeKey)
-	envStore.Record(env.BatchSpanProcessorMaxExportBatchSizeKey)
-
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
 
 	for _, option := range options {
 		t.Run(option.name, func(t *testing.T) {
