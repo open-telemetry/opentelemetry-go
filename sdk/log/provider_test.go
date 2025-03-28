@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -184,11 +183,7 @@ func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {
 }
 
 func TestWithResource(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVarResourceAttributes: "key=value,rk5=7",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv(envVarResourceAttributes, "key=value,rk5=7")
 
 	cases := []struct {
 		name    string
