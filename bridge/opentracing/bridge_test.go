@@ -473,7 +473,6 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 		key      string
 		value    interface{}
 		expected attribute.KeyValue
-		code     codes.Code
 	}{
 		{
 			name:  "span kind",
