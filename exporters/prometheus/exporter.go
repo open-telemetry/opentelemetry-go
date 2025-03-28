@@ -254,7 +254,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.Histogram[N], m metricdata.Metrics, name string, kv keyVals) {
+func addHistogramMetric[N int64 | float64](
+	ch chan<- prometheus.Metric,
+	histogram metricdata.Histogram[N],
+	m metricdata.Metrics,
+	name string,
+	kv keyVals,
+) {
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
 		keys = append(keys, kv.keys...)
@@ -278,7 +284,13 @@ func addHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogra
 	}
 }
 
-func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata.Sum[N], m metricdata.Metrics, name string, kv keyVals) {
+func addSumMetric[N int64 | float64](
+	ch chan<- prometheus.Metric,
+	sum metricdata.Sum[N],
+	m metricdata.Metrics,
+	name string,
+	kv keyVals,
+) {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
@@ -304,7 +316,13 @@ func addSumMetric[N int64 | float64](ch chan<- prometheus.Metric, sum metricdata
 	}
 }
 
-func addGaugeMetric[N int64 | float64](ch chan<- prometheus.Metric, gauge metricdata.Gauge[N], m metricdata.Metrics, name string, kv keyVals) {
+func addGaugeMetric[N int64 | float64](
+	ch chan<- prometheus.Metric,
+	gauge metricdata.Gauge[N],
+	m metricdata.Metrics,
+	name string,
+	kv keyVals,
+) {
 	for _, dp := range gauge.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
 		keys = append(keys, kv.keys...)

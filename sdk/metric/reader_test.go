@@ -287,7 +287,14 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 
 		for n := 0; n < b.N; n++ {
 			err = r.Collect(ctx, &collectedMetrics)
-			assert.Equalf(b, testResourceMetricsA, collectedMetrics, "unexpected Collect response: (%#v, %v)", collectedMetrics, err)
+			assert.Equalf(
+				b,
+				testResourceMetricsA,
+				collectedMetrics,
+				"unexpected Collect response: (%#v, %v)",
+				collectedMetrics,
+				err,
+			)
 		}
 	}
 }

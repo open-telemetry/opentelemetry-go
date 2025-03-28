@@ -441,9 +441,25 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
 						{
-							Attributes:   attribute.Set{},
-							Count:        1,
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							Attributes: attribute.Set{},
+							Count:      1,
+							Bounds: []float64{
+								0,
+								5,
+								10,
+								25,
+								50,
+								75,
+								100,
+								250,
+								500,
+								750,
+								1000,
+								2500,
+								5000,
+								7500,
+								10000,
+							},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Min:          metricdata.NewExtrema[int64](7),
 							Max:          metricdata.NewExtrema[int64](7),
@@ -511,9 +527,25 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes:   attribute.Set{},
-							Count:        1,
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							Attributes: attribute.Set{},
+							Count:      1,
+							Bounds: []float64{
+								0,
+								5,
+								10,
+								25,
+								50,
+								75,
+								100,
+								250,
+								500,
+								750,
+								1000,
+								2500,
+								5000,
+								7500,
+								10000,
+							},
 							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Min:          metricdata.NewExtrema[float64](7.),
 							Max:          metricdata.NewExtrema[float64](7.),
@@ -1576,8 +1608,24 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Data: metricdata.Histogram[float64]{
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes:   fooBar,
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							Attributes: fooBar,
+							Bounds: []float64{
+								0,
+								5,
+								10,
+								25,
+								50,
+								75,
+								100,
+								250,
+								500,
+								750,
+								1000,
+								2500,
+								5000,
+								7500,
+								10000,
+							},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
 							Min:          metricdata.NewExtrema(1.),
@@ -1652,8 +1700,24 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				Data: metricdata.Histogram[int64]{
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
 						{
-							Attributes:   fooBar,
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							Attributes: fooBar,
+							Bounds: []float64{
+								0,
+								5,
+								10,
+								25,
+								50,
+								75,
+								100,
+								250,
+								500,
+								750,
+								1000,
+								2500,
+								5000,
+								7500,
+								10000,
+							},
 							BucketCounts: []uint64{0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Count:        2,
 							Min:          metricdata.NewExtrema[int64](1),
@@ -1689,7 +1753,12 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				require.Len(t, m.ScopeMetrics, 1)
 				require.Len(t, m.ScopeMetrics[0].Metrics, 1)
 
-				metricdatatest.AssertEqual(t, tt.wantMetric, m.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					tt.wantMetric,
+					m.ScopeMetrics[0].Metrics[0],
+					metricdatatest.IgnoreTimestamp(),
+				)
 			})
 		}
 	}
@@ -2119,7 +2188,15 @@ func TestMalformedSelectors(t *testing.T) {
 				obs.ObserveFloat64(afGauge, 1)
 				return nil
 			}
-			_, err = meter.RegisterCallback(callback, aiCounter, aiUpDownCounter, aiGauge, afCounter, afUpDownCounter, afGauge)
+			_, err = meter.RegisterCallback(
+				callback,
+				aiCounter,
+				aiUpDownCounter,
+				aiGauge,
+				afCounter,
+				afUpDownCounter,
+				afGauge,
+			)
 			require.NoError(t, err)
 
 			siCounter.Add(context.Background(), 1)
@@ -2182,7 +2259,10 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			meter := NewMeterProvider(WithView(tt.views...), WithReader(tt.reader)).Meter("TestHistogramBucketPrecedenceOrdering")
+			meter := NewMeterProvider(
+				WithView(tt.views...),
+				WithReader(tt.reader),
+			).Meter("TestHistogramBucketPrecedenceOrdering")
 			sfHistogram, err := meter.Float64Histogram("sync.float64.histogram", tt.histogramOpts...)
 			require.NoError(t, err)
 			sfHistogram.Record(context.Background(), 1)
@@ -2508,7 +2588,15 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 			internalMeter, ok := m.(*meter)
 			require.True(t, ok)
 			// check that multiple calls to create the same instrument only create 1 instrument
-			numInstruments := len(internalMeter.int64Insts.data) + len(internalMeter.float64Insts.data) + len(internalMeter.int64ObservableInsts.data) + len(internalMeter.float64ObservableInsts.data)
+			numInstruments := len(
+				internalMeter.int64Insts.data,
+			) + len(
+				internalMeter.float64Insts.data,
+			) + len(
+				internalMeter.int64ObservableInsts.data,
+			) + len(
+				internalMeter.float64ObservableInsts.data,
+			)
 			require.Equal(t, 1, numInstruments)
 		})
 	}
