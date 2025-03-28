@@ -321,7 +321,7 @@ add-tags: verify-mods
 
 .PHONY: lint-markdown
 lint-markdown:
-	docker run -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
+	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
 
 .PHONY: verify-readmes
 verify-readmes:
