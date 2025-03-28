@@ -19,4 +19,4 @@ assignees: ''
 - [ ] [Sync with Contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/RELEASING.md#upgrade-goopentelemetryiootel-packages)
 - [ ] [Release contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/RELEASING.md#release-process)
 - [ ] [Sync website docs](https://github.com/open-telemetry/opentelemetry-go/blob/main/RELEASING.md#website-documentation)
-- [ ] Close the milestone
+- [ ] [Close the milestone](https://github.com/open-telemetry/opentelemetry-go/blob/main/RELEASING.md#close-the-milestone)
