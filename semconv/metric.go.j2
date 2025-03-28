@@ -7,7 +7,7 @@
 package semconv // import "go.opentelemetry.io/otel/semconv/{{params.tag}}"
 
 const (
-{%- for metric in ctx %}
+{%- for metric in ctx if not metric.deprecated %}
   {{ h.metric_keydoc(metric) | comment(indent=2) }}
   // Instrument: {{ metric.instrument }}
   // Unit: {{ metric.unit }}

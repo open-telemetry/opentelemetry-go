@@ -4,6 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package matchers provides comparison and matching functionality for tests.
 package matchers // import "go.opentelemetry.io/otel/internal/matchers"
 
 import (
@@ -27,7 +28,7 @@ func (e *Expectation) ToEqual(expected interface{}) {
 	e.verifyExpectedNotNil(expected)
 
 	if !reflect.DeepEqual(e.actual, expected) {
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto equal\n\t%v", e.actual, expected))
+		e.fatalf("Expected\n\t%v\nto equal\n\t%v", e.actual, expected)
 	}
 }
 
@@ -35,19 +36,19 @@ func (e *Expectation) NotToEqual(expected interface{}) {
 	e.verifyExpectedNotNil(expected)
 
 	if reflect.DeepEqual(e.actual, expected) {
-		e.fail(fmt.Sprintf("Expected\n\t%v\nnot to equal\n\t%v", e.actual, expected))
+		e.fatalf("Expected\n\t%v\nnot to equal\n\t%v", e.actual, expected)
 	}
 }
 
 func (e *Expectation) ToBeNil() {
 	if e.actual != nil {
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto be nil", e.actual))
+		e.fatalf("Expected\n\t%v\nto be nil", e.actual)
 	}
 }
 
 func (e *Expectation) NotToBeNil() {
 	if e.actual == nil {
-		e.fail(fmt.Sprintf("Expected\n\t%v\nnot to be nil", e.actual))
+		e.fatalf("Expected\n\t%v\nnot to be nil", e.actual)
 	}
 }
 
@@ -55,10 +56,10 @@ func (e *Expectation) ToBeTrue() {
 	switch a := e.actual.(type) {
 	case bool:
 		if !a {
-			e.fail(fmt.Sprintf("Expected\n\t%v\nto be true", e.actual))
+			e.fatalf("Expected\n\t%v\nto be true", e.actual)
 		}
 	default:
-		e.fail(fmt.Sprintf("Cannot check if non-bool value\n\t%v\nis truthy", a))
+		e.fatalf("Cannot check if non-bool value\n\t%v\nis truthy", a)
 	}
 }
 
@@ -66,10 +67,10 @@ func (e *Expectation) ToBeFalse() {
 	switch a := e.actual.(type) {
 	case bool:
 		if a {
-			e.fail(fmt.Sprintf("Expected\n\t%v\nto be false", e.actual))
+			e.fatalf("Expected\n\t%v\nto be false", e.actual)
 		}
 	default:
-		e.fail(fmt.Sprintf("Cannot check if non-bool value\n\t%v\nis truthy", a))
+		e.fatalf("Cannot check if non-bool value\n\t%v\nis truthy", a)
 	}
 }
 
@@ -79,14 +80,14 @@ func (e *Expectation) NotToPanic() {
 		func() {
 			defer func() {
 				if recovered := recover(); recovered != nil {
-					e.fail(fmt.Sprintf("Expected panic\n\t%v\nto have not been raised", recovered))
+					e.fatalf("Expected panic\n\t%v\nto have not been raised", recovered)
 				}
 			}()
 
 			a()
 		}()
 	default:
-		e.fail(fmt.Sprintf("Cannot check if non-func value\n\t%v\nis truthy", a))
+		e.fatalf("Cannot check if non-func value\n\t%v\nis truthy", a)
 	}
 }
 
@@ -94,10 +95,10 @@ func (e *Expectation) ToSucceed() {
 	switch actual := e.actual.(type) {
 	case error:
 		if actual != nil {
-			e.fail(fmt.Sprintf("Expected error\n\t%v\nto have succeeded", actual))
+			e.fatalf("Expected error\n\t%v\nto have succeeded", actual)
 		}
 	default:
-		e.fail(fmt.Sprintf("Cannot check if non-error value\n\t%v\nsucceeded", actual))
+		e.fatalf("Cannot check if non-error value\n\t%v\nsucceeded", actual)
 	}
 }
 
@@ -106,20 +107,20 @@ func (e *Expectation) ToMatchError(expected interface{}) {
 
 	actual, ok := e.actual.(error)
 	if !ok {
-		e.fail(fmt.Sprintf("Cannot check if non-error value\n\t%v\nmatches error", e.actual))
+		e.fatalf("Cannot check if non-error value\n\t%v\nmatches error", e.actual)
 	}
 
 	switch expected := expected.(type) {
 	case error:
 		if !reflect.DeepEqual(actual, expected) {
-			e.fail(fmt.Sprintf("Expected\n\t%v\nto match error\n\t%v", actual, expected))
+			e.fatalf("Expected\n\t%v\nto match error\n\t%v", actual, expected)
 		}
 	case string:
 		if actual.Error() != expected {
-			e.fail(fmt.Sprintf("Expected\n\t%v\nto match error\n\t%v", actual, expected))
+			e.fatalf("Expected\n\t%v\nto match error\n\t%v", actual, expected)
 		}
 	default:
-		e.fail(fmt.Sprintf("Cannot match\n\t%v\nagainst non-error\n\t%v", actual, expected))
+		e.fatalf("Cannot match\n\t%v\nagainst non-error\n\t%v", actual, expected)
 	}
 }
 
@@ -130,7 +131,7 @@ func (e *Expectation) ToContain(expected interface{}) {
 	switch actualKind {
 	case reflect.Array, reflect.Slice:
 	default:
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto be an array", e.actual))
+		e.fatalf("Expected\n\t%v\nto be an array", e.actual)
 		return
 	}
 
@@ -155,7 +156,7 @@ func (e *Expectation) ToContain(expected interface{}) {
 		}
 
 		if !contained {
-			e.fail(fmt.Sprintf("Expected\n\t%v\nto contain\n\t%v", e.actual, expectedElem))
+			e.fatalf("Expected\n\t%v\nto contain\n\t%v", e.actual, expectedElem)
 			return
 		}
 	}
@@ -168,7 +169,7 @@ func (e *Expectation) NotToContain(expected interface{}) {
 	switch actualKind {
 	case reflect.Array, reflect.Slice:
 	default:
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto be an array", e.actual))
+		e.fatalf("Expected\n\t%v\nto be an array", e.actual)
 		return
 	}
 
@@ -186,7 +187,7 @@ func (e *Expectation) NotToContain(expected interface{}) {
 
 		for j := 0; j < actualValue.Len(); j++ {
 			if reflect.DeepEqual(actualValue.Index(j).Interface(), expectedElem) {
-				e.fail(fmt.Sprintf("Expected\n\t%v\nnot to contain\n\t%v", e.actual, expectedElem))
+				e.fatalf("Expected\n\t%v\nnot to contain\n\t%v", e.actual, expectedElem)
 				return
 			}
 		}
@@ -200,7 +201,7 @@ func (e *Expectation) ToMatchInAnyOrder(expected interface{}) {
 	switch expectedKind {
 	case reflect.Array, reflect.Slice:
 	default:
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto be an array", expected))
+		e.fatalf("Expected\n\t%v\nto be an array", expected)
 		return
 	}
 
@@ -208,12 +209,12 @@ func (e *Expectation) ToMatchInAnyOrder(expected interface{}) {
 	actualKind := actualValue.Kind()
 
 	if actualKind != expectedKind {
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto be the same type as\n\t%v", e.actual, expected))
+		e.fatalf("Expected\n\t%v\nto be the same type as\n\t%v", e.actual, expected)
 		return
 	}
 
 	if actualValue.Len() != expectedValue.Len() {
-		e.fail(fmt.Sprintf("Expected\n\t%v\nto have the same length as\n\t%v", e.actual, expected))
+		e.fatalf("Expected\n\t%v\nto have the same length as\n\t%v", e.actual, expected)
 		return
 	}
 
@@ -236,7 +237,7 @@ func (e *Expectation) ToMatchInAnyOrder(expected interface{}) {
 		}
 
 		if !found {
-			e.fail(fmt.Sprintf("Expected\n\t%v\nto contain the same elements as\n\t%v", e.actual, expected))
+			e.fatalf("Expected\n\t%v\nto contain the same elements as\n\t%v", e.actual, expected)
 		}
 	}
 }
@@ -245,44 +246,44 @@ func (e *Expectation) ToBeTemporally(matcher TemporalMatcher, compareTo interfac
 	if actual, ok := e.actual.(time.Time); ok {
 		ct, ok := compareTo.(time.Time)
 		if !ok {
-			e.fail(fmt.Sprintf("Cannot compare to non-temporal value\n\t%v", compareTo))
+			e.fatalf("Cannot compare to non-temporal value\n\t%v", compareTo)
 			return
 		}
 
 		switch matcher {
 		case Before:
 			if !actual.Before(ct) {
-				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before\n\t%v", e.actual, compareTo))
+				e.fatalf("Expected\n\t%v\nto be temporally before\n\t%v", e.actual, compareTo)
 			}
 		case BeforeOrSameTime:
 			if actual.After(ct) {
-				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally before or at the same time as\n\t%v", e.actual, compareTo))
+				e.fatalf("Expected\n\t%v\nto be temporally before or at the same time as\n\t%v", e.actual, compareTo)
 			}
 		case After:
 			if !actual.After(ct) {
-				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after\n\t%v", e.actual, compareTo))
+				e.fatalf("Expected\n\t%v\nto be temporally after\n\t%v", e.actual, compareTo)
 			}
 		case AfterOrSameTime:
 			if actual.Before(ct) {
-				e.fail(fmt.Sprintf("Expected\n\t%v\nto be temporally after or at the same time as\n\t%v", e.actual, compareTo))
+				e.fatalf("Expected\n\t%v\nto be temporally after or at the same time as\n\t%v", e.actual, compareTo)
 			}
 		default:
-			e.fail("Cannot compare times with unexpected temporal matcher")
+			e.fatalf("Cannot compare times with unexpected temporal matcher")
 		}
 
 		return
 	}
 
-	e.fail(fmt.Sprintf("Cannot compare non-temporal value\n\t%v", e.actual))
+	e.fatalf("Cannot compare non-temporal value\n\t%v", e.actual)
 }
 
 func (e *Expectation) verifyExpectedNotNil(expected interface{}) {
 	if expected == nil {
-		e.fail("Refusing to compare with <nil>. Use `ToBeNil` or `NotToBeNil` instead.")
+		e.fatalf("Refusing to compare with <nil>. Use `ToBeNil` or `NotToBeNil` instead.")
 	}
 }
 
-func (e *Expectation) fail(msg string) {
+func (e *Expectation) fatalf(format string, a ...any) {
 	// Prune the stack trace so that it's easier to see relevant lines
 	stack := strings.Split(string(debug.Stack()), "\n")
 	var prunedStack []string
@@ -293,5 +294,6 @@ func (e *Expectation) fail(msg string) {
 		}
 	}
 
+	msg := fmt.Sprintf(format, a...)
 	e.t.Fatalf("\n%s\n%s\n", strings.Join(prunedStack, "\n"), msg)
 }

@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package ast provides abstract syntax tree parsing for the OpenTelemetry
+// schema.
 package ast // import "go.opentelemetry.io/otel/schema/v1.1/ast"
 
 import (

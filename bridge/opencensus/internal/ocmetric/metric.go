@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package internal provides internal functionality for the opencensus package.
 package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
 
 import (
@@ -188,8 +189,8 @@ func convertExemplar(ocExemplar *ocmetricdata.Exemplar) (metricdata.Exemplar[flo
 	}
 	var err error
 	for k, v := range ocExemplar.Attachments {
-		switch {
-		case k == ocmetricdata.AttachmentKeySpanContext:
+		switch k {
+		case ocmetricdata.AttachmentKeySpanContext:
 			sc, ok := v.(octrace.SpanContext)
 			if !ok {
 				err = errors.Join(err, fmt.Errorf("%w; type: %v", errInvalidExemplarSpanContext, reflect.TypeOf(v)))

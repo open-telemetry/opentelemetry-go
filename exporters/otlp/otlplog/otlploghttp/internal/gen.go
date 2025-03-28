@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package internal provides internal functionality for the otlploghttp
+// package.
 package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/retry/retry.go.tmpl "--data={}" --out=retry/retry.go

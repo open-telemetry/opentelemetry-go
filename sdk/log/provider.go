@@ -236,7 +236,7 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 	})
 }
 
-// AttributeValueLengthLimit sets the maximum allowed attribute value length.
+// WithAttributeValueLengthLimit sets the maximum allowed attribute value length.
 //
 // This limit only applies to string and string slice attribute values.
 // Any string longer than this value will be truncated to this length.
