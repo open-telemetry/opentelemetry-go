@@ -157,7 +157,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			}
 
 			qLen := b.q.Len()
-			// don't copy data from queue unless exporter can accept more, it is very expensive
+			// Don't copy data from queue unless exporter can accept more, it is very expensive.
 			if !b.exporter.IsQueueFull() {
 				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
 					ok := b.exporter.EnqueueExport(r)
