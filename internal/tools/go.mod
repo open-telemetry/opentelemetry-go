@@ -25,7 +25,7 @@ require (
 	github.com/Abirdcfly/dupword v0.1.3 // indirect
 	github.com/Antonboom/errname v1.1.0 // indirect
 	github.com/Antonboom/nilnil v1.1.0 // indirect
-	github.com/Antonboom/testifylint v1.6.0 // indirect
+	github.com/Antonboom/testifylint v1.6.1 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/Crocmagnon/fatcontext v0.7.1 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
@@ -121,7 +121,7 @@ require (
 	github.com/kisielk/errcheck v1.9.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
 	github.com/kulti/thelper v0.6.3 // indirect
-	github.com/kunwardeep/paralleltest v1.0.13 // indirect
+	github.com/kunwardeep/paralleltest v1.0.14 // indirect
 	github.com/lasiar/canonicalheader v1.1.2 // indirect
 	github.com/ldez/exptostd v0.4.2 // indirect
 	github.com/ldez/gomoddirectives v0.6.1 // indirect
@@ -153,7 +153,7 @@ require (
 	github.com/polyfloyd/go-errorlint v1.7.1 // indirect
 	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.4 // indirect
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22 // indirect
@@ -214,7 +214,7 @@ require (
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/telemetry v0.0.0-20250310203348-fdfaad844314 // indirect
