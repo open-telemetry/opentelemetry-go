@@ -12,7 +12,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/internal/env"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -110,10 +109,7 @@ func TestSettingSpanLimits(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.env != nil {
-				es := ottest.NewEnvStore()
-				t.Cleanup(func() { require.NoError(t, es.Restore()) })
 				for k, v := range test.env {
-					es.Record(k)
 					t.Setenv(k, v)
 				}
 			}
