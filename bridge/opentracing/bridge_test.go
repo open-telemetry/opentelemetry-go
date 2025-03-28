@@ -18,7 +18,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -461,7 +460,7 @@ func Test_otTagToOTelAttr(t *testing.T) {
 }
 
 func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
-	tracer := internal.NewMockTracer()
+	tracer := newMockTracer()
 	sc := &bridgeSpanContext{}
 
 	testCases := []struct {
@@ -496,7 +495,7 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 			b, _ := NewTracerPair(tracer)
 
 			s := b.StartSpan(tc.name, tc.opt...)
-			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind)
+			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*mockSpan).SpanKind)
 		})
 	}
 }
@@ -521,7 +520,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			tracer.TraceFlags = tc.flags
 
 			b, _ := NewTracerPair(tracer)
@@ -625,7 +624,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	for _, c := range carriers {
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
-				mockOtelTracer := internal.NewMockTracer()
+				mockOtelTracer := newMockTracer()
 				b, _ := NewTracerPair(mockOtelTracer)
 				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 					propagation.TraceContext{},

@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
 
 type namedMockTracer struct {
 	name string
-	*internal.MockTracer
+	*mockTracer
 }
 
 type namedMockTracerProvider struct{ embedded.TracerProvider }
@@ -25,7 +24,7 @@ var _ trace.TracerProvider = (*namedMockTracerProvider)(nil)
 func (p *namedMockTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
 	return &namedMockTracer{
 		name:       name,
-		MockTracer: internal.NewMockTracer(),
+		mockTracer: newMockTracer(),
 	}
 }
 
