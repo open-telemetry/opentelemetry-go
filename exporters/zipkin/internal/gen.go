@@ -8,7 +8,6 @@ package internal // import "go.opentelemetry.io/otel/exporters/zipkin/internal"
 //go:generate gotmpl --body=../../../internal/shared/matchers/expecter.go.tmpl "--data={}" --out=matchers/expecter.go
 //go:generate gotmpl --body=../../../internal/shared/matchers/temporal_matcher.go.tmpl "--data={}" --out=matchers/temporal_matcher.go
 
-//go:generate gotmpl --body=../../../internal/shared/internaltest/alignment.go.tmpl "--data={}" --out=internaltest/alignment.go
 //go:generate gotmpl --body=../../../internal/shared/internaltest/env.go.tmpl "--data={}" --out=internaltest/env.go
 //go:generate gotmpl --body=../../../internal/shared/internaltest/env_test.go.tmpl "--data={}" --out=internaltest/env_test.go
 //go:generate gotmpl --body=../../../internal/shared/internaltest/errors.go.tmpl "--data={}" --out=internaltest/errors.go
