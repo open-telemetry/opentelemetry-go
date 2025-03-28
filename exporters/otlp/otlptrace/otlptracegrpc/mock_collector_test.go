@@ -61,7 +61,10 @@ func (mts *mockTraceService) getResourceSpans() []*tracepb.ResourceSpans {
 	return mts.storage.GetResourceSpans()
 }
 
-func (mts *mockTraceService) Export(ctx context.Context, exp *collectortracepb.ExportTraceServiceRequest) (*collectortracepb.ExportTraceServiceResponse, error) {
+func (mts *mockTraceService) Export(
+	ctx context.Context,
+	exp *collectortracepb.ExportTraceServiceRequest,
+) (*collectortracepb.ExportTraceServiceResponse, error) {
 	mts.mu.Lock()
 	defer func() {
 		mts.requests++

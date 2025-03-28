@@ -374,12 +374,26 @@ func testStoredError(t *testing.T, target interface{}) {
 func TestTracerProviderReturnsSameTracer(t *testing.T) {
 	p := NewTracerProvider()
 
-	t0, t1, t2 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+	t0, t1, t2 := p.Tracer(
+		"t0",
+	), p.Tracer(
+		"t1",
+	), p.Tracer(
+		"t0",
+		trace.WithInstrumentationAttributes(attribute.String("foo", "bar")),
+	)
 	assert.NotSame(t, t0, t1)
 	assert.NotSame(t, t0, t2)
 	assert.NotSame(t, t1, t2)
 
-	t3, t4, t5 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+	t3, t4, t5 := p.Tracer(
+		"t0",
+	), p.Tracer(
+		"t1",
+	), p.Tracer(
+		"t0",
+		trace.WithInstrumentationAttributes(attribute.String("foo", "bar")),
+	)
 	assert.Same(t, t0, t3)
 	assert.Same(t, t1, t4)
 	assert.Same(t, t2, t5)

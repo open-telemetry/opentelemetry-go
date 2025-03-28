@@ -177,20 +177,38 @@ func (cast *currentActiveSpanTest) setup(t *testing.T, tracer *internal.MockTrac
 func (cast *currentActiveSpanTest) check(t *testing.T, tracer *internal.MockTracer) {
 	checkTraceAndSpans(t, tracer, cast.traceID, cast.spanIDs)
 	if len(cast.recordedCurrentOtelSpanIDs) != len(cast.spanIDs) {
-		t.Errorf("Expected to have %d recorded Otel current spans, got %d", len(cast.spanIDs), len(cast.recordedCurrentOtelSpanIDs))
+		t.Errorf(
+			"Expected to have %d recorded Otel current spans, got %d",
+			len(cast.spanIDs),
+			len(cast.recordedCurrentOtelSpanIDs),
+		)
 	}
 	if len(cast.recordedActiveOTSpanIDs) != len(cast.spanIDs) {
-		t.Errorf("Expected to have %d recorded OT active spans, got %d", len(cast.spanIDs), len(cast.recordedActiveOTSpanIDs))
+		t.Errorf(
+			"Expected to have %d recorded OT active spans, got %d",
+			len(cast.spanIDs),
+			len(cast.recordedActiveOTSpanIDs),
+		)
 	}
 
 	minLen := min(len(cast.recordedCurrentOtelSpanIDs), len(cast.spanIDs))
 	minLen = min(minLen, len(cast.recordedActiveOTSpanIDs))
 	for i := 0; i < minLen; i++ {
 		if cast.recordedCurrentOtelSpanIDs[i] != cast.spanIDs[i] {
-			t.Errorf("Expected span idx %d (%d) to be recorded as current span in Otel, got %d", i, cast.spanIDs[i], cast.recordedCurrentOtelSpanIDs[i])
+			t.Errorf(
+				"Expected span idx %d (%d) to be recorded as current span in Otel, got %d",
+				i,
+				cast.spanIDs[i],
+				cast.recordedCurrentOtelSpanIDs[i],
+			)
 		}
 		if cast.recordedActiveOTSpanIDs[i] != cast.spanIDs[i] {
-			t.Errorf("Expected span idx %d (%d) to be recorded as active span in OT, got %d", i, cast.spanIDs[i], cast.recordedActiveOTSpanIDs[i])
+			t.Errorf(
+				"Expected span idx %d (%d) to be recorded as active span in OT, got %d",
+				i,
+				cast.spanIDs[i],
+				cast.recordedActiveOTSpanIDs[i],
+			)
 		}
 	}
 }
@@ -264,7 +282,11 @@ func (coin *contextIntactTest) setup(t *testing.T, tracer *internal.MockTracer) 
 
 func (coin *contextIntactTest) check(t *testing.T, tracer *internal.MockTracer) {
 	if len(coin.recordedContextValues) != len(coin.contextKeyValues) {
-		t.Errorf("Expected to have %d recorded context values, got %d", len(coin.contextKeyValues), len(coin.recordedContextValues))
+		t.Errorf(
+			"Expected to have %d recorded context values, got %d",
+			len(coin.contextKeyValues),
+			len(coin.recordedContextValues),
+		)
 	}
 
 	minLen := min(len(coin.recordedContextValues), len(coin.contextKeyValues))
@@ -344,7 +366,12 @@ func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *internal.Mo
 	for i := 0; i < minLen; i++ {
 		recordedItems := bip.recordedBaggage[i]
 		if len(recordedItems) != i+1 {
-			t.Errorf("Expected %d recorded baggage items in recording %d, got %d", i+1, i+1, len(bip.recordedBaggage[i]))
+			t.Errorf(
+				"Expected %d recorded baggage items in recording %d, got %d",
+				i+1,
+				i+1,
+				len(bip.recordedBaggage[i]),
+			)
 		}
 		minItemLen := min(len(bip.baggageItems), i+1)
 		for j := 0; j < minItemLen; j++ {
@@ -452,7 +479,13 @@ func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, 
 		recordedItems := recordings[i]
 		expectedItemsInStep := (i + 1) * 2
 		if expectedItemsInStep != len(recordedItems) {
-			t.Errorf("Expected %d recorded items in recording %d from %s, got %d", expectedItemsInStep, i, apiDesc, len(recordedItems))
+			t.Errorf(
+				"Expected %d recorded items in recording %d from %s, got %d",
+				expectedItemsInStep,
+				i,
+				apiDesc,
+				len(recordedItems),
+			)
 		}
 		recordedItemsCopy := make(map[string]string, len(recordedItems))
 		for k, v := range recordedItems {
@@ -464,7 +497,14 @@ func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, 
 			for _, k := range []string{otKey, otelKey} {
 				if v, ok := recordedItemsCopy[k]; ok {
 					if value != v {
-						t.Errorf("Expected value %s under key %s in recording %d from %s, got %s", value, k, i, apiDesc, v)
+						t.Errorf(
+							"Expected value %s under key %s in recording %d from %s, got %s",
+							value,
+							k,
+							i,
+							apiDesc,
+							v,
+						)
 					}
 					delete(recordedItemsCopy, k)
 				} else {
@@ -537,7 +577,12 @@ func generateBaggageKeys(key string) (otKey, otelKey string) {
 
 // helpers
 
-func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTraceID trace.TraceID, expectedSpanIDs []trace.SpanID) {
+func checkTraceAndSpans(
+	t *testing.T,
+	tracer *internal.MockTracer,
+	expectedTraceID trace.TraceID,
+	expectedSpanIDs []trace.SpanID,
+) {
 	expectedSpanCount := len(expectedSpanIDs)
 
 	// reverse spanIDs, since first span ID belongs to root, that
@@ -562,7 +607,13 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 	for idx, span := range tracer.FinishedSpans {
 		sctx := span.SpanContext()
 		if sctx.TraceID() != expectedTraceID {
-			t.Errorf("Expected trace ID %v in span %d (%d), got %v", expectedTraceID, idx, sctx.SpanID(), sctx.TraceID())
+			t.Errorf(
+				"Expected trace ID %v in span %d (%d), got %v",
+				expectedTraceID,
+				idx,
+				sctx.SpanID(),
+				sctx.TraceID(),
+			)
 		}
 		expectedSpanID := spanIDs[idx]
 		expectedParentSpanID := parentSpanIDs[idx]
@@ -570,10 +621,22 @@ func checkTraceAndSpans(t *testing.T, tracer *internal.MockTracer, expectedTrace
 			t.Errorf("Expected finished span %d to have span ID %d, but got %d", idx, expectedSpanID, sctx.SpanID())
 		}
 		if span.ParentSpanID != expectedParentSpanID {
-			t.Errorf("Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d", idx, sctx.SpanID(), expectedParentSpanID, span.ParentSpanID)
+			t.Errorf(
+				"Expected finished span %d (span ID: %d) to have parent span ID %d, but got %d",
+				idx,
+				sctx.SpanID(),
+				expectedParentSpanID,
+				span.ParentSpanID,
+			)
 		}
 		if span.SpanKind != sks[span.SpanContext().SpanID()] {
-			t.Errorf("Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'", idx, sctx.SpanID(), sks[span.SpanContext().SpanID()], span.SpanKind)
+			t.Errorf(
+				"Expected finished span %d (span ID: %d) to have span.kind to be '%v' but was '%v'",
+				idx,
+				sctx.SpanID(),
+				sks[span.SpanContext().SpanID()],
+				span.SpanKind,
+			)
 		}
 	}
 }
@@ -600,7 +663,12 @@ func simpleSpanIDs(count int) []trace.SpanID {
 	return base[:count]
 }
 
-func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
+func runOtelOTOtel(
+	t *testing.T,
+	ctx context.Context,
+	name string,
+	callback func(*testing.T, context.Context) context.Context,
+) {
 	tr := otel.Tracer("")
 	ctx, span := tr.Start(ctx, fmt.Sprintf("%s_Otel_OTOtel", name), trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
@@ -610,16 +678,29 @@ func runOtelOTOtel(t *testing.T, ctx context.Context, name string, callback func
 		defer span.Finish()
 		ctx2 = callback(t, ctx2)
 		func(ctx3 context.Context) {
-			ctx3, span := tr.Start(ctx3, fmt.Sprintf("%sOtelOT_Otel_", name), trace.WithSpanKind(trace.SpanKindProducer))
+			ctx3, span := tr.Start(
+				ctx3,
+				fmt.Sprintf("%sOtelOT_Otel_", name),
+				trace.WithSpanKind(trace.SpanKindProducer),
+			)
 			defer span.End()
 			_ = callback(t, ctx3)
 		}(ctx2)
 	}(ctx)
 }
 
-func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*testing.T, context.Context) context.Context) {
+func runOTOtelOT(
+	t *testing.T,
+	ctx context.Context,
+	name string,
+	callback func(*testing.T, context.Context) context.Context,
+) {
 	tr := otel.Tracer("")
-	span, ctx := ot.StartSpanFromContext(ctx, fmt.Sprintf("%s_OT_OtelOT", name), ot.Tag{Key: "span.kind", Value: "client"})
+	span, ctx := ot.StartSpanFromContext(
+		ctx,
+		fmt.Sprintf("%s_OT_OtelOT", name),
+		ot.Tag{Key: "span.kind", Value: "client"},
+	)
 	defer span.Finish()
 	ctx = callback(t, ctx)
 	func(ctx2 context.Context) {
@@ -627,7 +708,11 @@ func runOTOtelOT(t *testing.T, ctx context.Context, name string, callback func(*
 		defer span.End()
 		ctx2 = callback(t, ctx2)
 		func(ctx3 context.Context) {
-			span, ctx3 := ot.StartSpanFromContext(ctx3, fmt.Sprintf("%sOTOtel_OT_", name), ot.Tag{Key: "span.kind", Value: "producer"})
+			span, ctx3 := ot.StartSpanFromContext(
+				ctx3,
+				fmt.Sprintf("%sOTOtel_OT_", name),
+				ot.Tag{Key: "span.kind", Value: "producer"},
+			)
 			defer span.Finish()
 			_ = callback(t, ctx3)
 		}(ctx2)

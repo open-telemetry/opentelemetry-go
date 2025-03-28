@@ -131,7 +131,9 @@ func redactAggregationTimestamps(orig metricdata.Aggregation) metricdata.Aggrega
 	}
 }
 
-func redactHistogramTimestamps[T int64 | float64](hdp []metricdata.HistogramDataPoint[T]) []metricdata.HistogramDataPoint[T] {
+func redactHistogramTimestamps[T int64 | float64](
+	hdp []metricdata.HistogramDataPoint[T],
+) []metricdata.HistogramDataPoint[T] {
 	out := make([]metricdata.HistogramDataPoint[T], len(hdp))
 	for i, dp := range hdp {
 		out[i] = metricdata.HistogramDataPoint[T]{

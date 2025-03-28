@@ -1073,10 +1073,22 @@ func FuzzGetBin(f *testing.F) {
 		p.scale = (scale%31+31)%31 - 10
 		got := p.getBin(v)
 		if v <= lowerBound(got, p.scale) {
-			t.Errorf("v=%x scale =%d had bin %d, but was below lower bound %x", v, p.scale, got, lowerBound(got, p.scale))
+			t.Errorf(
+				"v=%x scale =%d had bin %d, but was below lower bound %x",
+				v,
+				p.scale,
+				got,
+				lowerBound(got, p.scale),
+			)
 		}
 		if v > lowerBound(got+1, p.scale) {
-			t.Errorf("v=%x scale =%d had bin %d, but was above upper bound %x", v, p.scale, got, lowerBound(got+1, p.scale))
+			t.Errorf(
+				"v=%x scale =%d had bin %d, but was above upper bound %x",
+				v,
+				p.scale,
+				got,
+				lowerBound(got+1, p.scale),
+			)
 		}
 	})
 }

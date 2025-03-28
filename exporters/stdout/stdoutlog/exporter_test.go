@@ -194,7 +194,11 @@ func getPrettyJSON(now *time.Time) string {
 	var timestamps string
 	if now != nil {
 		serializedNow, _ := json.Marshal(now)
-		timestamps = "\n\t\"Timestamp\": " + string(serializedNow) + ",\n\t\"ObservedTimestamp\": " + string(serializedNow) + ","
+		timestamps = "\n\t\"Timestamp\": " + string(
+			serializedNow,
+		) + ",\n\t\"ObservedTimestamp\": " + string(
+			serializedNow,
+		) + ","
 	}
 
 	return `{` + timestamps + `
@@ -318,8 +322,12 @@ func getRecord(now time.Time) sdklog.Record {
 			"https://example.com/custom-resource-schema",
 			attribute.String("foo", "bar"),
 		),
-		InstrumentationScope: &instrumentation.Scope{Name: "name", Version: "version", SchemaURL: "https://example.com/custom-schema"},
-		DroppedAttributes:    10,
+		InstrumentationScope: &instrumentation.Scope{
+			Name:      "name",
+			Version:   "version",
+			SchemaURL: "https://example.com/custom-schema",
+		},
+		DroppedAttributes: 10,
 	}
 
 	return rf.NewRecord()

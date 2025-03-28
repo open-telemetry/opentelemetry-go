@@ -25,7 +25,10 @@ func NewTracerPair(tracer trace.Tracer) (*BridgeTracer, *WrapperTracerProvider) 
 // NewTracerPairWithContext is a convenience function. It calls NewTracerPair
 // and returns a hooked version of ctx with the created BridgeTracer along
 // with the BridgeTracer and WrapperTracerProvider.
-func NewTracerPairWithContext(ctx context.Context, tracer trace.Tracer) (context.Context, *BridgeTracer, *WrapperTracerProvider) {
+func NewTracerPairWithContext(
+	ctx context.Context,
+	tracer trace.Tracer,
+) (context.Context, *BridgeTracer, *WrapperTracerProvider) {
 	bridgeTracer, wrapperProvider := NewTracerPair(tracer)
 	ctx = bridgeTracer.NewHookedContext(ctx)
 	return ctx, bridgeTracer, wrapperProvider

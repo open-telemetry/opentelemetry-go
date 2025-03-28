@@ -271,7 +271,11 @@ func TestNoRetry(t *testing.T) {
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
 
 	unwrapped := errors.Unwrap(err)
-	assert.Contains(t, unwrapped.Error(), fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint))
+	assert.Contains(
+		t,
+		unwrapped.Error(),
+		fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint),
+	)
 
 	unwrapped2 := errors.Unwrap(unwrapped)
 	assert.Contains(t, unwrapped2.Error(), "missing required attribute aaa")

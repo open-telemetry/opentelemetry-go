@@ -28,7 +28,9 @@ type config struct {
 }
 
 var logDeprecatedLegacyScheme = sync.OnceFunc(func() {
-	global.Warn("prometheus exporter legacy scheme deprecated: support for the legacy NameValidationScheme will be removed in the next release")
+	global.Warn(
+		"prometheus exporter legacy scheme deprecated: support for the legacy NameValidationScheme will be removed in the next release",
+	)
 })
 
 // newConfig creates a validated config configured with options.

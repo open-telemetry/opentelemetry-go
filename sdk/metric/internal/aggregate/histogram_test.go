@@ -225,7 +225,12 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 
 // hPointSummed returns an HistogramDataPoint that started and ended now with
 // multi number of measurements values v. It includes a min and max (set to v).
-func hPointSummed[N int64 | float64](a attribute.Set, v N, multi uint64, start, t time.Time) metricdata.HistogramDataPoint[N] {
+func hPointSummed[N int64 | float64](
+	a attribute.Set,
+	v N,
+	multi uint64,
+	start, t time.Time,
+) metricdata.HistogramDataPoint[N] {
 	idx := sort.SearchFloat64s(bounds, float64(v))
 	counts := make([]uint64, len(bounds)+1)
 	counts[idx] += multi
@@ -244,7 +249,12 @@ func hPointSummed[N int64 | float64](a attribute.Set, v N, multi uint64, start, 
 
 // hPoint returns an HistogramDataPoint that started and ended now with multi
 // number of measurements values v. It includes a min and max (set to v).
-func hPoint[N int64 | float64](a attribute.Set, v N, multi uint64, start, t time.Time) metricdata.HistogramDataPoint[N] {
+func hPoint[N int64 | float64](
+	a attribute.Set,
+	v N,
+	multi uint64,
+	start, t time.Time,
+) metricdata.HistogramDataPoint[N] {
 	idx := sort.SearchFloat64s(bounds, float64(v))
 	counts := make([]uint64, len(bounds)+1)
 	counts[idx] += multi
@@ -339,7 +349,12 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
 	hdp.BucketCounts[0] = 10
-	assert.Equal(t, cpCounts, h.values[alice.Equivalent()].counts, "modifying the Aggregator bucket counts should not change the Aggregator")
+	assert.Equal(
+		t,
+		cpCounts,
+		h.values[alice.Equivalent()].counts,
+		"modifying the Aggregator bucket counts should not change the Aggregator",
+	)
 }
 
 func TestDeltaHistogramReset(t *testing.T) {

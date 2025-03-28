@@ -125,7 +125,10 @@ func TestUnregisterConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func testSetupAllInstrumentTypes(t *testing.T, m metric.Meter) (metric.Float64Counter, metric.Float64ObservableCounter) {
+func testSetupAllInstrumentTypes(
+	t *testing.T,
+	m metric.Meter,
+) (metric.Float64Counter, metric.Float64ObservableCounter) {
 	afcounter, err := m.Float64ObservableCounter("test_Async_Counter")
 	require.NoError(t, err)
 	_, err = m.Float64ObservableUpDownCounter("test_Async_UpDownCounter")
@@ -439,7 +442,10 @@ type failingRegisterCallbackMeter struct {
 	noop.Meter
 }
 
-func (m *failingRegisterCallbackMeter) RegisterCallback(metric.Callback, ...metric.Observable) (metric.Registration, error) {
+func (m *failingRegisterCallbackMeter) RegisterCallback(
+	metric.Callback,
+	...metric.Observable,
+) (metric.Registration, error) {
 	return nil, errors.New("an error occurred")
 }
 

@@ -427,7 +427,10 @@ func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcColle
 }
 
 // Export handles the export req.
-func (c *grpcCollector) Export(ctx context.Context, req *collogpb.ExportLogsServiceRequest) (*collogpb.ExportLogsServiceResponse, error) {
+func (c *grpcCollector) Export(
+	ctx context.Context,
+	req *collogpb.ExportLogsServiceRequest,
+) (*collogpb.ExportLogsServiceResponse, error) {
 	c.storage.Add(req)
 
 	if h, ok := metadata.FromIncomingContext(ctx); ok {

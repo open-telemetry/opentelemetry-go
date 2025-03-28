@@ -409,7 +409,11 @@ func TestNew(t *testing.T) {
 			options: []resource.Option{
 				resource.WithDetectors(
 					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
-					resource.StringDetector("https://opentelemetry.io/schemas/1.1.0", semconv.HostNameKey, func() (string, error) { return "", errors.New("fail") }),
+					resource.StringDetector(
+						"https://opentelemetry.io/schemas/1.1.0",
+						semconv.HostNameKey,
+						func() (string, error) { return "", errors.New("fail") },
+					),
 				),
 				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
 			},

@@ -47,11 +47,14 @@ func TestLoggerEmit(t *testing.T) {
 	rWithNoObservedTimestamp := r
 	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
-	contextWithSpanContext := trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    trace.TraceID{0o1},
-		SpanID:     trace.SpanID{0o2},
-		TraceFlags: 0x1,
-	}))
+	contextWithSpanContext := trace.ContextWithSpanContext(
+		context.Background(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    trace.TraceID{0o1},
+			SpanID:     trace.SpanID{0o2},
+			TraceFlags: 0x1,
+		}),
+	)
 
 	testCases := []struct {
 		name            string

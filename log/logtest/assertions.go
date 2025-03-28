@@ -24,7 +24,11 @@ func AssertRecordEqual(t testing.TB, want, got log.Record) bool {
 		return false
 	}
 	if !want.ObservedTimestamp().Equal(got.ObservedTimestamp()) {
-		t.Errorf("ObservedTimestamp value is not equal:\nwant: %v\ngot:  %v", want.ObservedTimestamp(), got.ObservedTimestamp())
+		t.Errorf(
+			"ObservedTimestamp value is not equal:\nwant: %v\ngot:  %v",
+			want.ObservedTimestamp(),
+			got.ObservedTimestamp(),
+		)
 		return false
 	}
 	if want.Severity() != got.Severity() {

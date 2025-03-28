@@ -230,7 +230,10 @@ func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config
 
 // equalDataPoints returns reasons DataPoints are not equal. If they are
 // equal, the returned reasons will be empty.
-func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
+func equalDataPoints[N int64 | float64](
+	a, b metricdata.DataPoint[N],
+	cfg config,
+) (reasons []string) { // nolint: revive // Intentional internal control flag
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -272,7 +275,10 @@ func equalDataPoints[N int64 | float64](a, b metricdata.DataPoint[N], cfg config
 
 // equalHistogramDataPoints returns reasons HistogramDataPoints are not equal.
 // If they are equal, the returned reasons will be empty.
-func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
+func equalHistogramDataPoints[N int64 | float64](
+	a, b metricdata.HistogramDataPoint[N],
+	cfg config,
+) (reasons []string) { // nolint: revive // Intentional internal control flag
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -329,7 +335,10 @@ func equalHistogramDataPoints[N int64 | float64](a, b metricdata.HistogramDataPo
 //
 // The DataPoints each Histogram contains are compared based on containing the
 // same HistogramDataPoint, not the order they are stored in.
-func equalExponentialHistograms[N int64 | float64](a, b metricdata.ExponentialHistogram[N], cfg config) (reasons []string) {
+func equalExponentialHistograms[N int64 | float64](
+	a, b metricdata.ExponentialHistogram[N],
+	cfg config,
+) (reasons []string) {
 	if a.Temporality != b.Temporality {
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
@@ -350,7 +359,10 @@ func equalExponentialHistograms[N int64 | float64](a, b metricdata.ExponentialHi
 
 // equalExponentialHistogramDataPoints returns reasons HistogramDataPoints are not equal.
 // If they are equal, the returned reasons will be empty.
-func equalExponentialHistogramDataPoints[N int64 | float64](a, b metricdata.ExponentialHistogramDataPoint[N], cfg config) (reasons []string) { // nolint: revive // Intentional internal control flag
+func equalExponentialHistogramDataPoints[N int64 | float64](
+	a, b metricdata.ExponentialHistogramDataPoint[N],
+	cfg config,
+) (reasons []string) { // nolint: revive // Intentional internal control flag
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
@@ -637,7 +649,10 @@ func missingAttrStr(name string) string {
 	return "missing attribute " + name
 }
 
-func hasAttributesExemplars[T int64 | float64](exemplar metricdata.Exemplar[T], attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesExemplars[T int64 | float64](
+	exemplar metricdata.Exemplar[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
 	s := attribute.NewSet(exemplar.FilteredAttributes...)
 	for _, attr := range attrs {
 		val, ok := s.Value(attr.Key)
@@ -652,7 +667,10 @@ func hasAttributesExemplars[T int64 | float64](exemplar metricdata.Exemplar[T], 
 	return reasons
 }
 
-func hasAttributesDataPoints[T int64 | float64](dp metricdata.DataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesDataPoints[T int64 | float64](
+	dp metricdata.DataPoint[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
 	for _, attr := range attrs {
 		val, ok := dp.Attributes.Value(attr.Key)
 		if !ok {
@@ -688,7 +706,10 @@ func hasAttributesSum[T int64 | float64](sum metricdata.Sum[T], attrs ...attribu
 	return reasons
 }
 
-func hasAttributesHistogramDataPoints[T int64 | float64](dp metricdata.HistogramDataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesHistogramDataPoints[T int64 | float64](
+	dp metricdata.HistogramDataPoint[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
 	for _, attr := range attrs {
 		val, ok := dp.Attributes.Value(attr.Key)
 		if !ok {
@@ -702,7 +723,10 @@ func hasAttributesHistogramDataPoints[T int64 | float64](dp metricdata.Histogram
 	return reasons
 }
 
-func hasAttributesHistogram[T int64 | float64](histogram metricdata.Histogram[T], attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesHistogram[T int64 | float64](
+	histogram metricdata.Histogram[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
 	for n, dp := range histogram.DataPoints {
 		reas := hasAttributesHistogramDataPoints(dp, attrs...)
 		if len(reas) > 0 {
@@ -713,7 +737,10 @@ func hasAttributesHistogram[T int64 | float64](histogram metricdata.Histogram[T]
 	return reasons
 }
 
-func hasAttributesExponentialHistogramDataPoints[T int64 | float64](dp metricdata.ExponentialHistogramDataPoint[T], attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesExponentialHistogramDataPoints[T int64 | float64](
+	dp metricdata.ExponentialHistogramDataPoint[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
 	for _, attr := range attrs {
 		val, ok := dp.Attributes.Value(attr.Key)
 		if !ok {
@@ -727,7 +754,10 @@ func hasAttributesExponentialHistogramDataPoints[T int64 | float64](dp metricdat
 	return reasons
 }
 
-func hasAttributesExponentialHistogram[T int64 | float64](histogram metricdata.ExponentialHistogram[T], attrs ...attribute.KeyValue) (reasons []string) {
+func hasAttributesExponentialHistogram[T int64 | float64](
+	histogram metricdata.ExponentialHistogram[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
 	for n, dp := range histogram.DataPoints {
 		reas := hasAttributesExponentialHistogramDataPoints(dp, attrs...)
 		if len(reas) > 0 {

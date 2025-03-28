@@ -34,7 +34,11 @@ type fnTracer struct {
 	start func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 }
 
-func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (fn fnTracer) Start(
+	ctx context.Context,
+	spanName string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
 	return fn.start(ctx, spanName, opts...)
 }
 

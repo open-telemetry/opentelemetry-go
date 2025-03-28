@@ -73,6 +73,8 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 func set(r *sdklog.Record, name string, value any) {
 	rVal := reflect.ValueOf(r).Elem()
 	rf := rVal.FieldByName(name)
-	rf = reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem() // nolint: gosec  // conversion of uintptr -> unsafe.Pointer.
+	rf = reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).
+		Elem()
+		// nolint: gosec  // conversion of uintptr -> unsafe.Pointer.
 	rf.Set(reflect.ValueOf(value))
 }
