@@ -25,24 +25,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Change `bridge/opentracing/internal/mock.go to bridge/opentracing/mock_test.go`
-- Refactor:
-  - Rename all exported types in bridge/opentracing/mock.go to be unexported:
-  - ComponentKey -> componentKey
-  - ServiceKey -> serviceKey
-  - StatusCodeKey -> statusCodeKey
-  - StatusMessageKey -> statusMessageKey
-  - ErrorKey -> errorKey
-  - NameKey -> nameKey
-  - MockContextKeyValue -> mockContextKeyValue
-  - MockTracer -> mockTracer
-  - NewMockTracer -> newMockTracer
-  - MockEvent -> mockEvent
-  - MockLink -> mockLink
-  - MockSpan -> mockSpan
-- Update all references in bridge/opentracing to use the locally defined code
-- Remove bridge/opentracing/internal
-
 - ⚠️ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
   This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
   This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
