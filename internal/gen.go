@@ -7,7 +7,6 @@ package internal // import "go.opentelemetry.io/otel/internal"
 //go:generate gotmpl --body=./shared/matchers/expecter.go.tmpl "--data={}" --out=matchers/expecter.go
 //go:generate gotmpl --body=./shared/matchers/temporal_matcher.go.tmpl "--data={}" --out=matchers/temporal_matcher.go
 
-//go:generate gotmpl --body=./shared/internaltest/alignment.go.tmpl "--data={}" --out=internaltest/alignment.go
 //go:generate gotmpl --body=./shared/internaltest/env.go.tmpl "--data={}" --out=internaltest/env.go
 //go:generate gotmpl --body=./shared/internaltest/env_test.go.tmpl "--data={}" --out=internaltest/env_test.go
 //go:generate gotmpl --body=./shared/internaltest/errors.go.tmpl "--data={}" --out=internaltest/errors.go
