@@ -17,6 +17,9 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"go.opentelemetry.io/otel/attribute"
 	ototel "go.opentelemetry.io/otel/bridge/opentracing"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
@@ -26,15 +29,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type testGRPCServer struct{}
 
 var (
-	componentKey     = attribute.Key("component")
-	serviceKey       = attribute.Key("service")
 	statusCodeKey    = attribute.Key("status.code")
 	statusMessageKey = attribute.Key("status.message")
 	errorKey         = attribute.Key("error")

@@ -21,8 +21,6 @@ import (
 
 //nolint:revive // ignoring missing comments for unexported global variables in an internal package.
 var (
-	componentKey     = attribute.Key("component")
-	serviceKey       = attribute.Key("service")
 	statusCodeKey    = attribute.Key("status.code")
 	statusMessageKey = attribute.Key("status.message")
 	errorKey         = attribute.Key("error")
