@@ -189,8 +189,8 @@ type bufferExporter struct {
 // If size is less than zero, zero will be used (i.e. only synchronous
 // exporting will be supported).
 func newBufferExporter(exporter Exporter, size int) *bufferExporter {
-	if size < 0 {
-		size = 0
+	if size < 1 {
+		size = 1
 	}
 	input := make(chan exportData, size)
 	return &bufferExporter{
@@ -199,6 +199,10 @@ func newBufferExporter(exporter Exporter, size int) *bufferExporter {
 		input: input,
 		done:  exportSync(input, exporter),
 	}
+}
+
+func (e *bufferExporter) IsQueueFull() bool {
+	return len(e.input) == cap(e.input)
 }
 
 var errStopped = errors.New("exporter stopped")
