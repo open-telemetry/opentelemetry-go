@@ -19,7 +19,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
@@ -426,12 +425,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			store, err := ottest.SetEnvVariables(map[string]string{
-				envVar: tt.envars,
-			})
-			require.NoError(t, err)
-			defer func() { require.NoError(t, store.Restore()) }()
-
+			t.Setenv(envVar, tt.envars)
 			ctx := context.Background()
 			res, err := resource.New(ctx, tt.options...)
 
