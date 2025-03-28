@@ -53,6 +53,9 @@ func TestModelConversion(t *testing.T) {
 				attribute.Int64("attr1", 42),
 				attribute.String("attr2", "bar"),
 				attribute.IntSlice("attr3", []int{0, 1, 2}),
+				attribute.BoolSlice("attr4", []bool{true, false, true}),
+				attribute.Float64Slice("attr5", []float64{1.1, 2.2, 3.3}),
+				attribute.StringSlice("attr6", []string{"bar1", "bar2", "bar3"}),
 			},
 			Events: []tracesdk.Event{
 				{
@@ -477,6 +480,9 @@ func TestModelConversion(t *testing.T) {
 				"attr1":           "42",
 				"attr2":           "bar",
 				"attr3":           "[0,1,2]",
+				"attr4":           "[true,false,true]",
+				"attr5":           "[1.1,2.2,3.3]",
+				"attr6":           "[\"bar1\",\"bar2\",\"bar3\"]",
 				"service.name":    "model-test",
 				"service.version": "0.1.0",
 				"resource-attr1":  "42",
