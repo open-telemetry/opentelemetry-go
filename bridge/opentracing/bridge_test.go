@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/codes"
+
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/stretchr/testify/assert"
@@ -456,6 +458,64 @@ func Test_otTagToOTelAttr(t *testing.T) {
 		t.Run(fmt.Sprintf("%s %v", reflect.TypeOf(tc.value), tc.value), func(t *testing.T) {
 			att := otTagToOTelAttr(string(key), tc.value)
 			assert.Equal(t, tc.expected, att)
+		})
+	}
+}
+
+func TestBridgeSpan_SetTag(t *testing.T) {
+	tracer := internal.NewMockTracer()
+	b, _ := NewTracerPair(tracer)
+
+	testCases := []struct {
+		name     string
+		key      string
+		value    interface{}
+		expected attribute.KeyValue
+		code     codes.Code
+	}{
+		{
+			name:  "span kind",
+			key:   string(ext.SpanKind),
+			value: "span kind",
+		},
+		{
+			name:  "error tag false",
+			key:   string(ext.Error),
+			value: false,
+		},
+		{
+			name:     "error tag true",
+			key:      string(ext.Error),
+			value:    true,
+			expected: internal.StatusCodeKey.Int(int(codes.Error)),
+		},
+		{
+			name:     "default tag",
+			key:      "string.key",
+			value:    "string.value",
+			expected: attribute.String("string.key", "string.value"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			span := b.StartSpan("test")
+			span.SetTag(tc.key, tc.value)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+
+			if tc.key == string(ext.SpanKind) {
+				assert.Empty(t, mockSpan.Attributes)
+				return
+			}
+
+			if tc.key == string(ext.Error) {
+				if v, ok := tc.value.(bool); !v && ok {
+					assert.Empty(t, mockSpan.Attributes)
+					return
+				}
+			}
+
+			assert.Contains(t, mockSpan.Attributes, tc.expected)
 		})
 	}
 }
