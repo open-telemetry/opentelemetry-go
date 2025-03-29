@@ -660,3 +660,23 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 		}
 	}
 }
+
+func TestBridgeSpan_BaggageItem(t *testing.T) {
+	tracer := NewBridgeTracer()
+
+	span := tracer.StartSpan("span")
+
+	assert.Empty(t, span.BaggageItem("invalid-key"))
+
+	span.SetBaggageItem("key", "val")
+
+	assert.Equal(t, "val", span.BaggageItem("key"))
+	assert.Equal(t, 1, span.Context().(*bridgeSpanContext).bag.Len())
+	assert.Equal(t, "key=val", span.Context().(*bridgeSpanContext).bag.String())
+
+	span.Context().ForeachBaggageItem(func(k, v string) bool {
+		assert.Equal(t, "key", k)
+		assert.Equal(t, "val", v)
+		return true
+	})
+}
