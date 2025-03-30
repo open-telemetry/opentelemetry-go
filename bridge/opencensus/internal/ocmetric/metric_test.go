@@ -989,10 +989,22 @@ func TestConvertAttributes(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			output, err := convertAttrs(tc.inputKeys, tc.inputValues)
 			if !errors.Is(err, tc.expectedErr) {
-				t.Errorf("convertAttrs(keys: %v, values: %v) = err(%v), want err(%v)", tc.inputKeys, tc.inputValues, err, tc.expectedErr)
+				t.Errorf(
+					"convertAttrs(keys: %v, values: %v) = err(%v), want err(%v)",
+					tc.inputKeys,
+					tc.inputValues,
+					err,
+					tc.expectedErr,
+				)
 			}
 			if !output.Equals(tc.expected) {
-				t.Errorf("convertAttrs(keys: %v, values: %v) = %+v, want %+v", tc.inputKeys, tc.inputValues, output.ToSlice(), tc.expected.ToSlice())
+				t.Errorf(
+					"convertAttrs(keys: %v, values: %v) = %+v, want %+v",
+					tc.inputKeys,
+					tc.inputValues,
+					output.ToSlice(),
+					tc.expected.ToSlice(),
+				)
 			}
 		})
 	}
