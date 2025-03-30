@@ -208,7 +208,11 @@ func (i *int64Inst) Enabled(_ context.Context) bool {
 	return len(i.measures) != 0
 }
 
-func (i *int64Inst) aggregate(ctx context.Context, val int64, s attribute.Set) { // nolint:revive  // okay to shadow pkg with method.
+func (i *int64Inst) aggregate(
+	ctx context.Context,
+	val int64,
+	s attribute.Set,
+) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
 		in(ctx, val, s)
 	}
