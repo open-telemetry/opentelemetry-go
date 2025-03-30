@@ -124,10 +124,18 @@ func TestSpanSetStatus(t *testing.T) {
 			ocS.SetStatus(status)
 
 			if s.sCode != tt.wantCode {
-				t.Errorf("span.SetStatus failed to set OpenTelemetry status code. Expected %d, got %d", tt.wantCode, s.sCode)
+				t.Errorf(
+					"span.SetStatus failed to set OpenTelemetry status code. Expected %d, got %d",
+					tt.wantCode,
+					s.sCode,
+				)
 			}
 			if s.sMsg != tt.message {
-				t.Errorf("span.SetStatus failed to set OpenTelemetry status description. Expected %s, got %s", tt.message, s.sMsg)
+				t.Errorf(
+					"span.SetStatus failed to set OpenTelemetry status description. Expected %s, got %s",
+					tt.message,
+					s.sMsg,
+				)
 			}
 		})
 	}
@@ -295,12 +303,22 @@ func TestSpanAddLinkFails(t *testing.T) {
 
 	for i, l := range s.links {
 		if !l.SpanContext.Equal(wantLinks[i].SpanContext) {
-			t.Errorf("link[%v] has the wrong span context; want %+v, got %+v", i, wantLinks[i].SpanContext, l.SpanContext)
+			t.Errorf(
+				"link[%v] has the wrong span context; want %+v, got %+v",
+				i,
+				wantLinks[i].SpanContext,
+				l.SpanContext,
+			)
 		}
 		gotAttributeSet := attribute.NewSet(l.Attributes...)
 		wantAttributeSet := attribute.NewSet(wantLinks[i].Attributes...)
 		if !gotAttributeSet.Equals(&wantAttributeSet) {
-			t.Errorf("link[%v] has the wrong attributes; want %v, got %v", i, wantAttributeSet.Encoded(attribute.DefaultEncoder()), gotAttributeSet.Encoded(attribute.DefaultEncoder()))
+			t.Errorf(
+				"link[%v] has the wrong attributes; want %v, got %v",
+				i,
+				wantAttributeSet.Encoded(attribute.DefaultEncoder()),
+				gotAttributeSet.Encoded(attribute.DefaultEncoder()),
+			)
 		}
 	}
 }

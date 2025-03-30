@@ -33,7 +33,9 @@ const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
 
 var _ Reader = (*reader)(nil)
 
-func (r *reader) aggregation(kind InstrumentKind) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *reader) aggregation(
+	kind InstrumentKind,
+) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationFunc(kind)
 }
 
@@ -148,9 +150,15 @@ func TestWithResource(t *testing.T) {
 			want:    resource.Default(),
 		},
 		{
-			name:    "explicit resource",
-			options: []Option{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
-			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			name: "explicit resource",
+			options: []Option{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			},
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
+			),
 		},
 		{
 			name: "last resource wins",
@@ -158,12 +166,22 @@ func TestWithResource(t *testing.T) {
 				WithResource(resource.NewSchemaless(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
 				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
 			},
-			want: mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)),
+			),
 		},
 		{
-			name:    "overlapping attributes with environment resource",
-			options: []Option{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
-			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			name: "overlapping attributes with environment resource",
+			options: []Option{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			},
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)),
+			),
 		},
 	}
 	for _, tc := range cases {
