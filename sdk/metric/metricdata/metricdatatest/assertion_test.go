@@ -680,18 +680,44 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("SumFloat64", testDatatype(sumFloat64A, sumFloat64B, equalSums[float64]))
 	t.Run("GaugeInt64", testDatatype(gaugeInt64A, gaugeInt64B, equalGauges[int64]))
 	t.Run("GaugeFloat64", testDatatype(gaugeFloat64A, gaugeFloat64B, equalGauges[float64]))
-	t.Run("HistogramDataPointInt64", testDatatype(histogramDataPointInt64A, histogramDataPointInt64B, equalHistogramDataPoints[int64]))
-	t.Run("HistogramDataPointFloat64", testDatatype(histogramDataPointFloat64A, histogramDataPointFloat64B, equalHistogramDataPoints[float64]))
+	t.Run(
+		"HistogramDataPointInt64",
+		testDatatype(histogramDataPointInt64A, histogramDataPointInt64B, equalHistogramDataPoints[int64]),
+	)
+	t.Run(
+		"HistogramDataPointFloat64",
+		testDatatype(histogramDataPointFloat64A, histogramDataPointFloat64B, equalHistogramDataPoints[float64]),
+	)
 	t.Run("DataPointInt64", testDatatype(dataPointInt64A, dataPointInt64B, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatype(dataPointFloat64A, dataPointFloat64B, equalDataPoints[float64]))
 	t.Run("ExtremaInt64", testDatatype(minInt64A, minInt64B, equalExtrema[int64]))
 	t.Run("ExtremaFloat64", testDatatype(minFloat64A, minFloat64B, equalExtrema[float64]))
 	t.Run("ExemplarInt64", testDatatype(exemplarInt64A, exemplarInt64B, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatype(exemplarFloat64A, exemplarFloat64B, equalExemplars[float64]))
-	t.Run("ExponentialHistogramInt64", testDatatype(exponentialHistogramInt64A, exponentialHistogramInt64B, equalExponentialHistograms[int64]))
-	t.Run("ExponentialHistogramFloat64", testDatatype(exponentialHistogramFloat64A, exponentialHistogramFloat64B, equalExponentialHistograms[float64]))
-	t.Run("ExponentialHistogramDataPointInt64", testDatatype(exponentialHistogramDataPointInt64A, exponentialHistogramDataPointInt64B, equalExponentialHistogramDataPoints[int64]))
-	t.Run("ExponentialHistogramDataPointFloat64", testDatatype(exponentialHistogramDataPointFloat64A, exponentialHistogramDataPointFloat64B, equalExponentialHistogramDataPoints[float64]))
+	t.Run(
+		"ExponentialHistogramInt64",
+		testDatatype(exponentialHistogramInt64A, exponentialHistogramInt64B, equalExponentialHistograms[int64]),
+	)
+	t.Run(
+		"ExponentialHistogramFloat64",
+		testDatatype(exponentialHistogramFloat64A, exponentialHistogramFloat64B, equalExponentialHistograms[float64]),
+	)
+	t.Run(
+		"ExponentialHistogramDataPointInt64",
+		testDatatype(
+			exponentialHistogramDataPointInt64A,
+			exponentialHistogramDataPointInt64B,
+			equalExponentialHistogramDataPoints[int64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramDataPointFloat64",
+		testDatatype(
+			exponentialHistogramDataPointFloat64A,
+			exponentialHistogramDataPointFloat64B,
+			equalExponentialHistogramDataPoints[float64],
+		),
+	)
 	t.Run("ExponentialBuckets", testDatatype(exponentialBucket2, exponentialBucket3, equalExponentialBuckets))
 	t.Run("Summary", testDatatype(summaryA, summaryB, equalSummary))
 	t.Run("SummaryDataPoint", testDatatype(summaryDataPointA, summaryDataPointB, equalSummaryDataPoint))
@@ -708,18 +734,56 @@ func TestAssertEqualIgnoreTime(t *testing.T) {
 	t.Run("SumFloat64", testDatatypeIgnoreTime(sumFloat64A, sumFloat64C, equalSums[float64]))
 	t.Run("GaugeInt64", testDatatypeIgnoreTime(gaugeInt64A, gaugeInt64C, equalGauges[int64]))
 	t.Run("GaugeFloat64", testDatatypeIgnoreTime(gaugeFloat64A, gaugeFloat64C, equalGauges[float64]))
-	t.Run("HistogramDataPointInt64", testDatatypeIgnoreTime(histogramDataPointInt64A, histogramDataPointInt64C, equalHistogramDataPoints[int64]))
-	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreTime(histogramDataPointFloat64A, histogramDataPointFloat64C, equalHistogramDataPoints[float64]))
+	t.Run(
+		"HistogramDataPointInt64",
+		testDatatypeIgnoreTime(histogramDataPointInt64A, histogramDataPointInt64C, equalHistogramDataPoints[int64]),
+	)
+	t.Run(
+		"HistogramDataPointFloat64",
+		testDatatypeIgnoreTime(
+			histogramDataPointFloat64A,
+			histogramDataPointFloat64C,
+			equalHistogramDataPoints[float64],
+		),
+	)
 	t.Run("DataPointInt64", testDatatypeIgnoreTime(dataPointInt64A, dataPointInt64C, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatypeIgnoreTime(dataPointFloat64A, dataPointFloat64C, equalDataPoints[float64]))
 	t.Run("ExtremaInt64", testDatatypeIgnoreTime(minInt64A, minInt64C, equalExtrema[int64]))
 	t.Run("ExtremaFloat64", testDatatypeIgnoreTime(minFloat64A, minFloat64C, equalExtrema[float64]))
 	t.Run("ExemplarInt64", testDatatypeIgnoreTime(exemplarInt64A, exemplarInt64C, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatypeIgnoreTime(exemplarFloat64A, exemplarFloat64C, equalExemplars[float64]))
-	t.Run("ExponentialHistogramInt64", testDatatypeIgnoreTime(exponentialHistogramInt64A, exponentialHistogramInt64C, equalExponentialHistograms[int64]))
-	t.Run("ExponentialHistogramFloat64", testDatatypeIgnoreTime(exponentialHistogramFloat64A, exponentialHistogramFloat64C, equalExponentialHistograms[float64]))
-	t.Run("ExponentialHistogramDataPointInt64", testDatatypeIgnoreTime(exponentialHistogramDataPointInt64A, exponentialHistogramDataPointInt64C, equalExponentialHistogramDataPoints[int64]))
-	t.Run("ExponentialHistogramDataPointFloat64", testDatatypeIgnoreTime(exponentialHistogramDataPointFloat64A, exponentialHistogramDataPointFloat64C, equalExponentialHistogramDataPoints[float64]))
+	t.Run(
+		"ExponentialHistogramInt64",
+		testDatatypeIgnoreTime(
+			exponentialHistogramInt64A,
+			exponentialHistogramInt64C,
+			equalExponentialHistograms[int64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramFloat64",
+		testDatatypeIgnoreTime(
+			exponentialHistogramFloat64A,
+			exponentialHistogramFloat64C,
+			equalExponentialHistograms[float64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramDataPointInt64",
+		testDatatypeIgnoreTime(
+			exponentialHistogramDataPointInt64A,
+			exponentialHistogramDataPointInt64C,
+			equalExponentialHistogramDataPoints[int64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramDataPointFloat64",
+		testDatatypeIgnoreTime(
+			exponentialHistogramDataPointFloat64A,
+			exponentialHistogramDataPointFloat64C,
+			equalExponentialHistogramDataPoints[float64],
+		),
+	)
 	t.Run("Summary", testDatatypeIgnoreTime(summaryA, summaryC, equalSummary))
 	t.Run("SummaryDataPoint", testDatatypeIgnoreTime(summaryDataPointA, summaryDataPointC, equalSummaryDataPoint))
 }
@@ -727,11 +791,17 @@ func TestAssertEqualIgnoreTime(t *testing.T) {
 func TestAssertEqualIgnoreExemplars(t *testing.T) {
 	hdpInt64 := histogramDataPointInt64A
 	hdpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
-	t.Run("HistogramDataPointInt64", testDatatypeIgnoreExemplars(histogramDataPointInt64A, hdpInt64, equalHistogramDataPoints[int64]))
+	t.Run(
+		"HistogramDataPointInt64",
+		testDatatypeIgnoreExemplars(histogramDataPointInt64A, hdpInt64, equalHistogramDataPoints[int64]),
+	)
 
 	hdpFloat64 := histogramDataPointFloat64A
 	hdpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
-	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreExemplars(histogramDataPointFloat64A, hdpFloat64, equalHistogramDataPoints[float64]))
+	t.Run(
+		"HistogramDataPointFloat64",
+		testDatatypeIgnoreExemplars(histogramDataPointFloat64A, hdpFloat64, equalHistogramDataPoints[float64]),
+	)
 
 	dpInt64 := dataPointInt64A
 	dpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
@@ -743,11 +813,25 @@ func TestAssertEqualIgnoreExemplars(t *testing.T) {
 
 	ehdpInt64 := exponentialHistogramDataPointInt64A
 	ehdpInt64.Exemplars = []metricdata.Exemplar[int64]{exemplarInt64B}
-	t.Run("ExponentialHistogramDataPointInt64", testDatatypeIgnoreExemplars(exponentialHistogramDataPointInt64A, ehdpInt64, equalExponentialHistogramDataPoints[int64]))
+	t.Run(
+		"ExponentialHistogramDataPointInt64",
+		testDatatypeIgnoreExemplars(
+			exponentialHistogramDataPointInt64A,
+			ehdpInt64,
+			equalExponentialHistogramDataPoints[int64],
+		),
+	)
 
 	ehdpFloat64 := exponentialHistogramDataPointFloat64A
 	ehdpFloat64.Exemplars = []metricdata.Exemplar[float64]{exemplarFloat64B}
-	t.Run("ExponentialHistogramDataPointFloat64", testDatatypeIgnoreExemplars(exponentialHistogramDataPointFloat64A, ehdpFloat64, equalExponentialHistogramDataPoints[float64]))
+	t.Run(
+		"ExponentialHistogramDataPointFloat64",
+		testDatatypeIgnoreExemplars(
+			exponentialHistogramDataPointFloat64A,
+			ehdpFloat64,
+			equalExponentialHistogramDataPoints[float64],
+		),
+	)
 }
 
 func TestAssertEqualIgnoreValue(t *testing.T) {
@@ -760,16 +844,54 @@ func TestAssertEqualIgnoreValue(t *testing.T) {
 	t.Run("SumFloat64", testDatatypeIgnoreValue(sumFloat64A, sumFloat64D, equalSums[float64]))
 	t.Run("GaugeInt64", testDatatypeIgnoreValue(gaugeInt64A, gaugeInt64D, equalGauges[int64]))
 	t.Run("GaugeFloat64", testDatatypeIgnoreValue(gaugeFloat64A, gaugeFloat64D, equalGauges[float64]))
-	t.Run("HistogramDataPointInt64", testDatatypeIgnoreValue(histogramDataPointInt64A, histogramDataPointInt64D, equalHistogramDataPoints[int64]))
-	t.Run("HistogramDataPointFloat64", testDatatypeIgnoreValue(histogramDataPointFloat64A, histogramDataPointFloat64D, equalHistogramDataPoints[float64]))
+	t.Run(
+		"HistogramDataPointInt64",
+		testDatatypeIgnoreValue(histogramDataPointInt64A, histogramDataPointInt64D, equalHistogramDataPoints[int64]),
+	)
+	t.Run(
+		"HistogramDataPointFloat64",
+		testDatatypeIgnoreValue(
+			histogramDataPointFloat64A,
+			histogramDataPointFloat64D,
+			equalHistogramDataPoints[float64],
+		),
+	)
 	t.Run("DataPointInt64", testDatatypeIgnoreValue(dataPointInt64A, dataPointInt64D, equalDataPoints[int64]))
 	t.Run("DataPointFloat64", testDatatypeIgnoreValue(dataPointFloat64A, dataPointFloat64D, equalDataPoints[float64]))
 	t.Run("ExemplarInt64", testDatatypeIgnoreValue(exemplarInt64A, exemplarInt64D, equalExemplars[int64]))
 	t.Run("ExemplarFloat64", testDatatypeIgnoreValue(exemplarFloat64A, exemplarFloat64D, equalExemplars[float64]))
-	t.Run("ExponentialHistogramInt64", testDatatypeIgnoreValue(exponentialHistogramInt64A, exponentialHistogramInt64D, equalExponentialHistograms[int64]))
-	t.Run("ExponentialHistogramFloat64", testDatatypeIgnoreValue(exponentialHistogramFloat64A, exponentialHistogramFloat64D, equalExponentialHistograms[float64]))
-	t.Run("ExponentialHistogramDataPointInt64", testDatatypeIgnoreValue(exponentialHistogramDataPointInt64A, exponentialHistogramDataPointInt64D, equalExponentialHistogramDataPoints[int64]))
-	t.Run("ExponentialHistogramDataPointFloat64", testDatatypeIgnoreValue(exponentialHistogramDataPointFloat64A, exponentialHistogramDataPointFloat64D, equalExponentialHistogramDataPoints[float64]))
+	t.Run(
+		"ExponentialHistogramInt64",
+		testDatatypeIgnoreValue(
+			exponentialHistogramInt64A,
+			exponentialHistogramInt64D,
+			equalExponentialHistograms[int64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramFloat64",
+		testDatatypeIgnoreValue(
+			exponentialHistogramFloat64A,
+			exponentialHistogramFloat64D,
+			equalExponentialHistograms[float64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramDataPointInt64",
+		testDatatypeIgnoreValue(
+			exponentialHistogramDataPointInt64A,
+			exponentialHistogramDataPointInt64D,
+			equalExponentialHistogramDataPoints[int64],
+		),
+	)
+	t.Run(
+		"ExponentialHistogramDataPointFloat64",
+		testDatatypeIgnoreValue(
+			exponentialHistogramDataPointFloat64A,
+			exponentialHistogramDataPointFloat64D,
+			equalExponentialHistogramDataPoints[float64],
+		),
+	)
 	t.Run("Summary", testDatatypeIgnoreValue(summaryA, summaryD, equalSummary))
 	t.Run("SummaryDataPoint", testDatatypeIgnoreValue(summaryDataPointA, summaryDataPointD, equalSummaryDataPoint))
 }
@@ -854,7 +976,13 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	assert.Empty(t, r, "value should be ignored: %v == %v", histogramFloat64A, histogramFloat64D)
 
 	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64B, config{})
-	assert.NotEmptyf(t, r, "exponential histograms should not be equal: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64B)
+	assert.NotEmptyf(
+		t,
+		r,
+		"exponential histograms should not be equal: %v == %v",
+		exponentialHistogramInt64A,
+		exponentialHistogramInt64B,
+	)
 
 	r = equalAggregations(exponentialHistogramInt64A, exponentialHistogramInt64C, config{ignoreTimestamp: true})
 	assert.Empty(t, r, "exponential histograms should be equal: %v", r)
@@ -863,7 +991,13 @@ func TestAssertAggregationsEqual(t *testing.T) {
 	assert.Empty(t, r, "value should be ignored: %v == %v", exponentialHistogramInt64A, exponentialHistogramInt64D)
 
 	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64B, config{})
-	assert.NotEmptyf(t, r, "exponential histograms should not be equal: %v == %v", exponentialHistogramFloat64A, exponentialHistogramFloat64B)
+	assert.NotEmptyf(
+		t,
+		r,
+		"exponential histograms should not be equal: %v == %v",
+		exponentialHistogramFloat64A,
+		exponentialHistogramFloat64B,
+	)
 
 	r = equalAggregations(exponentialHistogramFloat64A, exponentialHistogramFloat64C, config{ignoreTimestamp: true})
 	assert.Empty(t, r, "exponential histograms should be equal: %v", r)
