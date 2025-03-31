@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strconv"
 
-	attribute "go.opentelemetry.io/otel/attribute/internal"
+	"go.opentelemetry.io/otel/attribute/internal"
 	"go.opentelemetry.io/otel/internal"
 )
 
