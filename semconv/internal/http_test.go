@@ -961,7 +961,12 @@ func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, forma
 	}
 }
 
-func testRequest(method, requestURI, proto, remoteAddr, host string, u *url.URL, header http.Header, tlsopt tlsOption) *http.Request {
+func testRequest(
+	method, requestURI, proto, remoteAddr, host string,
+	u *url.URL,
+	header http.Header,
+	tlsopt tlsOption,
+) *http.Request {
 	major, minor := protoToInts(proto)
 	var tlsConn *tls.ConnectionState
 	switch tlsopt {

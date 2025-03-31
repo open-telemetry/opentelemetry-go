@@ -26,7 +26,9 @@ var (
 	errNegativeCount                = errors.New("distribution or summary count is negative")
 	errNegativeBucketCount          = errors.New("distribution bucket count is negative")
 	errMismatchedAttributeKeyValues = errors.New("mismatched number of attribute keys and values")
-	errInvalidExemplarSpanContext   = errors.New("span context exemplar attachment does not contain an OpenCensus SpanContext")
+	errInvalidExemplarSpanContext   = errors.New(
+		"span context exemplar attachment does not contain an OpenCensus SpanContext",
+	)
 )
 
 // ConvertMetrics converts metric data from OpenCensus to OpenTelemetry.
@@ -76,20 +78,29 @@ func convertAggregation(metric *ocmetricdata.Metric) (metricdata.Aggregation, er
 }
 
 // convertGauge converts an OpenCensus gauge to an OpenTelemetry gauge aggregation.
-func convertGauge[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Gauge[N], error) {
+func convertGauge[N int64 | float64](
+	labelKeys []ocmetricdata.LabelKey,
+	ts []*ocmetricdata.TimeSeries,
+) (metricdata.Gauge[N], error) {
 	points, err := convertNumberDataPoints[N](labelKeys, ts)
 	return metricdata.Gauge[N]{DataPoints: points}, err
 }
 
 // convertSum converts an OpenCensus cumulative to an OpenTelemetry sum aggregation.
-func convertSum[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Sum[N], error) {
+func convertSum[N int64 | float64](
+	labelKeys []ocmetricdata.LabelKey,
+	ts []*ocmetricdata.TimeSeries,
+) (metricdata.Sum[N], error) {
 	points, err := convertNumberDataPoints[N](labelKeys, ts)
 	// OpenCensus sums are always Cumulative
 	return metricdata.Sum[N]{DataPoints: points, Temporality: metricdata.CumulativeTemporality, IsMonotonic: true}, err
 }
 
 // convertNumberDataPoints converts OpenCensus TimeSeries to OpenTelemetry DataPoints.
-func convertNumberDataPoints[N int64 | float64](labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) ([]metricdata.DataPoint[N], error) {
+func convertNumberDataPoints[N int64 | float64](
+	labelKeys []ocmetricdata.LabelKey,
+	ts []*ocmetricdata.TimeSeries,
+) ([]metricdata.DataPoint[N], error) {
 	var points []metricdata.DataPoint[N]
 	var err error
 	for _, t := range ts {
@@ -117,7 +128,10 @@ func convertNumberDataPoints[N int64 | float64](labelKeys []ocmetricdata.LabelKe
 
 // convertHistogram converts OpenCensus Distribution timeseries to an
 // OpenTelemetry Histogram aggregation.
-func convertHistogram(labelKeys []ocmetricdata.LabelKey, ts []*ocmetricdata.TimeSeries) (metricdata.Histogram[float64], error) {
+func convertHistogram(
+	labelKeys []ocmetricdata.LabelKey,
+	ts []*ocmetricdata.TimeSeries,
+) (metricdata.Histogram[float64], error) {
 	points := make([]metricdata.HistogramDataPoint[float64], 0, len(ts))
 	var err error
 	for _, t := range ts {
@@ -390,7 +404,12 @@ func convertQuantiles(snapshot ocmetricdata.Snapshot) []metricdata.QuantileValue
 // OpenTelemetry attribute Set.
 func convertAttrs(keys []ocmetricdata.LabelKey, values []ocmetricdata.LabelValue) (attribute.Set, error) {
 	if len(keys) != len(values) {
-		return attribute.NewSet(), fmt.Errorf("%w: keys(%q) values(%q)", errMismatchedAttributeKeyValues, len(keys), len(values))
+		return attribute.NewSet(), fmt.Errorf(
+			"%w: keys(%q) values(%q)",
+			errMismatchedAttributeKeyValues,
+			len(keys),
+			len(values),
+		)
 	}
 	attrs := []attribute.KeyValue{}
 	for i, lv := range values {
