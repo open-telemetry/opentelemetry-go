@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -184,11 +183,7 @@ func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {
 }
 
 func TestWithResource(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVarResourceAttributes: "key=value,rk5=7",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv(envVarResourceAttributes, "key=value,rk5=7")
 
 	cases := []struct {
 		name    string
@@ -207,9 +202,15 @@ func TestWithResource(t *testing.T) {
 			want:    resource.Default(),
 		},
 		{
-			name:    "explicit resource",
-			options: []LoggerProviderOption{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
-			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			name: "explicit resource",
+			options: []LoggerProviderOption{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			},
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
+			),
 		},
 		{
 			name: "last resource wins",
@@ -217,12 +218,22 @@ func TestWithResource(t *testing.T) {
 				WithResource(resource.NewSchemaless(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
 				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
 			},
-			want: mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)),
+			),
 		},
 		{
-			name:    "overlapping attributes with environment resource",
-			options: []LoggerProviderOption{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
-			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			name: "overlapping attributes with environment resource",
+			options: []LoggerProviderOption{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			},
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)),
+			),
 		},
 	}
 	for _, tc := range cases {
@@ -301,12 +312,26 @@ func TestLoggerProviderLogger(t *testing.T) {
 	t.Run("SameLoggers", func(t *testing.T) {
 		p := NewLoggerProvider()
 
-		l0, l1, l2 := p.Logger("l0"), p.Logger("l1"), p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+		l0, l1, l2 := p.Logger(
+			"l0",
+		), p.Logger(
+			"l1",
+		), p.Logger(
+			"l0",
+			log.WithInstrumentationAttributes(attribute.String("foo", "bar")),
+		)
 		assert.NotSame(t, l0, l1)
 		assert.NotSame(t, l0, l2)
 		assert.NotSame(t, l1, l2)
 
-		l3, l4, l5 := p.Logger("l0"), p.Logger("l1"), p.Logger("l0", log.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+		l3, l4, l5 := p.Logger(
+			"l0",
+		), p.Logger(
+			"l1",
+		), p.Logger(
+			"l0",
+			log.WithInstrumentationAttributes(attribute.String("foo", "bar")),
+		)
 		assert.Same(t, l0, l3)
 		assert.Same(t, l1, l4)
 		assert.Same(t, l2, l5)

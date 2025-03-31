@@ -56,7 +56,11 @@ func TestAttributesFromMap(t *testing.T) {
 	gotAttributeSet := attribute.NewSet(got...)
 	wantAttributeSet := attribute.NewSet(want...)
 	if !gotAttributeSet.Equals(&wantAttributeSet) {
-		t.Errorf("Attributes conversion want %v, got %v", wantAttributeSet.Encoded(attribute.DefaultEncoder()), gotAttributeSet.Encoded(attribute.DefaultEncoder()))
+		t.Errorf(
+			"Attributes conversion want %v, got %v",
+			wantAttributeSet.Encoded(attribute.DefaultEncoder()),
+			gotAttributeSet.Encoded(attribute.DefaultEncoder()),
+		)
 	}
 }
 
