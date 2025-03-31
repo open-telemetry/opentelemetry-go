@@ -213,11 +213,8 @@ go-mod-tidy/%: crosslink
 		&& cd $(DIR) \
 		&& $(GO) mod tidy -compat=1.21
 
-.PHONY: lint-modules
-lint-modules: go-mod-tidy
-
 .PHONY: lint
-lint: misspell lint-modules golangci-lint govulncheck
+lint: misspell go-mod-tidy golangci-lint govulncheck
 
 .PHONY: vanity-import-check
 vanity-import-check: $(PORTO)
