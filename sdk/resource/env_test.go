@@ -12,16 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestDetectOnePair(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		resourceAttrKey: "key=value",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv(resourceAttrKey, "key=value")
 
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -30,11 +25,7 @@ func TestDetectOnePair(t *testing.T) {
 }
 
 func TestDetectURIEncodingOnePair(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		resourceAttrKey: "key=x+y+z?q=123",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv(resourceAttrKey, "key=x+y+z?q=123")
 
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -43,12 +34,8 @@ func TestDetectURIEncodingOnePair(t *testing.T) {
 }
 
 func TestDetectMultiPairs(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		"x":             "1",
-		resourceAttrKey: "key=value, k = v , a= x, a=z, b=c%2Fd",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv("x", "1")
+	t.Setenv(resourceAttrKey, "key=value, k = v , a= x, a=z, b=c%2Fd")
 
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
@@ -63,13 +50,8 @@ func TestDetectMultiPairs(t *testing.T) {
 }
 
 func TestDetectURIEncodingMultiPairs(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		"x":             "1",
-		resourceAttrKey: "key=x+y+z,namespace=localhost/test&verify",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
+	t.Setenv("x", "1")
+	t.Setenv(resourceAttrKey, "key=x+y+z,namespace=localhost/test&verify")
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
@@ -80,12 +62,7 @@ func TestDetectURIEncodingMultiPairs(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		resourceAttrKey: "   ",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
+	t.Setenv(resourceAttrKey, "   ")
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
@@ -93,11 +70,7 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestNoResourceAttributesSet(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		svcNameKey: "bar",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv(svcNameKey, "bar")
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
@@ -107,12 +80,7 @@ func TestNoResourceAttributesSet(t *testing.T) {
 }
 
 func TestMissingKeyError(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		resourceAttrKey: "key=value,key",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
+	t.Setenv(resourceAttrKey, "key=value,key")
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.Error(t, err)
@@ -123,12 +91,7 @@ func TestMissingKeyError(t *testing.T) {
 }
 
 func TestInvalidPercentDecoding(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		resourceAttrKey: "key=%invalid",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
+	t.Setenv(resourceAttrKey, "key=%invalid")
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	assert.NoError(t, err)
@@ -138,13 +101,8 @@ func TestInvalidPercentDecoding(t *testing.T) {
 }
 
 func TestDetectServiceNameFromEnv(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		resourceAttrKey: "key=value,service.name=foo",
-		svcNameKey:      "bar",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
-
+	t.Setenv(resourceAttrKey, "key=value,service.name=foo")
+	t.Setenv(svcNameKey, "bar")
 	detector := &fromEnv{}
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)

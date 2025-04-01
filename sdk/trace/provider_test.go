@@ -14,8 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	envTracesSampler    = "OTEL_TRACES_SAMPLER"
+	envTracesSamplerArg = "OTEL_TRACES_SAMPLER_ARG"
 )
 
 type basicSpanProcessor struct {
@@ -313,19 +317,11 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.sampler, func(t *testing.T) {
-			envVars := map[string]string{
-				"OTEL_TRACES_SAMPLER": test.sampler,
-			}
+			t.Setenv(envTracesSampler, test.sampler)
 
 			if test.samplerArg != "" {
-				envVars["OTEL_TRACES_SAMPLER_ARG"] = test.samplerArg
+				t.Setenv(envTracesSamplerArg, test.samplerArg)
 			}
-			envStore, err := ottest.SetEnvVariables(envVars)
-			require.NoError(t, err)
-			t.Cleanup(func() {
-				handler.Reset()
-				require.NoError(t, envStore.Restore())
-			})
 
 			stp := NewTracerProvider(WithSyncer(NewTestExporter()))
 			assert.Equal(t, test.description, stp.sampler.Description())
@@ -337,15 +333,8 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 
 			if test.argOptional {
 				t.Run("invalid sampler arg", func(t *testing.T) {
-					envStore, err := ottest.SetEnvVariables(map[string]string{
-						"OTEL_TRACES_SAMPLER":     test.sampler,
-						"OTEL_TRACES_SAMPLER_ARG": "invalid-ignored-string",
-					})
-					require.NoError(t, err)
-					t.Cleanup(func() {
-						handler.Reset()
-						require.NoError(t, envStore.Restore())
-					})
+					t.Setenv(envTracesSampler, test.sampler)
+					t.Setenv(envTracesSamplerArg, "invalid-ignored-string")
 
 					stp := NewTracerProvider(WithSyncer(NewTestExporter()))
 					t.Cleanup(func() {
@@ -385,12 +374,26 @@ func testStoredError(t *testing.T, target interface{}) {
 func TestTracerProviderReturnsSameTracer(t *testing.T) {
 	p := NewTracerProvider()
 
-	t0, t1, t2 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+	t0, t1, t2 := p.Tracer(
+		"t0",
+	), p.Tracer(
+		"t1",
+	), p.Tracer(
+		"t0",
+		trace.WithInstrumentationAttributes(attribute.String("foo", "bar")),
+	)
 	assert.NotSame(t, t0, t1)
 	assert.NotSame(t, t0, t2)
 	assert.NotSame(t, t1, t2)
 
-	t3, t4, t5 := p.Tracer("t0"), p.Tracer("t1"), p.Tracer("t0", trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
+	t3, t4, t5 := p.Tracer(
+		"t0",
+	), p.Tracer(
+		"t1",
+	), p.Tracer(
+		"t0",
+		trace.WithInstrumentationAttributes(attribute.String("foo", "bar")),
+	)
 	assert.Same(t, t0, t3)
 	assert.Same(t, t1, t4)
 	assert.Same(t, t2, t5)

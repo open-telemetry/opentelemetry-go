@@ -43,14 +43,47 @@ func TestSetDedup(t *testing.T) {
 	cases := []testCase{
 		expect("A=B", attribute.String("A", "2"), attribute.String("A", "B")),
 		expect("A=B", attribute.String("A", "2"), attribute.Int("A", 1), attribute.String("A", "B")),
-		expect("A=B", attribute.String("A", "B"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B")),
+		expect(
+			"A=B",
+			attribute.String("A", "B"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+		),
 
 		expect("A=B,C=D", attribute.String("A", "1"), attribute.String("C", "D"), attribute.String("A", "B")),
 		expect("A=B,C=D", attribute.String("A", "2"), attribute.String("A", "B"), attribute.String("C", "D")),
-		expect("A=B,C=D", attribute.Float64("C", 1.2), attribute.String("A", "2"), attribute.String("A", "B"), attribute.String("C", "D")),
-		expect("A=B,C=D", attribute.String("C", "D"), attribute.String("A", "B"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B")),
-		expect("A=B,C=D", attribute.String("A", "B"), attribute.String("C", "D"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B")),
-		expect("A=B,C=D", attribute.String("A", "B"), attribute.String("A", "C"), attribute.String("A", "D"), attribute.String("A", "B"), attribute.String("C", "D")),
+		expect(
+			"A=B,C=D",
+			attribute.Float64("C", 1.2),
+			attribute.String("A", "2"),
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+		),
+		expect(
+			"A=B,C=D",
+			attribute.String("C", "D"),
+			attribute.String("A", "B"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+		),
+		expect(
+			"A=B,C=D",
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+		),
+		expect(
+			"A=B,C=D",
+			attribute.String("A", "B"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+		),
 	}
 	enc := attribute.DefaultEncoder()
 

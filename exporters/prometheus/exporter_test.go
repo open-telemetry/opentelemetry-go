@@ -279,15 +279,24 @@ func TestPrometheusExporter(t *testing.T) {
 				gauge.Add(ctx, -25, opt)
 
 				// Invalid, will be renamed.
-				gauge, err = meter.Float64UpDownCounter("invalid.gauge.name", otelmetric.WithDescription("a gauge with an invalid name"))
+				gauge, err = meter.Float64UpDownCounter(
+					"invalid.gauge.name",
+					otelmetric.WithDescription("a gauge with an invalid name"),
+				)
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, opt)
 
-				counter, err := meter.Float64Counter("0invalid.counter.name", otelmetric.WithDescription("a counter with an invalid name"))
+				counter, err := meter.Float64Counter(
+					"0invalid.counter.name",
+					otelmetric.WithDescription("a counter with an invalid name"),
+				)
 				require.ErrorIs(t, err, metric.ErrInstrumentName)
 				counter.Add(ctx, 100, opt)
 
-				histogram, err := meter.Float64Histogram("invalid.hist.name", otelmetric.WithDescription("a histogram with an invalid name"))
+				histogram, err := meter.Float64Histogram(
+					"invalid.hist.name",
+					otelmetric.WithDescription("a histogram with an invalid name"),
+				)
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, opt)
 			},
@@ -517,11 +526,11 @@ func TestPrometheusExporter(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.disableUTF8 {
-				model.NameValidationScheme = model.LegacyValidation
-				t.Cleanup(func() {
+				model.NameValidationScheme = model.LegacyValidation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+				defer func() {
 					// Reset to defaults
-					model.NameValidationScheme = model.UTF8Validation
-				})
+					model.NameValidationScheme = model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+				}()
 			}
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
@@ -1090,13 +1099,13 @@ func TestExemplars(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			originalEscapingScheme := model.NameEscapingScheme
-			originalValidationScheme := model.NameValidationScheme
+			originalValidationScheme := model.NameValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 			model.NameEscapingScheme = tc.escapingScheme
-			model.NameValidationScheme = tc.validationScheme
+			model.NameValidationScheme = tc.validationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 			// Restore original value after the test is complete
 			defer func() {
 				model.NameEscapingScheme = originalEscapingScheme
-				model.NameValidationScheme = originalValidationScheme
+				model.NameValidationScheme = originalValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 			}()
 			// initialize registry exporter
 			ctx := context.Background()

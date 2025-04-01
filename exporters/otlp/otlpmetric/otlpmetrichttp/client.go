@@ -277,7 +277,7 @@ type request struct {
 // reset reinitializes the request Body and uses ctx for the request.
 func (r *request) reset(ctx context.Context) {
 	r.Body = r.bodyReader()
-	r.Request = r.Request.WithContext(ctx)
+	r.Request = r.WithContext(ctx)
 }
 
 // retryableError represents a request failure that can be retried.
