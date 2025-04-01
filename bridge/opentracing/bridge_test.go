@@ -695,6 +695,12 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 			expected: attribute.Int64("int32Key", 12),
 		},
 		{
+			name:     "int64",
+			field:    otlog.Int64("int64Key", int64(12)),
+			expected: attribute.Int64("int64Key", 12),
+		},
+
+		{
 			name:     "uint32",
 			field:    otlog.Uint32("uint32Key", uint32(12)),
 			expected: attribute.Int64("uint32Key", 12),
