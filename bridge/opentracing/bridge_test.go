@@ -682,7 +682,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 			expected: attribute.String("key", "value"),
 		},
 		{
-			name:     "otext.SpanKind doesnt set an attribute",
+			name:     "otext.SpanKind doesn't set an attribute",
 			tagKey:   "span.kind",
 			tagValue: "value",
 			expected: nil,
