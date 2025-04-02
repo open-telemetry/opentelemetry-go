@@ -259,7 +259,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func addExponentialHistogramMetric[N int64 | float64](ch chan<- prometheus.Metric, histogram metricdata.ExponentialHistogram[N], m metricdata.Metrics, name string, kv keyVals) {
+func addExponentialHistogramMetric[N int64 | float64](
+	ch chan<- prometheus.Metric,
+	histogram metricdata.ExponentialHistogram[N],
+	m metricdata.Metrics,
+	name string,
+	kv keyVals,
+) {
 	for _, dp := range histogram.DataPoints {
 		keys, values := getAttrs(dp.Attributes)
 		keys = append(keys, kv.keys...)
@@ -286,7 +292,17 @@ func addExponentialHistogramMetric[N int64 | float64](ch chan<- prometheus.Metri
 			negativeBuckets[int(dp.NegativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
-		m, err := prometheus.NewConstNativeHistogram(desc, dp.Count, float64(dp.Sum), positiveBuckets, negativeBuckets, dp.ZeroCount, dp.Scale, dp.ZeroThreshold, dp.StartTime, values...)
+		m, err := prometheus.NewConstNativeHistogram(
+			desc,
+			dp.Count,
+			float64(dp.Sum),
+			positiveBuckets,
+			negativeBuckets,
+			dp.ZeroCount,
+			dp.Scale,
+			dp.ZeroThreshold,
+			dp.StartTime,
+			values...)
 		if err != nil {
 			otel.Handle(err)
 			continue
