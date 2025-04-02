@@ -319,9 +319,10 @@ add-tags: verify-mods
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
+MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
 .PHONY: lint-markdown
 lint-markdown:
-	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" avtodev/markdown-lint:v1 -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
+	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
 
 .PHONY: verify-readmes
 verify-readmes:
