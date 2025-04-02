@@ -229,7 +229,11 @@ type httpCollector struct {
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func newHTTPCollector(endpoint string, resultCh <-chan exportResult, opts ...func(*httpCollector)) (*httpCollector, error) {
+func newHTTPCollector(
+	endpoint string,
+	resultCh <-chan exportResult,
+	opts ...func(*httpCollector),
+) (*httpCollector, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err

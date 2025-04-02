@@ -25,7 +25,11 @@ func NewTracer(tracer trace.Tracer) octrace.Tracer {
 
 // StartSpan starts a new child span of the current span in the context. If
 // there is no span in the context, it creates a new trace and span.
-func (o *Tracer) StartSpan(ctx context.Context, name string, s ...octrace.StartOption) (context.Context, *octrace.Span) {
+func (o *Tracer) StartSpan(
+	ctx context.Context,
+	name string,
+	s ...octrace.StartOption,
+) (context.Context, *octrace.Span) {
 	otelOpts, err := oc2otel.StartOptions(s)
 	if err != nil {
 		Handle(fmt.Errorf("starting span %q: %w", name, err))
@@ -36,7 +40,12 @@ func (o *Tracer) StartSpan(ctx context.Context, name string, s ...octrace.StartO
 
 // StartSpanWithRemoteParent starts a new child span of the span from the
 // given parent.
-func (o *Tracer) StartSpanWithRemoteParent(ctx context.Context, name string, parent octrace.SpanContext, s ...octrace.StartOption) (context.Context, *octrace.Span) {
+func (o *Tracer) StartSpanWithRemoteParent(
+	ctx context.Context,
+	name string,
+	parent octrace.SpanContext,
+	s ...octrace.StartOption,
+) (context.Context, *octrace.Span) {
 	// make sure span context is zeroed out so we use the remote parent
 	ctx = trace.ContextWithSpan(ctx, nil)
 	ctx = trace.ContextWithRemoteSpanContext(ctx, oc2otel.SpanContext(parent))
@@ -53,6 +62,8 @@ func (o *Tracer) NewContext(parent context.Context, s *octrace.Span) context.Con
 	if otSpan, ok := s.Internal().(*Span); ok {
 		return trace.ContextWithSpan(parent, otSpan.otelSpan)
 	}
-	Handle(fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()))
+	Handle(
+		fmt.Errorf("unable to create context with span %q, since it was created using a different tracer", s.String()),
+	)
 	return parent
 }
