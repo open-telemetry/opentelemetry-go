@@ -6,22 +6,24 @@ package opentracing
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"reflect"
+	"strconv"
+	"strings"
+	"testing"
+
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"reflect"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 type testOnlyTextMapReader struct{}
@@ -793,10 +795,8 @@ func TestBridgeFiledEncoder(t *testing.T) {
 			called = true
 			oe.EmitString("lazy", "value")
 		})
-
 		assert.True(t, called)
 		assert.Equal(t, attribute.String("lazy", "value"), encoder.pairs[0])
-
 	})
 }
 
