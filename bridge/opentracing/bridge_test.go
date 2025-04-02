@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
+
+	otlog "github.com/opentracing/opentracing-go/log"
 
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -662,6 +665,202 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 				assert.ElementsMatch(t, tc.baggageItems, got)
 			})
 		}
+	}
+}
+
+func TestBridgeSpan_LogFields(t *testing.T) {
+	testCases := []struct {
+		name     string
+		field    otlog.Field
+		expected attribute.KeyValue
+	}{
+		{
+			name:     "string",
+			field:    otlog.String("stringKey", "bar"),
+			expected: attribute.String("stringKey", "bar"),
+		},
+		{
+			name:     "bool",
+			field:    otlog.Bool("boolKey", true),
+			expected: attribute.Bool("boolKey", true),
+		},
+		{
+			name:     "int",
+			field:    otlog.Int("intKey", 12),
+			expected: attribute.Int("intKey", 12),
+		},
+		{
+			name:     "int32",
+			field:    otlog.Int32("int32Key", int32(12)),
+			expected: attribute.Int64("int32Key", 12),
+		},
+		{
+			name:     "int64",
+			field:    otlog.Int64("int64Key", int64(12)),
+			expected: attribute.Int64("int64Key", 12),
+		},
+
+		{
+			name:     "uint32",
+			field:    otlog.Uint32("uint32Key", uint32(12)),
+			expected: attribute.Int64("uint32Key", 12),
+		},
+		{
+			name:     "uint64",
+			field:    otlog.Uint64("uint64Key", uint64(12)),
+			expected: attribute.String("uint64Key", strconv.FormatUint(12, 10)),
+		},
+		{
+			name:     "float32",
+			field:    otlog.Float32("float32", float32(1)),
+			expected: attribute.Float64("float32", float64(1)),
+		},
+		{
+			name:     "float64",
+			field:    otlog.Float64("float64", 1.1),
+			expected: attribute.Float64("float64", 1.1),
+		},
+		{
+			name:     "error",
+			field:    otlog.Error(fmt.Errorf("error")),
+			expected: attribute.String("error.object", "error"),
+		},
+		{
+			name:     "object",
+			field:    otlog.Object("object", struct{}{}),
+			expected: attribute.String("object", "{}"),
+		},
+		{
+			name:     "event",
+			field:    otlog.Event("eventValue"),
+			expected: attribute.String("event", "eventValue"),
+		},
+		{
+			name:     "message",
+			field:    otlog.Message("messageValue"),
+			expected: attribute.String("message", "messageValue"),
+		},
+		{
+			name: "lazyLog",
+			field: otlog.Lazy(func(fv otlog.Encoder) {
+				fv.EmitBool("bool", true)
+			}),
+			expected: attribute.Bool("bool", true),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracer := internal.NewMockTracer()
+			b, _ := NewTracerPair(tracer)
+			span := b.StartSpan("test")
+
+			span.LogFields(tc.field)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			event := mockSpan.Events[0]
+			assert.Contains(t, event.Attributes, tc.expected)
+		})
+	}
+}
+
+func TestBridgeSpan_LogKV(t *testing.T) {
+	testCases := []struct {
+		name     string
+		kv       [2]interface{}
+		expected attribute.KeyValue
+	}{
+		{
+			name:     "string",
+			kv:       [2]interface{}{"string", "value"},
+			expected: attribute.String("string", "value"),
+		},
+		{
+			name:     "bool",
+			kv:       [2]interface{}{"boolKey", true},
+			expected: attribute.Bool("boolKey", true),
+		},
+		{
+			name:     "int",
+			kv:       [2]interface{}{"intKey", int(12)},
+			expected: attribute.Int("intKey", 12),
+		},
+		{
+			name:     "int8",
+			kv:       [2]interface{}{"int8Key", int8(12)},
+			expected: attribute.Int64("int8Key", 12),
+		},
+		{
+			name:     "int16",
+			kv:       [2]interface{}{"int16Key", int16(12)},
+			expected: attribute.Int64("int16Key", 12),
+		},
+		{
+			name:     "int32",
+			kv:       [2]interface{}{"int32", int32(12)},
+			expected: attribute.Int64("int32", 12),
+		},
+		{
+			name:     "int64",
+			kv:       [2]interface{}{"int64Key", int64(12)},
+			expected: attribute.Int64("int64Key", 12),
+		},
+		{
+			name:     "uint",
+			kv:       [2]interface{}{"uintKey", uint(12)},
+			expected: attribute.String("uintKey", strconv.FormatUint(12, 10)),
+		},
+		{
+			name:     "uint8",
+			kv:       [2]interface{}{"uint8Key", uint8(12)},
+			expected: attribute.Int64("uint8Key", 12),
+		},
+		{
+			name:     "uint16",
+			kv:       [2]interface{}{"uint16Key", uint16(12)},
+			expected: attribute.Int64("uint16Key", 12),
+		},
+		{
+			name:     "uint32",
+			kv:       [2]interface{}{"uint32Key", uint32(12)},
+			expected: attribute.Int64("uint32Key", 12),
+		},
+		{
+			name:     "uint64",
+			kv:       [2]interface{}{"uint64Key", uint64(12)},
+			expected: attribute.String("uint64Key", strconv.FormatUint(12, 10)),
+		},
+		{
+			name:     "float32",
+			kv:       [2]interface{}{"float32Key", float32(12)},
+			expected: attribute.Float64("float32Key", float64(12)),
+		},
+		{
+			name:     "float64",
+			kv:       [2]interface{}{"float64Key", 1.1},
+			expected: attribute.Float64("float64Key", 1.1),
+		},
+		{
+			name:     "error",
+			kv:       [2]interface{}{"errorKey", fmt.Errorf("error")},
+			expected: attribute.String("errorKey", "error"),
+		},
+		{
+			name:     "objectKey",
+			kv:       [2]interface{}{"objectKey", struct{}{}},
+			expected: attribute.String("objectKey", "{}"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracer := internal.NewMockTracer()
+			b, _ := NewTracerPair(tracer)
+			span := b.StartSpan("test")
+			span.LogKV(tc.kv[0], tc.kv[1])
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			event := mockSpan.Events[0]
+			assert.Contains(t, event.Attributes, tc.expected)
+		})
 	}
 }
 
