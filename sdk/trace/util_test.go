@@ -29,6 +29,18 @@ func basicTracerProvider(t *testing.T) *TracerProvider {
 	return tp
 }
 
+type testError string
+
+var _ error = testError("")
+
+func newTestError(s string) error {
+	return testError(s)
+}
+
+func (e testError) Error() string {
+	return string(e)
+}
+
 // harness is a testing harness used to test implementations of the
 // OpenTelemetry API.
 type harness struct {
