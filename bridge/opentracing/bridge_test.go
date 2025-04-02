@@ -689,9 +689,21 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 		},
 		{
 			name:     "otext.Error with bool value set status code 1",
-			tagKey:   string(ext.Error),
+			tagKey:   "error",
 			tagValue: true,
 			expected: attribute.Int64("status.code", 1),
+		},
+		{
+			name:     "otext.Error with bool but we don't set status code",
+			tagKey:   "error",
+			tagValue: false,
+			expected: nil,
+		},
+		{
+			name:     "otext.Error with non-bool type but we don't set status code",
+			tagKey:   "error",
+			tagValue: "false",
+			expected: nil,
 		},
 	}
 
