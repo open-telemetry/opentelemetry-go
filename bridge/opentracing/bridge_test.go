@@ -668,6 +668,32 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	}
 }
 
+func TestBridgeSpan_SetTag(t *testing.T) {
+	testCases := []struct {
+		name     string
+		field    otlog.Field
+		expected attribute.KeyValue
+	}{
+		{
+			name:     "string",
+			field:    otlog.String("stringKey", "bar"),
+			expected: attribute.String("stringKey", "bar"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracer := internal.NewMockTracer()
+			b, _ := NewTracerPair(tracer)
+			span := b.StartSpan("test")
+
+			span.SetTag("key", "value")
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			assert.Contains(t, mockSpan.Attributes, attribute.String("key", "value"))
+		})
+	}
+}
+
 func TestBridgeSpan_LogFields(t *testing.T) {
 	testCases := []struct {
 		name     string
