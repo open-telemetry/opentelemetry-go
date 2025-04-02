@@ -7,9 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
 )
 
 func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
@@ -33,11 +30,6 @@ func TestEnvOrWithCollectorEndpointOptionsFromEnv(t *testing.T) {
 		},
 	}
 
-	envStore := ottest.NewEnvStore()
-	envStore.Record(envEndpoint)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(envEndpoint, tc.envEndpoint)
