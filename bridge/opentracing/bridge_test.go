@@ -672,14 +672,26 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 	testCases := []struct {
 		name     string
 		tagKey   string
-		tagValue string
-		expected attribute.KeyValue
+		tagValue any
+		expected any
 	}{
 		{
 			name:     "basic",
 			tagKey:   "key",
 			tagValue: "value",
 			expected: attribute.String("key", "value"),
+		},
+		{
+			name:     "otext.SpanKind doesnt set an attribute",
+			tagKey:   "span.kind",
+			tagValue: "value",
+			expected: nil,
+		},
+		{
+			name:     "otext.Error with bool value set status code 1",
+			tagKey:   string(ext.Error),
+			tagValue: true,
+			expected: attribute.Int64("status.code", 1),
 		},
 	}
 
@@ -691,7 +703,11 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 
 			span.SetTag(tc.tagKey, tc.tagValue)
 			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
-			assert.Contains(t, mockSpan.Attributes, tc.expected)
+			if tc.expected != nil {
+				assert.Contains(t, mockSpan.Attributes, tc.expected)
+			} else {
+				assert.Nil(t, mockSpan.Attributes)
+			}
 		})
 	}
 }
