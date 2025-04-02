@@ -36,11 +36,11 @@ func TestOCSpanContextToOTel(t *testing.T) {
 		SpanID:       [8]byte{1, 2, 3, 4, 5, 6, 7, 8},
 		TraceOptions: octrace.TraceOptions(1),
 	}
-	expected := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
+	want := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID:    oteltrace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 		SpanID:     oteltrace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
 		TraceFlags: oteltrace.TraceFlags(1),
 	})
 	got := OCSpanContextToOTel(input)
-	assert.Equal(t, expected, got)
+	assert.Equal(t, want, got)
 }
