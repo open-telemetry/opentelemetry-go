@@ -1,0 +1,25 @@
+header:
+  schema-version: 2.0.0
+  last-updated: '2025-04-02'
+  last-reviewed: '2025-04-02'
+  project-si-source: https://github.com/open-telemetry/.github/security-insights.yml
+
+repository:
+  url: https://github.com/open-telemetry/opentelemetry-go
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  core-team:
+    - name: Damien Mathieu
+      affiliation: Elastic
+    - name: Tyler Yahn
+      affiliation: Splunk
+    - name: Sam Xie
+      affiliation: Cisco/AppDynamics
+    - name: Robert Pająk
+      affiliation: Splunk
+    - name: David Ashpole
+      affiliation: Google
+  license:
+    url: https://github.com/open-telemetry/opentelemetry-go/blob/main/LICENSE
+    expression: Apache-2.0
