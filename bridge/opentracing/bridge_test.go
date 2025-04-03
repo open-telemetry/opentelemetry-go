@@ -12,16 +12,16 @@ import (
 	"strings"
 	"testing"
 
-	otlog "github.com/opentracing/opentracing-go/log"
-
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	otlog "github.com/opentracing/opentracing-go/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -467,6 +467,64 @@ func Test_otTagToOTelAttr(t *testing.T) {
 	}
 }
 
+func TestBridgeSpan_SetTag(t *testing.T) {
+	tracer := internal.NewMockTracer()
+	b, _ := NewTracerPair(tracer)
+
+	testCases := []struct {
+		name     string
+		key      string
+		value    interface{}
+		expected attribute.KeyValue
+	}{
+		// span kind is ignored
+		{
+			name:  "span kind",
+			key:   string(ext.SpanKind),
+			value: "span kind",
+		},
+		{
+			name:  "error tag false",
+			key:   string(ext.Error),
+			value: false,
+		},
+		{
+			name:     "error tag true",
+			key:      string(ext.Error),
+			value:    true,
+			expected: internal.StatusCodeKey.Int(int(codes.Error)),
+		},
+		{
+			name:     "default tag",
+			key:      "string.key",
+			value:    "string.value",
+			expected: attribute.String("string.key", "string.value"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			span := b.StartSpan("test")
+			span.SetTag(tc.key, tc.value)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+
+			if tc.key == string(ext.SpanKind) {
+				assert.Empty(t, mockSpan.Attributes)
+				return
+			}
+
+			if tc.key == string(ext.Error) {
+				if v, ok := tc.value.(bool); !v && ok {
+					assert.Empty(t, mockSpan.Attributes)
+					return
+				}
+			}
+
+			assert.Contains(t, mockSpan.Attributes, tc.expected)
+		})
+	}
+}
+
 func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 	tracer := internal.NewMockTracer()
 	sc := &bridgeSpanContext{}
@@ -666,6 +724,80 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestBridgeFiledEncoder(t *testing.T) {
+	t.Run("emit string", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitString("stringKey", "bar")
+		assert.Equal(t, attribute.String("stringKey", "bar"), encoder.pairs[0])
+	})
+
+	t.Run("emit bool", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitBool("boolKey", true)
+		assert.Equal(t, attribute.Bool("boolKey", true), encoder.pairs[0])
+	})
+
+	t.Run("emit int", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitInt("intKey", 123)
+		assert.Equal(t, attribute.Int("intKey", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit int32", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitInt32("int32Key", int32(123))
+		assert.Equal(t, attribute.Int("int32Key", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit int64", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitInt64("int64Key", int64(123))
+		assert.Equal(t, attribute.Int("int64Key", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit uint32", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitUint32("uint32Key", uint32(123))
+		assert.Equal(t, attribute.Int64("uint32Key", 123), encoder.pairs[0])
+	})
+
+	t.Run("emit uint64", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitUint64("uint64Key", uint64(123))
+		assert.Equal(t, attribute.String("uint64Key", strconv.FormatUint(123, 10)), encoder.pairs[0])
+	})
+
+	t.Run("emit float32", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitFloat32("float32Key", float32(1.1))
+		attr := encoder.pairs[0]
+		assert.InDelta(t, float32(1.1), attr.Value.AsFloat64(), 0.0001)
+	})
+
+	t.Run("emit float64", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitFloat64("float64Key", 1.1)
+		assert.Equal(t, attribute.Float64("float64Key", 1.1), encoder.pairs[0])
+	})
+
+	t.Run("emit object", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		encoder.EmitObject("objectKey", struct{}{})
+		assert.Equal(t, attribute.String("objectKey", "{}"), encoder.pairs[0])
+	})
+
+	t.Run("emit logger", func(t *testing.T) {
+		encoder := &bridgeFieldEncoder{}
+		called := false
+		encoder.EmitLazyLogger(func(oe otlog.Encoder) {
+			called = true
+			oe.EmitString("lazy", "value")
+		})
+		assert.True(t, called)
+		assert.Equal(t, attribute.String("lazy", "value"), encoder.pairs[0])
+	})
 }
 
 func TestBridgeSpan_LogFields(t *testing.T) {
