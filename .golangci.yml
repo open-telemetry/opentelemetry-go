@@ -233,10 +233,13 @@ formatters:
   enable:
     - gofumpt
     - goimports
+    - golines
   settings:
     goimports:
       local-prefixes:
         - go.opentelemetry.io
+    golines:
+      max-len: 120
   exclusions:
     generated: lax
     paths:

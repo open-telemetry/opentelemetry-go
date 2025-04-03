@@ -142,7 +142,10 @@ func (c *GRPCCollector) Headers() map[string][]string {
 }
 
 // Export handles the export req.
-func (c *GRPCCollector) Export(ctx context.Context, req *collpb.ExportMetricsServiceRequest) (*collpb.ExportMetricsServiceResponse, error) {
+func (c *GRPCCollector) Export(
+	ctx context.Context,
+	req *collpb.ExportMetricsServiceRequest,
+) (*collpb.ExportMetricsServiceResponse, error) {
 	c.storage.Add(req)
 
 	if h, ok := metadata.FromIncomingContext(ctx); ok {
@@ -208,7 +211,11 @@ type HTTPCollector struct {
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func NewHTTPCollector(endpoint string, resultCh <-chan ExportResult, opts ...func(*HTTPCollector)) (*HTTPCollector, error) {
+func NewHTTPCollector(
+	endpoint string,
+	resultCh <-chan ExportResult,
+	opts ...func(*HTTPCollector),
+) (*HTTPCollector, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
