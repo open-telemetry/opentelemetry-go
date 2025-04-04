@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"sync"
@@ -241,6 +242,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				addHistogramMetric(ch, v, m, name, kv)
 			case metricdata.Histogram[float64]:
 				addHistogramMetric(ch, v, m, name, kv)
+			case metricdata.ExponentialHistogram[int64]:
+				addExponentialHistogramMetric(ch, v, m, name, kv)
+			case metricdata.ExponentialHistogram[float64]:
+				addExponentialHistogramMetric(ch, v, m, name, kv)
 			case metricdata.Sum[int64]:
 				addSumMetric(ch, v, m, name, kv)
 			case metricdata.Sum[float64]:
@@ -251,6 +256,60 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				addGaugeMetric(ch, v, m, name, kv)
 			}
 		}
+	}
+}
+
+func addExponentialHistogramMetric[N int64 | float64](
+	ch chan<- prometheus.Metric,
+	histogram metricdata.ExponentialHistogram[N],
+	m metricdata.Metrics,
+	name string,
+	kv keyVals,
+) {
+	for _, dp := range histogram.DataPoints {
+		keys, values := getAttrs(dp.Attributes)
+		keys = append(keys, kv.keys...)
+		values = append(values, kv.vals...)
+
+		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+
+		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
+		positiveBuckets := make(map[int]int64)
+		for i, c := range dp.PositiveBucket.Counts {
+			if c > math.MaxInt64 {
+				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", c))
+				continue
+			}
+			positiveBuckets[int(dp.PositiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
+		}
+
+		negativeBuckets := make(map[int]int64)
+		for i, c := range dp.NegativeBucket.Counts {
+			if c > math.MaxInt64 {
+				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", c))
+				continue
+			}
+			negativeBuckets[int(dp.NegativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
+		}
+
+		m, err := prometheus.NewConstNativeHistogram(
+			desc,
+			dp.Count,
+			float64(dp.Sum),
+			positiveBuckets,
+			negativeBuckets,
+			dp.ZeroCount,
+			dp.Scale,
+			dp.ZeroThreshold,
+			dp.StartTime,
+			values...)
+		if err != nil {
+			otel.Handle(err)
+			continue
+		}
+
+		// TODO(GiedriusS): add exemplars here after https://github.com/prometheus/client_golang/pull/1654#pullrequestreview-2434669425 is done.
+		ch <- m
 	}
 }
 
@@ -468,6 +527,8 @@ func convertsToUnderscore(b rune) bool {
 
 func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
 	switch v := m.Data.(type) {
+	case metricdata.ExponentialHistogram[int64], metricdata.ExponentialHistogram[float64]:
+		return dto.MetricType_HISTOGRAM.Enum()
 	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
 		return dto.MetricType_HISTOGRAM.Enum()
 	case metricdata.Sum[float64]:

@@ -36,6 +36,7 @@ func TestPrometheusExporter(t *testing.T) {
 		options             []Option
 		expectedFile        string
 		disableUTF8         bool
+		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
 		{
 			name:         "counter",
@@ -170,6 +171,50 @@ func TestPrometheusExporter(t *testing.T) {
 				require.NoError(t, err)
 				gauge.Add(ctx, 1.0, opt)
 				gauge.Add(ctx, -.25, opt)
+			},
+		},
+		{
+			name:         "exponential histogram",
+			expectedFile: "testdata/exponential_histogram.txt",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+
+				for _, mf := range mfs {
+					if *mf.Name == `exponential_histogram_baz_bytes` {
+						hist = mf
+						break
+					}
+				}
+
+				if hist == nil {
+					t.Fatal("expected to find histogram")
+				}
+
+				m := hist.GetMetric()[0].Histogram
+
+				require.Equal(t, 236.0, *m.SampleSum)
+				require.Equal(t, uint64(4), *m.SampleCount)
+				require.Equal(t, []int64{1, -1, 1, -1, 2}, m.PositiveDelta)
+				require.Equal(t, uint32(5), *m.PositiveSpan[0].Length)
+				require.Equal(t, int32(3), *m.PositiveSpan[0].Offset)
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				// NOTE(GiedriusS): there is no text format for exponential (native)
+				// histograms so we don't expect any output.
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				histogram, err := meter.Float64Histogram(
+					"exponential_histogram_baz",
+					otelmetric.WithDescription("a very nice histogram"),
+					otelmetric.WithUnit("By"),
+				)
+				require.NoError(t, err)
+				histogram.Record(ctx, 23, opt)
+				histogram.Record(ctx, 7, opt)
+				histogram.Record(ctx, 101, opt)
+				histogram.Record(ctx, 105, opt)
 			},
 		},
 		{
@@ -517,7 +562,14 @@ func TestPrometheusExporter(t *testing.T) {
 					metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
 						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 					}},
-				)),
+				),
+					metric.NewView(
+						metric.Instrument{Name: "exponential_histogram_*"},
+						metric.Stream{Aggregation: metric.AggregationBase2ExponentialHistogram{
+							MaxSize: 10,
+						}},
+					),
+				),
 			)
 			meter := provider.Meter(
 				"testmeter",
@@ -533,6 +585,15 @@ func TestPrometheusExporter(t *testing.T) {
 
 			err = testutil.GatherAndCompare(registry, file)
 			require.NoError(t, err)
+
+			if tc.checkMetricFamilies == nil {
+				return
+			}
+
+			mfs, err := registry.Gather()
+			require.NoError(t, err)
+
+			tc.checkMetricFamilies(t, mfs)
 		})
 	}
 }
