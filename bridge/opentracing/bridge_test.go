@@ -466,6 +466,63 @@ func Test_otTagToOTelAttr(t *testing.T) {
 	}
 }
 
+func TestBridgeSpan_SetTag(t *testing.T) {
+	tracer := internal.NewMockTracer()
+	b, _ := NewTracerPair(tracer)
+
+	testCases := []struct {
+		name     string
+		tagKey   string
+		tagValue any
+		expected any
+	}{
+		{
+			name:     "basic",
+			tagKey:   "key",
+			tagValue: "value",
+			expected: attribute.String("key", "value"),
+		},
+		{
+			name:     "otext.SpanKind doesn't set an attribute",
+			tagKey:   "span.kind",
+			tagValue: "value",
+			expected: nil,
+		},
+		{
+			name:     "otext.Error with bool value set status code 1",
+			tagKey:   "error",
+			tagValue: true,
+			expected: attribute.Int64("status.code", 1),
+		},
+		{
+			name:     "otext.Error with bool but we don't set status code",
+			tagKey:   "error",
+			tagValue: false,
+			expected: nil,
+		},
+		{
+			name:     "otext.Error with non-bool type but we don't set status code",
+			tagKey:   "error",
+			tagValue: "false",
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			span := b.StartSpan("test")
+
+			span.SetTag(tc.tagKey, tc.tagValue)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			if tc.expected != nil {
+				assert.Contains(t, mockSpan.Attributes, tc.expected)
+			} else {
+				assert.Nil(t, mockSpan.Attributes)
+			}
+		})
+	}
+}
+
 func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 	tracer := internal.NewMockTracer()
 	sc := &bridgeSpanContext{}
@@ -664,63 +721,6 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 				assert.ElementsMatch(t, tc.baggageItems, got)
 			})
 		}
-	}
-}
-
-func TestBridgeSpan_SetTag(t *testing.T) {
-	tracer := internal.NewMockTracer()
-	b, _ := NewTracerPair(tracer)
-
-	testCases := []struct {
-		name     string
-		tagKey   string
-		tagValue any
-		expected any
-	}{
-		{
-			name:     "basic",
-			tagKey:   "key",
-			tagValue: "value",
-			expected: attribute.String("key", "value"),
-		},
-		{
-			name:     "otext.SpanKind doesn't set an attribute",
-			tagKey:   "span.kind",
-			tagValue: "value",
-			expected: nil,
-		},
-		{
-			name:     "otext.Error with bool value set status code 1",
-			tagKey:   "error",
-			tagValue: true,
-			expected: attribute.Int64("status.code", 1),
-		},
-		{
-			name:     "otext.Error with bool but we don't set status code",
-			tagKey:   "error",
-			tagValue: false,
-			expected: nil,
-		},
-		{
-			name:     "otext.Error with non-bool type but we don't set status code",
-			tagKey:   "error",
-			tagValue: "false",
-			expected: nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			span := b.StartSpan("test")
-
-			span.SetTag(tc.tagKey, tc.tagValue)
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
-			if tc.expected != nil {
-				assert.Contains(t, mockSpan.Attributes, tc.expected)
-			} else {
-				assert.Nil(t, mockSpan.Attributes)
-			}
-		})
 	}
 }
 
