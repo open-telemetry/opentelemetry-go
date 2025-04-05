@@ -477,19 +477,19 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 		expected any
 	}{
 		{
-			name:     "basic span kind",
+			name:     "basic string key / value",
 			tagKey:   "key",
 			tagValue: "value",
 			expected: attribute.String("key", "value"),
 		},
 		{
-			name:     "tag SpanKind without attribute",
+			name:     "tag SpanKind no attribute",
 			tagKey:   "span.kind",
 			tagValue: "value",
 			expected: nil,
 		},
 		{
-			name:     "Error with bool value set status code 1",
+			name:     "Error with bool value and set status code 1",
 			tagKey:   "error",
 			tagValue: true,
 			expected: attribute.Int64("status.code", 1),
