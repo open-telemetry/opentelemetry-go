@@ -4,10 +4,8 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
-	"bytes"
 	"context"
 	stdlog "log"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -18,188 +16,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 )
 
-type concurrentBuffer struct {
-	b bytes.Buffer
-	m sync.Mutex
-}
-
-func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
-	b.m.Lock()
-	defer b.m.Unlock()
-	return b.b.Write(p)
-}
-
-func (b *concurrentBuffer) String() string {
-	b.m.Lock()
-	defer b.m.Unlock()
-	return b.b.String()
-}
-
-func TestEmptyBatchConfig(t *testing.T) {
-	assert.NotPanics(t, func() {
-		var bp BatchProcessor
-		ctx := context.Background()
-		record := new(Record)
-		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
-		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
-		assert.NoError(t, bp.Shutdown(ctx), "Shutdown")
-	})
-}
-
-func TestNewBatchConfig(t *testing.T) {
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		t.Log(err)
-	}))
-
-	testcases := []struct {
-		name    string
-		envars  map[string]string
-		options []BatchProcessorOption
-		want    batchConfig
-	}{
-		{
-			name: "Defaults",
-			want: batchConfig{
-				maxQSize:        newSetting(dfltMaxQSize),
-				expInterval:     newSetting(dfltExpInterval),
-				expTimeout:      newSetting(dfltExpTimeout),
-				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
-				expBufferSize:   newSetting(dfltExpBufferSize),
-			},
-		},
-		{
-			name: "Options",
-			options: []BatchProcessorOption{
-				WithMaxQueueSize(10),
-				WithExportInterval(time.Microsecond),
-				WithExportTimeout(time.Hour),
-				WithExportMaxBatchSize(2),
-				WithExportBufferSize(3),
-			},
-			want: batchConfig{
-				maxQSize:        newSetting(10),
-				expInterval:     newSetting(time.Microsecond),
-				expTimeout:      newSetting(time.Hour),
-				expMaxBatchSize: newSetting(2),
-				expBufferSize:   newSetting(3),
-			},
-		},
-		{
-			name: "Environment",
-			envars: map[string]string{
-				envarMaxQSize:        strconv.Itoa(10),
-				envarExpInterval:     strconv.Itoa(100),
-				envarExpTimeout:      strconv.Itoa(1000),
-				envarExpMaxBatchSize: strconv.Itoa(1),
-			},
-			want: batchConfig{
-				maxQSize:        newSetting(10),
-				expInterval:     newSetting(100 * time.Millisecond),
-				expTimeout:      newSetting(1000 * time.Millisecond),
-				expMaxBatchSize: newSetting(1),
-				expBufferSize:   newSetting(dfltExpBufferSize),
-			},
-		},
-		{
-			name: "InvalidOptions",
-			options: []BatchProcessorOption{
-				WithMaxQueueSize(-11),
-				WithExportInterval(-1 * time.Microsecond),
-				WithExportTimeout(-1 * time.Hour),
-				WithExportMaxBatchSize(-2),
-				WithExportBufferSize(-2),
-			},
-			want: batchConfig{
-				maxQSize:        newSetting(dfltMaxQSize),
-				expInterval:     newSetting(dfltExpInterval),
-				expTimeout:      newSetting(dfltExpTimeout),
-				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
-				expBufferSize:   newSetting(dfltExpBufferSize),
-			},
-		},
-		{
-			name: "InvalidEnvironment",
-			envars: map[string]string{
-				envarMaxQSize:        "-1",
-				envarExpInterval:     "-1",
-				envarExpTimeout:      "-1",
-				envarExpMaxBatchSize: "-1",
-			},
-			want: batchConfig{
-				maxQSize:        newSetting(dfltMaxQSize),
-				expInterval:     newSetting(dfltExpInterval),
-				expTimeout:      newSetting(dfltExpTimeout),
-				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
-				expBufferSize:   newSetting(dfltExpBufferSize),
-			},
-		},
-		{
-			name: "Precedence",
-			envars: map[string]string{
-				envarMaxQSize:        strconv.Itoa(1),
-				envarExpInterval:     strconv.Itoa(100),
-				envarExpTimeout:      strconv.Itoa(1000),
-				envarExpMaxBatchSize: strconv.Itoa(10),
-			},
-			options: []BatchProcessorOption{
-				// These override the environment variables.
-				WithMaxQueueSize(3),
-				WithExportInterval(time.Microsecond),
-				WithExportTimeout(time.Hour),
-				WithExportMaxBatchSize(2),
-				WithExportBufferSize(2),
-			},
-			want: batchConfig{
-				maxQSize:        newSetting(3),
-				expInterval:     newSetting(time.Microsecond),
-				expTimeout:      newSetting(time.Hour),
-				expMaxBatchSize: newSetting(2),
-				expBufferSize:   newSetting(2),
-			},
-		},
-		{
-			name: "BatchLessThanOrEqualToQSize",
-			options: []BatchProcessorOption{
-				WithMaxQueueSize(1),
-				WithExportMaxBatchSize(10),
-				WithExportBufferSize(3),
-			},
-			want: batchConfig{
-				maxQSize:        newSetting(1),
-				expInterval:     newSetting(dfltExpInterval),
-				expTimeout:      newSetting(dfltExpTimeout),
-				expMaxBatchSize: newSetting(1),
-				expBufferSize:   newSetting(3),
-			},
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			for key, value := range tc.envars {
-				t.Setenv(key, value)
-			}
-			assert.Equal(t, tc.want, newBatchConfig(tc.options))
-		})
-	}
-}
-
-func TestBatchProcessor(t *testing.T) {
+func TestBatchProcessorV2(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("NilExporter", func(t *testing.T) {
-		assert.NotPanics(t, func() { NewBatchProcessor(nil) })
+		assert.NotPanics(t, func() { NewBatchProcessorV2(nil) })
 	})
 
 	t.Run("Polling", func(t *testing.T) {
 		e := newTestExporter(nil)
 		const size = 15
-		b := NewBatchProcessor(
+		b := NewBatchProcessorV2(
 			e,
 			WithMaxQueueSize(2*size),
 			WithExportMaxBatchSize(2*size),
@@ -222,7 +53,7 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("OnEmit", func(t *testing.T) {
 		const batch = 10
 		e := newTestExporter(nil)
-		b := NewBatchProcessor(
+		b := NewBatchProcessorV2(
 			e,
 			WithMaxQueueSize(10*batch),
 			WithExportMaxBatchSize(batch),
@@ -245,7 +76,7 @@ func TestBatchProcessor(t *testing.T) {
 		e.ExportTrigger = make(chan struct{})
 
 		const batch = 10
-		b := NewBatchProcessor(
+		b := NewBatchProcessorV2(
 			e,
 			WithMaxQueueSize(3*batch),
 			WithExportMaxBatchSize(batch),
@@ -282,14 +113,14 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("Shutdown", func(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
-			b := NewBatchProcessor(e)
+			b := NewBatchProcessorV2(e)
 			assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
 			assert.NoError(t, b.Shutdown(ctx))
 		})
 
 		t.Run("Multiple", func(t *testing.T) {
 			e := newTestExporter(nil)
-			b := NewBatchProcessor(e)
+			b := NewBatchProcessorV2(e)
 
 			const shutdowns = 3
 			for i := 0; i < shutdowns; i++ {
@@ -300,7 +131,7 @@ func TestBatchProcessor(t *testing.T) {
 
 		t.Run("OnEmit", func(t *testing.T) {
 			e := newTestExporter(nil)
-			b := NewBatchProcessor(e)
+			b := NewBatchProcessorV2(e)
 			assert.NoError(t, b.Shutdown(ctx))
 
 			want := e.ExportN()
@@ -310,7 +141,7 @@ func TestBatchProcessor(t *testing.T) {
 
 		t.Run("ForceFlush", func(t *testing.T) {
 			e := newTestExporter(nil)
-			b := NewBatchProcessor(e)
+			b := NewBatchProcessorV2(e)
 
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.NoError(t, b.Shutdown(ctx))
@@ -323,7 +154,7 @@ func TestBatchProcessor(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
 			t.Cleanup(func() { close(e.ExportTrigger) })
-			b := NewBatchProcessor(e)
+			b := NewBatchProcessorV2(e)
 
 			ctx := context.Background()
 			c, cancel := context.WithCancel(ctx)
@@ -336,7 +167,7 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("ForceFlush", func(t *testing.T) {
 		t.Run("Flush", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
-			b := NewBatchProcessor(
+			b := NewBatchProcessorV2(
 				e,
 				WithMaxQueueSize(100),
 				WithExportMaxBatchSize(10),
@@ -372,7 +203,7 @@ func TestBatchProcessor(t *testing.T) {
 			t.Cleanup(func() { ctxErr = orig })
 
 			const batch = 1
-			b := NewBatchProcessor(
+			b := NewBatchProcessorV2(
 				e,
 				WithMaxQueueSize(10*batch),
 				WithExportMaxBatchSize(batch),
@@ -385,7 +216,7 @@ func TestBatchProcessor(t *testing.T) {
 				require.NoError(t, b.OnEmit(ctx, new(Record)))
 			}
 			assert.Eventually(t, func() bool {
-				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
+				return e.ExportN() > 0 && len(b.queuedChunks) == cap(b.queuedChunks)
 			}, 2*time.Second, time.Microsecond)
 			// 1 export being performed, 1 export in buffer chan, >1 batch
 			// still in queue that an attempt to flush will be made on.
@@ -421,7 +252,7 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
-			b := NewBatchProcessor(e)
+			b := NewBatchProcessorV2(e)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 			r := new(Record)
@@ -447,7 +278,7 @@ func TestBatchProcessor(t *testing.T) {
 		e := newTestExporter(nil)
 		e.ExportTrigger = make(chan struct{})
 
-		b := NewBatchProcessor(
+		b := NewBatchProcessorV2(
 			e,
 			WithMaxQueueSize(1),
 			WithExportMaxBatchSize(1),
@@ -464,7 +295,7 @@ func TestBatchProcessor(t *testing.T) {
 		// Second record will be written to export queue
 		assert.NoError(t, b.OnEmit(ctx, r), "export queue record")
 		require.Eventually(t, func() bool {
-			return len(b.exporter.input) == cap(b.exporter.input)
+			return len(b.queuedChunks) == cap(b.queuedChunks)
 		}, 2*time.Second, time.Microsecond, "blocked queue read not attempted")
 
 		// Third record will be written to BatchProcessor.q
@@ -485,7 +316,7 @@ func TestBatchProcessor(t *testing.T) {
 		const goRoutines = 10
 
 		e := newTestExporter(nil)
-		b := NewBatchProcessor(e)
+		b := NewBatchProcessorV2(e)
 
 		ctx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
@@ -521,14 +352,14 @@ func TestBatchProcessor(t *testing.T) {
 	})
 }
 
-func BenchmarkBatchProcessorOnEmit(b *testing.B) {
+func BenchmarkBatchProcessorV2OnEmit(b *testing.B) {
 	r := new(Record)
 	body := log.BoolValue(true)
 	r.SetBody(body)
 
 	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
 	ctx := context.Background()
-	bp := NewBatchProcessor(
+	bp := NewBatchProcessorV2(
 		defaultNoopExporter,
 		WithMaxQueueSize(b.N+1),
 		WithExportMaxBatchSize(b.N+1),

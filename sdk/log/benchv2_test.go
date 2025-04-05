@@ -6,25 +6,13 @@ package log
 import (
 	"context"
 	"testing"
-	"time"
 
 	"go.opentelemetry.io/otel/log"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type mockDelayExporter struct{}
-
-func (mockDelayExporter) Export(context.Context, []Record) error {
-	time.Sleep(time.Millisecond * 5)
-	return nil
-}
-
-func (mockDelayExporter) Shutdown(context.Context) error { return nil }
-
-func (mockDelayExporter) ForceFlush(context.Context) error { return nil }
-
-func BenchmarkProcessor(b *testing.B) {
+func BenchmarkV2Processor(b *testing.B) {
 	for _, tc := range []struct {
 		name string
 		f    func() []LoggerProviderOption
@@ -38,13 +26,13 @@ func BenchmarkProcessor(b *testing.B) {
 		{
 			name: "Batch",
 			f: func() []LoggerProviderOption {
-				return []LoggerProviderOption{WithProcessor(NewBatchProcessor(noopExporter{}))}
+				return []LoggerProviderOption{WithProcessor(NewBatchProcessorV2(noopExporter{}))}
 			},
 		},
 		{
 			name: "BatchSimulateExport",
 			f: func() []LoggerProviderOption {
-				return []LoggerProviderOption{WithProcessor(NewBatchProcessor(mockDelayExporter{}))}
+				return []LoggerProviderOption{WithProcessor(NewBatchProcessorV2(mockDelayExporter{}))}
 			},
 		},
 		{
@@ -61,7 +49,7 @@ func BenchmarkProcessor(b *testing.B) {
 			f: func() []LoggerProviderOption {
 				return []LoggerProviderOption{
 					WithProcessor(timestampProcessor{}),
-					WithProcessor(NewBatchProcessor(noopExporter{})),
+					WithProcessor(NewBatchProcessorV2(noopExporter{})),
 				}
 			},
 		},
@@ -79,7 +67,7 @@ func BenchmarkProcessor(b *testing.B) {
 			f: func() []LoggerProviderOption {
 				return []LoggerProviderOption{
 					WithProcessor(attrAddProcessor{}),
-					WithProcessor(NewBatchProcessor(noopExporter{})),
+					WithProcessor(NewBatchProcessorV2(noopExporter{})),
 				}
 			},
 		},
@@ -97,7 +85,7 @@ func BenchmarkProcessor(b *testing.B) {
 			f: func() []LoggerProviderOption {
 				return []LoggerProviderOption{
 					WithProcessor(attrSetDecorator{}),
-					WithProcessor(NewBatchProcessor(noopExporter{})),
+					WithProcessor(NewBatchProcessorV2(noopExporter{})),
 				}
 			},
 		},
@@ -124,61 +112,4 @@ func BenchmarkProcessor(b *testing.B) {
 			})
 		})
 	}
-}
-
-type timestampProcessor struct{}
-
-func (p timestampProcessor) OnEmit(ctx context.Context, r *Record) error {
-	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
-	return nil
-}
-
-func (p timestampProcessor) Enabled(context.Context, Record) bool {
-	return true
-}
-
-func (p timestampProcessor) Shutdown(ctx context.Context) error {
-	return nil
-}
-
-func (p timestampProcessor) ForceFlush(ctx context.Context) error {
-	return nil
-}
-
-type attrAddProcessor struct{}
-
-func (p attrAddProcessor) OnEmit(ctx context.Context, r *Record) error {
-	r.AddAttributes(log.String("add", "me"))
-	return nil
-}
-
-func (p attrAddProcessor) Enabled(context.Context, Record) bool {
-	return true
-}
-
-func (p attrAddProcessor) Shutdown(ctx context.Context) error {
-	return nil
-}
-
-func (p attrAddProcessor) ForceFlush(ctx context.Context) error {
-	return nil
-}
-
-type attrSetDecorator struct{}
-
-func (p attrSetDecorator) OnEmit(ctx context.Context, r *Record) error {
-	r.SetAttributes(log.String("replace", "me"))
-	return nil
-}
-
-func (p attrSetDecorator) Enabled(context.Context, Record) bool {
-	return true
-}
-
-func (p attrSetDecorator) Shutdown(ctx context.Context) error {
-	return nil
-}
-
-func (p attrSetDecorator) ForceFlush(ctx context.Context) error {
-	return nil
 }
