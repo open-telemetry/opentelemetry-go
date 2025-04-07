@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/internal"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -473,54 +472,53 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		key      string
-		value    interface{}
-		expected attribute.KeyValue
+		tagKey   string
+		tagValue any
+		expected any
 	}{
-		// span kind is ignored
 		{
-			name:  "span kind",
-			key:   string(ext.SpanKind),
-			value: "span kind",
+			name:     "basic string key / value",
+			tagKey:   "key",
+			tagValue: "value",
+			expected: attribute.String("key", "value"),
 		},
 		{
-			name:  "error tag false",
-			key:   string(ext.Error),
-			value: false,
+			name:     "tag SpanKind no attribute",
+			tagKey:   "span.kind",
+			tagValue: "value",
+			expected: nil,
 		},
 		{
-			name:     "error tag true",
-			key:      string(ext.Error),
-			value:    true,
-			expected: internal.StatusCodeKey.Int(int(codes.Error)),
+			name:     "Error with bool value and set status code 1",
+			tagKey:   "error",
+			tagValue: true,
+			expected: attribute.Int64("status.code", 1),
 		},
 		{
-			name:     "default tag",
-			key:      "string.key",
-			value:    "string.value",
-			expected: attribute.String("string.key", "string.value"),
+			name:     "Error with bool but we don't set status code",
+			tagKey:   "error",
+			tagValue: false,
+			expected: nil,
+		},
+		{
+			name:     "Error with non-bool type but we don't set status code",
+			tagKey:   "error",
+			tagValue: "false",
+			expected: nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			span := b.StartSpan("test")
-			span.SetTag(tc.key, tc.value)
+
+			span.SetTag(tc.tagKey, tc.tagValue)
 			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
-
-			if tc.key == string(ext.SpanKind) {
-				assert.Empty(t, mockSpan.Attributes)
-				return
+			if tc.expected != nil {
+				assert.Contains(t, mockSpan.Attributes, tc.expected)
+			} else {
+				assert.Nil(t, mockSpan.Attributes)
 			}
-
-			if tc.key == string(ext.Error) {
-				if v, ok := tc.value.(bool); !v && ok {
-					assert.Empty(t, mockSpan.Attributes)
-					return
-				}
-			}
-
-			assert.Contains(t, mockSpan.Attributes, tc.expected)
 		})
 	}
 }
