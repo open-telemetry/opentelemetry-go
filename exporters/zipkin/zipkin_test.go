@@ -17,8 +17,6 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
-
 	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
@@ -76,13 +74,7 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 	)
 
 	expectedEndpoint := "http://localhost:19411/api/v2/spans"
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envEndpoint: expectedEndpoint,
-	})
-	assert.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
+	t.Setenv(envEndpoint, expectedEndpoint)
 
 	exp, err = New("")
 
@@ -201,8 +193,11 @@ func TestExportSpans(t *testing.T) {
 		// parent
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+				TraceID: trace.TraceID{
+					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+					0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+				},
+				SpanID: trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
 			SpanKind:   trace.SpanKindServer,
 			Name:       "foo",
@@ -219,12 +214,18 @@ func TestExportSpans(t *testing.T) {
 		// child
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-				SpanID:  trace.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
+				TraceID: trace.TraceID{
+					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+					0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+				},
+				SpanID: trace.SpanID{0xDF, 0xDE, 0xDD, 0xDC, 0xDB, 0xDA, 0xD9, 0xD8},
 			}),
 			Parent: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+				TraceID: trace.TraceID{
+					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+					0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+				},
+				SpanID: trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
 			SpanKind:   trace.SpanKindServer,
 			Name:       "bar",
@@ -394,8 +395,11 @@ func TestWithHeaders(t *testing.T) {
 	spans := tracetest.SpanStubs{
 		{
 			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: trace.TraceID{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F},
-				SpanID:  trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
+				TraceID: trace.TraceID{
+					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+					0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+				},
+				SpanID: trace.SpanID{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 			}),
 		},
 	}.Snapshots()
@@ -420,4 +424,39 @@ func TestWithHeaders(t *testing.T) {
 	assert.Equal(t, headers["host"], req.Host)
 	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
 	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
+}
+
+func TestWithClient(t *testing.T) {
+	customClient := &http.Client{
+		Timeout: 1000,
+	}
+
+	testcases := []struct {
+		name        string
+		client      *http.Client
+		want        *http.Client
+		description string
+	}{
+		{
+			name:        "nil client",
+			client:      nil,
+			want:        http.DefaultClient,
+			description: "should fall back to default client when nil is provided",
+		},
+		{
+			name:        "custom client",
+			client:      customClient,
+			want:        customClient,
+			description: "should use provided custom client",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			exp, err := New("", WithClient(tc.client))
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.want, exp.client)
+		})
+	}
 }
