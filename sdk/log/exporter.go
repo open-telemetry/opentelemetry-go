@@ -200,8 +200,8 @@ func newBufferExporter(exporter Exporter, size int) *bufferExporter {
 	}
 }
 
-func (e *bufferExporter) IsQueueFull() bool {
-	return len(e.input) == cap(e.input)
+func (e *bufferExporter) Ready() bool {
+	return len(e.input) != cap(e.input)
 }
 
 var errStopped = errors.New("exporter stopped")
