@@ -425,3 +425,38 @@ func TestWithHeaders(t *testing.T) {
 	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
 	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
 }
+
+func TestWithClient(t *testing.T) {
+	customClient := &http.Client{
+		Timeout: 1000,
+	}
+
+	testcases := []struct {
+		name        string
+		client      *http.Client
+		want        *http.Client
+		description string
+	}{
+		{
+			name:        "nil client",
+			client:      nil,
+			want:        http.DefaultClient,
+			description: "should fall back to default client when nil is provided",
+		},
+		{
+			name:        "custom client",
+			client:      customClient,
+			want:        customClient,
+			description: "should use provided custom client",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			exp, err := New("", WithClient(tc.client))
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.want, exp.client)
+		})
+	}
+}
