@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/multimod v0.21.0
 	go.opentelemetry.io/build-tools/semconvgen v0.21.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
-	golang.org/x/tools v0.31.0
+	golang.org/x/tools v0.32.0
 	golang.org/x/vuln v1.1.4
 )
 
@@ -214,7 +214,7 @@ require (
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/telemetry v0.0.0-20250406004356-f593adaf3fc1 // indirect
