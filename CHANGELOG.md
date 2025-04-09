@@ -8,14 +8,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-> [!WARNING]
-> This is the last version to support `model.LegacyValidation` for
-> `go.opentelemetry.io/otel/exporters/prometheus`.
-> The next version (v0.59.0) will only support the default `model.UTF8Validation`.
->
-> See also [Change default validation scheme to UTF8Validation](https://github.com/prometheus/common/pull/724)
-> in the prometheus repository.
-
 ### Added
 
 - Add exponential histogram support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6421)
