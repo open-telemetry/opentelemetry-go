@@ -17,8 +17,6 @@ import (
 	"testing"
 	"time"
 
-	ottest "go.opentelemetry.io/otel/exporters/zipkin/internal/internaltest"
-
 	"github.com/go-logr/logr/funcr"
 	zkmodel "github.com/openzipkin/zipkin-go/model"
 	"github.com/stretchr/testify/assert"
@@ -76,13 +74,7 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 	)
 
 	expectedEndpoint := "http://localhost:19411/api/v2/spans"
-	envStore, err := ottest.SetEnvVariables(map[string]string{
-		envEndpoint: expectedEndpoint,
-	})
-	assert.NoError(t, err)
-	defer func() {
-		require.NoError(t, envStore.Restore())
-	}()
+	t.Setenv(envEndpoint, expectedEndpoint)
 
 	exp, err = New("")
 
@@ -432,4 +424,39 @@ func TestWithHeaders(t *testing.T) {
 	assert.Equal(t, headers["host"], req.Host)
 	assert.Equal(t, headers["name1"], req.Header.Get("name1"))
 	assert.Equal(t, headers["name2"], req.Header.Get("name2"))
+}
+
+func TestWithClient(t *testing.T) {
+	customClient := &http.Client{
+		Timeout: 1000,
+	}
+
+	testcases := []struct {
+		name        string
+		client      *http.Client
+		want        *http.Client
+		description string
+	}{
+		{
+			name:        "nil client",
+			client:      nil,
+			want:        http.DefaultClient,
+			description: "should fall back to default client when nil is provided",
+		},
+		{
+			name:        "custom client",
+			client:      customClient,
+			want:        customClient,
+			description: "should use provided custom client",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			exp, err := New("", WithClient(tc.client))
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.want, exp.client)
+		})
+	}
 }
