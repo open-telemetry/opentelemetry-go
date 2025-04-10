@@ -607,7 +607,8 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View, exempl
 
 type unregisterFuncs struct {
 	noop.Registration // Embed noop implementation for future-compatibility.
-	f                 []func()
+
+	f []func()
 }
 
 func (u unregisterFuncs) Unregister() error {
