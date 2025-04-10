@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -66,14 +65,14 @@ func init() {
 }
 
 func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	harness := ottest.NewHarness(t)
+	harness := newHarness(t)
 
-	harness.TestTracerProvider(func() trace.TracerProvider {
+	harness.testTracerProvider(func() trace.TracerProvider {
 		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
 	})
 
 	tp := NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
-	harness.TestTracer(func() trace.Tracer {
+	harness.testTracer(func() trace.Tracer {
 		return tp.Tracer("")
 	})
 }
@@ -1226,8 +1225,8 @@ func TestRecordError(t *testing.T) {
 		msg string
 	}{
 		{
-			err: ottest.NewTestError("test error"),
-			typ: "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError",
+			err: newTestError("test error"),
+			typ: "go.opentelemetry.io/otel/sdk/trace.testError",
 			msg: "test error",
 		},
 		{
@@ -1278,8 +1277,8 @@ func TestRecordError(t *testing.T) {
 }
 
 func TestRecordErrorWithStackTrace(t *testing.T) {
-	err := ottest.NewTestError("test error")
-	typ := "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError"
+	err := newTestError("test error")
+	typ := "go.opentelemetry.io/otel/sdk/trace.testError"
 	msg := "test error"
 
 	te := NewTestExporter()
