@@ -29,7 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
 - `go.opentelemetry.io/otel/log/logtest` is now a separate Go module. (#6465)
 - `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
-- Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569)
+- Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569, #6641)
 
 ### Deprecated
 
