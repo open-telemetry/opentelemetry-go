@@ -25,7 +25,7 @@ var ErrInstrumentName = errors.New("invalid instrument name")
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	noop.Meter
+	noop.Meter // Embed noop implementation for future-compatibility.
 
 	scope instrumentation.Scope
 	pipes pipelines
@@ -537,7 +537,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 }
 
 type observer struct {
-	noop.Observer
+	noop.Observer // Embed noop implementation for future-compatibility.
 
 	pipe    *pipeline
 	float64 map[observableID[float64]]struct{}
@@ -748,7 +748,7 @@ func (p float64InstProvider) lookupHistogram(name string, cfg metric.Float64Hist
 }
 
 type int64Observer struct {
-	noop.Int64Observer
+	noop.Int64Observer // Embed noop implementation for future-compatibility.
 	measures[int64]
 }
 
@@ -758,7 +758,7 @@ func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 }
 
 type float64Observer struct {
-	noop.Float64Observer
+	noop.Float64Observer // Embed noop implementation for future-compatibility.
 	measures[float64]
 }
 

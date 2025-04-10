@@ -59,7 +59,7 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 // LoggerProvider handles the creation and coordination of Loggers. All Loggers
 // created by a LoggerProvider will be associated with the same Resource.
 type LoggerProvider struct {
-	noop.LoggerProvider
+	noop.LoggerProvider // Embed noop implementation for future-compatibility.
 
 	resource                  *resource.Resource
 	processors                []Processor

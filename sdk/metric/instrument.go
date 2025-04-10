@@ -180,10 +180,10 @@ func (i instID) normalize() instID {
 type int64Inst struct {
 	measures []aggregate.Measure[int64]
 
-	noop.Int64Counter
-	noop.Int64UpDownCounter
-	noop.Int64Histogram
-	noop.Int64Gauge
+	noop.Int64Counter       // Embed noop implementation for future-compatibility.
+	noop.Int64UpDownCounter // Embed noop implementation for future-compatibility.
+	noop.Int64Histogram     // Embed noop implementation for future-compatibility.
+	noop.Int64Gauge         // Embed noop implementation for future-compatibility.
 }
 
 var (
@@ -221,10 +221,10 @@ func (i *int64Inst) aggregate(
 type float64Inst struct {
 	measures []aggregate.Measure[float64]
 
-	noop.Float64Counter
-	noop.Float64UpDownCounter
-	noop.Float64Histogram
-	noop.Float64Gauge
+	noop.Float64Counter       // Embed noop implementation for future-compatibility.
+	noop.Float64UpDownCounter // Embed noop implementation for future-compatibility.
+	noop.Float64Histogram     // Embed noop implementation for future-compatibility.
+	noop.Float64Gauge         // Embed noop implementation for future-compatibility.
 }
 
 var (
@@ -268,9 +268,9 @@ type float64Observable struct {
 	metric.Float64Observable
 	*observable[float64]
 
-	noop.Float64ObservableCounter
-	noop.Float64ObservableUpDownCounter
-	noop.Float64ObservableGauge
+	noop.Float64ObservableCounter       // Embed noop implementation for future-compatibility.
+	noop.Float64ObservableUpDownCounter // Embed noop implementation for future-compatibility.
+	noop.Float64ObservableGauge         // Embed noop implementation for future-compatibility.
 }
 
 var (
@@ -289,9 +289,9 @@ type int64Observable struct {
 	metric.Int64Observable
 	*observable[int64]
 
-	noop.Int64ObservableCounter
-	noop.Int64ObservableUpDownCounter
-	noop.Int64ObservableGauge
+	noop.Int64ObservableCounter       // Embed noop implementation for future-compatibility.
+	noop.Int64ObservableUpDownCounter // Embed noop implementation for future-compatibility.
+	noop.Int64ObservableGauge         // Embed noop implementation for future-compatibility.
 }
 
 var (

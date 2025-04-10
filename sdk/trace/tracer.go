@@ -13,7 +13,7 @@ import (
 )
 
 type tracer struct {
-	noop.Tracer
+	noop.Tracer // Embed noop implementation for future-compatibility.
 
 	provider             *TracerProvider
 	instrumentationScope instrumentation.Scope

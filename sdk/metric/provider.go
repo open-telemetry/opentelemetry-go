@@ -18,7 +18,7 @@ import (
 // the same Views applied to them, and have their produced metric telemetry
 // passed to the configured Readers.
 type MeterProvider struct {
-	noop.MeterProvider
+	noop.MeterProvider // Embed noop implementation for future-compatibility.
 
 	pipes  pipelines
 	meters cache[instrumentation.Scope, *meter]

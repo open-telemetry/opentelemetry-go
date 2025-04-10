@@ -20,7 +20,7 @@ var now = time.Now
 var _ log.Logger = (*logger)(nil)
 
 type logger struct {
-	noop.Logger
+	noop.Logger // Embed noop implementation for future-compatibility.
 
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope

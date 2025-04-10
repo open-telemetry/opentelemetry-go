@@ -99,7 +99,7 @@ type ReadWriteSpan interface {
 // recordingSpan is an implementation of the OpenTelemetry Span API
 // representing the individual component of a trace that is sampled.
 type recordingSpan struct {
-	noop.Span
+	noop.Span // Embed noop implementation for future-compatibility.
 
 	// mu protects the contents of this span.
 	mu sync.Mutex
@@ -876,7 +876,7 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context) context.Context {
 // that wraps a SpanContext. It performs no operations other than to return
 // the wrapped SpanContext or TracerProvider that created it.
 type nonRecordingSpan struct {
-	noop.Span
+	noop.Span // Embed noop implementation for future-compatibility.
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
