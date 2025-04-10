@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"go.opentelemetry.io/otel/internal/attribute"
+	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
 
 //go:generate stringer -type=Type
