@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/x"
@@ -180,10 +180,10 @@ func (i instID) normalize() instID {
 type int64Inst struct {
 	measures []aggregate.Measure[int64]
 
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
-	embedded.Int64Gauge
+	noop.Int64Counter
+	noop.Int64UpDownCounter
+	noop.Int64Histogram
+	noop.Int64Gauge
 }
 
 var (
@@ -221,10 +221,10 @@ func (i *int64Inst) aggregate(
 type float64Inst struct {
 	measures []aggregate.Measure[float64]
 
-	embedded.Float64Counter
-	embedded.Float64UpDownCounter
-	embedded.Float64Histogram
-	embedded.Float64Gauge
+	noop.Float64Counter
+	noop.Float64UpDownCounter
+	noop.Float64Histogram
+	noop.Float64Gauge
 }
 
 var (
@@ -268,9 +268,9 @@ type float64Observable struct {
 	metric.Float64Observable
 	*observable[float64]
 
-	embedded.Float64ObservableCounter
-	embedded.Float64ObservableUpDownCounter
-	embedded.Float64ObservableGauge
+	noop.Float64ObservableCounter
+	noop.Float64ObservableUpDownCounter
+	noop.Float64ObservableGauge
 }
 
 var (
@@ -289,9 +289,9 @@ type int64Observable struct {
 	metric.Int64Observable
 	*observable[int64]
 
-	embedded.Int64ObservableCounter
-	embedded.Int64ObservableUpDownCounter
-	embedded.Int64ObservableGauge
+	noop.Int64ObservableCounter
+	noop.Int64ObservableUpDownCounter
+	noop.Int64ObservableGauge
 }
 
 var (

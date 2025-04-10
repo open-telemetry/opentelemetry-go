@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
@@ -64,7 +63,7 @@ func (cfg tracerProviderConfig) MarshalLog() interface{} {
 // TracerProvider is an OpenTelemetry TracerProvider. It provides Tracers to
 // instrumentation so it can trace operational flow through a system.
 type TracerProvider struct {
-	embedded.TracerProvider
+	noop.TracerProvider
 
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Scope]*tracer

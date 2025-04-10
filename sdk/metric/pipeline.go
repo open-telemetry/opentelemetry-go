@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
@@ -606,7 +606,7 @@ func newPipelines(res *resource.Resource, readers []Reader, views []View, exempl
 }
 
 type unregisterFuncs struct {
-	embedded.Registration
+	noop.Registration
 	f []func()
 }
 

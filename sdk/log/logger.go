@@ -9,7 +9,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -20,7 +20,7 @@ var now = time.Now
 var _ log.Logger = (*logger)(nil)
 
 type logger struct {
-	embedded.Logger
+	noop.Logger
 
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope

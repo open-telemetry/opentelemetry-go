@@ -9,11 +9,11 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 type tracer struct {
-	embedded.Tracer
+	noop.Tracer
 
 	provider             *TracerProvider
 	instrumentationScope instrumentation.Scope

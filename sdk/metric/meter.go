@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
@@ -25,7 +25,7 @@ var ErrInstrumentName = errors.New("invalid instrument name")
 // produced by an instrumentation scope will use metric instruments from a
 // single meter.
 type meter struct {
-	embedded.Meter
+	noop.Meter
 
 	scope instrumentation.Scope
 	pipes pipelines
@@ -480,7 +480,7 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) (metric.Registration, error) {
 	if len(insts) == 0 {
 		// Don't allocate a observer if not needed.
-		return noopRegister{}, nil
+		return noop.Registration{}, nil
 	}
 
 	var err error
@@ -513,7 +513,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 
 	if len(validInstruments) == 0 {
 		// All insts use drop aggregation or are invalid.
-		return noopRegister{}, err
+		return noop.Registration{}, err
 	}
 
 	unregs := make([]func(), len(m.pipes))
@@ -537,7 +537,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 }
 
 type observer struct {
-	embedded.Observer
+	noop.Observer
 
 	pipe    *pipeline
 	float64 map[observableID[float64]]struct{}
@@ -623,12 +623,6 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	for _, m := range measures {
 		m(context.Background(), v, c.Attributes())
 	}
-}
-
-type noopRegister struct{ embedded.Registration }
-
-func (noopRegister) Unregister() error {
-	return nil
 }
 
 // int64InstProvider provides int64 OpenTelemetry instruments.
@@ -754,7 +748,7 @@ func (p float64InstProvider) lookupHistogram(name string, cfg metric.Float64Hist
 }
 
 type int64Observer struct {
-	embedded.Int64Observer
+	noop.Int64Observer
 	measures[int64]
 }
 
@@ -764,7 +758,7 @@ func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 }
 
 type float64Observer struct {
-	embedded.Float64Observer
+	noop.Float64Observer
 	measures[float64]
 }
 

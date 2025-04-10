@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -60,7 +59,7 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 // LoggerProvider handles the creation and coordination of Loggers. All Loggers
 // created by a LoggerProvider will be associated with the same Resource.
 type LoggerProvider struct {
-	embedded.LoggerProvider
+	noop.LoggerProvider
 
 	resource                  *resource.Resource
 	processors                []Processor
