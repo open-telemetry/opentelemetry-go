@@ -385,7 +385,7 @@ func TestBatchProcessor(t *testing.T) {
 				require.NoError(t, b.OnEmit(ctx, new(Record)))
 			}
 			assert.Eventually(t, func() bool {
-				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
+				return e.ExportN() > 0 && len(b.recordsBatches) == cap(b.recordsBatches)
 			}, 2*time.Second, time.Microsecond)
 			// 1 export being performed, 1 export in buffer chan, >1 batch
 			// still in queue that an attempt to flush will be made on.
@@ -464,7 +464,7 @@ func TestBatchProcessor(t *testing.T) {
 		// Second record will be written to export queue
 		assert.NoError(t, b.OnEmit(ctx, r), "export queue record")
 		require.Eventually(t, func() bool {
-			return len(b.exporter.input) == cap(b.exporter.input)
+			return len(b.recordsBatches) == cap(b.recordsBatches)
 		}, 2*time.Second, time.Microsecond, "blocked queue read not attempted")
 
 		// Third record will be written to BatchProcessor.q
