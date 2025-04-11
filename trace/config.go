@@ -224,6 +224,29 @@ func WithAttributes(attributes ...attribute.KeyValue) SpanStartEventOption {
 	return attributeOption(attributes)
 }
 
+type lazyAttributeOption func() []attribute.KeyValue
+
+func (o lazyAttributeOption) applySpan(c SpanConfig) SpanConfig {
+	c.attributes = append(c.attributes, o()...)
+	return c
+}
+func (o lazyAttributeOption) applySpanStart(c SpanConfig) SpanConfig { return o.applySpan(c) }
+func (o lazyAttributeOption) applyEvent(c EventConfig) EventConfig {
+	c.attributes = append(c.attributes, o()...)
+	return c
+}
+
+var _ SpanStartEventOption = lazyAttributeOption(func() []attribute.KeyValue { return nil })
+
+// WithLazyAttributes adds the attributes related to a span life-cycle event when need similar to WithAttributes.
+// Lazy attributes are only requested when they will be used allowing for less allocation when sampling is off.
+//
+// This option will not cache the result of the attributesFunc should you wish to reuse the option for multiple calls
+// (e.g. tracer.Start and span.AddEvent). Then one can wrap the function in a `sync.OnceValue`.
+func WithLazyAttributes(attributesFunc func() []attribute.KeyValue) SpanStartEventOption {
+	return lazyAttributeOption(attributesFunc)
+}
+
 // SpanEventOption are options that can be used with an event or a span.
 type SpanEventOption interface {
 	SpanOption
