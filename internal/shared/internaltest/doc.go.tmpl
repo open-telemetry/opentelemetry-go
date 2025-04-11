@@ -1,5 +1,5 @@
 // Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/internaltest/harness.go.tmpl
+// source: internal/shared/internaltest/doc.go.tmpl
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
