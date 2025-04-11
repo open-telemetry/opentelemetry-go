@@ -21,6 +21,14 @@ var excludedDirs = []string{
 	"/.",
 }
 
+// readmeFiles is a list of possible README file names to check for in lowercase
+var readmeFiles = []string{
+	"readme.md",
+	"readme.rst",
+	"readme.txt",
+	"readme",
+}
+
 // verifyReadme is a [os.WalkFunc] that checks if a README.md exists in the same directory as the go.mod file.
 func verifyReadme(path string, info os.FileInfo, err error) error {
 	if err != nil {
@@ -38,15 +46,24 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 		}
 	}
 
-	// Check that a README.md exists in the same directory as the go.mod file.
-	readme := filepath.Join(filepath.Dir(path), "README.md")
-	_, err = os.Stat(readme)
-	if os.IsNotExist(err) {
-		err = fmt.Errorf("couldn't find README.md for %q", filepath.Dir(path))
+	folder := filepath.Dir(path)
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return err
 	}
 
-	return err
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		for _, readme := range readmeFiles {
+			if strings.EqualFold(entry.Name(), readme) {
+				return nil
+			}
+		}
+	}
 
+	return fmt.Errorf("couldn't find README.md for %q", folder)
 }
 
 func main() {
@@ -64,18 +81,15 @@ func main() {
 
 	var errs []string
 	filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
-		err = verifyReadme(path, info, err)
-		if err != nil {
+		if err := verifyReadme(path, info, err); err != nil {
 			errs = append(errs, err.Error())
 		}
 		return nil // continue walking
 	})
 
-	if len(errs) == 0 {
-		return
+	if len(errs) > 0 {
+		fmt.Println("Some readme files couldn't be found.")
+		fmt.Println(strings.Join(errs, "\n"))
+		os.Exit(1)
 	}
-
-	fmt.Println("Error: some READMEs couldn't be found.")
-	fmt.Println(strings.Join(errs, "\n"))
-	os.Exit(1)
 }
