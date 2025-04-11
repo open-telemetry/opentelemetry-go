@@ -156,7 +156,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				global.Warn("dropped log records", "dropped", d)
 			}
 
-			qLen := b.q.Len()
+			var qLen int
 			// Don't copy data from queue unless exporter can accept more, it is very expensive.
 			if b.exporter.Ready() {
 				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
@@ -166,6 +166,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 					}
 					return ok
 				})
+			} else {
+				qLen = b.q.Len()
 			}
 
 			if qLen >= b.batchSize {
