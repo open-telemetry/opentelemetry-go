@@ -21,13 +21,7 @@ var excludedDirs = []string{
 	"/.",
 }
 
-// readmeFiles is a list of possible README file names to check for in lowercase
-var readmeFiles = []string{
-	"readme.md",
-	"readme.rst",
-	"readme.txt",
-	"readme",
-}
+const readmeFilename = "README.md"
 
 // verifyReadme is a [os.WalkFunc] that checks if a README.md exists in the same directory as the go.mod file.
 func verifyReadme(path string, info os.FileInfo, err error) error {
@@ -46,24 +40,15 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 		}
 	}
 
-	folder := filepath.Dir(path)
-	entries, err := os.ReadDir(folder)
-	if err != nil {
-		return err
+
+	// Check that a README.md exists in the same directory as the go.mod file.
+	readme := filepath.Join(filepath.Dir(path), readmeFilename)
+	_, err = os.Stat(readme)
+	if os.IsNotExist(err) {
+		err = fmt.Errorf("couldn't find README.md for %q", filepath.Dir(path))
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		for _, readme := range readmeFiles {
-			if strings.EqualFold(entry.Name(), readme) {
-				return nil
-			}
-		}
-	}
-
-	return fmt.Errorf("couldn't find README.md for %q", folder)
+	return err
 }
 
 func main() {
