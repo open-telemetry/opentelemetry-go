@@ -32,7 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/log/logtest` is now a separate Go module. (#6465)
 - `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
 - `Recorder` in `go.opentelemetry.io/otel/log/logtest` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6507)
-- Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569)
+- Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569, #6641)
 
 ### Deprecated
 
