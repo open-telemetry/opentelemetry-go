@@ -6,8 +6,10 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
+	"weak"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
@@ -67,7 +69,7 @@ type TracerProvider struct {
 	embedded.TracerProvider
 
 	mu             sync.Mutex
-	namedTracer    map[instrumentation.Scope]*tracer
+	namedTracer    sync.Map
 	spanProcessors atomic.Pointer[spanProcessorStates]
 
 	isShutdown atomic.Bool
@@ -105,7 +107,6 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer: make(map[instrumentation.Scope]*tracer),
 		sampler:     o.sampler,
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
@@ -146,22 +147,33 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	}
 
 	t, ok := func() (trace.Tracer, bool) {
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		// Must check the flag after acquiring the mutex to avoid returning a valid tracer if Shutdown() ran
-		// after the first check above but before we acquired the mutex.
-		if p.isShutdown.Load() {
-			return noop.NewTracerProvider().Tracer(name, opts...), true
-		}
-		t, ok := p.namedTracer[is]
-		if !ok {
-			t = &tracer{
-				provider:             p,
-				instrumentationScope: is,
+		var tracerPtr *tracer
+		for {
+			// Must check the flag after acquiring the mutex to avoid returning a valid tracer if Shutdown() ran
+			// after the first check above but before we acquired the mutex.
+			if p.isShutdown.Load() {
+				return noop.NewTracerProvider().Tracer(name, opts...), true
 			}
-			p.namedTracer[is] = t
+			value, ok := p.namedTracer.Load(is)
+			if !ok {
+				if tracerPtr == nil {
+					tracerPtr = &tracer{provider: p, instrumentationScope: is}
+				}
+				wp := weak.Make[tracer](tracerPtr) //nolint
+				var loaded bool
+				value, loaded = p.namedTracer.LoadOrStore(is, wp)
+				if !loaded {
+					runtime.AddCleanup(tracerPtr, func(is instrumentation.Scope) { //nolint
+						p.namedTracer.CompareAndDelete(is, wp)
+					}, is)
+					return tracerPtr, ok
+				}
+			}
+			if mf := value.(weak.Pointer[tracer]).Value(); mf != nil { //nolint
+				return mf, true
+			}
+			p.namedTracer.CompareAndDelete(is, value)
 		}
-		return t, ok
 	}()
 	if !ok {
 		// This code is outside the mutex to not hold the lock while calling third party logging code:

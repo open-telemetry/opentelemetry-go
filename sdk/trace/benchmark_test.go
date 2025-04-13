@@ -6,6 +6,7 @@ package trace_test
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"testing"
 	"time"
 
@@ -388,4 +389,52 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			span.End()
 		}
 	}
+}
+
+func benchmarkTracerWithUniqueName(b *testing.B) {
+	stp := sdktrace.NewTracerProvider()
+
+	names := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		names[i] = fmt.Sprintf("%d tr", i)
+	}
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		stp.Tracer(names[i])
+	}
+	b.StopTimer()
+
+	tr := stp.Tracer(names[rand.IntN(b.N)])
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+}
+
+func benchmarkTracerWithSameName(b *testing.B) {
+	stp := sdktrace.NewTracerProvider()
+
+	names := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		names[i] = "foo"
+	}
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		stp.Tracer(names[i])
+	}
+	b.StopTimer()
+
+	tr := stp.Tracer(names[rand.IntN(b.N)])
+	_, span := tr.Start(context.Background(), "foo")
+	span.End()
+}
+
+func BenchmarkTracerWithUniqueName(b *testing.B) {
+	benchmarkTracerWithUniqueName(b)
+}
+
+func BenchmarkTracerWithSameName(b *testing.B) {
+	benchmarkTracerWithSameName(b)
 }
