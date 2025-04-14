@@ -148,6 +148,42 @@ func BenchmarkStartEndSpan(b *testing.B) {
 	})
 }
 
+func BenchmarkStartEndSpanWithAttributes(b *testing.B) {
+	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo", trace.WithAttributes(
+				attribute.Bool("key1", false),
+				attribute.String("key2", "hello"),
+				attribute.Int64("key3", 123),
+				attribute.Float64("key7", 123.456),
+				attribute.Int("key9", 123),
+			))
+			span.End()
+		}
+	})
+}
+
+func BenchmarkStartEndSpanWithAttributesLazy(b *testing.B) {
+	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t trace.Tracer) {
+		ctx := context.Background()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, span := t.Start(ctx, "/foo", trace.WithAttributesLazy(func() []attribute.KeyValue {
+				return []attribute.KeyValue{
+					attribute.Bool("key1", false),
+					attribute.String("key2", "hello"),
+					attribute.Int64("key3", 123),
+					attribute.Float64("key7", 123.456),
+					attribute.Int("key9", 123),
+				}
+			}))
+			span.End()
+		}
+	})
+}
+
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
 		ctx := context.Background()

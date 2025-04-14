@@ -349,6 +349,16 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			},
 		},
 		{
+			name: "with attributes lazy",
+			options: []SpanStartOption{
+				WithAttributesLazy(func() []attribute.KeyValue {
+					return []attribute.KeyValue{
+						attribute.Bool("key", true),
+					}
+				}),
+			},
+		},
+		{
 			name: "with attributes set multiple times",
 			options: []SpanStartOption{
 				WithAttributes(attribute.Bool("key", true)),
@@ -442,6 +452,16 @@ func BenchmarkNewEventConfig(b *testing.B) {
 			name: "with attributes",
 			options: []EventOption{
 				WithAttributes(attribute.Bool("key", true)),
+			},
+		},
+		{
+			name: "with attributes lazy",
+			options: []EventOption{
+				WithAttributesLazy(func() []attribute.KeyValue {
+					return []attribute.KeyValue{
+						attribute.Bool("key", true),
+					}
+				}),
 			},
 		},
 		{
