@@ -15,13 +15,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.31.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
 - Add `Recording`, `Scope`, and `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6507)
+- Add `AssertEqual` function in `go.opentelemetry.io/otel/log/logtest`. (#6662)
 
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
 - Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
-- Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
+- Remove `RecordFactory` type from `go.opentelemetry.io/otel/log/logtest`. (#6492)
 - Remove `ScopeRecords`, `EmittedRecord`, and `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6507)
+- Remove`AssertRecordEqual` function in `go.opentelemetry.io/otel/log/logtest`, use `AssertEqual` instead. (#6662)
 
 ### Changed
 
