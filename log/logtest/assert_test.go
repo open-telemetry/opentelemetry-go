@@ -33,12 +33,20 @@ func TestAssertEqualRecording(t *testing.T) {
 			name: "equal recordings",
 			a: Recording{
 				Scope{Name: t.Name()}: []Record{
-					{Timestamp: y2k, Context: context.Background(), Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")}},
+					{
+						Timestamp:  y2k,
+						Context:    context.Background(),
+						Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
+					},
 				},
 			},
 			b: Recording{
 				Scope{Name: t.Name()}: []Record{
-					{Timestamp: y2k, Context: context.Background(), Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)}},
+					{
+						Timestamp:  y2k,
+						Context:    context.Background(),
+						Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
+					},
 				},
 			},
 			want: true,

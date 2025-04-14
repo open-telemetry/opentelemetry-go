@@ -26,8 +26,10 @@ func AssertEqual[T Recording | Record](t TestingT, want, got T, opts ...AssertOp
 	}
 
 	cmpOpts := []cmp.Option{
-		cmp.Comparer(func(x, y context.Context) bool { return x == y }),           // Compare context.
-		cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key }), // Unordered compare of the key values.
+		cmp.Comparer(func(x, y context.Context) bool { return x == y }), // Compare context.
+		cmpopts.SortSlices(
+			func(a, b log.KeyValue) bool { return a.Key < b.Key },
+		), // Unordered compare of the key values.
 		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
 	}
 
