@@ -14,12 +14,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.31.0` package.
   The package contains semantic conventions from the `v1.31.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
+- Add `Recording`, `Scope`, and `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6507)
 
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
 - Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
 - Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
+- Remove `ScopeRecords`, `EmittedRecord`, and `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6507)
 
 ### Changed
 
@@ -29,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
 - `go.opentelemetry.io/otel/log/logtest` is now a separate Go module. (#6465)
 - `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
+- `Recorder` in `go.opentelemetry.io/otel/log/logtest` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6507)
 - Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569, #6641)
 
 ### Deprecated
