@@ -45,7 +45,7 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 	readme := filepath.Join(filepath.Dir(path), readmeFilename)
 	_, err = os.Stat(readme)
 	if os.IsNotExist(err) {
-		err = fmt.Errorf("couldn't find README.md for %q", filepath.Dir(path))
+		err = fmt.Errorf("couldn't find %s for %q", readmeFilename, filepath.Dir(path))
 	}
 
 	return err
