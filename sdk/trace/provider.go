@@ -69,7 +69,7 @@ type TracerProvider struct {
 	embedded.TracerProvider
 
 	mu             sync.Mutex
-	namedTracer    sync.Map
+	namedTracer    sync.Map // map[instrumentation.Scope]weak.Pointer[tracer]
 	spanProcessors atomic.Pointer[spanProcessorStates]
 
 	isShutdown atomic.Bool
@@ -147,33 +147,29 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 	}
 
 	t, ok := func() (trace.Tracer, bool) {
-		var tracerPtr *tracer
-		for {
-			// Must check the flag after acquiring the mutex to avoid returning a valid tracer if Shutdown() ran
-			// after the first check above but before we acquired the mutex.
-			if p.isShutdown.Load() {
-				return noop.NewTracerProvider().Tracer(name, opts...), true
-			}
-			value, ok := p.namedTracer.Load(is)
-			if !ok {
-				if tracerPtr == nil {
-					tracerPtr = &tracer{provider: p, instrumentationScope: is}
-				}
-				wp := weak.Make[tracer](tracerPtr) //nolint
-				var loaded bool
-				value, loaded = p.namedTracer.LoadOrStore(is, wp)
-				if !loaded {
-					runtime.AddCleanup(tracerPtr, func(is instrumentation.Scope) { //nolint
-						p.namedTracer.CompareAndDelete(is, wp)
-					}, is)
-					return tracerPtr, ok
-				}
-			}
-			if mf := value.(weak.Pointer[tracer]).Value(); mf != nil { //nolint
-				return mf, true
-			}
-			p.namedTracer.CompareAndDelete(is, value)
+		// Must check the flag after acquiring the mutex to avoid returning a valid tracer if Shutdown() ran
+		// after the first check above but before we acquired the mutex.
+		if p.isShutdown.Load() {
+			return noop.NewTracerProvider().Tracer(name, opts...), true
 		}
+
+		tracerPtr := &tracer{provider: p, instrumentationScope: is}
+		wp := weak.Make(tracerPtr)
+
+		value, loaded := p.namedTracer.LoadOrStore(is, wp)
+		if !loaded {
+			runtime.AddCleanup(tracerPtr, func(is instrumentation.Scope) {
+				p.namedTracer.CompareAndDelete(is, wp)
+			}, is)
+			return tracerPtr, true
+		}
+
+		if mf := value.(weak.Pointer[tracer]).Value(); mf != nil {
+			return mf, true
+		}
+
+		p.namedTracer.CompareAndDelete(is, value)
+		return noop.NewTracerProvider().Tracer(name, opts...), true
 	}()
 	if !ok {
 		// This code is outside the mutex to not hold the lock while calling third party logging code:
