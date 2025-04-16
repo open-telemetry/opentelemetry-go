@@ -361,8 +361,8 @@ func WithTimeout(duration time.Duration) Option {
 // precedence over these settings.
 //
 // These settings define the retry strategy implemented by the exporter.
-// These settings do not define any network retry strategy
-// that is handled by the gRPC ClientConn.
+// These settings do not define any network retry strategy.
+// That is handled by the gRPC ClientConn.
 //
 // If unset, the default retry policy will be used. It will retry the export
 // 5 seconds after receiving a retryable error and increase exponentially
