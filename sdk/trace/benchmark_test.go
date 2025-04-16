@@ -6,9 +6,13 @@ package trace_test
 import (
 	"context"
 	"fmt"
-	"math/rand/v2"
+	"runtime"
+	"sync"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/trace/embedded"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -391,50 +395,47 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 	}
 }
 
-func benchmarkTracerWithUniqueName(b *testing.B) {
-	stp := sdktrace.NewTracerProvider()
+func BenchmarkTracerCleanup(b *testing.B) {
+	b.Run("WithWeakAndCleanup", func(b *testing.B) {
+		p := sdktrace.NewTracerProvider()
 
-	names := make([]string, b.N)
-	for i := 0; i < b.N; i++ {
-		names[i] = fmt.Sprintf("%d tr", i)
-	}
-	b.ResetTimer()
-	b.ReportAllocs()
+		b.ReportAllocs()
+		b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		stp.Tracer(names[i])
-	}
-	b.StopTimer()
+		for i := 0; i < b.N; i++ {
+			func() {
+				tr := p.Tracer(fmt.Sprintf("tracer-%d", i))
+				_ = tr
+			}()
 
-	tr := stp.Tracer(names[rand.IntN(b.N)])
-	_, span := tr.Start(context.Background(), "foo")
-	span.End()
-}
+			if i%100 == 0 {
+				runtime.GC()
+			}
+		}
+	})
 
-func benchmarkTracerWithSameName(b *testing.B) {
-	stp := sdktrace.NewTracerProvider()
+	b.Run("NoWeak, NoCleanup", func(b *testing.B) {
+		type tracer struct {
+			embedded.Tracer
+			provider             *sdktrace.TracerProvider
+			instrumentationScope instrumentation.Scope
+		}
 
-	names := make([]string, b.N)
-	for i := 0; i < b.N; i++ {
-		names[i] = "foo"
-	}
-	b.ResetTimer()
-	b.ReportAllocs()
+		p := sdktrace.NewTracerProvider()
+		var namedTracer sync.Map
 
-	for i := 0; i < b.N; i++ {
-		stp.Tracer(names[i])
-	}
-	b.StopTimer()
+		b.ReportAllocs()
+		b.ResetTimer()
 
-	tr := stp.Tracer(names[rand.IntN(b.N)])
-	_, span := tr.Start(context.Background(), "foo")
-	span.End()
-}
-
-func BenchmarkTracerWithUniqueName(b *testing.B) {
-	benchmarkTracerWithUniqueName(b)
-}
-
-func BenchmarkTracerWithSameName(b *testing.B) {
-	benchmarkTracerWithSameName(b)
+		for i := 0; i < b.N; i++ {
+			func() {
+				name := fmt.Sprintf("tracer-%d", i)
+				scope := instrumentation.Scope{Name: name}
+				_, _ = namedTracer.LoadOrStore(name, &tracer{provider: p, instrumentationScope: scope})
+			}()
+			if i%100 == 0 {
+				runtime.GC()
+			}
+		}
+	})
 }

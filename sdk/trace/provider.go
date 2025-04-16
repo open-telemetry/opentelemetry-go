@@ -154,18 +154,18 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		}
 
 		tracerPtr := &tracer{provider: p, instrumentationScope: is}
-		wp := weak.Make(tracerPtr)
+		wp := weak.Make(tracerPtr) //nolint
 
 		value, loaded := p.namedTracer.LoadOrStore(is, wp)
 		if !loaded {
-			runtime.AddCleanup(tracerPtr, func(is instrumentation.Scope) {
+			runtime.AddCleanup(tracerPtr, func(is instrumentation.Scope) { //nolint
 				p.namedTracer.CompareAndDelete(is, wp)
 			}, is)
-			return tracerPtr, true
+			return tracerPtr, loaded
 		}
 
-		if mf := value.(weak.Pointer[tracer]).Value(); mf != nil {
-			return mf, true
+		if mf := value.(weak.Pointer[tracer]).Value(); mf != nil { //nolint
+			return mf, loaded
 		}
 
 		p.namedTracer.CompareAndDelete(is, value)
