@@ -1,0 +1,161 @@
+{% import 'helpers.j2' as h -%}
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+package semconv // import "go.opentelemetry.io/otel/semconv/{{params.tag}}"
+
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+)
+{%- for attr in ctx.metrics | map(attribute="attributes") | flatten | selectattr("type", "mapping") | unique(attribute="name") | sort(attribute="name") %}
+{%- set name = h.to_go_name(attr.name) %}
+{% if attr.type.members[0].value is string %}
+type {{ name }}Attr string
+{%- elif attribute.type.members[0].value is bool %}
+type {{ name }}Attr bool
+{%- elif attribute.type.members[0].value is int %}
+type {{ name }}Attr int64
+{%- elif attribute.type.members[0].value is float %}
+type {{ name }}Attr float64
+{%- endif %}
+
+var (
+{%- for m in attr.type.members %}
+	{{ name }}{{ h.to_go_name(m.id) }} = {{ name }}Attr(
+		{%- if attr.type.members[0].value is string -%}
+		"{{ m.value }}"
+		{%- else -%}
+		{{ m.value }}
+		{%- endif -%}
+	)
+{%- endfor %}
+)
+{%- endfor %}
+
+{%- for metric in ctx.metrics %}
+{%- set metric_name = h.to_go_name(metric.metric_name) %}
+
+{{ h.metric_typedoc(metric) | comment | trim }}
+type {{ metric_name }} struct {
+	inst metric.{{metric.instrument | map_text("metric_type_interface")}}
+}
+
+{{ ["New" ~ metric_name ~ " returns a new " ~ metric_name ~ " instrument."] | comment }}
+func New{{ metric_name }}(m metric.Meter) ({{ metric_name }}, error) {
+	i, err := m.{{metric.instrument | map_text("metric_type_interface")}}(
+	    "{{metric.metric_name}}",
+	    metric.WithDescription("{{metric.brief}}"),
+	    metric.WithUnit("{{metric.unit}}"),
+	)
+	if err != nil {
+	    return {{metric_name}}{}, err
+	}
+	return {{ metric_name }}{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func ({{ metric_name }}) Name() string {
+	return "{{ metric.metric_name }}"
+}
+
+// Name returns the semantic convention unit of the instrument
+func ({{ metric_name }}) Unit() string {
+	return "{{ metric.unit }}"
+}
+{%- if metric.brief %}
+
+// Name returns the semantic convention description of the instrument
+func ({{ metric_name }}) Description() string {
+	return "{{ metric.brief | trim }}"
+}
+{%- endif %}
+{%- if metric.attributes | length > 0 %}
+
+// Add adds incr to the existing count.
+{%- for attr in metric.attributes | required | attribute_sort %}
+//
+{{ [ "The " ~ attr.name | camel_case ~ " parameter is the " ~ h.lower_first(attr.brief) ] | comment | trim }}
+{%- endfor %}
+func (m {{ metric_name }}) Add(
+    ctx context.Context,
+    incr int64,
+{%- for attr in metric.attributes | required | attribute_sort %}
+{%- if attr.type is mapping %}
+    {{ attr.name | camel_case }} {{ h.to_go_name(attr.name) }}Attr,
+{%- else %}
+    {{ attr.name | camel_case }} {{ attr.type | map_text("attribute_type_value")}},
+{%- endif %}
+{%- endfor %}
+{%- if metric.attributes | not_required | length > 0 %}
+    attrs ...{{metric_name}}Attr,
+{%- endif %}
+) {
+    m.inst.Add(ctx, incr, metric.WithAttributes(
+        {%- if metric.attributes | not_required | length > 0 %}
+		append(
+			{{metric.metric_name | camel_case }}AttrToAttrs(attrs),
+        {%- endif %}
+        {%- for attr in metric.attributes | required | attribute_sort %}
+		{%- if attr.type is mapping %}
+			attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ attr.name | camel_case }}),
+		{%- else %}
+			attribute.{{ attr.type | map_text("attribute_type_method")}}("{{ attr.name }}", {{ attr.name | camel_case }}),
+		{%- endif %}
+        {%- endfor %}
+        {%- if metric.attributes | not_required | length > 0 %}
+		)...,
+        {%- endif %}
+    ))
+}
+{%- if metric.attributes | not_required | length > 0 %}
+
+func {{metric.metric_name | camel_case }}AttrToAttrs(in []{{metric_name}}Attr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.{{metric.metric_name | camel_case }}Attr()
+	}
+	return out
+}
+{%- endif %}
+{%- if metric.attributes | not_required | length > 0 %}
+
+type {{ metric_name }}Attr interface {
+    {{metric.metric_name | camel_case }}Attr() attribute.KeyValue
+}
+
+func (a attr) {{metric.metric_name | camel_case }}Attr() attribute.KeyValue {
+    return a.kv
+}
+{%- endif %}
+{%- else %}
+func (m {{ metric_name }}) Add(ctx context.Context, incr int64) {
+    (*m.instrument).Add(ctx, incr)
+}
+{%- endif %}
+{%- for attr in metric.attributes | not_required | attribute_sort %}
+{%- set name = h.to_go_name(attr.name) %}
+{% if attr.type is mapping %}
+func ({{ metric_name}}) {{name}}(val {{ name }}Attr) {{metric_name}}Attr {
+	return attr{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)}
+}
+{%- else %}
+func ({{ metric_name}}) {{name}}(val {{ attr.type | map_text("attribute_type_value")}}) {{metric_name}}Attr {
+	return attr{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)}
+}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+
+// This is used as a helper for all optional attributes.
+type attr struct {
+	kv attribute.KeyValue
+}

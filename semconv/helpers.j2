@@ -31,12 +31,16 @@ Examples: {{ attr.examples | trim("[]") }}
 {%- endif %}
 {%- endmacro -%}
 
+{%- macro lower_first(line) -%}
+{{ line[0]|lower }}{{ line[1:] }}
+{%- endmacro -%}
+
 {%- macro it_reps(brief) -%}
 {%- set brief = brief | trim() -%}
 It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
-  {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+  {{ lower_first(brief) | trim(".") }}.
 {%- else -%}
-  the {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+  the {{ lower_first(brief) | trim(".") }}.
 {%- endif -%}
 {%- endmacro -%}
 
@@ -110,3 +114,28 @@ var (
 {{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
 {%- endif %}
 {%- endmacro -%}
+
+{%- macro metric_typedoc(metric) -%}
+{%- if not metric.brief -%}
+{{ to_go_name(metric.metric_name) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions.
+{%- else -%}
+{{ to_go_name(metric.metric_name) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro attr_type(attribute) %}
+{%- if attribute.type is mapping %}
+	{%- if attribute.type.members[0].value is string %}string{%- endif %}
+	{%- if attribute.type.members[0].value is int %}int{%- endif %}
+	{%- if attribute.type.members[0].value is float %}double{%- endif %}
+{%- elif attribute.type == "template[boolean]" %}boolean
+{%- elif attribute.type == "template[int]" %}int
+{%- elif attribute.type == "template[double]" %}double
+{%- elif attribute.type == "template[string]" %}string
+{%- elif attribute.type == "template[boolean[]]" %}boolean[]
+{%- elif attribute.type == "template[int[]]" %}int[]
+{%- elif attribute.type == "template[double[]]" %}double[]
+{%- elif attribute.type == "template[string[]]" %}string[]
+{%- else %}{{ attribute.type | trim }}
+{%- endif %}
+{%- endmacro %}

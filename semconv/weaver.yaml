@@ -14,14 +14,12 @@ templates:
       })
     application_mode: single
     file_name: attribute_group.go
-  - pattern: metric.go.j2
+  - pattern: metric.pkg.go.j2
     filter: >
-      semconv_metrics({
-        "exclude_root_namespace": $excluded_namespaces,
-      })
-      | sort_by(.metric_name)
-    application_mode: single
-    file_name: metric.go
+      semconv_grouped_metrics
+      | map(select(.root_namespace == "http"))
+    application_mode: each
+    file_name: "{{ctx.root_namespace | snake_case}}_metric.go"
 comment_formats:
   go:
     format: markdown
@@ -59,6 +57,9 @@ text_maps:
     double[]: "...float64"
     boolean: bool
     boolean[]: "...bool"
+  metric_type_interface:
+    counter: Int64Counter
+    updowncounter: Int64UpDownCounter
 acronyms:
   - ACL
   - AI
