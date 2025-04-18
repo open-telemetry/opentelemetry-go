@@ -4,10 +4,11 @@
 /*
 Package log provides the OpenTelemetry Logs API.
 
-This package is intended to be used by bridges between existing logging
-libraries and OpenTelemetry. Users should not directly use this package as a
-logging library. Instead, install one of the bridges listed in the
-[registry], and use the associated logging library.
+This package defines the API for emitting LogRecords and provides a standard
+interface for integration with the OpenTelemetry ecosystem. It enables the
+use of log appenders (bridges) to connect existing logging libraries with the
+OpenTelemetry log data model. A variety of bridges for popular logging
+libraries are available in the [registry].
 
 # API Implementations
 
