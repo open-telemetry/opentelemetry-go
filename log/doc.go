@@ -14,10 +14,9 @@ This package allows users to emit LogRecords, enabling structured, context-rich 
 that can be easily integrated with observability tools. It ensures that log data is captured
 in a way that is consistent with OpenTelemetry's data model.
 
-Additionally, the log package supports integration with existing logging systems by offering
-log appenders (bridges). These bridges facilitate the connection between popular logging libraries,
-variety of bridges available in the [registry], and the OpenTelemetry log data model. Simplifying 
-the process of adapting current logging setups to benefit from the full capabilities of OpenTelemetry.
+This package can be used to create bridges between existing logging libraries and OpenTelemetry.
+Log bridges allow integrating the existing logging setups with OpenTelemetry.
+The can find log bridges in the [registry].
 
 # API Implementations
 
