@@ -16,7 +16,7 @@ in a way that is consistent with OpenTelemetry's data model.
 
 This package can be used to create bridges between existing logging libraries and OpenTelemetry.
 Log bridges allow integrating the existing logging setups with OpenTelemetry.
-The can find log bridges in the [registry].
+Log bridges can be found in the [registry].
 
 # API Implementations
 
