@@ -31,6 +31,6 @@ is being run on. That way when multiple instances of the code are collected
 at a single endpoint their origin is decipherable.
 
 See [go.opentelemetry.io/otel/log] for more information about
-the OpenTelemetry Logs Bridge API.
+the OpenTelemetry Logs API.
 */
 package log // import "go.opentelemetry.io/otel/sdk/log"
