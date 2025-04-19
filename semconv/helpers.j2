@@ -13,7 +13,16 @@
 {%- endfor -%}
 {%- endmacro -%}
 
-{%- macro to_go_name(fqn) -%}
+{%- macro to_go_name(fqn="", pkg="") -%}
+{%- if pkg != "" -%}
+{%- set n = pkg | length -%}
+{%- if pkg == fqn[:n] -%}
+{%- set fqn = fqn[n:] -%}
+{%- if fqn[0] == "." or fqn[0] == "." -%}
+{%- set fqn = fqn[1:] -%}
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
 {{ repl(smart_title_case(fqn | replace(" ", "") | replace("_", ".") | acronym)) }}
 {%- endmacro -%}
 
@@ -123,11 +132,16 @@ var (
 {%- endif %}
 {%- endmacro -%}
 
+{%- macro member_type(member) %}
+{%- if member.value is string %}string{%- endif %}
+{%- if member.value is boolean %}bool{%- endif %}
+{%- if member.value is int %}int64{%- endif %}
+{%- if member.value is float %}float64{%- endif %}
+{%- endmacro %}
+
 {%- macro attr_type(attribute) %}
 {%- if attribute.type is mapping %}
-	{%- if attribute.type.members[0].value is string %}string{%- endif %}
-	{%- if attribute.type.members[0].value is int %}int{%- endif %}
-	{%- if attribute.type.members[0].value is float %}double{%- endif %}
+{{- member_type(attribute.type.members[0]) }}
 {%- elif attribute.type == "template[boolean]" %}boolean
 {%- elif attribute.type == "template[int]" %}int
 {%- elif attribute.type == "template[double]" %}double

@@ -19,7 +19,7 @@ templates:
       semconv_grouped_metrics
       | map(select(.root_namespace == "http"))
     application_mode: each
-    file_name: "{{ctx.root_namespace | snake_case}}_metric.go"
+    file_name: "{{ctx.root_namespace | snake_case}}/metric.go"
 comment_formats:
   go:
     format: markdown
@@ -60,6 +60,7 @@ text_maps:
   metric_type_interface:
     counter: Int64Counter
     updowncounter: Int64UpDownCounter
+    histogram: Int64Histogram
 acronyms:
   - ACL
   - AI

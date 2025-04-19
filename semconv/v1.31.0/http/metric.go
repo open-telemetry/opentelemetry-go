@@ -3,7 +3,7 @@
 
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-package semconv // import "go.opentelemetry.io/otel/semconv/v1.31.0"
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.31.0/http"
 
 import (
 	"context"
@@ -15,70 +15,70 @@ import (
 type ErrorTypeAttr string
 
 var (
-	ErrorTypeOther = ErrorTypeAttr("_OTHER")
+	ErrorTypeOther ErrorTypeAttr = "_OTHER"
 )
 
-type HTTPConnectionStateAttr string
+type ConnectionStateAttr string
 
 var (
-	HTTPConnectionStateActive = HTTPConnectionStateAttr("active")
-	HTTPConnectionStateIdle = HTTPConnectionStateAttr("idle")
+	ConnectionStateActive ConnectionStateAttr = "active"
+	ConnectionStateIdle ConnectionStateAttr = "idle"
 )
 
-type HTTPRequestMethodAttr string
+type RequestMethodAttr string
 
 var (
-	HTTPRequestMethodConnect = HTTPRequestMethodAttr("CONNECT")
-	HTTPRequestMethodDelete = HTTPRequestMethodAttr("DELETE")
-	HTTPRequestMethodGet = HTTPRequestMethodAttr("GET")
-	HTTPRequestMethodHead = HTTPRequestMethodAttr("HEAD")
-	HTTPRequestMethodOptions = HTTPRequestMethodAttr("OPTIONS")
-	HTTPRequestMethodPatch = HTTPRequestMethodAttr("PATCH")
-	HTTPRequestMethodPost = HTTPRequestMethodAttr("POST")
-	HTTPRequestMethodPut = HTTPRequestMethodAttr("PUT")
-	HTTPRequestMethodTrace = HTTPRequestMethodAttr("TRACE")
-	HTTPRequestMethodOther = HTTPRequestMethodAttr("_OTHER")
+	RequestMethodConnect RequestMethodAttr = "CONNECT"
+	RequestMethodDelete RequestMethodAttr = "DELETE"
+	RequestMethodGet RequestMethodAttr = "GET"
+	RequestMethodHead RequestMethodAttr = "HEAD"
+	RequestMethodOptions RequestMethodAttr = "OPTIONS"
+	RequestMethodPatch RequestMethodAttr = "PATCH"
+	RequestMethodPost RequestMethodAttr = "POST"
+	RequestMethodPut RequestMethodAttr = "PUT"
+	RequestMethodTrace RequestMethodAttr = "TRACE"
+	RequestMethodOther RequestMethodAttr = "_OTHER"
 )
 
 type UserAgentSyntheticTypeAttr string
 
 var (
-	UserAgentSyntheticTypeBot = UserAgentSyntheticTypeAttr("bot")
-	UserAgentSyntheticTypeTest = UserAgentSyntheticTypeAttr("test")
+	UserAgentSyntheticTypeBot UserAgentSyntheticTypeAttr = "bot"
+	UserAgentSyntheticTypeTest UserAgentSyntheticTypeAttr = "test"
 )
 
 // HTTPClientActiveRequests is an instrument used to record metric values
 // conforming to the "http.client.active_requests" semantic conventions. It
 // represents the number of active HTTP requests.
-type HTTPClientActiveRequests struct {
+type ClientActiveRequests struct {
 	inst metric.Int64UpDownCounter
 }
 
-// NewHTTPClientActiveRequests returns a new HTTPClientActiveRequests instrument.
-func NewHTTPClientActiveRequests(m metric.Meter) (HTTPClientActiveRequests, error) {
+// NewClientActiveRequests returns a new ClientActiveRequests instrument.
+func NewClientActiveRequests(m metric.Meter) (ClientActiveRequests, error) {
 	i, err := m.Int64UpDownCounter(
 	    "http.client.active_requests",
 	    metric.WithDescription("Number of active HTTP requests."),
 	    metric.WithUnit("{request}"),
 	)
 	if err != nil {
-	    return HTTPClientActiveRequests{}, err
+	    return ClientActiveRequests{}, err
 	}
-	return HTTPClientActiveRequests{i}, nil
+	return ClientActiveRequests{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPClientActiveRequests) Name() string {
+func (ClientActiveRequests) Name() string {
 	return "http.client.active_requests"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPClientActiveRequests) Unit() string {
+func (ClientActiveRequests) Unit() string {
 	return "{request}"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPClientActiveRequests) Description() string {
+func (ClientActiveRequests) Description() string {
 	return "Number of active HTTP requests."
 }
 
@@ -91,12 +91,12 @@ func (HTTPClientActiveRequests) Description() string {
 // request is sent to.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-func (m HTTPClientActiveRequests) Add(
+func (m ClientActiveRequests) Add(
     ctx context.Context,
     incr int64,
     serverAddress string,
     serverPort int,
-    attrs ...HTTPClientActiveRequestsAttr,
+    attrs ...ClientActiveRequestsAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
@@ -107,7 +107,7 @@ func (m HTTPClientActiveRequests) Add(
     ))
 }
 
-func httpClientActiveRequestsAttrToAttrs(in []HTTPClientActiveRequestsAttr) []attribute.KeyValue {
+func httpClientActiveRequestsAttrToAttrs(in []ClientActiveRequestsAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -119,7 +119,7 @@ func httpClientActiveRequestsAttrToAttrs(in []HTTPClientActiveRequestsAttr) []at
 	return out
 }
 
-type HTTPClientActiveRequestsAttr interface {
+type ClientActiveRequestsAttr interface {
     httpClientActiveRequestsAttr() attribute.KeyValue
 }
 
@@ -127,15 +127,15 @@ func (a attr) httpClientActiveRequestsAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPClientActiveRequests) URLTemplate(val string) HTTPClientActiveRequestsAttr {
+func (ClientActiveRequests) URLTemplate(val string) ClientActiveRequestsAttr {
 	return attr{kv: attribute.String("url.template", val)}
 }
 
-func (HTTPClientActiveRequests) HTTPRequestMethod(val HTTPRequestMethodAttr) HTTPClientActiveRequestsAttr {
-	return attr{kv: attribute.String("http.request.method", val)}
+func (ClientActiveRequests) RequestMethod(val RequestMethodAttr) ClientActiveRequestsAttr {
+	return attr{kv: attribute.String("http.request.method", string(val))}
 }
 
-func (HTTPClientActiveRequests) URLScheme(val string) HTTPClientActiveRequestsAttr {
+func (ClientActiveRequests) URLScheme(val string) ClientActiveRequestsAttr {
 	return attr{kv: attribute.String("url.scheme", val)}
 }
 
@@ -143,36 +143,35 @@ func (HTTPClientActiveRequests) URLScheme(val string) HTTPClientActiveRequestsAt
 // conforming to the "http.client.connection.duration" semantic conventions. It
 // represents the duration of the successfully established outbound HTTP
 // connections.
-type HTTPClientConnectionDuration struct {
-	inst metric.histogram
+type ClientConnectionDuration struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPClientConnectionDuration returns a new HTTPClientConnectionDuration
-// instrument.
-func NewHTTPClientConnectionDuration(m metric.Meter) (HTTPClientConnectionDuration, error) {
-	i, err := m.histogram(
+// NewClientConnectionDuration returns a new ClientConnectionDuration instrument.
+func NewClientConnectionDuration(m metric.Meter) (ClientConnectionDuration, error) {
+	i, err := m.Int64Histogram(
 	    "http.client.connection.duration",
 	    metric.WithDescription("The duration of the successfully established outbound HTTP connections."),
 	    metric.WithUnit("s"),
 	)
 	if err != nil {
-	    return HTTPClientConnectionDuration{}, err
+	    return ClientConnectionDuration{}, err
 	}
-	return HTTPClientConnectionDuration{i}, nil
+	return ClientConnectionDuration{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPClientConnectionDuration) Name() string {
+func (ClientConnectionDuration) Name() string {
 	return "http.client.connection.duration"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPClientConnectionDuration) Unit() string {
+func (ClientConnectionDuration) Unit() string {
 	return "s"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPClientConnectionDuration) Description() string {
+func (ClientConnectionDuration) Description() string {
 	return "The duration of the successfully established outbound HTTP connections."
 }
 
@@ -185,12 +184,12 @@ func (HTTPClientConnectionDuration) Description() string {
 // request is sent to.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-func (m HTTPClientConnectionDuration) Add(
+func (m ClientConnectionDuration) Add(
     ctx context.Context,
     incr int64,
     serverAddress string,
     serverPort int,
-    attrs ...HTTPClientConnectionDurationAttr,
+    attrs ...ClientConnectionDurationAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
@@ -201,7 +200,7 @@ func (m HTTPClientConnectionDuration) Add(
     ))
 }
 
-func httpClientConnectionDurationAttrToAttrs(in []HTTPClientConnectionDurationAttr) []attribute.KeyValue {
+func httpClientConnectionDurationAttrToAttrs(in []ClientConnectionDurationAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -213,7 +212,7 @@ func httpClientConnectionDurationAttrToAttrs(in []HTTPClientConnectionDurationAt
 	return out
 }
 
-type HTTPClientConnectionDurationAttr interface {
+type ClientConnectionDurationAttr interface {
     httpClientConnectionDurationAttr() attribute.KeyValue
 }
 
@@ -221,15 +220,15 @@ func (a attr) httpClientConnectionDurationAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPClientConnectionDuration) NetworkPeerAddress(val string) HTTPClientConnectionDurationAttr {
+func (ClientConnectionDuration) NetworkPeerAddress(val string) ClientConnectionDurationAttr {
 	return attr{kv: attribute.String("network.peer.address", val)}
 }
 
-func (HTTPClientConnectionDuration) NetworkProtocolVersion(val string) HTTPClientConnectionDurationAttr {
+func (ClientConnectionDuration) NetworkProtocolVersion(val string) ClientConnectionDurationAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPClientConnectionDuration) URLScheme(val string) HTTPClientConnectionDurationAttr {
+func (ClientConnectionDuration) URLScheme(val string) ClientConnectionDurationAttr {
 	return attr{kv: attribute.String("url.scheme", val)}
 }
 
@@ -237,36 +236,35 @@ func (HTTPClientConnectionDuration) URLScheme(val string) HTTPClientConnectionDu
 // conforming to the "http.client.open_connections" semantic conventions. It
 // represents the number of outbound HTTP connections that are currently active
 // or idle on the client.
-type HTTPClientOpenConnections struct {
+type ClientOpenConnections struct {
 	inst metric.Int64UpDownCounter
 }
 
-// NewHTTPClientOpenConnections returns a new HTTPClientOpenConnections
-// instrument.
-func NewHTTPClientOpenConnections(m metric.Meter) (HTTPClientOpenConnections, error) {
+// NewClientOpenConnections returns a new ClientOpenConnections instrument.
+func NewClientOpenConnections(m metric.Meter) (ClientOpenConnections, error) {
 	i, err := m.Int64UpDownCounter(
 	    "http.client.open_connections",
 	    metric.WithDescription("Number of outbound HTTP connections that are currently active or idle on the client."),
 	    metric.WithUnit("{connection}"),
 	)
 	if err != nil {
-	    return HTTPClientOpenConnections{}, err
+	    return ClientOpenConnections{}, err
 	}
-	return HTTPClientOpenConnections{i}, nil
+	return ClientOpenConnections{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPClientOpenConnections) Name() string {
+func (ClientOpenConnections) Name() string {
 	return "http.client.open_connections"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPClientOpenConnections) Unit() string {
+func (ClientOpenConnections) Unit() string {
 	return "{connection}"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPClientOpenConnections) Description() string {
+func (ClientOpenConnections) Description() string {
 	return "Number of outbound HTTP connections that are currently active or idle on the client."
 }
 
@@ -282,25 +280,25 @@ func (HTTPClientOpenConnections) Description() string {
 // request is sent to.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-func (m HTTPClientOpenConnections) Add(
+func (m ClientOpenConnections) Add(
     ctx context.Context,
     incr int64,
-    httpConnectionState HTTPConnectionStateAttr,
+    httpConnectionState ConnectionStateAttr,
     serverAddress string,
     serverPort int,
-    attrs ...HTTPClientOpenConnectionsAttr,
+    attrs ...ClientOpenConnectionsAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpClientOpenConnectionsAttrToAttrs(attrs),
-			attribute.String("http.connection.state", httpConnectionState),
+			attribute.String("http.connection.state", string(httpConnectionState)),
 			attribute.String("server.address", serverAddress),
 			attribute.Int("server.port", serverPort),
 		)...,
     ))
 }
 
-func httpClientOpenConnectionsAttrToAttrs(in []HTTPClientOpenConnectionsAttr) []attribute.KeyValue {
+func httpClientOpenConnectionsAttrToAttrs(in []ClientOpenConnectionsAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -312,7 +310,7 @@ func httpClientOpenConnectionsAttrToAttrs(in []HTTPClientOpenConnectionsAttr) []
 	return out
 }
 
-type HTTPClientOpenConnectionsAttr interface {
+type ClientOpenConnectionsAttr interface {
     httpClientOpenConnectionsAttr() attribute.KeyValue
 }
 
@@ -320,51 +318,50 @@ func (a attr) httpClientOpenConnectionsAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPClientOpenConnections) NetworkPeerAddress(val string) HTTPClientOpenConnectionsAttr {
+func (ClientOpenConnections) NetworkPeerAddress(val string) ClientOpenConnectionsAttr {
 	return attr{kv: attribute.String("network.peer.address", val)}
 }
 
-func (HTTPClientOpenConnections) NetworkProtocolVersion(val string) HTTPClientOpenConnectionsAttr {
+func (ClientOpenConnections) NetworkProtocolVersion(val string) ClientOpenConnectionsAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPClientOpenConnections) URLScheme(val string) HTTPClientOpenConnectionsAttr {
+func (ClientOpenConnections) URLScheme(val string) ClientOpenConnectionsAttr {
 	return attr{kv: attribute.String("url.scheme", val)}
 }
 
 // HTTPClientRequestBodySize is an instrument used to record metric values
 // conforming to the "http.client.request.body.size" semantic conventions. It
 // represents the size of HTTP client request bodies.
-type HTTPClientRequestBodySize struct {
-	inst metric.histogram
+type ClientRequestBodySize struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPClientRequestBodySize returns a new HTTPClientRequestBodySize
-// instrument.
-func NewHTTPClientRequestBodySize(m metric.Meter) (HTTPClientRequestBodySize, error) {
-	i, err := m.histogram(
+// NewClientRequestBodySize returns a new ClientRequestBodySize instrument.
+func NewClientRequestBodySize(m metric.Meter) (ClientRequestBodySize, error) {
+	i, err := m.Int64Histogram(
 	    "http.client.request.body.size",
 	    metric.WithDescription("Size of HTTP client request bodies."),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return HTTPClientRequestBodySize{}, err
+	    return ClientRequestBodySize{}, err
 	}
-	return HTTPClientRequestBodySize{i}, nil
+	return ClientRequestBodySize{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPClientRequestBodySize) Name() string {
+func (ClientRequestBodySize) Name() string {
 	return "http.client.request.body.size"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPClientRequestBodySize) Unit() string {
+func (ClientRequestBodySize) Unit() string {
 	return "By"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPClientRequestBodySize) Description() string {
+func (ClientRequestBodySize) Description() string {
 	return "Size of HTTP client request bodies."
 }
 
@@ -381,25 +378,25 @@ func (HTTPClientRequestBodySize) Description() string {
 // request is sent to.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-func (m HTTPClientRequestBodySize) Add(
+func (m ClientRequestBodySize) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     serverAddress string,
     serverPort int,
-    attrs ...HTTPClientRequestBodySizeAttr,
+    attrs ...ClientRequestBodySizeAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpClientRequestBodySizeAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("server.address", serverAddress),
 			attribute.Int("server.port", serverPort),
 		)...,
     ))
 }
 
-func httpClientRequestBodySizeAttrToAttrs(in []HTTPClientRequestBodySizeAttr) []attribute.KeyValue {
+func httpClientRequestBodySizeAttrToAttrs(in []ClientRequestBodySizeAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -411,7 +408,7 @@ func httpClientRequestBodySizeAttrToAttrs(in []HTTPClientRequestBodySizeAttr) []
 	return out
 }
 
-type HTTPClientRequestBodySizeAttr interface {
+type ClientRequestBodySizeAttr interface {
     httpClientRequestBodySizeAttr() attribute.KeyValue
 }
 
@@ -419,63 +416,62 @@ func (a attr) httpClientRequestBodySizeAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPClientRequestBodySize) ErrorType(val ErrorTypeAttr) HTTPClientRequestBodySizeAttr {
-	return attr{kv: attribute.String("error.type", val)}
+func (ClientRequestBodySize) ErrorType(val ErrorTypeAttr) ClientRequestBodySizeAttr {
+	return attr{kv: attribute.String("error.type", string(val))}
 }
 
-func (HTTPClientRequestBodySize) HTTPResponseStatusCode(val int) HTTPClientRequestBodySizeAttr {
+func (ClientRequestBodySize) ResponseStatusCode(val int) ClientRequestBodySizeAttr {
 	return attr{kv: attribute.Int("http.response.status_code", val)}
 }
 
-func (HTTPClientRequestBodySize) NetworkProtocolName(val string) HTTPClientRequestBodySizeAttr {
+func (ClientRequestBodySize) NetworkProtocolName(val string) ClientRequestBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.name", val)}
 }
 
-func (HTTPClientRequestBodySize) URLTemplate(val string) HTTPClientRequestBodySizeAttr {
+func (ClientRequestBodySize) URLTemplate(val string) ClientRequestBodySizeAttr {
 	return attr{kv: attribute.String("url.template", val)}
 }
 
-func (HTTPClientRequestBodySize) NetworkProtocolVersion(val string) HTTPClientRequestBodySizeAttr {
+func (ClientRequestBodySize) NetworkProtocolVersion(val string) ClientRequestBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPClientRequestBodySize) URLScheme(val string) HTTPClientRequestBodySizeAttr {
+func (ClientRequestBodySize) URLScheme(val string) ClientRequestBodySizeAttr {
 	return attr{kv: attribute.String("url.scheme", val)}
 }
 
 // HTTPClientRequestDuration is an instrument used to record metric values
 // conforming to the "http.client.request.duration" semantic conventions. It
 // represents the duration of HTTP client requests.
-type HTTPClientRequestDuration struct {
-	inst metric.histogram
+type ClientRequestDuration struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPClientRequestDuration returns a new HTTPClientRequestDuration
-// instrument.
-func NewHTTPClientRequestDuration(m metric.Meter) (HTTPClientRequestDuration, error) {
-	i, err := m.histogram(
+// NewClientRequestDuration returns a new ClientRequestDuration instrument.
+func NewClientRequestDuration(m metric.Meter) (ClientRequestDuration, error) {
+	i, err := m.Int64Histogram(
 	    "http.client.request.duration",
 	    metric.WithDescription("Duration of HTTP client requests."),
 	    metric.WithUnit("s"),
 	)
 	if err != nil {
-	    return HTTPClientRequestDuration{}, err
+	    return ClientRequestDuration{}, err
 	}
-	return HTTPClientRequestDuration{i}, nil
+	return ClientRequestDuration{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPClientRequestDuration) Name() string {
+func (ClientRequestDuration) Name() string {
 	return "http.client.request.duration"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPClientRequestDuration) Unit() string {
+func (ClientRequestDuration) Unit() string {
 	return "s"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPClientRequestDuration) Description() string {
+func (ClientRequestDuration) Description() string {
 	return "Duration of HTTP client requests."
 }
 
@@ -492,25 +488,25 @@ func (HTTPClientRequestDuration) Description() string {
 // request is sent to.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-func (m HTTPClientRequestDuration) Add(
+func (m ClientRequestDuration) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     serverAddress string,
     serverPort int,
-    attrs ...HTTPClientRequestDurationAttr,
+    attrs ...ClientRequestDurationAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpClientRequestDurationAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("server.address", serverAddress),
 			attribute.Int("server.port", serverPort),
 		)...,
     ))
 }
 
-func httpClientRequestDurationAttrToAttrs(in []HTTPClientRequestDurationAttr) []attribute.KeyValue {
+func httpClientRequestDurationAttrToAttrs(in []ClientRequestDurationAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -522,7 +518,7 @@ func httpClientRequestDurationAttrToAttrs(in []HTTPClientRequestDurationAttr) []
 	return out
 }
 
-type HTTPClientRequestDurationAttr interface {
+type ClientRequestDurationAttr interface {
     httpClientRequestDurationAttr() attribute.KeyValue
 }
 
@@ -530,63 +526,62 @@ func (a attr) httpClientRequestDurationAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPClientRequestDuration) ErrorType(val ErrorTypeAttr) HTTPClientRequestDurationAttr {
-	return attr{kv: attribute.String("error.type", val)}
+func (ClientRequestDuration) ErrorType(val ErrorTypeAttr) ClientRequestDurationAttr {
+	return attr{kv: attribute.String("error.type", string(val))}
 }
 
-func (HTTPClientRequestDuration) HTTPResponseStatusCode(val int) HTTPClientRequestDurationAttr {
+func (ClientRequestDuration) ResponseStatusCode(val int) ClientRequestDurationAttr {
 	return attr{kv: attribute.Int("http.response.status_code", val)}
 }
 
-func (HTTPClientRequestDuration) NetworkProtocolName(val string) HTTPClientRequestDurationAttr {
+func (ClientRequestDuration) NetworkProtocolName(val string) ClientRequestDurationAttr {
 	return attr{kv: attribute.String("network.protocol.name", val)}
 }
 
-func (HTTPClientRequestDuration) NetworkProtocolVersion(val string) HTTPClientRequestDurationAttr {
+func (ClientRequestDuration) NetworkProtocolVersion(val string) ClientRequestDurationAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPClientRequestDuration) URLScheme(val string) HTTPClientRequestDurationAttr {
+func (ClientRequestDuration) URLScheme(val string) ClientRequestDurationAttr {
 	return attr{kv: attribute.String("url.scheme", val)}
 }
 
-func (HTTPClientRequestDuration) URLTemplate(val string) HTTPClientRequestDurationAttr {
+func (ClientRequestDuration) URLTemplate(val string) ClientRequestDurationAttr {
 	return attr{kv: attribute.String("url.template", val)}
 }
 
 // HTTPClientResponseBodySize is an instrument used to record metric values
 // conforming to the "http.client.response.body.size" semantic conventions. It
 // represents the size of HTTP client response bodies.
-type HTTPClientResponseBodySize struct {
-	inst metric.histogram
+type ClientResponseBodySize struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPClientResponseBodySize returns a new HTTPClientResponseBodySize
-// instrument.
-func NewHTTPClientResponseBodySize(m metric.Meter) (HTTPClientResponseBodySize, error) {
-	i, err := m.histogram(
+// NewClientResponseBodySize returns a new ClientResponseBodySize instrument.
+func NewClientResponseBodySize(m metric.Meter) (ClientResponseBodySize, error) {
+	i, err := m.Int64Histogram(
 	    "http.client.response.body.size",
 	    metric.WithDescription("Size of HTTP client response bodies."),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return HTTPClientResponseBodySize{}, err
+	    return ClientResponseBodySize{}, err
 	}
-	return HTTPClientResponseBodySize{i}, nil
+	return ClientResponseBodySize{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPClientResponseBodySize) Name() string {
+func (ClientResponseBodySize) Name() string {
 	return "http.client.response.body.size"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPClientResponseBodySize) Unit() string {
+func (ClientResponseBodySize) Unit() string {
 	return "By"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPClientResponseBodySize) Description() string {
+func (ClientResponseBodySize) Description() string {
 	return "Size of HTTP client response bodies."
 }
 
@@ -603,25 +598,25 @@ func (HTTPClientResponseBodySize) Description() string {
 // request is sent to.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-func (m HTTPClientResponseBodySize) Add(
+func (m ClientResponseBodySize) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     serverAddress string,
     serverPort int,
-    attrs ...HTTPClientResponseBodySizeAttr,
+    attrs ...ClientResponseBodySizeAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpClientResponseBodySizeAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("server.address", serverAddress),
 			attribute.Int("server.port", serverPort),
 		)...,
     ))
 }
 
-func httpClientResponseBodySizeAttrToAttrs(in []HTTPClientResponseBodySizeAttr) []attribute.KeyValue {
+func httpClientResponseBodySizeAttrToAttrs(in []ClientResponseBodySizeAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -633,7 +628,7 @@ func httpClientResponseBodySizeAttrToAttrs(in []HTTPClientResponseBodySizeAttr) 
 	return out
 }
 
-type HTTPClientResponseBodySizeAttr interface {
+type ClientResponseBodySizeAttr interface {
     httpClientResponseBodySizeAttr() attribute.KeyValue
 }
 
@@ -641,62 +636,62 @@ func (a attr) httpClientResponseBodySizeAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPClientResponseBodySize) ErrorType(val ErrorTypeAttr) HTTPClientResponseBodySizeAttr {
-	return attr{kv: attribute.String("error.type", val)}
+func (ClientResponseBodySize) ErrorType(val ErrorTypeAttr) ClientResponseBodySizeAttr {
+	return attr{kv: attribute.String("error.type", string(val))}
 }
 
-func (HTTPClientResponseBodySize) HTTPResponseStatusCode(val int) HTTPClientResponseBodySizeAttr {
+func (ClientResponseBodySize) ResponseStatusCode(val int) ClientResponseBodySizeAttr {
 	return attr{kv: attribute.Int("http.response.status_code", val)}
 }
 
-func (HTTPClientResponseBodySize) NetworkProtocolName(val string) HTTPClientResponseBodySizeAttr {
+func (ClientResponseBodySize) NetworkProtocolName(val string) ClientResponseBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.name", val)}
 }
 
-func (HTTPClientResponseBodySize) URLTemplate(val string) HTTPClientResponseBodySizeAttr {
+func (ClientResponseBodySize) URLTemplate(val string) ClientResponseBodySizeAttr {
 	return attr{kv: attribute.String("url.template", val)}
 }
 
-func (HTTPClientResponseBodySize) NetworkProtocolVersion(val string) HTTPClientResponseBodySizeAttr {
+func (ClientResponseBodySize) NetworkProtocolVersion(val string) ClientResponseBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPClientResponseBodySize) URLScheme(val string) HTTPClientResponseBodySizeAttr {
+func (ClientResponseBodySize) URLScheme(val string) ClientResponseBodySizeAttr {
 	return attr{kv: attribute.String("url.scheme", val)}
 }
 
 // HTTPServerActiveRequests is an instrument used to record metric values
 // conforming to the "http.server.active_requests" semantic conventions. It
 // represents the number of active HTTP server requests.
-type HTTPServerActiveRequests struct {
+type ServerActiveRequests struct {
 	inst metric.Int64UpDownCounter
 }
 
-// NewHTTPServerActiveRequests returns a new HTTPServerActiveRequests instrument.
-func NewHTTPServerActiveRequests(m metric.Meter) (HTTPServerActiveRequests, error) {
+// NewServerActiveRequests returns a new ServerActiveRequests instrument.
+func NewServerActiveRequests(m metric.Meter) (ServerActiveRequests, error) {
 	i, err := m.Int64UpDownCounter(
 	    "http.server.active_requests",
 	    metric.WithDescription("Number of active HTTP server requests."),
 	    metric.WithUnit("{request}"),
 	)
 	if err != nil {
-	    return HTTPServerActiveRequests{}, err
+	    return ServerActiveRequests{}, err
 	}
-	return HTTPServerActiveRequests{i}, nil
+	return ServerActiveRequests{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPServerActiveRequests) Name() string {
+func (ServerActiveRequests) Name() string {
 	return "http.server.active_requests"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPServerActiveRequests) Unit() string {
+func (ServerActiveRequests) Unit() string {
 	return "{request}"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPServerActiveRequests) Description() string {
+func (ServerActiveRequests) Description() string {
 	return "Number of active HTTP server requests."
 }
 
@@ -708,23 +703,23 @@ func (HTTPServerActiveRequests) Description() string {
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (m HTTPServerActiveRequests) Add(
+func (m ServerActiveRequests) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     urlScheme string,
-    attrs ...HTTPServerActiveRequestsAttr,
+    attrs ...ServerActiveRequestsAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpServerActiveRequestsAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("url.scheme", urlScheme),
 		)...,
     ))
 }
 
-func httpServerActiveRequestsAttrToAttrs(in []HTTPServerActiveRequestsAttr) []attribute.KeyValue {
+func httpServerActiveRequestsAttrToAttrs(in []ServerActiveRequestsAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -736,7 +731,7 @@ func httpServerActiveRequestsAttrToAttrs(in []HTTPServerActiveRequestsAttr) []at
 	return out
 }
 
-type HTTPServerActiveRequestsAttr interface {
+type ServerActiveRequestsAttr interface {
     httpServerActiveRequestsAttr() attribute.KeyValue
 }
 
@@ -744,47 +739,46 @@ func (a attr) httpServerActiveRequestsAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPServerActiveRequests) ServerAddress(val string) HTTPServerActiveRequestsAttr {
+func (ServerActiveRequests) ServerAddress(val string) ServerActiveRequestsAttr {
 	return attr{kv: attribute.String("server.address", val)}
 }
 
-func (HTTPServerActiveRequests) ServerPort(val int) HTTPServerActiveRequestsAttr {
+func (ServerActiveRequests) ServerPort(val int) ServerActiveRequestsAttr {
 	return attr{kv: attribute.Int("server.port", val)}
 }
 
 // HTTPServerRequestBodySize is an instrument used to record metric values
 // conforming to the "http.server.request.body.size" semantic conventions. It
 // represents the size of HTTP server request bodies.
-type HTTPServerRequestBodySize struct {
-	inst metric.histogram
+type ServerRequestBodySize struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPServerRequestBodySize returns a new HTTPServerRequestBodySize
-// instrument.
-func NewHTTPServerRequestBodySize(m metric.Meter) (HTTPServerRequestBodySize, error) {
-	i, err := m.histogram(
+// NewServerRequestBodySize returns a new ServerRequestBodySize instrument.
+func NewServerRequestBodySize(m metric.Meter) (ServerRequestBodySize, error) {
+	i, err := m.Int64Histogram(
 	    "http.server.request.body.size",
 	    metric.WithDescription("Size of HTTP server request bodies."),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return HTTPServerRequestBodySize{}, err
+	    return ServerRequestBodySize{}, err
 	}
-	return HTTPServerRequestBodySize{i}, nil
+	return ServerRequestBodySize{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPServerRequestBodySize) Name() string {
+func (ServerRequestBodySize) Name() string {
 	return "http.server.request.body.size"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPServerRequestBodySize) Unit() string {
+func (ServerRequestBodySize) Unit() string {
 	return "By"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPServerRequestBodySize) Description() string {
+func (ServerRequestBodySize) Description() string {
 	return "Size of HTTP server request bodies."
 }
 
@@ -796,23 +790,23 @@ func (HTTPServerRequestBodySize) Description() string {
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (m HTTPServerRequestBodySize) Add(
+func (m ServerRequestBodySize) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     urlScheme string,
-    attrs ...HTTPServerRequestBodySizeAttr,
+    attrs ...ServerRequestBodySizeAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpServerRequestBodySizeAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("url.scheme", urlScheme),
 		)...,
     ))
 }
 
-func httpServerRequestBodySizeAttrToAttrs(in []HTTPServerRequestBodySizeAttr) []attribute.KeyValue {
+func httpServerRequestBodySizeAttrToAttrs(in []ServerRequestBodySizeAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -824,7 +818,7 @@ func httpServerRequestBodySizeAttrToAttrs(in []HTTPServerRequestBodySizeAttr) []
 	return out
 }
 
-type HTTPServerRequestBodySizeAttr interface {
+type ServerRequestBodySizeAttr interface {
     httpServerRequestBodySizeAttr() attribute.KeyValue
 }
 
@@ -832,71 +826,70 @@ func (a attr) httpServerRequestBodySizeAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPServerRequestBodySize) ErrorType(val ErrorTypeAttr) HTTPServerRequestBodySizeAttr {
-	return attr{kv: attribute.String("error.type", val)}
+func (ServerRequestBodySize) ErrorType(val ErrorTypeAttr) ServerRequestBodySizeAttr {
+	return attr{kv: attribute.String("error.type", string(val))}
 }
 
-func (HTTPServerRequestBodySize) HTTPResponseStatusCode(val int) HTTPServerRequestBodySizeAttr {
+func (ServerRequestBodySize) ResponseStatusCode(val int) ServerRequestBodySizeAttr {
 	return attr{kv: attribute.Int("http.response.status_code", val)}
 }
 
-func (HTTPServerRequestBodySize) HTTPRoute(val string) HTTPServerRequestBodySizeAttr {
+func (ServerRequestBodySize) Route(val string) ServerRequestBodySizeAttr {
 	return attr{kv: attribute.String("http.route", val)}
 }
 
-func (HTTPServerRequestBodySize) NetworkProtocolName(val string) HTTPServerRequestBodySizeAttr {
+func (ServerRequestBodySize) NetworkProtocolName(val string) ServerRequestBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.name", val)}
 }
 
-func (HTTPServerRequestBodySize) NetworkProtocolVersion(val string) HTTPServerRequestBodySizeAttr {
+func (ServerRequestBodySize) NetworkProtocolVersion(val string) ServerRequestBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPServerRequestBodySize) ServerAddress(val string) HTTPServerRequestBodySizeAttr {
+func (ServerRequestBodySize) ServerAddress(val string) ServerRequestBodySizeAttr {
 	return attr{kv: attribute.String("server.address", val)}
 }
 
-func (HTTPServerRequestBodySize) ServerPort(val int) HTTPServerRequestBodySizeAttr {
+func (ServerRequestBodySize) ServerPort(val int) ServerRequestBodySizeAttr {
 	return attr{kv: attribute.Int("server.port", val)}
 }
 
-func (HTTPServerRequestBodySize) UserAgentSyntheticType(val UserAgentSyntheticTypeAttr) HTTPServerRequestBodySizeAttr {
-	return attr{kv: attribute.String("user_agent.synthetic.type", val)}
+func (ServerRequestBodySize) UserAgentSyntheticType(val UserAgentSyntheticTypeAttr) ServerRequestBodySizeAttr {
+	return attr{kv: attribute.String("user_agent.synthetic.type", string(val))}
 }
 
 // HTTPServerRequestDuration is an instrument used to record metric values
 // conforming to the "http.server.request.duration" semantic conventions. It
 // represents the duration of HTTP server requests.
-type HTTPServerRequestDuration struct {
-	inst metric.histogram
+type ServerRequestDuration struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPServerRequestDuration returns a new HTTPServerRequestDuration
-// instrument.
-func NewHTTPServerRequestDuration(m metric.Meter) (HTTPServerRequestDuration, error) {
-	i, err := m.histogram(
+// NewServerRequestDuration returns a new ServerRequestDuration instrument.
+func NewServerRequestDuration(m metric.Meter) (ServerRequestDuration, error) {
+	i, err := m.Int64Histogram(
 	    "http.server.request.duration",
 	    metric.WithDescription("Duration of HTTP server requests."),
 	    metric.WithUnit("s"),
 	)
 	if err != nil {
-	    return HTTPServerRequestDuration{}, err
+	    return ServerRequestDuration{}, err
 	}
-	return HTTPServerRequestDuration{i}, nil
+	return ServerRequestDuration{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPServerRequestDuration) Name() string {
+func (ServerRequestDuration) Name() string {
 	return "http.server.request.duration"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPServerRequestDuration) Unit() string {
+func (ServerRequestDuration) Unit() string {
 	return "s"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPServerRequestDuration) Description() string {
+func (ServerRequestDuration) Description() string {
 	return "Duration of HTTP server requests."
 }
 
@@ -908,23 +901,23 @@ func (HTTPServerRequestDuration) Description() string {
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (m HTTPServerRequestDuration) Add(
+func (m ServerRequestDuration) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     urlScheme string,
-    attrs ...HTTPServerRequestDurationAttr,
+    attrs ...ServerRequestDurationAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpServerRequestDurationAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("url.scheme", urlScheme),
 		)...,
     ))
 }
 
-func httpServerRequestDurationAttrToAttrs(in []HTTPServerRequestDurationAttr) []attribute.KeyValue {
+func httpServerRequestDurationAttrToAttrs(in []ServerRequestDurationAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -936,7 +929,7 @@ func httpServerRequestDurationAttrToAttrs(in []HTTPServerRequestDurationAttr) []
 	return out
 }
 
-type HTTPServerRequestDurationAttr interface {
+type ServerRequestDurationAttr interface {
     httpServerRequestDurationAttr() attribute.KeyValue
 }
 
@@ -944,71 +937,70 @@ func (a attr) httpServerRequestDurationAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPServerRequestDuration) ErrorType(val ErrorTypeAttr) HTTPServerRequestDurationAttr {
-	return attr{kv: attribute.String("error.type", val)}
+func (ServerRequestDuration) ErrorType(val ErrorTypeAttr) ServerRequestDurationAttr {
+	return attr{kv: attribute.String("error.type", string(val))}
 }
 
-func (HTTPServerRequestDuration) HTTPResponseStatusCode(val int) HTTPServerRequestDurationAttr {
+func (ServerRequestDuration) ResponseStatusCode(val int) ServerRequestDurationAttr {
 	return attr{kv: attribute.Int("http.response.status_code", val)}
 }
 
-func (HTTPServerRequestDuration) HTTPRoute(val string) HTTPServerRequestDurationAttr {
+func (ServerRequestDuration) Route(val string) ServerRequestDurationAttr {
 	return attr{kv: attribute.String("http.route", val)}
 }
 
-func (HTTPServerRequestDuration) NetworkProtocolName(val string) HTTPServerRequestDurationAttr {
+func (ServerRequestDuration) NetworkProtocolName(val string) ServerRequestDurationAttr {
 	return attr{kv: attribute.String("network.protocol.name", val)}
 }
 
-func (HTTPServerRequestDuration) NetworkProtocolVersion(val string) HTTPServerRequestDurationAttr {
+func (ServerRequestDuration) NetworkProtocolVersion(val string) ServerRequestDurationAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPServerRequestDuration) ServerAddress(val string) HTTPServerRequestDurationAttr {
+func (ServerRequestDuration) ServerAddress(val string) ServerRequestDurationAttr {
 	return attr{kv: attribute.String("server.address", val)}
 }
 
-func (HTTPServerRequestDuration) ServerPort(val int) HTTPServerRequestDurationAttr {
+func (ServerRequestDuration) ServerPort(val int) ServerRequestDurationAttr {
 	return attr{kv: attribute.Int("server.port", val)}
 }
 
-func (HTTPServerRequestDuration) UserAgentSyntheticType(val UserAgentSyntheticTypeAttr) HTTPServerRequestDurationAttr {
-	return attr{kv: attribute.String("user_agent.synthetic.type", val)}
+func (ServerRequestDuration) UserAgentSyntheticType(val UserAgentSyntheticTypeAttr) ServerRequestDurationAttr {
+	return attr{kv: attribute.String("user_agent.synthetic.type", string(val))}
 }
 
 // HTTPServerResponseBodySize is an instrument used to record metric values
 // conforming to the "http.server.response.body.size" semantic conventions. It
 // represents the size of HTTP server response bodies.
-type HTTPServerResponseBodySize struct {
-	inst metric.histogram
+type ServerResponseBodySize struct {
+	inst metric.Int64Histogram
 }
 
-// NewHTTPServerResponseBodySize returns a new HTTPServerResponseBodySize
-// instrument.
-func NewHTTPServerResponseBodySize(m metric.Meter) (HTTPServerResponseBodySize, error) {
-	i, err := m.histogram(
+// NewServerResponseBodySize returns a new ServerResponseBodySize instrument.
+func NewServerResponseBodySize(m metric.Meter) (ServerResponseBodySize, error) {
+	i, err := m.Int64Histogram(
 	    "http.server.response.body.size",
 	    metric.WithDescription("Size of HTTP server response bodies."),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return HTTPServerResponseBodySize{}, err
+	    return ServerResponseBodySize{}, err
 	}
-	return HTTPServerResponseBodySize{i}, nil
+	return ServerResponseBodySize{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HTTPServerResponseBodySize) Name() string {
+func (ServerResponseBodySize) Name() string {
 	return "http.server.response.body.size"
 }
 
 // Name returns the semantic convention unit of the instrument
-func (HTTPServerResponseBodySize) Unit() string {
+func (ServerResponseBodySize) Unit() string {
 	return "By"
 }
 
 // Name returns the semantic convention description of the instrument
-func (HTTPServerResponseBodySize) Description() string {
+func (ServerResponseBodySize) Description() string {
 	return "Size of HTTP server response bodies."
 }
 
@@ -1020,23 +1012,23 @@ func (HTTPServerResponseBodySize) Description() string {
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (m HTTPServerResponseBodySize) Add(
+func (m ServerResponseBodySize) Add(
     ctx context.Context,
     incr int64,
-    httpRequestMethod HTTPRequestMethodAttr,
+    httpRequestMethod RequestMethodAttr,
     urlScheme string,
-    attrs ...HTTPServerResponseBodySizeAttr,
+    attrs ...ServerResponseBodySizeAttr,
 ) {
     m.inst.Add(ctx, incr, metric.WithAttributes(
 		append(
 			httpServerResponseBodySizeAttrToAttrs(attrs),
-			attribute.String("http.request.method", httpRequestMethod),
+			attribute.String("http.request.method", string(httpRequestMethod)),
 			attribute.String("url.scheme", urlScheme),
 		)...,
     ))
 }
 
-func httpServerResponseBodySizeAttrToAttrs(in []HTTPServerResponseBodySizeAttr) []attribute.KeyValue {
+func httpServerResponseBodySizeAttrToAttrs(in []ServerResponseBodySizeAttr) []attribute.KeyValue {
 	if len(in) == 0 {
 		return nil
 	}
@@ -1048,7 +1040,7 @@ func httpServerResponseBodySizeAttrToAttrs(in []HTTPServerResponseBodySizeAttr) 
 	return out
 }
 
-type HTTPServerResponseBodySizeAttr interface {
+type ServerResponseBodySizeAttr interface {
     httpServerResponseBodySizeAttr() attribute.KeyValue
 }
 
@@ -1056,36 +1048,36 @@ func (a attr) httpServerResponseBodySizeAttr() attribute.KeyValue {
     return a.kv
 }
 
-func (HTTPServerResponseBodySize) ErrorType(val ErrorTypeAttr) HTTPServerResponseBodySizeAttr {
-	return attr{kv: attribute.String("error.type", val)}
+func (ServerResponseBodySize) ErrorType(val ErrorTypeAttr) ServerResponseBodySizeAttr {
+	return attr{kv: attribute.String("error.type", string(val))}
 }
 
-func (HTTPServerResponseBodySize) HTTPResponseStatusCode(val int) HTTPServerResponseBodySizeAttr {
+func (ServerResponseBodySize) ResponseStatusCode(val int) ServerResponseBodySizeAttr {
 	return attr{kv: attribute.Int("http.response.status_code", val)}
 }
 
-func (HTTPServerResponseBodySize) HTTPRoute(val string) HTTPServerResponseBodySizeAttr {
+func (ServerResponseBodySize) Route(val string) ServerResponseBodySizeAttr {
 	return attr{kv: attribute.String("http.route", val)}
 }
 
-func (HTTPServerResponseBodySize) NetworkProtocolName(val string) HTTPServerResponseBodySizeAttr {
+func (ServerResponseBodySize) NetworkProtocolName(val string) ServerResponseBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.name", val)}
 }
 
-func (HTTPServerResponseBodySize) NetworkProtocolVersion(val string) HTTPServerResponseBodySizeAttr {
+func (ServerResponseBodySize) NetworkProtocolVersion(val string) ServerResponseBodySizeAttr {
 	return attr{kv: attribute.String("network.protocol.version", val)}
 }
 
-func (HTTPServerResponseBodySize) ServerAddress(val string) HTTPServerResponseBodySizeAttr {
+func (ServerResponseBodySize) ServerAddress(val string) ServerResponseBodySizeAttr {
 	return attr{kv: attribute.String("server.address", val)}
 }
 
-func (HTTPServerResponseBodySize) ServerPort(val int) HTTPServerResponseBodySizeAttr {
+func (ServerResponseBodySize) ServerPort(val int) ServerResponseBodySizeAttr {
 	return attr{kv: attribute.Int("server.port", val)}
 }
 
-func (HTTPServerResponseBodySize) UserAgentSyntheticType(val UserAgentSyntheticTypeAttr) HTTPServerResponseBodySizeAttr {
-	return attr{kv: attribute.String("user_agent.synthetic.type", val)}
+func (ServerResponseBodySize) UserAgentSyntheticType(val UserAgentSyntheticTypeAttr) ServerResponseBodySizeAttr {
+	return attr{kv: attribute.String("user_agent.synthetic.type", string(val))}
 }
 
 // This is used as a helper for all optional attributes.

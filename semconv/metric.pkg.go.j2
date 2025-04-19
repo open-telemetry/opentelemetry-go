@@ -4,7 +4,7 @@
 
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-package semconv // import "go.opentelemetry.io/otel/semconv/{{params.tag}}"
+package semconv // import "go.opentelemetry.io/otel/semconv/{{params.tag}}/{{ctx.root_namespace}}"
 
 import (
 	"context"
@@ -13,32 +13,23 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 {%- for attr in ctx.metrics | map(attribute="attributes") | flatten | selectattr("type", "mapping") | unique(attribute="name") | sort(attribute="name") %}
-{%- set name = h.to_go_name(attr.name) %}
-{% if attr.type.members[0].value is string %}
-type {{ name }}Attr string
-{%- elif attribute.type.members[0].value is bool %}
-type {{ name }}Attr bool
-{%- elif attribute.type.members[0].value is int %}
-type {{ name }}Attr int64
-{%- elif attribute.type.members[0].value is float %}
-type {{ name }}Attr float64
-{%- endif %}
+{%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}
+
+type {{ name }}Attr {{ h.member_type(attr.type.members[0]) }}
 
 var (
 {%- for m in attr.type.members %}
-	{{ name }}{{ h.to_go_name(m.id) }} = {{ name }}Attr(
-		{%- if attr.type.members[0].value is string -%}
+	{{ name }}{{ h.to_go_name(m.id, ctx.root_namespace) }} {{ name }}Attr = {% if attr.type.members[0].value is string -%}
 		"{{ m.value }}"
-		{%- else -%}
+	{%- else -%}
 		{{ m.value }}
-		{%- endif -%}
-	)
+	{%- endif -%}
 {%- endfor %}
 )
 {%- endfor %}
 
 {%- for metric in ctx.metrics %}
-{%- set metric_name = h.to_go_name(metric.metric_name) %}
+{%- set metric_name = h.to_go_name(metric.metric_name, ctx.root_namespace) %}
 
 {{ h.metric_typedoc(metric) | comment | trim }}
 type {{ metric_name }} struct {
@@ -86,7 +77,7 @@ func (m {{ metric_name }}) Add(
     incr int64,
 {%- for attr in metric.attributes | required | attribute_sort %}
 {%- if attr.type is mapping %}
-    {{ attr.name | camel_case }} {{ h.to_go_name(attr.name) }}Attr,
+    {{ attr.name | camel_case }} {{ h.to_go_name(attr.name, ctx.root_namespace) }}Attr,
 {%- else %}
     {{ attr.name | camel_case }} {{ attr.type | map_text("attribute_type_value")}},
 {%- endif %}
@@ -102,7 +93,7 @@ func (m {{ metric_name }}) Add(
         {%- endif %}
         {%- for attr in metric.attributes | required | attribute_sort %}
 		{%- if attr.type is mapping %}
-			attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ attr.name | camel_case }}),
+			attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}({{ attr.name | camel_case }})),
 		{%- else %}
 			attribute.{{ attr.type | map_text("attribute_type_method")}}("{{ attr.name }}", {{ attr.name | camel_case }}),
 		{%- endif %}
@@ -142,10 +133,10 @@ func (m {{ metric_name }}) Add(ctx context.Context, incr int64) {
 }
 {%- endif %}
 {%- for attr in metric.attributes | not_required | attribute_sort %}
-{%- set name = h.to_go_name(attr.name) %}
+{%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}
 {% if attr.type is mapping %}
 func ({{ metric_name}}) {{name}}(val {{ name }}Attr) {{metric_name}}Attr {
-	return attr{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)}
+	return attr{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}(val))}
 }
 {%- else %}
 func ({{ metric_name}}) {{name}}(val {{ attr.type | map_text("attribute_type_value")}}) {{metric_name}}Attr {
