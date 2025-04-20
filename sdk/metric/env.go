@@ -17,6 +17,8 @@ const (
 	envInterval = "OTEL_METRIC_EXPORT_INTERVAL"
 	// Maximum allowed time (in milliseconds) to export data.
 	envTimeout = "OTEL_METRIC_EXPORT_TIMEOUT"
+	// The time (in milliseconds) to wait export remaining metrics in shutdown.
+	envShutdownWait = "OTEL_METRIC_EXPORT_SHUTDOWN_WAIT"
 )
 
 // envDuration returns an environment variable's value as duration in milliseconds if it is exists,

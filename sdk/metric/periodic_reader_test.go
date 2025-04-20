@@ -139,6 +139,66 @@ func TestIntervalEnvAndOption(t *testing.T) {
 	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
+func TestWithShutdownWait(t *testing.T) {
+	test := func(d time.Duration) time.Duration {
+		opts := []PeriodicReaderOption{WithShutdownWait(d)}
+		return newPeriodicReaderConfig(opts).shutdownWait
+	}
+
+	assert.Equal(t, testDur, test(testDur))
+	assert.Equal(t, defaultShutdownWait, newPeriodicReaderConfig(nil).shutdownWait)
+	assert.Equal(t, defaultShutdownWait, test(time.Duration(0)), "invalid shutdownWait should use default")
+	assert.Equal(t, defaultShutdownWait, test(time.Duration(-1)), "invalid shutdownWait should use default")
+}
+
+func TestShutdownWaitEnvVar(t *testing.T) {
+	testCases := []struct {
+		v    string
+		want time.Duration
+	}{
+		{
+			// empty value
+			"",
+			defaultShutdownWait,
+		},
+		{
+			// positive value
+			"1",
+			time.Millisecond,
+		},
+		{
+			// non-positive value
+			"0",
+			defaultShutdownWait,
+		},
+		{
+			// value with unit (not supported)
+			"1ms",
+			defaultShutdownWait,
+		},
+		{
+			// NaN
+			"abc",
+			defaultShutdownWait,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.v, func(t *testing.T) {
+			t.Setenv(envShutdownWait, tc.v)
+			got := newPeriodicReaderConfig(nil).shutdownWait
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestShutdownWaitEnvAndOption(t *testing.T) {
+	want := 5 * time.Millisecond
+	t.Setenv(envShutdownWait, "999")
+	opts := []PeriodicReaderOption{WithShutdownWait(want)}
+	got := newPeriodicReaderConfig(opts).shutdownWait
+	assert.Equal(t, want, got, "option should have precedence over env var")
+}
+
 type fnExporter struct {
 	temporalityFunc TemporalitySelector
 	aggregationFunc AggregationSelector
@@ -370,6 +430,29 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 	})
 
+	t.Run("Shutdown with wait", func(t *testing.T) {
+		shutdownWait := 1 * time.Millisecond
+		expFunc := func(t *testing.T) (exp Exporter, called *bool, calledTime *time.Time) {
+			called = new(bool)
+			calledTime = new(time.Time)
+			return &fnExporter{
+				exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+					// The testSDKProducer produces testResourceMetricsA.
+					assert.Equal(t, testResourceMetricsAB, *m)
+					*called = true
+					*calledTime = time.Now()
+					return assert.AnError
+				},
+			}, called, calledTime
+		}
+		exp, called, calledTime := expFunc(t)
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}), WithShutdownWait(shutdownWait))
+		r.register(testSDKProducer{})
+		now := time.Now()
+		assert.Equal(t, assert.AnError, r.Shutdown(context.Background()), "export error not returned")
+		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
+		assert.GreaterOrEqual(t, calledTime.Sub(now), shutdownWait, "shutdown with wait not waited")
+	})
 	t.Run("Shutdown timeout on producer", func(t *testing.T) {
 		exp, called := expFunc(t)
 		timeout := time.Millisecond

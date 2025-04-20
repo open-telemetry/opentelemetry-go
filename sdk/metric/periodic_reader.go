@@ -18,23 +18,26 @@ import (
 
 // Default periodic reader timing.
 const (
-	defaultTimeout  = time.Millisecond * 30000
-	defaultInterval = time.Millisecond * 60000
+	defaultTimeout      = time.Millisecond * 30000
+	defaultInterval     = time.Millisecond * 60000
+	defaultShutdownWait = time.Duration(0)
 )
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval  time.Duration
-	timeout   time.Duration
-	producers []Producer
+	interval     time.Duration
+	timeout      time.Duration
+	shutdownWait time.Duration
+	producers    []Producer
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: envDuration(envInterval, defaultInterval),
-		timeout:  envDuration(envTimeout, defaultTimeout),
+		interval:     envDuration(envInterval, defaultInterval),
+		timeout:      envDuration(envTimeout, defaultTimeout),
+		shutdownWait: envDuration(envShutdownWait, defaultShutdownWait),
 	}
 	for _, o := range options {
 		c = o.applyPeriodic(c)
@@ -94,6 +97,24 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 	})
 }
 
+// WithShutdownWait configures the wait time to export remainning metrics in shutdown for a
+// PeriodicReader.
+//
+// This option overrides any value set for the
+// OTEL_METRIC_EXPORT_SHUTDOWN_WAIT environment variable.
+//
+// If this option is not used or d is less than or equal to zero, 0 seconds
+// is used as the default.
+func WithShutdownWait(d time.Duration) PeriodicReaderOption {
+	return periodicReaderOptionFunc(func(conf periodicReaderConfig) periodicReaderConfig {
+		if d <= 0 {
+			return conf
+		}
+		conf.shutdownWait = d
+		return conf
+	})
+}
+
 // NewPeriodicReader returns a Reader that collects and exports metric data to
 // the exporter at a defined interval. By default, the returned Reader will
 // collect and export data every 60 seconds, and will cancel any attempts that
@@ -107,12 +128,13 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &PeriodicReader{
-		interval: conf.interval,
-		timeout:  conf.timeout,
-		exporter: exporter,
-		flushCh:  make(chan chan error),
-		cancel:   cancel,
-		done:     make(chan struct{}),
+		interval:     conf.interval,
+		timeout:      conf.timeout,
+		shutdownWait: conf.shutdownWait,
+		exporter:     exporter,
+		flushCh:      make(chan chan error),
+		cancel:       cancel,
+		done:         make(chan struct{}),
 		rmPool: sync.Pool{
 			New: func() interface{} {
 				return &metricdata.ResourceMetrics{}
@@ -138,10 +160,11 @@ type PeriodicReader struct {
 	isShutdown        bool
 	externalProducers atomic.Value
 
-	interval time.Duration
-	timeout  time.Duration
-	exporter Exporter
-	flushCh  chan chan error
+	interval     time.Duration
+	timeout      time.Duration
+	shutdownWait time.Duration
+	exporter     Exporter
+	flushCh      chan chan error
 
 	done         chan struct{}
 	cancel       context.CancelFunc
@@ -329,6 +352,9 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			err = r.collect(ctx, ph, m)
 			if err == nil {
+				if r.shutdownWait > 0 {
+					time.Sleep(r.shutdownWait)
+				}
 				err = r.export(ctx, m)
 			}
 			r.rmPool.Put(m)
