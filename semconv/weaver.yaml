@@ -24,8 +24,10 @@ templates:
     file_name: metric.go
   - pattern: metric.pkg.go.j2
     filter: >
-      semconv_grouped_metrics
-      | map(select(.root_namespace == "http"))
+      semconv_grouped_metrics({
+        "exclude_deprecated": true,
+        "exclude_root_namespace": $excluded_namespaces,
+      })
     application_mode: each
     file_name: "{{ctx.root_namespace | snake_case}}/metric.go"
 comment_formats:

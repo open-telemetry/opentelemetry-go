@@ -1,0 +1,1313 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.31.0/messaging"
+
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+)
+
+// ErrorTypeAttr is an attribute conforming to the error.type semantic
+// conventions. It represents the describes a class of error the operation ended
+// with.
+type ErrorTypeAttr string
+
+var (
+	// ErrorTypeOther is a fallback error value to be used when the instrumentation
+	// doesn't define a custom value.
+	ErrorTypeOther ErrorTypeAttr = "_OTHER"
+)
+
+// OperationTypeAttr is an attribute conforming to the messaging.operation.type
+// semantic conventions. It represents a string identifying the type of the
+// messaging operation.
+type OperationTypeAttr string
+
+var (
+	// OperationTypeCreate is a message is created. "Create" spans always refer to a
+	// single message and are used to provide a unique creation context for messages
+	// in batch sending scenarios.
+	OperationTypeCreate OperationTypeAttr = "create"
+	// OperationTypeSend is the one or more messages are provided for sending to an
+	// intermediary. If a single message is sent, the context of the "Send" span can
+	// be used as the creation context and no "Create" span needs to be created.
+	OperationTypeSend OperationTypeAttr = "send"
+	// OperationTypeReceive is the one or more messages are requested by a consumer.
+	// This operation refers to pull-based scenarios, where consumers explicitly
+	// call methods of messaging SDKs to receive messages.
+	OperationTypeReceive OperationTypeAttr = "receive"
+	// OperationTypeProcess is the one or more messages are processed by a consumer.
+	OperationTypeProcess OperationTypeAttr = "process"
+	// OperationTypeSettle is the one or more messages are settled.
+	OperationTypeSettle OperationTypeAttr = "settle"
+)
+
+// SystemAttr is an attribute conforming to the messaging.system semantic
+// conventions. It represents the messaging system as identified by the client
+// instrumentation.
+type SystemAttr string
+
+var (
+	// SystemActivemq is the apache ActiveMQ.
+	SystemActivemq SystemAttr = "activemq"
+	// SystemAWSSqs is the amazon Simple Queue Service (SQS).
+	SystemAWSSqs SystemAttr = "aws_sqs"
+	// SystemEventgrid is the azure Event Grid.
+	SystemEventgrid SystemAttr = "eventgrid"
+	// SystemEventhubs is the azure Event Hubs.
+	SystemEventhubs SystemAttr = "eventhubs"
+	// SystemServicebus is the azure Service Bus.
+	SystemServicebus SystemAttr = "servicebus"
+	// SystemGCPPubsub is the google Cloud Pub/Sub.
+	SystemGCPPubsub SystemAttr = "gcp_pubsub"
+	// SystemJms is the java Message Service.
+	SystemJms SystemAttr = "jms"
+	// SystemKafka is the apache Kafka.
+	SystemKafka SystemAttr = "kafka"
+	// SystemRabbitmq is the rabbitMQ.
+	SystemRabbitmq SystemAttr = "rabbitmq"
+	// SystemRocketmq is the apache RocketMQ.
+	SystemRocketmq SystemAttr = "rocketmq"
+	// SystemPulsar is the apache Pulsar.
+	SystemPulsar SystemAttr = "pulsar"
+)
+
+// MessagingClientConsumedMessages is an instrument used to record metric values
+// conforming to the "messaging.client.consumed.messages" semantic conventions.
+// It represents the number of messages that were delivered to the application.
+type ClientConsumedMessages struct {
+	inst metric.Int64Counter
+}
+
+// NewClientConsumedMessages returns a new ClientConsumedMessages instrument.
+func NewClientConsumedMessages(m metric.Meter) (ClientConsumedMessages, error) {
+	i, err := m.Int64Counter(
+	    "messaging.client.consumed.messages",
+	    metric.WithDescription("Number of messages that were delivered to the application."),
+	    metric.WithUnit("{message}"),
+	)
+	if err != nil {
+	    return ClientConsumedMessages{}, err
+	}
+	return ClientConsumedMessages{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConsumedMessages) Name() string {
+	return "messaging.client.consumed.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConsumedMessages) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConsumedMessages) Description() string {
+	return "Number of messages that were delivered to the application."
+}
+
+// Add adds incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// The messagingSystem is the the messaging system as identified by the client
+// instrumentation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ClientConsumedMessages) Add(
+    ctx context.Context,
+    incr int64,
+	operationName string,
+	system SystemAttr,
+	attrs ...ClientConsumedMessagesAttr,
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+				attribute.String("messaging.system", string(system)),
+			)...,
+		),
+	)
+}
+
+func (m ClientConsumedMessages) conv(in []ClientConsumedMessagesAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.clientConsumedMessagesAttr()
+	}
+	return out
+}
+
+// ClientConsumedMessagesAttr is an optional attribute for the
+// ClientConsumedMessages instrument.
+type ClientConsumedMessagesAttr interface {
+    clientConsumedMessagesAttr() attribute.KeyValue
+}
+
+type clientConsumedMessagesAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a clientConsumedMessagesAttr) clientConsumedMessagesAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientConsumedMessages) ErrorType(val ErrorTypeAttr) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ConsumerGroupName returns an optional attribute for the
+// "messaging.consumer.group.name" semantic convention. It represents the name of
+// the consumer group with which a consumer is associated.
+func (ClientConsumedMessages) ConsumerGroupName(val string) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("messaging.consumer.group.name", val)}
+}
+
+// DestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientConsumedMessages) DestinationName(val string) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.name", val)}
+}
+
+// DestinationSubscriptionName returns an optional attribute for the
+// "messaging.destination.subscription.name" semantic convention. It represents
+// the name of the destination subscription from which a message is consumed.
+func (ClientConsumedMessages) DestinationSubscriptionName(val string) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.subscription.name", val)}
+}
+
+// DestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientConsumedMessages) DestinationTemplate(val string) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.template", val)}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientConsumedMessages) ServerAddress(val string) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("server.address", val)}
+}
+
+// DestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientConsumedMessages) DestinationPartitionID(val string) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.partition.id", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientConsumedMessages) ServerPort(val int) ClientConsumedMessagesAttr {
+	return clientConsumedMessagesAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingClientOperationDuration is an instrument used to record metric values
+// conforming to the "messaging.client.operation.duration" semantic conventions.
+// It represents the duration of messaging operation initiated by a producer or
+// consumer client.
+type ClientOperationDuration struct {
+	inst metric.Float64Histogram
+}
+
+// NewClientOperationDuration returns a new ClientOperationDuration instrument.
+func NewClientOperationDuration(m metric.Meter) (ClientOperationDuration, error) {
+	i, err := m.Float64Histogram(
+	    "messaging.client.operation.duration",
+	    metric.WithDescription("Duration of messaging operation initiated by a producer or consumer client."),
+	    metric.WithUnit("s"),
+	)
+	if err != nil {
+	    return ClientOperationDuration{}, err
+	}
+	return ClientOperationDuration{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientOperationDuration) Name() string {
+	return "messaging.client.operation.duration"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientOperationDuration) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientOperationDuration) Description() string {
+	return "Duration of messaging operation initiated by a producer or consumer client."
+}
+
+// Record records incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// The messagingSystem is the the messaging system as identified by the client
+// instrumentation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ClientOperationDuration) Record(
+    ctx context.Context,
+    val float64,
+	operationName string,
+	system SystemAttr,
+	attrs ...ClientOperationDurationAttr,
+) {
+	m.inst.Record(
+		ctx,
+		val,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+				attribute.String("messaging.system", string(system)),
+			)...,
+		),
+	)
+}
+
+func (m ClientOperationDuration) conv(in []ClientOperationDurationAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.clientOperationDurationAttr()
+	}
+	return out
+}
+
+// ClientOperationDurationAttr is an optional attribute for the
+// ClientOperationDuration instrument.
+type ClientOperationDurationAttr interface {
+    clientOperationDurationAttr() attribute.KeyValue
+}
+
+type clientOperationDurationAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a clientOperationDurationAttr) clientOperationDurationAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientOperationDuration) ErrorType(val ErrorTypeAttr) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ConsumerGroupName returns an optional attribute for the
+// "messaging.consumer.group.name" semantic convention. It represents the name of
+// the consumer group with which a consumer is associated.
+func (ClientOperationDuration) ConsumerGroupName(val string) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("messaging.consumer.group.name", val)}
+}
+
+// DestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientOperationDuration) DestinationName(val string) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.name", val)}
+}
+
+// DestinationSubscriptionName returns an optional attribute for the
+// "messaging.destination.subscription.name" semantic convention. It represents
+// the name of the destination subscription from which a message is consumed.
+func (ClientOperationDuration) DestinationSubscriptionName(val string) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.subscription.name", val)}
+}
+
+// DestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientOperationDuration) DestinationTemplate(val string) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.template", val)}
+}
+
+// OperationType returns an optional attribute for the "messaging.operation.type"
+// semantic convention. It represents a string identifying the type of the
+// messaging operation.
+func (ClientOperationDuration) OperationType(val OperationTypeAttr) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("messaging.operation.type", string(val))}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientOperationDuration) ServerAddress(val string) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("server.address", val)}
+}
+
+// DestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientOperationDuration) DestinationPartitionID(val string) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.partition.id", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientOperationDuration) ServerPort(val int) ClientOperationDurationAttr {
+	return clientOperationDurationAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingClientPublishedMessages is an instrument used to record metric values
+// conforming to the "messaging.client.published.messages" semantic conventions.
+// It represents the deprecated. Use `messaging.client.sent.messages` instead.
+type ClientPublishedMessages struct {
+	inst metric.Int64Counter
+}
+
+// NewClientPublishedMessages returns a new ClientPublishedMessages instrument.
+func NewClientPublishedMessages(m metric.Meter) (ClientPublishedMessages, error) {
+	i, err := m.Int64Counter(
+	    "messaging.client.published.messages",
+	    metric.WithDescription("Deprecated. Use `messaging.client.sent.messages` instead."),
+	    metric.WithUnit("{message}"),
+	)
+	if err != nil {
+	    return ClientPublishedMessages{}, err
+	}
+	return ClientPublishedMessages{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientPublishedMessages) Name() string {
+	return "messaging.client.published.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientPublishedMessages) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientPublishedMessages) Description() string {
+	return "Deprecated. Use `messaging.client.sent.messages` instead."
+}
+
+// Add adds incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// The messagingSystem is the the messaging system as identified by the client
+// instrumentation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ClientPublishedMessages) Add(
+    ctx context.Context,
+    incr int64,
+	operationName string,
+	system SystemAttr,
+	attrs ...ClientPublishedMessagesAttr,
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+				attribute.String("messaging.system", string(system)),
+			)...,
+		),
+	)
+}
+
+func (m ClientPublishedMessages) conv(in []ClientPublishedMessagesAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.clientPublishedMessagesAttr()
+	}
+	return out
+}
+
+// ClientPublishedMessagesAttr is an optional attribute for the
+// ClientPublishedMessages instrument.
+type ClientPublishedMessagesAttr interface {
+    clientPublishedMessagesAttr() attribute.KeyValue
+}
+
+type clientPublishedMessagesAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a clientPublishedMessagesAttr) clientPublishedMessagesAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientPublishedMessages) ErrorType(val ErrorTypeAttr) ClientPublishedMessagesAttr {
+	return clientPublishedMessagesAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// DestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientPublishedMessages) DestinationName(val string) ClientPublishedMessagesAttr {
+	return clientPublishedMessagesAttr{kv: attribute.String("messaging.destination.name", val)}
+}
+
+// DestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientPublishedMessages) DestinationTemplate(val string) ClientPublishedMessagesAttr {
+	return clientPublishedMessagesAttr{kv: attribute.String("messaging.destination.template", val)}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientPublishedMessages) ServerAddress(val string) ClientPublishedMessagesAttr {
+	return clientPublishedMessagesAttr{kv: attribute.String("server.address", val)}
+}
+
+// DestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientPublishedMessages) DestinationPartitionID(val string) ClientPublishedMessagesAttr {
+	return clientPublishedMessagesAttr{kv: attribute.String("messaging.destination.partition.id", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientPublishedMessages) ServerPort(val int) ClientPublishedMessagesAttr {
+	return clientPublishedMessagesAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingClientSentMessages is an instrument used to record metric values
+// conforming to the "messaging.client.sent.messages" semantic conventions. It
+// represents the number of messages producer attempted to send to the broker.
+type ClientSentMessages struct {
+	inst metric.Int64Counter
+}
+
+// NewClientSentMessages returns a new ClientSentMessages instrument.
+func NewClientSentMessages(m metric.Meter) (ClientSentMessages, error) {
+	i, err := m.Int64Counter(
+	    "messaging.client.sent.messages",
+	    metric.WithDescription("Number of messages producer attempted to send to the broker."),
+	    metric.WithUnit("{message}"),
+	)
+	if err != nil {
+	    return ClientSentMessages{}, err
+	}
+	return ClientSentMessages{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientSentMessages) Name() string {
+	return "messaging.client.sent.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientSentMessages) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientSentMessages) Description() string {
+	return "Number of messages producer attempted to send to the broker."
+}
+
+// Add adds incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// The messagingSystem is the the messaging system as identified by the client
+// instrumentation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ClientSentMessages) Add(
+    ctx context.Context,
+    incr int64,
+	operationName string,
+	system SystemAttr,
+	attrs ...ClientSentMessagesAttr,
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+				attribute.String("messaging.system", string(system)),
+			)...,
+		),
+	)
+}
+
+func (m ClientSentMessages) conv(in []ClientSentMessagesAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.clientSentMessagesAttr()
+	}
+	return out
+}
+
+// ClientSentMessagesAttr is an optional attribute for the ClientSentMessages
+// instrument.
+type ClientSentMessagesAttr interface {
+    clientSentMessagesAttr() attribute.KeyValue
+}
+
+type clientSentMessagesAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a clientSentMessagesAttr) clientSentMessagesAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientSentMessages) ErrorType(val ErrorTypeAttr) ClientSentMessagesAttr {
+	return clientSentMessagesAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// DestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientSentMessages) DestinationName(val string) ClientSentMessagesAttr {
+	return clientSentMessagesAttr{kv: attribute.String("messaging.destination.name", val)}
+}
+
+// DestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientSentMessages) DestinationTemplate(val string) ClientSentMessagesAttr {
+	return clientSentMessagesAttr{kv: attribute.String("messaging.destination.template", val)}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientSentMessages) ServerAddress(val string) ClientSentMessagesAttr {
+	return clientSentMessagesAttr{kv: attribute.String("server.address", val)}
+}
+
+// DestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientSentMessages) DestinationPartitionID(val string) ClientSentMessagesAttr {
+	return clientSentMessagesAttr{kv: attribute.String("messaging.destination.partition.id", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientSentMessages) ServerPort(val int) ClientSentMessagesAttr {
+	return clientSentMessagesAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingProcessDuration is an instrument used to record metric values
+// conforming to the "messaging.process.duration" semantic conventions. It
+// represents the duration of processing operation.
+type ProcessDuration struct {
+	inst metric.Float64Histogram
+}
+
+// NewProcessDuration returns a new ProcessDuration instrument.
+func NewProcessDuration(m metric.Meter) (ProcessDuration, error) {
+	i, err := m.Float64Histogram(
+	    "messaging.process.duration",
+	    metric.WithDescription("Duration of processing operation."),
+	    metric.WithUnit("s"),
+	)
+	if err != nil {
+	    return ProcessDuration{}, err
+	}
+	return ProcessDuration{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ProcessDuration) Name() string {
+	return "messaging.process.duration"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ProcessDuration) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ProcessDuration) Description() string {
+	return "Duration of processing operation."
+}
+
+// Record records incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// The messagingSystem is the the messaging system as identified by the client
+// instrumentation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ProcessDuration) Record(
+    ctx context.Context,
+    val float64,
+	operationName string,
+	system SystemAttr,
+	attrs ...ProcessDurationAttr,
+) {
+	m.inst.Record(
+		ctx,
+		val,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+				attribute.String("messaging.system", string(system)),
+			)...,
+		),
+	)
+}
+
+func (m ProcessDuration) conv(in []ProcessDurationAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.processDurationAttr()
+	}
+	return out
+}
+
+// ProcessDurationAttr is an optional attribute for the ProcessDuration
+// instrument.
+type ProcessDurationAttr interface {
+    processDurationAttr() attribute.KeyValue
+}
+
+type processDurationAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a processDurationAttr) processDurationAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ProcessDuration) ErrorType(val ErrorTypeAttr) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ConsumerGroupName returns an optional attribute for the
+// "messaging.consumer.group.name" semantic convention. It represents the name of
+// the consumer group with which a consumer is associated.
+func (ProcessDuration) ConsumerGroupName(val string) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("messaging.consumer.group.name", val)}
+}
+
+// DestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ProcessDuration) DestinationName(val string) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("messaging.destination.name", val)}
+}
+
+// DestinationSubscriptionName returns an optional attribute for the
+// "messaging.destination.subscription.name" semantic convention. It represents
+// the name of the destination subscription from which a message is consumed.
+func (ProcessDuration) DestinationSubscriptionName(val string) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("messaging.destination.subscription.name", val)}
+}
+
+// DestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ProcessDuration) DestinationTemplate(val string) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("messaging.destination.template", val)}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ProcessDuration) ServerAddress(val string) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("server.address", val)}
+}
+
+// DestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ProcessDuration) DestinationPartitionID(val string) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.String("messaging.destination.partition.id", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ProcessDuration) ServerPort(val int) ProcessDurationAttr {
+	return processDurationAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingProcessMessages is an instrument used to record metric values
+// conforming to the "messaging.process.messages" semantic conventions. It
+// represents the deprecated. Use `messaging.client.consumed.messages` instead.
+type ProcessMessages struct {
+	inst metric.Int64Counter
+}
+
+// NewProcessMessages returns a new ProcessMessages instrument.
+func NewProcessMessages(m metric.Meter) (ProcessMessages, error) {
+	i, err := m.Int64Counter(
+	    "messaging.process.messages",
+	    metric.WithDescription("Deprecated. Use `messaging.client.consumed.messages` instead."),
+	    metric.WithUnit("{message}"),
+	)
+	if err != nil {
+	    return ProcessMessages{}, err
+	}
+	return ProcessMessages{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ProcessMessages) Name() string {
+	return "messaging.process.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ProcessMessages) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ProcessMessages) Description() string {
+	return "Deprecated. Use `messaging.client.consumed.messages` instead."
+}
+
+// Add adds incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ProcessMessages) Add(
+    ctx context.Context,
+    incr int64,
+	operationName string,
+	attrs ...ProcessMessagesAttr,
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+			)...,
+		),
+	)
+}
+
+func (m ProcessMessages) conv(in []ProcessMessagesAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.processMessagesAttr()
+	}
+	return out
+}
+
+// ProcessMessagesAttr is an optional attribute for the ProcessMessages
+// instrument.
+type ProcessMessagesAttr interface {
+    processMessagesAttr() attribute.KeyValue
+}
+
+type processMessagesAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a processMessagesAttr) processMessagesAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ProcessMessages) ErrorType(val ErrorTypeAttr) ProcessMessagesAttr {
+	return processMessagesAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ProcessMessages) ServerAddress(val string) ProcessMessagesAttr {
+	return processMessagesAttr{kv: attribute.String("server.address", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ProcessMessages) ServerPort(val int) ProcessMessagesAttr {
+	return processMessagesAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingPublishDuration is an instrument used to record metric values
+// conforming to the "messaging.publish.duration" semantic conventions. It
+// represents the deprecated. Use `messaging.client.operation.duration` instead.
+type PublishDuration struct {
+	inst metric.Float64Histogram
+}
+
+// NewPublishDuration returns a new PublishDuration instrument.
+func NewPublishDuration(m metric.Meter) (PublishDuration, error) {
+	i, err := m.Float64Histogram(
+	    "messaging.publish.duration",
+	    metric.WithDescription("Deprecated. Use `messaging.client.operation.duration` instead."),
+	    metric.WithUnit("s"),
+	)
+	if err != nil {
+	    return PublishDuration{}, err
+	}
+	return PublishDuration{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PublishDuration) Name() string {
+	return "messaging.publish.duration"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PublishDuration) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PublishDuration) Description() string {
+	return "Deprecated. Use `messaging.client.operation.duration` instead."
+}
+
+// Record records incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m PublishDuration) Record(
+    ctx context.Context,
+    val float64,
+	operationName string,
+	attrs ...PublishDurationAttr,
+) {
+	m.inst.Record(
+		ctx,
+		val,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+			)...,
+		),
+	)
+}
+
+func (m PublishDuration) conv(in []PublishDurationAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.publishDurationAttr()
+	}
+	return out
+}
+
+// PublishDurationAttr is an optional attribute for the PublishDuration
+// instrument.
+type PublishDurationAttr interface {
+    publishDurationAttr() attribute.KeyValue
+}
+
+type publishDurationAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a publishDurationAttr) publishDurationAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (PublishDuration) ErrorType(val ErrorTypeAttr) PublishDurationAttr {
+	return publishDurationAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (PublishDuration) ServerAddress(val string) PublishDurationAttr {
+	return publishDurationAttr{kv: attribute.String("server.address", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (PublishDuration) ServerPort(val int) PublishDurationAttr {
+	return publishDurationAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingPublishMessages is an instrument used to record metric values
+// conforming to the "messaging.publish.messages" semantic conventions. It
+// represents the deprecated. Use `messaging.client.produced.messages` instead.
+type PublishMessages struct {
+	inst metric.Int64Counter
+}
+
+// NewPublishMessages returns a new PublishMessages instrument.
+func NewPublishMessages(m metric.Meter) (PublishMessages, error) {
+	i, err := m.Int64Counter(
+	    "messaging.publish.messages",
+	    metric.WithDescription("Deprecated. Use `messaging.client.produced.messages` instead."),
+	    metric.WithUnit("{message}"),
+	)
+	if err != nil {
+	    return PublishMessages{}, err
+	}
+	return PublishMessages{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PublishMessages) Name() string {
+	return "messaging.publish.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PublishMessages) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PublishMessages) Description() string {
+	return "Deprecated. Use `messaging.client.produced.messages` instead."
+}
+
+// Add adds incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m PublishMessages) Add(
+    ctx context.Context,
+    incr int64,
+	operationName string,
+	attrs ...PublishMessagesAttr,
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+			)...,
+		),
+	)
+}
+
+func (m PublishMessages) conv(in []PublishMessagesAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.publishMessagesAttr()
+	}
+	return out
+}
+
+// PublishMessagesAttr is an optional attribute for the PublishMessages
+// instrument.
+type PublishMessagesAttr interface {
+    publishMessagesAttr() attribute.KeyValue
+}
+
+type publishMessagesAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a publishMessagesAttr) publishMessagesAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (PublishMessages) ErrorType(val ErrorTypeAttr) PublishMessagesAttr {
+	return publishMessagesAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (PublishMessages) ServerAddress(val string) PublishMessagesAttr {
+	return publishMessagesAttr{kv: attribute.String("server.address", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (PublishMessages) ServerPort(val int) PublishMessagesAttr {
+	return publishMessagesAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingReceiveDuration is an instrument used to record metric values
+// conforming to the "messaging.receive.duration" semantic conventions. It
+// represents the deprecated. Use `messaging.client.operation.duration` instead.
+type ReceiveDuration struct {
+	inst metric.Float64Histogram
+}
+
+// NewReceiveDuration returns a new ReceiveDuration instrument.
+func NewReceiveDuration(m metric.Meter) (ReceiveDuration, error) {
+	i, err := m.Float64Histogram(
+	    "messaging.receive.duration",
+	    metric.WithDescription("Deprecated. Use `messaging.client.operation.duration` instead."),
+	    metric.WithUnit("s"),
+	)
+	if err != nil {
+	    return ReceiveDuration{}, err
+	}
+	return ReceiveDuration{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ReceiveDuration) Name() string {
+	return "messaging.receive.duration"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ReceiveDuration) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ReceiveDuration) Description() string {
+	return "Deprecated. Use `messaging.client.operation.duration` instead."
+}
+
+// Record records incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ReceiveDuration) Record(
+    ctx context.Context,
+    val float64,
+	operationName string,
+	attrs ...ReceiveDurationAttr,
+) {
+	m.inst.Record(
+		ctx,
+		val,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+			)...,
+		),
+	)
+}
+
+func (m ReceiveDuration) conv(in []ReceiveDurationAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.receiveDurationAttr()
+	}
+	return out
+}
+
+// ReceiveDurationAttr is an optional attribute for the ReceiveDuration
+// instrument.
+type ReceiveDurationAttr interface {
+    receiveDurationAttr() attribute.KeyValue
+}
+
+type receiveDurationAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a receiveDurationAttr) receiveDurationAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ReceiveDuration) ErrorType(val ErrorTypeAttr) ReceiveDurationAttr {
+	return receiveDurationAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ReceiveDuration) ServerAddress(val string) ReceiveDurationAttr {
+	return receiveDurationAttr{kv: attribute.String("server.address", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ReceiveDuration) ServerPort(val int) ReceiveDurationAttr {
+	return receiveDurationAttr{kv: attribute.Int("server.port", val)}
+}
+
+// MessagingReceiveMessages is an instrument used to record metric values
+// conforming to the "messaging.receive.messages" semantic conventions. It
+// represents the deprecated. Use `messaging.client.consumed.messages` instead.
+type ReceiveMessages struct {
+	inst metric.Int64Counter
+}
+
+// NewReceiveMessages returns a new ReceiveMessages instrument.
+func NewReceiveMessages(m metric.Meter) (ReceiveMessages, error) {
+	i, err := m.Int64Counter(
+	    "messaging.receive.messages",
+	    metric.WithDescription("Deprecated. Use `messaging.client.consumed.messages` instead."),
+	    metric.WithUnit("{message}"),
+	)
+	if err != nil {
+	    return ReceiveMessages{}, err
+	}
+	return ReceiveMessages{i}, nil
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ReceiveMessages) Name() string {
+	return "messaging.receive.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ReceiveMessages) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ReceiveMessages) Description() string {
+	return "Deprecated. Use `messaging.client.consumed.messages` instead."
+}
+
+// Add adds incr to the existing count.
+//
+// The messagingOperationName is the the system-specific name of the messaging
+// operation.
+//
+// All additional attrs passed are included in the recorded value.
+func (m ReceiveMessages) Add(
+    ctx context.Context,
+    incr int64,
+	operationName string,
+	attrs ...ReceiveMessagesAttr,
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+		metric.WithAttributes(
+			append(
+				m.conv(attrs),
+				attribute.String("messaging.operation.name", operationName),
+			)...,
+		),
+	)
+}
+
+func (m ReceiveMessages) conv(in []ReceiveMessagesAttr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.receiveMessagesAttr()
+	}
+	return out
+}
+
+// ReceiveMessagesAttr is an optional attribute for the ReceiveMessages
+// instrument.
+type ReceiveMessagesAttr interface {
+    receiveMessagesAttr() attribute.KeyValue
+}
+
+type receiveMessagesAttr struct {
+	kv attribute.KeyValue
+}
+
+func (a receiveMessagesAttr) receiveMessagesAttr() attribute.KeyValue {
+    return a.kv
+}
+
+// ErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ReceiveMessages) ErrorType(val ErrorTypeAttr) ReceiveMessagesAttr {
+	return receiveMessagesAttr{kv: attribute.String("error.type", string(val))}
+}
+
+// ServerAddress returns an optional attribute for the "server.address" semantic
+// convention. It represents the server domain name if available without reverse
+// DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ReceiveMessages) ServerAddress(val string) ReceiveMessagesAttr {
+	return receiveMessagesAttr{kv: attribute.String("server.address", val)}
+}
+
+// ServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ReceiveMessages) ServerPort(val int) ReceiveMessagesAttr {
+	return receiveMessagesAttr{kv: attribute.Int("server.port", val)}
+}

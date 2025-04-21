@@ -99,12 +99,16 @@ func (a {{ private_name }}) {{ private_name }}() attribute.KeyValue {
 {%- if attrs | length > 0 -%}
 {{ prefix }}metric.WithAttributes(
 {%- if attrs | not_required | length > 0 %}
+{%- if attrs | required | length > 0 %}
 {{ prefix }}	append(
 {{ prefix }}		m.conv(attrs),
 {%- for attr in attrs | required | attribute_sort %}
 {{ prefix }}		{{ to_attribute(attr, pkg) }}
 {%- endfor %}
 {{ prefix }}	)...,
+{%- else %}
+{{ prefix }}	m.conv(attrs)...,
+{%- endif %}
 {%- else -%}
 {%- for attr in attrs | required | attribute_sort -%}
 {{ prefix }}	{{ to_attribute(attr, pkg) }}
@@ -160,7 +164,7 @@ func (m {{ name }}) Add(
 {%- else -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
 func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower }}) {
-    (*m.instrument).Add(ctx, incr)
+    m.inst.Add(ctx, incr)
 }
 {%- endif -%}
 {%- endmacro -%}
@@ -195,8 +199,8 @@ func (m {{ name }}) Record(
 {{ record_method_with_optional(metric, pkg) }}
 {%- else -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
-func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metrid) | lower }}) {
-    (*m.instrument).Record(ctx, val)
+func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lower }}) {
+    m.inst.Record(ctx, val)
 }
 {%- endif -%}
 {%- endmacro -%}
