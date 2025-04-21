@@ -1,5 +1,31 @@
 {% import 'helpers.j2' as h -%}
 
+{%- macro instrument_kind(instrument) -%}
+{%- if instrument == "counter" -%}
+Counter
+{%- elif instrument == "updowncounter" -%}
+UpDownCounter
+{%- elif instrument == "gauge" -%}
+Gauge
+{%- elif instrument == "histogram" -%}
+Histogram
+{%- else -%}
+unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro value_type(metric) -%}
+{%- if metric.unit == "s" -%}
+Float64
+{%- else -%}
+Int64
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro instrument(metric) -%}
+{{ value_type(metric) ~ instrument_kind(metric.instrument) }}
+{%- endmacro -%}
+
 {%- macro param_name(raw="", pkg="") -%}
 {%- if pkg != "" -%}
 {%- set n = pkg | length -%}
@@ -103,7 +129,7 @@ func (m {{ name }}) conv(in []{{name}}Attr) []attribute.KeyValue {
 }
 {%- endmacro -%}
 
-{%- macro add_method_with_optional(metric, pkg="", val_type="int64") -%}
+{%- macro add_method_with_optional(metric, pkg="") -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
 {%- set req_attr = metric.attributes | required | attribute_sort -%}
 
@@ -111,7 +137,7 @@ func (m {{ name }}) conv(in []{{name}}Attr) []attribute.KeyValue {
 {{ params_docs(metric.attributes) }}
 func (m {{ name }}) Add(
     ctx context.Context,
-    incr {{ val_type }},
+    incr {{ value_type(metric) | lower }},
 {{ params(metric.attributes, type=name, pkg=pkg, prefix="\t") }}
 ) {
 	m.inst.Add(
@@ -128,18 +154,18 @@ func (m {{ name }}) Add(
 {%- endif %}
 {%- endmacro -%}
 
-{%- macro add_method(metric, pkg="", val_type="int64") -%}
+{%- macro add_method(metric, pkg="") -%}
 {%- if metric.attributes | length > 0 -%}
-{{ add_method_with_optional(metric, pkg, val_type) }}
+{{ add_method_with_optional(metric, pkg) }}
 {%- else -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
-func (m {{ name }}) Add(ctx context.Context, incr {{ val_type }}) {
+func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower }}) {
     (*m.instrument).Add(ctx, incr)
 }
 {%- endif -%}
 {%- endmacro -%}
 
-{%- macro record_method_with_optional(metric, pkg="", val_type="int64") -%}
+{%- macro record_method_with_optional(metric, pkg="") -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
 {%- set req_attr = metric.attributes | required | attribute_sort -%}
 
@@ -147,7 +173,7 @@ func (m {{ name }}) Add(ctx context.Context, incr {{ val_type }}) {
 {{ params_docs(metric.attributes) }}
 func (m {{ name }}) Record(
     ctx context.Context,
-    val {{ val_type }},
+    val {{ value_type(metric) | lower }},
 {{ params(metric.attributes, type=name, pkg=pkg, prefix="\t") }}
 ) {
 	m.inst.Record(
@@ -164,12 +190,12 @@ func (m {{ name }}) Record(
 {%- endif %}
 {%- endmacro -%}
 
-{%- macro record_method(metric, pkg="", val_type="int64") -%}
+{%- macro record_method(metric, pkg="") -%}
 {%- if metric.attributes | length > 0 -%}
-{{ record_method_with_optional(metric, pkg, val_type) }}
+{{ record_method_with_optional(metric, pkg) }}
 {%- else -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
-func (m {{ name }}) Record(ctx context.Context, val {{ val_type }}) {
+func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metrid) | lower }}) {
     (*m.instrument).Record(ctx, val)
 }
 {%- endif -%}

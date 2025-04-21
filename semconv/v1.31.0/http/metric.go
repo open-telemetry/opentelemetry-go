@@ -196,12 +196,12 @@ func (ClientActiveRequests) URLScheme(val string) ClientActiveRequestsAttr {
 // represents the duration of the successfully established outbound HTTP
 // connections.
 type ClientConnectionDuration struct {
-	inst metric.Int64Histogram
+	inst metric.Float64Histogram
 }
 
 // NewClientConnectionDuration returns a new ClientConnectionDuration instrument.
 func NewClientConnectionDuration(m metric.Meter) (ClientConnectionDuration, error) {
-	i, err := m.Int64Histogram(
+	i, err := m.Float64Histogram(
 	    "http.client.connection.duration",
 	    metric.WithDescription("The duration of the successfully established outbound HTTP connections."),
 	    metric.WithUnit("s"),
@@ -240,7 +240,7 @@ func (ClientConnectionDuration) Description() string {
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientConnectionDuration) Record(
     ctx context.Context,
-    val int64,
+    val float64,
 	serverAddress string,
 	serverPort int,
 	attrs ...ClientConnectionDurationAttr,
@@ -579,12 +579,12 @@ func (ClientRequestBodySize) URLScheme(val string) ClientRequestBodySizeAttr {
 // conforming to the "http.client.request.duration" semantic conventions. It
 // represents the duration of HTTP client requests.
 type ClientRequestDuration struct {
-	inst metric.Int64Histogram
+	inst metric.Float64Histogram
 }
 
 // NewClientRequestDuration returns a new ClientRequestDuration instrument.
 func NewClientRequestDuration(m metric.Meter) (ClientRequestDuration, error) {
-	i, err := m.Int64Histogram(
+	i, err := m.Float64Histogram(
 	    "http.client.request.duration",
 	    metric.WithDescription("Duration of HTTP client requests."),
 	    metric.WithUnit("s"),
@@ -626,7 +626,7 @@ func (ClientRequestDuration) Description() string {
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientRequestDuration) Record(
     ctx context.Context,
-    val int64,
+    val float64,
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
@@ -1127,12 +1127,12 @@ func (ServerRequestBodySize) UserAgentSyntheticType(val UserAgentSyntheticTypeAt
 // conforming to the "http.server.request.duration" semantic conventions. It
 // represents the duration of HTTP server requests.
 type ServerRequestDuration struct {
-	inst metric.Int64Histogram
+	inst metric.Float64Histogram
 }
 
 // NewServerRequestDuration returns a new ServerRequestDuration instrument.
 func NewServerRequestDuration(m metric.Meter) (ServerRequestDuration, error) {
-	i, err := m.Int64Histogram(
+	i, err := m.Float64Histogram(
 	    "http.server.request.duration",
 	    metric.WithDescription("Duration of HTTP server requests."),
 	    metric.WithUnit("s"),
@@ -1169,7 +1169,7 @@ func (ServerRequestDuration) Description() string {
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 func (m ServerRequestDuration) Record(
     ctx context.Context,
-    val int64,
+    val float64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
 	attrs ...ServerRequestDurationAttr,

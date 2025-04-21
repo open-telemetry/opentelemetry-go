@@ -57,10 +57,6 @@ text_maps:
     double[]: "...float64"
     boolean: bool
     boolean[]: "...bool"
-  metric_type_interface:
-    counter: Int64Counter
-    updowncounter: Int64UpDownCounter
-    histogram: Int64Histogram
 acronyms:
   - ACL
   - AI
