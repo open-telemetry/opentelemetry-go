@@ -31,12 +31,21 @@ Examples: {{ attr.examples | trim("[]") }}
 {%- endif %}
 {%- endmacro -%}
 
+{%- macro lower_first(line) -%}
+{%- if line[0] is upper and line[1] is upper -%}
+{#- Assume an acronym -#}
+{{ line }}
+{%- else -%}
+{{ line[0]|lower }}{{ line[1:] }}
+{%- endif -%}
+{%- endmacro -%}
+
 {%- macro it_reps(brief) -%}
 {%- set brief = brief | trim() -%}
 It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
-  {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+  {{ lower_first(brief) | trim(".") }}.
 {%- else -%}
-  the {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+  the {{ lower_first(brief) | trim(".") }}.
 {%- endif -%}
 {%- endmacro -%}
 
