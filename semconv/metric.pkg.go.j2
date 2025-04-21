@@ -32,7 +32,7 @@ var (
 )
 {%- endfor %}
 
-{%- for metric in ctx.metrics %}
+{%- for metric in ctx.metrics if not metric.deprecated %}
 {%- set metric_name = h.to_go_name(metric.metric_name, ctx.root_namespace) %}
 
 {{ h.metric_typedoc(metric, ctx.root_namespace) | comment | trim }}

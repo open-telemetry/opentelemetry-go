@@ -195,45 +195,6 @@ var (
 	ProcessStatusDefunct ProcessStatusAttr = "defunct"
 )
 
-// CPUFrequency is an instrument used to record metric values conforming to the
-// "system.cpu.frequency" semantic conventions. It represents the deprecated. Use
-// `cpu.frequency` instead.
-type CPUFrequency struct {
-	inst metric.Int64Gauge
-}
-
-// NewCPUFrequency returns a new CPUFrequency instrument.
-func NewCPUFrequency(m metric.Meter) (CPUFrequency, error) {
-	i, err := m.Int64Gauge(
-	    "system.cpu.frequency",
-	    metric.WithDescription("Deprecated. Use `cpu.frequency` instead."),
-	    metric.WithUnit("{Hz}"),
-	)
-	if err != nil {
-	    return CPUFrequency{}, err
-	}
-	return CPUFrequency{i}, nil
-}
-
-// Name returns the semantic convention name of the instrument.
-func (CPUFrequency) Name() string {
-	return "system.cpu.frequency"
-}
-
-// Unit returns the semantic convention unit of the instrument
-func (CPUFrequency) Unit() string {
-	return "{Hz}"
-}
-
-// Description returns the semantic convention description of the instrument
-func (CPUFrequency) Description() string {
-	return "Deprecated. Use `cpu.frequency` instead."
-}
-
-func (m CPUFrequency) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
-}
-
 // CPULogicalCount is an instrument used to record metric values conforming to
 // the "system.cpu.logical.count" semantic conventions. It represents the reports
 // the number of logical (virtual) processor cores created by the operating
@@ -311,84 +272,6 @@ func (CPUPhysicalCount) Description() string {
 
 func (m CPUPhysicalCount) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
-}
-
-// CPUTime is an instrument used to record metric values conforming to the
-// "system.cpu.time" semantic conventions. It represents the deprecated. Use
-// `cpu.time` instead.
-type CPUTime struct {
-	inst metric.Float64Counter
-}
-
-// NewCPUTime returns a new CPUTime instrument.
-func NewCPUTime(m metric.Meter) (CPUTime, error) {
-	i, err := m.Float64Counter(
-	    "system.cpu.time",
-	    metric.WithDescription("Deprecated. Use `cpu.time` instead."),
-	    metric.WithUnit("s"),
-	)
-	if err != nil {
-	    return CPUTime{}, err
-	}
-	return CPUTime{i}, nil
-}
-
-// Name returns the semantic convention name of the instrument.
-func (CPUTime) Name() string {
-	return "system.cpu.time"
-}
-
-// Unit returns the semantic convention unit of the instrument
-func (CPUTime) Unit() string {
-	return "s"
-}
-
-// Description returns the semantic convention description of the instrument
-func (CPUTime) Description() string {
-	return "Deprecated. Use `cpu.time` instead."
-}
-
-func (m CPUTime) Add(ctx context.Context, incr float64) {
-    m.inst.Add(ctx, incr)
-}
-
-// CPUUtilization is an instrument used to record metric values conforming to the
-// "system.cpu.utilization" semantic conventions. It represents the deprecated.
-// Use `cpu.utilization` instead.
-type CPUUtilization struct {
-	inst metric.Int64Gauge
-}
-
-// NewCPUUtilization returns a new CPUUtilization instrument.
-func NewCPUUtilization(m metric.Meter) (CPUUtilization, error) {
-	i, err := m.Int64Gauge(
-	    "system.cpu.utilization",
-	    metric.WithDescription("Deprecated. Use `cpu.utilization` instead."),
-	    metric.WithUnit("1"),
-	)
-	if err != nil {
-	    return CPUUtilization{}, err
-	}
-	return CPUUtilization{i}, nil
-}
-
-// Name returns the semantic convention name of the instrument.
-func (CPUUtilization) Name() string {
-	return "system.cpu.utilization"
-}
-
-// Unit returns the semantic convention unit of the instrument
-func (CPUUtilization) Unit() string {
-	return "1"
-}
-
-// Description returns the semantic convention description of the instrument
-func (CPUUtilization) Description() string {
-	return "Deprecated. Use `cpu.utilization` instead."
-}
-
-func (m CPUUtilization) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
 }
 
 // DiskIo is an instrument used to record metric values conforming to the
