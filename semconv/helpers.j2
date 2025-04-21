@@ -41,16 +41,25 @@ Examples: {{ attr.examples | trim("[]") }}
 {%- endmacro -%}
 
 {%- macro lower_first(line) -%}
+{%- if line[0] is upper and line[1] is upper -%}
+{#- Assume an acronym -#}
+{{ line }}
+{%- else -%}
 {{ line[0]|lower }}{{ line[1:] }}
+{%- endif -%}
 {%- endmacro -%}
 
-{%- macro it_reps(brief) -%}
+{%- macro prefix_brief(brief, prefix="") -%}
 {%- set brief = brief | trim() -%}
-It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
+{{ prefix }} {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
   {{ lower_first(brief) | trim(".") }}.
 {%- else -%}
   the {{ lower_first(brief) | trim(".") }}.
 {%- endif -%}
+{%- endmacro -%}
+
+{%- macro it_reps(brief) -%}
+{{ prefix_brief(brief, "It represents") }}
 {%- endmacro -%}
 
 {%- macro keydoc(attr) -%}

@@ -1,0 +1,176 @@
+{% import 'helpers.j2' as h -%}
+
+{%- macro param_name(raw="", pkg="") -%}
+{%- if pkg != "" -%}
+{%- set n = pkg | length -%}
+{%- if pkg == raw[:n] -%}
+{%- set raw = raw[n:] -%}
+{%- if raw[0] == "." or raw[0] == "." -%}
+{%- set raw = raw[1:] -%}
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
+{{ raw | camel_case }}
+{%- endmacro -%}
+
+{%- macro attr_iface(metric_name, pkg="") -%}
+{%- set name = h.to_go_name(metric_name, pkg) -%}
+{%- set private_name = param_name(metric_name, pkg) ~ "Attr" -%}
+{{ [ name ~"Attr is an optional attribute for the " ~ name ~ " instrument." ] | comment }}
+type {{ name }}Attr interface {
+    {{ private_name }}() attribute.KeyValue
+}
+
+type {{ private_name }} struct {
+	kv attribute.KeyValue
+}
+
+func (a {{ private_name }}) {{ private_name }}() attribute.KeyValue {
+    return a.kv
+}
+{%- endmacro -%}
+
+{%- macro params_docs(attrs, pkg="") -%}
+{%- set ns = namespace(output='') -%}
+{%- for attr in attrs | required | attribute_sort -%}
+	{%- set ns.output = ns.output ~  "\n\nThe " ~ param_name(attr.name, pkg) ~ " is the " ~ h.lower_first(attr.brief) -%}
+{%- endfor -%}
+{%- if attrs | not_required | length > 0 -%}
+	{%- set ns.output = ns.output ~ "\n\nAll additional attrs passed are included in the recorded value." -%}
+{%- endif -%}
+{%- if ns.output != "" -%}
+//
+{{ ns.output | comment }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro param(attr, pkg="") -%}
+{%- if attr.type is mapping -%}
+{{ param_name(attr.name, pkg) }} {{ h.to_go_name(attr.name, pkg) }}Attr,
+{%- else -%}
+{{ param_name(attr.name, pkg) }} {{ attr.type | map_text("attribute_type_value")}},
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro params(attrs, type="", pkg="", prefix="") -%}
+{%- for attr in attrs | required | attribute_sort -%}
+{{ prefix ~ param(attr, pkg) }}
+{% endfor -%}
+{%- if attrs | not_required | length > 0 -%}
+{{ prefix ~ "attrs ..." ~ type ~ "Attr," }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro to_attribute(attr, pkg="") -%}
+{%- if attr.type is mapping -%}
+	attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}({{ param_name(attr.name, pkg) }})),
+{%- else -%}
+	attribute.{{ attr.type | map_text("attribute_type_method")}}("{{ attr.name }}", {{ param_name(attr.name, pkg) }}),
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro with_attributes_opt(attrs, pkg="", prefix="") -%}
+{%- if attrs | length > 0 -%}
+{{ prefix }}metric.WithAttributes(
+{%- if attrs | not_required | length > 0 %}
+{{ prefix }}	append(
+{{ prefix }}		m.conv(attrs),
+{%- for attr in attrs | required | attribute_sort %}
+{{ prefix }}		{{ to_attribute(attr, pkg) }}
+{%- endfor %}
+{{ prefix }}	)...,
+{%- else -%}
+{%- for attr in attrs | required | attribute_sort -%}
+{{ prefix }}	{{ to_attribute(attr, pkg) }}
+{% endfor -%}
+{%- endif %}
+{{ prefix }}),
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro conv_func(metric, pkg="") -%}
+{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
+func (m {{ name }}) conv(in []{{name}}Attr) []attribute.KeyValue {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]attribute.KeyValue, len(in))
+	for i, a := range in {
+		out[i] = a.{{ param_name(metric.metric_name, pkg) }}Attr()
+	}
+	return out
+}
+{%- endmacro -%}
+
+{%- macro add_method_with_optional(metric, pkg="", val_type="int64") -%}
+{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
+{%- set req_attr = metric.attributes | required | attribute_sort -%}
+
+// Add adds incr to the existing count.
+{{ params_docs(metric.attributes) }}
+func (m {{ name }}) Add(
+    ctx context.Context,
+    incr {{ val_type }},
+{{ params(metric.attributes, type=name, pkg=pkg, prefix="\t") }}
+) {
+	m.inst.Add(
+		ctx,
+		incr,
+{{ with_attributes_opt(metric.attributes, pkg=pkg, prefix="\t\t") }}
+	)
+}
+{%- if metric.attributes | not_required | length > 0 %}
+
+{{ conv_func(metric, pkg) }}
+
+{{ attr_iface(metric.metric_name, pkg) }}
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro add_method(metric, pkg="", val_type="int64") -%}
+{%- if metric.attributes | length > 0 -%}
+{{ add_method_with_optional(metric, pkg, val_type) }}
+{%- else -%}
+{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
+func (m {{ name }}) Add(ctx context.Context, incr {{ val_type }}) {
+    (*m.instrument).Add(ctx, incr)
+}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro record_method_with_optional(metric, pkg="", val_type="int64") -%}
+{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
+{%- set req_attr = metric.attributes | required | attribute_sort -%}
+
+// Record records incr to the existing count.
+{{ params_docs(metric.attributes) }}
+func (m {{ name }}) Record(
+    ctx context.Context,
+    val {{ val_type }},
+{{ params(metric.attributes, type=name, pkg=pkg, prefix="\t") }}
+) {
+	m.inst.Record(
+		ctx,
+		val,
+{{ with_attributes_opt(metric.attributes, pkg=pkg, prefix="\t\t") }}
+	)
+}
+{%- if metric.attributes | not_required | length > 0 %}
+
+{{ conv_func(metric, pkg) }}
+
+{{ attr_iface(metric.metric_name, pkg) }}
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro record_method(metric, pkg="", val_type="int64") -%}
+{%- if metric.attributes | length > 0 -%}
+{{ record_method_with_optional(metric, pkg, val_type) }}
+{%- else -%}
+{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
+func (m {{ name }}) Record(ctx context.Context, val {{ val_type }}) {
+    (*m.instrument).Record(ctx, val)
+}
+{%- endif -%}
+{%- endmacro -%}
