@@ -35,7 +35,7 @@ var (
 	ModeKernel ModeAttr = "kernel"
 )
 
-// CPUFrequency is an instrument used to record metric values conforming to the
+// Frequency is an instrument used to record metric values conforming to the
 // "cpu.frequency" semantic conventions. It represents the operating frequency of
 // the logical CPU in Hertz.
 type Frequency struct {
@@ -118,7 +118,7 @@ func (Frequency) LogicalNumber(val int) FrequencyAttr {
 	return frequencyAttr{kv: attribute.Int("cpu.logical_number", val)}
 }
 
-// CPUTime is an instrument used to record metric values conforming to the
+// Time is an instrument used to record metric values conforming to the
 // "cpu.time" semantic conventions. It represents the seconds each logical CPU
 // spent on each mode.
 type Time struct {
@@ -207,7 +207,7 @@ func (Time) Mode(val ModeAttr) TimeAttr {
 	return timeAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
-// CPUUtilization is an instrument used to record metric values conforming to the
+// Utilization is an instrument used to record metric values conforming to the
 // "cpu.utilization" semantic conventions. It represents the for each logical
 // CPU, the utilization is calculated as the change in cumulative CPU time
 // (cpu.time) over a measurement interval, divided by the elapsed time.

@@ -62,8 +62,8 @@ Examples: {{ attr.examples | trim("[]") }}
 {{ prefix_brief(brief, "It represents") }}
 {%- endmacro -%}
 
-{%- macro keydoc(attr) -%}
-{{ to_go_name(attr.name) }}Key is the attribute Key conforming to the "{{ attr.name }}" semantic conventions. {{ it_reps(attr.brief) }}
+{%- macro keydoc(attr, pkg="") -%}
+{{ to_go_name(attr.name, pkg) }}Key is the attribute Key conforming to the "{{ attr.name }}" semantic conventions. {{ it_reps(attr.brief) }}
 
 {% if attr is enum -%}
 Type: Enum
@@ -77,7 +77,7 @@ Stability: {{ attr.stability | title }}
 {{ deprecated_doc(attr) }}
 {%- endmacro -%}
 
-{%- macro generate_consts(group) -%}
+{%- macro generate_consts(group, pkg="") -%}
 {#- TODO: generate with group docs (i.e group by registry namespace) #}
 
 {{ ["Namespace: " ~ group.root_namespace] | comment(format="go") }}
@@ -86,26 +86,26 @@ const (
 {#- TODO: Handle template attributes. #}
 {%- if not attribute.type is template_type %}
 {{ keydoc(attribute) | comment(format="go_1tab") }}
-	{{to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
+	{{to_go_name(attribute.name, pkg=pkg)}}Key = attribute.Key("{{attribute.name}}")
 {% endif -%}
 {%- endfor -%}
 )
 {%- endmacro -%}
 
-{%- macro generate_funcs(group) -%}
+{%- macro generate_funcs(group, pkg="") -%}
 {%- for attribute in group.attributes if not attribute is enum %}
 {#- TODO: Handle template attributes. #}
 {%- if not attribute.type is template_type %}
 
-{{ [to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
-func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
-	return {{to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
+{{ [to_go_name(attribute.name, pkg) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
+func {{to_go_name(attribute.name, pkg)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return {{to_go_name(attribute.name, pkg)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
 {%- endif %}
 {%- endfor %}
 {%- endmacro -%}
 
-{%- macro generate_vars(group) -%}
+{%- macro generate_vars(group, pkg="") -%}
 {#- Render values for enums #}
 {%- for attribute in group.attributes %}
 {%- if attribute is enum %}
@@ -118,26 +118,26 @@ var (
 {%- else %}
 {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(format="go_1tab") }}
 {%- endif %}
-	{{to_go_name(attribute.name ~ "." ~ value.id)}} = {{ to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
+	{{to_go_name(attribute.name ~ "." ~ value.id, pkg=pkg)}} = {{ to_go_name(attribute.name, pkg=pkg) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
 {%- endfor %}
 )
 {%- endif %}
 {%- endfor %}
 {%- endmacro -%}
 
-{%- macro metric_keydoc(metric) -%}
+{%- macro metric_keydoc(metric, pkg="") -%}
 {%- if not metric.brief -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
 {%- endif %}
 {%- endmacro -%}
 
-{%- macro metric_typedoc(metric) -%}
+{%- macro metric_typedoc(metric, pkg="") -%}
 {%- if not metric.brief -%}
-{{ to_go_name(metric.metric_name) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions.
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
 {%- endif %}
 {%- endmacro -%}
 

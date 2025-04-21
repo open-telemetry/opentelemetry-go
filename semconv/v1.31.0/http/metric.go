@@ -75,9 +75,9 @@ var (
 	UserAgentSyntheticTypeTest UserAgentSyntheticTypeAttr = "test"
 )
 
-// HTTPClientActiveRequests is an instrument used to record metric values
-// conforming to the "http.client.active_requests" semantic conventions. It
-// represents the number of active HTTP requests.
+// ClientActiveRequests is an instrument used to record metric values conforming
+// to the "http.client.active_requests" semantic conventions. It represents the
+// number of active HTTP requests.
 type ClientActiveRequests struct {
 	inst metric.Int64UpDownCounter
 }
@@ -191,7 +191,7 @@ func (ClientActiveRequests) URLScheme(val string) ClientActiveRequestsAttr {
 	return clientActiveRequestsAttr{kv: attribute.String("url.scheme", val)}
 }
 
-// HTTPClientConnectionDuration is an instrument used to record metric values
+// ClientConnectionDuration is an instrument used to record metric values
 // conforming to the "http.client.connection.duration" semantic conventions. It
 // represents the duration of the successfully established outbound HTTP
 // connections.
@@ -307,10 +307,10 @@ func (ClientConnectionDuration) URLScheme(val string) ClientConnectionDurationAt
 	return clientConnectionDurationAttr{kv: attribute.String("url.scheme", val)}
 }
 
-// HTTPClientOpenConnections is an instrument used to record metric values
-// conforming to the "http.client.open_connections" semantic conventions. It
-// represents the number of outbound HTTP connections that are currently active
-// or idle on the client.
+// ClientOpenConnections is an instrument used to record metric values conforming
+// to the "http.client.open_connections" semantic conventions. It represents the
+// number of outbound HTTP connections that are currently active or idle on the
+// client.
 type ClientOpenConnections struct {
 	inst metric.Int64UpDownCounter
 }
@@ -428,9 +428,9 @@ func (ClientOpenConnections) URLScheme(val string) ClientOpenConnectionsAttr {
 	return clientOpenConnectionsAttr{kv: attribute.String("url.scheme", val)}
 }
 
-// HTTPClientRequestBodySize is an instrument used to record metric values
-// conforming to the "http.client.request.body.size" semantic conventions. It
-// represents the size of HTTP client request bodies.
+// ClientRequestBodySize is an instrument used to record metric values conforming
+// to the "http.client.request.body.size" semantic conventions. It represents the
+// size of HTTP client request bodies.
 type ClientRequestBodySize struct {
 	inst metric.Int64Histogram
 }
@@ -575,9 +575,9 @@ func (ClientRequestBodySize) URLScheme(val string) ClientRequestBodySizeAttr {
 	return clientRequestBodySizeAttr{kv: attribute.String("url.scheme", val)}
 }
 
-// HTTPClientRequestDuration is an instrument used to record metric values
-// conforming to the "http.client.request.duration" semantic conventions. It
-// represents the duration of HTTP client requests.
+// ClientRequestDuration is an instrument used to record metric values conforming
+// to the "http.client.request.duration" semantic conventions. It represents the
+// duration of HTTP client requests.
 type ClientRequestDuration struct {
 	inst metric.Float64Histogram
 }
@@ -722,7 +722,7 @@ func (ClientRequestDuration) URLTemplate(val string) ClientRequestDurationAttr {
 	return clientRequestDurationAttr{kv: attribute.String("url.template", val)}
 }
 
-// HTTPClientResponseBodySize is an instrument used to record metric values
+// ClientResponseBodySize is an instrument used to record metric values
 // conforming to the "http.client.response.body.size" semantic conventions. It
 // represents the size of HTTP client response bodies.
 type ClientResponseBodySize struct {
@@ -869,9 +869,9 @@ func (ClientResponseBodySize) URLScheme(val string) ClientResponseBodySizeAttr {
 	return clientResponseBodySizeAttr{kv: attribute.String("url.scheme", val)}
 }
 
-// HTTPServerActiveRequests is an instrument used to record metric values
-// conforming to the "http.server.active_requests" semantic conventions. It
-// represents the number of active HTTP server requests.
+// ServerActiveRequests is an instrument used to record metric values conforming
+// to the "http.server.active_requests" semantic conventions. It represents the
+// number of active HTTP server requests.
 type ServerActiveRequests struct {
 	inst metric.Int64UpDownCounter
 }
@@ -973,9 +973,9 @@ func (ServerActiveRequests) ServerPort(val int) ServerActiveRequestsAttr {
 	return serverActiveRequestsAttr{kv: attribute.Int("server.port", val)}
 }
 
-// HTTPServerRequestBodySize is an instrument used to record metric values
-// conforming to the "http.server.request.body.size" semantic conventions. It
-// represents the size of HTTP server request bodies.
+// ServerRequestBodySize is an instrument used to record metric values conforming
+// to the "http.server.request.body.size" semantic conventions. It represents the
+// size of HTTP server request bodies.
 type ServerRequestBodySize struct {
 	inst metric.Int64Histogram
 }
@@ -1123,9 +1123,9 @@ func (ServerRequestBodySize) UserAgentSyntheticType(val UserAgentSyntheticTypeAt
 	return serverRequestBodySizeAttr{kv: attribute.String("user_agent.synthetic.type", string(val))}
 }
 
-// HTTPServerRequestDuration is an instrument used to record metric values
-// conforming to the "http.server.request.duration" semantic conventions. It
-// represents the duration of HTTP server requests.
+// ServerRequestDuration is an instrument used to record metric values conforming
+// to the "http.server.request.duration" semantic conventions. It represents the
+// duration of HTTP server requests.
 type ServerRequestDuration struct {
 	inst metric.Float64Histogram
 }
@@ -1273,7 +1273,7 @@ func (ServerRequestDuration) UserAgentSyntheticType(val UserAgentSyntheticTypeAt
 	return serverRequestDurationAttr{kv: attribute.String("user_agent.synthetic.type", string(val))}
 }
 
-// HTTPServerResponseBodySize is an instrument used to record metric values
+// ServerResponseBodySize is an instrument used to record metric values
 // conforming to the "http.server.response.body.size" semantic conventions. It
 // represents the size of HTTP server response bodies.
 type ServerResponseBodySize struct {

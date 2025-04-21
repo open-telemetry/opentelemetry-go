@@ -56,9 +56,9 @@ var (
 	NetworkTypeIpv6 NetworkTypeAttr = "ipv6"
 )
 
-// KestrelActiveConnections is an instrument used to record metric values
-// conforming to the "kestrel.active_connections" semantic conventions. It
-// represents the number of connections that are currently active on the server.
+// ActiveConnections is an instrument used to record metric values conforming to
+// the "kestrel.active_connections" semantic conventions. It represents the
+// number of connections that are currently active on the server.
 type ActiveConnections struct {
 	inst metric.Int64UpDownCounter
 }
@@ -165,10 +165,9 @@ func (ActiveConnections) ServerPort(val int) ActiveConnectionsAttr {
 	return activeConnectionsAttr{kv: attribute.Int("server.port", val)}
 }
 
-// KestrelActiveTLSHandshakes is an instrument used to record metric values
-// conforming to the "kestrel.active_tls_handshakes" semantic conventions. It
-// represents the number of TLS handshakes that are currently in progress on the
-// server.
+// ActiveTLSHandshakes is an instrument used to record metric values conforming
+// to the "kestrel.active_tls_handshakes" semantic conventions. It represents the
+// number of TLS handshakes that are currently in progress on the server.
 type ActiveTLSHandshakes struct {
 	inst metric.Int64UpDownCounter
 }
@@ -275,9 +274,9 @@ func (ActiveTLSHandshakes) ServerPort(val int) ActiveTLSHandshakesAttr {
 	return activeTlsHandshakesAttr{kv: attribute.Int("server.port", val)}
 }
 
-// KestrelConnectionDuration is an instrument used to record metric values
-// conforming to the "kestrel.connection.duration" semantic conventions. It
-// represents the duration of connections on the server.
+// ConnectionDuration is an instrument used to record metric values conforming to
+// the "kestrel.connection.duration" semantic conventions. It represents the
+// duration of connections on the server.
 type ConnectionDuration struct {
 	inst metric.Float64Histogram
 }
@@ -416,10 +415,9 @@ func (ConnectionDuration) TLSProtocolVersion(val string) ConnectionDurationAttr 
 	return connectionDurationAttr{kv: attribute.String("tls.protocol.version", val)}
 }
 
-// KestrelQueuedConnections is an instrument used to record metric values
-// conforming to the "kestrel.queued_connections" semantic conventions. It
-// represents the number of connections that are currently queued and are waiting
-// to start.
+// QueuedConnections is an instrument used to record metric values conforming to
+// the "kestrel.queued_connections" semantic conventions. It represents the
+// number of connections that are currently queued and are waiting to start.
 type QueuedConnections struct {
 	inst metric.Int64UpDownCounter
 }
@@ -526,10 +524,10 @@ func (QueuedConnections) ServerPort(val int) QueuedConnectionsAttr {
 	return queuedConnectionsAttr{kv: attribute.Int("server.port", val)}
 }
 
-// KestrelQueuedRequests is an instrument used to record metric values conforming
-// to the "kestrel.queued_requests" semantic conventions. It represents the
-// number of HTTP requests on multiplexed connections (HTTP/2 and HTTP/3) that
-// are currently queued and are waiting to start.
+// QueuedRequests is an instrument used to record metric values conforming to the
+// "kestrel.queued_requests" semantic conventions. It represents the number of
+// HTTP requests on multiplexed connections (HTTP/2 and HTTP/3) that are
+// currently queued and are waiting to start.
 type QueuedRequests struct {
 	inst metric.Int64UpDownCounter
 }
@@ -651,9 +649,9 @@ func (QueuedRequests) ServerPort(val int) QueuedRequestsAttr {
 	return queuedRequestsAttr{kv: attribute.Int("server.port", val)}
 }
 
-// KestrelRejectedConnections is an instrument used to record metric values
-// conforming to the "kestrel.rejected_connections" semantic conventions. It
-// represents the number of connections rejected by the server.
+// RejectedConnections is an instrument used to record metric values conforming
+// to the "kestrel.rejected_connections" semantic conventions. It represents the
+// number of connections rejected by the server.
 type RejectedConnections struct {
 	inst metric.Int64Counter
 }
@@ -760,9 +758,9 @@ func (RejectedConnections) ServerPort(val int) RejectedConnectionsAttr {
 	return rejectedConnectionsAttr{kv: attribute.Int("server.port", val)}
 }
 
-// KestrelTLSHandshakeDuration is an instrument used to record metric values
-// conforming to the "kestrel.tls_handshake.duration" semantic conventions. It
-// represents the duration of TLS handshakes on the server.
+// TLSHandshakeDuration is an instrument used to record metric values conforming
+// to the "kestrel.tls_handshake.duration" semantic conventions. It represents
+// the duration of TLS handshakes on the server.
 type TLSHandshakeDuration struct {
 	inst metric.Float64Histogram
 }
@@ -885,10 +883,9 @@ func (TLSHandshakeDuration) TLSProtocolVersion(val string) TLSHandshakeDurationA
 	return tlsHandshakeDurationAttr{kv: attribute.String("tls.protocol.version", val)}
 }
 
-// KestrelUpgradedConnections is an instrument used to record metric values
-// conforming to the "kestrel.upgraded_connections" semantic conventions. It
-// represents the number of connections that are currently upgraded (WebSockets).
-// .
+// UpgradedConnections is an instrument used to record metric values conforming
+// to the "kestrel.upgraded_connections" semantic conventions. It represents the
+// number of connections that are currently upgraded (WebSockets). .
 type UpgradedConnections struct {
 	inst metric.Int64UpDownCounter
 }

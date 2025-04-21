@@ -59,9 +59,9 @@ var (
 	NetworkIoDirectionReceive NetworkIoDirectionAttr = "receive"
 )
 
-// ContainerCPUTime is an instrument used to record metric values conforming to
-// the "container.cpu.time" semantic conventions. It represents the total CPU
-// time consumed.
+// CPUTime is an instrument used to record metric values conforming to the
+// "container.cpu.time" semantic conventions. It represents the total CPU time
+// consumed.
 type CPUTime struct {
 	inst metric.Float64Counter
 }
@@ -144,9 +144,9 @@ func (CPUTime) CPUMode(val CPUModeAttr) CPUTimeAttr {
 	return cpuTimeAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
-// ContainerCPUUsage is an instrument used to record metric values conforming to
-// the "container.cpu.usage" semantic conventions. It represents the container's
-// CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs.
+// CPUUsage is an instrument used to record metric values conforming to the
+// "container.cpu.usage" semantic conventions. It represents the container's CPU
+// usage, measured in cpus. Range from 0 to the number of allocatable CPUs.
 type CPUUsage struct {
 	inst metric.Int64Gauge
 }
@@ -229,9 +229,9 @@ func (CPUUsage) CPUMode(val CPUModeAttr) CPUUsageAttr {
 	return cpuUsageAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
-// ContainerDiskIo is an instrument used to record metric values conforming to
-// the "container.disk.io" semantic conventions. It represents the disk bytes for
-// the container.
+// DiskIo is an instrument used to record metric values conforming to the
+// "container.disk.io" semantic conventions. It represents the disk bytes for the
+// container.
 type DiskIo struct {
 	inst metric.Int64Counter
 }
@@ -318,9 +318,9 @@ func (DiskIo) SystemDevice(val string) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("system.device", val)}
 }
 
-// ContainerMemoryUsage is an instrument used to record metric values conforming
-// to the "container.memory.usage" semantic conventions. It represents the memory
-// usage of the container.
+// MemoryUsage is an instrument used to record metric values conforming to the
+// "container.memory.usage" semantic conventions. It represents the memory usage
+// of the container.
 type MemoryUsage struct {
 	inst metric.Int64Counter
 }
@@ -357,9 +357,9 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// ContainerNetworkIo is an instrument used to record metric values conforming to
-// the "container.network.io" semantic conventions. It represents the network
-// bytes for the container.
+// NetworkIo is an instrument used to record metric values conforming to the
+// "container.network.io" semantic conventions. It represents the network bytes
+// for the container.
 type NetworkIo struct {
 	inst metric.Int64Counter
 }
@@ -448,9 +448,9 @@ func (NetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// ContainerUptime is an instrument used to record metric values conforming to
-// the "container.uptime" semantic conventions. It represents the time the
-// container has been running.
+// Uptime is an instrument used to record metric values conforming to the
+// "container.uptime" semantic conventions. It represents the time the container
+// has been running.
 type Uptime struct {
 	inst metric.Float64Gauge
 }

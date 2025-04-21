@@ -32,7 +32,7 @@ var (
 	TriggerOther TriggerAttr = "other"
 )
 
-// FaaSColdstarts is an instrument used to record metric values conforming to the
+// Coldstarts is an instrument used to record metric values conforming to the
 // "faas.coldstarts" semantic conventions. It represents the number of invocation
 // cold starts.
 type Coldstarts struct {
@@ -116,7 +116,7 @@ func (Coldstarts) Trigger(val TriggerAttr) ColdstartsAttr {
 	return coldstartsAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSCPUUsage is an instrument used to record metric values conforming to the
+// CPUUsage is an instrument used to record metric values conforming to the
 // "faas.cpu_usage" semantic conventions. It represents the distribution of CPU
 // usage per invocation.
 type CPUUsage struct {
@@ -200,7 +200,7 @@ func (CPUUsage) Trigger(val TriggerAttr) CPUUsageAttr {
 	return cpuUsageAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSErrors is an instrument used to record metric values conforming to the
+// Errors is an instrument used to record metric values conforming to the
 // "faas.errors" semantic conventions. It represents the number of invocation
 // errors.
 type Errors struct {
@@ -284,8 +284,8 @@ func (Errors) Trigger(val TriggerAttr) ErrorsAttr {
 	return errorsAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSInitDuration is an instrument used to record metric values conforming to
-// the "faas.init_duration" semantic conventions. It represents the measures the
+// InitDuration is an instrument used to record metric values conforming to the
+// "faas.init_duration" semantic conventions. It represents the measures the
 // duration of the function's initialization, such as a cold start.
 type InitDuration struct {
 	inst metric.Float64Histogram
@@ -368,8 +368,8 @@ func (InitDuration) Trigger(val TriggerAttr) InitDurationAttr {
 	return initDurationAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSInvocations is an instrument used to record metric values conforming to
-// the "faas.invocations" semantic conventions. It represents the number of
+// Invocations is an instrument used to record metric values conforming to the
+// "faas.invocations" semantic conventions. It represents the number of
 // successful invocations.
 type Invocations struct {
 	inst metric.Int64Counter
@@ -452,9 +452,9 @@ func (Invocations) Trigger(val TriggerAttr) InvocationsAttr {
 	return invocationsAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSInvokeDuration is an instrument used to record metric values conforming to
-// the "faas.invoke_duration" semantic conventions. It represents the measures
-// the duration of the function's logic execution.
+// InvokeDuration is an instrument used to record metric values conforming to the
+// "faas.invoke_duration" semantic conventions. It represents the measures the
+// duration of the function's logic execution.
 type InvokeDuration struct {
 	inst metric.Float64Histogram
 }
@@ -536,7 +536,7 @@ func (InvokeDuration) Trigger(val TriggerAttr) InvokeDurationAttr {
 	return invokeDurationAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSMemUsage is an instrument used to record metric values conforming to the
+// MemUsage is an instrument used to record metric values conforming to the
 // "faas.mem_usage" semantic conventions. It represents the distribution of max
 // memory usage per invocation.
 type MemUsage struct {
@@ -620,7 +620,7 @@ func (MemUsage) Trigger(val TriggerAttr) MemUsageAttr {
 	return memUsageAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSNetIo is an instrument used to record metric values conforming to the
+// NetIo is an instrument used to record metric values conforming to the
 // "faas.net_io" semantic conventions. It represents the distribution of net I/O
 // usage per invocation.
 type NetIo struct {
@@ -704,7 +704,7 @@ func (NetIo) Trigger(val TriggerAttr) NetIoAttr {
 	return netIoAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
-// FaaSTimeouts is an instrument used to record metric values conforming to the
+// Timeouts is an instrument used to record metric values conforming to the
 // "faas.timeouts" semantic conventions. It represents the number of invocation
 // timeouts.
 type Timeouts struct {

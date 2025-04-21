@@ -81,9 +81,9 @@ var (
 	ErrorTypeOther ErrorTypeAttr = "_OTHER"
 )
 
-// CICDPipelineRunActive is an instrument used to record metric values conforming
-// to the "cicd.pipeline.run.active" semantic conventions. It represents the
-// number of pipeline runs currently active in the system by state.
+// PipelineRunActive is an instrument used to record metric values conforming to
+// the "cicd.pipeline.run.active" semantic conventions. It represents the number
+// of pipeline runs currently active in the system by state.
 type PipelineRunActive struct {
 	inst metric.Int64UpDownCounter
 }
@@ -140,10 +140,9 @@ func (m PipelineRunActive) Add(
 	)
 }
 
-// CICDPipelineRunDuration is an instrument used to record metric values
-// conforming to the "cicd.pipeline.run.duration" semantic conventions. It
-// represents the duration of a pipeline run grouped by pipeline, state and
-// result.
+// PipelineRunDuration is an instrument used to record metric values conforming
+// to the "cicd.pipeline.run.duration" semantic conventions. It represents the
+// duration of a pipeline run grouped by pipeline, state and result.
 type PipelineRunDuration struct {
 	inst metric.Float64Histogram
 }
@@ -244,9 +243,9 @@ func (PipelineRunDuration) ErrorType(val ErrorTypeAttr) PipelineRunDurationAttr 
 	return pipelineRunDurationAttr{kv: attribute.String("error.type", string(val))}
 }
 
-// CICDPipelineRunErrors is an instrument used to record metric values conforming
-// to the "cicd.pipeline.run.errors" semantic conventions. It represents the
-// number of errors encountered in pipeline runs (eg. compile, test failures).
+// PipelineRunErrors is an instrument used to record metric values conforming to
+// the "cicd.pipeline.run.errors" semantic conventions. It represents the number
+// of errors encountered in pipeline runs (eg. compile, test failures).
 type PipelineRunErrors struct {
 	inst metric.Int64Counter
 }
@@ -302,9 +301,9 @@ func (m PipelineRunErrors) Add(
 	)
 }
 
-// CICDSystemErrors is an instrument used to record metric values conforming to
-// the "cicd.system.errors" semantic conventions. It represents the number of
-// errors in a component of the CICD system (eg. controller, scheduler, agent).
+// SystemErrors is an instrument used to record metric values conforming to the
+// "cicd.system.errors" semantic conventions. It represents the number of errors
+// in a component of the CICD system (eg. controller, scheduler, agent).
 type SystemErrors struct {
 	inst metric.Int64Counter
 }
@@ -359,9 +358,9 @@ func (m SystemErrors) Add(
 	)
 }
 
-// CICDWorkerCount is an instrument used to record metric values conforming to
-// the "cicd.worker.count" semantic conventions. It represents the number of
-// workers on the CICD system by state.
+// WorkerCount is an instrument used to record metric values conforming to the
+// "cicd.worker.count" semantic conventions. It represents the number of workers
+// on the CICD system by state.
 type WorkerCount struct {
 	inst metric.Int64UpDownCounter
 }

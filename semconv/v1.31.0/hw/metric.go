@@ -70,7 +70,7 @@ var (
 	TypeVoltage TypeAttr = "voltage"
 )
 
-// HwEnergy is an instrument used to record metric values conforming to the
+// Energy is an instrument used to record metric values conforming to the
 // "hw.energy" semantic conventions. It represents the energy consumed by the
 // component.
 type Energy struct {
@@ -171,7 +171,7 @@ func (Energy) Parent(val string) EnergyAttr {
 	return energyAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwErrors is an instrument used to record metric values conforming to the
+// Errors is an instrument used to record metric values conforming to the
 // "hw.errors" semantic conventions. It represents the number of errors
 // encountered by the component.
 type Errors struct {
@@ -278,7 +278,7 @@ func (Errors) Parent(val string) ErrorsAttr {
 	return errorsAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwHostAmbientTemperature is an instrument used to record metric values
+// HostAmbientTemperature is an instrument used to record metric values
 // conforming to the "hw.host.ambient_temperature" semantic conventions. It
 // represents the ambient (external) temperature of the physical host.
 type HostAmbientTemperature struct {
@@ -376,7 +376,7 @@ func (HostAmbientTemperature) Parent(val string) HostAmbientTemperatureAttr {
 	return hostAmbientTemperatureAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwHostEnergy is an instrument used to record metric values conforming to the
+// HostEnergy is an instrument used to record metric values conforming to the
 // "hw.host.energy" semantic conventions. It represents the total energy consumed
 // by the entire physical host, in joules.
 type HostEnergy struct {
@@ -473,8 +473,8 @@ func (HostEnergy) Parent(val string) HostEnergyAttr {
 	return hostEnergyAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwHostHeatingMargin is an instrument used to record metric values conforming
-// to the "hw.host.heating_margin" semantic conventions. It represents the by how
+// HostHeatingMargin is an instrument used to record metric values conforming to
+// the "hw.host.heating_margin" semantic conventions. It represents the by how
 // many degrees Celsius the temperature of the physical host can be increased,
 // before reaching a warning threshold on one of the internal sensors.
 type HostHeatingMargin struct {
@@ -572,7 +572,7 @@ func (HostHeatingMargin) Parent(val string) HostHeatingMarginAttr {
 	return hostHeatingMarginAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwHostPower is an instrument used to record metric values conforming to the
+// HostPower is an instrument used to record metric values conforming to the
 // "hw.host.power" semantic conventions. It represents the instantaneous power
 // consumed by the entire physical host in Watts (`hw.host.energy` is preferred).
 type HostPower struct {
@@ -669,7 +669,7 @@ func (HostPower) Parent(val string) HostPowerAttr {
 	return hostPowerAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwPower is an instrument used to record metric values conforming to the
+// Power is an instrument used to record metric values conforming to the
 // "hw.power" semantic conventions. It represents the instantaneous power
 // consumed by the component.
 type Power struct {
@@ -770,7 +770,7 @@ func (Power) Parent(val string) PowerAttr {
 	return powerAttr{kv: attribute.String("hw.parent", val)}
 }
 
-// HwStatus is an instrument used to record metric values conforming to the
+// Status is an instrument used to record metric values conforming to the
 // "hw.status" semantic conventions. It represents the operational status: `1`
 // (true) or `0` (false) for each of the possible states.
 type Status struct {

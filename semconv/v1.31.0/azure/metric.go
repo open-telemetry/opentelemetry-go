@@ -43,7 +43,7 @@ var (
 	ErrorTypeOther ErrorTypeAttr = "_OTHER"
 )
 
-// AzureCosmosDBClientActiveInstanceCount is an instrument used to record metric
+// CosmosDBClientActiveInstanceCount is an instrument used to record metric
 // values conforming to the "azure.cosmosdb.client.active_instance.count"
 // semantic conventions. It represents the number of active client instances.
 type CosmosDBClientActiveInstanceCount struct {
@@ -134,10 +134,10 @@ func (CosmosDBClientActiveInstanceCount) ServerAddress(val string) CosmosDBClien
 	return cosmosdbClientActiveInstanceCountAttr{kv: attribute.String("server.address", val)}
 }
 
-// AzureCosmosDBClientOperationRequestCharge is an instrument used to record
-// metric values conforming to the
-// "azure.cosmosdb.client.operation.request_charge" semantic conventions. It
-// represents the [Request units] consumed by the operation.
+// CosmosDBClientOperationRequestCharge is an instrument used to record metric
+// values conforming to the "azure.cosmosdb.client.operation.request_charge"
+// semantic conventions. It represents the [Request units] consumed by the
+// operation.
 //
 // [Request units]: https://learn.microsoft.com/azure/cosmos-db/request-units
 type CosmosDBClientOperationRequestCharge struct {

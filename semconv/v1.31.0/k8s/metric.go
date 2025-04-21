@@ -40,9 +40,9 @@ var (
 	NetworkIoDirectionReceive NetworkIoDirectionAttr = "receive"
 )
 
-// K8SCronJobActiveJobs is an instrument used to record metric values conforming
-// to the "k8s.cronjob.active_jobs" semantic conventions. It represents the
-// number of actively running jobs for a cronjob.
+// CronJobActiveJobs is an instrument used to record metric values conforming to
+// the "k8s.cronjob.active_jobs" semantic conventions. It represents the number
+// of actively running jobs for a cronjob.
 type CronJobActiveJobs struct {
 	inst metric.Int64UpDownCounter
 }
@@ -79,8 +79,8 @@ func (m CronJobActiveJobs) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SDaemonSetCurrentScheduledNodes is an instrument used to record metric
-// values conforming to the "k8s.daemonset.current_scheduled_nodes" semantic
+// DaemonSetCurrentScheduledNodes is an instrument used to record metric values
+// conforming to the "k8s.daemonset.current_scheduled_nodes" semantic
 // conventions. It represents the number of nodes that are running at least 1
 // daemon pod and are supposed to run the daemon pod.
 type DaemonSetCurrentScheduledNodes struct {
@@ -120,8 +120,8 @@ func (m DaemonSetCurrentScheduledNodes) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SDaemonSetDesiredScheduledNodes is an instrument used to record metric
-// values conforming to the "k8s.daemonset.desired_scheduled_nodes" semantic
+// DaemonSetDesiredScheduledNodes is an instrument used to record metric values
+// conforming to the "k8s.daemonset.desired_scheduled_nodes" semantic
 // conventions. It represents the number of nodes that should be running the
 // daemon pod (including nodes currently running the daemon pod).
 type DaemonSetDesiredScheduledNodes struct {
@@ -161,7 +161,7 @@ func (m DaemonSetDesiredScheduledNodes) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SDaemonSetMisscheduledNodes is an instrument used to record metric values
+// DaemonSetMisscheduledNodes is an instrument used to record metric values
 // conforming to the "k8s.daemonset.misscheduled_nodes" semantic conventions. It
 // represents the number of nodes that are running the daemon pod, but are not
 // supposed to run the daemon pod.
@@ -202,10 +202,10 @@ func (m DaemonSetMisscheduledNodes) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SDaemonSetReadyNodes is an instrument used to record metric values
-// conforming to the "k8s.daemonset.ready_nodes" semantic conventions. It
-// represents the number of nodes that should be running the daemon pod and have
-// one or more of the daemon pod running and ready.
+// DaemonSetReadyNodes is an instrument used to record metric values conforming
+// to the "k8s.daemonset.ready_nodes" semantic conventions. It represents the
+// number of nodes that should be running the daemon pod and have one or more of
+// the daemon pod running and ready.
 type DaemonSetReadyNodes struct {
 	inst metric.Int64UpDownCounter
 }
@@ -242,7 +242,7 @@ func (m DaemonSetReadyNodes) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SDeploymentAvailablePods is an instrument used to record metric values
+// DeploymentAvailablePods is an instrument used to record metric values
 // conforming to the "k8s.deployment.available_pods" semantic conventions. It
 // represents the total number of available replica pods (ready for at least
 // minReadySeconds) targeted by this deployment.
@@ -282,9 +282,9 @@ func (m DeploymentAvailablePods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SDeploymentDesiredPods is an instrument used to record metric values
-// conforming to the "k8s.deployment.desired_pods" semantic conventions. It
-// represents the number of desired replica pods in this deployment.
+// DeploymentDesiredPods is an instrument used to record metric values conforming
+// to the "k8s.deployment.desired_pods" semantic conventions. It represents the
+// number of desired replica pods in this deployment.
 type DeploymentDesiredPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -321,10 +321,10 @@ func (m DeploymentDesiredPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SHpaCurrentPods is an instrument used to record metric values conforming to
-// the "k8s.hpa.current_pods" semantic conventions. It represents the current
-// number of replica pods managed by this horizontal pod autoscaler, as last seen
-// by the autoscaler.
+// HpaCurrentPods is an instrument used to record metric values conforming to the
+// "k8s.hpa.current_pods" semantic conventions. It represents the current number
+// of replica pods managed by this horizontal pod autoscaler, as last seen by the
+// autoscaler.
 type HpaCurrentPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -361,10 +361,10 @@ func (m HpaCurrentPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SHpaDesiredPods is an instrument used to record metric values conforming to
-// the "k8s.hpa.desired_pods" semantic conventions. It represents the desired
-// number of replica pods managed by this horizontal pod autoscaler, as last
-// calculated by the autoscaler.
+// HpaDesiredPods is an instrument used to record metric values conforming to the
+// "k8s.hpa.desired_pods" semantic conventions. It represents the desired number
+// of replica pods managed by this horizontal pod autoscaler, as last calculated
+// by the autoscaler.
 type HpaDesiredPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -401,7 +401,7 @@ func (m HpaDesiredPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SHpaMaxPods is an instrument used to record metric values conforming to the
+// HpaMaxPods is an instrument used to record metric values conforming to the
 // "k8s.hpa.max_pods" semantic conventions. It represents the upper limit for the
 // number of replica pods to which the autoscaler can scale up.
 type HpaMaxPods struct {
@@ -440,7 +440,7 @@ func (m HpaMaxPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SHpaMinPods is an instrument used to record metric values conforming to the
+// HpaMinPods is an instrument used to record metric values conforming to the
 // "k8s.hpa.min_pods" semantic conventions. It represents the lower limit for the
 // number of replica pods to which the autoscaler can scale down.
 type HpaMinPods struct {
@@ -479,8 +479,8 @@ func (m HpaMinPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SJobActivePods is an instrument used to record metric values conforming to
-// the "k8s.job.active_pods" semantic conventions. It represents the number of
+// JobActivePods is an instrument used to record metric values conforming to the
+// "k8s.job.active_pods" semantic conventions. It represents the number of
 // pending and actively running pods for a job.
 type JobActivePods struct {
 	inst metric.Int64UpDownCounter
@@ -518,7 +518,7 @@ func (m JobActivePods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SJobDesiredSuccessfulPods is an instrument used to record metric values
+// JobDesiredSuccessfulPods is an instrument used to record metric values
 // conforming to the "k8s.job.desired_successful_pods" semantic conventions. It
 // represents the desired number of successfully finished pods the job should be
 // run with.
@@ -558,9 +558,9 @@ func (m JobDesiredSuccessfulPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SJobFailedPods is an instrument used to record metric values conforming to
-// the "k8s.job.failed_pods" semantic conventions. It represents the number of
-// pods which reached phase Failed for a job.
+// JobFailedPods is an instrument used to record metric values conforming to the
+// "k8s.job.failed_pods" semantic conventions. It represents the number of pods
+// which reached phase Failed for a job.
 type JobFailedPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -597,8 +597,8 @@ func (m JobFailedPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SJobMaxParallelPods is an instrument used to record metric values conforming
-// to the "k8s.job.max_parallel_pods" semantic conventions. It represents the max
+// JobMaxParallelPods is an instrument used to record metric values conforming to
+// the "k8s.job.max_parallel_pods" semantic conventions. It represents the max
 // desired number of pods the job should run at any given time.
 type JobMaxParallelPods struct {
 	inst metric.Int64UpDownCounter
@@ -636,9 +636,9 @@ func (m JobMaxParallelPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SJobSuccessfulPods is an instrument used to record metric values conforming
-// to the "k8s.job.successful_pods" semantic conventions. It represents the
-// number of pods which reached phase Succeeded for a job.
+// JobSuccessfulPods is an instrument used to record metric values conforming to
+// the "k8s.job.successful_pods" semantic conventions. It represents the number
+// of pods which reached phase Succeeded for a job.
 type JobSuccessfulPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -675,9 +675,9 @@ func (m JobSuccessfulPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SNamespacePhase is an instrument used to record metric values conforming to
-// the "k8s.namespace.phase" semantic conventions. It represents the describes
-// number of K8s namespaces that are currently in a given phase.
+// NamespacePhase is an instrument used to record metric values conforming to the
+// "k8s.namespace.phase" semantic conventions. It represents the describes number
+// of K8s namespaces that are currently in a given phase.
 type NamespacePhase struct {
 	inst metric.Int64UpDownCounter
 }
@@ -728,7 +728,7 @@ func (m NamespacePhase) Add(
 	)
 }
 
-// K8SNodeCPUTime is an instrument used to record metric values conforming to the
+// NodeCPUTime is an instrument used to record metric values conforming to the
 // "k8s.node.cpu.time" semantic conventions. It represents the total CPU time
 // consumed.
 type NodeCPUTime struct {
@@ -767,9 +767,9 @@ func (m NodeCPUTime) Add(ctx context.Context, incr float64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SNodeCPUUsage is an instrument used to record metric values conforming to
-// the "k8s.node.cpu.usage" semantic conventions. It represents the node's CPU
-// usage, measured in cpus. Range from 0 to the number of allocatable CPUs.
+// NodeCPUUsage is an instrument used to record metric values conforming to the
+// "k8s.node.cpu.usage" semantic conventions. It represents the node's CPU usage,
+// measured in cpus. Range from 0 to the number of allocatable CPUs.
 type NodeCPUUsage struct {
 	inst metric.Int64Gauge
 }
@@ -806,7 +806,7 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// K8SNodeMemoryUsage is an instrument used to record metric values conforming to
+// NodeMemoryUsage is an instrument used to record metric values conforming to
 // the "k8s.node.memory.usage" semantic conventions. It represents the memory
 // usage of the Node.
 type NodeMemoryUsage struct {
@@ -845,8 +845,8 @@ func (m NodeMemoryUsage) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// K8SNodeNetworkErrors is an instrument used to record metric values conforming
-// to the "k8s.node.network.errors" semantic conventions. It represents the node
+// NodeNetworkErrors is an instrument used to record metric values conforming to
+// the "k8s.node.network.errors" semantic conventions. It represents the node
 // network errors.
 type NodeNetworkErrors struct {
 	inst metric.Int64Counter
@@ -937,9 +937,9 @@ func (NodeNetworkErrors) NetworkIoDirection(val NetworkIoDirectionAttr) NodeNetw
 	return nodeNetworkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// K8SNodeNetworkIo is an instrument used to record metric values conforming to
-// the "k8s.node.network.io" semantic conventions. It represents the network
-// bytes for the Node.
+// NodeNetworkIo is an instrument used to record metric values conforming to the
+// "k8s.node.network.io" semantic conventions. It represents the network bytes
+// for the Node.
 type NodeNetworkIo struct {
 	inst metric.Int64Counter
 }
@@ -1028,7 +1028,7 @@ func (NodeNetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NodeNetworkI
 	return nodeNetworkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// K8SNodeUptime is an instrument used to record metric values conforming to the
+// NodeUptime is an instrument used to record metric values conforming to the
 // "k8s.node.uptime" semantic conventions. It represents the time the Node has
 // been running.
 type NodeUptime struct {
@@ -1067,7 +1067,7 @@ func (m NodeUptime) Record(ctx context.Context, val float64) {
     m.inst.Record(ctx, val)
 }
 
-// K8SPodCPUTime is an instrument used to record metric values conforming to the
+// PodCPUTime is an instrument used to record metric values conforming to the
 // "k8s.pod.cpu.time" semantic conventions. It represents the total CPU time
 // consumed.
 type PodCPUTime struct {
@@ -1106,7 +1106,7 @@ func (m PodCPUTime) Add(ctx context.Context, incr float64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SPodCPUUsage is an instrument used to record metric values conforming to the
+// PodCPUUsage is an instrument used to record metric values conforming to the
 // "k8s.pod.cpu.usage" semantic conventions. It represents the pod's CPU usage,
 // measured in cpus. Range from 0 to the number of allocatable CPUs.
 type PodCPUUsage struct {
@@ -1145,9 +1145,9 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// K8SPodMemoryUsage is an instrument used to record metric values conforming to
-// the "k8s.pod.memory.usage" semantic conventions. It represents the memory
-// usage of the Pod.
+// PodMemoryUsage is an instrument used to record metric values conforming to the
+// "k8s.pod.memory.usage" semantic conventions. It represents the memory usage of
+// the Pod.
 type PodMemoryUsage struct {
 	inst metric.Int64Gauge
 }
@@ -1184,8 +1184,8 @@ func (m PodMemoryUsage) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// K8SPodNetworkErrors is an instrument used to record metric values conforming
-// to the "k8s.pod.network.errors" semantic conventions. It represents the pod
+// PodNetworkErrors is an instrument used to record metric values conforming to
+// the "k8s.pod.network.errors" semantic conventions. It represents the pod
 // network errors.
 type PodNetworkErrors struct {
 	inst metric.Int64Counter
@@ -1276,9 +1276,9 @@ func (PodNetworkErrors) NetworkIoDirection(val NetworkIoDirectionAttr) PodNetwor
 	return podNetworkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// K8SPodNetworkIo is an instrument used to record metric values conforming to
-// the "k8s.pod.network.io" semantic conventions. It represents the network bytes
-// for the Pod.
+// PodNetworkIo is an instrument used to record metric values conforming to the
+// "k8s.pod.network.io" semantic conventions. It represents the network bytes for
+// the Pod.
 type PodNetworkIo struct {
 	inst metric.Int64Counter
 }
@@ -1367,7 +1367,7 @@ func (PodNetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) PodNetworkIoA
 	return podNetworkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// K8SPodUptime is an instrument used to record metric values conforming to the
+// PodUptime is an instrument used to record metric values conforming to the
 // "k8s.pod.uptime" semantic conventions. It represents the time the Pod has been
 // running.
 type PodUptime struct {
@@ -1406,7 +1406,7 @@ func (m PodUptime) Record(ctx context.Context, val float64) {
     m.inst.Record(ctx, val)
 }
 
-// K8SReplicaSetAvailablePods is an instrument used to record metric values
+// ReplicaSetAvailablePods is an instrument used to record metric values
 // conforming to the "k8s.replicaset.available_pods" semantic conventions. It
 // represents the total number of available replica pods (ready for at least
 // minReadySeconds) targeted by this replicaset.
@@ -1446,9 +1446,9 @@ func (m ReplicaSetAvailablePods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SReplicaSetDesiredPods is an instrument used to record metric values
-// conforming to the "k8s.replicaset.desired_pods" semantic conventions. It
-// represents the number of desired replica pods in this replicaset.
+// ReplicaSetDesiredPods is an instrument used to record metric values conforming
+// to the "k8s.replicaset.desired_pods" semantic conventions. It represents the
+// number of desired replica pods in this replicaset.
 type ReplicaSetDesiredPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1485,7 +1485,7 @@ func (m ReplicaSetDesiredPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SReplicationControllerAvailablePods is an instrument used to record metric
+// ReplicationControllerAvailablePods is an instrument used to record metric
 // values conforming to the "k8s.replication_controller.available_pods" semantic
 // conventions. It represents the deprecated, use
 // `k8s.replicationcontroller.available_pods` instead.
@@ -1526,8 +1526,8 @@ func (m ReplicationControllerAvailablePods) Add(ctx context.Context, incr int64)
     m.inst.Add(ctx, incr)
 }
 
-// K8SReplicationControllerDesiredPods is an instrument used to record metric
-// values conforming to the "k8s.replication_controller.desired_pods" semantic
+// ReplicationControllerDesiredPods is an instrument used to record metric values
+// conforming to the "k8s.replication_controller.desired_pods" semantic
 // conventions. It represents the deprecated, use
 // `k8s.replicationcontroller.desired_pods` instead.
 type ReplicationControllerDesiredPods struct {
@@ -1567,7 +1567,7 @@ func (m ReplicationControllerDesiredPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SReplicationControllerAvailablePods is an instrument used to record metric
+// ReplicationControllerAvailablePods is an instrument used to record metric
 // values conforming to the "k8s.replicationcontroller.available_pods" semantic
 // conventions. It represents the total number of available replica pods (ready
 // for at least minReadySeconds) targeted by this replication controller.
@@ -1608,8 +1608,8 @@ func (m ReplicationControllerAvailablePods) Add(ctx context.Context, incr int64)
     m.inst.Add(ctx, incr)
 }
 
-// K8SReplicationControllerDesiredPods is an instrument used to record metric
-// values conforming to the "k8s.replicationcontroller.desired_pods" semantic
+// ReplicationControllerDesiredPods is an instrument used to record metric values
+// conforming to the "k8s.replicationcontroller.desired_pods" semantic
 // conventions. It represents the number of desired replica pods in this
 // replication controller.
 type ReplicationControllerDesiredPods struct {
@@ -1649,7 +1649,7 @@ func (m ReplicationControllerDesiredPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SStatefulSetCurrentPods is an instrument used to record metric values
+// StatefulSetCurrentPods is an instrument used to record metric values
 // conforming to the "k8s.statefulset.current_pods" semantic conventions. It
 // represents the number of replica pods created by the statefulset controller
 // from the statefulset version indicated by currentRevision.
@@ -1689,7 +1689,7 @@ func (m StatefulSetCurrentPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SStatefulSetDesiredPods is an instrument used to record metric values
+// StatefulSetDesiredPods is an instrument used to record metric values
 // conforming to the "k8s.statefulset.desired_pods" semantic conventions. It
 // represents the number of desired replica pods in this statefulset.
 type StatefulSetDesiredPods struct {
@@ -1728,10 +1728,9 @@ func (m StatefulSetDesiredPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SStatefulSetReadyPods is an instrument used to record metric values
-// conforming to the "k8s.statefulset.ready_pods" semantic conventions. It
-// represents the number of replica pods created for this statefulset with a
-// Ready Condition.
+// StatefulSetReadyPods is an instrument used to record metric values conforming
+// to the "k8s.statefulset.ready_pods" semantic conventions. It represents the
+// number of replica pods created for this statefulset with a Ready Condition.
 type StatefulSetReadyPods struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1768,7 +1767,7 @@ func (m StatefulSetReadyPods) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// K8SStatefulSetUpdatedPods is an instrument used to record metric values
+// StatefulSetUpdatedPods is an instrument used to record metric values
 // conforming to the "k8s.statefulset.updated_pods" semantic conventions. It
 // represents the number of replica pods created by the statefulset controller
 // from the statefulset version indicated by updateRevision.

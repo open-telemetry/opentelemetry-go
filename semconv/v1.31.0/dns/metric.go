@@ -22,8 +22,8 @@ var (
 	ErrorTypeOther ErrorTypeAttr = "_OTHER"
 )
 
-// DNSLookupDuration is an instrument used to record metric values conforming to
-// the "dns.lookup.duration" semantic conventions. It represents the measures the
+// LookupDuration is an instrument used to record metric values conforming to the
+// "dns.lookup.duration" semantic conventions. It represents the measures the
 // time taken to perform a DNS lookup.
 type LookupDuration struct {
 	inst metric.Float64Histogram

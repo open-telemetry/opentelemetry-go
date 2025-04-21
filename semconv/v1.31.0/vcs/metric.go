@@ -113,7 +113,7 @@ var (
 	RevisionDeltaDirectionAhead RevisionDeltaDirectionAttr = "ahead"
 )
 
-// VCSChangeCount is an instrument used to record metric values conforming to the
+// ChangeCount is an instrument used to record metric values conforming to the
 // "vcs.change.count" semantic conventions. It represents the number of changes
 // (pull requests/merge requests/changelists) in a repository, categorized by
 // their state (e.g. open or merged).
@@ -214,10 +214,9 @@ func (ChangeCount) RepositoryName(val string) ChangeCountAttr {
 	return changeCountAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSChangeDuration is an instrument used to record metric values conforming to
-// the "vcs.change.duration" semantic conventions. It represents the time
-// duration a change (pull request/merge request/changelist) has been in a given
-// state.
+// ChangeDuration is an instrument used to record metric values conforming to the
+// "vcs.change.duration" semantic conventions. It represents the time duration a
+// change (pull request/merge request/changelist) has been in a given state.
 type ChangeDuration struct {
 	inst metric.Float64Gauge
 }
@@ -321,10 +320,10 @@ func (ChangeDuration) RepositoryName(val string) ChangeDurationAttr {
 	return changeDurationAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSChangeTimeToApproval is an instrument used to record metric values
-// conforming to the "vcs.change.time_to_approval" semantic conventions. It
-// represents the amount of time since its creation it took a change (pull
-// request/merge request/changelist) to get the first approval.
+// ChangeTimeToApproval is an instrument used to record metric values conforming
+// to the "vcs.change.time_to_approval" semantic conventions. It represents the
+// amount of time since its creation it took a change (pull request/merge
+// request/changelist) to get the first approval.
 type ChangeTimeToApproval struct {
 	inst metric.Float64Gauge
 }
@@ -453,9 +452,9 @@ func (ChangeTimeToApproval) RefHeadRevision(val string) ChangeTimeToApprovalAttr
 	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.head.revision", val)}
 }
 
-// VCSChangeTimeToMerge is an instrument used to record metric values conforming
-// to the "vcs.change.time_to_merge" semantic conventions. It represents the
-// amount of time since its creation it took a change (pull request/merge
+// ChangeTimeToMerge is an instrument used to record metric values conforming to
+// the "vcs.change.time_to_merge" semantic conventions. It represents the amount
+// of time since its creation it took a change (pull request/merge
 // request/changelist) to get merged into the target(base) ref.
 type ChangeTimeToMerge struct {
 	inst metric.Float64Gauge
@@ -585,9 +584,9 @@ func (ChangeTimeToMerge) RefHeadRevision(val string) ChangeTimeToMergeAttr {
 	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.head.revision", val)}
 }
 
-// VCSContributorCount is an instrument used to record metric values conforming
-// to the "vcs.contributor.count" semantic conventions. It represents the number
-// of unique contributors to a repository.
+// ContributorCount is an instrument used to record metric values conforming to
+// the "vcs.contributor.count" semantic conventions. It represents the number of
+// unique contributors to a repository.
 type ContributorCount struct {
 	inst metric.Int64Gauge
 }
@@ -681,7 +680,7 @@ func (ContributorCount) RepositoryName(val string) ContributorCountAttr {
 	return contributorCountAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSRefCount is an instrument used to record metric values conforming to the
+// RefCount is an instrument used to record metric values conforming to the
 // "vcs.ref.count" semantic conventions. It represents the number of refs of type
 // branch or tag in a repository.
 type RefCount struct {
@@ -781,9 +780,9 @@ func (RefCount) RepositoryName(val string) RefCountAttr {
 	return refCountAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSRefLinesDelta is an instrument used to record metric values conforming to
-// the "vcs.ref.lines_delta" semantic conventions. It represents the number of
-// lines added/removed in a ref (branch) relative to the ref from the
+// RefLinesDelta is an instrument used to record metric values conforming to the
+// "vcs.ref.lines_delta" semantic conventions. It represents the number of lines
+// added/removed in a ref (branch) relative to the ref from the
 // `vcs.ref.base.name` attribute.
 type RefLinesDelta struct {
 	inst metric.Int64Gauge
@@ -912,10 +911,10 @@ func (RefLinesDelta) RepositoryName(val string) RefLinesDeltaAttr {
 	return refLinesDeltaAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSRefRevisionsDelta is an instrument used to record metric values conforming
-// to the "vcs.ref.revisions_delta" semantic conventions. It represents the
-// number of revisions (commits) a ref (branch) is ahead/behind the branch from
-// the `vcs.ref.base.name` attribute.
+// RefRevisionsDelta is an instrument used to record metric values conforming to
+// the "vcs.ref.revisions_delta" semantic conventions. It represents the number
+// of revisions (commits) a ref (branch) is ahead/behind the branch from the
+// `vcs.ref.base.name` attribute.
 type RefRevisionsDelta struct {
 	inst metric.Int64Gauge
 }
@@ -1043,7 +1042,7 @@ func (RefRevisionsDelta) RepositoryName(val string) RefRevisionsDeltaAttr {
 	return refRevisionsDeltaAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSRefTime is an instrument used to record metric values conforming to the
+// RefTime is an instrument used to record metric values conforming to the
 // "vcs.ref.time" semantic conventions. It represents the time a ref (branch)
 // created from the default branch (trunk) has existed. The `ref.type` attribute
 // will always be `branch`.
@@ -1150,7 +1149,7 @@ func (RefTime) RepositoryName(val string) RefTimeAttr {
 	return refTimeAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
-// VCSRepositoryCount is an instrument used to record metric values conforming to
+// RepositoryCount is an instrument used to record metric values conforming to
 // the "vcs.repository.count" semantic conventions. It represents the number of
 // repositories in an organization.
 type RepositoryCount struct {

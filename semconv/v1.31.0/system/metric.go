@@ -195,9 +195,9 @@ var (
 	ProcessStatusDefunct ProcessStatusAttr = "defunct"
 )
 
-// SystemCPUFrequency is an instrument used to record metric values conforming to
-// the "system.cpu.frequency" semantic conventions. It represents the deprecated.
-// Use `cpu.frequency` instead.
+// CPUFrequency is an instrument used to record metric values conforming to the
+// "system.cpu.frequency" semantic conventions. It represents the deprecated. Use
+// `cpu.frequency` instead.
 type CPUFrequency struct {
 	inst metric.Int64Gauge
 }
@@ -234,10 +234,10 @@ func (m CPUFrequency) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// SystemCPULogicalCount is an instrument used to record metric values conforming
-// to the "system.cpu.logical.count" semantic conventions. It represents the
-// reports the number of logical (virtual) processor cores created by the
-// operating system to manage multitasking.
+// CPULogicalCount is an instrument used to record metric values conforming to
+// the "system.cpu.logical.count" semantic conventions. It represents the reports
+// the number of logical (virtual) processor cores created by the operating
+// system to manage multitasking.
 type CPULogicalCount struct {
 	inst metric.Int64UpDownCounter
 }
@@ -274,10 +274,9 @@ func (m CPULogicalCount) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemCPUPhysicalCount is an instrument used to record metric values
-// conforming to the "system.cpu.physical.count" semantic conventions. It
-// represents the reports the number of actual physical processor cores on the
-// hardware.
+// CPUPhysicalCount is an instrument used to record metric values conforming to
+// the "system.cpu.physical.count" semantic conventions. It represents the
+// reports the number of actual physical processor cores on the hardware.
 type CPUPhysicalCount struct {
 	inst metric.Int64UpDownCounter
 }
@@ -314,7 +313,7 @@ func (m CPUPhysicalCount) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemCPUTime is an instrument used to record metric values conforming to the
+// CPUTime is an instrument used to record metric values conforming to the
 // "system.cpu.time" semantic conventions. It represents the deprecated. Use
 // `cpu.time` instead.
 type CPUTime struct {
@@ -353,9 +352,9 @@ func (m CPUTime) Add(ctx context.Context, incr float64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemCPUUtilization is an instrument used to record metric values conforming
-// to the "system.cpu.utilization" semantic conventions. It represents the
-// deprecated. Use `cpu.utilization` instead.
+// CPUUtilization is an instrument used to record metric values conforming to the
+// "system.cpu.utilization" semantic conventions. It represents the deprecated.
+// Use `cpu.utilization` instead.
 type CPUUtilization struct {
 	inst metric.Int64Gauge
 }
@@ -392,7 +391,7 @@ func (m CPUUtilization) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// SystemDiskIo is an instrument used to record metric values conforming to the
+// DiskIo is an instrument used to record metric values conforming to the
 // "system.disk.io" semantic conventions.
 type DiskIo struct {
 	inst metric.Int64Counter
@@ -475,9 +474,9 @@ func (DiskIo) Device(val string) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemDiskIoTime is an instrument used to record metric values conforming to
-// the "system.disk.io_time" semantic conventions. It represents the time disk
-// spent activated.
+// DiskIoTime is an instrument used to record metric values conforming to the
+// "system.disk.io_time" semantic conventions. It represents the time disk spent
+// activated.
 type DiskIoTime struct {
 	inst metric.Float64Counter
 }
@@ -558,8 +557,8 @@ func (DiskIoTime) Device(val string) DiskIoTimeAttr {
 	return diskIoTimeAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemDiskLimit is an instrument used to record metric values conforming to
-// the "system.disk.limit" semantic conventions. It represents the total storage
+// DiskLimit is an instrument used to record metric values conforming to the
+// "system.disk.limit" semantic conventions. It represents the total storage
 // capacity of the disk.
 type DiskLimit struct {
 	inst metric.Int64UpDownCounter
@@ -641,8 +640,8 @@ func (DiskLimit) Device(val string) DiskLimitAttr {
 	return diskLimitAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemDiskMerged is an instrument used to record metric values conforming to
-// the "system.disk.merged" semantic conventions.
+// DiskMerged is an instrument used to record metric values conforming to the
+// "system.disk.merged" semantic conventions.
 type DiskMerged struct {
 	inst metric.Int64Counter
 }
@@ -724,9 +723,9 @@ func (DiskMerged) Device(val string) DiskMergedAttr {
 	return diskMergedAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemDiskOperationTime is an instrument used to record metric values
-// conforming to the "system.disk.operation_time" semantic conventions. It
-// represents the sum of the time each operation took to complete.
+// DiskOperationTime is an instrument used to record metric values conforming to
+// the "system.disk.operation_time" semantic conventions. It represents the sum
+// of the time each operation took to complete.
 type DiskOperationTime struct {
 	inst metric.Float64Counter
 }
@@ -814,8 +813,8 @@ func (DiskOperationTime) Device(val string) DiskOperationTimeAttr {
 	return diskOperationTimeAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemDiskOperations is an instrument used to record metric values conforming
-// to the "system.disk.operations" semantic conventions.
+// DiskOperations is an instrument used to record metric values conforming to the
+// "system.disk.operations" semantic conventions.
 type DiskOperations struct {
 	inst metric.Int64Counter
 }
@@ -897,8 +896,8 @@ func (DiskOperations) Device(val string) DiskOperationsAttr {
 	return diskOperationsAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemFilesystemLimit is an instrument used to record metric values conforming
-// to the "system.filesystem.limit" semantic conventions. It represents the total
+// FilesystemLimit is an instrument used to record metric values conforming to
+// the "system.filesystem.limit" semantic conventions. It represents the total
 // storage capacity of the filesystem.
 type FilesystemLimit struct {
 	inst metric.Int64UpDownCounter
@@ -1001,9 +1000,9 @@ func (FilesystemLimit) FilesystemType(val FilesystemTypeAttr) FilesystemLimitAtt
 	return filesystemLimitAttr{kv: attribute.String("system.filesystem.type", string(val))}
 }
 
-// SystemFilesystemUsage is an instrument used to record metric values conforming
-// to the "system.filesystem.usage" semantic conventions. It represents the
-// reports a filesystem's space usage across different states.
+// FilesystemUsage is an instrument used to record metric values conforming to
+// the "system.filesystem.usage" semantic conventions. It represents the reports
+// a filesystem's space usage across different states.
 type FilesystemUsage struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1112,8 +1111,8 @@ func (FilesystemUsage) FilesystemType(val FilesystemTypeAttr) FilesystemUsageAtt
 	return filesystemUsageAttr{kv: attribute.String("system.filesystem.type", string(val))}
 }
 
-// SystemFilesystemUtilization is an instrument used to record metric values
-// conforming to the "system.filesystem.utilization" semantic conventions.
+// FilesystemUtilization is an instrument used to record metric values conforming
+// to the "system.filesystem.utilization" semantic conventions.
 type FilesystemUtilization struct {
 	inst metric.Int64Gauge
 }
@@ -1217,10 +1216,10 @@ func (FilesystemUtilization) FilesystemType(val FilesystemTypeAttr) FilesystemUt
 	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.type", string(val))}
 }
 
-// SystemLinuxMemoryAvailable is an instrument used to record metric values
-// conforming to the "system.linux.memory.available" semantic conventions. It
-// represents an estimate of how much memory is available for starting new
-// applications, without causing swapping.
+// LinuxMemoryAvailable is an instrument used to record metric values conforming
+// to the "system.linux.memory.available" semantic conventions. It represents an
+// estimate of how much memory is available for starting new applications,
+// without causing swapping.
 type LinuxMemoryAvailable struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1257,10 +1256,10 @@ func (m LinuxMemoryAvailable) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemLinuxMemorySlabUsage is an instrument used to record metric values
-// conforming to the "system.linux.memory.slab.usage" semantic conventions. It
-// represents the reports the memory used by the Linux kernel for managing caches
-// of frequently used objects.
+// LinuxMemorySlabUsage is an instrument used to record metric values conforming
+// to the "system.linux.memory.slab.usage" semantic conventions. It represents
+// the reports the memory used by the Linux kernel for managing caches of
+// frequently used objects.
 type LinuxMemorySlabUsage struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1343,8 +1342,8 @@ func (LinuxMemorySlabUsage) LinuxMemorySlabState(val LinuxMemorySlabStateAttr) L
 	return linuxMemorySlabUsageAttr{kv: attribute.String("linux.memory.slab.state", string(val))}
 }
 
-// SystemMemoryLimit is an instrument used to record metric values conforming to
-// the "system.memory.limit" semantic conventions. It represents the total memory
+// MemoryLimit is an instrument used to record metric values conforming to the
+// "system.memory.limit" semantic conventions. It represents the total memory
 // available in the system.
 type MemoryLimit struct {
 	inst metric.Int64UpDownCounter
@@ -1382,9 +1381,9 @@ func (m MemoryLimit) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemMemoryShared is an instrument used to record metric values conforming to
-// the "system.memory.shared" semantic conventions. It represents the shared
-// memory used (mostly by tmpfs).
+// MemoryShared is an instrument used to record metric values conforming to the
+// "system.memory.shared" semantic conventions. It represents the shared memory
+// used (mostly by tmpfs).
 type MemoryShared struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1421,9 +1420,9 @@ func (m MemoryShared) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemMemoryUsage is an instrument used to record metric values conforming to
-// the "system.memory.usage" semantic conventions. It represents the reports
-// memory in use by state.
+// MemoryUsage is an instrument used to record metric values conforming to the
+// "system.memory.usage" semantic conventions. It represents the reports memory
+// in use by state.
 type MemoryUsage struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1504,8 +1503,8 @@ func (MemoryUsage) MemoryState(val MemoryStateAttr) MemoryUsageAttr {
 	return memoryUsageAttr{kv: attribute.String("system.memory.state", string(val))}
 }
 
-// SystemMemoryUtilization is an instrument used to record metric values
-// conforming to the "system.memory.utilization" semantic conventions.
+// MemoryUtilization is an instrument used to record metric values conforming to
+// the "system.memory.utilization" semantic conventions.
 type MemoryUtilization struct {
 	inst metric.Int64Gauge
 }
@@ -1582,8 +1581,8 @@ func (MemoryUtilization) MemoryState(val MemoryStateAttr) MemoryUtilizationAttr 
 	return memoryUtilizationAttr{kv: attribute.String("system.memory.state", string(val))}
 }
 
-// SystemNetworkConnections is an instrument used to record metric values
-// conforming to the "system.network.connections" semantic conventions.
+// NetworkConnections is an instrument used to record metric values conforming to
+// the "system.network.connections" semantic conventions.
 type NetworkConnections struct {
 	inst metric.Int64UpDownCounter
 }
@@ -1678,9 +1677,9 @@ func (NetworkConnections) NetworkTransport(val NetworkTransportAttr) NetworkConn
 	return networkConnectionsAttr{kv: attribute.String("network.transport", string(val))}
 }
 
-// SystemNetworkDropped is an instrument used to record metric values conforming
-// to the "system.network.dropped" semantic conventions. It represents the count
-// of packets that are dropped or discarded even though there was no error.
+// NetworkDropped is an instrument used to record metric values conforming to the
+// "system.network.dropped" semantic conventions. It represents the count of
+// packets that are dropped or discarded even though there was no error.
 type NetworkDropped struct {
 	inst metric.Int64Counter
 }
@@ -1769,9 +1768,9 @@ func (NetworkDropped) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkDrop
 	return networkDroppedAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// SystemNetworkErrors is an instrument used to record metric values conforming
-// to the "system.network.errors" semantic conventions. It represents the count
-// of network errors detected.
+// NetworkErrors is an instrument used to record metric values conforming to the
+// "system.network.errors" semantic conventions. It represents the count of
+// network errors detected.
 type NetworkErrors struct {
 	inst metric.Int64Counter
 }
@@ -1860,8 +1859,8 @@ func (NetworkErrors) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkError
 	return networkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// SystemNetworkIo is an instrument used to record metric values conforming to
-// the "system.network.io" semantic conventions.
+// NetworkIo is an instrument used to record metric values conforming to the
+// "system.network.io" semantic conventions.
 type NetworkIo struct {
 	inst metric.Int64Counter
 }
@@ -1945,8 +1944,8 @@ func (NetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// SystemNetworkPackets is an instrument used to record metric values conforming
-// to the "system.network.packets" semantic conventions.
+// NetworkPackets is an instrument used to record metric values conforming to the
+// "system.network.packets" semantic conventions.
 type NetworkPackets struct {
 	inst metric.Int64Counter
 }
@@ -2029,8 +2028,8 @@ func (NetworkPackets) Device(val string) NetworkPacketsAttr {
 	return networkPacketsAttr{kv: attribute.String("system.device", val)}
 }
 
-// SystemPagingFaults is an instrument used to record metric values conforming to
-// the "system.paging.faults" semantic conventions.
+// PagingFaults is an instrument used to record metric values conforming to the
+// "system.paging.faults" semantic conventions.
 type PagingFaults struct {
 	inst metric.Int64Counter
 }
@@ -2106,8 +2105,8 @@ func (PagingFaults) PagingType(val PagingTypeAttr) PagingFaultsAttr {
 	return pagingFaultsAttr{kv: attribute.String("system.paging.type", string(val))}
 }
 
-// SystemPagingOperations is an instrument used to record metric values
-// conforming to the "system.paging.operations" semantic conventions.
+// PagingOperations is an instrument used to record metric values conforming to
+// the "system.paging.operations" semantic conventions.
 type PagingOperations struct {
 	inst metric.Int64Counter
 }
@@ -2191,8 +2190,8 @@ func (PagingOperations) PagingType(val PagingTypeAttr) PagingOperationsAttr {
 	return pagingOperationsAttr{kv: attribute.String("system.paging.type", string(val))}
 }
 
-// SystemPagingUsage is an instrument used to record metric values conforming to
-// the "system.paging.usage" semantic conventions. It represents the unix swap or
+// PagingUsage is an instrument used to record metric values conforming to the
+// "system.paging.usage" semantic conventions. It represents the unix swap or
 // windows pagefile usage.
 type PagingUsage struct {
 	inst metric.Int64UpDownCounter
@@ -2281,8 +2280,8 @@ func (PagingUsage) PagingState(val PagingStateAttr) PagingUsageAttr {
 	return pagingUsageAttr{kv: attribute.String("system.paging.state", string(val))}
 }
 
-// SystemPagingUtilization is an instrument used to record metric values
-// conforming to the "system.paging.utilization" semantic conventions.
+// PagingUtilization is an instrument used to record metric values conforming to
+// the "system.paging.utilization" semantic conventions.
 type PagingUtilization struct {
 	inst metric.Int64Gauge
 }
@@ -2366,9 +2365,9 @@ func (PagingUtilization) PagingState(val PagingStateAttr) PagingUtilizationAttr 
 	return pagingUtilizationAttr{kv: attribute.String("system.paging.state", string(val))}
 }
 
-// SystemProcessCount is an instrument used to record metric values conforming to
-// the "system.process.count" semantic conventions. It represents the total
-// number of processes in each state.
+// ProcessCount is an instrument used to record metric values conforming to the
+// "system.process.count" semantic conventions. It represents the total number of
+// processes in each state.
 type ProcessCount struct {
 	inst metric.Int64UpDownCounter
 }
@@ -2452,9 +2451,9 @@ func (ProcessCount) ProcessStatus(val ProcessStatusAttr) ProcessCountAttr {
 	return processCountAttr{kv: attribute.String("system.process.status", string(val))}
 }
 
-// SystemProcessCreated is an instrument used to record metric values conforming
-// to the "system.process.created" semantic conventions. It represents the total
-// number of processes created over uptime of the host.
+// ProcessCreated is an instrument used to record metric values conforming to the
+// "system.process.created" semantic conventions. It represents the total number
+// of processes created over uptime of the host.
 type ProcessCreated struct {
 	inst metric.Int64Counter
 }
@@ -2491,7 +2490,7 @@ func (m ProcessCreated) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// SystemUptime is an instrument used to record metric values conforming to the
+// Uptime is an instrument used to record metric values conforming to the
 // "system.uptime" semantic conventions. It represents the time the system has
 // been running.
 type Uptime struct {

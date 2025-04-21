@@ -25,7 +25,7 @@ var (
 	MemoryTypeOther MemoryTypeAttr = "other"
 )
 
-// GoConfigGogc is an instrument used to record metric values conforming to the
+// ConfigGogc is an instrument used to record metric values conforming to the
 // "go.config.gogc" semantic conventions. It represents the heap size target
 // percentage configured by the user, otherwise 100.
 type ConfigGogc struct {
@@ -64,8 +64,8 @@ func (m ConfigGogc) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoGoroutineCount is an instrument used to record metric values conforming to
-// the "go.goroutine.count" semantic conventions. It represents the count of live
+// GoroutineCount is an instrument used to record metric values conforming to the
+// "go.goroutine.count" semantic conventions. It represents the count of live
 // goroutines.
 type GoroutineCount struct {
 	inst metric.Int64UpDownCounter
@@ -103,7 +103,7 @@ func (m GoroutineCount) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoMemoryAllocated is an instrument used to record metric values conforming to
+// MemoryAllocated is an instrument used to record metric values conforming to
 // the "go.memory.allocated" semantic conventions. It represents the memory
 // allocated to the heap by the application.
 type MemoryAllocated struct {
@@ -142,9 +142,9 @@ func (m MemoryAllocated) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoMemoryAllocations is an instrument used to record metric values conforming
-// to the "go.memory.allocations" semantic conventions. It represents the count
-// of allocations to the heap by the application.
+// MemoryAllocations is an instrument used to record metric values conforming to
+// the "go.memory.allocations" semantic conventions. It represents the count of
+// allocations to the heap by the application.
 type MemoryAllocations struct {
 	inst metric.Int64Counter
 }
@@ -181,7 +181,7 @@ func (m MemoryAllocations) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoMemoryGCGoal is an instrument used to record metric values conforming to the
+// MemoryGCGoal is an instrument used to record metric values conforming to the
 // "go.memory.gc.goal" semantic conventions. It represents the heap size target
 // for the end of the GC cycle.
 type MemoryGCGoal struct {
@@ -220,7 +220,7 @@ func (m MemoryGCGoal) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoMemoryLimit is an instrument used to record metric values conforming to the
+// MemoryLimit is an instrument used to record metric values conforming to the
 // "go.memory.limit" semantic conventions. It represents the go runtime memory
 // limit configured by the user, if a limit exists.
 type MemoryLimit struct {
@@ -259,7 +259,7 @@ func (m MemoryLimit) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoMemoryUsed is an instrument used to record metric values conforming to the
+// MemoryUsed is an instrument used to record metric values conforming to the
 // "go.memory.used" semantic conventions. It represents the memory used by the Go
 // runtime.
 type MemoryUsed struct {
@@ -342,8 +342,8 @@ func (MemoryUsed) MemoryType(val MemoryTypeAttr) MemoryUsedAttr {
 	return memoryUsedAttr{kv: attribute.String("go.memory.type", string(val))}
 }
 
-// GoProcessorLimit is an instrument used to record metric values conforming to
-// the "go.processor.limit" semantic conventions. It represents the number of OS
+// ProcessorLimit is an instrument used to record metric values conforming to the
+// "go.processor.limit" semantic conventions. It represents the number of OS
 // threads that can execute user-level Go code simultaneously.
 type ProcessorLimit struct {
 	inst metric.Int64UpDownCounter
@@ -381,7 +381,7 @@ func (m ProcessorLimit) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// GoScheduleDuration is an instrument used to record metric values conforming to
+// ScheduleDuration is an instrument used to record metric values conforming to
 // the "go.schedule.duration" semantic conventions. It represents the time
 // goroutines have spent in the scheduler in a runnable state before actually
 // running.

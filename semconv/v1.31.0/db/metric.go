@@ -235,10 +235,10 @@ var (
 	ErrorTypeOther ErrorTypeAttr = "_OTHER"
 )
 
-// DBClientConnectionCount is an instrument used to record metric values
-// conforming to the "db.client.connection.count" semantic conventions. It
-// represents the number of connections that are currently in state described by
-// the `state` attribute.
+// ClientConnectionCount is an instrument used to record metric values conforming
+// to the "db.client.connection.count" semantic conventions. It represents the
+// number of connections that are currently in state described by the `state`
+// attribute.
 type ClientConnectionCount struct {
 	inst metric.Int64UpDownCounter
 }
@@ -299,7 +299,7 @@ func (m ClientConnectionCount) Add(
 	)
 }
 
-// DBClientConnectionCreateTime is an instrument used to record metric values
+// ClientConnectionCreateTime is an instrument used to record metric values
 // conforming to the "db.client.connection.create_time" semantic conventions. It
 // represents the time it took to create a new connection.
 type ClientConnectionCreateTime struct {
@@ -359,7 +359,7 @@ func (m ClientConnectionCreateTime) Record(
 	)
 }
 
-// DBClientConnectionIdleMax is an instrument used to record metric values
+// ClientConnectionIdleMax is an instrument used to record metric values
 // conforming to the "db.client.connection.idle.max" semantic conventions. It
 // represents the maximum number of idle open connections allowed.
 type ClientConnectionIdleMax struct {
@@ -418,7 +418,7 @@ func (m ClientConnectionIdleMax) Add(
 	)
 }
 
-// DBClientConnectionIdleMin is an instrument used to record metric values
+// ClientConnectionIdleMin is an instrument used to record metric values
 // conforming to the "db.client.connection.idle.min" semantic conventions. It
 // represents the minimum number of idle open connections allowed.
 type ClientConnectionIdleMin struct {
@@ -477,7 +477,7 @@ func (m ClientConnectionIdleMin) Add(
 	)
 }
 
-// DBClientConnectionMax is an instrument used to record metric values conforming
+// ClientConnectionMax is an instrument used to record metric values conforming
 // to the "db.client.connection.max" semantic conventions. It represents the
 // maximum number of open connections allowed.
 type ClientConnectionMax struct {
@@ -536,8 +536,8 @@ func (m ClientConnectionMax) Add(
 	)
 }
 
-// DBClientConnectionPendingRequests is an instrument used to record metric
-// values conforming to the "db.client.connection.pending_requests" semantic
+// ClientConnectionPendingRequests is an instrument used to record metric values
+// conforming to the "db.client.connection.pending_requests" semantic
 // conventions. It represents the number of current pending requests for an open
 // connection.
 type ClientConnectionPendingRequests struct {
@@ -597,7 +597,7 @@ func (m ClientConnectionPendingRequests) Add(
 	)
 }
 
-// DBClientConnectionTimeouts is an instrument used to record metric values
+// ClientConnectionTimeouts is an instrument used to record metric values
 // conforming to the "db.client.connection.timeouts" semantic conventions. It
 // represents the number of connection timeouts that have occurred trying to
 // obtain a connection from the pool.
@@ -657,7 +657,7 @@ func (m ClientConnectionTimeouts) Add(
 	)
 }
 
-// DBClientConnectionUseTime is an instrument used to record metric values
+// ClientConnectionUseTime is an instrument used to record metric values
 // conforming to the "db.client.connection.use_time" semantic conventions. It
 // represents the time between borrowing a connection and returning it to the
 // pool.
@@ -717,7 +717,7 @@ func (m ClientConnectionUseTime) Record(
 	)
 }
 
-// DBClientConnectionWaitTime is an instrument used to record metric values
+// ClientConnectionWaitTime is an instrument used to record metric values
 // conforming to the "db.client.connection.wait_time" semantic conventions. It
 // represents the time it took to obtain an open connection from the pool.
 type ClientConnectionWaitTime struct {
@@ -776,7 +776,7 @@ func (m ClientConnectionWaitTime) Record(
 	)
 }
 
-// DBClientConnectionsCreateTime is an instrument used to record metric values
+// ClientConnectionsCreateTime is an instrument used to record metric values
 // conforming to the "db.client.connections.create_time" semantic conventions. It
 // represents the deprecated, use `db.client.connection.create_time` instead.
 // Note: the unit also changed from `ms` to `s`.
@@ -832,7 +832,7 @@ func (m ClientConnectionsCreateTime) Record(
 	)
 }
 
-// DBClientConnectionsIdleMax is an instrument used to record metric values
+// ClientConnectionsIdleMax is an instrument used to record metric values
 // conforming to the "db.client.connections.idle.max" semantic conventions. It
 // represents the deprecated, use `db.client.connection.idle.max` instead.
 type ClientConnectionsIdleMax struct {
@@ -886,7 +886,7 @@ func (m ClientConnectionsIdleMax) Add(
 	)
 }
 
-// DBClientConnectionsIdleMin is an instrument used to record metric values
+// ClientConnectionsIdleMin is an instrument used to record metric values
 // conforming to the "db.client.connections.idle.min" semantic conventions. It
 // represents the deprecated, use `db.client.connection.idle.min` instead.
 type ClientConnectionsIdleMin struct {
@@ -940,9 +940,9 @@ func (m ClientConnectionsIdleMin) Add(
 	)
 }
 
-// DBClientConnectionsMax is an instrument used to record metric values
-// conforming to the "db.client.connections.max" semantic conventions. It
-// represents the deprecated, use `db.client.connection.max` instead.
+// ClientConnectionsMax is an instrument used to record metric values conforming
+// to the "db.client.connections.max" semantic conventions. It represents the
+// deprecated, use `db.client.connection.max` instead.
 type ClientConnectionsMax struct {
 	inst metric.Int64UpDownCounter
 }
@@ -994,8 +994,8 @@ func (m ClientConnectionsMax) Add(
 	)
 }
 
-// DBClientConnectionsPendingRequests is an instrument used to record metric
-// values conforming to the "db.client.connections.pending_requests" semantic
+// ClientConnectionsPendingRequests is an instrument used to record metric values
+// conforming to the "db.client.connections.pending_requests" semantic
 // conventions. It represents the deprecated, use
 // `db.client.connection.pending_requests` instead.
 type ClientConnectionsPendingRequests struct {
@@ -1050,7 +1050,7 @@ func (m ClientConnectionsPendingRequests) Add(
 	)
 }
 
-// DBClientConnectionsTimeouts is an instrument used to record metric values
+// ClientConnectionsTimeouts is an instrument used to record metric values
 // conforming to the "db.client.connections.timeouts" semantic conventions. It
 // represents the deprecated, use `db.client.connection.timeouts` instead.
 type ClientConnectionsTimeouts struct {
@@ -1105,7 +1105,7 @@ func (m ClientConnectionsTimeouts) Add(
 	)
 }
 
-// DBClientConnectionsUsage is an instrument used to record metric values
+// ClientConnectionsUsage is an instrument used to record metric values
 // conforming to the "db.client.connections.usage" semantic conventions. It
 // represents the deprecated, use `db.client.connection.count` instead.
 type ClientConnectionsUsage struct {
@@ -1164,7 +1164,7 @@ func (m ClientConnectionsUsage) Add(
 	)
 }
 
-// DBClientConnectionsUseTime is an instrument used to record metric values
+// ClientConnectionsUseTime is an instrument used to record metric values
 // conforming to the "db.client.connections.use_time" semantic conventions. It
 // represents the deprecated, use `db.client.connection.use_time` instead. Note:
 // the unit also changed from `ms` to `s`.
@@ -1219,7 +1219,7 @@ func (m ClientConnectionsUseTime) Record(
 	)
 }
 
-// DBClientConnectionsWaitTime is an instrument used to record metric values
+// ClientConnectionsWaitTime is an instrument used to record metric values
 // conforming to the "db.client.connections.wait_time" semantic conventions. It
 // represents the deprecated, use `db.client.connection.wait_time` instead. Note:
 // the unit also changed from `ms` to `s`.
@@ -1275,7 +1275,7 @@ func (m ClientConnectionsWaitTime) Record(
 	)
 }
 
-// DBClientCosmosDBActiveInstanceCount is an instrument used to record metric
+// ClientCosmosDBActiveInstanceCount is an instrument used to record metric
 // values conforming to the "db.client.cosmosdb.active_instance.count" semantic
 // conventions. It represents the deprecated, use
 // `azure.cosmosdb.client.active_instance.count` instead.
@@ -1367,7 +1367,7 @@ func (ClientCosmosDBActiveInstanceCount) ServerAddress(val string) ClientCosmosD
 	return clientCosmosdbActiveInstanceCountAttr{kv: attribute.String("server.address", val)}
 }
 
-// DBClientCosmosDBOperationRequestCharge is an instrument used to record metric
+// ClientCosmosDBOperationRequestCharge is an instrument used to record metric
 // values conforming to the "db.client.cosmosdb.operation.request_charge"
 // semantic conventions. It represents the deprecated, use
 // `azure.cosmosdb.client.operation.request_charge` instead.
@@ -1488,7 +1488,7 @@ func (ClientCosmosDBOperationRequestCharge) CosmosDBRegionsContacted(val ...stri
 	return clientCosmosdbOperationRequestChargeAttr{kv: attribute.StringSlice("db.cosmosdb.regions_contacted", val)}
 }
 
-// DBClientOperationDuration is an instrument used to record metric values
+// ClientOperationDuration is an instrument used to record metric values
 // conforming to the "db.client.operation.duration" semantic conventions. It
 // represents the duration of database client operations.
 type ClientOperationDuration struct {
@@ -1647,7 +1647,7 @@ func (ClientOperationDuration) QueryText(val string) ClientOperationDurationAttr
 	return clientOperationDurationAttr{kv: attribute.String("db.query.text", val)}
 }
 
-// DBClientResponseReturnedRows is an instrument used to record metric values
+// ClientResponseReturnedRows is an instrument used to record metric values
 // conforming to the "db.client.response.returned_rows" semantic conventions. It
 // represents the actual number of records returned by the database operation.
 type ClientResponseReturnedRows struct {

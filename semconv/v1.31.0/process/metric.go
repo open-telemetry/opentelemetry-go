@@ -84,9 +84,9 @@ var (
 	PagingFaultTypeMinor PagingFaultTypeAttr = "minor"
 )
 
-// ProcessContextSwitches is an instrument used to record metric values
-// conforming to the "process.context_switches" semantic conventions. It
-// represents the number of times the process has been context switched.
+// ContextSwitches is an instrument used to record metric values conforming to
+// the "process.context_switches" semantic conventions. It represents the number
+// of times the process has been context switched.
 type ContextSwitches struct {
 	inst metric.Int64Counter
 }
@@ -170,7 +170,7 @@ func (ContextSwitches) ContextSwitchType(val ContextSwitchTypeAttr) ContextSwitc
 	return contextSwitchesAttr{kv: attribute.String("process.context_switch_type", string(val))}
 }
 
-// ProcessCPUTime is an instrument used to record metric values conforming to the
+// CPUTime is an instrument used to record metric values conforming to the
 // "process.cpu.time" semantic conventions. It represents the total CPU seconds
 // broken down by different states.
 type CPUTime struct {
@@ -254,10 +254,10 @@ func (CPUTime) CPUMode(val CPUModeAttr) CPUTimeAttr {
 	return cpuTimeAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
-// ProcessCPUUtilization is an instrument used to record metric values conforming
-// to the "process.cpu.utilization" semantic conventions. It represents the
-// difference in process.cpu.time since the last measurement, divided by the
-// elapsed time and number of CPUs available to the process.
+// CPUUtilization is an instrument used to record metric values conforming to the
+// "process.cpu.utilization" semantic conventions. It represents the difference
+// in process.cpu.time since the last measurement, divided by the elapsed time
+// and number of CPUs available to the process.
 type CPUUtilization struct {
 	inst metric.Int64Gauge
 }
@@ -339,7 +339,7 @@ func (CPUUtilization) CPUMode(val CPUModeAttr) CPUUtilizationAttr {
 	return cpuUtilizationAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
-// ProcessDiskIo is an instrument used to record metric values conforming to the
+// DiskIo is an instrument used to record metric values conforming to the
 // "process.disk.io" semantic conventions. It represents the disk bytes
 // transferred.
 type DiskIo struct {
@@ -422,8 +422,8 @@ func (DiskIo) DiskIoDirection(val DiskIoDirectionAttr) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
-// ProcessMemoryUsage is an instrument used to record metric values conforming to
-// the "process.memory.usage" semantic conventions. It represents the amount of
+// MemoryUsage is an instrument used to record metric values conforming to the
+// "process.memory.usage" semantic conventions. It represents the amount of
 // physical memory in use.
 type MemoryUsage struct {
 	inst metric.Int64UpDownCounter
@@ -461,9 +461,9 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// ProcessMemoryVirtual is an instrument used to record metric values conforming
-// to the "process.memory.virtual" semantic conventions. It represents the amount
-// of committed virtual memory.
+// MemoryVirtual is an instrument used to record metric values conforming to the
+// "process.memory.virtual" semantic conventions. It represents the amount of
+// committed virtual memory.
 type MemoryVirtual struct {
 	inst metric.Int64UpDownCounter
 }
@@ -500,8 +500,8 @@ func (m MemoryVirtual) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// ProcessNetworkIo is an instrument used to record metric values conforming to
-// the "process.network.io" semantic conventions. It represents the network bytes
+// NetworkIo is an instrument used to record metric values conforming to the
+// "process.network.io" semantic conventions. It represents the network bytes
 // transferred.
 type NetworkIo struct {
 	inst metric.Int64Counter
@@ -584,7 +584,7 @@ func (NetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
-// ProcessOpenFileDescriptorCount is an instrument used to record metric values
+// OpenFileDescriptorCount is an instrument used to record metric values
 // conforming to the "process.open_file_descriptor.count" semantic conventions.
 // It represents the number of file descriptors in use by the process.
 type OpenFileDescriptorCount struct {
@@ -623,9 +623,9 @@ func (m OpenFileDescriptorCount) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// ProcessPagingFaults is an instrument used to record metric values conforming
-// to the "process.paging.faults" semantic conventions. It represents the number
-// of page faults the process has made.
+// PagingFaults is an instrument used to record metric values conforming to the
+// "process.paging.faults" semantic conventions. It represents the number of page
+// faults the process has made.
 type PagingFaults struct {
 	inst metric.Int64Counter
 }
@@ -708,9 +708,9 @@ func (PagingFaults) PagingFaultType(val PagingFaultTypeAttr) PagingFaultsAttr {
 	return pagingFaultsAttr{kv: attribute.String("process.paging.fault_type", string(val))}
 }
 
-// ProcessThreadCount is an instrument used to record metric values conforming to
-// the "process.thread.count" semantic conventions. It represents the process
-// threads count.
+// ThreadCount is an instrument used to record metric values conforming to the
+// "process.thread.count" semantic conventions. It represents the process threads
+// count.
 type ThreadCount struct {
 	inst metric.Int64UpDownCounter
 }
@@ -747,7 +747,7 @@ func (m ThreadCount) Add(ctx context.Context, incr int64) {
     m.inst.Add(ctx, incr)
 }
 
-// ProcessUptime is an instrument used to record metric values conforming to the
+// Uptime is an instrument used to record metric values conforming to the
 // "process.uptime" semantic conventions. It represents the time the process has
 // been running.
 type Uptime struct {

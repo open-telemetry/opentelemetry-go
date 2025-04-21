@@ -42,7 +42,7 @@ var (
 	TransportWebSockets TransportAttr = "web_sockets"
 )
 
-// SignalrServerActiveConnections is an instrument used to record metric values
+// ServerActiveConnections is an instrument used to record metric values
 // conforming to the "signalr.server.active_connections" semantic conventions. It
 // represents the number of connections that are currently active on the server.
 type ServerActiveConnections struct {
@@ -135,7 +135,7 @@ func (ServerActiveConnections) Transport(val TransportAttr) ServerActiveConnecti
 	return serverActiveConnectionsAttr{kv: attribute.String("signalr.transport", string(val))}
 }
 
-// SignalrServerConnectionDuration is an instrument used to record metric values
+// ServerConnectionDuration is an instrument used to record metric values
 // conforming to the "signalr.server.connection.duration" semantic conventions.
 // It represents the duration of connections on the server.
 type ServerConnectionDuration struct {

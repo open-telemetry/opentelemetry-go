@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// RPCClientDuration is an instrument used to record metric values conforming to
-// the "rpc.client.duration" semantic conventions. It represents the measures the
+// ClientDuration is an instrument used to record metric values conforming to the
+// "rpc.client.duration" semantic conventions. It represents the measures the
 // duration of outbound RPC.
 type ClientDuration struct {
 	inst metric.Int64Histogram
@@ -51,9 +51,9 @@ func (m ClientDuration) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCClientRequestSize is an instrument used to record metric values conforming
-// to the "rpc.client.request.size" semantic conventions. It represents the
-// measures the size of RPC request messages (uncompressed).
+// ClientRequestSize is an instrument used to record metric values conforming to
+// the "rpc.client.request.size" semantic conventions. It represents the measures
+// the size of RPC request messages (uncompressed).
 type ClientRequestSize struct {
 	inst metric.Int64Histogram
 }
@@ -90,9 +90,9 @@ func (m ClientRequestSize) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCClientRequestsPerRPC is an instrument used to record metric values
-// conforming to the "rpc.client.requests_per_rpc" semantic conventions. It
-// represents the measures the number of messages received per RPC.
+// ClientRequestsPerRPC is an instrument used to record metric values conforming
+// to the "rpc.client.requests_per_rpc" semantic conventions. It represents the
+// measures the number of messages received per RPC.
 type ClientRequestsPerRPC struct {
 	inst metric.Int64Histogram
 }
@@ -129,8 +129,8 @@ func (m ClientRequestsPerRPC) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCClientResponseSize is an instrument used to record metric values conforming
-// to the "rpc.client.response.size" semantic conventions. It represents the
+// ClientResponseSize is an instrument used to record metric values conforming to
+// the "rpc.client.response.size" semantic conventions. It represents the
 // measures the size of RPC response messages (uncompressed).
 type ClientResponseSize struct {
 	inst metric.Int64Histogram
@@ -168,9 +168,9 @@ func (m ClientResponseSize) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCClientResponsesPerRPC is an instrument used to record metric values
-// conforming to the "rpc.client.responses_per_rpc" semantic conventions. It
-// represents the measures the number of messages sent per RPC.
+// ClientResponsesPerRPC is an instrument used to record metric values conforming
+// to the "rpc.client.responses_per_rpc" semantic conventions. It represents the
+// measures the number of messages sent per RPC.
 type ClientResponsesPerRPC struct {
 	inst metric.Int64Histogram
 }
@@ -207,8 +207,8 @@ func (m ClientResponsesPerRPC) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCServerDuration is an instrument used to record metric values conforming to
-// the "rpc.server.duration" semantic conventions. It represents the measures the
+// ServerDuration is an instrument used to record metric values conforming to the
+// "rpc.server.duration" semantic conventions. It represents the measures the
 // duration of inbound RPC.
 type ServerDuration struct {
 	inst metric.Int64Histogram
@@ -246,9 +246,9 @@ func (m ServerDuration) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCServerRequestSize is an instrument used to record metric values conforming
-// to the "rpc.server.request.size" semantic conventions. It represents the
-// measures the size of RPC request messages (uncompressed).
+// ServerRequestSize is an instrument used to record metric values conforming to
+// the "rpc.server.request.size" semantic conventions. It represents the measures
+// the size of RPC request messages (uncompressed).
 type ServerRequestSize struct {
 	inst metric.Int64Histogram
 }
@@ -285,9 +285,9 @@ func (m ServerRequestSize) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCServerRequestsPerRPC is an instrument used to record metric values
-// conforming to the "rpc.server.requests_per_rpc" semantic conventions. It
-// represents the measures the number of messages received per RPC.
+// ServerRequestsPerRPC is an instrument used to record metric values conforming
+// to the "rpc.server.requests_per_rpc" semantic conventions. It represents the
+// measures the number of messages received per RPC.
 type ServerRequestsPerRPC struct {
 	inst metric.Int64Histogram
 }
@@ -324,8 +324,8 @@ func (m ServerRequestsPerRPC) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCServerResponseSize is an instrument used to record metric values conforming
-// to the "rpc.server.response.size" semantic conventions. It represents the
+// ServerResponseSize is an instrument used to record metric values conforming to
+// the "rpc.server.response.size" semantic conventions. It represents the
 // measures the size of RPC response messages (uncompressed).
 type ServerResponseSize struct {
 	inst metric.Int64Histogram
@@ -363,9 +363,9 @@ func (m ServerResponseSize) Record(ctx context.Context, val int64) {
     m.inst.Record(ctx, val)
 }
 
-// RPCServerResponsesPerRPC is an instrument used to record metric values
-// conforming to the "rpc.server.responses_per_rpc" semantic conventions. It
-// represents the measures the number of messages sent per RPC.
+// ServerResponsesPerRPC is an instrument used to record metric values conforming
+// to the "rpc.server.responses_per_rpc" semantic conventions. It represents the
+// measures the number of messages sent per RPC.
 type ServerResponsesPerRPC struct {
 	inst metric.Int64Histogram
 }

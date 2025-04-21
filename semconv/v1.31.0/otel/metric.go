@@ -59,7 +59,7 @@ var (
 	SpanSamplingResultRecordAndSample SpanSamplingResultAttr = "RECORD_AND_SAMPLE"
 )
 
-// OTelSDKExporterSpanExportedCount is an instrument used to record metric values
+// SDKExporterSpanExportedCount is an instrument used to record metric values
 // conforming to the "otel.sdk.exporter.span.exported.count" semantic
 // conventions. It represents the number of spans for which the export has
 // finished, either successful or failed.
@@ -173,7 +173,7 @@ func (SDKExporterSpanExportedCount) ServerPort(val int) SDKExporterSpanExportedC
 	return sdkExporterSpanExportedCountAttr{kv: attribute.Int("server.port", val)}
 }
 
-// OTelSDKExporterSpanInflightCount is an instrument used to record metric values
+// SDKExporterSpanInflightCount is an instrument used to record metric values
 // conforming to the "otel.sdk.exporter.span.inflight.count" semantic
 // conventions. It represents the number of spans which were passed to the
 // exporter, but that have not been exported yet (neither successful, nor
@@ -281,8 +281,8 @@ func (SDKExporterSpanInflightCount) ServerPort(val int) SDKExporterSpanInflightC
 	return sdkExporterSpanInflightCountAttr{kv: attribute.Int("server.port", val)}
 }
 
-// OTelSDKProcessorSpanProcessedCount is an instrument used to record metric
-// values conforming to the "otel.sdk.processor.span.processed.count" semantic
+// SDKProcessorSpanProcessedCount is an instrument used to record metric values
+// conforming to the "otel.sdk.processor.span.processed.count" semantic
 // conventions. It represents the number of spans for which the processing has
 // finished, either successful or failed.
 type SDKProcessorSpanProcessedCount struct {
@@ -383,8 +383,8 @@ func (SDKProcessorSpanProcessedCount) ComponentType(val ComponentTypeAttr) SDKPr
 	return sdkProcessorSpanProcessedCountAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
-// OTelSDKProcessorSpanQueueCapacity is an instrument used to record metric
-// values conforming to the "otel.sdk.processor.span.queue.capacity" semantic
+// SDKProcessorSpanQueueCapacity is an instrument used to record metric values
+// conforming to the "otel.sdk.processor.span.queue.capacity" semantic
 // conventions. It represents the maximum number of spans the queue of a given
 // instance of an SDK span processor can hold.
 type SDKProcessorSpanQueueCapacity struct {
@@ -477,7 +477,7 @@ func (SDKProcessorSpanQueueCapacity) ComponentType(val ComponentTypeAttr) SDKPro
 	return sdkProcessorSpanQueueCapacityAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
-// OTelSDKProcessorSpanQueueSize is an instrument used to record metric values
+// SDKProcessorSpanQueueSize is an instrument used to record metric values
 // conforming to the "otel.sdk.processor.span.queue.size" semantic conventions.
 // It represents the number of spans in the queue of a given instance of an SDK
 // span processor.
@@ -571,9 +571,9 @@ func (SDKProcessorSpanQueueSize) ComponentType(val ComponentTypeAttr) SDKProcess
 	return sdkProcessorSpanQueueSizeAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
-// OTelSDKSpanEndedCount is an instrument used to record metric values conforming
-// to the "otel.sdk.span.ended.count" semantic conventions. It represents the
-// number of created spans for which the end operation was called.
+// SDKSpanEndedCount is an instrument used to record metric values conforming to
+// the "otel.sdk.span.ended.count" semantic conventions. It represents the number
+// of created spans for which the end operation was called.
 type SDKSpanEndedCount struct {
 	inst metric.Int64Counter
 }
@@ -656,9 +656,9 @@ func (SDKSpanEndedCount) SpanSamplingResult(val SpanSamplingResultAttr) SDKSpanE
 	return sdkSpanEndedCountAttr{kv: attribute.String("otel.span.sampling_result", string(val))}
 }
 
-// OTelSDKSpanLiveCount is an instrument used to record metric values conforming
-// to the "otel.sdk.span.live.count" semantic conventions. It represents the
-// number of created spans for which the end operation has not been called yet.
+// SDKSpanLiveCount is an instrument used to record metric values conforming to
+// the "otel.sdk.span.live.count" semantic conventions. It represents the number
+// of created spans for which the end operation has not been called yet.
 type SDKSpanLiveCount struct {
 	inst metric.Int64UpDownCounter
 }

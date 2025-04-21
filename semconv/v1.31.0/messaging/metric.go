@@ -77,7 +77,7 @@ var (
 	SystemPulsar SystemAttr = "pulsar"
 )
 
-// MessagingClientConsumedMessages is an instrument used to record metric values
+// ClientConsumedMessages is an instrument used to record metric values
 // conforming to the "messaging.client.consumed.messages" semantic conventions.
 // It represents the number of messages that were delivered to the application.
 type ClientConsumedMessages struct {
@@ -223,7 +223,7 @@ func (ClientConsumedMessages) ServerPort(val int) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingClientOperationDuration is an instrument used to record metric values
+// ClientOperationDuration is an instrument used to record metric values
 // conforming to the "messaging.client.operation.duration" semantic conventions.
 // It represents the duration of messaging operation initiated by a producer or
 // consumer client.
@@ -377,7 +377,7 @@ func (ClientOperationDuration) ServerPort(val int) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingClientPublishedMessages is an instrument used to record metric values
+// ClientPublishedMessages is an instrument used to record metric values
 // conforming to the "messaging.client.published.messages" semantic conventions.
 // It represents the deprecated. Use `messaging.client.sent.messages` instead.
 type ClientPublishedMessages struct {
@@ -509,9 +509,9 @@ func (ClientPublishedMessages) ServerPort(val int) ClientPublishedMessagesAttr {
 	return clientPublishedMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingClientSentMessages is an instrument used to record metric values
-// conforming to the "messaging.client.sent.messages" semantic conventions. It
-// represents the number of messages producer attempted to send to the broker.
+// ClientSentMessages is an instrument used to record metric values conforming to
+// the "messaging.client.sent.messages" semantic conventions. It represents the
+// number of messages producer attempted to send to the broker.
 type ClientSentMessages struct {
 	inst metric.Int64Counter
 }
@@ -641,9 +641,9 @@ func (ClientSentMessages) ServerPort(val int) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingProcessDuration is an instrument used to record metric values
-// conforming to the "messaging.process.duration" semantic conventions. It
-// represents the duration of processing operation.
+// ProcessDuration is an instrument used to record metric values conforming to
+// the "messaging.process.duration" semantic conventions. It represents the
+// duration of processing operation.
 type ProcessDuration struct {
 	inst metric.Float64Histogram
 }
@@ -787,9 +787,9 @@ func (ProcessDuration) ServerPort(val int) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingProcessMessages is an instrument used to record metric values
-// conforming to the "messaging.process.messages" semantic conventions. It
-// represents the deprecated. Use `messaging.client.consumed.messages` instead.
+// ProcessMessages is an instrument used to record metric values conforming to
+// the "messaging.process.messages" semantic conventions. It represents the
+// deprecated. Use `messaging.client.consumed.messages` instead.
 type ProcessMessages struct {
 	inst metric.Int64Counter
 }
@@ -892,9 +892,9 @@ func (ProcessMessages) ServerPort(val int) ProcessMessagesAttr {
 	return processMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingPublishDuration is an instrument used to record metric values
-// conforming to the "messaging.publish.duration" semantic conventions. It
-// represents the deprecated. Use `messaging.client.operation.duration` instead.
+// PublishDuration is an instrument used to record metric values conforming to
+// the "messaging.publish.duration" semantic conventions. It represents the
+// deprecated. Use `messaging.client.operation.duration` instead.
 type PublishDuration struct {
 	inst metric.Float64Histogram
 }
@@ -997,9 +997,9 @@ func (PublishDuration) ServerPort(val int) PublishDurationAttr {
 	return publishDurationAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingPublishMessages is an instrument used to record metric values
-// conforming to the "messaging.publish.messages" semantic conventions. It
-// represents the deprecated. Use `messaging.client.produced.messages` instead.
+// PublishMessages is an instrument used to record metric values conforming to
+// the "messaging.publish.messages" semantic conventions. It represents the
+// deprecated. Use `messaging.client.produced.messages` instead.
 type PublishMessages struct {
 	inst metric.Int64Counter
 }
@@ -1102,9 +1102,9 @@ func (PublishMessages) ServerPort(val int) PublishMessagesAttr {
 	return publishMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingReceiveDuration is an instrument used to record metric values
-// conforming to the "messaging.receive.duration" semantic conventions. It
-// represents the deprecated. Use `messaging.client.operation.duration` instead.
+// ReceiveDuration is an instrument used to record metric values conforming to
+// the "messaging.receive.duration" semantic conventions. It represents the
+// deprecated. Use `messaging.client.operation.duration` instead.
 type ReceiveDuration struct {
 	inst metric.Float64Histogram
 }
@@ -1207,9 +1207,9 @@ func (ReceiveDuration) ServerPort(val int) ReceiveDurationAttr {
 	return receiveDurationAttr{kv: attribute.Int("server.port", val)}
 }
 
-// MessagingReceiveMessages is an instrument used to record metric values
-// conforming to the "messaging.receive.messages" semantic conventions. It
-// represents the deprecated. Use `messaging.client.consumed.messages` instead.
+// ReceiveMessages is an instrument used to record metric values conforming to
+// the "messaging.receive.messages" semantic conventions. It represents the
+// deprecated. Use `messaging.client.consumed.messages` instead.
 type ReceiveMessages struct {
 	inst metric.Int64Counter
 }

@@ -96,7 +96,7 @@ var (
 	TokenTypeOutput TokenTypeAttr = "output"
 )
 
-// GenAIClientOperationDuration is an instrument used to record metric values
+// ClientOperationDuration is an instrument used to record metric values
 // conforming to the "gen_ai.client.operation.duration" semantic conventions. It
 // represents the genAI operation duration.
 type ClientOperationDuration struct {
@@ -218,8 +218,8 @@ func (ClientOperationDuration) ServerAddress(val string) ClientOperationDuration
 	return clientOperationDurationAttr{kv: attribute.String("server.address", val)}
 }
 
-// GenAIClientTokenUsage is an instrument used to record metric values conforming
-// to the "gen_ai.client.token.usage" semantic conventions. It represents the
+// ClientTokenUsage is an instrument used to record metric values conforming to
+// the "gen_ai.client.token.usage" semantic conventions. It represents the
 // measures number of input and output tokens used.
 type ClientTokenUsage struct {
 	inst metric.Int64Histogram
@@ -337,10 +337,10 @@ func (ClientTokenUsage) ServerAddress(val string) ClientTokenUsageAttr {
 	return clientTokenUsageAttr{kv: attribute.String("server.address", val)}
 }
 
-// GenAIServerRequestDuration is an instrument used to record metric values
-// conforming to the "gen_ai.server.request.duration" semantic conventions. It
-// represents the generative AI server request duration such as time-to-last byte
-// or last output token.
+// ServerRequestDuration is an instrument used to record metric values conforming
+// to the "gen_ai.server.request.duration" semantic conventions. It represents
+// the generative AI server request duration such as time-to-last byte or last
+// output token.
 type ServerRequestDuration struct {
 	inst metric.Float64Histogram
 }
@@ -460,7 +460,7 @@ func (ServerRequestDuration) ServerAddress(val string) ServerRequestDurationAttr
 	return serverRequestDurationAttr{kv: attribute.String("server.address", val)}
 }
 
-// GenAIServerTimePerOutputToken is an instrument used to record metric values
+// ServerTimePerOutputToken is an instrument used to record metric values
 // conforming to the "gen_ai.server.time_per_output_token" semantic conventions.
 // It represents the time per output token generated after the first token for
 // successful responses.
@@ -576,7 +576,7 @@ func (ServerTimePerOutputToken) ServerAddress(val string) ServerTimePerOutputTok
 	return serverTimePerOutputTokenAttr{kv: attribute.String("server.address", val)}
 }
 
-// GenAIServerTimeToFirstToken is an instrument used to record metric values
+// ServerTimeToFirstToken is an instrument used to record metric values
 // conforming to the "gen_ai.server.time_to_first_token" semantic conventions. It
 // represents the time to generate first token for successful responses.
 type ServerTimeToFirstToken struct {

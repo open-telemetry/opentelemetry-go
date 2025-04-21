@@ -35,7 +35,7 @@ var (
 {%- for metric in ctx.metrics %}
 {%- set metric_name = h.to_go_name(metric.metric_name, ctx.root_namespace) %}
 
-{{ h.metric_typedoc(metric) | comment | trim }}
+{{ h.metric_typedoc(metric, ctx.root_namespace) | comment | trim }}
 type {{ metric_name }} struct {
 	inst metric.{{ i.instrument(metric) }}
 }
