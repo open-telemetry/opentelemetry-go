@@ -27,16 +27,26 @@ Int64
 {%- endmacro -%}
 
 {%- macro param_name(raw="", pkg="") -%}
+{%- set reserved = [
+	"type", "break", "default", "func", "interface", "select", "case", "defer",
+	"go", "map", "struct", "chan", "else", "goto", "const", "fallthrough", "if",
+	"range", "type", "continue", "for", "import", "return", "var",
+]-%}
+{%- set name = raw -%}
 {%- if pkg != "" -%}
 {%- set n = pkg | length -%}
-{%- if pkg == raw[:n] -%}
-{%- set raw = raw[n:] -%}
-{%- if raw[0] == "." or raw[0] == "." -%}
-{%- set raw = raw[1:] -%}
+{%- if pkg == name[:n] -%}
+{%- set name = name[n:] -%}
+{%- if name[0] == "." or name[0] == "." -%}
+{%- set name = name[1:] -%}
 {%- endif -%}
 {%- endif -%}
 {%- endif -%}
+{%- if name | lower is in reserved -%}
 {{ raw | camel_case }}
+{%- else -%}
+{{ name | camel_case }}
+{%- endif -%}
 {%- endmacro -%}
 
 {%- macro attr_iface(metric_name, pkg="") -%}

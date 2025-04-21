@@ -117,7 +117,7 @@ func (m Energy) Add(
     ctx context.Context,
     incr int64,
 	id string,
-	type TypeAttr,
+	hwType TypeAttr,
 	attrs ...EnergyAttr,
 ) {
 	m.inst.Add(
@@ -127,7 +127,7 @@ func (m Energy) Add(
 			append(
 				m.conv(attrs),
 				attribute.String("hw.id", id),
-				attribute.String("hw.type", string(type)),
+				attribute.String("hw.type", string(hwType)),
 			)...,
 		),
 	)
@@ -218,7 +218,7 @@ func (m Errors) Add(
     ctx context.Context,
     incr int64,
 	id string,
-	type TypeAttr,
+	hwType TypeAttr,
 	attrs ...ErrorsAttr,
 ) {
 	m.inst.Add(
@@ -228,7 +228,7 @@ func (m Errors) Add(
 			append(
 				m.conv(attrs),
 				attribute.String("hw.id", id),
-				attribute.String("hw.type", string(type)),
+				attribute.String("hw.type", string(hwType)),
 			)...,
 		),
 	)
@@ -485,8 +485,7 @@ type HostHeatingMargin struct {
 func NewHostHeatingMargin(m metric.Meter) (HostHeatingMargin, error) {
 	i, err := m.Int64Gauge(
 	    "hw.host.heating_margin",
-	    metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors
-"),
+	    metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors"),
 	    metric.WithUnit("Cel"),
 	)
 	if err != nil {
@@ -584,8 +583,7 @@ type HostPower struct {
 func NewHostPower(m metric.Meter) (HostPower, error) {
 	i, err := m.Int64Gauge(
 	    "hw.host.power",
-	    metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)
-"),
+	    metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)"),
 	    metric.WithUnit("W"),
 	)
 	if err != nil {
@@ -718,7 +716,7 @@ func (m Power) Record(
     ctx context.Context,
     val int64,
 	id string,
-	type TypeAttr,
+	hwType TypeAttr,
 	attrs ...PowerAttr,
 ) {
 	m.inst.Record(
@@ -728,7 +726,7 @@ func (m Power) Record(
 			append(
 				m.conv(attrs),
 				attribute.String("hw.id", id),
-				attribute.String("hw.type", string(type)),
+				attribute.String("hw.type", string(hwType)),
 			)...,
 		),
 	)
@@ -822,7 +820,7 @@ func (m Status) Add(
     incr int64,
 	id string,
 	state StateAttr,
-	type TypeAttr,
+	hwType TypeAttr,
 	attrs ...StatusAttr,
 ) {
 	m.inst.Add(
@@ -833,7 +831,7 @@ func (m Status) Add(
 				m.conv(attrs),
 				attribute.String("hw.id", id),
 				attribute.String("hw.state", string(state)),
-				attribute.String("hw.type", string(type)),
+				attribute.String("hw.type", string(hwType)),
 			)...,
 		),
 	)

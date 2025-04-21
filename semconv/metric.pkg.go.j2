@@ -44,7 +44,7 @@ type {{ metric_name }} struct {
 func New{{ metric_name }}(m metric.Meter) ({{ metric_name }}, error) {
 	i, err := m.{{ i.instrument(metric) }}(
 	    "{{metric.metric_name}}",
-	    metric.WithDescription("{{metric.brief}}"),
+	    metric.WithDescription("{{metric.brief | trim}}"),
 	    metric.WithUnit("{{metric.unit}}"),
 	)
 	if err != nil {
