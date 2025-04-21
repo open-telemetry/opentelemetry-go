@@ -9992,9 +9992,8 @@ const (
 	RPCMessageCompressedSizeKey = attribute.Key("rpc.message.compressed_size")
 
 	// RPCMessageIDKey is the attribute Key conforming to the "rpc.message.id"
-	// semantic conventions. It represents the MUST be calculated as two different
-	// counters starting from `1` one for sent messages and one for received
-	// message.
+	// semantic conventions. It MUST be calculated as two different counters
+	// starting from `1` one for sent messages and one for received message.
 	//
 	// Type: int
 	// RequirementLevel: Recommended
@@ -10112,8 +10111,8 @@ func RPCMessageCompressedSize(val int) attribute.KeyValue {
 }
 
 // RPCMessageID returns an attribute KeyValue conforming to the "rpc.message.id"
-// semantic conventions. It represents the MUST be calculated as two different
-// counters starting from `1` one for sent messages and one for received message.
+// semantic conventions. It MUST be calculated as two different counters starting
+// from `1` one for sent messages and one for received message.
 func RPCMessageID(val int) attribute.KeyValue {
 	return RPCMessageIDKey.Int(val)
 }
