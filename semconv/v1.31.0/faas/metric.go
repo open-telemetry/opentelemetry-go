@@ -73,47 +73,22 @@ func (Coldstarts) Description() string {
 func (m Coldstarts) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ColdstartsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Coldstarts) conv(in []ColdstartsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.coldstartsAttr()
-	}
-	return out
-}
-
-// ColdstartsAttr is an optional attribute for the Coldstarts instrument.
-type ColdstartsAttr interface {
-    coldstartsAttr() attribute.KeyValue
-}
-
-type coldstartsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a coldstartsAttr) coldstartsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Coldstarts) TriggerAttr(val TriggerAttr) ColdstartsAttr {
-	return coldstartsAttr{kv: attribute.String("faas.trigger", string(val))}
+func (Coldstarts) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // CPUUsage is an instrument used to record metric values conforming to the
@@ -157,47 +132,22 @@ func (CPUUsage) Description() string {
 func (m CPUUsage) Record(
     ctx context.Context,
     val float64,
-	attrs ...CPUUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m CPUUsage) conv(in []CPUUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.cpuUsageAttr()
-	}
-	return out
-}
-
-// CPUUsageAttr is an optional attribute for the CPUUsage instrument.
-type CPUUsageAttr interface {
-    cpuUsageAttr() attribute.KeyValue
-}
-
-type cpuUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a cpuUsageAttr) cpuUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (CPUUsage) TriggerAttr(val TriggerAttr) CPUUsageAttr {
-	return cpuUsageAttr{kv: attribute.String("faas.trigger", string(val))}
+func (CPUUsage) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // Errors is an instrument used to record metric values conforming to the
@@ -241,47 +191,22 @@ func (Errors) Description() string {
 func (m Errors) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ErrorsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Errors) conv(in []ErrorsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.errorsAttr()
-	}
-	return out
-}
-
-// ErrorsAttr is an optional attribute for the Errors instrument.
-type ErrorsAttr interface {
-    errorsAttr() attribute.KeyValue
-}
-
-type errorsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a errorsAttr) errorsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Errors) TriggerAttr(val TriggerAttr) ErrorsAttr {
-	return errorsAttr{kv: attribute.String("faas.trigger", string(val))}
+func (Errors) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // InitDuration is an instrument used to record metric values conforming to the
@@ -325,47 +250,22 @@ func (InitDuration) Description() string {
 func (m InitDuration) Record(
     ctx context.Context,
     val float64,
-	attrs ...InitDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m InitDuration) conv(in []InitDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.initDurationAttr()
-	}
-	return out
-}
-
-// InitDurationAttr is an optional attribute for the InitDuration instrument.
-type InitDurationAttr interface {
-    initDurationAttr() attribute.KeyValue
-}
-
-type initDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a initDurationAttr) initDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (InitDuration) TriggerAttr(val TriggerAttr) InitDurationAttr {
-	return initDurationAttr{kv: attribute.String("faas.trigger", string(val))}
+func (InitDuration) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // Invocations is an instrument used to record metric values conforming to the
@@ -409,47 +309,22 @@ func (Invocations) Description() string {
 func (m Invocations) Add(
     ctx context.Context,
     incr int64,
-	attrs ...InvocationsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Invocations) conv(in []InvocationsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.invocationsAttr()
-	}
-	return out
-}
-
-// InvocationsAttr is an optional attribute for the Invocations instrument.
-type InvocationsAttr interface {
-    invocationsAttr() attribute.KeyValue
-}
-
-type invocationsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a invocationsAttr) invocationsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Invocations) TriggerAttr(val TriggerAttr) InvocationsAttr {
-	return invocationsAttr{kv: attribute.String("faas.trigger", string(val))}
+func (Invocations) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // InvokeDuration is an instrument used to record metric values conforming to the
@@ -493,47 +368,22 @@ func (InvokeDuration) Description() string {
 func (m InvokeDuration) Record(
     ctx context.Context,
     val float64,
-	attrs ...InvokeDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m InvokeDuration) conv(in []InvokeDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.invokeDurationAttr()
-	}
-	return out
-}
-
-// InvokeDurationAttr is an optional attribute for the InvokeDuration instrument.
-type InvokeDurationAttr interface {
-    invokeDurationAttr() attribute.KeyValue
-}
-
-type invokeDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a invokeDurationAttr) invokeDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (InvokeDuration) TriggerAttr(val TriggerAttr) InvokeDurationAttr {
-	return invokeDurationAttr{kv: attribute.String("faas.trigger", string(val))}
+func (InvokeDuration) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // MemUsage is an instrument used to record metric values conforming to the
@@ -577,47 +427,22 @@ func (MemUsage) Description() string {
 func (m MemUsage) Record(
     ctx context.Context,
     val int64,
-	attrs ...MemUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m MemUsage) conv(in []MemUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.memUsageAttr()
-	}
-	return out
-}
-
-// MemUsageAttr is an optional attribute for the MemUsage instrument.
-type MemUsageAttr interface {
-    memUsageAttr() attribute.KeyValue
-}
-
-type memUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a memUsageAttr) memUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (MemUsage) TriggerAttr(val TriggerAttr) MemUsageAttr {
-	return memUsageAttr{kv: attribute.String("faas.trigger", string(val))}
+func (MemUsage) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // NetIo is an instrument used to record metric values conforming to the
@@ -661,47 +486,22 @@ func (NetIo) Description() string {
 func (m NetIo) Record(
     ctx context.Context,
     val int64,
-	attrs ...NetIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetIo) conv(in []NetIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.netIoAttr()
-	}
-	return out
-}
-
-// NetIoAttr is an optional attribute for the NetIo instrument.
-type NetIoAttr interface {
-    netIoAttr() attribute.KeyValue
-}
-
-type netIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a netIoAttr) netIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (NetIo) TriggerAttr(val TriggerAttr) NetIoAttr {
-	return netIoAttr{kv: attribute.String("faas.trigger", string(val))}
+func (NetIo) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }
 
 // Timeouts is an instrument used to record metric values conforming to the
@@ -745,45 +545,20 @@ func (Timeouts) Description() string {
 func (m Timeouts) Add(
     ctx context.Context,
     incr int64,
-	attrs ...TimeoutsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Timeouts) conv(in []TimeoutsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.timeoutsAttr()
-	}
-	return out
-}
-
-// TimeoutsAttr is an optional attribute for the Timeouts instrument.
-type TimeoutsAttr interface {
-    timeoutsAttr() attribute.KeyValue
-}
-
-type timeoutsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a timeoutsAttr) timeoutsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Trigger returns an optional attribute for the "faas.trigger" semantic
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Timeouts) TriggerAttr(val TriggerAttr) TimeoutsAttr {
-	return timeoutsAttr{kv: attribute.String("faas.trigger", string(val))}
+func (Timeouts) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
 }

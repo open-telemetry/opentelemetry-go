@@ -97,72 +97,46 @@ func (ActiveConnections) Description() string {
 func (m ActiveConnections) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ActiveConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ActiveConnections) conv(in []ActiveConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.activeConnectionsAttr()
-	}
-	return out
-}
-
-// ActiveConnectionsAttr is an optional attribute for the ActiveConnections
-// instrument.
-type ActiveConnectionsAttr interface {
-    activeConnectionsAttr() attribute.KeyValue
-}
-
-type activeConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a activeConnectionsAttr) activeConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (ActiveConnections) NetworkTransportAttr(val NetworkTransportAttr) ActiveConnectionsAttr {
-	return activeConnectionsAttr{kv: attribute.String("network.transport", string(val))}
+func (ActiveConnections) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (ActiveConnections) NetworkTypeAttr(val NetworkTypeAttr) ActiveConnectionsAttr {
-	return activeConnectionsAttr{kv: attribute.String("network.type", string(val))}
+func (ActiveConnections) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ActiveConnections) ServerAddressAttr(val string) ActiveConnectionsAttr {
-	return activeConnectionsAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ActiveConnections) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ActiveConnections) ServerPortAttr(val int) ActiveConnectionsAttr {
-	return activeConnectionsAttr{kv: attribute.Int("server.port", val)}
+func (ActiveConnections) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // ActiveTLSHandshakes is an instrument used to record metric values conforming
@@ -206,72 +180,46 @@ func (ActiveTLSHandshakes) Description() string {
 func (m ActiveTLSHandshakes) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ActiveTLSHandshakesAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ActiveTLSHandshakes) conv(in []ActiveTLSHandshakesAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.activeTlsHandshakesAttr()
-	}
-	return out
-}
-
-// ActiveTLSHandshakesAttr is an optional attribute for the ActiveTLSHandshakes
-// instrument.
-type ActiveTLSHandshakesAttr interface {
-    activeTlsHandshakesAttr() attribute.KeyValue
-}
-
-type activeTlsHandshakesAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a activeTlsHandshakesAttr) activeTlsHandshakesAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (ActiveTLSHandshakes) NetworkTransportAttr(val NetworkTransportAttr) ActiveTLSHandshakesAttr {
-	return activeTlsHandshakesAttr{kv: attribute.String("network.transport", string(val))}
+func (ActiveTLSHandshakes) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (ActiveTLSHandshakes) NetworkTypeAttr(val NetworkTypeAttr) ActiveTLSHandshakesAttr {
-	return activeTlsHandshakesAttr{kv: attribute.String("network.type", string(val))}
+func (ActiveTLSHandshakes) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ActiveTLSHandshakes) ServerAddressAttr(val string) ActiveTLSHandshakesAttr {
-	return activeTlsHandshakesAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ActiveTLSHandshakes) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ActiveTLSHandshakes) ServerPortAttr(val int) ActiveTLSHandshakesAttr {
-	return activeTlsHandshakesAttr{kv: attribute.Int("server.port", val)}
+func (ActiveTLSHandshakes) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // ConnectionDuration is an instrument used to record metric values conforming to
@@ -315,104 +263,78 @@ func (ConnectionDuration) Description() string {
 func (m ConnectionDuration) Record(
     ctx context.Context,
     val float64,
-	attrs ...ConnectionDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ConnectionDuration) conv(in []ConnectionDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.connectionDurationAttr()
-	}
-	return out
-}
-
-// ConnectionDurationAttr is an optional attribute for the ConnectionDuration
-// instrument.
-type ConnectionDurationAttr interface {
-    connectionDurationAttr() attribute.KeyValue
-}
-
-type connectionDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a connectionDurationAttr) connectionDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the full name of exception type.
-func (ConnectionDuration) ErrorTypeAttr(val ErrorTypeAttr) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("error.type", string(val))}
+func (ConnectionDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ConnectionDuration) NetworkProtocolNameAttr(val string) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("network.protocol.name", val)}
+func (ConnectionDuration) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ConnectionDuration) NetworkProtocolVersionAttr(val string) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("network.protocol.version", val)}
+func (ConnectionDuration) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (ConnectionDuration) NetworkTransportAttr(val NetworkTransportAttr) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("network.transport", string(val))}
+func (ConnectionDuration) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (ConnectionDuration) NetworkTypeAttr(val NetworkTypeAttr) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("network.type", string(val))}
+func (ConnectionDuration) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ConnectionDuration) ServerAddressAttr(val string) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ConnectionDuration) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ConnectionDuration) ServerPortAttr(val int) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.Int("server.port", val)}
+func (ConnectionDuration) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// TLSProtocolVersion returns an optional attribute for the
+// AttrTLSProtocolVersion returns an optional attribute for the
 // "tls.protocol.version" semantic convention. It represents the numeric part of
 // the version parsed from the original string of the negotiated
 // [SSL/TLS protocol version].
 //
 // [SSL/TLS protocol version]: https://docs.openssl.org/1.1.1/man3/SSL_get_version/#return-values
-func (ConnectionDuration) TLSProtocolVersionAttr(val string) ConnectionDurationAttr {
-	return connectionDurationAttr{kv: attribute.String("tls.protocol.version", val)}
+func (ConnectionDuration) AttrTLSProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("tls.protocol.version", val)
 }
 
 // QueuedConnections is an instrument used to record metric values conforming to
@@ -456,72 +378,46 @@ func (QueuedConnections) Description() string {
 func (m QueuedConnections) Add(
     ctx context.Context,
     incr int64,
-	attrs ...QueuedConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m QueuedConnections) conv(in []QueuedConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.queuedConnectionsAttr()
-	}
-	return out
-}
-
-// QueuedConnectionsAttr is an optional attribute for the QueuedConnections
-// instrument.
-type QueuedConnectionsAttr interface {
-    queuedConnectionsAttr() attribute.KeyValue
-}
-
-type queuedConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a queuedConnectionsAttr) queuedConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (QueuedConnections) NetworkTransportAttr(val NetworkTransportAttr) QueuedConnectionsAttr {
-	return queuedConnectionsAttr{kv: attribute.String("network.transport", string(val))}
+func (QueuedConnections) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (QueuedConnections) NetworkTypeAttr(val NetworkTypeAttr) QueuedConnectionsAttr {
-	return queuedConnectionsAttr{kv: attribute.String("network.type", string(val))}
+func (QueuedConnections) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (QueuedConnections) ServerAddressAttr(val string) QueuedConnectionsAttr {
-	return queuedConnectionsAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (QueuedConnections) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (QueuedConnections) ServerPortAttr(val int) QueuedConnectionsAttr {
-	return queuedConnectionsAttr{kv: attribute.Int("server.port", val)}
+func (QueuedConnections) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // QueuedRequests is an instrument used to record metric values conforming to the
@@ -566,87 +462,62 @@ func (QueuedRequests) Description() string {
 func (m QueuedRequests) Add(
     ctx context.Context,
     incr int64,
-	attrs ...QueuedRequestsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m QueuedRequests) conv(in []QueuedRequestsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.queuedRequestsAttr()
-	}
-	return out
-}
-
-// QueuedRequestsAttr is an optional attribute for the QueuedRequests instrument.
-type QueuedRequestsAttr interface {
-    queuedRequestsAttr() attribute.KeyValue
-}
-
-type queuedRequestsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a queuedRequestsAttr) queuedRequestsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (QueuedRequests) NetworkProtocolNameAttr(val string) QueuedRequestsAttr {
-	return queuedRequestsAttr{kv: attribute.String("network.protocol.name", val)}
+func (QueuedRequests) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (QueuedRequests) NetworkProtocolVersionAttr(val string) QueuedRequestsAttr {
-	return queuedRequestsAttr{kv: attribute.String("network.protocol.version", val)}
+func (QueuedRequests) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (QueuedRequests) NetworkTransportAttr(val NetworkTransportAttr) QueuedRequestsAttr {
-	return queuedRequestsAttr{kv: attribute.String("network.transport", string(val))}
+func (QueuedRequests) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (QueuedRequests) NetworkTypeAttr(val NetworkTypeAttr) QueuedRequestsAttr {
-	return queuedRequestsAttr{kv: attribute.String("network.type", string(val))}
+func (QueuedRequests) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (QueuedRequests) ServerAddressAttr(val string) QueuedRequestsAttr {
-	return queuedRequestsAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (QueuedRequests) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (QueuedRequests) ServerPortAttr(val int) QueuedRequestsAttr {
-	return queuedRequestsAttr{kv: attribute.Int("server.port", val)}
+func (QueuedRequests) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // RejectedConnections is an instrument used to record metric values conforming
@@ -690,72 +561,46 @@ func (RejectedConnections) Description() string {
 func (m RejectedConnections) Add(
     ctx context.Context,
     incr int64,
-	attrs ...RejectedConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m RejectedConnections) conv(in []RejectedConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.rejectedConnectionsAttr()
-	}
-	return out
-}
-
-// RejectedConnectionsAttr is an optional attribute for the RejectedConnections
-// instrument.
-type RejectedConnectionsAttr interface {
-    rejectedConnectionsAttr() attribute.KeyValue
-}
-
-type rejectedConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a rejectedConnectionsAttr) rejectedConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (RejectedConnections) NetworkTransportAttr(val NetworkTransportAttr) RejectedConnectionsAttr {
-	return rejectedConnectionsAttr{kv: attribute.String("network.transport", string(val))}
+func (RejectedConnections) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (RejectedConnections) NetworkTypeAttr(val NetworkTypeAttr) RejectedConnectionsAttr {
-	return rejectedConnectionsAttr{kv: attribute.String("network.type", string(val))}
+func (RejectedConnections) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (RejectedConnections) ServerAddressAttr(val string) RejectedConnectionsAttr {
-	return rejectedConnectionsAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (RejectedConnections) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (RejectedConnections) ServerPortAttr(val int) RejectedConnectionsAttr {
-	return rejectedConnectionsAttr{kv: attribute.Int("server.port", val)}
+func (RejectedConnections) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // TLSHandshakeDuration is an instrument used to record metric values conforming
@@ -799,88 +644,62 @@ func (TLSHandshakeDuration) Description() string {
 func (m TLSHandshakeDuration) Record(
     ctx context.Context,
     val float64,
-	attrs ...TLSHandshakeDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m TLSHandshakeDuration) conv(in []TLSHandshakeDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.tlsHandshakeDurationAttr()
-	}
-	return out
-}
-
-// TLSHandshakeDurationAttr is an optional attribute for the TLSHandshakeDuration
-// instrument.
-type TLSHandshakeDurationAttr interface {
-    tlsHandshakeDurationAttr() attribute.KeyValue
-}
-
-type tlsHandshakeDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a tlsHandshakeDurationAttr) tlsHandshakeDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the full name of exception type.
-func (TLSHandshakeDuration) ErrorTypeAttr(val ErrorTypeAttr) TLSHandshakeDurationAttr {
-	return tlsHandshakeDurationAttr{kv: attribute.String("error.type", string(val))}
+func (TLSHandshakeDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (TLSHandshakeDuration) NetworkTransportAttr(val NetworkTransportAttr) TLSHandshakeDurationAttr {
-	return tlsHandshakeDurationAttr{kv: attribute.String("network.transport", string(val))}
+func (TLSHandshakeDuration) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (TLSHandshakeDuration) NetworkTypeAttr(val NetworkTypeAttr) TLSHandshakeDurationAttr {
-	return tlsHandshakeDurationAttr{kv: attribute.String("network.type", string(val))}
+func (TLSHandshakeDuration) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (TLSHandshakeDuration) ServerAddressAttr(val string) TLSHandshakeDurationAttr {
-	return tlsHandshakeDurationAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (TLSHandshakeDuration) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (TLSHandshakeDuration) ServerPortAttr(val int) TLSHandshakeDurationAttr {
-	return tlsHandshakeDurationAttr{kv: attribute.Int("server.port", val)}
+func (TLSHandshakeDuration) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// TLSProtocolVersion returns an optional attribute for the
+// AttrTLSProtocolVersion returns an optional attribute for the
 // "tls.protocol.version" semantic convention. It represents the numeric part of
 // the version parsed from the original string of the negotiated
 // [SSL/TLS protocol version].
 //
 // [SSL/TLS protocol version]: https://docs.openssl.org/1.1.1/man3/SSL_get_version/#return-values
-func (TLSHandshakeDuration) TLSProtocolVersionAttr(val string) TLSHandshakeDurationAttr {
-	return tlsHandshakeDurationAttr{kv: attribute.String("tls.protocol.version", val)}
+func (TLSHandshakeDuration) AttrTLSProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("tls.protocol.version", val)
 }
 
 // UpgradedConnections is an instrument used to record metric values conforming
@@ -924,70 +743,44 @@ func (UpgradedConnections) Description() string {
 func (m UpgradedConnections) Add(
     ctx context.Context,
     incr int64,
-	attrs ...UpgradedConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m UpgradedConnections) conv(in []UpgradedConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.upgradedConnectionsAttr()
-	}
-	return out
-}
-
-// UpgradedConnectionsAttr is an optional attribute for the UpgradedConnections
-// instrument.
-type UpgradedConnectionsAttr interface {
-    upgradedConnectionsAttr() attribute.KeyValue
-}
-
-type upgradedConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a upgradedConnectionsAttr) upgradedConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (UpgradedConnections) NetworkTransportAttr(val NetworkTransportAttr) UpgradedConnectionsAttr {
-	return upgradedConnectionsAttr{kv: attribute.String("network.transport", string(val))}
+func (UpgradedConnections) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
-// NetworkType returns an optional attribute for the "network.type" semantic
+// AttrNetworkType returns an optional attribute for the "network.type" semantic
 // convention. It represents the [OSI network layer] or non-OSI equivalent.
 //
 // [OSI network layer]: https://wikipedia.org/wiki/Network_layer
-func (UpgradedConnections) NetworkTypeAttr(val NetworkTypeAttr) UpgradedConnectionsAttr {
-	return upgradedConnectionsAttr{kv: attribute.String("network.type", string(val))}
+func (UpgradedConnections) AttrNetworkType(val NetworkTypeAttr) attribute.KeyValue {
+	return attribute.String("network.type", string(val))
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the server domain name if available without reverse
-// DNS lookup; otherwise, IP address or Unix domain socket name.
-func (UpgradedConnections) ServerAddressAttr(val string) UpgradedConnectionsAttr {
-	return upgradedConnectionsAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (UpgradedConnections) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (UpgradedConnections) ServerPortAttr(val int) UpgradedConnectionsAttr {
-	return upgradedConnectionsAttr{kv: attribute.Int("server.port", val)}
+func (UpgradedConnections) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }

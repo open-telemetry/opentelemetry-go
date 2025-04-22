@@ -66,47 +66,22 @@ func (m LookupDuration) Record(
     ctx context.Context,
     val float64,
 	questionName string,
-	attrs ...LookupDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("dns.question.name", questionName),
 			)...,
 		),
 	)
 }
 
-func (m LookupDuration) conv(in []LookupDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.lookupDurationAttr()
-	}
-	return out
-}
-
-// LookupDurationAttr is an optional attribute for the LookupDuration instrument.
-type LookupDurationAttr interface {
-    lookupDurationAttr() attribute.KeyValue
-}
-
-type lookupDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a lookupDurationAttr) lookupDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes the error the DNS lookup failed with.
-func (LookupDuration) ErrorTypeAttr(val ErrorTypeAttr) LookupDurationAttr {
-	return lookupDurationAttr{kv: attribute.String("error.type", string(val))}
+func (LookupDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }

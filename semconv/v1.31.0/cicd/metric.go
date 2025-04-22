@@ -128,7 +128,7 @@ func (m PipelineRunActive) Add(
     incr int64,
 	pipelineName string,
 	pipelineRunState PipelineRunStateAttr,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -189,14 +189,14 @@ func (m PipelineRunDuration) Record(
     val float64,
 	pipelineName string,
 	pipelineRunState PipelineRunStateAttr,
-	attrs ...PipelineRunDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("cicd.pipeline.name", pipelineName),
 				attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
 			)...,
@@ -204,43 +204,18 @@ func (m PipelineRunDuration) Record(
 	)
 }
 
-func (m PipelineRunDuration) conv(in []PipelineRunDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.pipelineRunDurationAttr()
-	}
-	return out
+// AttrPipelineResult returns an optional attribute for the
+// "cicd.pipeline.result" semantic convention. It represents the result of a
+// pipeline run.
+func (PipelineRunDuration) AttrPipelineResult(val PipelineResultAttr) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.result", string(val))
 }
 
-// PipelineRunDurationAttr is an optional attribute for the PipelineRunDuration
-// instrument.
-type PipelineRunDurationAttr interface {
-    pipelineRunDurationAttr() attribute.KeyValue
-}
-
-type pipelineRunDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a pipelineRunDurationAttr) pipelineRunDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// PipelineResult returns an optional attribute for the "cicd.pipeline.result"
-// semantic convention. It represents the result of a pipeline run.
-func (PipelineRunDuration) PipelineResultAttr(val PipelineResultAttr) PipelineRunDurationAttr {
-	return pipelineRunDurationAttr{kv: attribute.String("cicd.pipeline.result", string(val))}
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (PipelineRunDuration) ErrorTypeAttr(val ErrorTypeAttr) PipelineRunDurationAttr {
-	return pipelineRunDurationAttr{kv: attribute.String("error.type", string(val))}
+func (PipelineRunDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
 // PipelineRunErrors is an instrument used to record metric values conforming to
@@ -289,7 +264,7 @@ func (m PipelineRunErrors) Add(
     incr int64,
 	pipelineName string,
 	errorType ErrorTypeAttr,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -346,7 +321,7 @@ func (m SystemErrors) Add(
     incr int64,
 	systemComponent string,
 	errorType ErrorTypeAttr,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -400,7 +375,7 @@ func (m WorkerCount) Add(
     ctx context.Context,
     incr int64,
 	workerState WorkerStateAttr,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,

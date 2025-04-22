@@ -49,23 +49,6 @@ Int64
 {%- endif -%}
 {%- endmacro -%}
 
-{%- macro attr_iface(metric_name, pkg="") -%}
-{%- set name = h.to_go_name(metric_name, pkg) -%}
-{%- set private_name = param_name(metric_name, pkg) ~ "Attr" -%}
-{{ [ name ~"Attr is an optional attribute for the " ~ name ~ " instrument." ] | comment }}
-type {{ name }}Attr interface {
-    {{ private_name }}() attribute.KeyValue
-}
-
-type {{ private_name }} struct {
-	kv attribute.KeyValue
-}
-
-func (a {{ private_name }}) {{ private_name }}() attribute.KeyValue {
-    return a.kv
-}
-{%- endmacro -%}
-
 {%- macro params_docs(attrs, pkg="") -%}
 {%- set ns = namespace(output='') -%}
 {%- for attr in attrs | required | attribute_sort -%}
@@ -92,9 +75,7 @@ func (a {{ private_name }}) {{ private_name }}() attribute.KeyValue {
 {%- for attr in attrs | required | attribute_sort -%}
 {{ prefix ~ param(attr, pkg) }}
 {% endfor -%}
-{%- if attrs | not_required | length > 0 -%}
-{{ prefix ~ "attrs ..." ~ type ~ "Attr," }}
-{%- endif -%}
+{{ prefix ~ "attrs ...attribute.KeyValue," }}
 {%- endmacro -%}
 
 {%- macro to_attribute(attr, pkg="") -%}
@@ -111,13 +92,13 @@ func (a {{ private_name }}) {{ private_name }}() attribute.KeyValue {
 {%- if attrs | not_required | length > 0 %}
 {%- if attrs | required | length > 0 %}
 {{ prefix }}	append(
-{{ prefix }}		m.conv(attrs),
+{{ prefix }}		attrs,
 {%- for attr in attrs | required | attribute_sort %}
 {{ prefix }}		{{ to_attribute(attr, pkg) }}
 {%- endfor %}
 {{ prefix }}	)...,
 {%- else %}
-{{ prefix }}	m.conv(attrs)...,
+{{ prefix }}	attrs...,
 {%- endif %}
 {%- else -%}
 {%- for attr in attrs | required | attribute_sort -%}
@@ -126,21 +107,6 @@ func (a {{ private_name }}) {{ private_name }}() attribute.KeyValue {
 {%- endif %}
 {{ prefix }}),
 {%- endif -%}
-{%- endmacro -%}
-
-{%- macro conv_func(metric, pkg="") -%}
-{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
-func (m {{ name }}) conv(in []{{name}}Attr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.{{ param_name(metric.metric_name, pkg) }}Attr()
-	}
-	return out
-}
 {%- endmacro -%}
 
 {%- macro add_method_with_optional(metric, pkg="") -%}
@@ -152,7 +118,7 @@ func (m {{ name }}) conv(in []{{name}}Attr) []attribute.KeyValue {
 func (m {{ name }}) Add(
     ctx context.Context,
     incr {{ value_type(metric) | lower }},
-{{ params(metric.attributes, type=name, pkg=pkg, prefix="\t") }}
+{{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
 	m.inst.Add(
 		ctx,
@@ -160,12 +126,6 @@ func (m {{ name }}) Add(
 {{ with_attributes_opt(metric.attributes, pkg=pkg, prefix="\t\t") }}
 	)
 }
-{%- if metric.attributes | not_required | length > 0 %}
-
-{{ conv_func(metric, pkg) }}
-
-{{ attr_iface(metric.metric_name, pkg) }}
-{%- endif %}
 {%- endmacro -%}
 
 {%- macro add_method(metric, pkg="") -%}
@@ -173,8 +133,12 @@ func (m {{ name }}) Add(
 {{ add_method_with_optional(metric, pkg) }}
 {%- else -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
-func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower }}) {
-    m.inst.Add(ctx, incr)
+func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 {%- endif -%}
 {%- endmacro -%}
@@ -188,7 +152,7 @@ func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower 
 func (m {{ name }}) Record(
     ctx context.Context,
     val {{ value_type(metric) | lower }},
-{{ params(metric.attributes, type=name, pkg=pkg, prefix="\t") }}
+{{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
 	m.inst.Record(
 		ctx,
@@ -196,12 +160,6 @@ func (m {{ name }}) Record(
 {{ with_attributes_opt(metric.attributes, pkg=pkg, prefix="\t\t") }}
 	)
 }
-{%- if metric.attributes | not_required | length > 0 %}
-
-{{ conv_func(metric, pkg) }}
-
-{{ attr_iface(metric.metric_name, pkg) }}
-{%- endif %}
 {%- endmacro -%}
 
 {%- macro record_method(metric, pkg="") -%}
@@ -209,8 +167,12 @@ func (m {{ name }}) Record(
 {{ record_method_with_optional(metric, pkg) }}
 {%- else -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
-func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lower }}) {
-    m.inst.Record(ctx, val)
+func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 {%- endif -%}
 {%- endmacro -%}

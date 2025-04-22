@@ -76,46 +76,21 @@ func (Frequency) Description() string {
 func (m Frequency) Record(
     ctx context.Context,
     val int64,
-	attrs ...FrequencyAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Frequency) conv(in []FrequencyAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.frequencyAttr()
-	}
-	return out
-}
-
-// FrequencyAttr is an optional attribute for the Frequency instrument.
-type FrequencyAttr interface {
-    frequencyAttr() attribute.KeyValue
-}
-
-type frequencyAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a frequencyAttr) frequencyAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// LogicalNumber returns an optional attribute for the "cpu.logical_number"
+// AttrLogicalNumber returns an optional attribute for the "cpu.logical_number"
 // semantic convention. It represents the logical CPU number [0..n-1].
-func (Frequency) LogicalNumberAttr(val int) FrequencyAttr {
-	return frequencyAttr{kv: attribute.Int("cpu.logical_number", val)}
+func (Frequency) AttrLogicalNumber(val int) attribute.KeyValue {
+	return attribute.Int("cpu.logical_number", val)
 }
 
 // Time is an instrument used to record metric values conforming to the
@@ -159,52 +134,27 @@ func (Time) Description() string {
 func (m Time) Add(
     ctx context.Context,
     incr float64,
-	attrs ...TimeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Time) conv(in []TimeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.timeAttr()
-	}
-	return out
-}
-
-// TimeAttr is an optional attribute for the Time instrument.
-type TimeAttr interface {
-    timeAttr() attribute.KeyValue
-}
-
-type timeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a timeAttr) timeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// LogicalNumber returns an optional attribute for the "cpu.logical_number"
+// AttrLogicalNumber returns an optional attribute for the "cpu.logical_number"
 // semantic convention. It represents the logical CPU number [0..n-1].
-func (Time) LogicalNumberAttr(val int) TimeAttr {
-	return timeAttr{kv: attribute.Int("cpu.logical_number", val)}
+func (Time) AttrLogicalNumber(val int) attribute.KeyValue {
+	return attribute.Int("cpu.logical_number", val)
 }
 
-// Mode returns an optional attribute for the "cpu.mode" semantic convention. It
-// represents the mode of the CPU.
-func (Time) ModeAttr(val ModeAttr) TimeAttr {
-	return timeAttr{kv: attribute.String("cpu.mode", string(val))}
+// AttrMode returns an optional attribute for the "cpu.mode" semantic convention.
+// It represents the mode of the CPU.
+func (Time) AttrMode(val ModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }
 
 // Utilization is an instrument used to record metric values conforming to the
@@ -249,50 +199,25 @@ func (Utilization) Description() string {
 func (m Utilization) Record(
     ctx context.Context,
     val int64,
-	attrs ...UtilizationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m Utilization) conv(in []UtilizationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.utilizationAttr()
-	}
-	return out
-}
-
-// UtilizationAttr is an optional attribute for the Utilization instrument.
-type UtilizationAttr interface {
-    utilizationAttr() attribute.KeyValue
-}
-
-type utilizationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a utilizationAttr) utilizationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// LogicalNumber returns an optional attribute for the "cpu.logical_number"
+// AttrLogicalNumber returns an optional attribute for the "cpu.logical_number"
 // semantic convention. It represents the logical CPU number [0..n-1].
-func (Utilization) LogicalNumberAttr(val int) UtilizationAttr {
-	return utilizationAttr{kv: attribute.Int("cpu.logical_number", val)}
+func (Utilization) AttrLogicalNumber(val int) attribute.KeyValue {
+	return attribute.Int("cpu.logical_number", val)
 }
 
-// Mode returns an optional attribute for the "cpu.mode" semantic convention. It
-// represents the mode of the CPU.
-func (Utilization) ModeAttr(val ModeAttr) UtilizationAttr {
-	return utilizationAttr{kv: attribute.String("cpu.mode", string(val))}
+// AttrMode returns an optional attribute for the "cpu.mode" semantic convention.
+// It represents the mode of the CPU.
+func (Utilization) AttrMode(val ModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }

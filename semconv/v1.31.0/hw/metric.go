@@ -118,14 +118,14 @@ func (m Energy) Add(
     incr int64,
 	id string,
 	hwType TypeAttr,
-	attrs ...EnergyAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 				attribute.String("hw.type", string(hwType)),
 			)...,
@@ -133,42 +133,17 @@ func (m Energy) Add(
 	)
 }
 
-func (m Energy) conv(in []EnergyAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.energyAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (Energy) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// EnergyAttr is an optional attribute for the Energy instrument.
-type EnergyAttr interface {
-    energyAttr() attribute.KeyValue
-}
-
-type energyAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a energyAttr) energyAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (Energy) NameAttr(val string) EnergyAttr {
-	return energyAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (Energy) ParentAttr(val string) EnergyAttr {
-	return energyAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (Energy) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // Errors is an instrument used to record metric values conforming to the
@@ -219,14 +194,14 @@ func (m Errors) Add(
     incr int64,
 	id string,
 	hwType TypeAttr,
-	attrs ...ErrorsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 				attribute.String("hw.type", string(hwType)),
 			)...,
@@ -234,48 +209,23 @@ func (m Errors) Add(
 	)
 }
 
-func (m Errors) conv(in []ErrorsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.errorsAttr()
-	}
-	return out
-}
-
-// ErrorsAttr is an optional attribute for the Errors instrument.
-type ErrorsAttr interface {
-    errorsAttr() attribute.KeyValue
-}
-
-type errorsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a errorsAttr) errorsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the type of error encountered by the component.
-func (Errors) ErrorTypeAttr(val ErrorTypeAttr) ErrorsAttr {
-	return errorsAttr{kv: attribute.String("error.type", string(val))}
+func (Errors) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (Errors) NameAttr(val string) ErrorsAttr {
-	return errorsAttr{kv: attribute.String("hw.name", val)}
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (Errors) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (Errors) ParentAttr(val string) ErrorsAttr {
-	return errorsAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (Errors) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // HostAmbientTemperature is an instrument used to record metric values
@@ -323,57 +273,31 @@ func (m HostAmbientTemperature) Record(
     ctx context.Context,
     val int64,
 	id string,
-	attrs ...HostAmbientTemperatureAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 			)...,
 		),
 	)
 }
 
-func (m HostAmbientTemperature) conv(in []HostAmbientTemperatureAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.hostAmbientTemperatureAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostAmbientTemperature) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// HostAmbientTemperatureAttr is an optional attribute for the
-// HostAmbientTemperature instrument.
-type HostAmbientTemperatureAttr interface {
-    hostAmbientTemperatureAttr() attribute.KeyValue
-}
-
-type hostAmbientTemperatureAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a hostAmbientTemperatureAttr) hostAmbientTemperatureAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (HostAmbientTemperature) NameAttr(val string) HostAmbientTemperatureAttr {
-	return hostAmbientTemperatureAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (HostAmbientTemperature) ParentAttr(val string) HostAmbientTemperatureAttr {
-	return hostAmbientTemperatureAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostAmbientTemperature) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // HostEnergy is an instrument used to record metric values conforming to the
@@ -421,56 +345,31 @@ func (m HostEnergy) Add(
     ctx context.Context,
     incr int64,
 	id string,
-	attrs ...HostEnergyAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 			)...,
 		),
 	)
 }
 
-func (m HostEnergy) conv(in []HostEnergyAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.hostEnergyAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostEnergy) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// HostEnergyAttr is an optional attribute for the HostEnergy instrument.
-type HostEnergyAttr interface {
-    hostEnergyAttr() attribute.KeyValue
-}
-
-type hostEnergyAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a hostEnergyAttr) hostEnergyAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (HostEnergy) NameAttr(val string) HostEnergyAttr {
-	return hostEnergyAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (HostEnergy) ParentAttr(val string) HostEnergyAttr {
-	return hostEnergyAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostEnergy) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // HostHeatingMargin is an instrument used to record metric values conforming to
@@ -519,57 +418,31 @@ func (m HostHeatingMargin) Record(
     ctx context.Context,
     val int64,
 	id string,
-	attrs ...HostHeatingMarginAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 			)...,
 		),
 	)
 }
 
-func (m HostHeatingMargin) conv(in []HostHeatingMarginAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.hostHeatingMarginAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostHeatingMargin) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// HostHeatingMarginAttr is an optional attribute for the HostHeatingMargin
-// instrument.
-type HostHeatingMarginAttr interface {
-    hostHeatingMarginAttr() attribute.KeyValue
-}
-
-type hostHeatingMarginAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a hostHeatingMarginAttr) hostHeatingMarginAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (HostHeatingMargin) NameAttr(val string) HostHeatingMarginAttr {
-	return hostHeatingMarginAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (HostHeatingMargin) ParentAttr(val string) HostHeatingMarginAttr {
-	return hostHeatingMarginAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostHeatingMargin) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // HostPower is an instrument used to record metric values conforming to the
@@ -617,56 +490,31 @@ func (m HostPower) Record(
     ctx context.Context,
     val int64,
 	id string,
-	attrs ...HostPowerAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 			)...,
 		),
 	)
 }
 
-func (m HostPower) conv(in []HostPowerAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.hostPowerAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostPower) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// HostPowerAttr is an optional attribute for the HostPower instrument.
-type HostPowerAttr interface {
-    hostPowerAttr() attribute.KeyValue
-}
-
-type hostPowerAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a hostPowerAttr) hostPowerAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (HostPower) NameAttr(val string) HostPowerAttr {
-	return hostPowerAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (HostPower) ParentAttr(val string) HostPowerAttr {
-	return hostPowerAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostPower) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // Power is an instrument used to record metric values conforming to the
@@ -717,14 +565,14 @@ func (m Power) Record(
     val int64,
 	id string,
 	hwType TypeAttr,
-	attrs ...PowerAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 				attribute.String("hw.type", string(hwType)),
 			)...,
@@ -732,42 +580,17 @@ func (m Power) Record(
 	)
 }
 
-func (m Power) conv(in []PowerAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.powerAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (Power) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// PowerAttr is an optional attribute for the Power instrument.
-type PowerAttr interface {
-    powerAttr() attribute.KeyValue
-}
-
-type powerAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a powerAttr) powerAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (Power) NameAttr(val string) PowerAttr {
-	return powerAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (Power) ParentAttr(val string) PowerAttr {
-	return powerAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (Power) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }
 
 // Status is an instrument used to record metric values conforming to the
@@ -821,14 +644,14 @@ func (m Status) Add(
 	id string,
 	state StateAttr,
 	hwType TypeAttr,
-	attrs ...StatusAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("hw.id", id),
 				attribute.String("hw.state", string(state)),
 				attribute.String("hw.type", string(hwType)),
@@ -837,40 +660,15 @@ func (m Status) Add(
 	)
 }
 
-func (m Status) conv(in []StatusAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.statusAttr()
-	}
-	return out
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (Status) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
 }
 
-// StatusAttr is an optional attribute for the Status instrument.
-type StatusAttr interface {
-    statusAttr() attribute.KeyValue
-}
-
-type statusAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a statusAttr) statusAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Name returns an optional attribute for the "hw.name" semantic convention. It
-// represents an easily-recognizable name for the hardware component.
-func (Status) NameAttr(val string) StatusAttr {
-	return statusAttr{kv: attribute.String("hw.name", val)}
-}
-
-// Parent returns an optional attribute for the "hw.parent" semantic convention.
-// It represents the unique identifier of the parent component (typically the
-// `hw.id` attribute of the enclosure, or disk controller).
-func (Status) ParentAttr(val string) StatusAttr {
-	return statusAttr{kv: attribute.String("hw.parent", val)}
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (Status) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
 }

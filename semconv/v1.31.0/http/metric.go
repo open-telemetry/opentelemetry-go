@@ -126,14 +126,14 @@ func (m ClientActiveRequests) Add(
     incr int64,
 	serverAddress string,
 	serverPort int,
-	attrs ...ClientActiveRequestsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
 			)...,
@@ -141,54 +141,28 @@ func (m ClientActiveRequests) Add(
 	)
 }
 
-func (m ClientActiveRequests) conv(in []ClientActiveRequestsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientActiveRequestsAttr()
-	}
-	return out
-}
-
-// ClientActiveRequestsAttr is an optional attribute for the ClientActiveRequests
-// instrument.
-type ClientActiveRequestsAttr interface {
-    clientActiveRequestsAttr() attribute.KeyValue
-}
-
-type clientActiveRequestsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientActiveRequestsAttr) clientActiveRequestsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// URLTemplate returns an optional attribute for the "url.template" semantic
+// AttrURLTemplate returns an optional attribute for the "url.template" semantic
 // convention. It represents the low-cardinality template of an
 // [absolute path reference].
 //
 // [absolute path reference]: https://www.rfc-editor.org/rfc/rfc3986#section-4.2
-func (ClientActiveRequests) URLTemplateAttr(val string) ClientActiveRequestsAttr {
-	return clientActiveRequestsAttr{kv: attribute.String("url.template", val)}
+func (ClientActiveRequests) AttrURLTemplate(val string) attribute.KeyValue {
+	return attribute.String("url.template", val)
 }
 
-// RequestMethod returns an optional attribute for the "http.request.method"
+// AttrRequestMethod returns an optional attribute for the "http.request.method"
 // semantic convention. It represents the HTTP request method.
-func (ClientActiveRequests) RequestMethodAttr(val RequestMethodAttr) ClientActiveRequestsAttr {
-	return clientActiveRequestsAttr{kv: attribute.String("http.request.method", string(val))}
+func (ClientActiveRequests) AttrRequestMethod(val RequestMethodAttr) attribute.KeyValue {
+	return attribute.String("http.request.method", string(val))
 }
 
-// URLScheme returns an optional attribute for the "url.scheme" semantic
+// AttrURLScheme returns an optional attribute for the "url.scheme" semantic
 // convention. It represents the [URI scheme] component identifying the used
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (ClientActiveRequests) URLSchemeAttr(val string) ClientActiveRequestsAttr {
-	return clientActiveRequestsAttr{kv: attribute.String("url.scheme", val)}
+func (ClientActiveRequests) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
 // ClientConnectionDuration is an instrument used to record metric values
@@ -243,14 +217,14 @@ func (m ClientConnectionDuration) Record(
     val float64,
 	serverAddress string,
 	serverPort int,
-	attrs ...ClientConnectionDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
 			)...,
@@ -258,53 +232,27 @@ func (m ClientConnectionDuration) Record(
 	)
 }
 
-func (m ClientConnectionDuration) conv(in []ClientConnectionDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientConnectionDurationAttr()
-	}
-	return out
-}
-
-// ClientConnectionDurationAttr is an optional attribute for the
-// ClientConnectionDuration instrument.
-type ClientConnectionDurationAttr interface {
-    clientConnectionDurationAttr() attribute.KeyValue
-}
-
-type clientConnectionDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientConnectionDurationAttr) clientConnectionDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkPeerAddress returns an optional attribute for the
+// AttrNetworkPeerAddress returns an optional attribute for the
 // "network.peer.address" semantic convention. It represents the peer address of
 // the network connection - IP address or Unix domain socket name.
-func (ClientConnectionDuration) NetworkPeerAddressAttr(val string) ClientConnectionDurationAttr {
-	return clientConnectionDurationAttr{kv: attribute.String("network.peer.address", val)}
+func (ClientConnectionDuration) AttrNetworkPeerAddress(val string) attribute.KeyValue {
+	return attribute.String("network.peer.address", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ClientConnectionDuration) NetworkProtocolVersionAttr(val string) ClientConnectionDurationAttr {
-	return clientConnectionDurationAttr{kv: attribute.String("network.protocol.version", val)}
+func (ClientConnectionDuration) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// URLScheme returns an optional attribute for the "url.scheme" semantic
+// AttrURLScheme returns an optional attribute for the "url.scheme" semantic
 // convention. It represents the [URI scheme] component identifying the used
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (ClientConnectionDuration) URLSchemeAttr(val string) ClientConnectionDurationAttr {
-	return clientConnectionDurationAttr{kv: attribute.String("url.scheme", val)}
+func (ClientConnectionDuration) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
 // ClientOpenConnections is an instrument used to record metric values conforming
@@ -363,14 +311,14 @@ func (m ClientOpenConnections) Add(
 	connectionState ConnectionStateAttr,
 	serverAddress string,
 	serverPort int,
-	attrs ...ClientOpenConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.connection.state", string(connectionState)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -379,53 +327,27 @@ func (m ClientOpenConnections) Add(
 	)
 }
 
-func (m ClientOpenConnections) conv(in []ClientOpenConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientOpenConnectionsAttr()
-	}
-	return out
-}
-
-// ClientOpenConnectionsAttr is an optional attribute for the
-// ClientOpenConnections instrument.
-type ClientOpenConnectionsAttr interface {
-    clientOpenConnectionsAttr() attribute.KeyValue
-}
-
-type clientOpenConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientOpenConnectionsAttr) clientOpenConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkPeerAddress returns an optional attribute for the
+// AttrNetworkPeerAddress returns an optional attribute for the
 // "network.peer.address" semantic convention. It represents the peer address of
 // the network connection - IP address or Unix domain socket name.
-func (ClientOpenConnections) NetworkPeerAddressAttr(val string) ClientOpenConnectionsAttr {
-	return clientOpenConnectionsAttr{kv: attribute.String("network.peer.address", val)}
+func (ClientOpenConnections) AttrNetworkPeerAddress(val string) attribute.KeyValue {
+	return attribute.String("network.peer.address", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ClientOpenConnections) NetworkProtocolVersionAttr(val string) ClientOpenConnectionsAttr {
-	return clientOpenConnectionsAttr{kv: attribute.String("network.protocol.version", val)}
+func (ClientOpenConnections) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// URLScheme returns an optional attribute for the "url.scheme" semantic
+// AttrURLScheme returns an optional attribute for the "url.scheme" semantic
 // convention. It represents the [URI scheme] component identifying the used
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (ClientOpenConnections) URLSchemeAttr(val string) ClientOpenConnectionsAttr {
-	return clientOpenConnectionsAttr{kv: attribute.String("url.scheme", val)}
+func (ClientOpenConnections) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
 // ClientRequestBodySize is an instrument used to record metric values conforming
@@ -483,14 +405,14 @@ func (m ClientRequestBodySize) Record(
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
-	attrs ...ClientRequestBodySizeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -499,80 +421,54 @@ func (m ClientRequestBodySize) Record(
 	)
 }
 
-func (m ClientRequestBodySize) conv(in []ClientRequestBodySizeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientRequestBodySizeAttr()
-	}
-	return out
-}
-
-// ClientRequestBodySizeAttr is an optional attribute for the
-// ClientRequestBodySize instrument.
-type ClientRequestBodySizeAttr interface {
-    clientRequestBodySizeAttr() attribute.KeyValue
-}
-
-type clientRequestBodySizeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientRequestBodySizeAttr) clientRequestBodySizeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientRequestBodySize) ErrorTypeAttr(val ErrorTypeAttr) ClientRequestBodySizeAttr {
-	return clientRequestBodySizeAttr{kv: attribute.String("error.type", string(val))}
+func (ClientRequestBodySize) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "http.response.status_code" semantic convention. It represents the
 // [HTTP response status code].
 //
 // [HTTP response status code]: https://tools.ietf.org/html/rfc7231#section-6
-func (ClientRequestBodySize) ResponseStatusCodeAttr(val int) ClientRequestBodySizeAttr {
-	return clientRequestBodySizeAttr{kv: attribute.Int("http.response.status_code", val)}
+func (ClientRequestBodySize) AttrResponseStatusCode(val int) attribute.KeyValue {
+	return attribute.Int("http.response.status_code", val)
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ClientRequestBodySize) NetworkProtocolNameAttr(val string) ClientRequestBodySizeAttr {
-	return clientRequestBodySizeAttr{kv: attribute.String("network.protocol.name", val)}
+func (ClientRequestBodySize) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// URLTemplate returns an optional attribute for the "url.template" semantic
+// AttrURLTemplate returns an optional attribute for the "url.template" semantic
 // convention. It represents the low-cardinality template of an
 // [absolute path reference].
 //
 // [absolute path reference]: https://www.rfc-editor.org/rfc/rfc3986#section-4.2
-func (ClientRequestBodySize) URLTemplateAttr(val string) ClientRequestBodySizeAttr {
-	return clientRequestBodySizeAttr{kv: attribute.String("url.template", val)}
+func (ClientRequestBodySize) AttrURLTemplate(val string) attribute.KeyValue {
+	return attribute.String("url.template", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ClientRequestBodySize) NetworkProtocolVersionAttr(val string) ClientRequestBodySizeAttr {
-	return clientRequestBodySizeAttr{kv: attribute.String("network.protocol.version", val)}
+func (ClientRequestBodySize) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// URLScheme returns an optional attribute for the "url.scheme" semantic
+// AttrURLScheme returns an optional attribute for the "url.scheme" semantic
 // convention. It represents the [URI scheme] component identifying the used
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (ClientRequestBodySize) URLSchemeAttr(val string) ClientRequestBodySizeAttr {
-	return clientRequestBodySizeAttr{kv: attribute.String("url.scheme", val)}
+func (ClientRequestBodySize) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
 // ClientRequestDuration is an instrument used to record metric values conforming
@@ -630,14 +526,14 @@ func (m ClientRequestDuration) Record(
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
-	attrs ...ClientRequestDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -646,80 +542,54 @@ func (m ClientRequestDuration) Record(
 	)
 }
 
-func (m ClientRequestDuration) conv(in []ClientRequestDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientRequestDurationAttr()
-	}
-	return out
-}
-
-// ClientRequestDurationAttr is an optional attribute for the
-// ClientRequestDuration instrument.
-type ClientRequestDurationAttr interface {
-    clientRequestDurationAttr() attribute.KeyValue
-}
-
-type clientRequestDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientRequestDurationAttr) clientRequestDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientRequestDuration) ErrorTypeAttr(val ErrorTypeAttr) ClientRequestDurationAttr {
-	return clientRequestDurationAttr{kv: attribute.String("error.type", string(val))}
+func (ClientRequestDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "http.response.status_code" semantic convention. It represents the
 // [HTTP response status code].
 //
 // [HTTP response status code]: https://tools.ietf.org/html/rfc7231#section-6
-func (ClientRequestDuration) ResponseStatusCodeAttr(val int) ClientRequestDurationAttr {
-	return clientRequestDurationAttr{kv: attribute.Int("http.response.status_code", val)}
+func (ClientRequestDuration) AttrResponseStatusCode(val int) attribute.KeyValue {
+	return attribute.Int("http.response.status_code", val)
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ClientRequestDuration) NetworkProtocolNameAttr(val string) ClientRequestDurationAttr {
-	return clientRequestDurationAttr{kv: attribute.String("network.protocol.name", val)}
+func (ClientRequestDuration) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ClientRequestDuration) NetworkProtocolVersionAttr(val string) ClientRequestDurationAttr {
-	return clientRequestDurationAttr{kv: attribute.String("network.protocol.version", val)}
+func (ClientRequestDuration) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// URLScheme returns an optional attribute for the "url.scheme" semantic
+// AttrURLScheme returns an optional attribute for the "url.scheme" semantic
 // convention. It represents the [URI scheme] component identifying the used
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (ClientRequestDuration) URLSchemeAttr(val string) ClientRequestDurationAttr {
-	return clientRequestDurationAttr{kv: attribute.String("url.scheme", val)}
+func (ClientRequestDuration) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
-// URLTemplate returns an optional attribute for the "url.template" semantic
+// AttrURLTemplate returns an optional attribute for the "url.template" semantic
 // convention. It represents the low-cardinality template of an
 // [absolute path reference].
 //
 // [absolute path reference]: https://www.rfc-editor.org/rfc/rfc3986#section-4.2
-func (ClientRequestDuration) URLTemplateAttr(val string) ClientRequestDurationAttr {
-	return clientRequestDurationAttr{kv: attribute.String("url.template", val)}
+func (ClientRequestDuration) AttrURLTemplate(val string) attribute.KeyValue {
+	return attribute.String("url.template", val)
 }
 
 // ClientResponseBodySize is an instrument used to record metric values
@@ -777,14 +647,14 @@ func (m ClientResponseBodySize) Record(
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
-	attrs ...ClientResponseBodySizeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -793,80 +663,54 @@ func (m ClientResponseBodySize) Record(
 	)
 }
 
-func (m ClientResponseBodySize) conv(in []ClientResponseBodySizeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientResponseBodySizeAttr()
-	}
-	return out
-}
-
-// ClientResponseBodySizeAttr is an optional attribute for the
-// ClientResponseBodySize instrument.
-type ClientResponseBodySizeAttr interface {
-    clientResponseBodySizeAttr() attribute.KeyValue
-}
-
-type clientResponseBodySizeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientResponseBodySizeAttr) clientResponseBodySizeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientResponseBodySize) ErrorTypeAttr(val ErrorTypeAttr) ClientResponseBodySizeAttr {
-	return clientResponseBodySizeAttr{kv: attribute.String("error.type", string(val))}
+func (ClientResponseBodySize) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "http.response.status_code" semantic convention. It represents the
 // [HTTP response status code].
 //
 // [HTTP response status code]: https://tools.ietf.org/html/rfc7231#section-6
-func (ClientResponseBodySize) ResponseStatusCodeAttr(val int) ClientResponseBodySizeAttr {
-	return clientResponseBodySizeAttr{kv: attribute.Int("http.response.status_code", val)}
+func (ClientResponseBodySize) AttrResponseStatusCode(val int) attribute.KeyValue {
+	return attribute.Int("http.response.status_code", val)
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ClientResponseBodySize) NetworkProtocolNameAttr(val string) ClientResponseBodySizeAttr {
-	return clientResponseBodySizeAttr{kv: attribute.String("network.protocol.name", val)}
+func (ClientResponseBodySize) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// URLTemplate returns an optional attribute for the "url.template" semantic
+// AttrURLTemplate returns an optional attribute for the "url.template" semantic
 // convention. It represents the low-cardinality template of an
 // [absolute path reference].
 //
 // [absolute path reference]: https://www.rfc-editor.org/rfc/rfc3986#section-4.2
-func (ClientResponseBodySize) URLTemplateAttr(val string) ClientResponseBodySizeAttr {
-	return clientResponseBodySizeAttr{kv: attribute.String("url.template", val)}
+func (ClientResponseBodySize) AttrURLTemplate(val string) attribute.KeyValue {
+	return attribute.String("url.template", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ClientResponseBodySize) NetworkProtocolVersionAttr(val string) ClientResponseBodySizeAttr {
-	return clientResponseBodySizeAttr{kv: attribute.String("network.protocol.version", val)}
+func (ClientResponseBodySize) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// URLScheme returns an optional attribute for the "url.scheme" semantic
+// AttrURLScheme returns an optional attribute for the "url.scheme" semantic
 // convention. It represents the [URI scheme] component identifying the used
 // protocol.
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-func (ClientResponseBodySize) URLSchemeAttr(val string) ClientResponseBodySizeAttr {
-	return clientResponseBodySizeAttr{kv: attribute.String("url.scheme", val)}
+func (ClientResponseBodySize) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
 // ServerActiveRequests is an instrument used to record metric values conforming
@@ -918,14 +762,14 @@ func (m ServerActiveRequests) Add(
     incr int64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
-	attrs ...ServerActiveRequestsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -933,44 +777,18 @@ func (m ServerActiveRequests) Add(
 	)
 }
 
-func (m ServerActiveRequests) conv(in []ServerActiveRequestsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverActiveRequestsAttr()
-	}
-	return out
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the local HTTP server that
+// received the request.
+func (ServerActiveRequests) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerActiveRequestsAttr is an optional attribute for the ServerActiveRequests
-// instrument.
-type ServerActiveRequestsAttr interface {
-    serverActiveRequestsAttr() attribute.KeyValue
-}
-
-type serverActiveRequestsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverActiveRequestsAttr) serverActiveRequestsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the name of the local HTTP server that received the
-// request.
-func (ServerActiveRequests) ServerAddressAttr(val string) ServerActiveRequestsAttr {
-	return serverActiveRequestsAttr{kv: attribute.String("server.address", val)}
-}
-
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the port of the local HTTP server that received the
 // request.
-func (ServerActiveRequests) ServerPortAttr(val int) ServerActiveRequestsAttr {
-	return serverActiveRequestsAttr{kv: attribute.Int("server.port", val)}
+func (ServerActiveRequests) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // ServerRequestBodySize is an instrument used to record metric values conforming
@@ -1022,14 +840,14 @@ func (m ServerRequestBodySize) Record(
     val int64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
-	attrs ...ServerRequestBodySizeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -1037,90 +855,64 @@ func (m ServerRequestBodySize) Record(
 	)
 }
 
-func (m ServerRequestBodySize) conv(in []ServerRequestBodySizeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverRequestBodySizeAttr()
-	}
-	return out
-}
-
-// ServerRequestBodySizeAttr is an optional attribute for the
-// ServerRequestBodySize instrument.
-type ServerRequestBodySizeAttr interface {
-    serverRequestBodySizeAttr() attribute.KeyValue
-}
-
-type serverRequestBodySizeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverRequestBodySizeAttr) serverRequestBodySizeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ServerRequestBodySize) ErrorTypeAttr(val ErrorTypeAttr) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.String("error.type", string(val))}
+func (ServerRequestBodySize) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "http.response.status_code" semantic convention. It represents the
 // [HTTP response status code].
 //
 // [HTTP response status code]: https://tools.ietf.org/html/rfc7231#section-6
-func (ServerRequestBodySize) ResponseStatusCodeAttr(val int) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.Int("http.response.status_code", val)}
+func (ServerRequestBodySize) AttrResponseStatusCode(val int) attribute.KeyValue {
+	return attribute.Int("http.response.status_code", val)
 }
 
-// Route returns an optional attribute for the "http.route" semantic convention.
-// It represents the matched route, that is, the path template in the format used
-// by the respective server framework.
-func (ServerRequestBodySize) RouteAttr(val string) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.String("http.route", val)}
+// AttrRoute returns an optional attribute for the "http.route" semantic
+// convention. It represents the matched route, that is, the path template in the
+// format used by the respective server framework.
+func (ServerRequestBodySize) AttrRoute(val string) attribute.KeyValue {
+	return attribute.String("http.route", val)
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ServerRequestBodySize) NetworkProtocolNameAttr(val string) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.String("network.protocol.name", val)}
+func (ServerRequestBodySize) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ServerRequestBodySize) NetworkProtocolVersionAttr(val string) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.String("network.protocol.version", val)}
+func (ServerRequestBodySize) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the name of the local HTTP server that received the
-// request.
-func (ServerRequestBodySize) ServerAddressAttr(val string) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the local HTTP server that
+// received the request.
+func (ServerRequestBodySize) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the port of the local HTTP server that received the
 // request.
-func (ServerRequestBodySize) ServerPortAttr(val int) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.Int("server.port", val)}
+func (ServerRequestBodySize) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// UserAgentSyntheticType returns an optional attribute for the
+// AttrUserAgentSyntheticType returns an optional attribute for the
 // "user_agent.synthetic.type" semantic convention. It represents the specifies
 // the category of synthetic traffic, such as tests or bots.
-func (ServerRequestBodySize) UserAgentSyntheticTypeAttr(val UserAgentSyntheticTypeAttr) ServerRequestBodySizeAttr {
-	return serverRequestBodySizeAttr{kv: attribute.String("user_agent.synthetic.type", string(val))}
+func (ServerRequestBodySize) AttrUserAgentSyntheticType(val UserAgentSyntheticTypeAttr) attribute.KeyValue {
+	return attribute.String("user_agent.synthetic.type", string(val))
 }
 
 // ServerRequestDuration is an instrument used to record metric values conforming
@@ -1172,14 +964,14 @@ func (m ServerRequestDuration) Record(
     val float64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
-	attrs ...ServerRequestDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -1187,90 +979,64 @@ func (m ServerRequestDuration) Record(
 	)
 }
 
-func (m ServerRequestDuration) conv(in []ServerRequestDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverRequestDurationAttr()
-	}
-	return out
-}
-
-// ServerRequestDurationAttr is an optional attribute for the
-// ServerRequestDuration instrument.
-type ServerRequestDurationAttr interface {
-    serverRequestDurationAttr() attribute.KeyValue
-}
-
-type serverRequestDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverRequestDurationAttr) serverRequestDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ServerRequestDuration) ErrorTypeAttr(val ErrorTypeAttr) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("error.type", string(val))}
+func (ServerRequestDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "http.response.status_code" semantic convention. It represents the
 // [HTTP response status code].
 //
 // [HTTP response status code]: https://tools.ietf.org/html/rfc7231#section-6
-func (ServerRequestDuration) ResponseStatusCodeAttr(val int) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.Int("http.response.status_code", val)}
+func (ServerRequestDuration) AttrResponseStatusCode(val int) attribute.KeyValue {
+	return attribute.Int("http.response.status_code", val)
 }
 
-// Route returns an optional attribute for the "http.route" semantic convention.
-// It represents the matched route, that is, the path template in the format used
-// by the respective server framework.
-func (ServerRequestDuration) RouteAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("http.route", val)}
+// AttrRoute returns an optional attribute for the "http.route" semantic
+// convention. It represents the matched route, that is, the path template in the
+// format used by the respective server framework.
+func (ServerRequestDuration) AttrRoute(val string) attribute.KeyValue {
+	return attribute.String("http.route", val)
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ServerRequestDuration) NetworkProtocolNameAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("network.protocol.name", val)}
+func (ServerRequestDuration) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ServerRequestDuration) NetworkProtocolVersionAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("network.protocol.version", val)}
+func (ServerRequestDuration) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the name of the local HTTP server that received the
-// request.
-func (ServerRequestDuration) ServerAddressAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the local HTTP server that
+// received the request.
+func (ServerRequestDuration) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the port of the local HTTP server that received the
 // request.
-func (ServerRequestDuration) ServerPortAttr(val int) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.Int("server.port", val)}
+func (ServerRequestDuration) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// UserAgentSyntheticType returns an optional attribute for the
+// AttrUserAgentSyntheticType returns an optional attribute for the
 // "user_agent.synthetic.type" semantic convention. It represents the specifies
 // the category of synthetic traffic, such as tests or bots.
-func (ServerRequestDuration) UserAgentSyntheticTypeAttr(val UserAgentSyntheticTypeAttr) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("user_agent.synthetic.type", string(val))}
+func (ServerRequestDuration) AttrUserAgentSyntheticType(val UserAgentSyntheticTypeAttr) attribute.KeyValue {
+	return attribute.String("user_agent.synthetic.type", string(val))
 }
 
 // ServerResponseBodySize is an instrument used to record metric values
@@ -1322,14 +1088,14 @@ func (m ServerResponseBodySize) Record(
     val int64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
-	attrs ...ServerResponseBodySizeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -1337,88 +1103,62 @@ func (m ServerResponseBodySize) Record(
 	)
 }
 
-func (m ServerResponseBodySize) conv(in []ServerResponseBodySizeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverResponseBodySizeAttr()
-	}
-	return out
-}
-
-// ServerResponseBodySizeAttr is an optional attribute for the
-// ServerResponseBodySize instrument.
-type ServerResponseBodySizeAttr interface {
-    serverResponseBodySizeAttr() attribute.KeyValue
-}
-
-type serverResponseBodySizeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverResponseBodySizeAttr) serverResponseBodySizeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ServerResponseBodySize) ErrorTypeAttr(val ErrorTypeAttr) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.String("error.type", string(val))}
+func (ServerResponseBodySize) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "http.response.status_code" semantic convention. It represents the
 // [HTTP response status code].
 //
 // [HTTP response status code]: https://tools.ietf.org/html/rfc7231#section-6
-func (ServerResponseBodySize) ResponseStatusCodeAttr(val int) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.Int("http.response.status_code", val)}
+func (ServerResponseBodySize) AttrResponseStatusCode(val int) attribute.KeyValue {
+	return attribute.Int("http.response.status_code", val)
 }
 
-// Route returns an optional attribute for the "http.route" semantic convention.
-// It represents the matched route, that is, the path template in the format used
-// by the respective server framework.
-func (ServerResponseBodySize) RouteAttr(val string) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.String("http.route", val)}
+// AttrRoute returns an optional attribute for the "http.route" semantic
+// convention. It represents the matched route, that is, the path template in the
+// format used by the respective server framework.
+func (ServerResponseBodySize) AttrRoute(val string) attribute.KeyValue {
+	return attribute.String("http.route", val)
 }
 
-// NetworkProtocolName returns an optional attribute for the
+// AttrNetworkProtocolName returns an optional attribute for the
 // "network.protocol.name" semantic convention. It represents the
 // [OSI application layer] or non-OSI equivalent.
 //
 // [OSI application layer]: https://wikipedia.org/wiki/Application_layer
-func (ServerResponseBodySize) NetworkProtocolNameAttr(val string) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.String("network.protocol.name", val)}
+func (ServerResponseBodySize) AttrNetworkProtocolName(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.name", val)
 }
 
-// NetworkProtocolVersion returns an optional attribute for the
+// AttrNetworkProtocolVersion returns an optional attribute for the
 // "network.protocol.version" semantic convention. It represents the actual
 // version of the protocol used for network communication.
-func (ServerResponseBodySize) NetworkProtocolVersionAttr(val string) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.String("network.protocol.version", val)}
+func (ServerResponseBodySize) AttrNetworkProtocolVersion(val string) attribute.KeyValue {
+	return attribute.String("network.protocol.version", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the name of the local HTTP server that received the
-// request.
-func (ServerResponseBodySize) ServerAddressAttr(val string) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the local HTTP server that
+// received the request.
+func (ServerResponseBodySize) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the port of the local HTTP server that received the
 // request.
-func (ServerResponseBodySize) ServerPortAttr(val int) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.Int("server.port", val)}
+func (ServerResponseBodySize) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// UserAgentSyntheticType returns an optional attribute for the
+// AttrUserAgentSyntheticType returns an optional attribute for the
 // "user_agent.synthetic.type" semantic convention. It represents the specifies
 // the category of synthetic traffic, such as tests or bots.
-func (ServerResponseBodySize) UserAgentSyntheticTypeAttr(val UserAgentSyntheticTypeAttr) ServerResponseBodySizeAttr {
-	return serverResponseBodySizeAttr{kv: attribute.String("user_agent.synthetic.type", string(val))}
+func (ServerResponseBodySize) AttrUserAgentSyntheticType(val UserAgentSyntheticTypeAttr) attribute.KeyValue {
+	return attribute.String("user_agent.synthetic.type", string(val))
 }

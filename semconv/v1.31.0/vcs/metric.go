@@ -166,14 +166,14 @@ func (m ChangeCount) Add(
     incr int64,
 	changeState ChangeStateAttr,
 	repositoryUrlFull string,
-	attrs ...ChangeCountAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.change.state", string(changeState)),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -181,37 +181,12 @@ func (m ChangeCount) Add(
 	)
 }
 
-func (m ChangeCount) conv(in []ChangeCountAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.changeCountAttr()
-	}
-	return out
-}
-
-// ChangeCountAttr is an optional attribute for the ChangeCount instrument.
-type ChangeCountAttr interface {
-    changeCountAttr() attribute.KeyValue
-}
-
-type changeCountAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a changeCountAttr) changeCountAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeCount) RepositoryNameAttr(val string) ChangeCountAttr {
-	return changeCountAttr{kv: attribute.String("vcs.repository.name", val)}
+func (ChangeCount) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // ChangeDuration is an instrument used to record metric values conforming to the
@@ -271,14 +246,14 @@ func (m ChangeDuration) Record(
 	changeState ChangeStateAttr,
 	refHeadName string,
 	repositoryUrlFull string,
-	attrs ...ChangeDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.change.state", string(changeState)),
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
@@ -287,37 +262,12 @@ func (m ChangeDuration) Record(
 	)
 }
 
-func (m ChangeDuration) conv(in []ChangeDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.changeDurationAttr()
-	}
-	return out
-}
-
-// ChangeDurationAttr is an optional attribute for the ChangeDuration instrument.
-type ChangeDurationAttr interface {
-    changeDurationAttr() attribute.KeyValue
-}
-
-type changeDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a changeDurationAttr) changeDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeDuration) RepositoryNameAttr(val string) ChangeDurationAttr {
-	return changeDurationAttr{kv: attribute.String("vcs.repository.name", val)}
+func (ChangeDuration) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // ChangeTimeToApproval is an instrument used to record metric values conforming
@@ -374,14 +324,14 @@ func (m ChangeTimeToApproval) Record(
     val float64,
 	refHeadName string,
 	repositoryUrlFull string,
-	attrs ...ChangeTimeToApprovalAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -389,67 +339,41 @@ func (m ChangeTimeToApproval) Record(
 	)
 }
 
-func (m ChangeTimeToApproval) conv(in []ChangeTimeToApprovalAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.changeTimeToApprovalAttr()
-	}
-	return out
-}
-
-// ChangeTimeToApprovalAttr is an optional attribute for the ChangeTimeToApproval
-// instrument.
-type ChangeTimeToApprovalAttr interface {
-    changeTimeToApprovalAttr() attribute.KeyValue
-}
-
-type changeTimeToApprovalAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a changeTimeToApprovalAttr) changeTimeToApprovalAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RefBaseName returns an optional attribute for the "vcs.ref.base.name" semantic
-// convention. It represents the name of the [reference] such as **branch** or
-// **tag** in the repository.
+// AttrRefBaseName returns an optional attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-func (ChangeTimeToApproval) RefBaseNameAttr(val string) ChangeTimeToApprovalAttr {
-	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.base.name", val)}
+func (ChangeTimeToApproval) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
 }
 
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeTimeToApproval) RepositoryNameAttr(val string) ChangeTimeToApprovalAttr {
-	return changeTimeToApprovalAttr{kv: attribute.String("vcs.repository.name", val)}
+func (ChangeTimeToApproval) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
-// RefBaseRevision returns an optional attribute for the "vcs.ref.base.revision"
-// semantic convention. It represents the revision, literally [revised version],
-// The revision most often refers to a commit object in Git, or a revision number
-// in SVN.
+// AttrRefBaseRevision returns an optional attribute for the
+// "vcs.ref.base.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToApproval) RefBaseRevisionAttr(val string) ChangeTimeToApprovalAttr {
-	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.base.revision", val)}
+func (ChangeTimeToApproval) AttrRefBaseRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.revision", val)
 }
 
-// RefHeadRevision returns an optional attribute for the "vcs.ref.head.revision"
-// semantic convention. It represents the revision, literally [revised version],
-// The revision most often refers to a commit object in Git, or a revision number
-// in SVN.
+// AttrRefHeadRevision returns an optional attribute for the
+// "vcs.ref.head.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToApproval) RefHeadRevisionAttr(val string) ChangeTimeToApprovalAttr {
-	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.head.revision", val)}
+func (ChangeTimeToApproval) AttrRefHeadRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.revision", val)
 }
 
 // ChangeTimeToMerge is an instrument used to record metric values conforming to
@@ -506,14 +430,14 @@ func (m ChangeTimeToMerge) Record(
     val float64,
 	refHeadName string,
 	repositoryUrlFull string,
-	attrs ...ChangeTimeToMergeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -521,67 +445,41 @@ func (m ChangeTimeToMerge) Record(
 	)
 }
 
-func (m ChangeTimeToMerge) conv(in []ChangeTimeToMergeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.changeTimeToMergeAttr()
-	}
-	return out
-}
-
-// ChangeTimeToMergeAttr is an optional attribute for the ChangeTimeToMerge
-// instrument.
-type ChangeTimeToMergeAttr interface {
-    changeTimeToMergeAttr() attribute.KeyValue
-}
-
-type changeTimeToMergeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a changeTimeToMergeAttr) changeTimeToMergeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RefBaseName returns an optional attribute for the "vcs.ref.base.name" semantic
-// convention. It represents the name of the [reference] such as **branch** or
-// **tag** in the repository.
+// AttrRefBaseName returns an optional attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-func (ChangeTimeToMerge) RefBaseNameAttr(val string) ChangeTimeToMergeAttr {
-	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.base.name", val)}
+func (ChangeTimeToMerge) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
 }
 
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeTimeToMerge) RepositoryNameAttr(val string) ChangeTimeToMergeAttr {
-	return changeTimeToMergeAttr{kv: attribute.String("vcs.repository.name", val)}
+func (ChangeTimeToMerge) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
-// RefBaseRevision returns an optional attribute for the "vcs.ref.base.revision"
-// semantic convention. It represents the revision, literally [revised version],
-// The revision most often refers to a commit object in Git, or a revision number
-// in SVN.
+// AttrRefBaseRevision returns an optional attribute for the
+// "vcs.ref.base.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToMerge) RefBaseRevisionAttr(val string) ChangeTimeToMergeAttr {
-	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.base.revision", val)}
+func (ChangeTimeToMerge) AttrRefBaseRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.revision", val)
 }
 
-// RefHeadRevision returns an optional attribute for the "vcs.ref.head.revision"
-// semantic convention. It represents the revision, literally [revised version],
-// The revision most often refers to a commit object in Git, or a revision number
-// in SVN.
+// AttrRefHeadRevision returns an optional attribute for the
+// "vcs.ref.head.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToMerge) RefHeadRevisionAttr(val string) ChangeTimeToMergeAttr {
-	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.head.revision", val)}
+func (ChangeTimeToMerge) AttrRefHeadRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.revision", val)
 }
 
 // ContributorCount is an instrument used to record metric values conforming to
@@ -632,52 +530,26 @@ func (m ContributorCount) Record(
     ctx context.Context,
     val int64,
 	repositoryUrlFull string,
-	attrs ...ContributorCountAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
 		),
 	)
 }
 
-func (m ContributorCount) conv(in []ContributorCountAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.contributorCountAttr()
-	}
-	return out
-}
-
-// ContributorCountAttr is an optional attribute for the ContributorCount
-// instrument.
-type ContributorCountAttr interface {
-    contributorCountAttr() attribute.KeyValue
-}
-
-type contributorCountAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a contributorCountAttr) contributorCountAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ContributorCount) RepositoryNameAttr(val string) ContributorCountAttr {
-	return contributorCountAttr{kv: attribute.String("vcs.repository.name", val)}
+func (ContributorCount) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // RefCount is an instrument used to record metric values conforming to the
@@ -732,14 +604,14 @@ func (m RefCount) Add(
     incr int64,
 	refType RefTypeAttr,
 	repositoryUrlFull string,
-	attrs ...RefCountAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.ref.type", string(refType)),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -747,37 +619,12 @@ func (m RefCount) Add(
 	)
 }
 
-func (m RefCount) conv(in []RefCountAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.refCountAttr()
-	}
-	return out
-}
-
-// RefCountAttr is an optional attribute for the RefCount instrument.
-type RefCountAttr interface {
-    refCountAttr() attribute.KeyValue
-}
-
-type refCountAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a refCountAttr) refCountAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefCount) RepositoryNameAttr(val string) RefCountAttr {
-	return refCountAttr{kv: attribute.String("vcs.repository.name", val)}
+func (RefCount) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // RefLinesDelta is an instrument used to record metric values conforming to the
@@ -851,14 +698,14 @@ func (m RefLinesDelta) Record(
 	refHeadName string,
 	refHeadType RefHeadTypeAttr,
 	repositoryUrlFull string,
-	attrs ...RefLinesDeltaAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.line_change.type", string(lineChangeType)),
 				attribute.String("vcs.ref.base.name", refBaseName),
 				attribute.String("vcs.ref.base.type", string(refBaseType)),
@@ -870,45 +717,20 @@ func (m RefLinesDelta) Record(
 	)
 }
 
-func (m RefLinesDelta) conv(in []RefLinesDeltaAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.refLinesDeltaAttr()
-	}
-	return out
-}
-
-// RefLinesDeltaAttr is an optional attribute for the RefLinesDelta instrument.
-type RefLinesDeltaAttr interface {
-    refLinesDeltaAttr() attribute.KeyValue
-}
-
-type refLinesDeltaAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a refLinesDeltaAttr) refLinesDeltaAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ChangeID returns an optional attribute for the "vcs.change.id" semantic
+// AttrChangeID returns an optional attribute for the "vcs.change.id" semantic
 // convention. It represents the ID of the change (pull request/merge
 // request/changelist) if applicable. This is usually a unique (within
 // repository) identifier generated by the VCS system.
-func (RefLinesDelta) ChangeIDAttr(val string) RefLinesDeltaAttr {
-	return refLinesDeltaAttr{kv: attribute.String("vcs.change.id", val)}
+func (RefLinesDelta) AttrChangeID(val string) attribute.KeyValue {
+	return attribute.String("vcs.change.id", val)
 }
 
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefLinesDelta) RepositoryNameAttr(val string) RefLinesDeltaAttr {
-	return refLinesDeltaAttr{kv: attribute.String("vcs.repository.name", val)}
+func (RefLinesDelta) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // RefRevisionsDelta is an instrument used to record metric values conforming to
@@ -981,14 +803,14 @@ func (m RefRevisionsDelta) Record(
 	refHeadType RefHeadTypeAttr,
 	repositoryUrlFull string,
 	revisionDeltaDirection RevisionDeltaDirectionAttr,
-	attrs ...RefRevisionsDeltaAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.ref.base.name", refBaseName),
 				attribute.String("vcs.ref.base.type", string(refBaseType)),
 				attribute.String("vcs.ref.head.name", refHeadName),
@@ -1000,46 +822,20 @@ func (m RefRevisionsDelta) Record(
 	)
 }
 
-func (m RefRevisionsDelta) conv(in []RefRevisionsDeltaAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.refRevisionsDeltaAttr()
-	}
-	return out
-}
-
-// RefRevisionsDeltaAttr is an optional attribute for the RefRevisionsDelta
-// instrument.
-type RefRevisionsDeltaAttr interface {
-    refRevisionsDeltaAttr() attribute.KeyValue
-}
-
-type refRevisionsDeltaAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a refRevisionsDeltaAttr) refRevisionsDeltaAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ChangeID returns an optional attribute for the "vcs.change.id" semantic
+// AttrChangeID returns an optional attribute for the "vcs.change.id" semantic
 // convention. It represents the ID of the change (pull request/merge
 // request/changelist) if applicable. This is usually a unique (within
 // repository) identifier generated by the VCS system.
-func (RefRevisionsDelta) ChangeIDAttr(val string) RefRevisionsDeltaAttr {
-	return refRevisionsDeltaAttr{kv: attribute.String("vcs.change.id", val)}
+func (RefRevisionsDelta) AttrChangeID(val string) attribute.KeyValue {
+	return attribute.String("vcs.change.id", val)
 }
 
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefRevisionsDelta) RepositoryNameAttr(val string) RefRevisionsDeltaAttr {
-	return refRevisionsDeltaAttr{kv: attribute.String("vcs.repository.name", val)}
+func (RefRevisionsDelta) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // RefTime is an instrument used to record metric values conforming to the
@@ -1100,14 +896,14 @@ func (m RefTime) Record(
 	refHeadName string,
 	refHeadType RefHeadTypeAttr,
 	repositoryUrlFull string,
-	attrs ...RefTimeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.ref.head.type", string(refHeadType)),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
@@ -1116,37 +912,12 @@ func (m RefTime) Record(
 	)
 }
 
-func (m RefTime) conv(in []RefTimeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.refTimeAttr()
-	}
-	return out
-}
-
-// RefTimeAttr is an optional attribute for the RefTime instrument.
-type RefTimeAttr interface {
-    refTimeAttr() attribute.KeyValue
-}
-
-type refTimeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a refTimeAttr) refTimeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RepositoryName returns an optional attribute for the "vcs.repository.name"
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefTime) RepositoryNameAttr(val string) RefTimeAttr {
-	return refTimeAttr{kv: attribute.String("vcs.repository.name", val)}
+func (RefTime) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
 }
 
 // RepositoryCount is an instrument used to record metric values conforming to
@@ -1184,6 +955,10 @@ func (RepositoryCount) Description() string {
 	return "The number of repositories in an organization."
 }
 
-func (m RepositoryCount) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m RepositoryCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }

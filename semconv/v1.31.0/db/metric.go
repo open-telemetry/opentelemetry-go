@@ -287,7 +287,7 @@ func (m ClientConnectionCount) Add(
     incr int64,
 	clientConnectionPoolName string,
 	clientConnectionState ClientConnectionStateAttr,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -348,7 +348,7 @@ func (m ClientConnectionCreateTime) Record(
     ctx context.Context,
     val float64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
@@ -407,7 +407,7 @@ func (m ClientConnectionIdleMax) Add(
     ctx context.Context,
     incr int64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -466,7 +466,7 @@ func (m ClientConnectionIdleMin) Add(
     ctx context.Context,
     incr int64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -525,7 +525,7 @@ func (m ClientConnectionMax) Add(
     ctx context.Context,
     incr int64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -586,7 +586,7 @@ func (m ClientConnectionPendingRequests) Add(
     ctx context.Context,
     incr int64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -646,7 +646,7 @@ func (m ClientConnectionTimeouts) Add(
     ctx context.Context,
     incr int64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -706,7 +706,7 @@ func (m ClientConnectionUseTime) Record(
     ctx context.Context,
     val float64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
@@ -765,7 +765,7 @@ func (m ClientConnectionWaitTime) Record(
     ctx context.Context,
     val float64,
 	clientConnectionPoolName string,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
@@ -821,118 +821,92 @@ func (m ClientOperationDuration) Record(
     ctx context.Context,
     val float64,
 	systemName SystemNameAttr,
-	attrs ...ClientOperationDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("db.system.name", string(systemName)),
 			)...,
 		),
 	)
 }
 
-func (m ClientOperationDuration) conv(in []ClientOperationDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientOperationDurationAttr()
-	}
-	return out
-}
-
-// ClientOperationDurationAttr is an optional attribute for the
-// ClientOperationDuration instrument.
-type ClientOperationDurationAttr interface {
-    clientOperationDurationAttr() attribute.KeyValue
-}
-
-type clientOperationDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientOperationDurationAttr) clientOperationDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// CollectionName returns an optional attribute for the "db.collection.name"
+// AttrCollectionName returns an optional attribute for the "db.collection.name"
 // semantic convention. It represents the name of a collection (table, container)
 // within the database.
-func (ClientOperationDuration) CollectionNameAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("db.collection.name", val)}
+func (ClientOperationDuration) AttrCollectionName(val string) attribute.KeyValue {
+	return attribute.String("db.collection.name", val)
 }
 
-// Namespace returns an optional attribute for the "db.namespace" semantic
+// AttrNamespace returns an optional attribute for the "db.namespace" semantic
 // convention. It represents the name of the database, fully qualified within the
 // server address and port.
-func (ClientOperationDuration) NamespaceAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("db.namespace", val)}
+func (ClientOperationDuration) AttrNamespace(val string) attribute.KeyValue {
+	return attribute.String("db.namespace", val)
 }
 
-// OperationName returns an optional attribute for the "db.operation.name"
+// AttrOperationName returns an optional attribute for the "db.operation.name"
 // semantic convention. It represents the name of the operation or command being
 // executed.
-func (ClientOperationDuration) OperationNameAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("db.operation.name", val)}
+func (ClientOperationDuration) AttrOperationName(val string) attribute.KeyValue {
+	return attribute.String("db.operation.name", val)
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "db.response.status_code" semantic convention. It represents the database
 // response status code.
-func (ClientOperationDuration) ResponseStatusCodeAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("db.response.status_code", val)}
+func (ClientOperationDuration) AttrResponseStatusCode(val string) attribute.KeyValue {
+	return attribute.String("db.response.status_code", val)
 }
 
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientOperationDuration) ErrorTypeAttr(val ErrorTypeAttr) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("error.type", string(val))}
+func (ClientOperationDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientOperationDuration) ServerPortAttr(val int) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.Int("server.port", val)}
+func (ClientOperationDuration) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// QuerySummary returns an optional attribute for the "db.query.summary" semantic
-// convention. It represents the low cardinality representation of a database
-// query text.
-func (ClientOperationDuration) QuerySummaryAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("db.query.summary", val)}
+// AttrQuerySummary returns an optional attribute for the "db.query.summary"
+// semantic convention. It represents the low cardinality representation of a
+// database query text.
+func (ClientOperationDuration) AttrQuerySummary(val string) attribute.KeyValue {
+	return attribute.String("db.query.summary", val)
 }
 
-// NetworkPeerAddress returns an optional attribute for the
+// AttrNetworkPeerAddress returns an optional attribute for the
 // "network.peer.address" semantic convention. It represents the peer address of
 // the database node where the operation was performed.
-func (ClientOperationDuration) NetworkPeerAddressAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("network.peer.address", val)}
+func (ClientOperationDuration) AttrNetworkPeerAddress(val string) attribute.KeyValue {
+	return attribute.String("network.peer.address", val)
 }
 
-// NetworkPeerPort returns an optional attribute for the "network.peer.port"
+// AttrNetworkPeerPort returns an optional attribute for the "network.peer.port"
 // semantic convention. It represents the peer port number of the network
 // connection.
-func (ClientOperationDuration) NetworkPeerPortAttr(val int) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.Int("network.peer.port", val)}
+func (ClientOperationDuration) AttrNetworkPeerPort(val int) attribute.KeyValue {
+	return attribute.Int("network.peer.port", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the name of the database host.
-func (ClientOperationDuration) ServerAddressAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the database host.
+func (ClientOperationDuration) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// QueryText returns an optional attribute for the "db.query.text" semantic
+// AttrQueryText returns an optional attribute for the "db.query.text" semantic
 // convention. It represents the database query being executed.
-func (ClientOperationDuration) QueryTextAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("db.query.text", val)}
+func (ClientOperationDuration) AttrQueryText(val string) attribute.KeyValue {
+	return attribute.String("db.query.text", val)
 }
 
 // ClientResponseReturnedRows is an instrument used to record metric values
@@ -981,116 +955,90 @@ func (m ClientResponseReturnedRows) Record(
     ctx context.Context,
     val int64,
 	systemName SystemNameAttr,
-	attrs ...ClientResponseReturnedRowsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("db.system.name", string(systemName)),
 			)...,
 		),
 	)
 }
 
-func (m ClientResponseReturnedRows) conv(in []ClientResponseReturnedRowsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientResponseReturnedRowsAttr()
-	}
-	return out
-}
-
-// ClientResponseReturnedRowsAttr is an optional attribute for the
-// ClientResponseReturnedRows instrument.
-type ClientResponseReturnedRowsAttr interface {
-    clientResponseReturnedRowsAttr() attribute.KeyValue
-}
-
-type clientResponseReturnedRowsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientResponseReturnedRowsAttr) clientResponseReturnedRowsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// CollectionName returns an optional attribute for the "db.collection.name"
+// AttrCollectionName returns an optional attribute for the "db.collection.name"
 // semantic convention. It represents the name of a collection (table, container)
 // within the database.
-func (ClientResponseReturnedRows) CollectionNameAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("db.collection.name", val)}
+func (ClientResponseReturnedRows) AttrCollectionName(val string) attribute.KeyValue {
+	return attribute.String("db.collection.name", val)
 }
 
-// Namespace returns an optional attribute for the "db.namespace" semantic
+// AttrNamespace returns an optional attribute for the "db.namespace" semantic
 // convention. It represents the name of the database, fully qualified within the
 // server address and port.
-func (ClientResponseReturnedRows) NamespaceAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("db.namespace", val)}
+func (ClientResponseReturnedRows) AttrNamespace(val string) attribute.KeyValue {
+	return attribute.String("db.namespace", val)
 }
 
-// OperationName returns an optional attribute for the "db.operation.name"
+// AttrOperationName returns an optional attribute for the "db.operation.name"
 // semantic convention. It represents the name of the operation or command being
 // executed.
-func (ClientResponseReturnedRows) OperationNameAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("db.operation.name", val)}
+func (ClientResponseReturnedRows) AttrOperationName(val string) attribute.KeyValue {
+	return attribute.String("db.operation.name", val)
 }
 
-// ResponseStatusCode returns an optional attribute for the
+// AttrResponseStatusCode returns an optional attribute for the
 // "db.response.status_code" semantic convention. It represents the database
 // response status code.
-func (ClientResponseReturnedRows) ResponseStatusCodeAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("db.response.status_code", val)}
+func (ClientResponseReturnedRows) AttrResponseStatusCode(val string) attribute.KeyValue {
+	return attribute.String("db.response.status_code", val)
 }
 
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientResponseReturnedRows) ErrorTypeAttr(val ErrorTypeAttr) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("error.type", string(val))}
+func (ClientResponseReturnedRows) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientResponseReturnedRows) ServerPortAttr(val int) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.Int("server.port", val)}
+func (ClientResponseReturnedRows) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// QuerySummary returns an optional attribute for the "db.query.summary" semantic
-// convention. It represents the low cardinality representation of a database
-// query text.
-func (ClientResponseReturnedRows) QuerySummaryAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("db.query.summary", val)}
+// AttrQuerySummary returns an optional attribute for the "db.query.summary"
+// semantic convention. It represents the low cardinality representation of a
+// database query text.
+func (ClientResponseReturnedRows) AttrQuerySummary(val string) attribute.KeyValue {
+	return attribute.String("db.query.summary", val)
 }
 
-// NetworkPeerAddress returns an optional attribute for the
+// AttrNetworkPeerAddress returns an optional attribute for the
 // "network.peer.address" semantic convention. It represents the peer address of
 // the database node where the operation was performed.
-func (ClientResponseReturnedRows) NetworkPeerAddressAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("network.peer.address", val)}
+func (ClientResponseReturnedRows) AttrNetworkPeerAddress(val string) attribute.KeyValue {
+	return attribute.String("network.peer.address", val)
 }
 
-// NetworkPeerPort returns an optional attribute for the "network.peer.port"
+// AttrNetworkPeerPort returns an optional attribute for the "network.peer.port"
 // semantic convention. It represents the peer port number of the network
 // connection.
-func (ClientResponseReturnedRows) NetworkPeerPortAttr(val int) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.Int("network.peer.port", val)}
+func (ClientResponseReturnedRows) AttrNetworkPeerPort(val int) attribute.KeyValue {
+	return attribute.Int("network.peer.port", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the name of the database host.
-func (ClientResponseReturnedRows) ServerAddressAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the database host.
+func (ClientResponseReturnedRows) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
-// QueryText returns an optional attribute for the "db.query.text" semantic
+// AttrQueryText returns an optional attribute for the "db.query.text" semantic
 // convention. It represents the database query being executed.
-func (ClientResponseReturnedRows) QueryTextAttr(val string) ClientResponseReturnedRowsAttr {
-	return clientResponseReturnedRowsAttr{kv: attribute.String("db.query.text", val)}
+func (ClientResponseReturnedRows) AttrQueryText(val string) attribute.KeyValue {
+	return attribute.String("db.query.text", val)
 }

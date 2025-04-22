@@ -125,49 +125,23 @@ func (ContextSwitches) Description() string {
 func (m ContextSwitches) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ContextSwitchesAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ContextSwitches) conv(in []ContextSwitchesAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.contextSwitchesAttr()
-	}
-	return out
-}
-
-// ContextSwitchesAttr is an optional attribute for the ContextSwitches
-// instrument.
-type ContextSwitchesAttr interface {
-    contextSwitchesAttr() attribute.KeyValue
-}
-
-type contextSwitchesAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a contextSwitchesAttr) contextSwitchesAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ContextSwitchType returns an optional attribute for the
+// AttrContextSwitchType returns an optional attribute for the
 // "process.context_switch_type" semantic convention. It represents the specifies
 // whether the context switches for this data point were voluntary or
 // involuntary.
-func (ContextSwitches) ContextSwitchTypeAttr(val ContextSwitchTypeAttr) ContextSwitchesAttr {
-	return contextSwitchesAttr{kv: attribute.String("process.context_switch_type", string(val))}
+func (ContextSwitches) AttrContextSwitchType(val ContextSwitchTypeAttr) attribute.KeyValue {
+	return attribute.String("process.context_switch_type", string(val))
 }
 
 // CPUTime is an instrument used to record metric values conforming to the
@@ -211,47 +185,22 @@ func (CPUTime) Description() string {
 func (m CPUTime) Add(
     ctx context.Context,
     incr float64,
-	attrs ...CPUTimeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m CPUTime) conv(in []CPUTimeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.cpuTimeAttr()
-	}
-	return out
-}
-
-// CPUTimeAttr is an optional attribute for the CPUTime instrument.
-type CPUTimeAttr interface {
-    cpuTimeAttr() attribute.KeyValue
-}
-
-type cpuTimeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a cpuTimeAttr) cpuTimeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// CPUMode returns an optional attribute for the "cpu.mode" semantic convention.
-// It represents a process SHOULD be characterized *either* by data points with
-// no `mode` labels, *or only* data points with `mode` labels.
-func (CPUTime) CPUModeAttr(val CPUModeAttr) CPUTimeAttr {
-	return cpuTimeAttr{kv: attribute.String("cpu.mode", string(val))}
+// AttrCPUMode returns an optional attribute for the "cpu.mode" semantic
+// convention. It represents a process SHOULD be characterized *either* by data
+// points with no `mode` labels, *or only* data points with `mode` labels.
+func (CPUTime) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }
 
 // CPUUtilization is an instrument used to record metric values conforming to the
@@ -296,47 +245,22 @@ func (CPUUtilization) Description() string {
 func (m CPUUtilization) Record(
     ctx context.Context,
     val int64,
-	attrs ...CPUUtilizationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m CPUUtilization) conv(in []CPUUtilizationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.cpuUtilizationAttr()
-	}
-	return out
-}
-
-// CPUUtilizationAttr is an optional attribute for the CPUUtilization instrument.
-type CPUUtilizationAttr interface {
-    cpuUtilizationAttr() attribute.KeyValue
-}
-
-type cpuUtilizationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a cpuUtilizationAttr) cpuUtilizationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// CPUMode returns an optional attribute for the "cpu.mode" semantic convention.
-// It represents a process SHOULD be characterized *either* by data points with
-// no `mode` labels, *or only* data points with `mode` labels.
-func (CPUUtilization) CPUModeAttr(val CPUModeAttr) CPUUtilizationAttr {
-	return cpuUtilizationAttr{kv: attribute.String("cpu.mode", string(val))}
+// AttrCPUMode returns an optional attribute for the "cpu.mode" semantic
+// convention. It represents a process SHOULD be characterized *either* by data
+// points with no `mode` labels, *or only* data points with `mode` labels.
+func (CPUUtilization) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }
 
 // DiskIo is an instrument used to record metric values conforming to the
@@ -380,46 +304,21 @@ func (DiskIo) Description() string {
 func (m DiskIo) Add(
     ctx context.Context,
     incr int64,
-	attrs ...DiskIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskIo) conv(in []DiskIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskIoAttr()
-	}
-	return out
-}
-
-// DiskIoAttr is an optional attribute for the DiskIo instrument.
-type DiskIoAttr interface {
-    diskIoAttr() attribute.KeyValue
-}
-
-type diskIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskIoAttr) diskIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// DiskIoDirection returns an optional attribute for the "disk.io.direction"
+// AttrDiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskIo) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskIoAttr {
-	return diskIoAttr{kv: attribute.String("disk.io.direction", string(val))}
+func (DiskIo) AttrDiskIoDirection(val DiskIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
 // MemoryUsage is an instrument used to record metric values conforming to the
@@ -457,8 +356,12 @@ func (MemoryUsage) Description() string {
 	return "The amount of physical memory in use."
 }
 
-func (m MemoryUsage) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryVirtual is an instrument used to record metric values conforming to the
@@ -496,8 +399,12 @@ func (MemoryVirtual) Description() string {
 	return "The amount of committed virtual memory."
 }
 
-func (m MemoryVirtual) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // NetworkIo is an instrument used to record metric values conforming to the
@@ -541,47 +448,22 @@ func (NetworkIo) Description() string {
 func (m NetworkIo) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NetworkIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetworkIo) conv(in []NetworkIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.networkIoAttr()
-	}
-	return out
-}
-
-// NetworkIoAttr is an optional attribute for the NetworkIo instrument.
-type NetworkIoAttr interface {
-    networkIoAttr() attribute.KeyValue
-}
-
-type networkIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a networkIoAttr) networkIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkIoAttr {
-	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // OpenFileDescriptorCount is an instrument used to record metric values
@@ -619,8 +501,12 @@ func (OpenFileDescriptorCount) Description() string {
 	return "Number of file descriptors in use by the process."
 }
 
-func (m OpenFileDescriptorCount) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m OpenFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // PagingFaults is an instrument used to record metric values conforming to the
@@ -664,48 +550,23 @@ func (PagingFaults) Description() string {
 func (m PagingFaults) Add(
     ctx context.Context,
     incr int64,
-	attrs ...PagingFaultsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PagingFaults) conv(in []PagingFaultsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.pagingFaultsAttr()
-	}
-	return out
-}
-
-// PagingFaultsAttr is an optional attribute for the PagingFaults instrument.
-type PagingFaultsAttr interface {
-    pagingFaultsAttr() attribute.KeyValue
-}
-
-type pagingFaultsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a pagingFaultsAttr) pagingFaultsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// PagingFaultType returns an optional attribute for the
+// AttrPagingFaultType returns an optional attribute for the
 // "process.paging.fault_type" semantic convention. It represents the type of
 // page fault for this data point. Type `major` is for major/hard page faults,
 // and `minor` is for minor/soft page faults.
-func (PagingFaults) PagingFaultTypeAttr(val PagingFaultTypeAttr) PagingFaultsAttr {
-	return pagingFaultsAttr{kv: attribute.String("process.paging.fault_type", string(val))}
+func (PagingFaults) AttrPagingFaultType(val PagingFaultTypeAttr) attribute.KeyValue {
+	return attribute.String("process.paging.fault_type", string(val))
 }
 
 // ThreadCount is an instrument used to record metric values conforming to the
@@ -743,8 +604,12 @@ func (ThreadCount) Description() string {
 	return "Process threads count."
 }
 
-func (m ThreadCount) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // Uptime is an instrument used to record metric values conforming to the
@@ -782,6 +647,10 @@ func (Uptime) Description() string {
 	return "The time the process has been running."
 }
 
-func (m Uptime) Record(ctx context.Context, val float64) {
-    m.inst.Record(ctx, val)
+func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }

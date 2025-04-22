@@ -81,16 +81,15 @@ func ({{ metric_name }}) Description() string {
 {%- endif %}
 {%- for attr in metric.attributes | not_required | attribute_sort %}
 {%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}
-{%- set private_name = i.param_name(metric.metric_name, ctx.root_namespace) ~ "Attr" %}
 
-{{ [ name ~ " returns an optional attribute for the \"" ~ attr.name ~ "\" semantic convention. " ~ h.it_reps(attr.brief) ] | comment }}
+{{ [ "Attr" ~ name ~ " returns an optional attribute for the \"" ~ attr.name ~ "\" semantic convention. " ~ h.it_reps(attr.brief) ] | comment }}
 {%- if attr.type is mapping %}
-func ({{ metric_name}}) {{name}}Attr(val {{ name }}Attr) {{metric_name}}Attr {
-	return {{ private_name }}{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}(val))}
+func ({{ metric_name}}) Attr{{name}}(val {{ name }}Attr) attribute.KeyValue {
+	return attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}(val))
 }
 {%- else %}
-func ({{ metric_name}}) {{name}}Attr(val {{ attr.type | map_text("attribute_type_value")}}) {{metric_name}}Attr {
-	return {{ private_name }}{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)}
+func ({{ metric_name}}) Attr{{name}}(val {{ attr.type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)
 }
 {%- endif %}
 {%- endfor %}

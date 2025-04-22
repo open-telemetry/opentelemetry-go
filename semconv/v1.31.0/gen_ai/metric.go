@@ -144,14 +144,14 @@ func (m ClientOperationDuration) Record(
     val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
-	attrs ...ClientOperationDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.system", string(system)),
 			)...,
@@ -159,63 +159,37 @@ func (m ClientOperationDuration) Record(
 	)
 }
 
-func (m ClientOperationDuration) conv(in []ClientOperationDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientOperationDurationAttr()
-	}
-	return out
-}
-
-// ClientOperationDurationAttr is an optional attribute for the
-// ClientOperationDuration instrument.
-type ClientOperationDurationAttr interface {
-    clientOperationDurationAttr() attribute.KeyValue
-}
-
-type clientOperationDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientOperationDurationAttr) clientOperationDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientOperationDuration) ErrorTypeAttr(val ErrorTypeAttr) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("error.type", string(val))}
+func (ClientOperationDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// RequestModel returns an optional attribute for the "gen_ai.request.model"
+// AttrRequestModel returns an optional attribute for the "gen_ai.request.model"
 // semantic convention. It represents the name of the GenAI model a request is
 // being made to.
-func (ClientOperationDuration) RequestModelAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("gen_ai.request.model", val)}
+func (ClientOperationDuration) AttrRequestModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.request.model", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the genAI server port.
-func (ClientOperationDuration) ServerPortAttr(val int) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.Int("server.port", val)}
+func (ClientOperationDuration) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// ResponseModel returns an optional attribute for the "gen_ai.response.model"
-// semantic convention. It represents the name of the model that generated the
-// response.
-func (ClientOperationDuration) ResponseModelAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("gen_ai.response.model", val)}
+// AttrResponseModel returns an optional attribute for the
+// "gen_ai.response.model" semantic convention. It represents the name of the
+// model that generated the response.
+func (ClientOperationDuration) AttrResponseModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.response.model", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the genAI server address.
-func (ClientOperationDuration) ServerAddressAttr(val string) ClientOperationDurationAttr {
-	return clientOperationDurationAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the genAI server address.
+func (ClientOperationDuration) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
 // ClientTokenUsage is an instrument used to record metric values conforming to
@@ -269,14 +243,14 @@ func (m ClientTokenUsage) Record(
 	operationName OperationNameAttr,
 	system SystemAttr,
 	tokenType TokenTypeAttr,
-	attrs ...ClientTokenUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.system", string(system)),
 				attribute.String("gen_ai.token.type", string(tokenType)),
@@ -285,56 +259,30 @@ func (m ClientTokenUsage) Record(
 	)
 }
 
-func (m ClientTokenUsage) conv(in []ClientTokenUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.clientTokenUsageAttr()
-	}
-	return out
-}
-
-// ClientTokenUsageAttr is an optional attribute for the ClientTokenUsage
-// instrument.
-type ClientTokenUsageAttr interface {
-    clientTokenUsageAttr() attribute.KeyValue
-}
-
-type clientTokenUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a clientTokenUsageAttr) clientTokenUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RequestModel returns an optional attribute for the "gen_ai.request.model"
+// AttrRequestModel returns an optional attribute for the "gen_ai.request.model"
 // semantic convention. It represents the name of the GenAI model a request is
 // being made to.
-func (ClientTokenUsage) RequestModelAttr(val string) ClientTokenUsageAttr {
-	return clientTokenUsageAttr{kv: attribute.String("gen_ai.request.model", val)}
+func (ClientTokenUsage) AttrRequestModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.request.model", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the genAI server port.
-func (ClientTokenUsage) ServerPortAttr(val int) ClientTokenUsageAttr {
-	return clientTokenUsageAttr{kv: attribute.Int("server.port", val)}
+func (ClientTokenUsage) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// ResponseModel returns an optional attribute for the "gen_ai.response.model"
-// semantic convention. It represents the name of the model that generated the
-// response.
-func (ClientTokenUsage) ResponseModelAttr(val string) ClientTokenUsageAttr {
-	return clientTokenUsageAttr{kv: attribute.String("gen_ai.response.model", val)}
+// AttrResponseModel returns an optional attribute for the
+// "gen_ai.response.model" semantic convention. It represents the name of the
+// model that generated the response.
+func (ClientTokenUsage) AttrResponseModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.response.model", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the genAI server address.
-func (ClientTokenUsage) ServerAddressAttr(val string) ClientTokenUsageAttr {
-	return clientTokenUsageAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the genAI server address.
+func (ClientTokenUsage) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
 // ServerRequestDuration is an instrument used to record metric values conforming
@@ -386,14 +334,14 @@ func (m ServerRequestDuration) Record(
     val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
-	attrs ...ServerRequestDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.system", string(system)),
 			)...,
@@ -401,63 +349,37 @@ func (m ServerRequestDuration) Record(
 	)
 }
 
-func (m ServerRequestDuration) conv(in []ServerRequestDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverRequestDurationAttr()
-	}
-	return out
-}
-
-// ServerRequestDurationAttr is an optional attribute for the
-// ServerRequestDuration instrument.
-type ServerRequestDurationAttr interface {
-    serverRequestDurationAttr() attribute.KeyValue
-}
-
-type serverRequestDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverRequestDurationAttr) serverRequestDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ErrorType returns an optional attribute for the "error.type" semantic
+// AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ServerRequestDuration) ErrorTypeAttr(val ErrorTypeAttr) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("error.type", string(val))}
+func (ServerRequestDuration) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
-// RequestModel returns an optional attribute for the "gen_ai.request.model"
+// AttrRequestModel returns an optional attribute for the "gen_ai.request.model"
 // semantic convention. It represents the name of the GenAI model a request is
 // being made to.
-func (ServerRequestDuration) RequestModelAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("gen_ai.request.model", val)}
+func (ServerRequestDuration) AttrRequestModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.request.model", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the genAI server port.
-func (ServerRequestDuration) ServerPortAttr(val int) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.Int("server.port", val)}
+func (ServerRequestDuration) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// ResponseModel returns an optional attribute for the "gen_ai.response.model"
-// semantic convention. It represents the name of the model that generated the
-// response.
-func (ServerRequestDuration) ResponseModelAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("gen_ai.response.model", val)}
+// AttrResponseModel returns an optional attribute for the
+// "gen_ai.response.model" semantic convention. It represents the name of the
+// model that generated the response.
+func (ServerRequestDuration) AttrResponseModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.response.model", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the genAI server address.
-func (ServerRequestDuration) ServerAddressAttr(val string) ServerRequestDurationAttr {
-	return serverRequestDurationAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the genAI server address.
+func (ServerRequestDuration) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
 // ServerTimePerOutputToken is an instrument used to record metric values
@@ -509,14 +431,14 @@ func (m ServerTimePerOutputToken) Record(
     val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
-	attrs ...ServerTimePerOutputTokenAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.system", string(system)),
 			)...,
@@ -524,56 +446,30 @@ func (m ServerTimePerOutputToken) Record(
 	)
 }
 
-func (m ServerTimePerOutputToken) conv(in []ServerTimePerOutputTokenAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverTimePerOutputTokenAttr()
-	}
-	return out
-}
-
-// ServerTimePerOutputTokenAttr is an optional attribute for the
-// ServerTimePerOutputToken instrument.
-type ServerTimePerOutputTokenAttr interface {
-    serverTimePerOutputTokenAttr() attribute.KeyValue
-}
-
-type serverTimePerOutputTokenAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverTimePerOutputTokenAttr) serverTimePerOutputTokenAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RequestModel returns an optional attribute for the "gen_ai.request.model"
+// AttrRequestModel returns an optional attribute for the "gen_ai.request.model"
 // semantic convention. It represents the name of the GenAI model a request is
 // being made to.
-func (ServerTimePerOutputToken) RequestModelAttr(val string) ServerTimePerOutputTokenAttr {
-	return serverTimePerOutputTokenAttr{kv: attribute.String("gen_ai.request.model", val)}
+func (ServerTimePerOutputToken) AttrRequestModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.request.model", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the genAI server port.
-func (ServerTimePerOutputToken) ServerPortAttr(val int) ServerTimePerOutputTokenAttr {
-	return serverTimePerOutputTokenAttr{kv: attribute.Int("server.port", val)}
+func (ServerTimePerOutputToken) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// ResponseModel returns an optional attribute for the "gen_ai.response.model"
-// semantic convention. It represents the name of the model that generated the
-// response.
-func (ServerTimePerOutputToken) ResponseModelAttr(val string) ServerTimePerOutputTokenAttr {
-	return serverTimePerOutputTokenAttr{kv: attribute.String("gen_ai.response.model", val)}
+// AttrResponseModel returns an optional attribute for the
+// "gen_ai.response.model" semantic convention. It represents the name of the
+// model that generated the response.
+func (ServerTimePerOutputToken) AttrResponseModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.response.model", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the genAI server address.
-func (ServerTimePerOutputToken) ServerAddressAttr(val string) ServerTimePerOutputTokenAttr {
-	return serverTimePerOutputTokenAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the genAI server address.
+func (ServerTimePerOutputToken) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }
 
 // ServerTimeToFirstToken is an instrument used to record metric values
@@ -624,14 +520,14 @@ func (m ServerTimeToFirstToken) Record(
     val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
-	attrs ...ServerTimeToFirstTokenAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
 			append(
-				m.conv(attrs),
+				attrs,
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.system", string(system)),
 			)...,
@@ -639,54 +535,28 @@ func (m ServerTimeToFirstToken) Record(
 	)
 }
 
-func (m ServerTimeToFirstToken) conv(in []ServerTimeToFirstTokenAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverTimeToFirstTokenAttr()
-	}
-	return out
-}
-
-// ServerTimeToFirstTokenAttr is an optional attribute for the
-// ServerTimeToFirstToken instrument.
-type ServerTimeToFirstTokenAttr interface {
-    serverTimeToFirstTokenAttr() attribute.KeyValue
-}
-
-type serverTimeToFirstTokenAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverTimeToFirstTokenAttr) serverTimeToFirstTokenAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// RequestModel returns an optional attribute for the "gen_ai.request.model"
+// AttrRequestModel returns an optional attribute for the "gen_ai.request.model"
 // semantic convention. It represents the name of the GenAI model a request is
 // being made to.
-func (ServerTimeToFirstToken) RequestModelAttr(val string) ServerTimeToFirstTokenAttr {
-	return serverTimeToFirstTokenAttr{kv: attribute.String("gen_ai.request.model", val)}
+func (ServerTimeToFirstToken) AttrRequestModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.request.model", val)
 }
 
-// ServerPort returns an optional attribute for the "server.port" semantic
+// AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the genAI server port.
-func (ServerTimeToFirstToken) ServerPortAttr(val int) ServerTimeToFirstTokenAttr {
-	return serverTimeToFirstTokenAttr{kv: attribute.Int("server.port", val)}
+func (ServerTimeToFirstToken) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
-// ResponseModel returns an optional attribute for the "gen_ai.response.model"
-// semantic convention. It represents the name of the model that generated the
-// response.
-func (ServerTimeToFirstToken) ResponseModelAttr(val string) ServerTimeToFirstTokenAttr {
-	return serverTimeToFirstTokenAttr{kv: attribute.String("gen_ai.response.model", val)}
+// AttrResponseModel returns an optional attribute for the
+// "gen_ai.response.model" semantic convention. It represents the name of the
+// model that generated the response.
+func (ServerTimeToFirstToken) AttrResponseModel(val string) attribute.KeyValue {
+	return attribute.String("gen_ai.response.model", val)
 }
 
-// ServerAddress returns an optional attribute for the "server.address" semantic
-// convention. It represents the genAI server address.
-func (ServerTimeToFirstToken) ServerAddressAttr(val string) ServerTimeToFirstTokenAttr {
-	return serverTimeToFirstTokenAttr{kv: attribute.String("server.address", val)}
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the genAI server address.
+func (ServerTimeToFirstToken) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
 }

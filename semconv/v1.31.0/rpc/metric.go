@@ -47,8 +47,12 @@ func (ClientDuration) Description() string {
 	return "Measures the duration of outbound RPC."
 }
 
-func (m ClientDuration) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ClientDuration) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ClientRequestSize is an instrument used to record metric values conforming to
@@ -86,8 +90,12 @@ func (ClientRequestSize) Description() string {
 	return "Measures the size of RPC request messages (uncompressed)."
 }
 
-func (m ClientRequestSize) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ClientRequestSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ClientRequestsPerRPC is an instrument used to record metric values conforming
@@ -125,8 +133,12 @@ func (ClientRequestsPerRPC) Description() string {
 	return "Measures the number of messages received per RPC."
 }
 
-func (m ClientRequestsPerRPC) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ClientRequestsPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ClientResponseSize is an instrument used to record metric values conforming to
@@ -164,8 +176,12 @@ func (ClientResponseSize) Description() string {
 	return "Measures the size of RPC response messages (uncompressed)."
 }
 
-func (m ClientResponseSize) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ClientResponseSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ClientResponsesPerRPC is an instrument used to record metric values conforming
@@ -203,8 +219,12 @@ func (ClientResponsesPerRPC) Description() string {
 	return "Measures the number of messages sent per RPC."
 }
 
-func (m ClientResponsesPerRPC) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ClientResponsesPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ServerDuration is an instrument used to record metric values conforming to the
@@ -242,8 +262,12 @@ func (ServerDuration) Description() string {
 	return "Measures the duration of inbound RPC."
 }
 
-func (m ServerDuration) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ServerDuration) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ServerRequestSize is an instrument used to record metric values conforming to
@@ -281,8 +305,12 @@ func (ServerRequestSize) Description() string {
 	return "Measures the size of RPC request messages (uncompressed)."
 }
 
-func (m ServerRequestSize) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ServerRequestSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ServerRequestsPerRPC is an instrument used to record metric values conforming
@@ -320,8 +348,12 @@ func (ServerRequestsPerRPC) Description() string {
 	return "Measures the number of messages received per RPC."
 }
 
-func (m ServerRequestsPerRPC) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ServerRequestsPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ServerResponseSize is an instrument used to record metric values conforming to
@@ -359,8 +391,12 @@ func (ServerResponseSize) Description() string {
 	return "Measures the size of RPC response messages (uncompressed)."
 }
 
-func (m ServerResponseSize) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ServerResponseSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ServerResponsesPerRPC is an instrument used to record metric values conforming
@@ -398,6 +434,10 @@ func (ServerResponsesPerRPC) Description() string {
 	return "Measures the number of messages sent per RPC."
 }
 
-func (m ServerResponsesPerRPC) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m ServerResponsesPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }

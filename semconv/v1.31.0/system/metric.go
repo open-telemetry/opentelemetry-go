@@ -231,8 +231,12 @@ func (CPULogicalCount) Description() string {
 	return "Reports the number of logical (virtual) processor cores created by the operating system to manage multitasking"
 }
 
-func (m CPULogicalCount) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m CPULogicalCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // CPUPhysicalCount is an instrument used to record metric values conforming to
@@ -270,8 +274,12 @@ func (CPUPhysicalCount) Description() string {
 	return "Reports the number of actual physical processor cores on the hardware"
 }
 
-func (m CPUPhysicalCount) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m CPUPhysicalCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DiskIo is an instrument used to record metric values conforming to the
@@ -309,52 +317,27 @@ func (DiskIo) Unit() string {
 func (m DiskIo) Add(
     ctx context.Context,
     incr int64,
-	attrs ...DiskIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskIo) conv(in []DiskIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskIoAttr()
-	}
-	return out
-}
-
-// DiskIoAttr is an optional attribute for the DiskIo instrument.
-type DiskIoAttr interface {
-    diskIoAttr() attribute.KeyValue
-}
-
-type diskIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskIoAttr) diskIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// DiskIoDirection returns an optional attribute for the "disk.io.direction"
+// AttrDiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskIo) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskIoAttr {
-	return diskIoAttr{kv: attribute.String("disk.io.direction", string(val))}
+func (DiskIo) AttrDiskIoDirection(val DiskIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskIo) DeviceAttr(val string) DiskIoAttr {
-	return diskIoAttr{kv: attribute.String("system.device", val)}
+func (DiskIo) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // DiskIoTime is an instrument used to record metric values conforming to the
@@ -398,46 +381,21 @@ func (DiskIoTime) Description() string {
 func (m DiskIoTime) Add(
     ctx context.Context,
     incr float64,
-	attrs ...DiskIoTimeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskIoTime) conv(in []DiskIoTimeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskIoTimeAttr()
-	}
-	return out
-}
-
-// DiskIoTimeAttr is an optional attribute for the DiskIoTime instrument.
-type DiskIoTimeAttr interface {
-    diskIoTimeAttr() attribute.KeyValue
-}
-
-type diskIoTimeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskIoTimeAttr) diskIoTimeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskIoTime) DeviceAttr(val string) DiskIoTimeAttr {
-	return diskIoTimeAttr{kv: attribute.String("system.device", val)}
+func (DiskIoTime) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // DiskLimit is an instrument used to record metric values conforming to the
@@ -481,46 +439,21 @@ func (DiskLimit) Description() string {
 func (m DiskLimit) Add(
     ctx context.Context,
     incr int64,
-	attrs ...DiskLimitAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskLimit) conv(in []DiskLimitAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskLimitAttr()
-	}
-	return out
-}
-
-// DiskLimitAttr is an optional attribute for the DiskLimit instrument.
-type DiskLimitAttr interface {
-    diskLimitAttr() attribute.KeyValue
-}
-
-type diskLimitAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskLimitAttr) diskLimitAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskLimit) DeviceAttr(val string) DiskLimitAttr {
-	return diskLimitAttr{kv: attribute.String("system.device", val)}
+func (DiskLimit) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // DiskMerged is an instrument used to record metric values conforming to the
@@ -558,52 +491,27 @@ func (DiskMerged) Unit() string {
 func (m DiskMerged) Add(
     ctx context.Context,
     incr int64,
-	attrs ...DiskMergedAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskMerged) conv(in []DiskMergedAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskMergedAttr()
-	}
-	return out
-}
-
-// DiskMergedAttr is an optional attribute for the DiskMerged instrument.
-type DiskMergedAttr interface {
-    diskMergedAttr() attribute.KeyValue
-}
-
-type diskMergedAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskMergedAttr) diskMergedAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// DiskIoDirection returns an optional attribute for the "disk.io.direction"
+// AttrDiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskMerged) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskMergedAttr {
-	return diskMergedAttr{kv: attribute.String("disk.io.direction", string(val))}
+func (DiskMerged) AttrDiskIoDirection(val DiskIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskMerged) DeviceAttr(val string) DiskMergedAttr {
-	return diskMergedAttr{kv: attribute.String("system.device", val)}
+func (DiskMerged) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // DiskOperationTime is an instrument used to record metric values conforming to
@@ -647,53 +555,27 @@ func (DiskOperationTime) Description() string {
 func (m DiskOperationTime) Add(
     ctx context.Context,
     incr float64,
-	attrs ...DiskOperationTimeAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskOperationTime) conv(in []DiskOperationTimeAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskOperationTimeAttr()
-	}
-	return out
-}
-
-// DiskOperationTimeAttr is an optional attribute for the DiskOperationTime
-// instrument.
-type DiskOperationTimeAttr interface {
-    diskOperationTimeAttr() attribute.KeyValue
-}
-
-type diskOperationTimeAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskOperationTimeAttr) diskOperationTimeAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// DiskIoDirection returns an optional attribute for the "disk.io.direction"
+// AttrDiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskOperationTime) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskOperationTimeAttr {
-	return diskOperationTimeAttr{kv: attribute.String("disk.io.direction", string(val))}
+func (DiskOperationTime) AttrDiskIoDirection(val DiskIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskOperationTime) DeviceAttr(val string) DiskOperationTimeAttr {
-	return diskOperationTimeAttr{kv: attribute.String("system.device", val)}
+func (DiskOperationTime) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // DiskOperations is an instrument used to record metric values conforming to the
@@ -731,52 +613,27 @@ func (DiskOperations) Unit() string {
 func (m DiskOperations) Add(
     ctx context.Context,
     incr int64,
-	attrs ...DiskOperationsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m DiskOperations) conv(in []DiskOperationsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.diskOperationsAttr()
-	}
-	return out
-}
-
-// DiskOperationsAttr is an optional attribute for the DiskOperations instrument.
-type DiskOperationsAttr interface {
-    diskOperationsAttr() attribute.KeyValue
-}
-
-type diskOperationsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a diskOperationsAttr) diskOperationsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// DiskIoDirection returns an optional attribute for the "disk.io.direction"
+// AttrDiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskOperations) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskOperationsAttr {
-	return diskOperationsAttr{kv: attribute.String("disk.io.direction", string(val))}
+func (DiskOperations) AttrDiskIoDirection(val DiskIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskOperations) DeviceAttr(val string) DiskOperationsAttr {
-	return diskOperationsAttr{kv: attribute.String("system.device", val)}
+func (DiskOperations) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // FilesystemLimit is an instrument used to record metric values conforming to
@@ -820,67 +677,43 @@ func (FilesystemLimit) Description() string {
 func (m FilesystemLimit) Add(
     ctx context.Context,
     incr int64,
-	attrs ...FilesystemLimitAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m FilesystemLimit) conv(in []FilesystemLimitAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.filesystemLimitAttr()
-	}
-	return out
-}
-
-// FilesystemLimitAttr is an optional attribute for the FilesystemLimit
-// instrument.
-type FilesystemLimitAttr interface {
-    filesystemLimitAttr() attribute.KeyValue
-}
-
-type filesystemLimitAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a filesystemLimitAttr) filesystemLimitAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the identifier for the device where the filesystem
 // resides.
-func (FilesystemLimit) DeviceAttr(val string) FilesystemLimitAttr {
-	return filesystemLimitAttr{kv: attribute.String("system.device", val)}
+func (FilesystemLimit) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
-// FilesystemMode returns an optional attribute for the "system.filesystem.mode"
-// semantic convention. It represents the filesystem mode.
-func (FilesystemLimit) FilesystemModeAttr(val string) FilesystemLimitAttr {
-	return filesystemLimitAttr{kv: attribute.String("system.filesystem.mode", val)}
+// AttrFilesystemMode returns an optional attribute for the
+// "system.filesystem.mode" semantic convention. It represents the filesystem
+// mode.
+func (FilesystemLimit) AttrFilesystemMode(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mode", val)
 }
 
-// FilesystemMountpoint returns an optional attribute for the
+// AttrFilesystemMountpoint returns an optional attribute for the
 // "system.filesystem.mountpoint" semantic convention. It represents the
 // filesystem mount path.
-func (FilesystemLimit) FilesystemMountpointAttr(val string) FilesystemLimitAttr {
-	return filesystemLimitAttr{kv: attribute.String("system.filesystem.mountpoint", val)}
+func (FilesystemLimit) AttrFilesystemMountpoint(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mountpoint", val)
 }
 
-// FilesystemType returns an optional attribute for the "system.filesystem.type"
-// semantic convention. It represents the filesystem type.
-func (FilesystemLimit) FilesystemTypeAttr(val FilesystemTypeAttr) FilesystemLimitAttr {
-	return filesystemLimitAttr{kv: attribute.String("system.filesystem.type", string(val))}
+// AttrFilesystemType returns an optional attribute for the
+// "system.filesystem.type" semantic convention. It represents the filesystem
+// type.
+func (FilesystemLimit) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.type", string(val))
 }
 
 // FilesystemUsage is an instrument used to record metric values conforming to
@@ -924,74 +757,50 @@ func (FilesystemUsage) Description() string {
 func (m FilesystemUsage) Add(
     ctx context.Context,
     incr int64,
-	attrs ...FilesystemUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m FilesystemUsage) conv(in []FilesystemUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.filesystemUsageAttr()
-	}
-	return out
-}
-
-// FilesystemUsageAttr is an optional attribute for the FilesystemUsage
-// instrument.
-type FilesystemUsageAttr interface {
-    filesystemUsageAttr() attribute.KeyValue
-}
-
-type filesystemUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a filesystemUsageAttr) filesystemUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the identifier for the device where the filesystem
 // resides.
-func (FilesystemUsage) DeviceAttr(val string) FilesystemUsageAttr {
-	return filesystemUsageAttr{kv: attribute.String("system.device", val)}
+func (FilesystemUsage) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
-// FilesystemMode returns an optional attribute for the "system.filesystem.mode"
-// semantic convention. It represents the filesystem mode.
-func (FilesystemUsage) FilesystemModeAttr(val string) FilesystemUsageAttr {
-	return filesystemUsageAttr{kv: attribute.String("system.filesystem.mode", val)}
+// AttrFilesystemMode returns an optional attribute for the
+// "system.filesystem.mode" semantic convention. It represents the filesystem
+// mode.
+func (FilesystemUsage) AttrFilesystemMode(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mode", val)
 }
 
-// FilesystemMountpoint returns an optional attribute for the
+// AttrFilesystemMountpoint returns an optional attribute for the
 // "system.filesystem.mountpoint" semantic convention. It represents the
 // filesystem mount path.
-func (FilesystemUsage) FilesystemMountpointAttr(val string) FilesystemUsageAttr {
-	return filesystemUsageAttr{kv: attribute.String("system.filesystem.mountpoint", val)}
+func (FilesystemUsage) AttrFilesystemMountpoint(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mountpoint", val)
 }
 
-// FilesystemState returns an optional attribute for the
+// AttrFilesystemState returns an optional attribute for the
 // "system.filesystem.state" semantic convention. It represents the filesystem
 // state.
-func (FilesystemUsage) FilesystemStateAttr(val FilesystemStateAttr) FilesystemUsageAttr {
-	return filesystemUsageAttr{kv: attribute.String("system.filesystem.state", string(val))}
+func (FilesystemUsage) AttrFilesystemState(val FilesystemStateAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.state", string(val))
 }
 
-// FilesystemType returns an optional attribute for the "system.filesystem.type"
-// semantic convention. It represents the filesystem type.
-func (FilesystemUsage) FilesystemTypeAttr(val FilesystemTypeAttr) FilesystemUsageAttr {
-	return filesystemUsageAttr{kv: attribute.String("system.filesystem.type", string(val))}
+// AttrFilesystemType returns an optional attribute for the
+// "system.filesystem.type" semantic convention. It represents the filesystem
+// type.
+func (FilesystemUsage) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.type", string(val))
 }
 
 // FilesystemUtilization is an instrument used to record metric values conforming
@@ -1029,74 +838,50 @@ func (FilesystemUtilization) Unit() string {
 func (m FilesystemUtilization) Record(
     ctx context.Context,
     val int64,
-	attrs ...FilesystemUtilizationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m FilesystemUtilization) conv(in []FilesystemUtilizationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.filesystemUtilizationAttr()
-	}
-	return out
-}
-
-// FilesystemUtilizationAttr is an optional attribute for the
-// FilesystemUtilization instrument.
-type FilesystemUtilizationAttr interface {
-    filesystemUtilizationAttr() attribute.KeyValue
-}
-
-type filesystemUtilizationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a filesystemUtilizationAttr) filesystemUtilizationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the identifier for the device where the filesystem
 // resides.
-func (FilesystemUtilization) DeviceAttr(val string) FilesystemUtilizationAttr {
-	return filesystemUtilizationAttr{kv: attribute.String("system.device", val)}
+func (FilesystemUtilization) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
-// FilesystemMode returns an optional attribute for the "system.filesystem.mode"
-// semantic convention. It represents the filesystem mode.
-func (FilesystemUtilization) FilesystemModeAttr(val string) FilesystemUtilizationAttr {
-	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.mode", val)}
+// AttrFilesystemMode returns an optional attribute for the
+// "system.filesystem.mode" semantic convention. It represents the filesystem
+// mode.
+func (FilesystemUtilization) AttrFilesystemMode(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mode", val)
 }
 
-// FilesystemMountpoint returns an optional attribute for the
+// AttrFilesystemMountpoint returns an optional attribute for the
 // "system.filesystem.mountpoint" semantic convention. It represents the
 // filesystem mount path.
-func (FilesystemUtilization) FilesystemMountpointAttr(val string) FilesystemUtilizationAttr {
-	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.mountpoint", val)}
+func (FilesystemUtilization) AttrFilesystemMountpoint(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mountpoint", val)
 }
 
-// FilesystemState returns an optional attribute for the
+// AttrFilesystemState returns an optional attribute for the
 // "system.filesystem.state" semantic convention. It represents the filesystem
 // state.
-func (FilesystemUtilization) FilesystemStateAttr(val FilesystemStateAttr) FilesystemUtilizationAttr {
-	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.state", string(val))}
+func (FilesystemUtilization) AttrFilesystemState(val FilesystemStateAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.state", string(val))
 }
 
-// FilesystemType returns an optional attribute for the "system.filesystem.type"
-// semantic convention. It represents the filesystem type.
-func (FilesystemUtilization) FilesystemTypeAttr(val FilesystemTypeAttr) FilesystemUtilizationAttr {
-	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.type", string(val))}
+// AttrFilesystemType returns an optional attribute for the
+// "system.filesystem.type" semantic convention. It represents the filesystem
+// type.
+func (FilesystemUtilization) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.type", string(val))
 }
 
 // LinuxMemoryAvailable is an instrument used to record metric values conforming
@@ -1135,8 +920,12 @@ func (LinuxMemoryAvailable) Description() string {
 	return "An estimate of how much memory is available for starting new applications, without causing swapping"
 }
 
-func (m LinuxMemoryAvailable) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m LinuxMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // LinuxMemorySlabUsage is an instrument used to record metric values conforming
@@ -1181,48 +970,22 @@ func (LinuxMemorySlabUsage) Description() string {
 func (m LinuxMemorySlabUsage) Add(
     ctx context.Context,
     incr int64,
-	attrs ...LinuxMemorySlabUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m LinuxMemorySlabUsage) conv(in []LinuxMemorySlabUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.linuxMemorySlabUsageAttr()
-	}
-	return out
-}
-
-// LinuxMemorySlabUsageAttr is an optional attribute for the LinuxMemorySlabUsage
-// instrument.
-type LinuxMemorySlabUsageAttr interface {
-    linuxMemorySlabUsageAttr() attribute.KeyValue
-}
-
-type linuxMemorySlabUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a linuxMemorySlabUsageAttr) linuxMemorySlabUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// LinuxMemorySlabState returns an optional attribute for the
+// AttrLinuxMemorySlabState returns an optional attribute for the
 // "linux.memory.slab.state" semantic convention. It represents the Linux Slab
 // memory state.
-func (LinuxMemorySlabUsage) LinuxMemorySlabStateAttr(val LinuxMemorySlabStateAttr) LinuxMemorySlabUsageAttr {
-	return linuxMemorySlabUsageAttr{kv: attribute.String("linux.memory.slab.state", string(val))}
+func (LinuxMemorySlabUsage) AttrLinuxMemorySlabState(val LinuxMemorySlabStateAttr) attribute.KeyValue {
+	return attribute.String("linux.memory.slab.state", string(val))
 }
 
 // MemoryLimit is an instrument used to record metric values conforming to the
@@ -1260,8 +1023,12 @@ func (MemoryLimit) Description() string {
 	return "Total memory available in the system."
 }
 
-func (m MemoryLimit) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryShared is an instrument used to record metric values conforming to the
@@ -1299,8 +1066,12 @@ func (MemoryShared) Description() string {
 	return "Shared memory used (mostly by tmpfs)."
 }
 
-func (m MemoryShared) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryShared) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryUsage is an instrument used to record metric values conforming to the
@@ -1344,46 +1115,21 @@ func (MemoryUsage) Description() string {
 func (m MemoryUsage) Add(
     ctx context.Context,
     incr int64,
-	attrs ...MemoryUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m MemoryUsage) conv(in []MemoryUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.memoryUsageAttr()
-	}
-	return out
-}
-
-// MemoryUsageAttr is an optional attribute for the MemoryUsage instrument.
-type MemoryUsageAttr interface {
-    memoryUsageAttr() attribute.KeyValue
-}
-
-type memoryUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a memoryUsageAttr) memoryUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// MemoryState returns an optional attribute for the "system.memory.state"
+// AttrMemoryState returns an optional attribute for the "system.memory.state"
 // semantic convention. It represents the memory state.
-func (MemoryUsage) MemoryStateAttr(val MemoryStateAttr) MemoryUsageAttr {
-	return memoryUsageAttr{kv: attribute.String("system.memory.state", string(val))}
+func (MemoryUsage) AttrMemoryState(val MemoryStateAttr) attribute.KeyValue {
+	return attribute.String("system.memory.state", string(val))
 }
 
 // MemoryUtilization is an instrument used to record metric values conforming to
@@ -1421,47 +1167,21 @@ func (MemoryUtilization) Unit() string {
 func (m MemoryUtilization) Record(
     ctx context.Context,
     val int64,
-	attrs ...MemoryUtilizationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m MemoryUtilization) conv(in []MemoryUtilizationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.memoryUtilizationAttr()
-	}
-	return out
-}
-
-// MemoryUtilizationAttr is an optional attribute for the MemoryUtilization
-// instrument.
-type MemoryUtilizationAttr interface {
-    memoryUtilizationAttr() attribute.KeyValue
-}
-
-type memoryUtilizationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a memoryUtilizationAttr) memoryUtilizationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// MemoryState returns an optional attribute for the "system.memory.state"
+// AttrMemoryState returns an optional attribute for the "system.memory.state"
 // semantic convention. It represents the memory state.
-func (MemoryUtilization) MemoryStateAttr(val MemoryStateAttr) MemoryUtilizationAttr {
-	return memoryUtilizationAttr{kv: attribute.String("system.memory.state", string(val))}
+func (MemoryUtilization) AttrMemoryState(val MemoryStateAttr) attribute.KeyValue {
+	return attribute.String("system.memory.state", string(val))
 }
 
 // NetworkConnections is an instrument used to record metric values conforming to
@@ -1499,65 +1219,39 @@ func (NetworkConnections) Unit() string {
 func (m NetworkConnections) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NetworkConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetworkConnections) conv(in []NetworkConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.networkConnectionsAttr()
-	}
-	return out
-}
-
-// NetworkConnectionsAttr is an optional attribute for the NetworkConnections
-// instrument.
-type NetworkConnectionsAttr interface {
-    networkConnectionsAttr() attribute.KeyValue
-}
-
-type networkConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a networkConnectionsAttr) networkConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkConnectionState returns an optional attribute for the
+// AttrNetworkConnectionState returns an optional attribute for the
 // "network.connection.state" semantic convention. It represents the state of
 // network connection.
-func (NetworkConnections) NetworkConnectionStateAttr(val NetworkConnectionStateAttr) NetworkConnectionsAttr {
-	return networkConnectionsAttr{kv: attribute.String("network.connection.state", string(val))}
+func (NetworkConnections) AttrNetworkConnectionState(val NetworkConnectionStateAttr) attribute.KeyValue {
+	return attribute.String("network.connection.state", string(val))
 }
 
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkConnections) NetworkInterfaceNameAttr(val string) NetworkConnectionsAttr {
-	return networkConnectionsAttr{kv: attribute.String("network.interface.name", val)}
+func (NetworkConnections) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkTransport returns an optional attribute for the "network.transport"
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
 // semantic convention. It represents the [OSI transport layer] or
 // [inter-process communication method].
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (NetworkConnections) NetworkTransportAttr(val NetworkTransportAttr) NetworkConnectionsAttr {
-	return networkConnectionsAttr{kv: attribute.String("network.transport", string(val))}
+func (NetworkConnections) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
 }
 
 // NetworkDropped is an instrument used to record metric values conforming to the
@@ -1601,54 +1295,29 @@ func (NetworkDropped) Description() string {
 func (m NetworkDropped) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NetworkDroppedAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetworkDropped) conv(in []NetworkDroppedAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.networkDroppedAttr()
-	}
-	return out
-}
-
-// NetworkDroppedAttr is an optional attribute for the NetworkDropped instrument.
-type NetworkDroppedAttr interface {
-    networkDroppedAttr() attribute.KeyValue
-}
-
-type networkDroppedAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a networkDroppedAttr) networkDroppedAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkDropped) NetworkInterfaceNameAttr(val string) NetworkDroppedAttr {
-	return networkDroppedAttr{kv: attribute.String("network.interface.name", val)}
+func (NetworkDropped) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkDropped) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkDroppedAttr {
-	return networkDroppedAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NetworkDropped) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // NetworkErrors is an instrument used to record metric values conforming to the
@@ -1692,54 +1361,29 @@ func (NetworkErrors) Description() string {
 func (m NetworkErrors) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NetworkErrorsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetworkErrors) conv(in []NetworkErrorsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.networkErrorsAttr()
-	}
-	return out
-}
-
-// NetworkErrorsAttr is an optional attribute for the NetworkErrors instrument.
-type NetworkErrorsAttr interface {
-    networkErrorsAttr() attribute.KeyValue
-}
-
-type networkErrorsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a networkErrorsAttr) networkErrorsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkErrors) NetworkInterfaceNameAttr(val string) NetworkErrorsAttr {
-	return networkErrorsAttr{kv: attribute.String("network.interface.name", val)}
+func (NetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkErrors) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkErrorsAttr {
-	return networkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NetworkErrors) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // NetworkIo is an instrument used to record metric values conforming to the
@@ -1777,54 +1421,29 @@ func (NetworkIo) Unit() string {
 func (m NetworkIo) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NetworkIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetworkIo) conv(in []NetworkIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.networkIoAttr()
-	}
-	return out
-}
-
-// NetworkIoAttr is an optional attribute for the NetworkIo instrument.
-type NetworkIoAttr interface {
-    networkIoAttr() attribute.KeyValue
-}
-
-type networkIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a networkIoAttr) networkIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkIo) NetworkInterfaceNameAttr(val string) NetworkIoAttr {
-	return networkIoAttr{kv: attribute.String("network.interface.name", val)}
+func (NetworkIo) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkIoAttr {
-	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // NetworkPackets is an instrument used to record metric values conforming to the
@@ -1862,53 +1481,28 @@ func (NetworkPackets) Unit() string {
 func (m NetworkPackets) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NetworkPacketsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NetworkPackets) conv(in []NetworkPacketsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.networkPacketsAttr()
-	}
-	return out
-}
-
-// NetworkPacketsAttr is an optional attribute for the NetworkPackets instrument.
-type NetworkPacketsAttr interface {
-    networkPacketsAttr() attribute.KeyValue
-}
-
-type networkPacketsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a networkPacketsAttr) networkPacketsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkPackets) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkPacketsAttr {
-	return networkPacketsAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NetworkPackets) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (NetworkPackets) DeviceAttr(val string) NetworkPacketsAttr {
-	return networkPacketsAttr{kv: attribute.String("system.device", val)}
+func (NetworkPackets) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
 // PagingFaults is an instrument used to record metric values conforming to the
@@ -1946,46 +1540,21 @@ func (PagingFaults) Unit() string {
 func (m PagingFaults) Add(
     ctx context.Context,
     incr int64,
-	attrs ...PagingFaultsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PagingFaults) conv(in []PagingFaultsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.pagingFaultsAttr()
-	}
-	return out
-}
-
-// PagingFaultsAttr is an optional attribute for the PagingFaults instrument.
-type PagingFaultsAttr interface {
-    pagingFaultsAttr() attribute.KeyValue
-}
-
-type pagingFaultsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a pagingFaultsAttr) pagingFaultsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// PagingType returns an optional attribute for the "system.paging.type" semantic
-// convention. It represents the memory paging type.
-func (PagingFaults) PagingTypeAttr(val PagingTypeAttr) PagingFaultsAttr {
-	return pagingFaultsAttr{kv: attribute.String("system.paging.type", string(val))}
+// AttrPagingType returns an optional attribute for the "system.paging.type"
+// semantic convention. It represents the memory paging type.
+func (PagingFaults) AttrPagingType(val PagingTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.type", string(val))
 }
 
 // PagingOperations is an instrument used to record metric values conforming to
@@ -2023,54 +1592,28 @@ func (PagingOperations) Unit() string {
 func (m PagingOperations) Add(
     ctx context.Context,
     incr int64,
-	attrs ...PagingOperationsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PagingOperations) conv(in []PagingOperationsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.pagingOperationsAttr()
-	}
-	return out
-}
-
-// PagingOperationsAttr is an optional attribute for the PagingOperations
-// instrument.
-type PagingOperationsAttr interface {
-    pagingOperationsAttr() attribute.KeyValue
-}
-
-type pagingOperationsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a pagingOperationsAttr) pagingOperationsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// PagingDirection returns an optional attribute for the
+// AttrPagingDirection returns an optional attribute for the
 // "system.paging.direction" semantic convention. It represents the paging access
 // direction.
-func (PagingOperations) PagingDirectionAttr(val PagingDirectionAttr) PagingOperationsAttr {
-	return pagingOperationsAttr{kv: attribute.String("system.paging.direction", string(val))}
+func (PagingOperations) AttrPagingDirection(val PagingDirectionAttr) attribute.KeyValue {
+	return attribute.String("system.paging.direction", string(val))
 }
 
-// PagingType returns an optional attribute for the "system.paging.type" semantic
-// convention. It represents the memory paging type.
-func (PagingOperations) PagingTypeAttr(val PagingTypeAttr) PagingOperationsAttr {
-	return pagingOperationsAttr{kv: attribute.String("system.paging.type", string(val))}
+// AttrPagingType returns an optional attribute for the "system.paging.type"
+// semantic convention. It represents the memory paging type.
+func (PagingOperations) AttrPagingType(val PagingTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.type", string(val))
 }
 
 // PagingUsage is an instrument used to record metric values conforming to the
@@ -2114,53 +1657,28 @@ func (PagingUsage) Description() string {
 func (m PagingUsage) Add(
     ctx context.Context,
     incr int64,
-	attrs ...PagingUsageAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PagingUsage) conv(in []PagingUsageAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.pagingUsageAttr()
-	}
-	return out
-}
-
-// PagingUsageAttr is an optional attribute for the PagingUsage instrument.
-type PagingUsageAttr interface {
-    pagingUsageAttr() attribute.KeyValue
-}
-
-type pagingUsageAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a pagingUsageAttr) pagingUsageAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the unique identifier for the device responsible for
 // managing paging operations.
-func (PagingUsage) DeviceAttr(val string) PagingUsageAttr {
-	return pagingUsageAttr{kv: attribute.String("system.device", val)}
+func (PagingUsage) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
-// PagingState returns an optional attribute for the "system.paging.state"
+// AttrPagingState returns an optional attribute for the "system.paging.state"
 // semantic convention. It represents the memory paging state.
-func (PagingUsage) PagingStateAttr(val PagingStateAttr) PagingUsageAttr {
-	return pagingUsageAttr{kv: attribute.String("system.paging.state", string(val))}
+func (PagingUsage) AttrPagingState(val PagingStateAttr) attribute.KeyValue {
+	return attribute.String("system.paging.state", string(val))
 }
 
 // PagingUtilization is an instrument used to record metric values conforming to
@@ -2198,54 +1716,28 @@ func (PagingUtilization) Unit() string {
 func (m PagingUtilization) Record(
     ctx context.Context,
     val int64,
-	attrs ...PagingUtilizationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PagingUtilization) conv(in []PagingUtilizationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.pagingUtilizationAttr()
-	}
-	return out
-}
-
-// PagingUtilizationAttr is an optional attribute for the PagingUtilization
-// instrument.
-type PagingUtilizationAttr interface {
-    pagingUtilizationAttr() attribute.KeyValue
-}
-
-type pagingUtilizationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a pagingUtilizationAttr) pagingUtilizationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// Device returns an optional attribute for the "system.device" semantic
+// AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the unique identifier for the device responsible for
 // managing paging operations.
-func (PagingUtilization) DeviceAttr(val string) PagingUtilizationAttr {
-	return pagingUtilizationAttr{kv: attribute.String("system.device", val)}
+func (PagingUtilization) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
 }
 
-// PagingState returns an optional attribute for the "system.paging.state"
+// AttrPagingState returns an optional attribute for the "system.paging.state"
 // semantic convention. It represents the memory paging state.
-func (PagingUtilization) PagingStateAttr(val PagingStateAttr) PagingUtilizationAttr {
-	return pagingUtilizationAttr{kv: attribute.String("system.paging.state", string(val))}
+func (PagingUtilization) AttrPagingState(val PagingStateAttr) attribute.KeyValue {
+	return attribute.String("system.paging.state", string(val))
 }
 
 // ProcessCount is an instrument used to record metric values conforming to the
@@ -2289,49 +1781,24 @@ func (ProcessCount) Description() string {
 func (m ProcessCount) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ProcessCountAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ProcessCount) conv(in []ProcessCountAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.processCountAttr()
-	}
-	return out
-}
-
-// ProcessCountAttr is an optional attribute for the ProcessCount instrument.
-type ProcessCountAttr interface {
-    processCountAttr() attribute.KeyValue
-}
-
-type processCountAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a processCountAttr) processCountAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ProcessStatus returns an optional attribute for the "system.process.status"
-// semantic convention. It represents the process state, e.g.,
-// [Linux Process State Codes].
+// AttrProcessStatus returns an optional attribute for the
+// "system.process.status" semantic convention. It represents the process state,
+// e.g., [Linux Process State Codes].
 //
 // [Linux Process State Codes]: https://man7.org/linux/man-pages/man1/ps.1.html#PROCESS_STATE_CODES
-func (ProcessCount) ProcessStatusAttr(val ProcessStatusAttr) ProcessCountAttr {
-	return processCountAttr{kv: attribute.String("system.process.status", string(val))}
+func (ProcessCount) AttrProcessStatus(val ProcessStatusAttr) attribute.KeyValue {
+	return attribute.String("system.process.status", string(val))
 }
 
 // ProcessCreated is an instrument used to record metric values conforming to the
@@ -2369,8 +1836,12 @@ func (ProcessCreated) Description() string {
 	return "Total number of processes created over uptime of the host"
 }
 
-func (m ProcessCreated) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ProcessCreated) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // Uptime is an instrument used to record metric values conforming to the
@@ -2408,6 +1879,10 @@ func (Uptime) Description() string {
 	return "The time the system has been running"
 }
 
-func (m Uptime) Record(ctx context.Context, val float64) {
-    m.inst.Record(ctx, val)
+func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }

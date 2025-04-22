@@ -75,8 +75,12 @@ func (CronJobActiveJobs) Description() string {
 	return "The number of actively running jobs for a cronjob"
 }
 
-func (m CronJobActiveJobs) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m CronJobActiveJobs) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DaemonSetCurrentScheduledNodes is an instrument used to record metric values
@@ -116,8 +120,12 @@ func (DaemonSetCurrentScheduledNodes) Description() string {
 	return "Number of nodes that are running at least 1 daemon pod and are supposed to run the daemon pod"
 }
 
-func (m DaemonSetCurrentScheduledNodes) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m DaemonSetCurrentScheduledNodes) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DaemonSetDesiredScheduledNodes is an instrument used to record metric values
@@ -157,8 +165,12 @@ func (DaemonSetDesiredScheduledNodes) Description() string {
 	return "Number of nodes that should be running the daemon pod (including nodes currently running the daemon pod)"
 }
 
-func (m DaemonSetDesiredScheduledNodes) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m DaemonSetDesiredScheduledNodes) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DaemonSetMisscheduledNodes is an instrument used to record metric values
@@ -198,8 +210,12 @@ func (DaemonSetMisscheduledNodes) Description() string {
 	return "Number of nodes that are running the daemon pod, but are not supposed to run the daemon pod"
 }
 
-func (m DaemonSetMisscheduledNodes) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m DaemonSetMisscheduledNodes) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DaemonSetReadyNodes is an instrument used to record metric values conforming
@@ -238,8 +254,12 @@ func (DaemonSetReadyNodes) Description() string {
 	return "Number of nodes that should be running the daemon pod and have one or more of the daemon pod running and ready"
 }
 
-func (m DaemonSetReadyNodes) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m DaemonSetReadyNodes) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DeploymentAvailablePods is an instrument used to record metric values
@@ -278,8 +298,12 @@ func (DeploymentAvailablePods) Description() string {
 	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this deployment"
 }
 
-func (m DeploymentAvailablePods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m DeploymentAvailablePods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // DeploymentDesiredPods is an instrument used to record metric values conforming
@@ -317,8 +341,12 @@ func (DeploymentDesiredPods) Description() string {
 	return "Number of desired replica pods in this deployment"
 }
 
-func (m DeploymentDesiredPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m DeploymentDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // HpaCurrentPods is an instrument used to record metric values conforming to the
@@ -357,8 +385,12 @@ func (HpaCurrentPods) Description() string {
 	return "Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler"
 }
 
-func (m HpaCurrentPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m HpaCurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // HpaDesiredPods is an instrument used to record metric values conforming to the
@@ -397,8 +429,12 @@ func (HpaDesiredPods) Description() string {
 	return "Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler"
 }
 
-func (m HpaDesiredPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m HpaDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // HpaMaxPods is an instrument used to record metric values conforming to the
@@ -436,8 +472,12 @@ func (HpaMaxPods) Description() string {
 	return "The upper limit for the number of replica pods to which the autoscaler can scale up"
 }
 
-func (m HpaMaxPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m HpaMaxPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // HpaMinPods is an instrument used to record metric values conforming to the
@@ -475,8 +515,12 @@ func (HpaMinPods) Description() string {
 	return "The lower limit for the number of replica pods to which the autoscaler can scale down"
 }
 
-func (m HpaMinPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m HpaMinPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // JobActivePods is an instrument used to record metric values conforming to the
@@ -514,8 +558,12 @@ func (JobActivePods) Description() string {
 	return "The number of pending and actively running pods for a job"
 }
 
-func (m JobActivePods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m JobActivePods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // JobDesiredSuccessfulPods is an instrument used to record metric values
@@ -554,8 +602,12 @@ func (JobDesiredSuccessfulPods) Description() string {
 	return "The desired number of successfully finished pods the job should be run with"
 }
 
-func (m JobDesiredSuccessfulPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m JobDesiredSuccessfulPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // JobFailedPods is an instrument used to record metric values conforming to the
@@ -593,8 +645,12 @@ func (JobFailedPods) Description() string {
 	return "The number of pods which reached phase Failed for a job"
 }
 
-func (m JobFailedPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m JobFailedPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // JobMaxParallelPods is an instrument used to record metric values conforming to
@@ -632,8 +688,12 @@ func (JobMaxParallelPods) Description() string {
 	return "The max desired number of pods the job should run at any given time"
 }
 
-func (m JobMaxParallelPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m JobMaxParallelPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // JobSuccessfulPods is an instrument used to record metric values conforming to
@@ -671,8 +731,12 @@ func (JobSuccessfulPods) Description() string {
 	return "The number of pods which reached phase Succeeded for a job"
 }
 
-func (m JobSuccessfulPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m JobSuccessfulPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // NamespacePhase is an instrument used to record metric values conforming to the
@@ -717,7 +781,7 @@ func (m NamespacePhase) Add(
     ctx context.Context,
     incr int64,
 	namespacePhase NamespacePhaseAttr,
-
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
@@ -763,8 +827,12 @@ func (NodeCPUTime) Description() string {
 	return "Total CPU time consumed"
 }
 
-func (m NodeCPUTime) Add(ctx context.Context, incr float64) {
-    m.inst.Add(ctx, incr)
+func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // NodeCPUUsage is an instrument used to record metric values conforming to the
@@ -802,8 +870,12 @@ func (NodeCPUUsage) Description() string {
 	return "Node's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs"
 }
 
-func (m NodeCPUUsage) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // NodeMemoryUsage is an instrument used to record metric values conforming to
@@ -841,8 +913,12 @@ func (NodeMemoryUsage) Description() string {
 	return "Memory usage of the Node"
 }
 
-func (m NodeMemoryUsage) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // NodeNetworkErrors is an instrument used to record metric values conforming to
@@ -886,55 +962,29 @@ func (NodeNetworkErrors) Description() string {
 func (m NodeNetworkErrors) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NodeNetworkErrorsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NodeNetworkErrors) conv(in []NodeNetworkErrorsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.nodeNetworkErrorsAttr()
-	}
-	return out
-}
-
-// NodeNetworkErrorsAttr is an optional attribute for the NodeNetworkErrors
-// instrument.
-type NodeNetworkErrorsAttr interface {
-    nodeNetworkErrorsAttr() attribute.KeyValue
-}
-
-type nodeNetworkErrorsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a nodeNetworkErrorsAttr) nodeNetworkErrorsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NodeNetworkErrors) NetworkInterfaceNameAttr(val string) NodeNetworkErrorsAttr {
-	return nodeNetworkErrorsAttr{kv: attribute.String("network.interface.name", val)}
+func (NodeNetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NodeNetworkErrors) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NodeNetworkErrorsAttr {
-	return nodeNetworkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NodeNetworkErrors) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // NodeNetworkIo is an instrument used to record metric values conforming to the
@@ -978,54 +1028,29 @@ func (NodeNetworkIo) Description() string {
 func (m NodeNetworkIo) Add(
     ctx context.Context,
     incr int64,
-	attrs ...NodeNetworkIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m NodeNetworkIo) conv(in []NodeNetworkIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.nodeNetworkIoAttr()
-	}
-	return out
-}
-
-// NodeNetworkIoAttr is an optional attribute for the NodeNetworkIo instrument.
-type NodeNetworkIoAttr interface {
-    nodeNetworkIoAttr() attribute.KeyValue
-}
-
-type nodeNetworkIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a nodeNetworkIoAttr) nodeNetworkIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NodeNetworkIo) NetworkInterfaceNameAttr(val string) NodeNetworkIoAttr {
-	return nodeNetworkIoAttr{kv: attribute.String("network.interface.name", val)}
+func (NodeNetworkIo) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NodeNetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NodeNetworkIoAttr {
-	return nodeNetworkIoAttr{kv: attribute.String("network.io.direction", string(val))}
+func (NodeNetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // NodeUptime is an instrument used to record metric values conforming to the
@@ -1063,8 +1088,12 @@ func (NodeUptime) Description() string {
 	return "The time the Node has been running"
 }
 
-func (m NodeUptime) Record(ctx context.Context, val float64) {
-    m.inst.Record(ctx, val)
+func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // PodCPUTime is an instrument used to record metric values conforming to the
@@ -1102,8 +1131,12 @@ func (PodCPUTime) Description() string {
 	return "Total CPU time consumed"
 }
 
-func (m PodCPUTime) Add(ctx context.Context, incr float64) {
-    m.inst.Add(ctx, incr)
+func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // PodCPUUsage is an instrument used to record metric values conforming to the
@@ -1141,8 +1174,12 @@ func (PodCPUUsage) Description() string {
 	return "Pod's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs"
 }
 
-func (m PodCPUUsage) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // PodMemoryUsage is an instrument used to record metric values conforming to the
@@ -1180,8 +1217,12 @@ func (PodMemoryUsage) Description() string {
 	return "Memory usage of the Pod"
 }
 
-func (m PodMemoryUsage) Record(ctx context.Context, val int64) {
-    m.inst.Record(ctx, val)
+func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // PodNetworkErrors is an instrument used to record metric values conforming to
@@ -1225,55 +1266,29 @@ func (PodNetworkErrors) Description() string {
 func (m PodNetworkErrors) Add(
     ctx context.Context,
     incr int64,
-	attrs ...PodNetworkErrorsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PodNetworkErrors) conv(in []PodNetworkErrorsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.podNetworkErrorsAttr()
-	}
-	return out
-}
-
-// PodNetworkErrorsAttr is an optional attribute for the PodNetworkErrors
-// instrument.
-type PodNetworkErrorsAttr interface {
-    podNetworkErrorsAttr() attribute.KeyValue
-}
-
-type podNetworkErrorsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a podNetworkErrorsAttr) podNetworkErrorsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (PodNetworkErrors) NetworkInterfaceNameAttr(val string) PodNetworkErrorsAttr {
-	return podNetworkErrorsAttr{kv: attribute.String("network.interface.name", val)}
+func (PodNetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (PodNetworkErrors) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) PodNetworkErrorsAttr {
-	return podNetworkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
+func (PodNetworkErrors) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // PodNetworkIo is an instrument used to record metric values conforming to the
@@ -1317,54 +1332,29 @@ func (PodNetworkIo) Description() string {
 func (m PodNetworkIo) Add(
     ctx context.Context,
     incr int64,
-	attrs ...PodNetworkIoAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m PodNetworkIo) conv(in []PodNetworkIoAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.podNetworkIoAttr()
-	}
-	return out
-}
-
-// PodNetworkIoAttr is an optional attribute for the PodNetworkIo instrument.
-type PodNetworkIoAttr interface {
-    podNetworkIoAttr() attribute.KeyValue
-}
-
-type podNetworkIoAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a podNetworkIoAttr) podNetworkIoAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// NetworkInterfaceName returns an optional attribute for the
+// AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (PodNetworkIo) NetworkInterfaceNameAttr(val string) PodNetworkIoAttr {
-	return podNetworkIoAttr{kv: attribute.String("network.interface.name", val)}
+func (PodNetworkIo) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
 }
 
-// NetworkIoDirection returns an optional attribute for the
+// AttrNetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (PodNetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) PodNetworkIoAttr {
-	return podNetworkIoAttr{kv: attribute.String("network.io.direction", string(val))}
+func (PodNetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // PodUptime is an instrument used to record metric values conforming to the
@@ -1402,8 +1392,12 @@ func (PodUptime) Description() string {
 	return "The time the Pod has been running"
 }
 
-func (m PodUptime) Record(ctx context.Context, val float64) {
-    m.inst.Record(ctx, val)
+func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }
 
 // ReplicaSetAvailablePods is an instrument used to record metric values
@@ -1442,8 +1436,12 @@ func (ReplicaSetAvailablePods) Description() string {
 	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this replicaset"
 }
 
-func (m ReplicaSetAvailablePods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ReplicaSetAvailablePods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // ReplicaSetDesiredPods is an instrument used to record metric values conforming
@@ -1481,8 +1479,12 @@ func (ReplicaSetDesiredPods) Description() string {
 	return "Number of desired replica pods in this replicaset"
 }
 
-func (m ReplicaSetDesiredPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ReplicaSetDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // ReplicationControllerAvailablePods is an instrument used to record metric
@@ -1522,8 +1524,12 @@ func (ReplicationControllerAvailablePods) Description() string {
 	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this replication controller"
 }
 
-func (m ReplicationControllerAvailablePods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ReplicationControllerAvailablePods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // ReplicationControllerDesiredPods is an instrument used to record metric values
@@ -1563,8 +1569,12 @@ func (ReplicationControllerDesiredPods) Description() string {
 	return "Number of desired replica pods in this replication controller"
 }
 
-func (m ReplicationControllerDesiredPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ReplicationControllerDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // StatefulSetCurrentPods is an instrument used to record metric values
@@ -1603,8 +1613,12 @@ func (StatefulSetCurrentPods) Description() string {
 	return "The number of replica pods created by the statefulset controller from the statefulset version indicated by currentRevision"
 }
 
-func (m StatefulSetCurrentPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m StatefulSetCurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // StatefulSetDesiredPods is an instrument used to record metric values
@@ -1642,8 +1656,12 @@ func (StatefulSetDesiredPods) Description() string {
 	return "Number of desired replica pods in this statefulset"
 }
 
-func (m StatefulSetDesiredPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m StatefulSetDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // StatefulSetReadyPods is an instrument used to record metric values conforming
@@ -1681,8 +1699,12 @@ func (StatefulSetReadyPods) Description() string {
 	return "The number of replica pods created for this statefulset with a Ready Condition"
 }
 
-func (m StatefulSetReadyPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m StatefulSetReadyPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // StatefulSetUpdatedPods is an instrument used to record metric values
@@ -1721,6 +1743,10 @@ func (StatefulSetUpdatedPods) Description() string {
 	return "Number of replica pods created by the statefulset controller from the statefulset version indicated by updateRevision"
 }
 
-func (m StatefulSetUpdatedPods) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m StatefulSetUpdatedPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }

@@ -60,8 +60,12 @@ func (ConfigGogc) Description() string {
 	return "Heap size target percentage configured by the user, otherwise 100."
 }
 
-func (m ConfigGogc) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ConfigGogc) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // GoroutineCount is an instrument used to record metric values conforming to the
@@ -99,8 +103,12 @@ func (GoroutineCount) Description() string {
 	return "Count of live goroutines."
 }
 
-func (m GoroutineCount) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m GoroutineCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryAllocated is an instrument used to record metric values conforming to
@@ -138,8 +146,12 @@ func (MemoryAllocated) Description() string {
 	return "Memory allocated to the heap by the application."
 }
 
-func (m MemoryAllocated) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryAllocated) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryAllocations is an instrument used to record metric values conforming to
@@ -177,8 +189,12 @@ func (MemoryAllocations) Description() string {
 	return "Count of allocations to the heap by the application."
 }
 
-func (m MemoryAllocations) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryAllocations) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryGCGoal is an instrument used to record metric values conforming to the
@@ -216,8 +232,12 @@ func (MemoryGCGoal) Description() string {
 	return "Heap size target for the end of the GC cycle."
 }
 
-func (m MemoryGCGoal) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryGCGoal) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryLimit is an instrument used to record metric values conforming to the
@@ -255,8 +275,12 @@ func (MemoryLimit) Description() string {
 	return "Go runtime memory limit configured by the user, if a limit exists."
 }
 
-func (m MemoryLimit) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m MemoryLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // MemoryUsed is an instrument used to record metric values conforming to the
@@ -300,46 +324,21 @@ func (MemoryUsed) Description() string {
 func (m MemoryUsed) Add(
     ctx context.Context,
     incr int64,
-	attrs ...MemoryUsedAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m MemoryUsed) conv(in []MemoryUsedAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.memoryUsedAttr()
-	}
-	return out
-}
-
-// MemoryUsedAttr is an optional attribute for the MemoryUsed instrument.
-type MemoryUsedAttr interface {
-    memoryUsedAttr() attribute.KeyValue
-}
-
-type memoryUsedAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a memoryUsedAttr) memoryUsedAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// MemoryType returns an optional attribute for the "go.memory.type" semantic
+// AttrMemoryType returns an optional attribute for the "go.memory.type" semantic
 // convention. It represents the type of memory.
-func (MemoryUsed) MemoryTypeAttr(val MemoryTypeAttr) MemoryUsedAttr {
-	return memoryUsedAttr{kv: attribute.String("go.memory.type", string(val))}
+func (MemoryUsed) AttrMemoryType(val MemoryTypeAttr) attribute.KeyValue {
+	return attribute.String("go.memory.type", string(val))
 }
 
 // ProcessorLimit is an instrument used to record metric values conforming to the
@@ -377,8 +376,12 @@ func (ProcessorLimit) Description() string {
 	return "The number of OS threads that can execute user-level Go code simultaneously."
 }
 
-func (m ProcessorLimit) Add(ctx context.Context, incr int64) {
-    m.inst.Add(ctx, incr)
+func (m ProcessorLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Add(ctx, incr)
+	} else {
+		m.inst.Add(ctx, incr, metric.WithAttributes(attrs...))
+	}
 }
 
 // ScheduleDuration is an instrument used to record metric values conforming to
@@ -417,6 +420,10 @@ func (ScheduleDuration) Description() string {
 	return "The time goroutines have spent in the scheduler in a runnable state before actually running."
 }
 
-func (m ScheduleDuration) Record(ctx context.Context, val float64) {
-    m.inst.Record(ctx, val)
+func (m ScheduleDuration) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if len(attrs) == 0 {
+		m.inst.Record(ctx, val)
+	} else {
+		m.inst.Record(ctx, val, metric.WithAttributes(attrs...))
+	}
 }

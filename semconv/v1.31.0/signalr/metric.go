@@ -83,56 +83,30 @@ func (ServerActiveConnections) Description() string {
 func (m ServerActiveConnections) Add(
     ctx context.Context,
     incr int64,
-	attrs ...ServerActiveConnectionsAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
 		ctx,
 		incr,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ServerActiveConnections) conv(in []ServerActiveConnectionsAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverActiveConnectionsAttr()
-	}
-	return out
-}
-
-// ServerActiveConnectionsAttr is an optional attribute for the
-// ServerActiveConnections instrument.
-type ServerActiveConnectionsAttr interface {
-    serverActiveConnectionsAttr() attribute.KeyValue
-}
-
-type serverActiveConnectionsAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverActiveConnectionsAttr) serverActiveConnectionsAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ConnectionStatus returns an optional attribute for the
+// AttrConnectionStatus returns an optional attribute for the
 // "signalr.connection.status" semantic convention. It represents the signalR
 // HTTP connection closure status.
-func (ServerActiveConnections) ConnectionStatusAttr(val ConnectionStatusAttr) ServerActiveConnectionsAttr {
-	return serverActiveConnectionsAttr{kv: attribute.String("signalr.connection.status", string(val))}
+func (ServerActiveConnections) AttrConnectionStatus(val ConnectionStatusAttr) attribute.KeyValue {
+	return attribute.String("signalr.connection.status", string(val))
 }
 
-// Transport returns an optional attribute for the "signalr.transport" semantic
-// convention. It represents the [SignalR transport type].
+// AttrTransport returns an optional attribute for the "signalr.transport"
+// semantic convention. It represents the [SignalR transport type].
 //
 // [SignalR transport type]: https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/TransportProtocols.md
-func (ServerActiveConnections) TransportAttr(val TransportAttr) ServerActiveConnectionsAttr {
-	return serverActiveConnectionsAttr{kv: attribute.String("signalr.transport", string(val))}
+func (ServerActiveConnections) AttrTransport(val TransportAttr) attribute.KeyValue {
+	return attribute.String("signalr.transport", string(val))
 }
 
 // ServerConnectionDuration is an instrument used to record metric values
@@ -176,54 +150,28 @@ func (ServerConnectionDuration) Description() string {
 func (m ServerConnectionDuration) Record(
     ctx context.Context,
     val float64,
-	attrs ...ServerConnectionDurationAttr,
+	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
 		ctx,
 		val,
 		metric.WithAttributes(
-			m.conv(attrs)...,
+			attrs...,
 		),
 	)
 }
 
-func (m ServerConnectionDuration) conv(in []ServerConnectionDurationAttr) []attribute.KeyValue {
-	if len(in) == 0 {
-		return nil
-	}
-
-	out := make([]attribute.KeyValue, len(in))
-	for i, a := range in {
-		out[i] = a.serverConnectionDurationAttr()
-	}
-	return out
-}
-
-// ServerConnectionDurationAttr is an optional attribute for the
-// ServerConnectionDuration instrument.
-type ServerConnectionDurationAttr interface {
-    serverConnectionDurationAttr() attribute.KeyValue
-}
-
-type serverConnectionDurationAttr struct {
-	kv attribute.KeyValue
-}
-
-func (a serverConnectionDurationAttr) serverConnectionDurationAttr() attribute.KeyValue {
-    return a.kv
-}
-
-// ConnectionStatus returns an optional attribute for the
+// AttrConnectionStatus returns an optional attribute for the
 // "signalr.connection.status" semantic convention. It represents the signalR
 // HTTP connection closure status.
-func (ServerConnectionDuration) ConnectionStatusAttr(val ConnectionStatusAttr) ServerConnectionDurationAttr {
-	return serverConnectionDurationAttr{kv: attribute.String("signalr.connection.status", string(val))}
+func (ServerConnectionDuration) AttrConnectionStatus(val ConnectionStatusAttr) attribute.KeyValue {
+	return attribute.String("signalr.connection.status", string(val))
 }
 
-// Transport returns an optional attribute for the "signalr.transport" semantic
-// convention. It represents the [SignalR transport type].
+// AttrTransport returns an optional attribute for the "signalr.transport"
+// semantic convention. It represents the [SignalR transport type].
 //
 // [SignalR transport type]: https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/TransportProtocols.md
-func (ServerConnectionDuration) TransportAttr(val TransportAttr) ServerConnectionDurationAttr {
-	return serverConnectionDurationAttr{kv: attribute.String("signalr.transport", string(val))}
+func (ServerConnectionDuration) AttrTransport(val TransportAttr) attribute.KeyValue {
+	return attribute.String("signalr.transport", string(val))
 }
