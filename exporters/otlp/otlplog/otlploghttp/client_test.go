@@ -787,7 +787,6 @@ func TestConfig(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithTransport(&http.Transport{
-
 			Proxy: func(r *http.Request) (*url.URL, error) {
 				r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
 				return r.URL, nil
