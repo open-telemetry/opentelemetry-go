@@ -72,10 +72,7 @@ func ({{ metric_name }}) Description() string {
 {%- if metric.instrument == "counter" or metric.instrument == "updowncounter" %}
 
 {{ i.add_method(metric, ctx.root_namespace) }}
-{%- elif metric.instrument == "histogram" %}
-
-{{ i.record_method(metric, ctx.root_namespace) }}
-{%- elif metric.instrument == "gauge" %}
+{%- elif metric.instrument == "histogram" or metric.instrument == "gauge" %}
 
 {{ i.record_method(metric, ctx.root_namespace) }}
 {%- endif %}
