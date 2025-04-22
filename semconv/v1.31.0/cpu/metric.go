@@ -114,7 +114,7 @@ func (a frequencyAttr) frequencyAttr() attribute.KeyValue {
 
 // LogicalNumber returns an optional attribute for the "cpu.logical_number"
 // semantic convention. It represents the logical CPU number [0..n-1].
-func (Frequency) LogicalNumber(val int) FrequencyAttr {
+func (Frequency) LogicalNumberAttr(val int) FrequencyAttr {
 	return frequencyAttr{kv: attribute.Int("cpu.logical_number", val)}
 }
 
@@ -197,13 +197,13 @@ func (a timeAttr) timeAttr() attribute.KeyValue {
 
 // LogicalNumber returns an optional attribute for the "cpu.logical_number"
 // semantic convention. It represents the logical CPU number [0..n-1].
-func (Time) LogicalNumber(val int) TimeAttr {
+func (Time) LogicalNumberAttr(val int) TimeAttr {
 	return timeAttr{kv: attribute.Int("cpu.logical_number", val)}
 }
 
 // Mode returns an optional attribute for the "cpu.mode" semantic convention. It
 // represents the mode of the CPU.
-func (Time) Mode(val ModeAttr) TimeAttr {
+func (Time) ModeAttr(val ModeAttr) TimeAttr {
 	return timeAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
@@ -287,12 +287,12 @@ func (a utilizationAttr) utilizationAttr() attribute.KeyValue {
 
 // LogicalNumber returns an optional attribute for the "cpu.logical_number"
 // semantic convention. It represents the logical CPU number [0..n-1].
-func (Utilization) LogicalNumber(val int) UtilizationAttr {
+func (Utilization) LogicalNumberAttr(val int) UtilizationAttr {
 	return utilizationAttr{kv: attribute.Int("cpu.logical_number", val)}
 }
 
 // Mode returns an optional attribute for the "cpu.mode" semantic convention. It
 // represents the mode of the CPU.
-func (Utilization) Mode(val ModeAttr) UtilizationAttr {
+func (Utilization) ModeAttr(val ModeAttr) UtilizationAttr {
 	return utilizationAttr{kv: attribute.String("cpu.mode", string(val))}
 }

@@ -124,13 +124,13 @@ func (a cosmosdbClientActiveInstanceCountAttr) cosmosdbClientActiveInstanceCount
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (CosmosDBClientActiveInstanceCount) ServerPort(val int) CosmosDBClientActiveInstanceCountAttr {
+func (CosmosDBClientActiveInstanceCount) ServerPortAttr(val int) CosmosDBClientActiveInstanceCountAttr {
 	return cosmosdbClientActiveInstanceCountAttr{kv: attribute.Int("server.port", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the name of the database host.
-func (CosmosDBClientActiveInstanceCount) ServerAddress(val string) CosmosDBClientActiveInstanceCountAttr {
+func (CosmosDBClientActiveInstanceCount) ServerAddressAttr(val string) CosmosDBClientActiveInstanceCountAttr {
 	return cosmosdbClientActiveInstanceCountAttr{kv: attribute.String("server.address", val)}
 }
 
@@ -221,54 +221,54 @@ func (a cosmosdbClientOperationRequestChargeAttr) cosmosdbClientOperationRequest
 // account or request [consistency level].
 //
 // [consistency level]: https://learn.microsoft.com/azure/cosmos-db/consistency-levels
-func (CosmosDBClientOperationRequestCharge) CosmosDBConsistencyLevel(val CosmosDBConsistencyLevelAttr) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) CosmosDBConsistencyLevelAttr(val CosmosDBConsistencyLevelAttr) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("azure.cosmosdb.consistency.level", string(val))}
 }
 
 // CosmosDBResponseSubStatusCode returns an optional attribute for the
 // "azure.cosmosdb.response.sub_status_code" semantic convention. It represents
 // the cosmos DB sub status code.
-func (CosmosDBClientOperationRequestCharge) CosmosDBResponseSubStatusCode(val int) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) CosmosDBResponseSubStatusCodeAttr(val int) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.Int("azure.cosmosdb.response.sub_status_code", val)}
 }
 
 // DBCollectionName returns an optional attribute for the "db.collection.name"
 // semantic convention. It represents the cosmos DB container name.
-func (CosmosDBClientOperationRequestCharge) DBCollectionName(val string) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) DBCollectionNameAttr(val string) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("db.collection.name", val)}
 }
 
 // DBNamespace returns an optional attribute for the "db.namespace" semantic
 // convention. It represents the name of the database, fully qualified within the
 // server address and port.
-func (CosmosDBClientOperationRequestCharge) DBNamespace(val string) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) DBNamespaceAttr(val string) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("db.namespace", val)}
 }
 
 // DBOperationName returns an optional attribute for the "db.operation.name"
 // semantic convention. It represents the name of the operation or command being
 // executed.
-func (CosmosDBClientOperationRequestCharge) DBOperationName(val string) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) DBOperationNameAttr(val string) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("db.operation.name", val)}
 }
 
 // DBResponseStatusCode returns an optional attribute for the
 // "db.response.status_code" semantic convention. It represents the database
 // response status code.
-func (CosmosDBClientOperationRequestCharge) DBResponseStatusCode(val string) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) DBResponseStatusCodeAttr(val string) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("db.response.status_code", val)}
 }
 
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (CosmosDBClientOperationRequestCharge) ErrorType(val ErrorTypeAttr) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) ErrorTypeAttr(val ErrorTypeAttr) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (CosmosDBClientOperationRequestCharge) ServerPort(val int) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) ServerPortAttr(val int) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.Int("server.port", val)}
 }
 
@@ -277,12 +277,12 @@ func (CosmosDBClientOperationRequestCharge) ServerPort(val int) CosmosDBClientOp
 // represents the list of regions contacted during operation in the order that
 // they were contacted. If there is more than one region listed, it indicates
 // that the operation was performed on multiple regions i.e. cross-regional call.
-func (CosmosDBClientOperationRequestCharge) CosmosDBOperationContactedRegions(val ...string) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) CosmosDBOperationContactedRegionsAttr(val ...string) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.StringSlice("azure.cosmosdb.operation.contacted_regions", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the name of the database host.
-func (CosmosDBClientOperationRequestCharge) ServerAddress(val string) CosmosDBClientOperationRequestChargeAttr {
+func (CosmosDBClientOperationRequestCharge) ServerAddressAttr(val string) CosmosDBClientOperationRequestChargeAttr {
 	return cosmosdbClientOperationRequestChargeAttr{kv: attribute.String("server.address", val)}
 }

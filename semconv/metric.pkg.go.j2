@@ -85,11 +85,11 @@ func ({{ metric_name }}) Description() string {
 
 {{ [ name ~ " returns an optional attribute for the \"" ~ attr.name ~ "\" semantic convention. " ~ h.it_reps(attr.brief) ] | comment }}
 {%- if attr.type is mapping %}
-func ({{ metric_name}}) {{name}}(val {{ name }}Attr) {{metric_name}}Attr {
+func ({{ metric_name}}) {{name}}Attr(val {{ name }}Attr) {{metric_name}}Attr {
 	return {{ private_name }}{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}(val))}
 }
 {%- else %}
-func ({{ metric_name}}) {{name}}(val {{ attr.type | map_text("attribute_type_value")}}) {{metric_name}}Attr {
+func ({{ metric_name}}) {{name}}Attr(val {{ attr.type | map_text("attribute_type_value")}}) {{metric_name}}Attr {
 	return {{ private_name }}{kv: attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)}
 }
 {%- endif %}

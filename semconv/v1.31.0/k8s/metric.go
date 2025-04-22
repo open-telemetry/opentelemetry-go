@@ -926,14 +926,14 @@ func (a nodeNetworkErrorsAttr) nodeNetworkErrorsAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NodeNetworkErrors) NetworkInterfaceName(val string) NodeNetworkErrorsAttr {
+func (NodeNetworkErrors) NetworkInterfaceNameAttr(val string) NodeNetworkErrorsAttr {
 	return nodeNetworkErrorsAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NodeNetworkErrors) NetworkIoDirection(val NetworkIoDirectionAttr) NodeNetworkErrorsAttr {
+func (NodeNetworkErrors) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NodeNetworkErrorsAttr {
 	return nodeNetworkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -1017,14 +1017,14 @@ func (a nodeNetworkIoAttr) nodeNetworkIoAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NodeNetworkIo) NetworkInterfaceName(val string) NodeNetworkIoAttr {
+func (NodeNetworkIo) NetworkInterfaceNameAttr(val string) NodeNetworkIoAttr {
 	return nodeNetworkIoAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NodeNetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NodeNetworkIoAttr {
+func (NodeNetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NodeNetworkIoAttr {
 	return nodeNetworkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -1265,14 +1265,14 @@ func (a podNetworkErrorsAttr) podNetworkErrorsAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (PodNetworkErrors) NetworkInterfaceName(val string) PodNetworkErrorsAttr {
+func (PodNetworkErrors) NetworkInterfaceNameAttr(val string) PodNetworkErrorsAttr {
 	return podNetworkErrorsAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (PodNetworkErrors) NetworkIoDirection(val NetworkIoDirectionAttr) PodNetworkErrorsAttr {
+func (PodNetworkErrors) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) PodNetworkErrorsAttr {
 	return podNetworkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -1356,14 +1356,14 @@ func (a podNetworkIoAttr) podNetworkIoAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (PodNetworkIo) NetworkInterfaceName(val string) PodNetworkIoAttr {
+func (PodNetworkIo) NetworkInterfaceNameAttr(val string) PodNetworkIoAttr {
 	return podNetworkIoAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (PodNetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) PodNetworkIoAttr {
+func (PodNetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) PodNetworkIoAttr {
 	return podNetworkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 

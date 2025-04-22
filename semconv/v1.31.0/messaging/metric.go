@@ -170,42 +170,42 @@ func (a clientConsumedMessagesAttr) clientConsumedMessagesAttr() attribute.KeyVa
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientConsumedMessages) ErrorType(val ErrorTypeAttr) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) ErrorTypeAttr(val ErrorTypeAttr) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ConsumerGroupName returns an optional attribute for the
 // "messaging.consumer.group.name" semantic convention. It represents the name of
 // the consumer group with which a consumer is associated.
-func (ClientConsumedMessages) ConsumerGroupName(val string) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) ConsumerGroupNameAttr(val string) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("messaging.consumer.group.name", val)}
 }
 
 // DestinationName returns an optional attribute for the
 // "messaging.destination.name" semantic convention. It represents the message
 // destination name.
-func (ClientConsumedMessages) DestinationName(val string) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) DestinationNameAttr(val string) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.name", val)}
 }
 
 // DestinationSubscriptionName returns an optional attribute for the
 // "messaging.destination.subscription.name" semantic convention. It represents
 // the name of the destination subscription from which a message is consumed.
-func (ClientConsumedMessages) DestinationSubscriptionName(val string) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) DestinationSubscriptionNameAttr(val string) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.subscription.name", val)}
 }
 
 // DestinationTemplate returns an optional attribute for the
 // "messaging.destination.template" semantic convention. It represents the low
 // cardinality representation of the messaging destination name.
-func (ClientConsumedMessages) DestinationTemplate(val string) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) DestinationTemplateAttr(val string) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.template", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the server domain name if available without reverse
 // DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ClientConsumedMessages) ServerAddress(val string) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) ServerAddressAttr(val string) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("server.address", val)}
 }
 
@@ -213,13 +213,13 @@ func (ClientConsumedMessages) ServerAddress(val string) ClientConsumedMessagesAt
 // "messaging.destination.partition.id" semantic convention. It represents the
 // identifier of the partition messages are sent to or received from, unique
 // within the `messaging.destination.name`.
-func (ClientConsumedMessages) DestinationPartitionID(val string) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) DestinationPartitionIDAttr(val string) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.String("messaging.destination.partition.id", val)}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientConsumedMessages) ServerPort(val int) ClientConsumedMessagesAttr {
+func (ClientConsumedMessages) ServerPortAttr(val int) ClientConsumedMessagesAttr {
 	return clientConsumedMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
@@ -317,49 +317,49 @@ func (a clientOperationDurationAttr) clientOperationDurationAttr() attribute.Key
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientOperationDuration) ErrorType(val ErrorTypeAttr) ClientOperationDurationAttr {
+func (ClientOperationDuration) ErrorTypeAttr(val ErrorTypeAttr) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ConsumerGroupName returns an optional attribute for the
 // "messaging.consumer.group.name" semantic convention. It represents the name of
 // the consumer group with which a consumer is associated.
-func (ClientOperationDuration) ConsumerGroupName(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) ConsumerGroupNameAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("messaging.consumer.group.name", val)}
 }
 
 // DestinationName returns an optional attribute for the
 // "messaging.destination.name" semantic convention. It represents the message
 // destination name.
-func (ClientOperationDuration) DestinationName(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) DestinationNameAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.name", val)}
 }
 
 // DestinationSubscriptionName returns an optional attribute for the
 // "messaging.destination.subscription.name" semantic convention. It represents
 // the name of the destination subscription from which a message is consumed.
-func (ClientOperationDuration) DestinationSubscriptionName(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) DestinationSubscriptionNameAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.subscription.name", val)}
 }
 
 // DestinationTemplate returns an optional attribute for the
 // "messaging.destination.template" semantic convention. It represents the low
 // cardinality representation of the messaging destination name.
-func (ClientOperationDuration) DestinationTemplate(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) DestinationTemplateAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.template", val)}
 }
 
 // OperationType returns an optional attribute for the "messaging.operation.type"
 // semantic convention. It represents a string identifying the type of the
 // messaging operation.
-func (ClientOperationDuration) OperationType(val OperationTypeAttr) ClientOperationDurationAttr {
+func (ClientOperationDuration) OperationTypeAttr(val OperationTypeAttr) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("messaging.operation.type", string(val))}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the server domain name if available without reverse
 // DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ClientOperationDuration) ServerAddress(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) ServerAddressAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("server.address", val)}
 }
 
@@ -367,13 +367,13 @@ func (ClientOperationDuration) ServerAddress(val string) ClientOperationDuration
 // "messaging.destination.partition.id" semantic convention. It represents the
 // identifier of the partition messages are sent to or received from, unique
 // within the `messaging.destination.name`.
-func (ClientOperationDuration) DestinationPartitionID(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) DestinationPartitionIDAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("messaging.destination.partition.id", val)}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientOperationDuration) ServerPort(val int) ClientOperationDurationAttr {
+func (ClientOperationDuration) ServerPortAttr(val int) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.Int("server.port", val)}
 }
 
@@ -470,28 +470,28 @@ func (a clientSentMessagesAttr) clientSentMessagesAttr() attribute.KeyValue {
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientSentMessages) ErrorType(val ErrorTypeAttr) ClientSentMessagesAttr {
+func (ClientSentMessages) ErrorTypeAttr(val ErrorTypeAttr) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // DestinationName returns an optional attribute for the
 // "messaging.destination.name" semantic convention. It represents the message
 // destination name.
-func (ClientSentMessages) DestinationName(val string) ClientSentMessagesAttr {
+func (ClientSentMessages) DestinationNameAttr(val string) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.String("messaging.destination.name", val)}
 }
 
 // DestinationTemplate returns an optional attribute for the
 // "messaging.destination.template" semantic convention. It represents the low
 // cardinality representation of the messaging destination name.
-func (ClientSentMessages) DestinationTemplate(val string) ClientSentMessagesAttr {
+func (ClientSentMessages) DestinationTemplateAttr(val string) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.String("messaging.destination.template", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the server domain name if available without reverse
 // DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ClientSentMessages) ServerAddress(val string) ClientSentMessagesAttr {
+func (ClientSentMessages) ServerAddressAttr(val string) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.String("server.address", val)}
 }
 
@@ -499,13 +499,13 @@ func (ClientSentMessages) ServerAddress(val string) ClientSentMessagesAttr {
 // "messaging.destination.partition.id" semantic convention. It represents the
 // identifier of the partition messages are sent to or received from, unique
 // within the `messaging.destination.name`.
-func (ClientSentMessages) DestinationPartitionID(val string) ClientSentMessagesAttr {
+func (ClientSentMessages) DestinationPartitionIDAttr(val string) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.String("messaging.destination.partition.id", val)}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientSentMessages) ServerPort(val int) ClientSentMessagesAttr {
+func (ClientSentMessages) ServerPortAttr(val int) ClientSentMessagesAttr {
 	return clientSentMessagesAttr{kv: attribute.Int("server.port", val)}
 }
 
@@ -602,42 +602,42 @@ func (a processDurationAttr) processDurationAttr() attribute.KeyValue {
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ProcessDuration) ErrorType(val ErrorTypeAttr) ProcessDurationAttr {
+func (ProcessDuration) ErrorTypeAttr(val ErrorTypeAttr) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ConsumerGroupName returns an optional attribute for the
 // "messaging.consumer.group.name" semantic convention. It represents the name of
 // the consumer group with which a consumer is associated.
-func (ProcessDuration) ConsumerGroupName(val string) ProcessDurationAttr {
+func (ProcessDuration) ConsumerGroupNameAttr(val string) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("messaging.consumer.group.name", val)}
 }
 
 // DestinationName returns an optional attribute for the
 // "messaging.destination.name" semantic convention. It represents the message
 // destination name.
-func (ProcessDuration) DestinationName(val string) ProcessDurationAttr {
+func (ProcessDuration) DestinationNameAttr(val string) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("messaging.destination.name", val)}
 }
 
 // DestinationSubscriptionName returns an optional attribute for the
 // "messaging.destination.subscription.name" semantic convention. It represents
 // the name of the destination subscription from which a message is consumed.
-func (ProcessDuration) DestinationSubscriptionName(val string) ProcessDurationAttr {
+func (ProcessDuration) DestinationSubscriptionNameAttr(val string) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("messaging.destination.subscription.name", val)}
 }
 
 // DestinationTemplate returns an optional attribute for the
 // "messaging.destination.template" semantic convention. It represents the low
 // cardinality representation of the messaging destination name.
-func (ProcessDuration) DestinationTemplate(val string) ProcessDurationAttr {
+func (ProcessDuration) DestinationTemplateAttr(val string) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("messaging.destination.template", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the server domain name if available without reverse
 // DNS lookup; otherwise, IP address or Unix domain socket name.
-func (ProcessDuration) ServerAddress(val string) ProcessDurationAttr {
+func (ProcessDuration) ServerAddressAttr(val string) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("server.address", val)}
 }
 
@@ -645,12 +645,12 @@ func (ProcessDuration) ServerAddress(val string) ProcessDurationAttr {
 // "messaging.destination.partition.id" semantic convention. It represents the
 // identifier of the partition messages are sent to or received from, unique
 // within the `messaging.destination.name`.
-func (ProcessDuration) DestinationPartitionID(val string) ProcessDurationAttr {
+func (ProcessDuration) DestinationPartitionIDAttr(val string) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.String("messaging.destination.partition.id", val)}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ProcessDuration) ServerPort(val int) ProcessDurationAttr {
+func (ProcessDuration) ServerPortAttr(val int) ProcessDurationAttr {
 	return processDurationAttr{kv: attribute.Int("server.port", val)}
 }

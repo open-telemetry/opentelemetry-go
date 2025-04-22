@@ -210,7 +210,7 @@ func (a changeCountAttr) changeCountAttr() attribute.KeyValue {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeCount) RepositoryName(val string) ChangeCountAttr {
+func (ChangeCount) RepositoryNameAttr(val string) ChangeCountAttr {
 	return changeCountAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -316,7 +316,7 @@ func (a changeDurationAttr) changeDurationAttr() attribute.KeyValue {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeDuration) RepositoryName(val string) ChangeDurationAttr {
+func (ChangeDuration) RepositoryNameAttr(val string) ChangeDurationAttr {
 	return changeDurationAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -420,7 +420,7 @@ func (a changeTimeToApprovalAttr) changeTimeToApprovalAttr() attribute.KeyValue 
 // **tag** in the repository.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-func (ChangeTimeToApproval) RefBaseName(val string) ChangeTimeToApprovalAttr {
+func (ChangeTimeToApproval) RefBaseNameAttr(val string) ChangeTimeToApprovalAttr {
 	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.base.name", val)}
 }
 
@@ -428,7 +428,7 @@ func (ChangeTimeToApproval) RefBaseName(val string) ChangeTimeToApprovalAttr {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeTimeToApproval) RepositoryName(val string) ChangeTimeToApprovalAttr {
+func (ChangeTimeToApproval) RepositoryNameAttr(val string) ChangeTimeToApprovalAttr {
 	return changeTimeToApprovalAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -438,7 +438,7 @@ func (ChangeTimeToApproval) RepositoryName(val string) ChangeTimeToApprovalAttr 
 // in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToApproval) RefBaseRevision(val string) ChangeTimeToApprovalAttr {
+func (ChangeTimeToApproval) RefBaseRevisionAttr(val string) ChangeTimeToApprovalAttr {
 	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.base.revision", val)}
 }
 
@@ -448,7 +448,7 @@ func (ChangeTimeToApproval) RefBaseRevision(val string) ChangeTimeToApprovalAttr
 // in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToApproval) RefHeadRevision(val string) ChangeTimeToApprovalAttr {
+func (ChangeTimeToApproval) RefHeadRevisionAttr(val string) ChangeTimeToApprovalAttr {
 	return changeTimeToApprovalAttr{kv: attribute.String("vcs.ref.head.revision", val)}
 }
 
@@ -552,7 +552,7 @@ func (a changeTimeToMergeAttr) changeTimeToMergeAttr() attribute.KeyValue {
 // **tag** in the repository.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-func (ChangeTimeToMerge) RefBaseName(val string) ChangeTimeToMergeAttr {
+func (ChangeTimeToMerge) RefBaseNameAttr(val string) ChangeTimeToMergeAttr {
 	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.base.name", val)}
 }
 
@@ -560,7 +560,7 @@ func (ChangeTimeToMerge) RefBaseName(val string) ChangeTimeToMergeAttr {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ChangeTimeToMerge) RepositoryName(val string) ChangeTimeToMergeAttr {
+func (ChangeTimeToMerge) RepositoryNameAttr(val string) ChangeTimeToMergeAttr {
 	return changeTimeToMergeAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -570,7 +570,7 @@ func (ChangeTimeToMerge) RepositoryName(val string) ChangeTimeToMergeAttr {
 // in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToMerge) RefBaseRevision(val string) ChangeTimeToMergeAttr {
+func (ChangeTimeToMerge) RefBaseRevisionAttr(val string) ChangeTimeToMergeAttr {
 	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.base.revision", val)}
 }
 
@@ -580,7 +580,7 @@ func (ChangeTimeToMerge) RefBaseRevision(val string) ChangeTimeToMergeAttr {
 // in SVN.
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
-func (ChangeTimeToMerge) RefHeadRevision(val string) ChangeTimeToMergeAttr {
+func (ChangeTimeToMerge) RefHeadRevisionAttr(val string) ChangeTimeToMergeAttr {
 	return changeTimeToMergeAttr{kv: attribute.String("vcs.ref.head.revision", val)}
 }
 
@@ -676,7 +676,7 @@ func (a contributorCountAttr) contributorCountAttr() attribute.KeyValue {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (ContributorCount) RepositoryName(val string) ContributorCountAttr {
+func (ContributorCount) RepositoryNameAttr(val string) ContributorCountAttr {
 	return contributorCountAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -776,7 +776,7 @@ func (a refCountAttr) refCountAttr() attribute.KeyValue {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefCount) RepositoryName(val string) RefCountAttr {
+func (RefCount) RepositoryNameAttr(val string) RefCountAttr {
 	return refCountAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -899,7 +899,7 @@ func (a refLinesDeltaAttr) refLinesDeltaAttr() attribute.KeyValue {
 // convention. It represents the ID of the change (pull request/merge
 // request/changelist) if applicable. This is usually a unique (within
 // repository) identifier generated by the VCS system.
-func (RefLinesDelta) ChangeID(val string) RefLinesDeltaAttr {
+func (RefLinesDelta) ChangeIDAttr(val string) RefLinesDeltaAttr {
 	return refLinesDeltaAttr{kv: attribute.String("vcs.change.id", val)}
 }
 
@@ -907,7 +907,7 @@ func (RefLinesDelta) ChangeID(val string) RefLinesDeltaAttr {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefLinesDelta) RepositoryName(val string) RefLinesDeltaAttr {
+func (RefLinesDelta) RepositoryNameAttr(val string) RefLinesDeltaAttr {
 	return refLinesDeltaAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -1030,7 +1030,7 @@ func (a refRevisionsDeltaAttr) refRevisionsDeltaAttr() attribute.KeyValue {
 // convention. It represents the ID of the change (pull request/merge
 // request/changelist) if applicable. This is usually a unique (within
 // repository) identifier generated by the VCS system.
-func (RefRevisionsDelta) ChangeID(val string) RefRevisionsDeltaAttr {
+func (RefRevisionsDelta) ChangeIDAttr(val string) RefRevisionsDeltaAttr {
 	return refRevisionsDeltaAttr{kv: attribute.String("vcs.change.id", val)}
 }
 
@@ -1038,7 +1038,7 @@ func (RefRevisionsDelta) ChangeID(val string) RefRevisionsDeltaAttr {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefRevisionsDelta) RepositoryName(val string) RefRevisionsDeltaAttr {
+func (RefRevisionsDelta) RepositoryNameAttr(val string) RefRevisionsDeltaAttr {
 	return refRevisionsDeltaAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 
@@ -1145,7 +1145,7 @@ func (a refTimeAttr) refTimeAttr() attribute.KeyValue {
 // semantic convention. It represents the human readable name of the repository.
 // It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
 // or organization in GitHub.
-func (RefTime) RepositoryName(val string) RefTimeAttr {
+func (RefTime) RepositoryNameAttr(val string) RefTimeAttr {
 	return refTimeAttr{kv: attribute.String("vcs.repository.name", val)}
 }
 

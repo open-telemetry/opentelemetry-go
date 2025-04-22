@@ -347,13 +347,13 @@ func (a diskIoAttr) diskIoAttr() attribute.KeyValue {
 
 // DiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskIo) DiskIoDirection(val DiskIoDirectionAttr) DiskIoAttr {
+func (DiskIo) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskIo) Device(val string) DiskIoAttr {
+func (DiskIo) DeviceAttr(val string) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -436,7 +436,7 @@ func (a diskIoTimeAttr) diskIoTimeAttr() attribute.KeyValue {
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskIoTime) Device(val string) DiskIoTimeAttr {
+func (DiskIoTime) DeviceAttr(val string) DiskIoTimeAttr {
 	return diskIoTimeAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -519,7 +519,7 @@ func (a diskLimitAttr) diskLimitAttr() attribute.KeyValue {
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskLimit) Device(val string) DiskLimitAttr {
+func (DiskLimit) DeviceAttr(val string) DiskLimitAttr {
 	return diskLimitAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -596,13 +596,13 @@ func (a diskMergedAttr) diskMergedAttr() attribute.KeyValue {
 
 // DiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskMerged) DiskIoDirection(val DiskIoDirectionAttr) DiskMergedAttr {
+func (DiskMerged) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskMergedAttr {
 	return diskMergedAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskMerged) Device(val string) DiskMergedAttr {
+func (DiskMerged) DeviceAttr(val string) DiskMergedAttr {
 	return diskMergedAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -686,13 +686,13 @@ func (a diskOperationTimeAttr) diskOperationTimeAttr() attribute.KeyValue {
 
 // DiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskOperationTime) DiskIoDirection(val DiskIoDirectionAttr) DiskOperationTimeAttr {
+func (DiskOperationTime) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskOperationTimeAttr {
 	return diskOperationTimeAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskOperationTime) Device(val string) DiskOperationTimeAttr {
+func (DiskOperationTime) DeviceAttr(val string) DiskOperationTimeAttr {
 	return diskOperationTimeAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -769,13 +769,13 @@ func (a diskOperationsAttr) diskOperationsAttr() attribute.KeyValue {
 
 // DiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskOperations) DiskIoDirection(val DiskIoDirectionAttr) DiskOperationsAttr {
+func (DiskOperations) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskOperationsAttr {
 	return diskOperationsAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskOperations) Device(val string) DiskOperationsAttr {
+func (DiskOperations) DeviceAttr(val string) DiskOperationsAttr {
 	return diskOperationsAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -860,26 +860,26 @@ func (a filesystemLimitAttr) filesystemLimitAttr() attribute.KeyValue {
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the identifier for the device where the filesystem
 // resides.
-func (FilesystemLimit) Device(val string) FilesystemLimitAttr {
+func (FilesystemLimit) DeviceAttr(val string) FilesystemLimitAttr {
 	return filesystemLimitAttr{kv: attribute.String("system.device", val)}
 }
 
 // FilesystemMode returns an optional attribute for the "system.filesystem.mode"
 // semantic convention. It represents the filesystem mode.
-func (FilesystemLimit) FilesystemMode(val string) FilesystemLimitAttr {
+func (FilesystemLimit) FilesystemModeAttr(val string) FilesystemLimitAttr {
 	return filesystemLimitAttr{kv: attribute.String("system.filesystem.mode", val)}
 }
 
 // FilesystemMountpoint returns an optional attribute for the
 // "system.filesystem.mountpoint" semantic convention. It represents the
 // filesystem mount path.
-func (FilesystemLimit) FilesystemMountpoint(val string) FilesystemLimitAttr {
+func (FilesystemLimit) FilesystemMountpointAttr(val string) FilesystemLimitAttr {
 	return filesystemLimitAttr{kv: attribute.String("system.filesystem.mountpoint", val)}
 }
 
 // FilesystemType returns an optional attribute for the "system.filesystem.type"
 // semantic convention. It represents the filesystem type.
-func (FilesystemLimit) FilesystemType(val FilesystemTypeAttr) FilesystemLimitAttr {
+func (FilesystemLimit) FilesystemTypeAttr(val FilesystemTypeAttr) FilesystemLimitAttr {
 	return filesystemLimitAttr{kv: attribute.String("system.filesystem.type", string(val))}
 }
 
@@ -964,33 +964,33 @@ func (a filesystemUsageAttr) filesystemUsageAttr() attribute.KeyValue {
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the identifier for the device where the filesystem
 // resides.
-func (FilesystemUsage) Device(val string) FilesystemUsageAttr {
+func (FilesystemUsage) DeviceAttr(val string) FilesystemUsageAttr {
 	return filesystemUsageAttr{kv: attribute.String("system.device", val)}
 }
 
 // FilesystemMode returns an optional attribute for the "system.filesystem.mode"
 // semantic convention. It represents the filesystem mode.
-func (FilesystemUsage) FilesystemMode(val string) FilesystemUsageAttr {
+func (FilesystemUsage) FilesystemModeAttr(val string) FilesystemUsageAttr {
 	return filesystemUsageAttr{kv: attribute.String("system.filesystem.mode", val)}
 }
 
 // FilesystemMountpoint returns an optional attribute for the
 // "system.filesystem.mountpoint" semantic convention. It represents the
 // filesystem mount path.
-func (FilesystemUsage) FilesystemMountpoint(val string) FilesystemUsageAttr {
+func (FilesystemUsage) FilesystemMountpointAttr(val string) FilesystemUsageAttr {
 	return filesystemUsageAttr{kv: attribute.String("system.filesystem.mountpoint", val)}
 }
 
 // FilesystemState returns an optional attribute for the
 // "system.filesystem.state" semantic convention. It represents the filesystem
 // state.
-func (FilesystemUsage) FilesystemState(val FilesystemStateAttr) FilesystemUsageAttr {
+func (FilesystemUsage) FilesystemStateAttr(val FilesystemStateAttr) FilesystemUsageAttr {
 	return filesystemUsageAttr{kv: attribute.String("system.filesystem.state", string(val))}
 }
 
 // FilesystemType returns an optional attribute for the "system.filesystem.type"
 // semantic convention. It represents the filesystem type.
-func (FilesystemUsage) FilesystemType(val FilesystemTypeAttr) FilesystemUsageAttr {
+func (FilesystemUsage) FilesystemTypeAttr(val FilesystemTypeAttr) FilesystemUsageAttr {
 	return filesystemUsageAttr{kv: attribute.String("system.filesystem.type", string(val))}
 }
 
@@ -1069,33 +1069,33 @@ func (a filesystemUtilizationAttr) filesystemUtilizationAttr() attribute.KeyValu
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the identifier for the device where the filesystem
 // resides.
-func (FilesystemUtilization) Device(val string) FilesystemUtilizationAttr {
+func (FilesystemUtilization) DeviceAttr(val string) FilesystemUtilizationAttr {
 	return filesystemUtilizationAttr{kv: attribute.String("system.device", val)}
 }
 
 // FilesystemMode returns an optional attribute for the "system.filesystem.mode"
 // semantic convention. It represents the filesystem mode.
-func (FilesystemUtilization) FilesystemMode(val string) FilesystemUtilizationAttr {
+func (FilesystemUtilization) FilesystemModeAttr(val string) FilesystemUtilizationAttr {
 	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.mode", val)}
 }
 
 // FilesystemMountpoint returns an optional attribute for the
 // "system.filesystem.mountpoint" semantic convention. It represents the
 // filesystem mount path.
-func (FilesystemUtilization) FilesystemMountpoint(val string) FilesystemUtilizationAttr {
+func (FilesystemUtilization) FilesystemMountpointAttr(val string) FilesystemUtilizationAttr {
 	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.mountpoint", val)}
 }
 
 // FilesystemState returns an optional attribute for the
 // "system.filesystem.state" semantic convention. It represents the filesystem
 // state.
-func (FilesystemUtilization) FilesystemState(val FilesystemStateAttr) FilesystemUtilizationAttr {
+func (FilesystemUtilization) FilesystemStateAttr(val FilesystemStateAttr) FilesystemUtilizationAttr {
 	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.state", string(val))}
 }
 
 // FilesystemType returns an optional attribute for the "system.filesystem.type"
 // semantic convention. It represents the filesystem type.
-func (FilesystemUtilization) FilesystemType(val FilesystemTypeAttr) FilesystemUtilizationAttr {
+func (FilesystemUtilization) FilesystemTypeAttr(val FilesystemTypeAttr) FilesystemUtilizationAttr {
 	return filesystemUtilizationAttr{kv: attribute.String("system.filesystem.type", string(val))}
 }
 
@@ -1221,7 +1221,7 @@ func (a linuxMemorySlabUsageAttr) linuxMemorySlabUsageAttr() attribute.KeyValue 
 // LinuxMemorySlabState returns an optional attribute for the
 // "linux.memory.slab.state" semantic convention. It represents the Linux Slab
 // memory state.
-func (LinuxMemorySlabUsage) LinuxMemorySlabState(val LinuxMemorySlabStateAttr) LinuxMemorySlabUsageAttr {
+func (LinuxMemorySlabUsage) LinuxMemorySlabStateAttr(val LinuxMemorySlabStateAttr) LinuxMemorySlabUsageAttr {
 	return linuxMemorySlabUsageAttr{kv: attribute.String("linux.memory.slab.state", string(val))}
 }
 
@@ -1382,7 +1382,7 @@ func (a memoryUsageAttr) memoryUsageAttr() attribute.KeyValue {
 
 // MemoryState returns an optional attribute for the "system.memory.state"
 // semantic convention. It represents the memory state.
-func (MemoryUsage) MemoryState(val MemoryStateAttr) MemoryUsageAttr {
+func (MemoryUsage) MemoryStateAttr(val MemoryStateAttr) MemoryUsageAttr {
 	return memoryUsageAttr{kv: attribute.String("system.memory.state", string(val))}
 }
 
@@ -1460,7 +1460,7 @@ func (a memoryUtilizationAttr) memoryUtilizationAttr() attribute.KeyValue {
 
 // MemoryState returns an optional attribute for the "system.memory.state"
 // semantic convention. It represents the memory state.
-func (MemoryUtilization) MemoryState(val MemoryStateAttr) MemoryUtilizationAttr {
+func (MemoryUtilization) MemoryStateAttr(val MemoryStateAttr) MemoryUtilizationAttr {
 	return memoryUtilizationAttr{kv: attribute.String("system.memory.state", string(val))}
 }
 
@@ -1539,14 +1539,14 @@ func (a networkConnectionsAttr) networkConnectionsAttr() attribute.KeyValue {
 // NetworkConnectionState returns an optional attribute for the
 // "network.connection.state" semantic convention. It represents the state of
 // network connection.
-func (NetworkConnections) NetworkConnectionState(val NetworkConnectionStateAttr) NetworkConnectionsAttr {
+func (NetworkConnections) NetworkConnectionStateAttr(val NetworkConnectionStateAttr) NetworkConnectionsAttr {
 	return networkConnectionsAttr{kv: attribute.String("network.connection.state", string(val))}
 }
 
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkConnections) NetworkInterfaceName(val string) NetworkConnectionsAttr {
+func (NetworkConnections) NetworkInterfaceNameAttr(val string) NetworkConnectionsAttr {
 	return networkConnectionsAttr{kv: attribute.String("network.interface.name", val)}
 }
 
@@ -1556,7 +1556,7 @@ func (NetworkConnections) NetworkInterfaceName(val string) NetworkConnectionsAtt
 //
 // [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
 // [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
-func (NetworkConnections) NetworkTransport(val NetworkTransportAttr) NetworkConnectionsAttr {
+func (NetworkConnections) NetworkTransportAttr(val NetworkTransportAttr) NetworkConnectionsAttr {
 	return networkConnectionsAttr{kv: attribute.String("network.transport", string(val))}
 }
 
@@ -1640,14 +1640,14 @@ func (a networkDroppedAttr) networkDroppedAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkDropped) NetworkInterfaceName(val string) NetworkDroppedAttr {
+func (NetworkDropped) NetworkInterfaceNameAttr(val string) NetworkDroppedAttr {
 	return networkDroppedAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkDropped) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkDroppedAttr {
+func (NetworkDropped) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkDroppedAttr {
 	return networkDroppedAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -1731,14 +1731,14 @@ func (a networkErrorsAttr) networkErrorsAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkErrors) NetworkInterfaceName(val string) NetworkErrorsAttr {
+func (NetworkErrors) NetworkInterfaceNameAttr(val string) NetworkErrorsAttr {
 	return networkErrorsAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkErrors) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkErrorsAttr {
+func (NetworkErrors) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkErrorsAttr {
 	return networkErrorsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -1816,14 +1816,14 @@ func (a networkIoAttr) networkIoAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkIo) NetworkInterfaceName(val string) NetworkIoAttr {
+func (NetworkIo) NetworkInterfaceNameAttr(val string) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkIoAttr {
+func (NetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -1901,13 +1901,13 @@ func (a networkPacketsAttr) networkPacketsAttr() attribute.KeyValue {
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkPackets) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkPacketsAttr {
+func (NetworkPackets) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkPacketsAttr {
 	return networkPacketsAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (NetworkPackets) Device(val string) NetworkPacketsAttr {
+func (NetworkPackets) DeviceAttr(val string) NetworkPacketsAttr {
 	return networkPacketsAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -1984,7 +1984,7 @@ func (a pagingFaultsAttr) pagingFaultsAttr() attribute.KeyValue {
 
 // PagingType returns an optional attribute for the "system.paging.type" semantic
 // convention. It represents the memory paging type.
-func (PagingFaults) PagingType(val PagingTypeAttr) PagingFaultsAttr {
+func (PagingFaults) PagingTypeAttr(val PagingTypeAttr) PagingFaultsAttr {
 	return pagingFaultsAttr{kv: attribute.String("system.paging.type", string(val))}
 }
 
@@ -2063,13 +2063,13 @@ func (a pagingOperationsAttr) pagingOperationsAttr() attribute.KeyValue {
 // PagingDirection returns an optional attribute for the
 // "system.paging.direction" semantic convention. It represents the paging access
 // direction.
-func (PagingOperations) PagingDirection(val PagingDirectionAttr) PagingOperationsAttr {
+func (PagingOperations) PagingDirectionAttr(val PagingDirectionAttr) PagingOperationsAttr {
 	return pagingOperationsAttr{kv: attribute.String("system.paging.direction", string(val))}
 }
 
 // PagingType returns an optional attribute for the "system.paging.type" semantic
 // convention. It represents the memory paging type.
-func (PagingOperations) PagingType(val PagingTypeAttr) PagingOperationsAttr {
+func (PagingOperations) PagingTypeAttr(val PagingTypeAttr) PagingOperationsAttr {
 	return pagingOperationsAttr{kv: attribute.String("system.paging.type", string(val))}
 }
 
@@ -2153,13 +2153,13 @@ func (a pagingUsageAttr) pagingUsageAttr() attribute.KeyValue {
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the unique identifier for the device responsible for
 // managing paging operations.
-func (PagingUsage) Device(val string) PagingUsageAttr {
+func (PagingUsage) DeviceAttr(val string) PagingUsageAttr {
 	return pagingUsageAttr{kv: attribute.String("system.device", val)}
 }
 
 // PagingState returns an optional attribute for the "system.paging.state"
 // semantic convention. It represents the memory paging state.
-func (PagingUsage) PagingState(val PagingStateAttr) PagingUsageAttr {
+func (PagingUsage) PagingStateAttr(val PagingStateAttr) PagingUsageAttr {
 	return pagingUsageAttr{kv: attribute.String("system.paging.state", string(val))}
 }
 
@@ -2238,13 +2238,13 @@ func (a pagingUtilizationAttr) pagingUtilizationAttr() attribute.KeyValue {
 // Device returns an optional attribute for the "system.device" semantic
 // convention. It represents the unique identifier for the device responsible for
 // managing paging operations.
-func (PagingUtilization) Device(val string) PagingUtilizationAttr {
+func (PagingUtilization) DeviceAttr(val string) PagingUtilizationAttr {
 	return pagingUtilizationAttr{kv: attribute.String("system.device", val)}
 }
 
 // PagingState returns an optional attribute for the "system.paging.state"
 // semantic convention. It represents the memory paging state.
-func (PagingUtilization) PagingState(val PagingStateAttr) PagingUtilizationAttr {
+func (PagingUtilization) PagingStateAttr(val PagingStateAttr) PagingUtilizationAttr {
 	return pagingUtilizationAttr{kv: attribute.String("system.paging.state", string(val))}
 }
 
@@ -2330,7 +2330,7 @@ func (a processCountAttr) processCountAttr() attribute.KeyValue {
 // [Linux Process State Codes].
 //
 // [Linux Process State Codes]: https://man7.org/linux/man-pages/man1/ps.1.html#PROCESS_STATE_CODES
-func (ProcessCount) ProcessStatus(val ProcessStatusAttr) ProcessCountAttr {
+func (ProcessCount) ProcessStatusAttr(val ProcessStatusAttr) ProcessCountAttr {
 	return processCountAttr{kv: attribute.String("system.process.status", string(val))}
 }
 

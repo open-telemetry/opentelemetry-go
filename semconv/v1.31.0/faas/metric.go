@@ -112,7 +112,7 @@ func (a coldstartsAttr) coldstartsAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Coldstarts) Trigger(val TriggerAttr) ColdstartsAttr {
+func (Coldstarts) TriggerAttr(val TriggerAttr) ColdstartsAttr {
 	return coldstartsAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -196,7 +196,7 @@ func (a cpuUsageAttr) cpuUsageAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (CPUUsage) Trigger(val TriggerAttr) CPUUsageAttr {
+func (CPUUsage) TriggerAttr(val TriggerAttr) CPUUsageAttr {
 	return cpuUsageAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -280,7 +280,7 @@ func (a errorsAttr) errorsAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Errors) Trigger(val TriggerAttr) ErrorsAttr {
+func (Errors) TriggerAttr(val TriggerAttr) ErrorsAttr {
 	return errorsAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -364,7 +364,7 @@ func (a initDurationAttr) initDurationAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (InitDuration) Trigger(val TriggerAttr) InitDurationAttr {
+func (InitDuration) TriggerAttr(val TriggerAttr) InitDurationAttr {
 	return initDurationAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -448,7 +448,7 @@ func (a invocationsAttr) invocationsAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Invocations) Trigger(val TriggerAttr) InvocationsAttr {
+func (Invocations) TriggerAttr(val TriggerAttr) InvocationsAttr {
 	return invocationsAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -532,7 +532,7 @@ func (a invokeDurationAttr) invokeDurationAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (InvokeDuration) Trigger(val TriggerAttr) InvokeDurationAttr {
+func (InvokeDuration) TriggerAttr(val TriggerAttr) InvokeDurationAttr {
 	return invokeDurationAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -616,7 +616,7 @@ func (a memUsageAttr) memUsageAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (MemUsage) Trigger(val TriggerAttr) MemUsageAttr {
+func (MemUsage) TriggerAttr(val TriggerAttr) MemUsageAttr {
 	return memUsageAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -700,7 +700,7 @@ func (a netIoAttr) netIoAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (NetIo) Trigger(val TriggerAttr) NetIoAttr {
+func (NetIo) TriggerAttr(val TriggerAttr) NetIoAttr {
 	return netIoAttr{kv: attribute.String("faas.trigger", string(val))}
 }
 
@@ -784,6 +784,6 @@ func (a timeoutsAttr) timeoutsAttr() attribute.KeyValue {
 // Trigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (Timeouts) Trigger(val TriggerAttr) TimeoutsAttr {
+func (Timeouts) TriggerAttr(val TriggerAttr) TimeoutsAttr {
 	return timeoutsAttr{kv: attribute.String("faas.trigger", string(val))}
 }

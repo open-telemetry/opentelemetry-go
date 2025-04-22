@@ -864,74 +864,74 @@ func (a clientOperationDurationAttr) clientOperationDurationAttr() attribute.Key
 // CollectionName returns an optional attribute for the "db.collection.name"
 // semantic convention. It represents the name of a collection (table, container)
 // within the database.
-func (ClientOperationDuration) CollectionName(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) CollectionNameAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("db.collection.name", val)}
 }
 
 // Namespace returns an optional attribute for the "db.namespace" semantic
 // convention. It represents the name of the database, fully qualified within the
 // server address and port.
-func (ClientOperationDuration) Namespace(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) NamespaceAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("db.namespace", val)}
 }
 
 // OperationName returns an optional attribute for the "db.operation.name"
 // semantic convention. It represents the name of the operation or command being
 // executed.
-func (ClientOperationDuration) OperationName(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) OperationNameAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("db.operation.name", val)}
 }
 
 // ResponseStatusCode returns an optional attribute for the
 // "db.response.status_code" semantic convention. It represents the database
 // response status code.
-func (ClientOperationDuration) ResponseStatusCode(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) ResponseStatusCodeAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("db.response.status_code", val)}
 }
 
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientOperationDuration) ErrorType(val ErrorTypeAttr) ClientOperationDurationAttr {
+func (ClientOperationDuration) ErrorTypeAttr(val ErrorTypeAttr) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientOperationDuration) ServerPort(val int) ClientOperationDurationAttr {
+func (ClientOperationDuration) ServerPortAttr(val int) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.Int("server.port", val)}
 }
 
 // QuerySummary returns an optional attribute for the "db.query.summary" semantic
 // convention. It represents the low cardinality representation of a database
 // query text.
-func (ClientOperationDuration) QuerySummary(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) QuerySummaryAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("db.query.summary", val)}
 }
 
 // NetworkPeerAddress returns an optional attribute for the
 // "network.peer.address" semantic convention. It represents the peer address of
 // the database node where the operation was performed.
-func (ClientOperationDuration) NetworkPeerAddress(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) NetworkPeerAddressAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("network.peer.address", val)}
 }
 
 // NetworkPeerPort returns an optional attribute for the "network.peer.port"
 // semantic convention. It represents the peer port number of the network
 // connection.
-func (ClientOperationDuration) NetworkPeerPort(val int) ClientOperationDurationAttr {
+func (ClientOperationDuration) NetworkPeerPortAttr(val int) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.Int("network.peer.port", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the name of the database host.
-func (ClientOperationDuration) ServerAddress(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) ServerAddressAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("server.address", val)}
 }
 
 // QueryText returns an optional attribute for the "db.query.text" semantic
 // convention. It represents the database query being executed.
-func (ClientOperationDuration) QueryText(val string) ClientOperationDurationAttr {
+func (ClientOperationDuration) QueryTextAttr(val string) ClientOperationDurationAttr {
 	return clientOperationDurationAttr{kv: attribute.String("db.query.text", val)}
 }
 
@@ -1024,73 +1024,73 @@ func (a clientResponseReturnedRowsAttr) clientResponseReturnedRowsAttr() attribu
 // CollectionName returns an optional attribute for the "db.collection.name"
 // semantic convention. It represents the name of a collection (table, container)
 // within the database.
-func (ClientResponseReturnedRows) CollectionName(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) CollectionNameAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("db.collection.name", val)}
 }
 
 // Namespace returns an optional attribute for the "db.namespace" semantic
 // convention. It represents the name of the database, fully qualified within the
 // server address and port.
-func (ClientResponseReturnedRows) Namespace(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) NamespaceAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("db.namespace", val)}
 }
 
 // OperationName returns an optional attribute for the "db.operation.name"
 // semantic convention. It represents the name of the operation or command being
 // executed.
-func (ClientResponseReturnedRows) OperationName(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) OperationNameAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("db.operation.name", val)}
 }
 
 // ResponseStatusCode returns an optional attribute for the
 // "db.response.status_code" semantic convention. It represents the database
 // response status code.
-func (ClientResponseReturnedRows) ResponseStatusCode(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) ResponseStatusCodeAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("db.response.status_code", val)}
 }
 
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (ClientResponseReturnedRows) ErrorType(val ErrorTypeAttr) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) ErrorTypeAttr(val ErrorTypeAttr) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (ClientResponseReturnedRows) ServerPort(val int) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) ServerPortAttr(val int) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.Int("server.port", val)}
 }
 
 // QuerySummary returns an optional attribute for the "db.query.summary" semantic
 // convention. It represents the low cardinality representation of a database
 // query text.
-func (ClientResponseReturnedRows) QuerySummary(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) QuerySummaryAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("db.query.summary", val)}
 }
 
 // NetworkPeerAddress returns an optional attribute for the
 // "network.peer.address" semantic convention. It represents the peer address of
 // the database node where the operation was performed.
-func (ClientResponseReturnedRows) NetworkPeerAddress(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) NetworkPeerAddressAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("network.peer.address", val)}
 }
 
 // NetworkPeerPort returns an optional attribute for the "network.peer.port"
 // semantic convention. It represents the peer port number of the network
 // connection.
-func (ClientResponseReturnedRows) NetworkPeerPort(val int) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) NetworkPeerPortAttr(val int) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.Int("network.peer.port", val)}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the name of the database host.
-func (ClientResponseReturnedRows) ServerAddress(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) ServerAddressAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("server.address", val)}
 }
 
 // QueryText returns an optional attribute for the "db.query.text" semantic
 // convention. It represents the database query being executed.
-func (ClientResponseReturnedRows) QueryText(val string) ClientResponseReturnedRowsAttr {
+func (ClientResponseReturnedRows) QueryTextAttr(val string) ClientResponseReturnedRowsAttr {
 	return clientResponseReturnedRowsAttr{kv: attribute.String("db.query.text", val)}
 }

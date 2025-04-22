@@ -142,34 +142,34 @@ func (a sdkExporterSpanExportedCountAttr) sdkExporterSpanExportedCountAttr() att
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (SDKExporterSpanExportedCount) ErrorType(val ErrorTypeAttr) SDKExporterSpanExportedCountAttr {
+func (SDKExporterSpanExportedCount) ErrorTypeAttr(val ErrorTypeAttr) SDKExporterSpanExportedCountAttr {
 	return sdkExporterSpanExportedCountAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ComponentName returns an optional attribute for the "otel.component.name"
 // semantic convention. It represents a name uniquely identifying the instance of
 // the OpenTelemetry component within its containing SDK instance.
-func (SDKExporterSpanExportedCount) ComponentName(val string) SDKExporterSpanExportedCountAttr {
+func (SDKExporterSpanExportedCount) ComponentNameAttr(val string) SDKExporterSpanExportedCountAttr {
 	return sdkExporterSpanExportedCountAttr{kv: attribute.String("otel.component.name", val)}
 }
 
 // ComponentType returns an optional attribute for the "otel.component.type"
 // semantic convention. It represents a name identifying the type of the
 // OpenTelemetry component.
-func (SDKExporterSpanExportedCount) ComponentType(val ComponentTypeAttr) SDKExporterSpanExportedCountAttr {
+func (SDKExporterSpanExportedCount) ComponentTypeAttr(val ComponentTypeAttr) SDKExporterSpanExportedCountAttr {
 	return sdkExporterSpanExportedCountAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the server domain name if available without reverse
 // DNS lookup; otherwise, IP address or Unix domain socket name.
-func (SDKExporterSpanExportedCount) ServerAddress(val string) SDKExporterSpanExportedCountAttr {
+func (SDKExporterSpanExportedCount) ServerAddressAttr(val string) SDKExporterSpanExportedCountAttr {
 	return sdkExporterSpanExportedCountAttr{kv: attribute.String("server.address", val)}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (SDKExporterSpanExportedCount) ServerPort(val int) SDKExporterSpanExportedCountAttr {
+func (SDKExporterSpanExportedCount) ServerPortAttr(val int) SDKExporterSpanExportedCountAttr {
 	return sdkExporterSpanExportedCountAttr{kv: attribute.Int("server.port", val)}
 }
 
@@ -257,27 +257,27 @@ func (a sdkExporterSpanInflightCountAttr) sdkExporterSpanInflightCountAttr() att
 // ComponentName returns an optional attribute for the "otel.component.name"
 // semantic convention. It represents a name uniquely identifying the instance of
 // the OpenTelemetry component within its containing SDK instance.
-func (SDKExporterSpanInflightCount) ComponentName(val string) SDKExporterSpanInflightCountAttr {
+func (SDKExporterSpanInflightCount) ComponentNameAttr(val string) SDKExporterSpanInflightCountAttr {
 	return sdkExporterSpanInflightCountAttr{kv: attribute.String("otel.component.name", val)}
 }
 
 // ComponentType returns an optional attribute for the "otel.component.type"
 // semantic convention. It represents a name identifying the type of the
 // OpenTelemetry component.
-func (SDKExporterSpanInflightCount) ComponentType(val ComponentTypeAttr) SDKExporterSpanInflightCountAttr {
+func (SDKExporterSpanInflightCount) ComponentTypeAttr(val ComponentTypeAttr) SDKExporterSpanInflightCountAttr {
 	return sdkExporterSpanInflightCountAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
 // ServerAddress returns an optional attribute for the "server.address" semantic
 // convention. It represents the server domain name if available without reverse
 // DNS lookup; otherwise, IP address or Unix domain socket name.
-func (SDKExporterSpanInflightCount) ServerAddress(val string) SDKExporterSpanInflightCountAttr {
+func (SDKExporterSpanInflightCount) ServerAddressAttr(val string) SDKExporterSpanInflightCountAttr {
 	return sdkExporterSpanInflightCountAttr{kv: attribute.String("server.address", val)}
 }
 
 // ServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
-func (SDKExporterSpanInflightCount) ServerPort(val int) SDKExporterSpanInflightCountAttr {
+func (SDKExporterSpanInflightCount) ServerPortAttr(val int) SDKExporterSpanInflightCountAttr {
 	return sdkExporterSpanInflightCountAttr{kv: attribute.Int("server.port", val)}
 }
 
@@ -365,21 +365,21 @@ func (a sdkProcessorSpanProcessedCountAttr) sdkProcessorSpanProcessedCountAttr()
 // convention. It represents a low-cardinality description of the failure reason.
 // SDK Batching Span Processors MUST use `queue_full` for spans dropped due to a
 // full queue.
-func (SDKProcessorSpanProcessedCount) ErrorType(val ErrorTypeAttr) SDKProcessorSpanProcessedCountAttr {
+func (SDKProcessorSpanProcessedCount) ErrorTypeAttr(val ErrorTypeAttr) SDKProcessorSpanProcessedCountAttr {
 	return sdkProcessorSpanProcessedCountAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // ComponentName returns an optional attribute for the "otel.component.name"
 // semantic convention. It represents a name uniquely identifying the instance of
 // the OpenTelemetry component within its containing SDK instance.
-func (SDKProcessorSpanProcessedCount) ComponentName(val string) SDKProcessorSpanProcessedCountAttr {
+func (SDKProcessorSpanProcessedCount) ComponentNameAttr(val string) SDKProcessorSpanProcessedCountAttr {
 	return sdkProcessorSpanProcessedCountAttr{kv: attribute.String("otel.component.name", val)}
 }
 
 // ComponentType returns an optional attribute for the "otel.component.type"
 // semantic convention. It represents a name identifying the type of the
 // OpenTelemetry component.
-func (SDKProcessorSpanProcessedCount) ComponentType(val ComponentTypeAttr) SDKProcessorSpanProcessedCountAttr {
+func (SDKProcessorSpanProcessedCount) ComponentTypeAttr(val ComponentTypeAttr) SDKProcessorSpanProcessedCountAttr {
 	return sdkProcessorSpanProcessedCountAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
@@ -466,14 +466,14 @@ func (a sdkProcessorSpanQueueCapacityAttr) sdkProcessorSpanQueueCapacityAttr() a
 // ComponentName returns an optional attribute for the "otel.component.name"
 // semantic convention. It represents a name uniquely identifying the instance of
 // the OpenTelemetry component within its containing SDK instance.
-func (SDKProcessorSpanQueueCapacity) ComponentName(val string) SDKProcessorSpanQueueCapacityAttr {
+func (SDKProcessorSpanQueueCapacity) ComponentNameAttr(val string) SDKProcessorSpanQueueCapacityAttr {
 	return sdkProcessorSpanQueueCapacityAttr{kv: attribute.String("otel.component.name", val)}
 }
 
 // ComponentType returns an optional attribute for the "otel.component.type"
 // semantic convention. It represents a name identifying the type of the
 // OpenTelemetry component.
-func (SDKProcessorSpanQueueCapacity) ComponentType(val ComponentTypeAttr) SDKProcessorSpanQueueCapacityAttr {
+func (SDKProcessorSpanQueueCapacity) ComponentTypeAttr(val ComponentTypeAttr) SDKProcessorSpanQueueCapacityAttr {
 	return sdkProcessorSpanQueueCapacityAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
@@ -560,14 +560,14 @@ func (a sdkProcessorSpanQueueSizeAttr) sdkProcessorSpanQueueSizeAttr() attribute
 // ComponentName returns an optional attribute for the "otel.component.name"
 // semantic convention. It represents a name uniquely identifying the instance of
 // the OpenTelemetry component within its containing SDK instance.
-func (SDKProcessorSpanQueueSize) ComponentName(val string) SDKProcessorSpanQueueSizeAttr {
+func (SDKProcessorSpanQueueSize) ComponentNameAttr(val string) SDKProcessorSpanQueueSizeAttr {
 	return sdkProcessorSpanQueueSizeAttr{kv: attribute.String("otel.component.name", val)}
 }
 
 // ComponentType returns an optional attribute for the "otel.component.type"
 // semantic convention. It represents a name identifying the type of the
 // OpenTelemetry component.
-func (SDKProcessorSpanQueueSize) ComponentType(val ComponentTypeAttr) SDKProcessorSpanQueueSizeAttr {
+func (SDKProcessorSpanQueueSize) ComponentTypeAttr(val ComponentTypeAttr) SDKProcessorSpanQueueSizeAttr {
 	return sdkProcessorSpanQueueSizeAttr{kv: attribute.String("otel.component.type", string(val))}
 }
 
@@ -652,7 +652,7 @@ func (a sdkSpanEndedCountAttr) sdkSpanEndedCountAttr() attribute.KeyValue {
 // SpanSamplingResult returns an optional attribute for the
 // "otel.span.sampling_result" semantic convention. It represents the result
 // value of the sampler for this span.
-func (SDKSpanEndedCount) SpanSamplingResult(val SpanSamplingResultAttr) SDKSpanEndedCountAttr {
+func (SDKSpanEndedCount) SpanSamplingResultAttr(val SpanSamplingResultAttr) SDKSpanEndedCountAttr {
 	return sdkSpanEndedCountAttr{kv: attribute.String("otel.span.sampling_result", string(val))}
 }
 
@@ -737,6 +737,6 @@ func (a sdkSpanLiveCountAttr) sdkSpanLiveCountAttr() attribute.KeyValue {
 // SpanSamplingResult returns an optional attribute for the
 // "otel.span.sampling_result" semantic convention. It represents the result
 // value of the sampler for this span.
-func (SDKSpanLiveCount) SpanSamplingResult(val SpanSamplingResultAttr) SDKSpanLiveCountAttr {
+func (SDKSpanLiveCount) SpanSamplingResultAttr(val SpanSamplingResultAttr) SDKSpanLiveCountAttr {
 	return sdkSpanLiveCountAttr{kv: attribute.String("otel.span.sampling_result", string(val))}
 }

@@ -338,7 +338,7 @@ func (a memoryUsedAttr) memoryUsedAttr() attribute.KeyValue {
 
 // MemoryType returns an optional attribute for the "go.memory.type" semantic
 // convention. It represents the type of memory.
-func (MemoryUsed) MemoryType(val MemoryTypeAttr) MemoryUsedAttr {
+func (MemoryUsed) MemoryTypeAttr(val MemoryTypeAttr) MemoryUsedAttr {
 	return memoryUsedAttr{kv: attribute.String("go.memory.type", string(val))}
 }
 

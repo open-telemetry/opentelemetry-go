@@ -123,7 +123,7 @@ func (a serverActiveConnectionsAttr) serverActiveConnectionsAttr() attribute.Key
 // ConnectionStatus returns an optional attribute for the
 // "signalr.connection.status" semantic convention. It represents the signalR
 // HTTP connection closure status.
-func (ServerActiveConnections) ConnectionStatus(val ConnectionStatusAttr) ServerActiveConnectionsAttr {
+func (ServerActiveConnections) ConnectionStatusAttr(val ConnectionStatusAttr) ServerActiveConnectionsAttr {
 	return serverActiveConnectionsAttr{kv: attribute.String("signalr.connection.status", string(val))}
 }
 
@@ -131,7 +131,7 @@ func (ServerActiveConnections) ConnectionStatus(val ConnectionStatusAttr) Server
 // convention. It represents the [SignalR transport type].
 //
 // [SignalR transport type]: https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/TransportProtocols.md
-func (ServerActiveConnections) Transport(val TransportAttr) ServerActiveConnectionsAttr {
+func (ServerActiveConnections) TransportAttr(val TransportAttr) ServerActiveConnectionsAttr {
 	return serverActiveConnectionsAttr{kv: attribute.String("signalr.transport", string(val))}
 }
 
@@ -216,7 +216,7 @@ func (a serverConnectionDurationAttr) serverConnectionDurationAttr() attribute.K
 // ConnectionStatus returns an optional attribute for the
 // "signalr.connection.status" semantic convention. It represents the signalR
 // HTTP connection closure status.
-func (ServerConnectionDuration) ConnectionStatus(val ConnectionStatusAttr) ServerConnectionDurationAttr {
+func (ServerConnectionDuration) ConnectionStatusAttr(val ConnectionStatusAttr) ServerConnectionDurationAttr {
 	return serverConnectionDurationAttr{kv: attribute.String("signalr.connection.status", string(val))}
 }
 
@@ -224,6 +224,6 @@ func (ServerConnectionDuration) ConnectionStatus(val ConnectionStatusAttr) Serve
 // convention. It represents the [SignalR transport type].
 //
 // [SignalR transport type]: https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/TransportProtocols.md
-func (ServerConnectionDuration) Transport(val TransportAttr) ServerConnectionDurationAttr {
+func (ServerConnectionDuration) TransportAttr(val TransportAttr) ServerConnectionDurationAttr {
 	return serverConnectionDurationAttr{kv: attribute.String("signalr.transport", string(val))}
 }

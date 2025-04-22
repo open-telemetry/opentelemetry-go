@@ -166,7 +166,7 @@ func (a contextSwitchesAttr) contextSwitchesAttr() attribute.KeyValue {
 // "process.context_switch_type" semantic convention. It represents the specifies
 // whether the context switches for this data point were voluntary or
 // involuntary.
-func (ContextSwitches) ContextSwitchType(val ContextSwitchTypeAttr) ContextSwitchesAttr {
+func (ContextSwitches) ContextSwitchTypeAttr(val ContextSwitchTypeAttr) ContextSwitchesAttr {
 	return contextSwitchesAttr{kv: attribute.String("process.context_switch_type", string(val))}
 }
 
@@ -250,7 +250,7 @@ func (a cpuTimeAttr) cpuTimeAttr() attribute.KeyValue {
 // CPUMode returns an optional attribute for the "cpu.mode" semantic convention.
 // It represents a process SHOULD be characterized *either* by data points with
 // no `mode` labels, *or only* data points with `mode` labels.
-func (CPUTime) CPUMode(val CPUModeAttr) CPUTimeAttr {
+func (CPUTime) CPUModeAttr(val CPUModeAttr) CPUTimeAttr {
 	return cpuTimeAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
@@ -335,7 +335,7 @@ func (a cpuUtilizationAttr) cpuUtilizationAttr() attribute.KeyValue {
 // CPUMode returns an optional attribute for the "cpu.mode" semantic convention.
 // It represents a process SHOULD be characterized *either* by data points with
 // no `mode` labels, *or only* data points with `mode` labels.
-func (CPUUtilization) CPUMode(val CPUModeAttr) CPUUtilizationAttr {
+func (CPUUtilization) CPUModeAttr(val CPUModeAttr) CPUUtilizationAttr {
 	return cpuUtilizationAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
@@ -418,7 +418,7 @@ func (a diskIoAttr) diskIoAttr() attribute.KeyValue {
 
 // DiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskIo) DiskIoDirection(val DiskIoDirectionAttr) DiskIoAttr {
+func (DiskIo) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
@@ -580,7 +580,7 @@ func (a networkIoAttr) networkIoAttr() attribute.KeyValue {
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkIoAttr {
+func (NetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 
@@ -704,7 +704,7 @@ func (a pagingFaultsAttr) pagingFaultsAttr() attribute.KeyValue {
 // "process.paging.fault_type" semantic convention. It represents the type of
 // page fault for this data point. Type `major` is for major/hard page faults,
 // and `minor` is for minor/soft page faults.
-func (PagingFaults) PagingFaultType(val PagingFaultTypeAttr) PagingFaultsAttr {
+func (PagingFaults) PagingFaultTypeAttr(val PagingFaultTypeAttr) PagingFaultsAttr {
 	return pagingFaultsAttr{kv: attribute.String("process.paging.fault_type", string(val))}
 }
 

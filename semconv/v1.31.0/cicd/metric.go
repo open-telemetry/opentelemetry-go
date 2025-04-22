@@ -232,14 +232,14 @@ func (a pipelineRunDurationAttr) pipelineRunDurationAttr() attribute.KeyValue {
 
 // PipelineResult returns an optional attribute for the "cicd.pipeline.result"
 // semantic convention. It represents the result of a pipeline run.
-func (PipelineRunDuration) PipelineResult(val PipelineResultAttr) PipelineRunDurationAttr {
+func (PipelineRunDuration) PipelineResultAttr(val PipelineResultAttr) PipelineRunDurationAttr {
 	return pipelineRunDurationAttr{kv: attribute.String("cicd.pipeline.result", string(val))}
 }
 
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
-func (PipelineRunDuration) ErrorType(val ErrorTypeAttr) PipelineRunDurationAttr {
+func (PipelineRunDuration) ErrorTypeAttr(val ErrorTypeAttr) PipelineRunDurationAttr {
 	return pipelineRunDurationAttr{kv: attribute.String("error.type", string(val))}
 }
 

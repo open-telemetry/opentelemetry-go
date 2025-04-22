@@ -160,14 +160,14 @@ func (a energyAttr) energyAttr() attribute.KeyValue {
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (Energy) Name(val string) EnergyAttr {
+func (Energy) NameAttr(val string) EnergyAttr {
 	return energyAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (Energy) Parent(val string) EnergyAttr {
+func (Energy) ParentAttr(val string) EnergyAttr {
 	return energyAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -261,20 +261,20 @@ func (a errorsAttr) errorsAttr() attribute.KeyValue {
 
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the type of error encountered by the component.
-func (Errors) ErrorType(val ErrorTypeAttr) ErrorsAttr {
+func (Errors) ErrorTypeAttr(val ErrorTypeAttr) ErrorsAttr {
 	return errorsAttr{kv: attribute.String("error.type", string(val))}
 }
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (Errors) Name(val string) ErrorsAttr {
+func (Errors) NameAttr(val string) ErrorsAttr {
 	return errorsAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (Errors) Parent(val string) ErrorsAttr {
+func (Errors) ParentAttr(val string) ErrorsAttr {
 	return errorsAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -365,14 +365,14 @@ func (a hostAmbientTemperatureAttr) hostAmbientTemperatureAttr() attribute.KeyVa
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (HostAmbientTemperature) Name(val string) HostAmbientTemperatureAttr {
+func (HostAmbientTemperature) NameAttr(val string) HostAmbientTemperatureAttr {
 	return hostAmbientTemperatureAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (HostAmbientTemperature) Parent(val string) HostAmbientTemperatureAttr {
+func (HostAmbientTemperature) ParentAttr(val string) HostAmbientTemperatureAttr {
 	return hostAmbientTemperatureAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -462,14 +462,14 @@ func (a hostEnergyAttr) hostEnergyAttr() attribute.KeyValue {
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (HostEnergy) Name(val string) HostEnergyAttr {
+func (HostEnergy) NameAttr(val string) HostEnergyAttr {
 	return hostEnergyAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (HostEnergy) Parent(val string) HostEnergyAttr {
+func (HostEnergy) ParentAttr(val string) HostEnergyAttr {
 	return hostEnergyAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -561,14 +561,14 @@ func (a hostHeatingMarginAttr) hostHeatingMarginAttr() attribute.KeyValue {
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (HostHeatingMargin) Name(val string) HostHeatingMarginAttr {
+func (HostHeatingMargin) NameAttr(val string) HostHeatingMarginAttr {
 	return hostHeatingMarginAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (HostHeatingMargin) Parent(val string) HostHeatingMarginAttr {
+func (HostHeatingMargin) ParentAttr(val string) HostHeatingMarginAttr {
 	return hostHeatingMarginAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -658,14 +658,14 @@ func (a hostPowerAttr) hostPowerAttr() attribute.KeyValue {
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (HostPower) Name(val string) HostPowerAttr {
+func (HostPower) NameAttr(val string) HostPowerAttr {
 	return hostPowerAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (HostPower) Parent(val string) HostPowerAttr {
+func (HostPower) ParentAttr(val string) HostPowerAttr {
 	return hostPowerAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -759,14 +759,14 @@ func (a powerAttr) powerAttr() attribute.KeyValue {
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (Power) Name(val string) PowerAttr {
+func (Power) NameAttr(val string) PowerAttr {
 	return powerAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (Power) Parent(val string) PowerAttr {
+func (Power) ParentAttr(val string) PowerAttr {
 	return powerAttr{kv: attribute.String("hw.parent", val)}
 }
 
@@ -864,13 +864,13 @@ func (a statusAttr) statusAttr() attribute.KeyValue {
 
 // Name returns an optional attribute for the "hw.name" semantic convention. It
 // represents an easily-recognizable name for the hardware component.
-func (Status) Name(val string) StatusAttr {
+func (Status) NameAttr(val string) StatusAttr {
 	return statusAttr{kv: attribute.String("hw.name", val)}
 }
 
 // Parent returns an optional attribute for the "hw.parent" semantic convention.
 // It represents the unique identifier of the parent component (typically the
 // `hw.id` attribute of the enclosure, or disk controller).
-func (Status) Parent(val string) StatusAttr {
+func (Status) ParentAttr(val string) StatusAttr {
 	return statusAttr{kv: attribute.String("hw.parent", val)}
 }

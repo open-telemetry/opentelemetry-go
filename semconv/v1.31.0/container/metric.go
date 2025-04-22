@@ -140,7 +140,7 @@ func (a cpuTimeAttr) cpuTimeAttr() attribute.KeyValue {
 // It represents the CPU mode for this data point. A container's CPU metric
 // SHOULD be characterized *either* by data points with no `mode` labels,
 // *or only* data points with `mode` labels.
-func (CPUTime) CPUMode(val CPUModeAttr) CPUTimeAttr {
+func (CPUTime) CPUModeAttr(val CPUModeAttr) CPUTimeAttr {
 	return cpuTimeAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
@@ -225,7 +225,7 @@ func (a cpuUsageAttr) cpuUsageAttr() attribute.KeyValue {
 // It represents the CPU mode for this data point. A container's CPU metric
 // SHOULD be characterized *either* by data points with no `mode` labels,
 // *or only* data points with `mode` labels.
-func (CPUUsage) CPUMode(val CPUModeAttr) CPUUsageAttr {
+func (CPUUsage) CPUModeAttr(val CPUModeAttr) CPUUsageAttr {
 	return cpuUsageAttr{kv: attribute.String("cpu.mode", string(val))}
 }
 
@@ -308,13 +308,13 @@ func (a diskIoAttr) diskIoAttr() attribute.KeyValue {
 
 // DiskIoDirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskIo) DiskIoDirection(val DiskIoDirectionAttr) DiskIoAttr {
+func (DiskIo) DiskIoDirectionAttr(val DiskIoDirectionAttr) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("disk.io.direction", string(val))}
 }
 
 // SystemDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
-func (DiskIo) SystemDevice(val string) DiskIoAttr {
+func (DiskIo) SystemDeviceAttr(val string) DiskIoAttr {
 	return diskIoAttr{kv: attribute.String("system.device", val)}
 }
 
@@ -437,14 +437,14 @@ func (a networkIoAttr) networkIoAttr() attribute.KeyValue {
 // NetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkIo) NetworkInterfaceName(val string) NetworkIoAttr {
+func (NetworkIo) NetworkInterfaceNameAttr(val string) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.interface.name", val)}
 }
 
 // NetworkIoDirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkIo) NetworkIoDirection(val NetworkIoDirectionAttr) NetworkIoAttr {
+func (NetworkIo) NetworkIoDirectionAttr(val NetworkIoDirectionAttr) NetworkIoAttr {
 	return networkIoAttr{kv: attribute.String("network.io.direction", string(val))}
 }
 

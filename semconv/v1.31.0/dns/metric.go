@@ -107,6 +107,6 @@ func (a lookupDurationAttr) lookupDurationAttr() attribute.KeyValue {
 
 // ErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes the error the DNS lookup failed with.
-func (LookupDuration) ErrorType(val ErrorTypeAttr) LookupDurationAttr {
+func (LookupDuration) ErrorTypeAttr(val ErrorTypeAttr) LookupDurationAttr {
 	return lookupDurationAttr{kv: attribute.String("error.type", string(val))}
 }
