@@ -74,8 +74,8 @@ func (Frequency) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Frequency) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -132,8 +132,8 @@ func (Time) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Time) Add(
-    ctx context.Context,
-    incr float64,
+	ctx context.Context,
+	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -197,8 +197,8 @@ func (Utilization) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Utilization) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(

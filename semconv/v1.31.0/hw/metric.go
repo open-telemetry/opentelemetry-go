@@ -114,8 +114,8 @@ func (Energy) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Energy) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	id string,
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
@@ -190,8 +190,8 @@ func (Errors) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Errors) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	id string,
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
@@ -270,8 +270,8 @@ func (HostAmbientTemperature) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m HostAmbientTemperature) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -342,8 +342,8 @@ func (HostEnergy) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m HostEnergy) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -415,8 +415,8 @@ func (HostHeatingMargin) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m HostHeatingMargin) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -487,8 +487,8 @@ func (HostPower) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m HostPower) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -561,8 +561,8 @@ func (Power) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Power) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	id string,
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
@@ -639,8 +639,8 @@ func (Status) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Status) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	id string,
 	state StateAttr,
 	hwType TypeAttr,

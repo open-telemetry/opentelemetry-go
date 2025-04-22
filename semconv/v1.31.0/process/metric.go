@@ -123,8 +123,8 @@ func (ContextSwitches) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ContextSwitches) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -183,8 +183,8 @@ func (CPUTime) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUTime) Add(
-    ctx context.Context,
-    incr float64,
+	ctx context.Context,
+	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -243,8 +243,8 @@ func (CPUUtilization) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUUtilization) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -302,8 +302,8 @@ func (DiskIo) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskIo) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -446,8 +446,8 @@ func (NetworkIo) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkIo) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -548,8 +548,8 @@ func (PagingFaults) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingFaults) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(

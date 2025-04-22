@@ -71,8 +71,8 @@ func (Coldstarts) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Coldstarts) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -130,8 +130,8 @@ func (CPUUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUUsage) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -189,8 +189,8 @@ func (Errors) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Errors) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -248,8 +248,8 @@ func (InitDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m InitDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -307,8 +307,8 @@ func (Invocations) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Invocations) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -366,8 +366,8 @@ func (InvokeDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m InvokeDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -425,8 +425,8 @@ func (MemUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m MemUsage) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -484,8 +484,8 @@ func (NetIo) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetIo) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -543,8 +543,8 @@ func (Timeouts) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m Timeouts) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(

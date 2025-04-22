@@ -81,8 +81,8 @@ func (ServerActiveConnections) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerActiveConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -148,8 +148,8 @@ func (ServerConnectionDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerConnectionDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(

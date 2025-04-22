@@ -315,8 +315,8 @@ func (DiskIo) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskIo) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -379,8 +379,8 @@ func (DiskIoTime) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskIoTime) Add(
-    ctx context.Context,
-    incr float64,
+	ctx context.Context,
+	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -437,8 +437,8 @@ func (DiskLimit) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskLimit) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -489,8 +489,8 @@ func (DiskMerged) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskMerged) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -553,8 +553,8 @@ func (DiskOperationTime) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskOperationTime) Add(
-    ctx context.Context,
-    incr float64,
+	ctx context.Context,
+	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -611,8 +611,8 @@ func (DiskOperations) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskOperations) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -675,8 +675,8 @@ func (FilesystemLimit) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m FilesystemLimit) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -755,8 +755,8 @@ func (FilesystemUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m FilesystemUsage) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -836,8 +836,8 @@ func (FilesystemUtilization) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m FilesystemUtilization) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -968,8 +968,8 @@ func (LinuxMemorySlabUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m LinuxMemorySlabUsage) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1113,8 +1113,8 @@ func (MemoryUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m MemoryUsage) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1165,8 +1165,8 @@ func (MemoryUtilization) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m MemoryUtilization) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -1217,8 +1217,8 @@ func (NetworkConnections) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1293,8 +1293,8 @@ func (NetworkDropped) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkDropped) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1359,8 +1359,8 @@ func (NetworkErrors) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkErrors) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1419,8 +1419,8 @@ func (NetworkIo) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkIo) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1479,8 +1479,8 @@ func (NetworkPackets) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkPackets) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1538,8 +1538,8 @@ func (PagingFaults) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingFaults) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1590,8 +1590,8 @@ func (PagingOperations) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingOperations) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1655,8 +1655,8 @@ func (PagingUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingUsage) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1714,8 +1714,8 @@ func (PagingUtilization) Unit() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingUtilization) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -1779,8 +1779,8 @@ func (ProcessCount) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ProcessCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(

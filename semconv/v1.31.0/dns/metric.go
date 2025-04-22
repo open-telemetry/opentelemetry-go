@@ -63,8 +63,8 @@ func (LookupDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m LookupDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	questionName string,
 	attrs ...attribute.KeyValue,
 ) {

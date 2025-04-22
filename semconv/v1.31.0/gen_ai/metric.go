@@ -140,8 +140,8 @@ func (ClientOperationDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientOperationDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
@@ -238,8 +238,8 @@ func (ClientTokenUsage) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientTokenUsage) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	operationName OperationNameAttr,
 	system SystemAttr,
 	tokenType TokenTypeAttr,
@@ -330,8 +330,8 @@ func (ServerRequestDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerRequestDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
@@ -427,8 +427,8 @@ func (ServerTimePerOutputToken) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerTimePerOutputToken) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
@@ -516,8 +516,8 @@ func (ServerTimeToFirstToken) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerTimeToFirstToken) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	operationName OperationNameAttr,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,

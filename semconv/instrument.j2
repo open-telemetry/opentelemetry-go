@@ -116,8 +116,8 @@ Int64
 // Add adds incr to the existing count.
 {{ params_docs(metric.attributes, pkg=pkg) }}
 func (m {{ name }}) Add(
-    ctx context.Context,
-    incr {{ value_type(metric) | lower }},
+	ctx context.Context,
+	incr {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
 	m.inst.Add(
@@ -150,8 +150,8 @@ func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower 
 // Record records val to the current distribution.
 {{ params_docs(metric.attributes, pkg=pkg) }}
 func (m {{ name }}) Record(
-    ctx context.Context,
-    val {{ value_type(metric) | lower }},
+	ctx context.Context,
+	val {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
 	m.inst.Record(

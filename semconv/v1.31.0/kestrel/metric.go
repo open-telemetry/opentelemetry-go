@@ -95,8 +95,8 @@ func (ActiveConnections) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ActiveConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -178,8 +178,8 @@ func (ActiveTLSHandshakes) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ActiveTLSHandshakes) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -261,8 +261,8 @@ func (ConnectionDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ConnectionDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -376,8 +376,8 @@ func (QueuedConnections) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m QueuedConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -460,8 +460,8 @@ func (QueuedRequests) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m QueuedRequests) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -559,8 +559,8 @@ func (RejectedConnections) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m RejectedConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -642,8 +642,8 @@ func (TLSHandshakeDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m TLSHandshakeDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Record(
@@ -741,8 +741,8 @@ func (UpgradedConnections) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m UpgradedConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(

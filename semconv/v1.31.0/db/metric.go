@@ -283,8 +283,8 @@ func (ClientConnectionCount) Description() string {
 //
 // The clientConnectionState is the the state of a connection in the pool
 func (m ClientConnectionCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	clientConnectionPoolName string,
 	clientConnectionState ClientConnectionStateAttr,
 	attrs ...attribute.KeyValue,
@@ -345,8 +345,8 @@ func (ClientConnectionCreateTime) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionCreateTime) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -404,8 +404,8 @@ func (ClientConnectionIdleMax) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionIdleMax) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -463,8 +463,8 @@ func (ClientConnectionIdleMin) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionIdleMin) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -522,8 +522,8 @@ func (ClientConnectionMax) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionMax) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -583,8 +583,8 @@ func (ClientConnectionPendingRequests) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionPendingRequests) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -643,8 +643,8 @@ func (ClientConnectionTimeouts) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionTimeouts) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -703,8 +703,8 @@ func (ClientConnectionUseTime) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionUseTime) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -762,8 +762,8 @@ func (ClientConnectionWaitTime) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 func (m ClientConnectionWaitTime) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -818,8 +818,8 @@ func (ClientOperationDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientOperationDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
@@ -952,8 +952,8 @@ func (ClientResponseReturnedRows) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientResponseReturnedRows) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {

@@ -100,8 +100,8 @@ func (SDKExporterSpanExportedCount) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKExporterSpanExportedCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -189,8 +189,8 @@ func (SDKExporterSpanInflightCount) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKExporterSpanInflightCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -270,8 +270,8 @@ func (SDKProcessorSpanProcessedCount) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKProcessorSpanProcessedCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -346,8 +346,8 @@ func (SDKProcessorSpanQueueCapacity) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKProcessorSpanQueueCapacity) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -414,8 +414,8 @@ func (SDKProcessorSpanQueueSize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKProcessorSpanQueueSize) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -480,8 +480,8 @@ func (SDKSpanEndedCount) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKSpanEndedCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -539,8 +539,8 @@ func (SDKSpanLiveCount) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKSpanLiveCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(

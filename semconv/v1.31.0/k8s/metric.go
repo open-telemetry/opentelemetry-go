@@ -778,8 +778,8 @@ func (NamespacePhase) Description() string {
 //
 // The namespacePhase is the the phase of the K8s namespace.
 func (m NamespacePhase) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	namespacePhase NamespacePhaseAttr,
 	attrs ...attribute.KeyValue,
 ) {
@@ -960,8 +960,8 @@ func (NodeNetworkErrors) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NodeNetworkErrors) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1026,8 +1026,8 @@ func (NodeNetworkIo) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m NodeNetworkIo) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1264,8 +1264,8 @@ func (PodNetworkErrors) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PodNetworkErrors) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(
@@ -1330,8 +1330,8 @@ func (PodNetworkIo) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m PodNetworkIo) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
 	m.inst.Add(

@@ -122,8 +122,8 @@ func (ClientActiveRequests) Description() string {
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientActiveRequests) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	serverAddress string,
 	serverPort int,
 	attrs ...attribute.KeyValue,
@@ -213,8 +213,8 @@ func (ClientConnectionDuration) Description() string {
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientConnectionDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	serverAddress string,
 	serverPort int,
 	attrs ...attribute.KeyValue,
@@ -306,8 +306,8 @@ func (ClientOpenConnections) Description() string {
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientOpenConnections) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	connectionState ConnectionStateAttr,
 	serverAddress string,
 	serverPort int,
@@ -400,8 +400,8 @@ func (ClientRequestBodySize) Description() string {
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientRequestBodySize) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
@@ -521,8 +521,8 @@ func (ClientRequestDuration) Description() string {
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientRequestDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
@@ -642,8 +642,8 @@ func (ClientResponseBodySize) Description() string {
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientResponseBodySize) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	requestMethod RequestMethodAttr,
 	serverAddress string,
 	serverPort int,
@@ -758,8 +758,8 @@ func (ServerActiveRequests) Description() string {
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 func (m ServerActiveRequests) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
 	attrs ...attribute.KeyValue,
@@ -836,8 +836,8 @@ func (ServerRequestBodySize) Description() string {
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 func (m ServerRequestBodySize) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
 	attrs ...attribute.KeyValue,
@@ -960,8 +960,8 @@ func (ServerRequestDuration) Description() string {
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 func (m ServerRequestDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
 	attrs ...attribute.KeyValue,
@@ -1084,8 +1084,8 @@ func (ServerResponseBodySize) Description() string {
 //
 // [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 func (m ServerResponseBodySize) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	requestMethod RequestMethodAttr,
 	urlScheme string,
 	attrs ...attribute.KeyValue,

@@ -162,8 +162,8 @@ func (ChangeCount) Description() string {
 //
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m ChangeCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	changeState ChangeStateAttr,
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
@@ -241,8 +241,8 @@ func (ChangeDuration) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m ChangeDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	changeState ChangeStateAttr,
 	refHeadName string,
 	repositoryUrlFull string,
@@ -320,8 +320,8 @@ func (ChangeTimeToApproval) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m ChangeTimeToApproval) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	refHeadName string,
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
@@ -426,8 +426,8 @@ func (ChangeTimeToMerge) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m ChangeTimeToMerge) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	refHeadName string,
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
@@ -527,8 +527,8 @@ func (ContributorCount) Description() string {
 //
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m ContributorCount) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
@@ -600,8 +600,8 @@ func (RefCount) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m RefCount) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	refType RefTypeAttr,
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
@@ -690,8 +690,8 @@ func (RefLinesDelta) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m RefLinesDelta) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	lineChangeType LineChangeTypeAttr,
 	refBaseName string,
 	refBaseType RefBaseTypeAttr,
@@ -795,8 +795,8 @@ func (RefRevisionsDelta) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m RefRevisionsDelta) Record(
-    ctx context.Context,
-    val int64,
+	ctx context.Context,
+	val int64,
 	refBaseName string,
 	refBaseType RefBaseTypeAttr,
 	refHeadName string,
@@ -891,8 +891,8 @@ func (RefTime) Description() string {
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
 func (m RefTime) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	refHeadName string,
 	refHeadType RefHeadTypeAttr,
 	repositoryUrlFull string,

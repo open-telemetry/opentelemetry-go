@@ -121,8 +121,8 @@ func (ClientConsumedMessages) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientConsumedMessages) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	operationName string,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
@@ -241,8 +241,8 @@ func (ClientOperationDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientOperationDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	operationName string,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
@@ -367,8 +367,8 @@ func (ClientSentMessages) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientSentMessages) Add(
-    ctx context.Context,
-    incr int64,
+	ctx context.Context,
+	incr int64,
 	operationName string,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
@@ -472,8 +472,8 @@ func (ProcessDuration) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 func (m ProcessDuration) Record(
-    ctx context.Context,
-    val float64,
+	ctx context.Context,
+	val float64,
 	operationName string,
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
