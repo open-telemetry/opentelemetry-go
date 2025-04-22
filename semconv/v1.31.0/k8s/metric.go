@@ -786,8 +786,11 @@ func (m NamespacePhase) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("k8s.namespace.phase", string(namespacePhase)),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("k8s.namespace.phase", string(namespacePhase)),
+			)...,
 		),
 	)
 }

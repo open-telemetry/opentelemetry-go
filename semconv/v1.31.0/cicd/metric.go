@@ -133,9 +133,12 @@ func (m PipelineRunActive) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("cicd.pipeline.name", pipelineName),
-			attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("cicd.pipeline.name", pipelineName),
+				attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
+			)...,
 		),
 	)
 }
@@ -269,9 +272,12 @@ func (m PipelineRunErrors) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("cicd.pipeline.name", pipelineName),
-			attribute.String("error.type", string(errorType)),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("cicd.pipeline.name", pipelineName),
+				attribute.String("error.type", string(errorType)),
+			)...,
 		),
 	)
 }
@@ -326,9 +332,12 @@ func (m SystemErrors) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("cicd.system.component", systemComponent),
-			attribute.String("error.type", string(errorType)),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("cicd.system.component", systemComponent),
+				attribute.String("error.type", string(errorType)),
+			)...,
 		),
 	)
 }
@@ -380,8 +389,11 @@ func (m WorkerCount) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("cicd.worker.state", string(workerState)),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("cicd.worker.state", string(workerState)),
+			)...,
 		),
 	)
 }

@@ -89,7 +89,6 @@ Int64
 {%- macro with_attributes_opt(attrs, pkg="", prefix="") -%}
 {%- if attrs | length > 0 -%}
 {{ prefix }}metric.WithAttributes(
-{%- if attrs | not_required | length > 0 %}
 {%- if attrs | required | length > 0 %}
 {{ prefix }}	append(
 {{ prefix }}		attrs,
@@ -99,11 +98,6 @@ Int64
 {{ prefix }}	)...,
 {%- else %}
 {{ prefix }}	attrs...,
-{%- endif %}
-{%- else -%}
-{%- for attr in attrs | required | attribute_sort -%}
-{{ prefix }}	{{ to_attribute(attr, pkg) }}
-{% endfor -%}
 {%- endif %}
 {{ prefix }}),
 {%- endif -%}

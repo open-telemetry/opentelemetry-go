@@ -292,9 +292,12 @@ func (m ClientConnectionCount) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-			attribute.String("db.client.connection.state", string(clientConnectionState)),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+				attribute.String("db.client.connection.state", string(clientConnectionState)),
+			)...,
 		),
 	)
 }
@@ -353,8 +356,11 @@ func (m ClientConnectionCreateTime) Record(
 	m.inst.Record(
 		ctx,
 		val,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -412,8 +418,11 @@ func (m ClientConnectionIdleMax) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -471,8 +480,11 @@ func (m ClientConnectionIdleMin) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -530,8 +542,11 @@ func (m ClientConnectionMax) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -591,8 +606,11 @@ func (m ClientConnectionPendingRequests) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -651,8 +669,11 @@ func (m ClientConnectionTimeouts) Add(
 	m.inst.Add(
 		ctx,
 		incr,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -711,8 +732,11 @@ func (m ClientConnectionUseTime) Record(
 	m.inst.Record(
 		ctx,
 		val,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
@@ -770,8 +794,11 @@ func (m ClientConnectionWaitTime) Record(
 	m.inst.Record(
 		ctx,
 		val,
-		metric.WithAttributes(			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
-
+		metric.WithAttributes(
+			append(
+				attrs,
+				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			)...,
 		),
 	)
 }
