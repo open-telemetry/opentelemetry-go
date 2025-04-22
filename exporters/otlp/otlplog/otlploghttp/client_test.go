@@ -783,6 +783,27 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
 
+	t.Run("WithTransport", func(t *testing.T) {
+		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
+		headerValueSetInProxy := "true"
+		exp, coll := factoryFunc("", nil, WithTransport(&http.Transport{
+
+			Proxy: func(r *http.Request) (*url.URL, error) {
+				r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
+				return r.URL, nil
+			},
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, headerKeySetInProxy)
+		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
+	})
+
 	t.Run("non-retryable errors are propagated", func(t *testing.T) {
 		exporterErr := errors.New("missing required attribute aaaa")
 		rCh := make(chan exportResult, 1)

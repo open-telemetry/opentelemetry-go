@@ -92,10 +92,11 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "Defaults",
 			want: config{
-				endpoint: newSetting(defaultEndpoint),
-				path:     newSetting(defaultPath),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting(defaultEndpoint),
+				path:      newSetting(defaultPath),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -109,6 +110,7 @@ func TestNewConfig(t *testing.T) {
 				WithHeaders(headers),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
+				WithTransport(http.DefaultTransport),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
@@ -120,6 +122,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(time.Second),
 				retryCfg:    newSetting(rc),
+				transport:   newSetting(http.RoundTripper(http.DefaultTransport)),
 			},
 		},
 		{
@@ -128,11 +131,12 @@ func TestNewConfig(t *testing.T) {
 				WithEndpointURL("http://test:8080/path"),
 			},
 			want: config{
-				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
-				insecure: newSetting(true),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("test:8080"),
+				path:      newSetting("/path"),
+				insecure:  newSetting(true),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -144,11 +148,12 @@ func TestNewConfig(t *testing.T) {
 				WithInsecure(),
 			},
 			want: config{
-				endpoint: newSetting("not-test:9090"),
-				path:     newSetting("/alt"),
-				insecure: newSetting(true),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("not-test:9090"),
+				path:      newSetting("/alt"),
+				insecure:  newSetting(true),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -160,11 +165,12 @@ func TestNewConfig(t *testing.T) {
 				WithEndpointURL("https://test:8080/path"),
 			},
 			want: config{
-				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
-				insecure: newSetting(false),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("test:8080"),
+				path:      newSetting("/path"),
+				insecure:  newSetting(false),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -176,11 +182,12 @@ func TestNewConfig(t *testing.T) {
 				WithEndpointURL("https://test:8080/path"),
 			},
 			want: config{
-				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
-				insecure: newSetting(false),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("test:8080"),
+				path:      newSetting("/path"),
+				insecure:  newSetting(false),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -192,11 +199,12 @@ func TestNewConfig(t *testing.T) {
 				WithEndpointURL("https://test:8080/path"),
 			},
 			want: config{
-				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
-				insecure: newSetting(false),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("test:8080"),
+				path:      newSetting("/path"),
+				insecure:  newSetting(false),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -219,6 +227,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
+				transport:   newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -227,11 +236,12 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint"),
-				path:     newSetting("/"),
-				insecure: newSetting(true),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("env.endpoint"),
+				path:      newSetting("/"),
+				insecure:  newSetting(true),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -254,6 +264,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(NoCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
+				transport:   newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -262,11 +273,12 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint"),
-				path:     newSetting(defaultPath),
-				insecure: newSetting(true),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting("env.endpoint"),
+				path:      newSetting(defaultPath),
+				insecure:  newSetting(true),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -297,6 +309,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
+				transport:   newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -338,6 +351,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(time.Second),
 				retryCfg:    newSetting(rc),
+				transport:   newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -352,10 +366,11 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "invalid_key",
 			},
 			want: config{
-				endpoint: newSetting(defaultEndpoint),
-				path:     newSetting(defaultPath),
-				timeout:  newSetting(defaultTimeout),
-				retryCfg: newSetting(defaultRetryCfg),
+				endpoint:  newSetting(defaultEndpoint),
+				path:      newSetting(defaultPath),
+				timeout:   newSetting(defaultTimeout),
+				retryCfg:  newSetting(defaultRetryCfg),
+				transport: newSetting(http.RoundTripper(ourTransport)),
 			},
 			errs: []string{
 				`invalid OTEL_EXPORTER_OTLP_LOGS_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
@@ -387,6 +402,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
+				transport:   newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 		{
@@ -408,6 +424,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(15 * time.Second),
 				retryCfg:    newSetting(defaultRetryCfg),
+				transport:   newSetting(http.RoundTripper(ourTransport)),
 			},
 		},
 	}

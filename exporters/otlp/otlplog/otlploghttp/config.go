@@ -95,6 +95,7 @@ type config struct {
 	timeout     setting[time.Duration]
 	proxy       setting[HTTPTransportProxyFunc]
 	retryCfg    setting[retry.Config]
+	transport   setting[http.RoundTripper]
 }
 
 func newConfig(options []Option) config {
@@ -133,6 +134,9 @@ func newConfig(options []Option) config {
 	)
 	c.retryCfg = c.retryCfg.Resolve(
 		fallback[retry.Config](defaultRetryCfg),
+	)
+	c.transport = c.transport.Resolve(
+		fallback[http.RoundTripper](ourTransport),
 	)
 
 	return c
@@ -340,6 +344,22 @@ type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 func WithProxy(pf HTTPTransportProxyFunc) Option {
 	return fnOpt(func(c config) config {
 		c.proxy = newSetting(pf)
+		return c
+	})
+}
+
+// WithTransport sets the HTTP transport to use by the exporter's HTTP client.
+//
+// This option will take precedence over [WithProxy], [WithTLSClientConfig] options
+// as well as OTEL_EXPORTER_OTLP_CERTIFICATE and OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE
+// environment variables.
+//
+// Be aware that passing an transport like
+// [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewTransport] can
+// cause the client to be instrumented twice and cause infinite recursion.
+func WithTransport(r http.RoundTripper) Option {
+	return fnOpt(func(c config) config {
+		c.transport = newSetting(r)
 		return c
 	})
 }
