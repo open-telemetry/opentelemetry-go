@@ -175,7 +175,7 @@ func (PipelineRunDuration) Description() string {
 	return "Duration of a pipeline run grouped by pipeline, state and result."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The cicdPipelineName is the the human readable name of the pipeline within a
 // CI/CD system.

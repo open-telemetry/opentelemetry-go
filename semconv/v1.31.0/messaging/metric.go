@@ -259,7 +259,7 @@ func (ClientOperationDuration) Description() string {
 	return "Duration of messaging operation initiated by a producer or consumer client."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The messagingOperationName is the the system-specific name of the messaging
 // operation.
@@ -544,7 +544,7 @@ func (ProcessDuration) Description() string {
 	return "Duration of processing operation."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The messagingOperationName is the the system-specific name of the messaging
 // operation.

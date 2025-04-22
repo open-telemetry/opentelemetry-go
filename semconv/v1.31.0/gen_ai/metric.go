@@ -131,7 +131,7 @@ func (ClientOperationDuration) Description() string {
 	return "GenAI operation duration"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The genAiOperationName is the the name of the operation being performed.
 //
@@ -253,7 +253,7 @@ func (ClientTokenUsage) Description() string {
 	return "Measures number of input and output tokens used"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The genAiOperationName is the the name of the operation being performed.
 //
@@ -373,7 +373,7 @@ func (ServerRequestDuration) Description() string {
 	return "Generative AI server request duration such as time-to-last byte or last output token"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The genAiOperationName is the the name of the operation being performed.
 //
@@ -496,7 +496,7 @@ func (ServerTimePerOutputToken) Description() string {
 	return "Time per output token generated after the first token for successful responses"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The genAiOperationName is the the name of the operation being performed.
 //
@@ -611,7 +611,7 @@ func (ServerTimeToFirstToken) Description() string {
 	return "Time to generate first token for successful responses"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The genAiOperationName is the the name of the operation being performed.
 //

@@ -1023,7 +1023,7 @@ func (FilesystemUtilization) Unit() string {
 	return "1"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m FilesystemUtilization) Record(
@@ -1415,7 +1415,7 @@ func (MemoryUtilization) Unit() string {
 	return "1"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m MemoryUtilization) Record(
@@ -2192,7 +2192,7 @@ func (PagingUtilization) Unit() string {
 	return "1"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingUtilization) Record(

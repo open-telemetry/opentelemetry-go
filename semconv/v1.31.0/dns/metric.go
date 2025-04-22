@@ -57,7 +57,7 @@ func (LookupDuration) Description() string {
 	return "Measures the time taken to perform a DNS lookup."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The dnsQuestionName is the the name being queried.
 //

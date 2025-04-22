@@ -313,7 +313,7 @@ func (HostAmbientTemperature) Description() string {
 	return "Ambient (external) temperature of the physical host"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The hwId is the an identifier for the hardware component, unique within the
 // monitored host
@@ -509,7 +509,7 @@ func (HostHeatingMargin) Description() string {
 	return "By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The hwId is the an identifier for the hardware component, unique within the
 // monitored host
@@ -607,7 +607,7 @@ func (HostPower) Description() string {
 	return "Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The hwId is the an identifier for the hardware component, unique within the
 // monitored host
@@ -704,7 +704,7 @@ func (Power) Description() string {
 	return "Instantaneous power consumed by the component"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The hwId is the an identifier for the hardware component, unique within the
 // monitored host

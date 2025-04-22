@@ -227,7 +227,7 @@ func (ClientConnectionDuration) Description() string {
 	return "The duration of the successfully established outbound HTTP connections."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The serverAddress is the server domain name if available without reverse DNS
 // lookup; otherwise, IP address or Unix domain socket name.
@@ -463,7 +463,7 @@ func (ClientRequestBodySize) Description() string {
 	return "Size of HTTP client request bodies."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The httpRequestMethod is the HTTP request method.
 //
@@ -610,7 +610,7 @@ func (ClientRequestDuration) Description() string {
 	return "Duration of HTTP client requests."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The httpRequestMethod is the HTTP request method.
 //
@@ -757,7 +757,7 @@ func (ClientResponseBodySize) Description() string {
 	return "Size of HTTP client response bodies."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The httpRequestMethod is the HTTP request method.
 //
@@ -1008,7 +1008,7 @@ func (ServerRequestBodySize) Description() string {
 	return "Size of HTTP server request bodies."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The httpRequestMethod is the HTTP request method.
 //
@@ -1158,7 +1158,7 @@ func (ServerRequestDuration) Description() string {
 	return "Duration of HTTP server requests."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The httpRequestMethod is the HTTP request method.
 //
@@ -1308,7 +1308,7 @@ func (ServerResponseBodySize) Description() string {
 	return "Size of HTTP server response bodies."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The httpRequestMethod is the HTTP request method.
 //

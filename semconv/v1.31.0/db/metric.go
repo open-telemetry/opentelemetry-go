@@ -335,7 +335,7 @@ func (ClientConnectionCreateTime) Description() string {
 	return "The time it took to create a new connection"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The dbClientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -693,7 +693,7 @@ func (ClientConnectionUseTime) Description() string {
 	return "The time between borrowing a connection and returning it to the pool"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The dbClientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -752,7 +752,7 @@ func (ClientConnectionWaitTime) Description() string {
 	return "The time it took to obtain an open connection from the pool"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The dbClientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -811,7 +811,7 @@ func (ClientOperationDuration) Description() string {
 	return "Duration of database client operations."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The dbSystemName is the the database management system (DBMS) product as
 // identified by the client instrumentation.
@@ -971,7 +971,7 @@ func (ClientResponseReturnedRows) Description() string {
 	return "The actual number of records returned by the database operation."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The dbSystemName is the the database management system (DBMS) product as
 // identified by the client instrumentation.

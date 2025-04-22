@@ -290,7 +290,7 @@ func (CPUUtilization) Description() string {
 	return "Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUUtilization) Record(

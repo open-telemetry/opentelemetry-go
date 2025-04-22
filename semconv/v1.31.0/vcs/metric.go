@@ -249,7 +249,7 @@ func (ChangeDuration) Description() string {
 	return "The time duration a change (pull request/merge request/changelist) has been in a given state."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsChangeState is the the state of the change (pull request/merge
 // request/changelist).
@@ -356,7 +356,7 @@ func (ChangeTimeToApproval) Description() string {
 	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsRefHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -488,7 +488,7 @@ func (ChangeTimeToMerge) Description() string {
 	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsRefHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -619,7 +619,7 @@ func (ContributorCount) Description() string {
 	return "The number of unique contributors to a repository"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsRepositoryUrlFull is the the [canonical URL] of the repository
 // providing the complete HTTP(S) address in order to locate and identify the
@@ -816,7 +816,7 @@ func (RefLinesDelta) Description() string {
 	return "The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsLineChangeType is the the type of line change being measured on a
 // branch or change.
@@ -947,7 +947,7 @@ func (RefRevisionsDelta) Description() string {
 	return "The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsRefBaseName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -1078,7 +1078,7 @@ func (RefTime) Description() string {
 	return "Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // The vcsRefHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.

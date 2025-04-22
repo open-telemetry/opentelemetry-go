@@ -309,7 +309,7 @@ func (ConnectionDuration) Description() string {
 	return "The duration of connections on the server."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ConnectionDuration) Record(
@@ -793,7 +793,7 @@ func (TLSHandshakeDuration) Description() string {
 	return "The duration of TLS handshakes on the server."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m TLSHandshakeDuration) Record(

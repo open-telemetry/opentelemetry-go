@@ -183,7 +183,7 @@ func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower 
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
 {%- set req_attr = metric.attributes | required | attribute_sort -%}
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 {{ params_docs(metric.attributes) }}
 func (m {{ name }}) Record(
     ctx context.Context,

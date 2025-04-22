@@ -151,7 +151,7 @@ func (CPUUsage) Description() string {
 	return "Distribution of CPU usage per invocation"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUUsage) Record(
@@ -319,7 +319,7 @@ func (InitDuration) Description() string {
 	return "Measures the duration of the function's initialization, such as a cold start"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m InitDuration) Record(
@@ -487,7 +487,7 @@ func (InvokeDuration) Description() string {
 	return "Measures the duration of the function's logic execution"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m InvokeDuration) Record(
@@ -571,7 +571,7 @@ func (MemUsage) Description() string {
 	return "Distribution of max memory usage per invocation"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m MemUsage) Record(
@@ -655,7 +655,7 @@ func (NetIo) Description() string {
 	return "Distribution of net I/O usage per invocation"
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetIo) Record(

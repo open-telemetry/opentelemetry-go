@@ -70,7 +70,7 @@ func (Frequency) Description() string {
 	return "Operating frequency of the logical CPU in Hertz."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m Frequency) Record(
@@ -243,7 +243,7 @@ func (Utilization) Description() string {
 	return "For each logical CPU, the utilization is calculated as the change in cumulative CPU time (cpu.time) over a measurement interval, divided by the elapsed time."
 }
 
-// Record records incr to the existing count.
+// Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
 func (m Utilization) Record(
