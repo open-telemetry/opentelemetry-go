@@ -37,26 +37,26 @@ var (
 	CPUModeKernel CPUModeAttr = "kernel"
 )
 
-// DiskIoDirectionAttr is an attribute conforming to the disk.io.direction
+// DiskIODirectionAttr is an attribute conforming to the disk.io.direction
 // semantic conventions. It represents the disk IO operation direction.
-type DiskIoDirectionAttr string
+type DiskIODirectionAttr string
 
 var (
-	// DiskIoDirectionRead is the none.
-	DiskIoDirectionRead DiskIoDirectionAttr = "read"
-	// DiskIoDirectionWrite is the none.
-	DiskIoDirectionWrite DiskIoDirectionAttr = "write"
+	// DiskIODirectionRead is the none.
+	DiskIODirectionRead DiskIODirectionAttr = "read"
+	// DiskIODirectionWrite is the none.
+	DiskIODirectionWrite DiskIODirectionAttr = "write"
 )
 
-// NetworkIoDirectionAttr is an attribute conforming to the network.io.direction
+// NetworkIODirectionAttr is an attribute conforming to the network.io.direction
 // semantic conventions. It represents the network IO operation direction.
-type NetworkIoDirectionAttr string
+type NetworkIODirectionAttr string
 
 var (
-	// NetworkIoDirectionTransmit is the none.
-	NetworkIoDirectionTransmit NetworkIoDirectionAttr = "transmit"
-	// NetworkIoDirectionReceive is the none.
-	NetworkIoDirectionReceive NetworkIoDirectionAttr = "receive"
+	// NetworkIODirectionTransmit is the none.
+	NetworkIODirectionTransmit NetworkIODirectionAttr = "transmit"
+	// NetworkIODirectionReceive is the none.
+	NetworkIODirectionReceive NetworkIODirectionAttr = "receive"
 )
 
 // CPUTime is an instrument used to record metric values conforming to the
@@ -179,45 +179,45 @@ func (CPUUsage) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
 	return attribute.String("cpu.mode", string(val))
 }
 
-// DiskIo is an instrument used to record metric values conforming to the
+// DiskIO is an instrument used to record metric values conforming to the
 // "container.disk.io" semantic conventions. It represents the disk bytes for the
 // container.
-type DiskIo struct {
+type DiskIO struct {
 	inst metric.Int64Counter
 }
 
-// NewDiskIo returns a new DiskIo instrument.
-func NewDiskIo(m metric.Meter) (DiskIo, error) {
+// NewDiskIO returns a new DiskIO instrument.
+func NewDiskIO(m metric.Meter) (DiskIO, error) {
 	i, err := m.Int64Counter(
 	    "container.disk.io",
 	    metric.WithDescription("Disk bytes for the container."),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return DiskIo{}, err
+	    return DiskIO{}, err
 	}
-	return DiskIo{i}, nil
+	return DiskIO{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (DiskIo) Name() string {
+func (DiskIO) Name() string {
 	return "container.disk.io"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (DiskIo) Unit() string {
+func (DiskIO) Unit() string {
 	return "By"
 }
 
 // Description returns the semantic convention description of the instrument
-func (DiskIo) Description() string {
+func (DiskIO) Description() string {
 	return "Disk bytes for the container."
 }
 
 // Add adds incr to the existing count.
 //
 // All additional attrs passed are included in the recorded value.
-func (m DiskIo) Add(
+func (m DiskIO) Add(
 	ctx context.Context,
 	incr int64,
 	attrs ...attribute.KeyValue,
@@ -231,15 +231,15 @@ func (m DiskIo) Add(
 	)
 }
 
-// AttrDiskIoDirection returns an optional attribute for the "disk.io.direction"
+// AttrDiskIODirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
-func (DiskIo) AttrDiskIoDirection(val DiskIoDirectionAttr) attribute.KeyValue {
+func (DiskIO) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
 	return attribute.String("disk.io.direction", string(val))
 }
 
 // AttrSystemDevice returns an optional attribute for the "system.device"
 // semantic convention. It represents the device identifier.
-func (DiskIo) AttrSystemDevice(val string) attribute.KeyValue {
+func (DiskIO) AttrSystemDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
@@ -286,45 +286,45 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 	}
 }
 
-// NetworkIo is an instrument used to record metric values conforming to the
+// NetworkIO is an instrument used to record metric values conforming to the
 // "container.network.io" semantic conventions. It represents the network bytes
 // for the container.
-type NetworkIo struct {
+type NetworkIO struct {
 	inst metric.Int64Counter
 }
 
-// NewNetworkIo returns a new NetworkIo instrument.
-func NewNetworkIo(m metric.Meter) (NetworkIo, error) {
+// NewNetworkIO returns a new NetworkIO instrument.
+func NewNetworkIO(m metric.Meter) (NetworkIO, error) {
 	i, err := m.Int64Counter(
 	    "container.network.io",
 	    metric.WithDescription("Network bytes for the container."),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return NetworkIo{}, err
+	    return NetworkIO{}, err
 	}
-	return NetworkIo{i}, nil
+	return NetworkIO{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (NetworkIo) Name() string {
+func (NetworkIO) Name() string {
 	return "container.network.io"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (NetworkIo) Unit() string {
+func (NetworkIO) Unit() string {
 	return "By"
 }
 
 // Description returns the semantic convention description of the instrument
-func (NetworkIo) Description() string {
+func (NetworkIO) Description() string {
 	return "Network bytes for the container."
 }
 
 // Add adds incr to the existing count.
 //
 // All additional attrs passed are included in the recorded value.
-func (m NetworkIo) Add(
+func (m NetworkIO) Add(
 	ctx context.Context,
 	incr int64,
 	attrs ...attribute.KeyValue,
@@ -341,14 +341,14 @@ func (m NetworkIo) Add(
 // AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NetworkIo) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+func (NetworkIO) AttrNetworkInterfaceName(val string) attribute.KeyValue {
 	return attribute.String("network.interface.name", val)
 }
 
-// AttrNetworkIoDirection returns an optional attribute for the
+// AttrNetworkIODirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+func (NetworkIO) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 

@@ -3761,7 +3761,7 @@ func DeviceModelName(val string) attribute.KeyValue {
 
 // Namespace: disk
 const (
-	// DiskIoDirectionKey is the attribute Key conforming to the "disk.io.direction"
+	// DiskIODirectionKey is the attribute Key conforming to the "disk.io.direction"
 	// semantic conventions. It represents the disk IO operation direction.
 	//
 	// Type: Enum
@@ -3769,17 +3769,17 @@ const (
 	// Stability: Development
 	//
 	// Examples: "read"
-	DiskIoDirectionKey = attribute.Key("disk.io.direction")
+	DiskIODirectionKey = attribute.Key("disk.io.direction")
 )
 
 // Enum values for disk.io.direction
 var (
 	// read
 	// Stability: development
-	DiskIoDirectionRead = DiskIoDirectionKey.String("read")
+	DiskIODirectionRead = DiskIODirectionKey.String("read")
 	// write
 	// Stability: development
-	DiskIoDirectionWrite = DiskIoDirectionKey.String("write")
+	DiskIODirectionWrite = DiskIODirectionKey.String("write")
 )
 
 // Namespace: dns
@@ -8423,7 +8423,7 @@ const (
 	// Examples: "lo", "eth0"
 	NetworkInterfaceNameKey = attribute.Key("network.interface.name")
 
-	// NetworkIoDirectionKey is the attribute Key conforming to the
+	// NetworkIODirectionKey is the attribute Key conforming to the
 	// "network.io.direction" semantic conventions. It represents the network IO
 	// operation direction.
 	//
@@ -8432,7 +8432,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: "transmit"
-	NetworkIoDirectionKey = attribute.Key("network.io.direction")
+	NetworkIODirectionKey = attribute.Key("network.io.direction")
 
 	// NetworkLocalAddressKey is the attribute Key conforming to the
 	// "network.local.address" semantic conventions. It represents the local address
@@ -8747,10 +8747,10 @@ var (
 var (
 	// transmit
 	// Stability: development
-	NetworkIoDirectionTransmit = NetworkIoDirectionKey.String("transmit")
+	NetworkIODirectionTransmit = NetworkIODirectionKey.String("transmit")
 	// receive
 	// Stability: development
-	NetworkIoDirectionReceive = NetworkIoDirectionKey.String("receive")
+	NetworkIODirectionReceive = NetworkIODirectionKey.String("receive")
 )
 
 // Enum values for network.transport

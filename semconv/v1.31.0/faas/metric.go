@@ -445,45 +445,45 @@ func (MemUsage) AttrTrigger(val TriggerAttr) attribute.KeyValue {
 	return attribute.String("faas.trigger", string(val))
 }
 
-// NetIo is an instrument used to record metric values conforming to the
+// NetIO is an instrument used to record metric values conforming to the
 // "faas.net_io" semantic conventions. It represents the distribution of net I/O
 // usage per invocation.
-type NetIo struct {
+type NetIO struct {
 	inst metric.Int64Histogram
 }
 
-// NewNetIo returns a new NetIo instrument.
-func NewNetIo(m metric.Meter) (NetIo, error) {
+// NewNetIO returns a new NetIO instrument.
+func NewNetIO(m metric.Meter) (NetIO, error) {
 	i, err := m.Int64Histogram(
 	    "faas.net_io",
 	    metric.WithDescription("Distribution of net I/O usage per invocation"),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return NetIo{}, err
+	    return NetIO{}, err
 	}
-	return NetIo{i}, nil
+	return NetIO{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (NetIo) Name() string {
+func (NetIO) Name() string {
 	return "faas.net_io"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (NetIo) Unit() string {
+func (NetIO) Unit() string {
 	return "By"
 }
 
 // Description returns the semantic convention description of the instrument
-func (NetIo) Description() string {
+func (NetIO) Description() string {
 	return "Distribution of net I/O usage per invocation"
 }
 
 // Record records val to the current distribution.
 //
 // All additional attrs passed are included in the recorded value.
-func (m NetIo) Record(
+func (m NetIO) Record(
 	ctx context.Context,
 	val int64,
 	attrs ...attribute.KeyValue,
@@ -500,7 +500,7 @@ func (m NetIo) Record(
 // AttrTrigger returns an optional attribute for the "faas.trigger" semantic
 // convention. It represents the type of the trigger which caused this function
 // invocation.
-func (NetIo) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+func (NetIO) AttrTrigger(val TriggerAttr) attribute.KeyValue {
 	return attribute.String("faas.trigger", string(val))
 }
 

@@ -88,14 +88,14 @@ const (
   ContainerCPUUsageName = "container.cpu.usage"
   ContainerCPUUsageUnit = "{cpu}"
   ContainerCPUUsageDescription = "Container's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs"
-  // ContainerDiskIo is the metric conforming to the "container.disk.io" semantic
+  // ContainerDiskIO is the metric conforming to the "container.disk.io" semantic
   // conventions. It represents the disk bytes for the container.
   // Instrument: counter
   // Unit: By
   // Stability: development
-  ContainerDiskIoName = "container.disk.io"
-  ContainerDiskIoUnit = "By"
-  ContainerDiskIoDescription = "Disk bytes for the container."
+  ContainerDiskIOName = "container.disk.io"
+  ContainerDiskIOUnit = "By"
+  ContainerDiskIODescription = "Disk bytes for the container."
   // ContainerMemoryUsage is the metric conforming to the
   // "container.memory.usage" semantic conventions. It represents the memory
   // usage of the container.
@@ -105,14 +105,14 @@ const (
   ContainerMemoryUsageName = "container.memory.usage"
   ContainerMemoryUsageUnit = "By"
   ContainerMemoryUsageDescription = "Memory usage of the container."
-  // ContainerNetworkIo is the metric conforming to the "container.network.io"
+  // ContainerNetworkIO is the metric conforming to the "container.network.io"
   // semantic conventions. It represents the network bytes for the container.
   // Instrument: counter
   // Unit: By
   // Stability: development
-  ContainerNetworkIoName = "container.network.io"
-  ContainerNetworkIoUnit = "By"
-  ContainerNetworkIoDescription = "Network bytes for the container."
+  ContainerNetworkIOName = "container.network.io"
+  ContainerNetworkIOUnit = "By"
+  ContainerNetworkIODescription = "Network bytes for the container."
   // ContainerUptime is the metric conforming to the "container.uptime" semantic
   // conventions. It represents the time the container has been running.
   // Instrument: gauge
@@ -317,14 +317,14 @@ const (
   FaaSMemUsageName = "faas.mem_usage"
   FaaSMemUsageUnit = "By"
   FaaSMemUsageDescription = "Distribution of max memory usage per invocation"
-  // FaaSNetIo is the metric conforming to the "faas.net_io" semantic
+  // FaaSNetIO is the metric conforming to the "faas.net_io" semantic
   // conventions. It represents the distribution of net I/O usage per invocation.
   // Instrument: histogram
   // Unit: By
   // Stability: development
-  FaaSNetIoName = "faas.net_io"
-  FaaSNetIoUnit = "By"
-  FaaSNetIoDescription = "Distribution of net I/O usage per invocation"
+  FaaSNetIOName = "faas.net_io"
+  FaaSNetIOUnit = "By"
+  FaaSNetIODescription = "Distribution of net I/O usage per invocation"
   // FaaSTimeouts is the metric conforming to the "faas.timeouts" semantic
   // conventions. It represents the number of invocation timeouts.
   // Instrument: counter
@@ -812,14 +812,14 @@ const (
   K8SNodeNetworkErrorsName = "k8s.node.network.errors"
   K8SNodeNetworkErrorsUnit = "{error}"
   K8SNodeNetworkErrorsDescription = "Node network errors"
-  // K8SNodeNetworkIo is the metric conforming to the "k8s.node.network.io"
+  // K8SNodeNetworkIO is the metric conforming to the "k8s.node.network.io"
   // semantic conventions. It represents the network bytes for the Node.
   // Instrument: counter
   // Unit: By
   // Stability: development
-  K8SNodeNetworkIoName = "k8s.node.network.io"
-  K8SNodeNetworkIoUnit = "By"
-  K8SNodeNetworkIoDescription = "Network bytes for the Node"
+  K8SNodeNetworkIOName = "k8s.node.network.io"
+  K8SNodeNetworkIOUnit = "By"
+  K8SNodeNetworkIODescription = "Network bytes for the Node"
   // K8SNodeUptime is the metric conforming to the "k8s.node.uptime" semantic
   // conventions. It represents the time the Node has been running.
   // Instrument: gauge
@@ -861,14 +861,14 @@ const (
   K8SPodNetworkErrorsName = "k8s.pod.network.errors"
   K8SPodNetworkErrorsUnit = "{error}"
   K8SPodNetworkErrorsDescription = "Pod network errors"
-  // K8SPodNetworkIo is the metric conforming to the "k8s.pod.network.io"
+  // K8SPodNetworkIO is the metric conforming to the "k8s.pod.network.io"
   // semantic conventions. It represents the network bytes for the Pod.
   // Instrument: counter
   // Unit: By
   // Stability: development
-  K8SPodNetworkIoName = "k8s.pod.network.io"
-  K8SPodNetworkIoUnit = "By"
-  K8SPodNetworkIoDescription = "Network bytes for the Pod"
+  K8SPodNetworkIOName = "k8s.pod.network.io"
+  K8SPodNetworkIOUnit = "By"
+  K8SPodNetworkIODescription = "Network bytes for the Pod"
   // K8SPodUptime is the metric conforming to the "k8s.pod.uptime" semantic
   // conventions. It represents the time the Pod has been running.
   // Instrument: gauge
@@ -1158,14 +1158,14 @@ const (
   ProcessCPUUtilizationName = "process.cpu.utilization"
   ProcessCPUUtilizationUnit = "1"
   ProcessCPUUtilizationDescription = "Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."
-  // ProcessDiskIo is the metric conforming to the "process.disk.io" semantic
+  // ProcessDiskIO is the metric conforming to the "process.disk.io" semantic
   // conventions. It represents the disk bytes transferred.
   // Instrument: counter
   // Unit: By
   // Stability: development
-  ProcessDiskIoName = "process.disk.io"
-  ProcessDiskIoUnit = "By"
-  ProcessDiskIoDescription = "Disk bytes transferred."
+  ProcessDiskIOName = "process.disk.io"
+  ProcessDiskIOUnit = "By"
+  ProcessDiskIODescription = "Disk bytes transferred."
   // ProcessMemoryUsage is the metric conforming to the "process.memory.usage"
   // semantic conventions. It represents the amount of physical memory in use.
   // Instrument: updowncounter
@@ -1183,14 +1183,14 @@ const (
   ProcessMemoryVirtualName = "process.memory.virtual"
   ProcessMemoryVirtualUnit = "By"
   ProcessMemoryVirtualDescription = "The amount of committed virtual memory."
-  // ProcessNetworkIo is the metric conforming to the "process.network.io"
+  // ProcessNetworkIO is the metric conforming to the "process.network.io"
   // semantic conventions. It represents the network bytes transferred.
   // Instrument: counter
   // Unit: By
   // Stability: development
-  ProcessNetworkIoName = "process.network.io"
-  ProcessNetworkIoUnit = "By"
-  ProcessNetworkIoDescription = "Network bytes transferred."
+  ProcessNetworkIOName = "process.network.io"
+  ProcessNetworkIOUnit = "By"
+  ProcessNetworkIODescription = "Network bytes transferred."
   // ProcessOpenFileDescriptorCount is the metric conforming to the
   // "process.open_file_descriptor.count" semantic conventions. It represents the
   // number of file descriptors in use by the process.
@@ -1352,22 +1352,22 @@ const (
   SystemCPUPhysicalCountName = "system.cpu.physical.count"
   SystemCPUPhysicalCountUnit = "{cpu}"
   SystemCPUPhysicalCountDescription = "Reports the number of actual physical processor cores on the hardware"
-  // SystemDiskIo is the metric conforming to the "system.disk.io" semantic
+  // SystemDiskIO is the metric conforming to the "system.disk.io" semantic
   // conventions.
   // Instrument: counter
   // Unit: By
   // Stability: development
   // NOTE: The description (brief) for this metric is not defined in the semantic-conventions repository.
-  SystemDiskIoName = "system.disk.io"
-  SystemDiskIoUnit = "By"
-  // SystemDiskIoTime is the metric conforming to the "system.disk.io_time"
+  SystemDiskIOName = "system.disk.io"
+  SystemDiskIOUnit = "By"
+  // SystemDiskIOTime is the metric conforming to the "system.disk.io_time"
   // semantic conventions. It represents the time disk spent activated.
   // Instrument: counter
   // Unit: s
   // Stability: development
-  SystemDiskIoTimeName = "system.disk.io_time"
-  SystemDiskIoTimeUnit = "s"
-  SystemDiskIoTimeDescription = "Time disk spent activated"
+  SystemDiskIOTimeName = "system.disk.io_time"
+  SystemDiskIOTimeUnit = "s"
+  SystemDiskIOTimeDescription = "Time disk spent activated"
   // SystemDiskLimit is the metric conforming to the "system.disk.limit" semantic
   // conventions. It represents the total storage capacity of the disk.
   // Instrument: updowncounter
@@ -1506,14 +1506,14 @@ const (
   SystemNetworkErrorsName = "system.network.errors"
   SystemNetworkErrorsUnit = "{error}"
   SystemNetworkErrorsDescription = "Count of network errors detected"
-  // SystemNetworkIo is the metric conforming to the "system.network.io" semantic
+  // SystemNetworkIO is the metric conforming to the "system.network.io" semantic
   // conventions.
   // Instrument: counter
   // Unit: By
   // Stability: development
   // NOTE: The description (brief) for this metric is not defined in the semantic-conventions repository.
-  SystemNetworkIoName = "system.network.io"
-  SystemNetworkIoUnit = "By"
+  SystemNetworkIOName = "system.network.io"
+  SystemNetworkIOUnit = "By"
   // SystemNetworkPackets is the metric conforming to the
   // "system.network.packets" semantic conventions.
   // Instrument: counter

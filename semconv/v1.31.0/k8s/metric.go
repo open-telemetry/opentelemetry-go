@@ -29,15 +29,15 @@ var (
 	NamespacePhaseTerminating NamespacePhaseAttr = "terminating"
 )
 
-// NetworkIoDirectionAttr is an attribute conforming to the network.io.direction
+// NetworkIODirectionAttr is an attribute conforming to the network.io.direction
 // semantic conventions. It represents the network IO operation direction.
-type NetworkIoDirectionAttr string
+type NetworkIODirectionAttr string
 
 var (
-	// NetworkIoDirectionTransmit is the none.
-	NetworkIoDirectionTransmit NetworkIoDirectionAttr = "transmit"
-	// NetworkIoDirectionReceive is the none.
-	NetworkIoDirectionReceive NetworkIoDirectionAttr = "receive"
+	// NetworkIODirectionTransmit is the none.
+	NetworkIODirectionTransmit NetworkIODirectionAttr = "transmit"
+	// NetworkIODirectionReceive is the none.
+	NetworkIODirectionReceive NetworkIODirectionAttr = "receive"
 )
 
 // CronJobActiveJobs is an instrument used to record metric values conforming to
@@ -983,52 +983,52 @@ func (NodeNetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue
 	return attribute.String("network.interface.name", val)
 }
 
-// AttrNetworkIoDirection returns an optional attribute for the
+// AttrNetworkIODirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NodeNetworkErrors) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+func (NodeNetworkErrors) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
-// NodeNetworkIo is an instrument used to record metric values conforming to the
+// NodeNetworkIO is an instrument used to record metric values conforming to the
 // "k8s.node.network.io" semantic conventions. It represents the network bytes
 // for the Node.
-type NodeNetworkIo struct {
+type NodeNetworkIO struct {
 	inst metric.Int64Counter
 }
 
-// NewNodeNetworkIo returns a new NodeNetworkIo instrument.
-func NewNodeNetworkIo(m metric.Meter) (NodeNetworkIo, error) {
+// NewNodeNetworkIO returns a new NodeNetworkIO instrument.
+func NewNodeNetworkIO(m metric.Meter) (NodeNetworkIO, error) {
 	i, err := m.Int64Counter(
 	    "k8s.node.network.io",
 	    metric.WithDescription("Network bytes for the Node"),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return NodeNetworkIo{}, err
+	    return NodeNetworkIO{}, err
 	}
-	return NodeNetworkIo{i}, nil
+	return NodeNetworkIO{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (NodeNetworkIo) Name() string {
+func (NodeNetworkIO) Name() string {
 	return "k8s.node.network.io"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (NodeNetworkIo) Unit() string {
+func (NodeNetworkIO) Unit() string {
 	return "By"
 }
 
 // Description returns the semantic convention description of the instrument
-func (NodeNetworkIo) Description() string {
+func (NodeNetworkIO) Description() string {
 	return "Network bytes for the Node"
 }
 
 // Add adds incr to the existing count.
 //
 // All additional attrs passed are included in the recorded value.
-func (m NodeNetworkIo) Add(
+func (m NodeNetworkIO) Add(
 	ctx context.Context,
 	incr int64,
 	attrs ...attribute.KeyValue,
@@ -1045,14 +1045,14 @@ func (m NodeNetworkIo) Add(
 // AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (NodeNetworkIo) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+func (NodeNetworkIO) AttrNetworkInterfaceName(val string) attribute.KeyValue {
 	return attribute.String("network.interface.name", val)
 }
 
-// AttrNetworkIoDirection returns an optional attribute for the
+// AttrNetworkIODirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (NodeNetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+func (NodeNetworkIO) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
@@ -1287,52 +1287,52 @@ func (PodNetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue 
 	return attribute.String("network.interface.name", val)
 }
 
-// AttrNetworkIoDirection returns an optional attribute for the
+// AttrNetworkIODirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (PodNetworkErrors) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+func (PodNetworkErrors) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
-// PodNetworkIo is an instrument used to record metric values conforming to the
+// PodNetworkIO is an instrument used to record metric values conforming to the
 // "k8s.pod.network.io" semantic conventions. It represents the network bytes for
 // the Pod.
-type PodNetworkIo struct {
+type PodNetworkIO struct {
 	inst metric.Int64Counter
 }
 
-// NewPodNetworkIo returns a new PodNetworkIo instrument.
-func NewPodNetworkIo(m metric.Meter) (PodNetworkIo, error) {
+// NewPodNetworkIO returns a new PodNetworkIO instrument.
+func NewPodNetworkIO(m metric.Meter) (PodNetworkIO, error) {
 	i, err := m.Int64Counter(
 	    "k8s.pod.network.io",
 	    metric.WithDescription("Network bytes for the Pod"),
 	    metric.WithUnit("By"),
 	)
 	if err != nil {
-	    return PodNetworkIo{}, err
+	    return PodNetworkIO{}, err
 	}
-	return PodNetworkIo{i}, nil
+	return PodNetworkIO{i}, nil
 }
 
 // Name returns the semantic convention name of the instrument.
-func (PodNetworkIo) Name() string {
+func (PodNetworkIO) Name() string {
 	return "k8s.pod.network.io"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (PodNetworkIo) Unit() string {
+func (PodNetworkIO) Unit() string {
 	return "By"
 }
 
 // Description returns the semantic convention description of the instrument
-func (PodNetworkIo) Description() string {
+func (PodNetworkIO) Description() string {
 	return "Network bytes for the Pod"
 }
 
 // Add adds incr to the existing count.
 //
 // All additional attrs passed are included in the recorded value.
-func (m PodNetworkIo) Add(
+func (m PodNetworkIO) Add(
 	ctx context.Context,
 	incr int64,
 	attrs ...attribute.KeyValue,
@@ -1349,14 +1349,14 @@ func (m PodNetworkIo) Add(
 // AttrNetworkInterfaceName returns an optional attribute for the
 // "network.interface.name" semantic convention. It represents the network
 // interface name.
-func (PodNetworkIo) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+func (PodNetworkIO) AttrNetworkInterfaceName(val string) attribute.KeyValue {
 	return attribute.String("network.interface.name", val)
 }
 
-// AttrNetworkIoDirection returns an optional attribute for the
+// AttrNetworkIODirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
-func (PodNetworkIo) AttrNetworkIoDirection(val NetworkIoDirectionAttr) attribute.KeyValue {
+func (PodNetworkIO) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
