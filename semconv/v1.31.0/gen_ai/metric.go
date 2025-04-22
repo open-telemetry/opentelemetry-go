@@ -133,10 +133,10 @@ func (ClientOperationDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The genAiOperationName is the the name of the operation being performed.
+// The operationName is the the name of the operation being performed.
 //
-// The genAiSystem is the the Generative AI product as identified by the client
-// or server instrumentation.
+// The system is the the Generative AI product as identified by the client or
+// server instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientOperationDuration) Record(
@@ -229,12 +229,12 @@ func (ClientTokenUsage) Description() string {
 
 // Record records val to the current distribution.
 //
-// The genAiOperationName is the the name of the operation being performed.
+// The operationName is the the name of the operation being performed.
 //
-// The genAiSystem is the the Generative AI product as identified by the client
-// or server instrumentation.
+// The system is the the Generative AI product as identified by the client or
+// server instrumentation.
 //
-// The genAiTokenType is the the type of token being counted.
+// The tokenType is the the type of token being counted.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ClientTokenUsage) Record(
@@ -323,10 +323,10 @@ func (ServerRequestDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The genAiOperationName is the the name of the operation being performed.
+// The operationName is the the name of the operation being performed.
 //
-// The genAiSystem is the the Generative AI product as identified by the client
-// or server instrumentation.
+// The system is the the Generative AI product as identified by the client or
+// server instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerRequestDuration) Record(
@@ -420,10 +420,10 @@ func (ServerTimePerOutputToken) Description() string {
 
 // Record records val to the current distribution.
 //
-// The genAiOperationName is the the name of the operation being performed.
+// The operationName is the the name of the operation being performed.
 //
-// The genAiSystem is the the Generative AI product as identified by the client
-// or server instrumentation.
+// The system is the the Generative AI product as identified by the client or
+// server instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerTimePerOutputToken) Record(
@@ -509,10 +509,10 @@ func (ServerTimeToFirstToken) Description() string {
 
 // Record records val to the current distribution.
 //
-// The genAiOperationName is the the name of the operation being performed.
+// The operationName is the the name of the operation being performed.
 //
-// The genAiSystem is the the Generative AI product as identified by the client
-// or server instrumentation.
+// The system is the the Generative AI product as identified by the client or
+// server instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ServerTimeToFirstToken) Record(

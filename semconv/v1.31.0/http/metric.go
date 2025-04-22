@@ -293,8 +293,8 @@ func (ClientOpenConnections) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The httpConnectionState is the state of the HTTP connection in the HTTP
-// connection pool.
+// The connectionState is the state of the HTTP connection in the HTTP connection
+// pool.
 //
 // The serverAddress is the server domain name if available without reverse DNS
 // lookup; otherwise, IP address or Unix domain socket name.
@@ -387,7 +387,7 @@ func (ClientRequestBodySize) Description() string {
 
 // Record records val to the current distribution.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The serverAddress is the host identifier of the ["URI origin"] HTTP request is
 // sent to.
@@ -508,7 +508,7 @@ func (ClientRequestDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The serverAddress is the host identifier of the ["URI origin"] HTTP request is
 // sent to.
@@ -629,7 +629,7 @@ func (ClientResponseBodySize) Description() string {
 
 // Record records val to the current distribution.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The serverAddress is the host identifier of the ["URI origin"] HTTP request is
 // sent to.
@@ -750,7 +750,7 @@ func (ServerActiveRequests) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The urlScheme is the the [URI scheme] component identifying the used protocol.
 //
@@ -828,7 +828,7 @@ func (ServerRequestBodySize) Description() string {
 
 // Record records val to the current distribution.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The urlScheme is the the [URI scheme] component identifying the used protocol.
 //
@@ -952,7 +952,7 @@ func (ServerRequestDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The urlScheme is the the [URI scheme] component identifying the used protocol.
 //
@@ -1076,7 +1076,7 @@ func (ServerResponseBodySize) Description() string {
 
 // Record records val to the current distribution.
 //
-// The httpRequestMethod is the HTTP request method.
+// The requestMethod is the HTTP request method.
 //
 // The urlScheme is the the [URI scheme] component identifying the used protocol.
 //

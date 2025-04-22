@@ -114,7 +114,7 @@ Int64
 {%- set req_attr = metric.attributes | required | attribute_sort -%}
 
 // Add adds incr to the existing count.
-{{ params_docs(metric.attributes) }}
+{{ params_docs(metric.attributes, pkg=pkg) }}
 func (m {{ name }}) Add(
     ctx context.Context,
     incr {{ value_type(metric) | lower }},
@@ -148,7 +148,7 @@ func (m {{ name }}) Add(ctx context.Context, incr {{ value_type(metric) | lower 
 {%- set req_attr = metric.attributes | required | attribute_sort -%}
 
 // Record records val to the current distribution.
-{{ params_docs(metric.attributes) }}
+{{ params_docs(metric.attributes, pkg=pkg) }}
 func (m {{ name }}) Record(
     ctx context.Context,
     val {{ value_type(metric) | lower }},

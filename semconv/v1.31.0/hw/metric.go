@@ -107,7 +107,7 @@ func (Energy) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // The hwType is the type of the component
@@ -183,7 +183,7 @@ func (Errors) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // The hwType is the type of the component
@@ -265,7 +265,7 @@ func (HostAmbientTemperature) Description() string {
 
 // Record records val to the current distribution.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // All additional attrs passed are included in the recorded value.
@@ -337,7 +337,7 @@ func (HostEnergy) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // All additional attrs passed are included in the recorded value.
@@ -410,7 +410,7 @@ func (HostHeatingMargin) Description() string {
 
 // Record records val to the current distribution.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // All additional attrs passed are included in the recorded value.
@@ -482,7 +482,7 @@ func (HostPower) Description() string {
 
 // Record records val to the current distribution.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // All additional attrs passed are included in the recorded value.
@@ -554,7 +554,7 @@ func (Power) Description() string {
 
 // Record records val to the current distribution.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
 // The hwType is the type of the component
@@ -630,10 +630,10 @@ func (Status) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The hwId is the an identifier for the hardware component, unique within the
+// The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwState is the the current state of the component
+// The state is the the current state of the component
 //
 // The hwType is the type of the component
 //

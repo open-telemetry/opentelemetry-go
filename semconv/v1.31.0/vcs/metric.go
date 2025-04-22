@@ -151,12 +151,12 @@ func (ChangeCount) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The vcsChangeState is the the state of the change (pull request/merge
+// The changeState is the the state of the change (pull request/merge
 // request/changelist).
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -226,15 +226,15 @@ func (ChangeDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsChangeState is the the state of the change (pull request/merge
+// The changeState is the the state of the change (pull request/merge
 // request/changelist).
 //
-// The vcsRefHeadName is the the name of the [reference] such as **branch** or
+// The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -308,12 +308,12 @@ func (ChangeTimeToApproval) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsRefHeadName is the the name of the [reference] such as **branch** or
+// The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -414,12 +414,12 @@ func (ChangeTimeToMerge) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsRefHeadName is the the name of the [reference] such as **branch** or
+// The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -519,9 +519,9 @@ func (ContributorCount) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -589,11 +589,11 @@ func (RefCount) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The vcsRefType is the the type of the [reference] in the repository.
+// The refType is the the type of the [reference] in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -665,22 +665,22 @@ func (RefLinesDelta) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsLineChangeType is the the type of line change being measured on a
-// branch or change.
+// The lineChangeType is the the type of line change being measured on a branch
+// or change.
 //
-// The vcsRefBaseName is the the name of the [reference] such as **branch** or
+// The refBaseName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRefBaseType is the the type of the [reference] in the repository.
+// The refBaseType is the the type of the [reference] in the repository.
 //
-// The vcsRefHeadName is the the name of the [reference] such as **branch** or
+// The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRefHeadType is the the type of the [reference] in the repository.
+// The refHeadType is the the type of the [reference] in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -771,21 +771,21 @@ func (RefRevisionsDelta) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsRefBaseName is the the name of the [reference] such as **branch** or
+// The refBaseName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRefBaseType is the the type of the [reference] in the repository.
+// The refBaseType is the the type of the [reference] in the repository.
 //
-// The vcsRefHeadName is the the name of the [reference] such as **branch** or
+// The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRefHeadType is the the type of the [reference] in the repository.
+// The refHeadType is the the type of the [reference] in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
-// The vcsRevisionDeltaDirection is the the type of revision comparison.
+// The revisionDeltaDirection is the the type of revision comparison.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -876,14 +876,14 @@ func (RefTime) Description() string {
 
 // Record records val to the current distribution.
 //
-// The vcsRefHeadName is the the name of the [reference] such as **branch** or
+// The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
 //
-// The vcsRefHeadType is the the type of the [reference] in the repository.
+// The refHeadType is the the type of the [reference] in the repository.
 //
-// The vcsRepositoryUrlFull is the the [canonical URL] of the repository
-// providing the complete HTTP(S) address in order to locate and identify the
-// repository through a browser.
+// The repositoryUrlFull is the the [canonical URL] of the repository providing
+// the complete HTTP(S) address in order to locate and identify the repository
+// through a browser.
 //
 // All additional attrs passed are included in the recorded value.
 //

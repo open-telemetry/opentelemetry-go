@@ -59,7 +59,7 @@ func (LookupDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The dnsQuestionName is the the name being queried.
+// The questionName is the the name being queried.
 //
 // All additional attrs passed are included in the recorded value.
 func (m LookupDuration) Record(

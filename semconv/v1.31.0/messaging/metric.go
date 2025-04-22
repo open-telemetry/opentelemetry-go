@@ -114,10 +114,9 @@ func (ClientConsumedMessages) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The messagingOperationName is the the system-specific name of the messaging
-// operation.
+// The operationName is the the system-specific name of the messaging operation.
 //
-// The messagingSystem is the the messaging system as identified by the client
+// The system is the the messaging system as identified by the client
 // instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
@@ -235,10 +234,9 @@ func (ClientOperationDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The messagingOperationName is the the system-specific name of the messaging
-// operation.
+// The operationName is the the system-specific name of the messaging operation.
 //
-// The messagingSystem is the the messaging system as identified by the client
+// The system is the the messaging system as identified by the client
 // instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
@@ -362,10 +360,9 @@ func (ClientSentMessages) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The messagingOperationName is the the system-specific name of the messaging
-// operation.
+// The operationName is the the system-specific name of the messaging operation.
 //
-// The messagingSystem is the the messaging system as identified by the client
+// The system is the the messaging system as identified by the client
 // instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
@@ -468,10 +465,9 @@ func (ProcessDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The messagingOperationName is the the system-specific name of the messaging
-// operation.
+// The operationName is the the system-specific name of the messaging operation.
 //
-// The messagingSystem is the the messaging system as identified by the client
+// The system is the the messaging system as identified by the client
 // instrumentation.
 //
 // All additional attrs passed are included in the recorded value.

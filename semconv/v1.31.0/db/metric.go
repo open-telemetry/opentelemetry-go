@@ -273,7 +273,7 @@ func (ClientConnectionCount) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -281,7 +281,7 @@ func (ClientConnectionCount) Description() string {
 // formatted as `server.address:server.port/db.namespace`. Instrumentations that
 // generate connection pool name following different patterns SHOULD document it.
 //
-// The dbClientConnectionState is the the state of a connection in the pool
+// The clientConnectionState is the the state of a connection in the pool
 func (m ClientConnectionCount) Add(
     ctx context.Context,
     incr int64,
@@ -337,7 +337,7 @@ func (ClientConnectionCreateTime) Description() string {
 
 // Record records val to the current distribution.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -396,7 +396,7 @@ func (ClientConnectionIdleMax) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -455,7 +455,7 @@ func (ClientConnectionIdleMin) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -514,7 +514,7 @@ func (ClientConnectionMax) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -575,7 +575,7 @@ func (ClientConnectionPendingRequests) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -635,7 +635,7 @@ func (ClientConnectionTimeouts) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -695,7 +695,7 @@ func (ClientConnectionUseTime) Description() string {
 
 // Record records val to the current distribution.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -754,7 +754,7 @@ func (ClientConnectionWaitTime) Description() string {
 
 // Record records val to the current distribution.
 //
-// The dbClientConnectionPoolName is the the name of the connection pool; unique
+// The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
 // implementation doesn't provide a name, instrumentation SHOULD use a
 // combination of parameters that would make the name unique, for example,
@@ -813,7 +813,7 @@ func (ClientOperationDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The dbSystemName is the the database management system (DBMS) product as
+// The systemName is the the database management system (DBMS) product as
 // identified by the client instrumentation.
 //
 // All additional attrs passed are included in the recorded value.
@@ -947,7 +947,7 @@ func (ClientResponseReturnedRows) Description() string {
 
 // Record records val to the current distribution.
 //
-// The dbSystemName is the the database management system (DBMS) product as
+// The systemName is the the database management system (DBMS) product as
 // identified by the client instrumentation.
 //
 // All additional attrs passed are included in the recorded value.

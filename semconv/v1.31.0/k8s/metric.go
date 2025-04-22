@@ -776,7 +776,7 @@ func (NamespacePhase) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The k8sNamespacePhase is the the phase of the K8s namespace.
+// The namespacePhase is the the phase of the K8s namespace.
 func (m NamespacePhase) Add(
     ctx context.Context,
     incr int64,

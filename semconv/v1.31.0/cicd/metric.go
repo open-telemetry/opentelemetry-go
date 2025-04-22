@@ -118,11 +118,11 @@ func (PipelineRunActive) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The cicdPipelineName is the the human readable name of the pipeline within a
-// CI/CD system.
+// The pipelineName is the the human readable name of the pipeline within a CI/CD
+// system.
 //
-// The cicdPipelineRunState is the the pipeline run goes through these states
-// during its lifecycle.
+// The pipelineRunState is the the pipeline run goes through these states during
+// its lifecycle.
 func (m PipelineRunActive) Add(
     ctx context.Context,
     incr int64,
@@ -177,11 +177,11 @@ func (PipelineRunDuration) Description() string {
 
 // Record records val to the current distribution.
 //
-// The cicdPipelineName is the the human readable name of the pipeline within a
-// CI/CD system.
+// The pipelineName is the the human readable name of the pipeline within a CI/CD
+// system.
 //
-// The cicdPipelineRunState is the the pipeline run goes through these states
-// during its lifecycle.
+// The pipelineRunState is the the pipeline run goes through these states during
+// its lifecycle.
 //
 // All additional attrs passed are included in the recorded value.
 func (m PipelineRunDuration) Record(
@@ -255,8 +255,8 @@ func (PipelineRunErrors) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The cicdPipelineName is the the human readable name of the pipeline within a
-// CI/CD system.
+// The pipelineName is the the human readable name of the pipeline within a CI/CD
+// system.
 //
 // The errorType is the describes a class of error the operation ended with.
 func (m PipelineRunErrors) Add(
@@ -313,7 +313,7 @@ func (SystemErrors) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The cicdSystemComponent is the the name of a component of the CICD system.
+// The systemComponent is the the name of a component of the CICD system.
 //
 // The errorType is the describes a class of error the operation ended with.
 func (m SystemErrors) Add(
@@ -370,7 +370,7 @@ func (WorkerCount) Description() string {
 
 // Add adds incr to the existing count.
 //
-// The cicdWorkerState is the the state of a CICD worker / agent.
+// The workerState is the the state of a CICD worker / agent.
 func (m WorkerCount) Add(
     ctx context.Context,
     incr int64,
