@@ -122,7 +122,7 @@ func TestNewConfig(t *testing.T) {
 				compression: newSetting(GzipCompression),
 				timeout:     newSetting(time.Second),
 				retryCfg:    newSetting(rc),
-				transport:   newSetting(http.RoundTripper(http.DefaultTransport)),
+				transport:   newSetting(http.DefaultTransport),
 			},
 		},
 		{
