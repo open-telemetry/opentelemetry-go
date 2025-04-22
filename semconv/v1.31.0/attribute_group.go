@@ -6082,7 +6082,7 @@ const (
 	HostIDKey = attribute.Key("host.id")
 
 	// HostImageIDKey is the attribute Key conforming to the "host.image.id"
-	// semantic conventions. It represents the vM image ID or host OS image ID. For
+	// semantic conventions. It represents the VM image ID or host OS image ID. For
 	// Cloud, this value is from the provider.
 	//
 	// Type: string
@@ -6224,7 +6224,7 @@ func HostID(val string) attribute.KeyValue {
 }
 
 // HostImageID returns an attribute KeyValue conforming to the "host.image.id"
-// semantic conventions. It represents the vM image ID or host OS image ID. For
+// semantic conventions. It represents the VM image ID or host OS image ID. For
 // Cloud, this value is from the provider.
 func HostImageID(val string) attribute.KeyValue {
 	return HostImageIDKey.String(val)
@@ -6331,7 +6331,7 @@ const (
 	HTTPRequestBodySizeKey = attribute.Key("http.request.body.size")
 
 	// HTTPRequestMethodKey is the attribute Key conforming to the
-	// "http.request.method" semantic conventions. It represents the hTTP request
+	// "http.request.method" semantic conventions. It represents the HTTP request
 	// method.
 	//
 	// Type: Enum
@@ -9992,9 +9992,8 @@ const (
 	RPCMessageCompressedSizeKey = attribute.Key("rpc.message.compressed_size")
 
 	// RPCMessageIDKey is the attribute Key conforming to the "rpc.message.id"
-	// semantic conventions. It represents the mUST be calculated as two different
-	// counters starting from `1` one for sent messages and one for received
-	// message.
+	// semantic conventions. It MUST be calculated as two different counters
+	// starting from `1` one for sent messages and one for received message.
 	//
 	// Type: int
 	// RequirementLevel: Recommended
@@ -10112,8 +10111,8 @@ func RPCMessageCompressedSize(val int) attribute.KeyValue {
 }
 
 // RPCMessageID returns an attribute KeyValue conforming to the "rpc.message.id"
-// semantic conventions. It represents the mUST be calculated as two different
-// counters starting from `1` one for sent messages and one for received message.
+// semantic conventions. It MUST be calculated as two different counters starting
+// from `1` one for sent messages and one for received message.
 func RPCMessageID(val int) attribute.KeyValue {
 	return RPCMessageIDKey.Int(val)
 }
@@ -11288,7 +11287,7 @@ const (
 	TLSCipherKey = attribute.Key("tls.cipher")
 
 	// TLSClientCertificateKey is the attribute Key conforming to the
-	// "tls.client.certificate" semantic conventions. It represents the pEM-encoded
+	// "tls.client.certificate" semantic conventions. It represents the PEM-encoded
 	// stand-alone certificate offered by the client. This is usually
 	// mutually-exclusive of `client.certificate_chain` since this value also exists
 	// in that list.
@@ -11496,7 +11495,7 @@ const (
 	TLSResumedKey = attribute.Key("tls.resumed")
 
 	// TLSServerCertificateKey is the attribute Key conforming to the
-	// "tls.server.certificate" semantic conventions. It represents the pEM-encoded
+	// "tls.server.certificate" semantic conventions. It represents the PEM-encoded
 	// stand-alone certificate offered by the server. This is usually
 	// mutually-exclusive of `server.certificate_chain` since this value also exists
 	// in that list.
@@ -11628,7 +11627,7 @@ func TLSCipher(val string) attribute.KeyValue {
 }
 
 // TLSClientCertificate returns an attribute KeyValue conforming to the
-// "tls.client.certificate" semantic conventions. It represents the pEM-encoded
+// "tls.client.certificate" semantic conventions. It represents the PEM-encoded
 // stand-alone certificate offered by the client. This is usually
 // mutually-exclusive of `client.certificate_chain` since this value also exists
 // in that list.
@@ -11759,7 +11758,7 @@ func TLSResumed(val bool) attribute.KeyValue {
 }
 
 // TLSServerCertificate returns an attribute KeyValue conforming to the
-// "tls.server.certificate" semantic conventions. It represents the pEM-encoded
+// "tls.server.certificate" semantic conventions. It represents the PEM-encoded
 // stand-alone certificate offered by the server. This is usually
 // mutually-exclusive of `server.certificate_chain` since this value also exists
 // in that list.

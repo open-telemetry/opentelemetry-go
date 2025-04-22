@@ -31,12 +31,39 @@ Examples: {{ attr.examples | trim("[]") }}
 {%- endif %}
 {%- endmacro -%}
 
-{%- macro it_reps(brief) -%}
-{%- set brief = brief | trim() -%}
-It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
-  {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+{%- macro lower_first(line) -%}
+{%- if line[0] is upper and line[1] is upper -%}
+{#- Assume an acronym -#}
+{{ line }}
 {%- else -%}
-  the {{ brief[0]|lower }}{{ brief[1:] | trim(".") }}.
+{{ line[0]|lower }}{{ line[1:] }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro first_word(line, delim=" ") -%}
+{%- for c in line -%}
+{%- if c == delim -%}
+{{ line[:loop.index0] }}
+{%- set line = "" -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro it_reps(brief) -%}
+{%- set norms = [
+	"MUST", "REQUIRED", "SHALL",
+	"SHOULD", "RECOMMENDED",
+	"MAY", "OPTIONAL"
+] -%}
+{%- set brief = brief | trim() | trim(".") -%}
+{%- if first_word(brief) is in norms -%}
+It {{ brief }}.
+{%- else -%}
+It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
+  {{ lower_first(brief) }}.
+{%- else -%}
+  the {{ lower_first(brief) }}.
+{%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
 
