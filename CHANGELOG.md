@@ -18,12 +18,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Drop support for [Go 1.22]. (#6381, #6418)
-- Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
-- Remove `RecordFactory` type from `go.opentelemetry.io/otel/log/logtest`. (#6492)
-- Remove `ScopeRecords`, `EmittedRecord`, and `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6507)
-- Remove `RecordFactory` type from `go.opentelemetry.io/otel/log/logtest`. (#6492)
-
 ### Changed
 
 - ⚠️ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
