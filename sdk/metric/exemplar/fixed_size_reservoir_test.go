@@ -6,10 +6,9 @@ package exemplar
 import (
 	"context"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -28,12 +27,10 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	intensity := 0.1
 	sampleSize := 1000
 
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	data := make([]float64, sampleSize*1000)
 	for i := range data {
 		// Generate exponentially distributed data.
-		data[i] = (-1.0 / intensity) * math.Log(rng.Float64())
+		data[i] = (-1.0 / intensity) * math.Log(rand.Float64())
 	}
 	// Sort to test position bias.
 	slices.Sort(data)

@@ -6,7 +6,7 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/exemplar"
 import (
 	"context"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -44,18 +44,11 @@ type FixedSizeReservoir struct {
 	// w is the largest random number in a distribution that is used to compute
 	// the next next.
 	w float64
-
-	// rng is used to make sampling decisions.
-	//
-	// Do not use crypto/rand. There is no reason for the decrease in performance
-	// given this is not a security sensitive decision.
-	rng *rand.Rand
 }
 
 func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
 	r := &FixedSizeReservoir{
 		storage: s,
-		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	r.reset()
 	return r
@@ -81,9 +74,9 @@ func (r *FixedSizeReservoir) randomFloat64() float64 {
 	//
 	// There are likely many other methods to explore here as well.
 
-	f := r.rng.Float64()
+	f := rand.Float64()
 	for f == 0 {
-		f = r.rng.Float64()
+		f = rand.Float64()
 	}
 	return f
 }
@@ -146,7 +139,7 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	} else {
 		if r.count == r.next {
 			// Overwrite a random existing measurement with the one offered.
-			idx := int(r.rng.Int63n(int64(cap(r.store))))
+			idx := int(rand.Int64N(int64(cap(r.store))))
 			r.store[idx] = newMeasurement(ctx, t, n, a)
 			r.advance()
 		}
