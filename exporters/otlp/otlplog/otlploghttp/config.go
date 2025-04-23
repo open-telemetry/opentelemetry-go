@@ -352,8 +352,7 @@ func WithProxy(pf HTTPTransportProxyFunc) Option {
 // OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE, OTEL_EXPORTER_OTLP_TIMEOUT,
 // OTEL_EXPORTER_OTLP_LOGS_TIMEOUT environment variables.
 //
-// When this option is used, we will not set default timeouts to the client's Transport anymore.
-// You therefore need to handle them yourself.
+// Timeout and all other fields of the passed [http.Client] are left intact.
 //
 // Be aware that passing an HTTP client with transport like
 // [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewTransport] can
