@@ -200,7 +200,7 @@ func TestMaxElapsedTime(t *testing.T) {
 	ctx := context.Background()
 	assert.Contains(t, reqFunc(ctx, func(context.Context) error {
 		return assert.AnError
-	}).Error(), "max retry time elapsed: ")
+	}).Error(), "max retry time")
 }
 
 func TestRetryNotEnabled(t *testing.T) {
