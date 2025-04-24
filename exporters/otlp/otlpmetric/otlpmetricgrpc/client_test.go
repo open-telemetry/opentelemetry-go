@@ -236,7 +236,7 @@ func TestConfig(t *testing.T) {
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+		assert.ErrorContains(t, err, "DeadlineExceeded")
 	})
 
 	t.Run("WithCustomUserAgent", func(t *testing.T) {
