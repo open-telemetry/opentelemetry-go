@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -49,4 +50,15 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+}
+
+func BenchmarkAllocsNewFixedSizeReservoir(b *testing.B) {
+	ctx := context.Background()
+	val := NewValue(rand.Int64())
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		r := NewFixedSizeReservoir(100)
+		r.Offer(ctx, time.Now(), val, nil)
+	}
 }
