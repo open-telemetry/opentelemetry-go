@@ -162,6 +162,11 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			headers: []string{"", ""},
 			want:    members{},
 		},
+		{
+			name:    "none",
+			headers: []string{},
+			want:    members{},
+		},
 	}
 
 	for _, tt := range tests {
