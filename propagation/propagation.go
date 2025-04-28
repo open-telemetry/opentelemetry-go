@@ -38,8 +38,8 @@ type MultiTextMapCarrier interface {
 // MultiGetter can return multiple values for a single key,
 // with contrast to TextMapCarrier.Get which returns a single value.
 type MultiGetter interface {
-	// GetAll returns all values associated with the passed key.
-	GetAll(key string) []string
+	// Values returns all values associated with the passed key.
+	Values(key string) []string
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 }
@@ -78,8 +78,8 @@ func (hc HeaderCarrier) Get(key string) string {
 	return http.Header(hc).Get(key)
 }
 
-// GetAll returns all values associated with the passed key.
-func (hc HeaderCarrier) GetAll(key string) []string {
+// Values returns all values associated with the passed key.
+func (hc HeaderCarrier) Values(key string) []string {
 	return http.Header(hc).Values(key)
 }
 

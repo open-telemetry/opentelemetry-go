@@ -55,7 +55,7 @@ func extractSingleBaggage(parent context.Context, carrier TextMapCarrier) contex
 }
 
 func extractMultiBaggage(parent context.Context, carrier MultiTextMapCarrier) context.Context {
-	bVals := carrier.GetAll(baggageHeader)
+	bVals := carrier.Values(baggageHeader)
 	members := make([]baggage.Member, 0)
 	for _, bStr := range bVals {
 		currBag, err := baggage.Parse(bStr)
