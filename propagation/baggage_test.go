@@ -171,7 +171,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 			req.Header["Baggage"] = tt.headers
 
 			ctx := context.Background()
