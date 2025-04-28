@@ -31,6 +31,9 @@ type TextMapCarrier interface {
 
 // MultiTextMapCarrier is a TextMapCarrier that can return multiple values for a single key.
 type MultiTextMapCarrier interface {
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
 	TextMapCarrier
 	MultiGetter
 }
@@ -38,6 +41,9 @@ type MultiTextMapCarrier interface {
 // MultiGetter can return multiple values for a single key,
 // with contrast to TextMapCarrier.Get which returns a single value.
 type MultiGetter interface {
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
 	// Values returns all values associated with the passed key.
 	Values(key string) []string
 	// DO NOT CHANGE: any modification will not be backwards compatible and
