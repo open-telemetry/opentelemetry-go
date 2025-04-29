@@ -115,6 +115,8 @@ type TextMapPropagator interface {
 	// must never be done outside of a new major release.
 
 	// Extract reads cross-cutting concerns from the carrier into a Context.
+	// Implementations may check if the carrier implements MultiTextMapCarrier,
+	// to support usage of multiple values per key.
 	Extract(ctx context.Context, carrier TextMapCarrier) context.Context
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
