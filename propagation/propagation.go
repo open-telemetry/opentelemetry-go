@@ -76,7 +76,7 @@ func (c MapCarrier) Keys() []string {
 	return keys
 }
 
-// HeaderCarrier adapts http.Header to satisfy the TextMapCarrier interface.
+// HeaderCarrier adapts http.Header to satisfy the MultiTextMapCarrier interface.
 type HeaderCarrier http.Header
 
 // Get returns the first value associated with the passed key.
