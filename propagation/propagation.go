@@ -35,12 +35,12 @@ type MultiTextMapCarrier interface {
 	// must never be done outside of a new major release.
 
 	TextMapCarrier
-	MultiGetter
+	ValuesGetter
 }
 
-// MultiGetter can return multiple values for a single key,
+// ValuesGetter can return multiple values for a single key,
 // with contrast to TextMapCarrier.Get which returns a single value.
-type MultiGetter interface {
+type ValuesGetter interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 
