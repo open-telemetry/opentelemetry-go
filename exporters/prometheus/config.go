@@ -132,7 +132,6 @@ func WithoutScopeInfo() Option {
 // have special behavior based on their name.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
-		// Only sanitize if prometheus does not support UTF-8.
 		ns = model.EscapeName(ns, model.NameEscapingScheme)
 		if !strings.HasSuffix(ns, "_") {
 			// namespace and metric names should be separated with an underscore,
