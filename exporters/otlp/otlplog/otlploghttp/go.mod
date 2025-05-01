@@ -12,7 +12,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.11.0
 	go.opentelemetry.io/otel/sdk/log/logtest v0.0.0-00000000000000-000000000000
 	go.opentelemetry.io/otel/trace v1.35.0
-	go.opentelemetry.io/proto/otlp v1.5.0
+	go.opentelemetry.io/proto/otlp v1.6.0
 	google.golang.org/protobuf v1.36.6
 )
 
@@ -21,7 +21,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
