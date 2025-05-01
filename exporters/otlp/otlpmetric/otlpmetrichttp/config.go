@@ -222,3 +222,12 @@ func WithAggregationSelector(selector metric.AggregationSelector) Option {
 func WithProxy(pf HTTPTransportProxyFunc) Option {
 	return wrappedOption{oconf.WithProxy(oconf.HTTPTransportProxyFunc(pf))}
 }
+
+// WithQueryParams sets the query parameters to be included in the endpoint URL.
+//
+// If query parameters are provided in the endpoint URL, they will be merged
+// with the parameters set using this function. Parameters set using this
+// function will take precedence in case of conflicts.
+func WithQueryParams(params map[string]string) Option {
+	return wrappedOption{oconf.WithQueryParams(params)}
+}

@@ -80,6 +80,16 @@ func newClient(cfg oconf.Config) (*client, error) {
 	if cfg.Metrics.Insecure {
 		u.Scheme = "http"
 	}
+
+	// Add query parameters to the URL
+	if len(cfg.Metrics.QueryParams) > 0 {
+		query := u.Query()
+		for key, value := range cfg.Metrics.QueryParams {
+			query.Set(key, value)
+		}
+		u.RawQuery = query.Encode()
+	}
+
 	// Body is set when this is cloned during upload.
 	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
