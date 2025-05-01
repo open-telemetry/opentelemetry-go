@@ -404,32 +404,23 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	values := make([]string, 0, attrs.Len())
 	itr := attrs.Iter()
 
-	if model.NameValidationScheme == model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-		// Do not perform sanitization if prometheus supports UTF-8.
-		for itr.Next() {
-			kv := itr.Attribute()
-			keys = append(keys, string(kv.Key))
-			values = append(values, kv.Value.Emit())
+	// It sanitizes invalid characters and handles duplicate keys
+	// (due to sanitization) by sorting and concatenating the values following the spec.
+	keysMap := make(map[string][]string)
+	for itr.Next() {
+		kv := itr.Attribute()
+		key := model.EscapeName(string(kv.Key), model.NameEscapingScheme)
+		if _, ok := keysMap[key]; !ok {
+			keysMap[key] = []string{kv.Value.Emit()}
+		} else {
+			// if the sanitized key is a duplicate, append to the list of keys
+			keysMap[key] = append(keysMap[key], kv.Value.Emit())
 		}
-	} else {
-		// It sanitizes invalid characters and handles duplicate keys
-		// (due to sanitization) by sorting and concatenating the values following the spec.
-		keysMap := make(map[string][]string)
-		for itr.Next() {
-			kv := itr.Attribute()
-			key := model.EscapeName(string(kv.Key), model.NameEscapingScheme)
-			if _, ok := keysMap[key]; !ok {
-				keysMap[key] = []string{kv.Value.Emit()}
-			} else {
-				// if the sanitized key is a duplicate, append to the list of keys
-				keysMap[key] = append(keysMap[key], kv.Value.Emit())
-			}
-		}
-		for key, vals := range keysMap {
-			keys = append(keys, key)
-			slices.Sort(vals)
-			values = append(values, strings.Join(vals, ";"))
-		}
+	}
+	for key, vals := range keysMap {
+		keys = append(keys, key)
+		slices.Sort(vals)
+		values = append(values, strings.Join(vals, ";"))
 	}
 	return keys, values
 }
@@ -489,12 +480,7 @@ var unitSuffixes = map[string]string{
 
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
-	name := m.Name
-	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-		// Only sanitize if prometheus does not support UTF-8.
-		logDeprecatedLegacyScheme()
-		name = model.EscapeName(name, model.NameEscapingScheme)
-	}
+	name := model.EscapeName(m.Name, model.NameEscapingScheme)
 	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
 	if addCounterSuffix {
 		// Remove the _total suffix here, as we will re-add the total suffix

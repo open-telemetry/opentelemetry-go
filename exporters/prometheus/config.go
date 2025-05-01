@@ -5,13 +5,11 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -26,12 +24,6 @@ type config struct {
 	namespace                string
 	resourceAttributesFilter attribute.Filter
 }
-
-var logDeprecatedLegacyScheme = sync.OnceFunc(func() {
-	global.Warn(
-		"prometheus exporter legacy scheme deprecated: support for the legacy NameValidationScheme will be removed in a future release",
-	)
-})
 
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
@@ -140,11 +132,8 @@ func WithoutScopeInfo() Option {
 // have special behavior based on their name.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
-		if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-			logDeprecatedLegacyScheme()
-			// Only sanitize if prometheus does not support UTF-8.
-			ns = model.EscapeName(ns, model.NameEscapingScheme)
-		}
+		// Only sanitize if prometheus does not support UTF-8.
+		ns = model.EscapeName(ns, model.NameEscapingScheme)
 		if !strings.HasSuffix(ns, "_") {
 			// namespace and metric names should be separated with an underscore,
 			// adds a trailing underscore if there is not one already.
