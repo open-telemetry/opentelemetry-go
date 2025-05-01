@@ -13,6 +13,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockDelayExporter struct{}
+
+func (mockDelayExporter) Export(context.Context, []Record) error {
+	time.Sleep(time.Millisecond * 5)
+	return nil
+}
+
+func (mockDelayExporter) Shutdown(context.Context) error { return nil }
+
+func (mockDelayExporter) ForceFlush(context.Context) error { return nil }
+
 func BenchmarkProcessor(b *testing.B) {
 	for _, tc := range []struct {
 		name string
@@ -28,6 +39,12 @@ func BenchmarkProcessor(b *testing.B) {
 			name: "Batch",
 			f: func() []LoggerProviderOption {
 				return []LoggerProviderOption{WithProcessor(NewBatchProcessor(noopExporter{}))}
+			},
+		},
+		{
+			name: "BatchSimulateExport",
+			f: func() []LoggerProviderOption {
+				return []LoggerProviderOption{WithProcessor(NewBatchProcessor(mockDelayExporter{}))}
 			},
 		},
 		{

@@ -186,11 +186,10 @@ type bufferExporter struct {
 
 // newBufferExporter returns a new bufferExporter that wraps exporter. The
 // returned bufferExporter will buffer at most size number of export requests.
-// If size is less than zero, zero will be used (i.e. only synchronous
-// exporting will be supported).
+// If size is less than 1, 1 will be used.
 func newBufferExporter(exporter Exporter, size int) *bufferExporter {
-	if size < 0 {
-		size = 0
+	if size < 1 {
+		size = 1
 	}
 	input := make(chan exportData, size)
 	return &bufferExporter{
@@ -199,6 +198,10 @@ func newBufferExporter(exporter Exporter, size int) *bufferExporter {
 		input: input,
 		done:  exportSync(input, exporter),
 	}
+}
+
+func (e *bufferExporter) Ready() bool {
+	return len(e.input) != cap(e.input)
 }
 
 var errStopped = errors.New("exporter stopped")
