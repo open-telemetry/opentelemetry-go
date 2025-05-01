@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -226,6 +227,12 @@ var gzPool = sync.Pool{
 func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, error) {
 	r := c.req.Clone(ctx)
 	req := request{Request: r}
+
+	// If the authorization bearer token environment variable is set, update the request to use it.
+	// The validity of the token is limited and will be periodically refreshed.
+	if bearerToken := os.Getenv("OTEL_EXPORTER_OTLP_HTTP_AUTH_BEARER_TOKEN"); bearerToken != "" {
+		r.Header.Set("Authorization", "Bearer "+bearerToken)
+	}
 
 	switch c.compression {
 	case NoCompression:
