@@ -1045,7 +1045,7 @@ func TestEndSpanTwice(t *testing.T) {
 	}
 
 	ro := span.(ReadOnlySpan)
-	if ro.EndTime() != et1 {
+	if !ro.EndTime().Equal(et1) {
 		t.Fatalf("2nd call to End() should not modify end time")
 	}
 }
@@ -1638,7 +1638,9 @@ func TestReadOnlySpan(t *testing.T) {
 	assert.Equal(t, trace.SpanContextFromContext(ctx), ro.SpanContext())
 	assert.Equal(t, parent, ro.Parent())
 	assert.Equal(t, trace.SpanKindInternal, ro.SpanKind())
-	assert.Equal(t, st, ro.StartTime())
+	if !st.Equal(ro.StartTime()) {
+		t.Errorf("StartTime should be set from timestamp")
+	}
 	assert.True(t, ro.EndTime().IsZero())
 	assert.Equal(t, kv.Key, ro.Attributes()[0].Key)
 	assert.Equal(t, kv.Value, ro.Attributes()[0].Value)
@@ -1680,7 +1682,9 @@ func TestReadOnlySpan(t *testing.T) {
 
 	et := st.Add(time.Millisecond)
 	s.End(trace.WithTimestamp(et))
-	assert.Equal(t, et, ro.EndTime())
+	if !et.Equal(ro.EndTime()) {
+		t.Errorf("EndTime should be set from timestamp")
+	}
 }
 
 func TestReadWriteSpan(t *testing.T) {

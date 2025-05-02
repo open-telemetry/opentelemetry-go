@@ -17,6 +17,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/internal/epoch"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -114,11 +115,11 @@ type recordingSpan struct {
 	name string
 
 	// startTime is the time at which this span was started.
-	startTime time.Time
+	startTime epoch.Nanos
 
-	// endTime is the time at which this span was ended. It contains the zero
-	// value of time.Time until the span is ended.
-	endTime time.Time
+	// endTime is the time at which this span was ended. It contains zero until
+	// the span is ended.
+	endTime epoch.Nanos
 
 	// status is the status of this span.
 	status Status
@@ -168,24 +169,7 @@ func (s *recordingSpan) SpanContext() trace.SpanContext {
 // IsRecording returns if this span is being recorded. If this span has ended
 // this will return false.
 func (s *recordingSpan) IsRecording() bool {
-	if s == nil {
-		return false
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.isRecording()
-}
-
-// isRecording returns if this span is being recorded. If this span has ended
-// this will return false.
-//
-// This method assumes s.mu.Lock is held by the caller.
-func (s *recordingSpan) isRecording() bool {
-	if s == nil {
-		return false
-	}
-	return s.endTime.IsZero()
+	return s != nil && (&s.endTime).Load() == 0
 }
 
 // SetStatus sets the status of the Span in the form of a code and a
@@ -193,15 +177,11 @@ func (s *recordingSpan) isRecording() bool {
 // included in the set status when the code is for an error. If this span is
 // not being recorded than this method does nothing.
 func (s *recordingSpan) SetStatus(code codes.Code, description string) {
-	if s == nil {
+	if !s.IsRecording() {
 		return
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 	if s.status.Code > code {
 		return
 	}
@@ -225,15 +205,12 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 // attributes the span is configured to have, the last added attributes will
 // be dropped.
 func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
-	if s == nil || len(attributes) == 0 {
+	if !s.IsRecording() || len(attributes) == 0 {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
@@ -444,24 +421,17 @@ func truncate(limit int, s string) string {
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
 func (s *recordingSpan) End(options ...trace.SpanEndOption) {
-	// Do not start by checking if the span is being recorded which requires
-	// acquiring a lock. Make a minimal check that the span is not nil.
 	if s == nil {
 		return
 	}
 
-	// Store the end time as soon as possible to avoid artificially increasing
-	// the span's duration in case some operation below takes a while.
-	et := monotonicEndTime(s.startTime)
-
-	// Lock the span now that we have an end time and see if we need to do any more processing.
-	s.mu.Lock()
-	if !s.isRecording() {
-		s.mu.Unlock()
+	config := trace.NewSpanEndConfig(options...)
+	endTime := epoch.NanosNowOrDefault(config.Timestamp())
+	// Only the first call to End sets the time using atomic compare-and-swap.
+	if !(&s.endTime).SwapIfZero(endTime) {
 		return
 	}
 
-	config := trace.NewSpanEndConfig(options...)
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
@@ -482,18 +452,8 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 
 	if s.executionTracerTaskEnd != nil {
-		s.mu.Unlock()
 		s.executionTracerTaskEnd()
-		s.mu.Lock()
 	}
-
-	// Setting endTime to non-zero marks the span as ended and not recording.
-	if config.Timestamp().IsZero() {
-		s.endTime = et
-	} else {
-		s.endTime = config.Timestamp()
-	}
-	s.mu.Unlock()
 
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
@@ -505,30 +465,17 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 }
 
-// monotonicEndTime returns the end time at present but offset from start,
-// monotonically.
-//
-// The monotonic clock is used in subtractions hence the duration since start
-// added back to start gives end as a monotonic time. See
-// https://golang.org/pkg/time/#hdr-Monotonic_Clocks
-func monotonicEndTime(start time.Time) time.Time {
-	return start.Add(time.Since(start))
-}
-
 // RecordError will record err as a span event for this span. An additional call to
 // SetStatus is required if the Status of the Span should be set to Error, this method
 // does not change the Span status. If this span is not being recorded or err is nil
 // than this method does nothing.
 func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
-	if s == nil || err == nil {
+	if err == nil || !s.IsRecording() {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 
 	opts = append(opts, trace.WithAttributes(
 		semconv.ExceptionType(typeStr(err)),
@@ -564,15 +511,12 @@ func recordStackTrace() string {
 // AddEvent adds an event with the provided name and options. If this span is
 // not being recorded then this method does nothing.
 func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
-	if s == nil {
+	if !s.IsRecording() {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 	s.addEvent(name, o...)
 }
 
@@ -601,15 +545,12 @@ func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 // SetName sets the name of this span. If this span is not being recorded than
 // this method does nothing.
 func (s *recordingSpan) SetName(name string) {
-	if s == nil {
+	if !s.IsRecording() {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 	s.name = name
 }
 
@@ -638,15 +579,13 @@ func (s *recordingSpan) SpanKind() trace.SpanKind {
 func (s *recordingSpan) StartTime() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.startTime
+	return s.startTime.ToTime()
 }
 
 // EndTime returns the time this span ended. For spans that have not yet
 // ended, the returned value will be the zero value of time.Time.
 func (s *recordingSpan) EndTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.endTime
+	return (&s.endTime).Load().ToTime()
 }
 
 // Attributes returns the attributes of this span.
@@ -740,7 +679,7 @@ func (s *recordingSpan) Resource() *resource.Resource {
 }
 
 func (s *recordingSpan) AddLink(link trace.Link) {
-	if s == nil {
+	if !s.IsRecording() {
 		return
 	}
 	if !link.SpanContext.IsValid() && len(link.Attributes) == 0 &&
@@ -750,9 +689,6 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 
 	l := Link{SpanContext: link.SpanContext, Attributes: link.Attributes}
 
@@ -814,14 +750,14 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	sd.endTime = s.endTime
+	sd.endTime = s.endTime.ToTime()
 	sd.instrumentationScope = s.tracer.instrumentationScope
 	sd.name = s.name
 	sd.parent = s.parent
 	sd.resource = s.tracer.provider.resource
 	sd.spanContext = s.spanContext
 	sd.spanKind = s.spanKind
-	sd.startTime = s.startTime
+	sd.startTime = s.startTime.ToTime()
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount
 
@@ -842,15 +778,12 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 }
 
 func (s *recordingSpan) addChild() {
-	if s == nil {
+	if !s.IsRecording() {
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.isRecording() {
-		return
-	}
 	s.childSpanCount++
 }
 
