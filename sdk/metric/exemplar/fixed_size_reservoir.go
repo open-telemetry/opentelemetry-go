@@ -5,8 +5,9 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/exemplar"
 
 import (
 	"context"
+	crand "crypto/rand"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -53,9 +54,11 @@ type FixedSizeReservoir struct {
 }
 
 func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
+	var seed [32]byte
+	crand.Read(seed[:]) //nolint // crypto/rand never errors
 	r := &FixedSizeReservoir{
 		storage: s,
-		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:     rand.New(rand.NewChaCha8(seed)),
 	}
 	r.reset()
 	return r
@@ -64,26 +67,9 @@ func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
 // randomFloat64 returns, as a float64, a uniform pseudo-random number in the
 // open interval (0.0,1.0).
 func (r *FixedSizeReservoir) randomFloat64() float64 {
-	// TODO: This does not return a uniform number. rng.Float64 returns a
-	// uniformly random int in [0,2^53) that is divided by 2^53. Meaning it
-	// returns multiples of 2^-53, and not all floating point numbers between 0
-	// and 1 (i.e. for values less than 2^-4 the 4 last bits of the significand
-	// are always going to be 0).
-	//
-	// An alternative algorithm should be considered that will actually return
-	// a uniform number in the interval (0,1). For example, since the default
-	// rand source provides a uniform distribution for Int63, this can be
-	// converted following the prototypical code of Mersenne Twister 64 (Takuji
-	// Nishimura and Makoto Matsumoto:
-	// http://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/VERSIONS/C-LANG/mt19937-64.c)
-	//
-	//   (float64(rng.Int63()>>11) + 0.5) * (1.0 / 4503599627370496.0)
-	//
-	// There are likely many other methods to explore here as well.
-
-	f := r.rng.Float64()
+	f := rand.Float64()
 	for f == 0 {
-		f = r.rng.Float64()
+		f = rand.Float64()
 	}
 	return f
 }
@@ -146,7 +132,7 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	} else {
 		if r.count == r.next {
 			// Overwrite a random existing measurement with the one offered.
-			idx := int(r.rng.Int63n(int64(cap(r.store))))
+			idx := int(rand.Int64N(int64(cap(r.store))))
 			r.store[idx] = newMeasurement(ctx, t, n, a)
 			r.advance()
 		}

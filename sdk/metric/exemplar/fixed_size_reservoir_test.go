@@ -5,11 +5,11 @@ package exemplar
 
 import (
 	"context"
+	crand "crypto/rand"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +28,9 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	intensity := 0.1
 	sampleSize := 1000
 
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	var seed [32]byte
+	crand.Read(seed[:]) //nolint // crypto/rand never errors
+	rng := rand.New(rand.NewChaCha8(seed))
 
 	data := make([]float64, sampleSize*1000)
 	for i := range data {
