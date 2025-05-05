@@ -5,6 +5,7 @@ package trace
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -570,4 +571,237 @@ func TestConfigLinkMutability(t *testing.T) {
 
 	want := SpanConfig{links: []Link{l0, l1}}
 	assert.Equal(t, want, conf)
+}
+
+func TestTraceIDUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    TraceID
+		wantErr bool
+	}{
+		{
+			name:  "valid TraceID",
+			input: `"80f198ee56343ba864fe8b2a57d3eff7"`,
+			want:  TraceID{0x80, 0xf1, 0x98, 0xee, 0x56, 0x34, 0x3b, 0xa8, 0x64, 0xfe, 0x8b, 0x2a, 0x57, 0xd3, 0xef, 0xf7},
+		},
+		{
+			name:    "invalid length",
+			input:   `"80f198ee56343ba864fe8b2a57d3eff"`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid char",
+			input:   `"80f198ee56343ba864fe8b2a57d3efg7"`,
+			wantErr: true,
+		},
+		{
+			name:    "all zeros",
+			input:   `"00000000000000000000000000000000"`,
+			wantErr: true,
+		},
+		{
+			name:    "not a string",
+			input:   `123`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var tid TraceID
+			err := json.Unmarshal([]byte(tc.input), &tid)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if tid != tc.want {
+					t.Errorf("got %v, want %v", tid, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestSpanIDUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    SpanID
+		wantErr bool
+	}{
+		{
+			name:  "valid SpanID",
+			input: `"2a00000000000000"`,
+			want:  SpanID{0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name:    "invalid length",
+			input:   `"2a0000000000000"`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid char",
+			input:   `"2a0000000000000g"`,
+			wantErr: true,
+		},
+		{
+			name:    "all zeros",
+			input:   `"0000000000000000"`,
+			wantErr: true,
+		},
+		{
+			name:    "not a string",
+			input:   `123`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var sid SpanID
+			err := json.Unmarshal([]byte(tc.input), &sid)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if sid != tc.want {
+					t.Errorf("got %v, want %v", sid, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestTraceFlagsUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    TraceFlags
+		wantErr bool
+	}{
+		{
+			name:  "valid TraceFlags 01",
+			input: `"01"`,
+			want:  TraceFlags(0x01),
+		},
+		{
+			name:  "valid TraceFlags 00",
+			input: `"00"`,
+			want:  TraceFlags(0x00),
+		},
+		{
+			name:    "invalid hex",
+			input:   `"gg"`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid length",
+			input:   `"0102"`,
+			wantErr: true,
+		},
+		{
+			name:    "not a string",
+			input:   `123`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var tf TraceFlags
+			err := json.Unmarshal([]byte(tc.input), &tf)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if tf != tc.want {
+					t.Errorf("got %v, want %v", tf, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestSpanContextUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    SpanContext
+		wantErr bool
+	}{
+		{
+			name:  "valid full SpanContext",
+			input: `{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000","TraceFlags":"01","TraceState":"foo=1","Remote":true}`,
+			want: NewSpanContext(SpanContextConfig{
+				TraceID:    TraceID{0x01},
+				SpanID:     SpanID{0x2a},
+				TraceFlags: TraceFlags(0x01),
+				TraceState: TraceState{list: []member{{Key: "foo", Value: "1"}}},
+				Remote:     true,
+			}),
+		},
+		{
+			name:  "valid partial SpanContext",
+			input: `{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000"}`,
+			want: NewSpanContext(SpanContextConfig{
+				TraceID: TraceID{0x01},
+				SpanID:  SpanID{0x2a},
+			}),
+		},
+		{
+			name:    "invalid TraceID",
+			input:   `{"TraceID":"00000000000000000000000000000000","SpanID":"2a00000000000000"}`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid JSON",
+			input:   `{"TraceID":123}`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var sc SpanContext
+			err := json.Unmarshal([]byte(tc.input), &sc)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if !assertSpanContextEqual(sc, tc.want) {
+					t.Errorf("got %+v, want %+v", sc, tc.want)
+				}
+				// Round-trip test
+				data, err := json.Marshal(sc)
+				if err != nil {
+					t.Errorf("MarshalJSON failed: %v", err)
+				}
+				var sc2 SpanContext
+				err = json.Unmarshal(data, &sc2)
+				if err != nil {
+					t.Errorf("UnmarshalJSON round-trip failed: %v", err)
+				}
+				if !assertSpanContextEqual(sc, sc2) {
+					t.Errorf("round-trip: got %+v, want %+v", sc2, sc)
+				}
+			}
+		})
+	}
 }

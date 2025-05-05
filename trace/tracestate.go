@@ -174,6 +174,8 @@ type TraceState struct { //nolint:revive // revive complains about stutter of `t
 
 var _ json.Marshaler = TraceState{}
 
+var _ json.Unmarshaler = &TraceState{}
+
 // ParseTraceState attempts to decode a TraceState from the passed
 // string. It returns an error if the input is invalid according to the W3C
 // Trace Context specification.
@@ -217,6 +219,27 @@ func ParseTraceState(ts string) (TraceState, error) {
 // MarshalJSON marshals the TraceState into JSON.
 func (ts TraceState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ts.String())
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for TraceState.
+// It expects the JSON to be a string (as produced by MarshalJSON), parses
+// it via ParseTraceState, and replaces the receiver’s contents.
+func (ts *TraceState) UnmarshalJSON(data []byte) error {
+	// 1) Unmarshal the JSON payload into a Go string.
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	// 2) Parse that string into a TraceState.
+	parsed, err := ParseTraceState(raw)
+	if err != nil {
+		return err
+	}
+
+	// 3) Overwrite the receiver with the parsed result.
+	*ts = parsed
+	return nil
 }
 
 // String encodes the TraceState into a string compliant with the W3C

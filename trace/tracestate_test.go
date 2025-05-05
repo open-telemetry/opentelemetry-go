@@ -624,3 +624,76 @@ func BenchmarkParseTraceState(b *testing.B) {
 		})
 	}
 }
+
+func TestTraceStateUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    TraceState
+		wantErr bool
+	}{
+		{
+			name:  "valid tracestate",
+			input: `"foo=1,bar=2"`,
+			want:  TraceState{list: []member{{Key: "foo", Value: "1"}, {Key: "bar", Value: "2"}}},
+		},
+		{
+			name:    "duplicate key",
+			input:   `"foo=1,foo=2"`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid key",
+			input:   `"foo!=1"`,
+			wantErr: true,
+		},
+		{
+			name:    "too many members",
+			input:   `"` + generateTooManyMembersString() + `"`,
+			wantErr: true,
+		},
+		{
+			name:    "not a string",
+			input:   `123`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var ts TraceState
+			err := json.Unmarshal([]byte(tc.input), &ts)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if fmt.Sprint(ts) != fmt.Sprint(tc.want) {
+					t.Errorf("got %v, want %v", ts, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func generateTooManyMembersString() string {
+	members := make([]string, 33)
+	for i := 0; i < 33; i++ {
+		members[i] = fmt.Sprintf("k%d=v%d", i, i)
+	}
+	return fmt.Sprintf("%s", stringJoin(members, ","))
+}
+
+func stringJoin(elems []string, sep string) string {
+	if len(elems) == 0 {
+		return ""
+	}
+	result := elems[0]
+	for _, s := range elems[1:] {
+		result += sep + s
+	}
+	return result
+}
