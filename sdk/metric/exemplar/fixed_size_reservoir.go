@@ -5,7 +5,6 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/exemplar"
 
 import (
 	"context"
-	crand "crypto/rand"
 	"math"
 	"math/rand/v2"
 	"time"
@@ -45,20 +44,11 @@ type FixedSizeReservoir struct {
 	// w is the largest random number in a distribution that is used to compute
 	// the next next.
 	w float64
-
-	// rng is used to make sampling decisions.
-	//
-	// Do not use crypto/rand. There is no reason for the decrease in performance
-	// given this is not a security sensitive decision.
-	rng *rand.Rand
 }
 
 func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
-	var seed [32]byte
-	crand.Read(seed[:]) //nolint // crypto/rand never errors
 	r := &FixedSizeReservoir{
 		storage: s,
-		rng:     rand.New(rand.NewChaCha8(seed)),
 	}
 	r.reset()
 	return r
