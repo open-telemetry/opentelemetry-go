@@ -684,7 +684,7 @@ func generateTooManyMembersString() string {
 	for i := 0; i < 33; i++ {
 		members[i] = fmt.Sprintf("k%d=v%d", i, i)
 	}
-	return fmt.Sprintf("%s", stringJoin(members, ","))
+	return stringJoin(members, ",")
 }
 
 func stringJoin(elems []string, sep string) string {
