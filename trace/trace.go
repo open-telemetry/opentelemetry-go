@@ -46,7 +46,9 @@ var (
 	_             json.Marshaler   = nilTraceFlags
 	_             json.Unmarshaler = &nilTraceFlags
 
-	_ json.Unmarshaler = &SpanContext{}
+	nilSpanContext SpanContext
+	_              json.Marshaler   = nilSpanContext
+	_              json.Unmarshaler = &nilSpanContext
 )
 
 // IsValid checks whether the trace TraceID is valid. A valid trace ID does
