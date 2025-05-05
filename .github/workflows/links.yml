@@ -21,7 +21,7 @@ jobs:
 
 
     - name: Restore lychee cache
-      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
       id: cache-restore
       with:
         path: .lycheecache
@@ -38,7 +38,7 @@ jobs:
 
     - name: Save lychee cache
       if: always()
-      uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
       with:
         path: .lycheecache
         key: ${{ steps.cache-restore.outputs.cache-primary-key }}
