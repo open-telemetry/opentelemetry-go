@@ -35,7 +35,7 @@ var _ IDGenerator = &randomIDGenerator{}
 func (gen *randomIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
 	sid := trace.SpanID{}
 	for {
-		binary.NativeEndian.PutUint64([]byte(sid[:]), rand.Uint64())
+		binary.NativeEndian.PutUint64(sid[:], rand.Uint64())
 		if sid.IsValid() {
 			break
 		}
@@ -49,14 +49,14 @@ func (gen *randomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.
 	tid := trace.TraceID{}
 	sid := trace.SpanID{}
 	for {
-		binary.NativeEndian.PutUint64([]byte(tid[:8]), rand.Uint64())
-		binary.NativeEndian.PutUint64([]byte(tid[8:]), rand.Uint64())
+		binary.NativeEndian.PutUint64(tid[:8], rand.Uint64())
+		binary.NativeEndian.PutUint64(tid[8:], rand.Uint64())
 		if tid.IsValid() {
 			break
 		}
 	}
 	for {
-		binary.NativeEndian.PutUint64([]byte(sid[:]), rand.Uint64())
+		binary.NativeEndian.PutUint64(sid[:], rand.Uint64())
 		if sid.IsValid() {
 			break
 		}
