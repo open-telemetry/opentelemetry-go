@@ -21,6 +21,8 @@ const (
 
 	errInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
 	errNilSpanID           errorConst = "span-id can't be all zero"
+
+	errInvalidTraceFlagsLength errorConst = "trace flags must only be 1 byte"
 )
 
 type errorConst string
@@ -222,7 +224,7 @@ func (tf *TraceFlags) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(decoded) != 1 {
-		return errInvalidTraceIDLength
+		return errInvalidTraceFlagsLength
 	}
 	*tf = TraceFlags(decoded[0])
 	return nil
