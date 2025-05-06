@@ -37,18 +37,6 @@ var (
 	nilTraceID TraceID
 	_          json.Marshaler   = nilTraceID
 	_          json.Unmarshaler = &nilTraceID
-
-	nilSpanID SpanID
-	_         json.Marshaler   = nilSpanID
-	_         json.Unmarshaler = &nilSpanID
-
-	nilTraceFlags TraceFlags
-	_             json.Marshaler   = nilTraceFlags
-	_             json.Unmarshaler = &nilTraceFlags
-
-	nilSpanContext SpanContext
-	_              json.Marshaler   = nilSpanContext
-	_              json.Unmarshaler = &nilSpanContext
 )
 
 // IsValid checks whether the trace TraceID is valid. A valid trace ID does
@@ -91,6 +79,12 @@ func (t *TraceID) UnmarshalJSON(data []byte) error {
 
 // SpanID is a unique identity of a span in a trace.
 type SpanID [8]byte
+
+var (
+	nilSpanID SpanID
+	_         json.Marshaler   = nilSpanID
+	_         json.Unmarshaler = &nilSpanID
+)
 
 // IsValid checks whether the SpanID is valid. A valid SpanID does not consist
 // of zeros only.
@@ -193,6 +187,12 @@ func decodeHex(h string, b []byte) error {
 // TraceFlags contains flags that can be set on a SpanContext.
 type TraceFlags byte //nolint:revive // revive complains about stutter of `trace.TraceFlags`.
 
+var (
+	nilTraceFlags TraceFlags
+	_             json.Marshaler   = nilTraceFlags
+	_             json.Unmarshaler = &nilTraceFlags
+)
+
 // IsSampled returns if the sampling bit is set in the TraceFlags.
 func (tf TraceFlags) IsSampled() bool {
 	return tf&FlagsSampled == FlagsSampled
@@ -268,7 +268,11 @@ type SpanContext struct {
 	remote     bool
 }
 
-var _ json.Marshaler = SpanContext{}
+var (
+	nilSpanContext SpanContext
+	_              json.Marshaler   = nilSpanContext
+	_              json.Unmarshaler = &nilSpanContext
+)
 
 // IsValid returns if the SpanContext is valid. A valid span context has a
 // valid TraceID and SpanID.

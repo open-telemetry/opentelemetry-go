@@ -785,7 +785,7 @@ func TestSpanContextUnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:    "invalid JSON",
-			input:   `{"TraceID":123}`,
+			input:   `{"TraceID:123}`,
 			wantErr: true,
 		},
 	}
