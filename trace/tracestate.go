@@ -222,22 +222,18 @@ func (ts TraceState) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for TraceState.
-// It expects the JSON to be a string (as produced by MarshalJSON), parses
-// it via ParseTraceState, and replaces the receiver’s contents.
+// It expects the JSON to be a string (as produced by MarshalJSON).
 func (ts *TraceState) UnmarshalJSON(data []byte) error {
-	// 1) Unmarshal the JSON payload into a Go string.
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 
-	// 2) Parse that string into a TraceState.
 	parsed, err := ParseTraceState(raw)
 	if err != nil {
 		return err
 	}
 
-	// 3) Overwrite the receiver with the parsed result.
 	*ts = parsed
 	return nil
 }

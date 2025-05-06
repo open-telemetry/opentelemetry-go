@@ -57,22 +57,18 @@ func (t TraceID) String() string {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for TraceID.
-// It expects the JSON to be a string (as produced by MarshalJSON), parses
-// it via TraceIDFromHex, and replaces the receiver's contents.
+// It expects the JSON to be a string (as produced by MarshalJSON).
 func (t *TraceID) UnmarshalJSON(data []byte) error {
-	// 1) Unmarshal the JSON payload into a Go string.
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 
-	// 2) Parse that string into a TraceID.
 	parsed, err := TraceIDFromHex(raw)
 	if err != nil {
 		return err
 	}
 
-	// 3) Overwrite the receiver with the parsed result.
 	*t = parsed
 	return nil
 }
@@ -104,22 +100,18 @@ func (s SpanID) String() string {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for SpanID.
-// It expects the JSON to be a string (as produced by MarshalJSON), parses
-// it via SpanIDFromHex, and replaces the receiver's contents.
+// It expects the JSON to be a string (as produced by MarshalJSON).
 func (s *SpanID) UnmarshalJSON(data []byte) error {
-	// 1) Unmarshal the JSON payload into a Go string.
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 
-	// 2) Parse that string into a SpanID.
 	parsed, err := SpanIDFromHex(raw)
 	if err != nil {
 		return err
 	}
 
-	// 3) Overwrite the receiver with the parsed result.
 	*s = parsed
 	return nil
 }
@@ -219,8 +211,7 @@ func (tf TraceFlags) String() string {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for TraceFlags.
-// It expects the JSON to be a hex string (as produced by MarshalJSON), parses
-// it and sets the value.
+// It expects the JSON to be a hex string (as produced by MarshalJSON).
 func (tf *TraceFlags) UnmarshalJSON(data []byte) error {
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -231,7 +222,7 @@ func (tf *TraceFlags) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(decoded) != 1 {
-		return errInvalidTraceIDLength // Use a relevant error or define a new one for TraceFlags
+		return errInvalidTraceIDLength
 	}
 	*tf = TraceFlags(decoded[0])
 	return nil
@@ -396,8 +387,7 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for SpanContext.
-// It expects the JSON to be an object with fields matching SpanContextConfig,
-// and uses NewSpanContext to construct the immutable SpanContext value.
+// It expects the JSON to be an object with fields matching SpanContextConfig.
 func (sc *SpanContext) UnmarshalJSON(data []byte) error {
 	var cfg SpanContextConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {
