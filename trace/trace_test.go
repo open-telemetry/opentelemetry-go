@@ -151,7 +151,7 @@ func TestSpanContextMarshalJSON(t *testing.T) {
 			name: "SpanContext.MarshalJSON() returns json with partial data",
 			tid:  [16]byte{1},
 			sid:  [8]byte{42},
-			want: []byte(`{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000","TraceFlags":"00","TraceState":"","Remote":false}`),
+			want: []byte(`{"TraceId":"01000000000000000000000000000000","SpanId":"2a00000000000000","TraceFlags":"00","TraceState":"","IsRemote":false}`),
 		},
 		{
 			name:     "SpanContext.MarshalJSON() returns json with full data",
@@ -162,7 +162,7 @@ func TestSpanContextMarshalJSON(t *testing.T) {
 			tstate: TraceState{list: []member{
 				{Key: "foo", Value: "1"},
 			}},
-			want: []byte(`{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000","TraceFlags":"01","TraceState":"foo=1","Remote":true}`),
+			want: []byte(`{"TraceId":"01000000000000000000000000000000","SpanId":"2a00000000000000","TraceFlags":"01","TraceState":"foo=1","IsRemote":true}`),
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
@@ -761,7 +761,7 @@ func TestSpanContextUnmarshalJSON(t *testing.T) {
 	}{
 		{
 			name:  "valid full SpanContext",
-			input: `{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000","TraceFlags":"01","TraceState":"foo=1","Remote":true}`,
+			input: `{"TraceId":"01000000000000000000000000000000","SpanId":"2a00000000000000","TraceFlags":"01","TraceState":"foo=1","IsRemote":true}`,
 			want: NewSpanContext(SpanContextConfig{
 				TraceID:    TraceID{0x01},
 				SpanID:     SpanID{0x2a},
@@ -772,7 +772,7 @@ func TestSpanContextUnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:  "valid partial SpanContext",
-			input: `{"TraceID":"01000000000000000000000000000000","SpanID":"2a00000000000000"}`,
+			input: `{"TraceId":"01000000000000000000000000000000","SpanId":"2a00000000000000"}`,
 			want: NewSpanContext(SpanContextConfig{
 				TraceID: TraceID{0x01},
 				SpanID:  SpanID{0x2a},
@@ -780,12 +780,12 @@ func TestSpanContextUnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:    "invalid TraceID",
-			input:   `{"TraceID":"00000000000000000000000000000000","SpanID":"2a00000000000000"}`,
+			input:   `{"TraceId":"00000000000000000000000000000000","SpanId":"2a00000000000000"}`,
 			wantErr: true,
 		},
 		{
 			name:    "invalid JSON",
-			input:   `{"TraceID:123}`,
+			input:   `{"TraceId:123}`,
 			wantErr: true,
 		},
 	}

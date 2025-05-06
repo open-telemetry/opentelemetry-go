@@ -230,12 +230,14 @@ func (tf *TraceFlags) UnmarshalJSON(data []byte) error {
 
 // SpanContextConfig contains mutable fields usable for constructing
 // an immutable SpanContext.
+// JSON tags match OTel API Specification:
+// https://github.com/open-telemetry/opentelemetry-specification/blob/815598814f3cf461ad5493ccbddd53633fb5cf24/specification/trace/api.md#spancontext
 type SpanContextConfig struct {
-	TraceID    TraceID
-	SpanID     SpanID
-	TraceFlags TraceFlags
-	TraceState TraceState
-	Remote     bool
+	TraceID    TraceID    `json:"TraceId"`
+	SpanID     SpanID     `json:"SpanId"`
+	TraceFlags TraceFlags `json:"TraceFlags"`
+	TraceState TraceState `json:"TraceState"`
+	Remote     bool       `json:"IsRemote"`
 }
 
 // NewSpanContext constructs a SpanContext using values from the provided

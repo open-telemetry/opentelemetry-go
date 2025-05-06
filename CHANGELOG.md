@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
 - `Recorder` in `go.opentelemetry.io/otel/log/logtest` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6507)
 - Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569, #6641)
+- Update JSON tags for `TraceId`, `SpanId`, and `IsRemote` in `go.opentelemetry.io/otel/trace` to match [OpenTelemetry API specification for SpanContext items](https://github.com/open-telemetry/opentelemetry-specification/blob/815598814f3cf461ad5493ccbddd53633fb5cf24/specification/trace/api.md#spancontext) (#6738)
 
 ### Deprecated
 
