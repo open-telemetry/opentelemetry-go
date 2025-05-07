@@ -18,6 +18,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     outputs:
       tag: ${{ steps.semconv-get-latest-tag.outputs.tag_name }}
     steps:
