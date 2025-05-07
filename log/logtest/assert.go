@@ -6,7 +6,6 @@ package logtest // import "go.opentelemetry.io/otel/log/logtest"
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -39,11 +38,6 @@ func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOp
 		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
 	}
 
-	cfg := newAssertConfig(opts)
-	if cfg.ignoreTimestamp {
-		cmpOpts = append(cmpOpts, cmpopts.IgnoreTypes(time.Time{})) // Ignore Timestamps.
-	}
-
 	if diff := cmp.Diff(want, got, cmpOpts...); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 		return false
@@ -52,15 +46,6 @@ func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOp
 }
 
 type assertConfig struct {
-	ignoreTimestamp bool
-}
-
-func newAssertConfig(opts []AssertOption) assertConfig {
-	var cfg assertConfig
-	for _, opt := range opts {
-		cfg = opt.apply(cfg)
-	}
-	return cfg
 }
 
 // AssertOption allows for fine grain control over how AssertEqual operates.
