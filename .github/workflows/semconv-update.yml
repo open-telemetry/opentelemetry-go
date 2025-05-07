@@ -1,0 +1,66 @@
+name: ci
+on:
+  push:
+env:
+  # Default version of Go to use by CI workflows. This should be the latest
+  # release of Go; developers likely use the latest release in development and
+  # we want to catch any bugs (e.g. lint errors, race detection) with this
+  # release before they are merged. The Go compatibility guarantees ensure
+  # backwards compatibility with the previous two minor releases and we
+  # explicitly test our code for these versions so keeping this at prior
+  # versions does not add value.
+  DEFAULT_GO_VERSION: '~1.24.0'
+# Declare default permissions as read only.
+permissions: read-all
+jobs:
+  semconv-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 ## Needed for "Set internal/tools/go.mod timestamp" step.
+      - name: Install Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: '**/go.sum'
+      - name: Tools cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        env:
+          cache-name: go-tools-cache
+        with:
+          path: .tools
+          key: ${{ runner.os }}-${{ env.DEFAULT_GO_VERSION }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      - name: Fetch latest release tag
+        id: semconv-get-latest-tag
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const owner = "open-telemetry";
+            const repo = "semantic-conventions";
+            const latestRelease = await github.rest.repos.getLatestRelease({
+              owner,
+              repo,
+            });
+            core.setOutput('tag', latestRelease.data.tag_name);
+            console.log(`Latest ${owner}/${repo} release tag: ${latestRelease.data.tag_name}`);
+      - name: Generate
+        env:
+          SEMCONV_LATEST_TAG: ${{ steps.semconv-get-latest-tag.outputs.tag }}
+        run: |
+          export LATEST_SEMCONV_TAG="${SEMCONV_LATEST_TAG:-}"
+          make semconv-generate
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          title: 'chore(semconv): update semconv to ${{ steps.semconv-get-latest-tag.outputs.tag }}'
+          branch: 'chore-semconv-update-to-${{ steps.semconv-get-latest-tag.outputs.tag }}'
+          body: 'Updating semconv to match open-telemetry/semantic-conventions latest release'
+          commit-message: 'chore(semconv): update semconv to ${{ steps.semconv-get-latest-tag.outputs.tag }}'
+          labels: bot-generated
