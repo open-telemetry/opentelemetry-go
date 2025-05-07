@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -19,6 +21,22 @@ type mockTestingT struct {
 
 func (m *mockTestingT) Errorf(format string, args ...any) {
 	m.errors = append(m.errors, format)
+}
+
+func TestAssertEqual(t *testing.T) {
+	a := Recording{
+		Scope{Name: t.Name()}: []Record{
+			{Body: log.StringValue("msg"), Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)}},
+		},
+	}
+	b := Recording{
+		Scope{Name: t.Name()}: []Record{
+			{Body: log.StringValue("msg"), Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")}},
+		},
+	}
+
+	got := assertEqual(t, a, b)
+	assert.True(t, got, "expected recordings to be equal")
 }
 
 func TestAssertEqualRecording(t *testing.T) {
@@ -94,7 +112,7 @@ func TestAssertEqualRecording(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockT := &mockTestingT{}
-			result := AssertEqual(mockT, tc.a, tc.b, tc.opts...)
+			result := assertEqual(mockT, tc.a, tc.b, tc.opts...)
 			if result != tc.want {
 				t.Errorf("AssertEqual() = %v, want %v", result, tc.want)
 			}
@@ -142,7 +160,7 @@ func TestAssertEqualRecord(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockT := &mockTestingT{}
-			result := AssertEqual(mockT, tc.a, tc.b, tc.opts...)
+			result := assertEqual(mockT, tc.a, tc.b, tc.opts...)
 			if result != tc.want {
 				t.Errorf("AssertEqual() = %v, want %v", result, tc.want)
 			}

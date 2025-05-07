@@ -5,6 +5,7 @@ package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -13,14 +14,19 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-// TestingT reports failure messages.
-// [testing.T] implements this interface.
-type TestingT interface {
+// AssertEqual asserts that the two concrete data-types from the logtest package are equal.
+func AssertEqual[T Recording | Record](t *testing.T, want, got T, opts ...AssertOption) bool {
+	t.Helper()
+	return assertEqual(t, want, got, opts...)
+}
+
+// testingT reports failure messages.
+// *testing.T implements this interface.
+type testingT interface {
 	Errorf(format string, args ...any)
 }
 
-// AssertEqual asserts that the two concrete data-types from the logtest package are equal.
-func AssertEqual[T Recording | Record](t TestingT, want, got T, opts ...AssertOption) bool {
+func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOption) bool {
 	if h, ok := t.(interface{ Helper() }); ok {
 		h.Helper()
 	}
