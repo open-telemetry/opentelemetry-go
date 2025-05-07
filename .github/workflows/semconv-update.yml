@@ -63,7 +63,7 @@ jobs:
         env:
           SEMCONV_LATEST_TAG: ${{ steps.semconv-get-latest-tag.outputs.tag_name }}
         run: |
-          export LATEST_SEMCONV_TAG="${SEMCONV_LATEST_TAG:-}"
+          export TAG="${SEMCONV_LATEST_TAG:-}"
           make semconv-generate
 
       - name: Create Pull Request
