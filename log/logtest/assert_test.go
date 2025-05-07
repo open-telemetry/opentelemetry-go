@@ -35,7 +35,7 @@ func TestAssertEqual(t *testing.T) {
 		},
 	}
 
-	got := assertEqual(t, a, b)
+	got := AssertEqual(t, a, b)
 	assert.True(t, got, "expected recordings to be equal")
 }
 
