@@ -16,7 +16,7 @@ jobs:
   semconv-update:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     outputs:
       tag: ${{ steps.semconv-get-latest-tag.outputs.tag_name }}
