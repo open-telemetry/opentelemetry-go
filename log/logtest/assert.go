@@ -25,7 +25,7 @@ type testingT interface {
 	Errorf(format string, args ...any)
 }
 
-func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOption) bool {
+func assertEqual[T Recording | Record](t testingT, want, got T, _ ...AssertOption) bool {
 	if h, ok := t.(interface{ Helper() }); ok {
 		h.Helper()
 	}
@@ -45,8 +45,7 @@ func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOp
 	return true
 }
 
-type assertConfig struct {
-}
+type assertConfig struct{}
 
 // AssertOption allows for fine grain control over how AssertEqual operates.
 type AssertOption interface {
