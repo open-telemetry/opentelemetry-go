@@ -60,7 +60,7 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	if len(bVals) == 0 {
 		return parent
 	}
-	members := make([]baggage.Member, 0)
+	var members []baggage.Member
 	for _, bStr := range bVals {
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
