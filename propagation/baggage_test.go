@@ -56,7 +56,7 @@ func (m members) Baggage(t *testing.T) baggage.Baggage {
 	return bag
 }
 
-func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
+func TestExtractValidBaggage(t *testing.T) {
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
 		name   string
@@ -113,16 +113,28 @@ func TestExtractValidBaggageFromHTTPReq(t *testing.T) {
 				{Key: "key1", Value: "val%2"},
 			},
 		},
+		{
+			name:   "empty header",
+			header: "",
+			want:   members{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mapCarr := propagation.MapCarrier{}
+			mapCarr["baggage"] = tt.header
 			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 			req.Header.Set("baggage", tt.header)
 
-			ctx := context.Background()
-			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
+			// test with http header carrier (which implements ValuesGetter)
+			ctx := prop.Extract(context.Background(), propagation.HeaderCarrier(req.Header))
 			expected := tt.want.Baggage(t)
+			assert.Equal(t, expected, baggage.FromContext(ctx))
+
+			// test with map carrier (which does not implement ValuesGetter)
+			ctx = prop.Extract(context.Background(), mapCarr)
+			expected = tt.want.Baggage(t)
 			assert.Equal(t, expected, baggage.FromContext(ctx))
 		})
 	}
