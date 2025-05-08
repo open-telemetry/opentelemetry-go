@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -36,6 +35,8 @@ const (
 
 	scopeNameLabel    = "otel_scope_name"
 	scopeVersionLabel = "otel_scope_version"
+
+	scopeAttributeLabelPrefix = "otel_scope_"
 
 	traceIDExemplarKey = "trace_id"
 	spanIDExemplarKey  = "span_id"
@@ -97,8 +98,6 @@ type collector struct {
 	mu                sync.Mutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
-	scopeInfos        map[instrumentation.Scope]prometheus.Metric
-	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
 	resourceKeyVals   keyVals
 }
@@ -122,8 +121,6 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutUnits:             cfg.withoutUnits,
 		withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 		disableScopeInfo:         cfg.disableScopeInfo,
-		scopeInfos:               make(map[instrumentation.Scope]prometheus.Metric),
-		scopeInfosInvalid:        make(map[instrumentation.Scope]struct{}),
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                cfg.namespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
@@ -201,21 +198,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			vals: make([]string, 0, n),
 		}
 
-		if !c.disableScopeInfo {
-			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
-			if errors.Is(err, errScopeInvalid) {
-				// Do not report the same error multiple times.
-				continue
-			}
-			if err != nil {
-				otel.Handle(err)
-				continue
-			}
+		kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel)
+		kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version)
 
-			ch <- scopeInfo
-
-			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel)
-			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version)
+		for _, attr := range scopeMetrics.Scope.Attributes.ToSlice() {
+			kv.keys = append(kv.keys, scopeAttributeLabelPrefix+string(attr.Key))
+			kv.vals = append(kv.vals, attr.Value.Emit())
 		}
 
 		kv.keys = append(kv.keys, c.resourceKeyVals.keys...)
@@ -440,17 +428,6 @@ func createInfoMetric(name, description string, res *resource.Resource) (prometh
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
-func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, error) {
-	attrs := make([]attribute.KeyValue, 0, scope.Attributes.Len()+2) // resource attrs + scope name + scope version
-	attrs = append(attrs, scope.Attributes.ToSlice()...)
-	attrs = append(attrs, attribute.String(scopeNameLabel, scope.Name))
-	attrs = append(attrs, attribute.String(scopeVersionLabel, scope.Version))
-
-	keys, values := getAttrs(attribute.NewSet(attrs...))
-	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
-	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
-}
-
 var unitSuffixes = map[string]string{
 	// Time
 	"d":   "days",
@@ -554,30 +531,6 @@ func (c *collector) createResourceAttributes(res *resource.Resource) {
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
 	resourceKeys, resourceValues := getAttrs(resourceAttrs)
 	c.resourceKeyVals = keyVals{keys: resourceKeys, vals: resourceValues}
-}
-
-func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	scopeInfo, ok := c.scopeInfos[scope]
-	if ok {
-		return scopeInfo, nil
-	}
-
-	if _, ok := c.scopeInfosInvalid[scope]; ok {
-		return nil, errScopeInvalid
-	}
-
-	scopeInfo, err := createScopeInfoMetric(scope)
-	if err != nil {
-		c.scopeInfosInvalid[scope] = struct{}{}
-		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
-	}
-
-	c.scopeInfos[scope] = scopeInfo
-
-	return scopeInfo, nil
 }
 
 func (c *collector) validateMetrics(name, description string, metricType *dto.MetricType) (drop bool, help string) {
