@@ -30,7 +30,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
-          go-version-file: 'internal/tools/semconvkit/go.mod'
+          go-version-file: 'internal/tools/go.mod'
           check-latest: true
           cache-dependency-path: 'internal/tools/semconvkit/go.sum'
 
