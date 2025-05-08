@@ -16,7 +16,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
 - Add `Recording`, `Scope`, and `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6507)
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6688)
-- Allow extraction of multiple values in propagation. Implements for baggage propagator. (#5973)
+- Add `ValuesGetter` in `go.opentelemetry.io/otel/propagation`, a `TextMapCarrier` that supports retrieving multiple values for a single key. (#5973)
+- Add `Values` method to `HeaderCarrier` to implement the new `ValuesGetter` interface in `go.opentelemetry.io/otel/propagation`. (#5973)
+- Update `Baggage` in `go.opentelemetry.io/otel/propagation` to retrieve multiple values for a key when the carrier implements `ValuesGetter`. (#5973)
 
 ### Removed
 
