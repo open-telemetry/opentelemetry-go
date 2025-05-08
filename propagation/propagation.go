@@ -9,6 +9,7 @@ import (
 )
 
 // TextMapCarrier is the storage medium used by a TextMapPropagator.
+// See ValuesGetter for how a TextMapCarrier can get multiple values for a key.
 type TextMapCarrier interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
@@ -27,15 +28,6 @@ type TextMapCarrier interface {
 	Keys() []string
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
-}
-
-// MultiTextMapCarrier is a TextMapCarrier that can return multiple values for a single key.
-type MultiTextMapCarrier interface {
-	// DO NOT CHANGE: any modification will not be backwards compatible and
-	// must never be done outside of a new major release.
-
-	TextMapCarrier
-	ValuesGetter
 }
 
 // ValuesGetter can return multiple values for a single key,
@@ -76,7 +68,7 @@ func (c MapCarrier) Keys() []string {
 	return keys
 }
 
-// HeaderCarrier adapts http.Header to satisfy the MultiTextMapCarrier interface.
+// HeaderCarrier adapts http.Header to satisfy the TextMapCarrier and ValuesGetter interfaces.
 type HeaderCarrier http.Header
 
 // Get returns the first value associated with the passed key.
@@ -115,8 +107,8 @@ type TextMapPropagator interface {
 	// must never be done outside of a new major release.
 
 	// Extract reads cross-cutting concerns from the carrier into a Context.
-	// Implementations may check if the carrier implements MultiTextMapCarrier,
-	// to support usage of multiple values per key.
+	// Implementations may check if the carrier implements ValuesGetter,
+	// to support extraction of multiple values per key.
 	Extract(ctx context.Context, carrier TextMapCarrier) context.Context
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.

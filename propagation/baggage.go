@@ -28,10 +28,10 @@ func (b Baggage) Inject(ctx context.Context, carrier TextMapCarrier) {
 }
 
 // Extract returns a copy of parent with the baggage from the carrier added.
-// If carrier implements [MultiTextMapCarrier] (e.g. [HeaderCarrier]), Values is invoked
+// If carrier implements [ValuesGetter] (e.g. [HeaderCarrier]), Values is invoked
 // for multiple values extraction. Otherwise, Get is called.
 func (b Baggage) Extract(parent context.Context, carrier TextMapCarrier) context.Context {
-	if multiCarrier, ok := carrier.(MultiTextMapCarrier); ok {
+	if multiCarrier, ok := carrier.(ValuesGetter); ok {
 		return extractMultiBaggage(parent, multiCarrier)
 	}
 	return extractSingleBaggage(parent, carrier)
@@ -55,7 +55,7 @@ func extractSingleBaggage(parent context.Context, carrier TextMapCarrier) contex
 	return baggage.ContextWithBaggage(parent, bag)
 }
 
-func extractMultiBaggage(parent context.Context, carrier MultiTextMapCarrier) context.Context {
+func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.Context {
 	bVals := carrier.Values(baggageHeader)
 	if len(bVals) == 0 {
 		return parent
