@@ -95,6 +95,7 @@ type config struct {
 	timeout     setting[time.Duration]
 	proxy       setting[HTTPTransportProxyFunc]
 	retryCfg    setting[retry.Config]
+	httpClient  *http.Client
 }
 
 func newConfig(options []Option) config {
@@ -341,6 +342,25 @@ func WithProxy(pf HTTPTransportProxyFunc) Option {
 	return fnOpt(func(c config) config {
 		c.proxy = newSetting(pf)
 		return c
+	})
+}
+
+// WithHTTPClient sets the HTTP client to used by the exporter.
+//
+// This option will take precedence over [WithProxy], [WithTimeout],
+// [WithTLSClientConfig] options as well as OTEL_EXPORTER_OTLP_CERTIFICATE,
+// OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE, OTEL_EXPORTER_OTLP_TIMEOUT,
+// OTEL_EXPORTER_OTLP_LOGS_TIMEOUT environment variables.
+//
+// Timeout and all other fields of the passed [http.Client] are left intact.
+//
+// Be aware that passing an HTTP client with transport like
+// [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewTransport] can
+// cause the client to be instrumented twice and cause infinite recursion.
+func WithHTTPClient(c *http.Client) Option {
+	return fnOpt(func(cfg config) config {
+		cfg.httpClient = c
+		return cfg
 	})
 }
 
