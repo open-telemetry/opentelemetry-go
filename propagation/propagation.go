@@ -71,6 +71,12 @@ func (c MapCarrier) Keys() []string {
 // HeaderCarrier adapts http.Header to satisfy the TextMapCarrier and ValuesGetter interfaces.
 type HeaderCarrier http.Header
 
+// Compile time check that HeaderCarrier implements ValuesGetter.
+var _ TextMapCarrier = HeaderCarrier{}
+
+// Compile time check that HeaderCarrier implements TextMapCarrier.
+var _ ValuesGetter = HeaderCarrier{}
+
 // Get returns the first value associated with the passed key.
 func (hc HeaderCarrier) Get(key string) string {
 	return http.Header(hc).Get(key)
