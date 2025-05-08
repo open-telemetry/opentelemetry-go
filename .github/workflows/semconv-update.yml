@@ -71,7 +71,7 @@ jobs:
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
         with:
           title: 'chore(semconv): update semconv to ${{ steps.semconv-get-latest-tag.outputs.tag_name }}'
-          branch: 'chore-semconv-update-to-${{ steps.semconv-get-latest-tag.outputs.tag }}'
+          branch: 'chore-semconv-update-to-${{ steps.semconv-get-latest-tag.outputs.tag_name }}'
           body: 'Updating semconv to match open-telemetry/semantic-conventions latest release'
           commit-message: 'chore(semconv): update semconv to ${{ steps.semconv-get-latest-tag.outputs.tag_name }}'
           labels: bot-generated
