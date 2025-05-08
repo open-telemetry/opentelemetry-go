@@ -595,19 +595,19 @@ func BenchmarkParseTraceState(b *testing.B) {
 	}{
 		{
 			name: "single key",
-			in:   "somewhatRealisticKeyLength=someValueAbcdefgh1234567890",
+			in:   "somewhat-realistic-key-length=someValueAbcdefgh1234567890",
 		},
 		{
 			name: "tenant single key",
-			in:   "somewhatRealisticKeyLength@someTenant=someValueAbcdefgh1234567890",
+			in:   "somewhat-realistic-key-length@some-tenant=someValueAbcdefgh1234567890",
 		},
 		{
 			name: "three keys",
-			in:   "someKeyName.One=someValue1,someKeyName.Two=someValue2,someKeyName.Three=someValue3",
+			in:   "some-key-name/one=someValue1,some-key-name/two=someValue2,some-key-name/three=someValue3",
 		},
 		{
 			name: "tenant three keys",
-			in:   "someKeyName.One@tenant=someValue1,someKeyName.Two@tenant=someValue2,someKeyName.Three@tenant=someValue3",
+			in:   "some-key-name/one@tenant=someValue1,some-key-name/two@tenant=someValue2,some-key-name/three@tenant=someValue3",
 		},
 	}
 	for _, bench := range benches {
@@ -616,7 +616,10 @@ func BenchmarkParseTraceState(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				_, _ = ParseTraceState(bench.in)
+				_, err := ParseTraceState(bench.in)
+				if err != nil {
+					b.Fatalf("parse TraceState: %v", err)
+				}
 			}
 		})
 	}
