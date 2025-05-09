@@ -5,7 +5,6 @@ package trace
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/internal/env"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -111,11 +109,8 @@ func TestSettingSpanLimits(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.env != nil {
-				es := ottest.NewEnvStore()
-				t.Cleanup(func() { require.NoError(t, es.Restore()) })
 				for k, v := range test.env {
-					es.Record(k)
-					require.NoError(t, os.Setenv(k, v))
+					t.Setenv(k, v)
 				}
 			}
 
@@ -183,7 +178,7 @@ func TestSpanLimits(t *testing.T) {
 		// Ensure string and string slice attributes are truncated.
 		assert.Contains(t, attrs, attribute.String("string", "ab"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
-		assert.Contains(t, attrs, attribute.String("euro", ""))
+		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
 		limits.AttributeValueLengthLimit = 0
 		attrs = testSpanLimits(t, limits).Attributes()

@@ -593,11 +593,11 @@ func TestBaggageParseValue(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := Parse(tc.in)
-			assert.Empty(t, err)
+			assert.NoError(t, err)
 
 			val := b.Members()[0].Value()
 
-			assert.EqualValues(t, tc.valueWant, val)
+			assert.Equal(t, tc.valueWant, val)
 			assert.Equal(t, len(val), tc.valueWantSize)
 			assert.True(t, utf8.ValidString(val))
 		})
@@ -971,7 +971,7 @@ func TestBaggageMember(t *testing.T) {
 
 func TestMemberKey(t *testing.T) {
 	m := Member{}
-	assert.Equal(t, "", m.Key(), "even invalid values should be returned")
+	assert.Empty(t, m.Key(), "even invalid values should be returned")
 
 	key := "k"
 	m.key = key
@@ -1173,7 +1173,9 @@ func BenchmarkParse(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		benchBaggage, _ = Parse("userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value, invalidUtf8=pr%ffo%ffp%fcValue")
+		benchBaggage, _ = Parse(
+			"userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value, invalidUtf8=pr%ffo%ffp%fcValue",
+		)
 	}
 }
 

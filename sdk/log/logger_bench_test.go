@@ -11,11 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-func BenchmarkLoggerNewRecord(b *testing.B) {
-	logger := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+func BenchmarkLoggerEmit(b *testing.B) {
+	logger := newTestLogger(b)
 
 	r := log.Record{}
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
@@ -48,7 +47,7 @@ func BenchmarkLoggerNewRecord(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				logger.newRecord(context.Background(), r)
+				logger.Emit(context.Background(), r)
 			}
 		})
 	})
@@ -57,8 +56,32 @@ func BenchmarkLoggerNewRecord(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				logger.newRecord(context.Background(), r10)
+				logger.Emit(context.Background(), r10)
 			}
 		})
 	})
+}
+
+func BenchmarkLoggerEnabled(b *testing.B) {
+	logger := newTestLogger(b)
+	ctx := context.Background()
+	param := log.EnabledParameters{Severity: log.SeverityDebug}
+	var enabled bool
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		enabled = logger.Enabled(ctx, param)
+	}
+
+	_ = enabled
+}
+
+func newTestLogger(t testing.TB) log.Logger {
+	provider := NewLoggerProvider(
+		WithProcessor(newFltrProcessor("0", false)),
+		WithProcessor(newFltrProcessor("1", true)),
+	)
+	return provider.Logger(t.Name())
 }

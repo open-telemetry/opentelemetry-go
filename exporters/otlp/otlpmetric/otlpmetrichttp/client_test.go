@@ -270,4 +270,25 @@ func TestConfig(t *testing.T) {
 		require.Contains(t, got, headerKeySetInProxy)
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
+
+	t.Run("non-retryable errors are propagated", func(t *testing.T) {
+		exporterErr := errors.New("missing required attribute aaa")
+		rCh := make(chan otest.ExportResult, 1)
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusBadRequest,
+			Err:    exporterErr,
+		}}
+		exp, coll := factoryFunc("", rCh)
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		// Push this after Shutdown so the HTTP server doesn't hang.
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		exCtx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		err := exp.Export(exCtx, &metricdata.ResourceMetrics{})
+		assert.ErrorContains(t, err, exporterErr.Error())
+
+		assert.NoError(t, exCtx.Err())
+	})
 }

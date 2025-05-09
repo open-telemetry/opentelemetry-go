@@ -15,12 +15,20 @@ import (
 func AssertRecordEqual(t testing.TB, want, got log.Record) bool {
 	t.Helper()
 
+	if want.EventName() != got.EventName() {
+		t.Errorf("EventName value is not equal:\nwant: %v\ngot:  %v", want.EventName(), got.EventName())
+		return false
+	}
 	if !want.Timestamp().Equal(got.Timestamp()) {
 		t.Errorf("Timestamp value is not equal:\nwant: %v\ngot:  %v", want.Timestamp(), got.Timestamp())
 		return false
 	}
 	if !want.ObservedTimestamp().Equal(got.ObservedTimestamp()) {
-		t.Errorf("ObservedTimestamp value is not equal:\nwant: %v\ngot:  %v", want.ObservedTimestamp(), got.ObservedTimestamp())
+		t.Errorf(
+			"ObservedTimestamp value is not equal:\nwant: %v\ngot:  %v",
+			want.ObservedTimestamp(),
+			got.ObservedTimestamp(),
+		)
 		return false
 	}
 	if want.Severity() != got.Severity() {

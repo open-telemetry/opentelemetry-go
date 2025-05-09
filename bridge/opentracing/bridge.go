@@ -6,6 +6,7 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -282,7 +283,9 @@ type bridgeSetTracer struct {
 func (s *bridgeSetTracer) tracer() trace.Tracer {
 	if !s.isSet {
 		s.warnOnce.Do(func() {
-			s.warningHandler("The OpenTelemetry tracer is not set, default no-op tracer is used! Call SetOpenTelemetryTracer to set it up.\n")
+			s.warningHandler(
+				"The OpenTelemetry tracer is not set, default no-op tracer is used! Call SetOpenTelemetryTracer to set it up.\n",
+			)
 		})
 	}
 	return s.otelTracer
@@ -361,7 +364,9 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) c
 	}
 	bSpan, ok := span.(*bridgeSpan)
 	if !ok {
-		t.warningHandler("Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTelemetry context\n")
+		t.warningHandler(
+			"Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTelemetry context\n",
+		)
 		return ctx
 	}
 	for k, v := range list {
@@ -373,12 +378,16 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) c
 func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) iBaggage.List {
 	span := ot.SpanFromContext(ctx)
 	if span == nil {
-		t.warningHandler("No active OpenTracing span, can not propagate the baggage items from OpenTracing span context\n")
+		t.warningHandler(
+			"No active OpenTracing span, can not propagate the baggage items from OpenTracing span context\n",
+		)
 		return list
 	}
 	bSpan, ok := span.(*bridgeSpan)
 	if !ok {
-		t.warningHandler("Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTracing span context\n")
+		t.warningHandler(
+			"Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTracing span context\n",
+		)
 		return list
 	}
 	items := bSpan.extraBaggageItems
@@ -426,7 +435,9 @@ func (t *BridgeTracer) StartSpan(operationName string, opts ...ot.StartSpanOptio
 	)
 	if ot.SpanFromContext(checkCtx2) != nil {
 		t.warnOnce.Do(func() {
-			t.warningHandler("SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/otel/bridge/opentracing/migration\n")
+			t.warningHandler(
+				"SDK should have deferred the context setup, see the documentation of go.opentelemetry.io/otel/bridge/opentracing/migration\n",
+			)
 		})
 	}
 	if hadTrueErrorTag {
@@ -472,7 +483,9 @@ func (t *BridgeTracer) ContextWithBridgeSpan(ctx context.Context, span trace.Spa
 func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) context.Context {
 	bSpan, ok := span.(*bridgeSpan)
 	if !ok {
-		t.warningHandler("Encountered a foreign OpenTracing span, will not run a possible deferred context setup hook\n")
+		t.warningHandler(
+			"Encountered a foreign OpenTracing span, will not run a possible deferred context setup hook\n",
+		)
 		return ctx
 	}
 	if bSpan.skipDeferHook {
@@ -532,7 +545,7 @@ func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
 	case int64:
 		return key.Int64(val)
 	case uint64:
-		return key.String(fmt.Sprintf("%d", val))
+		return key.String(strconv.FormatUint(val, 10))
 	case float64:
 		return key.Float64(val)
 	case int8:
@@ -552,7 +565,7 @@ func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
 	case int:
 		return key.Int(val)
 	case uint:
-		return key.String(fmt.Sprintf("%d", val))
+		return key.String(strconv.FormatUint(uint64(val), 10))
 	case string:
 		return key.String(val)
 	default:

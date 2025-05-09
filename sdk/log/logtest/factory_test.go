@@ -25,6 +25,7 @@ func TestRecordFactoryEmpty(t *testing.T) {
 func TestRecordFactory(t *testing.T) {
 	now := time.Now()
 	observed := now.Add(time.Second)
+	eventName := "testing.name"
 	severity := log.SeverityDebug
 	severityText := "DBG"
 	body := log.StringValue("Message")
@@ -43,6 +44,7 @@ func TestRecordFactory(t *testing.T) {
 	r := resource.NewSchemaless(attribute.Bool("works", true))
 
 	got := RecordFactory{
+		EventName:            eventName,
 		Timestamp:            now,
 		ObservedTimestamp:    observed,
 		Severity:             severity,
@@ -57,6 +59,7 @@ func TestRecordFactory(t *testing.T) {
 		Resource:             r,
 	}.NewRecord()
 
+	assert.Equal(t, eventName, got.EventName())
 	assert.Equal(t, now, got.Timestamp())
 	assert.Equal(t, observed, got.ObservedTimestamp())
 	assert.Equal(t, severity, got.Severity())

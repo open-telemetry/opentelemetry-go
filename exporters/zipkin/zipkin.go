@@ -153,7 +153,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 		}
 	}
 
-	resp, err := e.client.Do(req)
+	resp, err := e.client.Do(req) // nolint:bodyclose  // False-positive.
 	if err != nil {
 		return e.errf("request to %s failed: %v", e.url, err)
 	}

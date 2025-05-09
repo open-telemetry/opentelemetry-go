@@ -15,10 +15,12 @@ import (
 const attributesInlineCount = 5
 
 // Record represents a log record.
+// A log record with non-empty event name is interpreted as an event record.
 type Record struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
+	eventName         string
 	timestamp         time.Time
 	observedTimestamp time.Time
 	severity          Severity
@@ -42,6 +44,18 @@ type Record struct {
 	//   - len(back) > 0 if nFront == len(front)
 	//   - Unused array elements are zero-ed. Used to detect mistakes.
 	back []KeyValue
+}
+
+// EventName returns the event name.
+// A log record with non-empty event name is interpreted as an event record.
+func (r *Record) EventName() string {
+	return r.eventName
+}
+
+// SetEventName sets the event name.
+// A log record with non-empty event name is interpreted as an event record.
+func (r *Record) SetEventName(s string) {
+	r.eventName = s
 }
 
 // Timestamp returns the time when the log record occurred.

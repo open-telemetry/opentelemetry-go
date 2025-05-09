@@ -1,0 +1,26 @@
+name: "Close stale issues and pull requests"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "8 5 * * *" # arbitrary time not to DDOS GitHub
+
+permissions:
+  issues: write
+  pull-requests: write
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
+        with:
+          stale-pr-message: 'This PR was marked stale due to lack of activity. It will be closed in 14 days.'
+          close-pr-message: 'Closed as inactive. Feel free to reopen if this PR is still being worked on.'
+          close-issue-message: 'This issue has been closed as inactive because it has been stale for 2 years with no activity.'
+          close-issue-label: 'closed as inactive'
+          days-before-pr-stale: 730
+          days-before-issue-stale: 730
+          days-before-pr-close: 14
+          days-before-issue-close: 14
+          exempt-issue-labels: 'never stale'
+          exempt-pr-labels: 'never stale'
+          ascending: true

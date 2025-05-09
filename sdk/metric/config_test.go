@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -34,7 +33,9 @@ const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
 
 var _ Reader = (*reader)(nil)
 
-func (r *reader) aggregation(kind InstrumentKind) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
+func (r *reader) aggregation(
+	kind InstrumentKind,
+) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return r.aggregationFunc(kind)
 }
 
@@ -130,11 +131,7 @@ func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {
 }
 
 func TestWithResource(t *testing.T) {
-	store, err := ottest.SetEnvVariables(map[string]string{
-		envVarResourceAttributes: "key=value,rk5=7",
-	})
-	require.NoError(t, err)
-	defer func() { require.NoError(t, store.Restore()) }()
+	t.Setenv(envVarResourceAttributes, "key=value,rk5=7")
 
 	cases := []struct {
 		name    string
@@ -153,9 +150,15 @@ func TestWithResource(t *testing.T) {
 			want:    resource.Default(),
 		},
 		{
-			name:    "explicit resource",
-			options: []Option{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)))},
-			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			name: "explicit resource",
+			options: []Option{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5))),
+			},
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk2", 5)),
+			),
 		},
 		{
 			name: "last resource wins",
@@ -163,12 +166,22 @@ func TestWithResource(t *testing.T) {
 				WithResource(resource.NewSchemaless(attribute.String("rk1", "vk1"), attribute.Int64("rk2", 5))),
 				WithResource(resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
 			},
-			want: mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10))),
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk3", "rv3"), attribute.Int64("rk4", 10)),
+			),
 		},
 		{
-			name:    "overlapping attributes with environment resource",
-			options: []Option{WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)))},
-			want:    mergeResource(t, resource.Environment(), resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			name: "overlapping attributes with environment resource",
+			options: []Option{
+				WithResource(resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10))),
+			},
+			want: mergeResource(
+				t,
+				resource.Environment(),
+				resource.NewSchemaless(attribute.String("rk1", "rv1"), attribute.Int64("rk5", 10)),
+			),
 		},
 	}
 	for _, tc := range cases {

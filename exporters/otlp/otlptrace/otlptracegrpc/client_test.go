@@ -39,7 +39,11 @@ func TestMain(m *testing.M) {
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
 
-func contextWithTimeout(parent context.Context, t *testing.T, timeout time.Duration) (context.Context, context.CancelFunc) {
+func contextWithTimeout(
+	parent context.Context,
+	t *testing.T,
+	timeout time.Duration,
+) (context.Context, context.CancelFunc) {
 	d, ok := t.Deadline()
 	if !ok {
 		d = time.Now().Add(timeout)
@@ -110,7 +114,12 @@ func TestWithEndpointURL(t *testing.T) {
 	otlptracetest.RunEndToEndTest(ctx, t, exp, mc)
 }
 
-func newGRPCExporter(t *testing.T, ctx context.Context, endpoint string, additionalOpts ...otlptracegrpc.Option) *otlptrace.Exporter {
+func newGRPCExporter(
+	t *testing.T,
+	ctx context.Context,
+	endpoint string,
+	additionalOpts ...otlptracegrpc.Option,
+) *otlptrace.Exporter {
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithEndpoint(endpoint),
@@ -255,7 +264,7 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 
 	unwrapped := errors.Unwrap(err)
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(unwrapped).Code())
-	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), err)
+	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
 }
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {

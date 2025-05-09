@@ -232,7 +232,7 @@ func ExampleMeter_observableUpDownCounter() {
 	// The function registers asynchronous metrics for the provided db.
 	// Make sure to unregister metric.Registration before closing the provided db.
 	_ = func(db *sql.DB, meter metric.Meter, poolName string) (metric.Registration, error) {
-		max, err := meter.Int64ObservableUpDownCounter(
+		m, err := meter.Int64ObservableUpDownCounter(
 			"db.client.connections.max",
 			metric.WithDescription("The maximum number of open connections allowed."),
 			metric.WithUnit("{connection}"),
@@ -253,11 +253,11 @@ func ExampleMeter_observableUpDownCounter() {
 		reg, err := meter.RegisterCallback(
 			func(_ context.Context, o metric.Observer) error {
 				stats := db.Stats()
-				o.ObserveInt64(max, int64(stats.MaxOpenConnections))
+				o.ObserveInt64(m, int64(stats.MaxOpenConnections))
 				o.ObserveInt64(waitTime, int64(stats.WaitDuration))
 				return nil
 			},
-			max,
+			m,
 			waitTime,
 		)
 		if err != nil {

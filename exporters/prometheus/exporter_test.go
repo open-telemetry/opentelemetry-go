@@ -35,7 +35,8 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
-		enableUTF8          bool
+		disableUTF8         bool
+		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
 		{
 			name:         "counter",
@@ -68,7 +69,7 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 		{
 			name:         "counter that already has the unit suffix",
-			expectedFile: "testdata/counter.txt",
+			expectedFile: "testdata/counter_with_unit_suffix.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -173,6 +174,50 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
+			name:         "exponential histogram",
+			expectedFile: "testdata/exponential_histogram.txt",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+
+				for _, mf := range mfs {
+					if *mf.Name == `exponential_histogram_baz_bytes` {
+						hist = mf
+						break
+					}
+				}
+
+				if hist == nil {
+					t.Fatal("expected to find histogram")
+				}
+
+				m := hist.GetMetric()[0].Histogram
+
+				require.Equal(t, 236.0, *m.SampleSum)
+				require.Equal(t, uint64(4), *m.SampleCount)
+				require.Equal(t, []int64{1, -1, 1, -1, 2}, m.PositiveDelta)
+				require.Equal(t, uint32(5), *m.PositiveSpan[0].Length)
+				require.Equal(t, int32(3), *m.PositiveSpan[0].Offset)
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				// NOTE(GiedriusS): there is no text format for exponential (native)
+				// histograms so we don't expect any output.
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				histogram, err := meter.Float64Histogram(
+					"exponential_histogram_baz",
+					otelmetric.WithDescription("a very nice histogram"),
+					otelmetric.WithUnit("By"),
+				)
+				require.NoError(t, err)
+				histogram.Record(ctx, 23, opt)
+				histogram.Record(ctx, 7, opt)
+				histogram.Record(ctx, 101, opt)
+				histogram.Record(ctx, 105, opt)
+			},
+		},
+		{
 			name:         "histogram",
 			expectedFile: "testdata/histogram.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
@@ -195,6 +240,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
+			disableUTF8:  true,
 			options:      []Option{WithoutUnits()},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -233,15 +279,24 @@ func TestPrometheusExporter(t *testing.T) {
 				gauge.Add(ctx, -25, opt)
 
 				// Invalid, will be renamed.
-				gauge, err = meter.Float64UpDownCounter("invalid.gauge.name", otelmetric.WithDescription("a gauge with an invalid name"))
+				gauge, err = meter.Float64UpDownCounter(
+					"invalid.gauge.name",
+					otelmetric.WithDescription("a gauge with an invalid name"),
+				)
 				require.NoError(t, err)
 				gauge.Add(ctx, 100, opt)
 
-				counter, err := meter.Float64Counter("0invalid.counter.name", otelmetric.WithDescription("a counter with an invalid name"))
+				counter, err := meter.Float64Counter(
+					"0invalid.counter.name",
+					otelmetric.WithDescription("a counter with an invalid name"),
+				)
 				require.ErrorIs(t, err, metric.ErrInstrumentName)
 				counter.Add(ctx, 100, opt)
 
-				histogram, err := meter.Float64Histogram("invalid.hist.name", otelmetric.WithDescription("a histogram with an invalid name"))
+				histogram, err := meter.Float64Histogram(
+					"invalid.hist.name",
+					otelmetric.WithDescription("a histogram with an invalid name"),
+				)
 				require.NoError(t, err)
 				histogram.Record(ctx, 23, opt)
 			},
@@ -404,7 +459,6 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter utf-8",
 			expectedFile: "testdata/counter_utf8.txt",
-			enableUTF8:   true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A.G").String("B"),
@@ -471,11 +525,11 @@ func TestPrometheusExporter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.enableUTF8 {
-				model.NameValidationScheme = model.UTF8Validation
+			if tc.disableUTF8 {
+				model.NameValidationScheme = model.LegacyValidation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 				defer func() {
 					// Reset to defaults
-					model.NameValidationScheme = model.LegacyValidation
+					model.NameValidationScheme = model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 				}()
 			}
 			ctx := context.Background()
@@ -508,7 +562,14 @@ func TestPrometheusExporter(t *testing.T) {
 					metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
 						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
 					}},
-				)),
+				),
+					metric.NewView(
+						metric.Instrument{Name: "exponential_histogram_*"},
+						metric.Stream{Aggregation: metric.AggregationBase2ExponentialHistogram{
+							MaxSize: 10,
+						}},
+					),
+				),
 			)
 			meter := provider.Meter(
 				"testmeter",
@@ -524,6 +585,15 @@ func TestPrometheusExporter(t *testing.T) {
 
 			err = testutil.GatherAndCompare(registry, file)
 			require.NoError(t, err)
+
+			if tc.checkMetricFamilies == nil {
+				return
+			}
+
+			mfs, err := registry.Gather()
+			require.NoError(t, err)
+
+			tc.checkMetricFamilies(t, mfs)
 		})
 	}
 }
@@ -949,37 +1019,94 @@ func TestShutdownExporter(t *testing.T) {
 
 func TestExemplars(t *testing.T) {
 	attrsOpt := otelmetric.WithAttributes(
-		attribute.Key("A").String("B"),
-		attribute.Key("C").String("D"),
-		attribute.Key("E").Bool(true),
-		attribute.Key("F").Int(42),
+		attribute.Key("A.1").String("B"),
+		attribute.Key("C.2").String("D"),
+		attribute.Key("E.3").Bool(true),
+		attribute.Key("F.4").Int(42),
 	)
+	expectedNonEscapedLabels := map[string]string{
+		traceIDExemplarKey: "01000000000000000000000000000000",
+		spanIDExemplarKey:  "0100000000000000",
+		"A.1":              "B",
+		"C.2":              "D",
+		"E.3":              "true",
+		"F.4":              "42",
+	}
+	expectedEscapedLabels := map[string]string{
+		traceIDExemplarKey: "01000000000000000000000000000000",
+		spanIDExemplarKey:  "0100000000000000",
+		"A_1":              "B",
+		"C_2":              "D",
+		"E_3":              "true",
+		"F_4":              "42",
+	}
 	for _, tc := range []struct {
 		name                  string
 		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
 		expectedExemplarValue float64
+		expectedLabels        map[string]string
+		escapingScheme        model.EscapingScheme
+		validationScheme      model.ValidationScheme
 	}{
 		{
-			name: "counter",
+			name: "escaped counter",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				counter, err := meter.Float64Counter("foo")
 				require.NoError(t, err)
 				counter.Add(ctx, 9, attrsOpt)
 			},
 			expectedExemplarValue: 9,
+			expectedLabels:        expectedEscapedLabels,
+			escapingScheme:        model.UnderscoreEscaping,
+			validationScheme:      model.LegacyValidation,
 		},
 		{
-			name: "histogram",
+			name: "escaped histogram",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				hist, err := meter.Int64Histogram("foo")
 				require.NoError(t, err)
 				hist.Record(ctx, 9, attrsOpt)
 			},
 			expectedExemplarValue: 9,
+			expectedLabels:        expectedEscapedLabels,
+			escapingScheme:        model.UnderscoreEscaping,
+			validationScheme:      model.LegacyValidation,
+		},
+		{
+			name: "non-escaped counter",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Float64Counter("foo")
+				require.NoError(t, err)
+				counter.Add(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			escapingScheme:        model.NoEscaping,
+			validationScheme:      model.UTF8Validation,
+		},
+		{
+			name: "non-escaped histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("foo")
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			escapingScheme:        model.NoEscaping,
+			validationScheme:      model.UTF8Validation,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_EXEMPLAR", "true")
+			originalEscapingScheme := model.NameEscapingScheme
+			originalValidationScheme := model.NameValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+			model.NameEscapingScheme = tc.escapingScheme
+			model.NameValidationScheme = tc.validationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+			// Restore original value after the test is complete
+			defer func() {
+				model.NameEscapingScheme = originalEscapingScheme
+				model.NameValidationScheme = originalValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+			}()
 			// initialize registry exporter
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
@@ -1044,17 +1171,9 @@ func TestExemplars(t *testing.T) {
 			}
 			require.NotNil(t, exemplar)
 			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
-			expectedLabels := map[string]string{
-				traceIDExemplarKey: "01000000000000000000000000000000",
-				spanIDExemplarKey:  "0100000000000000",
-				"A":                "B",
-				"C":                "D",
-				"E":                "true",
-				"F":                "42",
-			}
-			require.Equal(t, len(expectedLabels), len(exemplar.GetLabel()))
+			require.Len(t, exemplar.GetLabel(), len(tc.expectedLabels))
 			for _, label := range exemplar.GetLabel() {
-				val, ok := expectedLabels[label.GetName()]
+				val, ok := tc.expectedLabels[label.GetName()]
 				require.True(t, ok)
 				require.Equal(t, label.GetValue(), val)
 			}

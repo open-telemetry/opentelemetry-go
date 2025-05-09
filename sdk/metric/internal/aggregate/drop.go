@@ -22,5 +22,6 @@ func (r *dropRes[N]) Offer(context.Context, N, []attribute.KeyValue) {}
 
 // Collect resets dest. No exemplars will ever be returned.
 func (r *dropRes[N]) Collect(dest *[]exemplar.Exemplar) {
+	clear(*dest) // Erase elements to let GC collect objects
 	*dest = (*dest)[:0]
 }

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 )
 
@@ -300,7 +301,7 @@ func (v Value) String() string {
 	case KindBool:
 		return strconv.FormatBool(v.asBool())
 	case KindBytes:
-		return fmt.Sprint(v.asBytes())
+		return fmt.Sprint(v.asBytes()) // nolint:staticcheck  // Use fmt.Sprint to encode as slice.
 	case KindMap:
 		return fmt.Sprint(v.asMap())
 	case KindSlice:
@@ -384,4 +385,59 @@ func Empty(key string) KeyValue {
 // the string representation is not stable.
 func (a KeyValue) String() string {
 	return fmt.Sprintf("%s:%s", a.Key, a.Value)
+}
+
+// ValueFromAttribute converts [attribute.Value] to [Value].
+func ValueFromAttribute(value attribute.Value) Value {
+	switch value.Type() {
+	case attribute.INVALID:
+		return Value{}
+	case attribute.BOOL:
+		return BoolValue(value.AsBool())
+	case attribute.BOOLSLICE:
+		val := value.AsBoolSlice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, BoolValue(v))
+		}
+		return SliceValue(res...)
+	case attribute.INT64:
+		return Int64Value(value.AsInt64())
+	case attribute.INT64SLICE:
+		val := value.AsInt64Slice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, Int64Value(v))
+		}
+		return SliceValue(res...)
+	case attribute.FLOAT64:
+		return Float64Value(value.AsFloat64())
+	case attribute.FLOAT64SLICE:
+		val := value.AsFloat64Slice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, Float64Value(v))
+		}
+		return SliceValue(res...)
+	case attribute.STRING:
+		return StringValue(value.AsString())
+	case attribute.STRINGSLICE:
+		val := value.AsStringSlice()
+		res := make([]Value, 0, len(val))
+		for _, v := range val {
+			res = append(res, StringValue(v))
+		}
+		return SliceValue(res...)
+	}
+	// This code should never be reached
+	// as log attributes are a superset of standard attributes.
+	panic("unknown attribute type")
+}
+
+// KeyValueFromAttribute converts [attribute.KeyValue] to [KeyValue].
+func KeyValueFromAttribute(kv attribute.KeyValue) KeyValue {
+	return KeyValue{
+		Key:   string(kv.Key),
+		Value: ValueFromAttribute(kv.Value),
+	}
 }

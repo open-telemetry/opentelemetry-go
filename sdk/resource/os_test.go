@@ -49,7 +49,7 @@ func TestMapRuntimeOSToSemconvOSType(t *testing.T) {
 
 		t.Run(tc.Name, func(t *testing.T) {
 			osTypeAttribute := resource.MapRuntimeOSToSemconvOSType(tc.Goos)
-			require.EqualValues(t, osTypeAttribute, tc.OSType)
+			require.Equal(t, osTypeAttribute, tc.OSType)
 		})
 	}
 }

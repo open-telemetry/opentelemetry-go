@@ -2,7 +2,12 @@ name: Links (Fail Fast)
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+
+# Declare default permissions as read only.
+permissions: read-all
 
 jobs:
   check-links:
@@ -10,19 +15,27 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Restore lychee cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        id: cache-restore
         with:
           path: .lycheecache
           key: cache-lychee-${{ github.sha }}
           restore-keys: cache-lychee-
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v2.0.2
+        uses: lycheeverse/lychee-action@1d97d84f0bc547f7b25f4c2170d87d810dc2fb2c # v2.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           fail: true
-          args: --max-concurrency 5 --cache --max-cache-age 1d .
+          args: --max-concurrency 5 --cache --max-cache-age 1d --cache-exclude-status 300..=599 .
+
+      - name: Save lychee cache
+        if: always()
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: .lycheecache
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}

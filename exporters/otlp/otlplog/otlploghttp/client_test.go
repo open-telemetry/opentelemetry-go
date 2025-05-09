@@ -229,7 +229,11 @@ type httpCollector struct {
 // If errCh is not nil, the collector will respond to HTTP requests with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func newHTTPCollector(endpoint string, resultCh <-chan exportResult, opts ...func(*httpCollector)) (*httpCollector, error) {
+func newHTTPCollector(
+	endpoint string,
+	resultCh <-chan exportResult,
+	opts ...func(*httpCollector),
+) (*httpCollector, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -434,8 +438,8 @@ func newWeakCertificate() (tls.Certificate, error) {
 	}
 	notBefore := time.Now()
 	notAfter := notBefore.Add(time.Hour)
-	max := new(big.Int).Lsh(big.NewInt(1), 128)
-	sn, err := rand.Int(rand.Reader, max)
+	m := new(big.Int).Lsh(big.NewInt(1), 128)
+	sn, err := rand.Int(rand.Reader, m)
 	if err != nil {
 		return tls.Certificate{}, err
 	}
@@ -777,5 +781,47 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		require.Contains(t, got, headerKeySetInProxy)
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
+	})
+
+	t.Run("WithHTTPClient", func(t *testing.T) {
+		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
+		headerValueSetInProxy := "true"
+		exp, coll := factoryFunc("", nil, WithHTTPClient(&http.Client{
+			Transport: &http.Transport{
+				Proxy: func(r *http.Request) (*url.URL, error) {
+					r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
+					return r.URL, nil
+				},
+			},
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, headerKeySetInProxy)
+		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
+	})
+
+	t.Run("non-retryable errors are propagated", func(t *testing.T) {
+		exporterErr := errors.New("missing required attribute aaaa")
+		rCh := make(chan exportResult, 1)
+		rCh <- exportResult{Err: &httpResponseError{
+			Status: http.StatusBadRequest,
+			Err:    exporterErr,
+		}}
+
+		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
+			Enabled: false,
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		// Push this after Shutdown so the HTTP server doesn't hang.
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		err := exp.Export(ctx, make([]log.Record, 1))
+		assert.ErrorContains(t, err, exporterErr.Error())
 	})
 }

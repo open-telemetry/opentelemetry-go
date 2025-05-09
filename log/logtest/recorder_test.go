@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -22,41 +23,37 @@ func TestRecorderLogger(t *testing.T) {
 		loggerName    string
 		loggerOptions []log.LoggerOption
 
-		wantLogger log.Logger
+		want Recording
 	}{
 		{
-			name: "provides a default logger",
-
-			wantLogger: &logger{
-				scopeRecord: &ScopeRecords{},
+			name: "default scope",
+			want: Recording{
+				Scope{}: nil,
 			},
 		},
 		{
-			name: "provides a logger with a configured scope",
-
+			name:       "configured scope",
 			loggerName: "test",
 			loggerOptions: []log.LoggerOption{
 				log.WithInstrumentationVersion("logtest v42"),
 				log.WithSchemaURL("https://example.com"),
 				log.WithInstrumentationAttributes(attribute.String("foo", "bar")),
 			},
-
-			wantLogger: &logger{
-				scopeRecord: &ScopeRecords{
+			want: Recording{
+				Scope{
 					Name:       "test",
 					Version:    "logtest v42",
 					SchemaURL:  "https://example.com",
 					Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-				},
+				}: nil,
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			l := NewRecorder(tt.options...).Logger(tt.loggerName, tt.loggerOptions...)
-			// unset enabledFn to allow comparison
-			l.(*logger).enabledFn = nil
-
-			assert.Equal(t, tt.wantLogger, l)
+			rec := NewRecorder(tt.options...)
+			rec.Logger(tt.loggerName, tt.loggerOptions...)
+			got := rec.Result()
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -68,21 +65,16 @@ func TestRecorderLoggerCreatesNewStruct(t *testing.T) {
 
 func TestLoggerEnabled(t *testing.T) {
 	for _, tt := range []struct {
-		name                   string
-		options                []Option
-		ctx                    context.Context
-		buildEnabledParameters func() log.EnabledParameters
-
-		isEnabled bool
+		name          string
+		options       []Option
+		ctx           context.Context
+		enabledParams log.EnabledParameters
+		want          bool
 	}{
 		{
 			name: "the default option enables every log entry",
 			ctx:  context.Background(),
-			buildEnabledParameters: func() log.EnabledParameters {
-				return log.EnabledParameters{}
-			},
-
-			isEnabled: true,
+			want: true,
 		},
 		{
 			name: "with everything disabled",
@@ -91,17 +83,13 @@ func TestLoggerEnabled(t *testing.T) {
 					return false
 				}),
 			},
-			ctx: context.Background(),
-			buildEnabledParameters: func() log.EnabledParameters {
-				return log.EnabledParameters{}
-			},
-
-			isEnabled: false,
+			ctx:  context.Background(),
+			want: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.buildEnabledParameters())
-			assert.Equal(t, tt.isEnabled, e)
+			e := NewRecorder(tt.options...).Logger("test").Enabled(tt.ctx, tt.enabledParams)
+			assert.Equal(t, tt.want, e)
 		})
 	}
 }
@@ -111,41 +99,54 @@ func TestLoggerEnabledFnUnset(t *testing.T) {
 	assert.True(t, r.Enabled(context.Background(), log.EnabledParameters{}))
 }
 
-func TestRecorderEmitAndReset(t *testing.T) {
-	r := NewRecorder()
-	l := r.Logger("test")
-	assert.Empty(t, r.Result()[0].Records)
+func TestRecorderLoggerEmitAndReset(t *testing.T) {
+	rec := NewRecorder()
+	ts := time.Now()
 
-	r1 := log.Record{}
-	r1.SetSeverity(log.SeverityInfo)
+	l := rec.Logger(t.Name())
 	ctx := context.Background()
+	r := log.Record{}
+	r.SetTimestamp(ts)
+	r.SetSeverity(log.SeverityInfo)
+	r.SetBody(log.StringValue("Hello there"))
+	r.AddAttributes(log.Int("n", 1))
+	r.AddAttributes(log.String("foo", "bar"))
+	l.Emit(ctx, r)
 
-	l.Emit(ctx, r1)
-	assert.Equal(t, []EmittedRecord{
-		{r1, ctx},
-	}, r.Result()[0].Records)
-
-	nl := r.Logger("test")
-	assert.Empty(t, r.Result()[1].Records)
-
+	l2 := rec.Logger(t.Name())
 	r2 := log.Record{}
-	r2.SetSeverity(log.SeverityError)
-	// We want a non-background context here so it's different from `ctx`.
-	ctx2, cancel := context.WithCancel(ctx)
-	defer cancel()
+	r2.SetBody(log.StringValue("Logger with the same scope"))
+	l2.Emit(ctx, r2)
 
-	nl.Emit(ctx2, r2)
-	assert.Len(t, r.Result()[0].Records, 1)
-	AssertRecordEqual(t, r.Result()[0].Records[0].Record, r1)
-	assert.Equal(t, r.Result()[0].Records[0].Context(), ctx)
+	want := Recording{
+		Scope{Name: t.Name()}: []Record{
+			{
+				Context:   ctx,
+				Timestamp: ts,
+				Severity:  log.SeverityInfo,
+				Body:      log.StringValue("Hello there"),
+				Attributes: []log.KeyValue{
+					log.Int("n", 1),
+					log.String("foo", "bar"),
+				},
+			},
+			{
+				Context:    ctx,
+				Body:       log.StringValue("Logger with the same scope"),
+				Attributes: []log.KeyValue{},
+			},
+		},
+	}
+	got := rec.Result()
+	assert.Equal(t, want, got)
 
-	assert.Len(t, r.Result()[1].Records, 1)
-	AssertRecordEqual(t, r.Result()[1].Records[0].Record, r2)
-	assert.Equal(t, r.Result()[1].Records[0].Context(), ctx2)
+	rec.Reset()
 
-	r.Reset()
-	assert.Empty(t, r.Result()[0].Records)
-	assert.Empty(t, r.Result()[1].Records)
+	want = Recording{
+		Scope{Name: t.Name()}: nil,
+	}
+	got = rec.Result()
+	assert.Equal(t, want, got)
 }
 
 func TestRecorderConcurrentSafe(t *testing.T) {

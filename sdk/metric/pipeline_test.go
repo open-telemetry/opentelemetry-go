@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -24,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -100,6 +102,21 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			pipe.addMultiCallback(func(context.Context) error { return nil })
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b := aggregate.Builder[int64]{
+				Temporality:      metricdata.CumulativeTemporality,
+				ReservoirFunc:    nil,
+				AggregationLimit: 0,
+			}
+			var oID observableID[int64]
+			m, _ := b.PrecomputedSum(false)
+			measures := []aggregate.Measure[int64]{}
+			measures = append(measures, m)
+			pipe.addInt64Measure(oID, measures)
 		}()
 	}
 	wg.Wait()
@@ -226,8 +243,8 @@ func TestLogConflictName(t *testing.T) {
 				tc.existing, tc.name,
 			)
 		} else {
-			assert.Equalf(
-				t, "", msg,
+			assert.Emptyf(
+				t, msg,
 				"warning logged for non-conflicting names: %s, %s",
 				tc.existing, tc.name,
 			)
@@ -517,4 +534,82 @@ func TestExemplars(t *testing.T) {
 		measure(sampled, m)
 		check(t, r, 2, 2, 2)
 	})
+}
+
+func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
+	r1 := NewManualReader()
+	r2 := NewManualReader()
+
+	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
+	m := mp.Meter("test")
+
+	oc1, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := m.Int64ObservableCounter("int64-observable-counter-2")
+		require.NoError(t, err)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := m.RegisterCallback(
+			func(_ context.Context, o metric.Observer) error {
+				o.ObserveInt64(oc1, 2)
+				return nil
+			}, oc1)
+		require.NoError(t, err)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = mp.pipes[0].produce(context.Background(), &metricdata.ResourceMetrics{})
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = mp.pipes[1].produce(context.Background(), &metricdata.ResourceMetrics{})
+	}()
+
+	wg.Wait()
+}
+
+func TestPipelineWithMultipleReaders(t *testing.T) {
+	r1 := NewManualReader()
+	r2 := NewManualReader()
+	mp := NewMeterProvider(WithReader(r1), WithReader(r2))
+	m := mp.Meter("test")
+	var val atomic.Int64
+	oc, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+	reg, err := m.RegisterCallback(
+		// SDK calls this function when collecting data.
+		func(_ context.Context, o metric.Observer) error {
+			o.ObserveInt64(oc, val.Load())
+			return nil
+		}, oc)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
+	ctx := context.Background()
+	rm := new(metricdata.ResourceMetrics)
+	val.Add(1)
+	err = r1.Collect(ctx, rm)
+	require.NoError(t, err)
+	if assert.Len(t, rm.ScopeMetrics, 1) &&
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
+		assert.Equal(t, int64(1), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	}
+	val.Add(1)
+	err = r2.Collect(ctx, rm)
+	require.NoError(t, err)
+	if assert.Len(t, rm.ScopeMetrics, 1) &&
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
+		assert.Equal(t, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	}
 }

@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package internal provides internal functionality for the schema package.
 package internal // import "go.opentelemetry.io/otel/schema/internal"
 
 import (
@@ -33,7 +34,9 @@ func CheckFileFormatField(fileFormat string, supportedFormatMajor, supportedForm
 	}
 
 	// Check that the major version number in the file is the same as what we expect.
-	if fileFormatParsed.Major() != uint64(supportedFormatMajor) { // nolint:gosec // Version can't be negative (overflow checked).
+	if fileFormatParsed.Major() != uint64(
+		supportedFormatMajor,
+	) { // nolint:gosec // Version can't be negative (overflow checked).
 		return fmt.Errorf(
 			"this library cannot parse file formats with major version other than %v",
 			supportedFormatMajor,
@@ -42,7 +45,9 @@ func CheckFileFormatField(fileFormat string, supportedFormatMajor, supportedForm
 
 	// Check that the file minor version number is not greater than
 	// what is requested supports.
-	if fileFormatParsed.Minor() > uint64(supportedFormatMinor) { // nolint:gosec // Version can't be negative (overflow checked).
+	if fileFormatParsed.Minor() > uint64(
+		supportedFormatMinor,
+	) { // nolint:gosec // Version can't be negative (overflow checked).
 		supportedFormatMajorMinor := strconv.Itoa(supportedFormatMajor) + "." +
 			strconv.Itoa(supportedFormatMinor) // 1.0
 

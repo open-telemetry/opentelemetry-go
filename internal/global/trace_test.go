@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/auto/sdk"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -33,7 +34,11 @@ type fnTracer struct {
 	start func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 }
 
-func (fn fnTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (fn fnTracer) Start(
+	ctx context.Context,
+	spanName string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
 	return fn.start(ctx, spanName, opts...)
 }
 
@@ -218,7 +223,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 		},
 	})
 
-	assert.NotSame(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
+	assert.NotEqual(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
 }
 
 func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
@@ -273,4 +278,20 @@ func TestTracerIdentity(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestNewSpanType(t *testing.T) {
+	tracer := new(tracer)
+	ctx := context.Background()
+	_, got := tracer.newSpan(ctx, autoInstEnabled, "", nil)
+	assert.IsType(t, nonRecordingSpan{}, got, "default span type")
+
+	orig := *autoInstEnabled
+	*autoInstEnabled = true
+	t.Cleanup(func() { *autoInstEnabled = orig })
+
+	_, got = tracer.newSpan(ctx, autoInstEnabled, "", nil)
+	autoTracer := sdk.TracerProvider().Tracer("")
+	_, span := autoTracer.Start(ctx, "")
+	assert.IsType(t, span, got, "auto span type")
 }

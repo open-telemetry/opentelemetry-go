@@ -128,5 +128,5 @@ func (s *Span) AddLink(l octrace.Link) {
 
 // String prints a string representation of this span.
 func (s *Span) String() string {
-	return fmt.Sprintf("span %s", s.otelSpan.SpanContext().SpanID().String())
+	return "span " + s.otelSpan.SpanContext().SpanID().String()
 }

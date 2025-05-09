@@ -63,7 +63,11 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (t *MockTracer) Start(
+	ctx context.Context,
+	name string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
 	config := trace.NewSpanStartConfig(opts...)
 	startTime := config.Timestamp()
 	if startTime.IsZero() {
