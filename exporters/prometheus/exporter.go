@@ -34,9 +34,10 @@ const (
 	scopeInfoMetricName  = "otel_scope_info"
 	scopeInfoDescription = "Instrumentation Scope metadata"
 
-	scopeNameLabel    = "otel_scope_name"
-	scopeVersionLabel = "otel_scope_version"
-	scopeSchemaLabel  = "otel_scope_schema_url"
+	scopeNameLabel        = "otel_scope_name"
+	scopeVersionLabel     = "otel_scope_version"
+	scopeSchemaLabel      = "otel_scope_schema_url"
+	scopeAttrsLabelPrefix = "otel_scope_"
 
 	traceIDExemplarKey = "trace_id"
 	spanIDExemplarKey  = "span_id"
@@ -220,7 +221,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes)
 			for i := range attrKeys {
-				attrKeys[i] = "otel_scope_" + attrKeys[i]
+				attrKeys[i] = scopeAttrsLabelPrefix + attrKeys[i]
 			}
 			kv.keys = append(kv.keys, attrKeys...)
 			kv.vals = append(kv.vals, attrVals...)
@@ -453,7 +454,6 @@ func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, erro
 	attrs = append(attrs, scope.Attributes.ToSlice()...)
 	attrs = append(attrs, attribute.String(scopeNameLabel, scope.Name))
 	attrs = append(attrs, attribute.String(scopeVersionLabel, scope.Version))
-	attrs = append(attrs, attribute.String(scopeSchemaLabel, scope.SchemaURL))
 
 	keys, values := getAttrs(attribute.NewSet(attrs...))
 	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
