@@ -57,13 +57,15 @@ type (
 		Timeout     time.Duration
 		URLPath     string
 
-		// gRPC configurations
-		GRPCCredentials credentials.TransportCredentials
-
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
 
-		Proxy HTTPTransportProxyFunc
+		// gRPC configurations
+		GRPCCredentials credentials.TransportCredentials
+
+		// HTTP configurations
+		Proxy      HTTPTransportProxyFunc
+		HTTPClient *http.Client
 	}
 
 	Config struct {
@@ -370,6 +372,13 @@ func WithAggregationSelector(selector metric.AggregationSelector) GenericOption 
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Proxy = pf
+		return cfg
+	})
+}
+
+func WithHTTPClient(c *http.Client) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.HTTPClient = c
 		return cfg
 	})
 }
