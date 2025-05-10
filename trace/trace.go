@@ -21,6 +21,8 @@ const (
 
 	errInvalidSpanIDLength errorConst = "hex encoded span-id must have length equals to 16"
 	errNilSpanID           errorConst = "span-id can't be all zero"
+
+	errInvalidTraceFlagsLength errorConst = "trace flags must only be 1 byte"
 )
 
 type errorConst string
@@ -35,7 +37,8 @@ type TraceID [16]byte
 
 var (
 	nilTraceID TraceID
-	_          json.Marshaler = nilTraceID
+	_          json.Marshaler   = nilTraceID
+	_          json.Unmarshaler = &nilTraceID
 )
 
 // IsValid checks whether the trace TraceID is valid. A valid trace ID does
@@ -55,12 +58,30 @@ func (t TraceID) String() string {
 	return hex.EncodeToString(t[:])
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for TraceID.
+// It expects the JSON to be a string (as produced by MarshalJSON).
+func (t *TraceID) UnmarshalJSON(data []byte) error {
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	parsed, err := TraceIDFromHex(raw)
+	if err != nil {
+		return err
+	}
+
+	*t = parsed
+	return nil
+}
+
 // SpanID is a unique identity of a span in a trace.
 type SpanID [8]byte
 
 var (
 	nilSpanID SpanID
-	_         json.Marshaler = nilSpanID
+	_         json.Marshaler   = nilSpanID
+	_         json.Unmarshaler = &nilSpanID
 )
 
 // IsValid checks whether the SpanID is valid. A valid SpanID does not consist
@@ -78,6 +99,23 @@ func (s SpanID) MarshalJSON() ([]byte, error) {
 // String returns the hex string representation form of a SpanID.
 func (s SpanID) String() string {
 	return hex.EncodeToString(s[:])
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for SpanID.
+// It expects the JSON to be a string (as produced by MarshalJSON).
+func (s *SpanID) UnmarshalJSON(data []byte) error {
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	parsed, err := SpanIDFromHex(raw)
+	if err != nil {
+		return err
+	}
+
+	*s = parsed
+	return nil
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant with
@@ -143,6 +181,12 @@ func decodeHex(h string, b []byte) error {
 // TraceFlags contains flags that can be set on a SpanContext.
 type TraceFlags byte //nolint:revive // revive complains about stutter of `trace.TraceFlags`.
 
+var (
+	nilTraceFlags TraceFlags
+	_             json.Marshaler   = nilTraceFlags
+	_             json.Unmarshaler = &nilTraceFlags
+)
+
 // IsSampled returns if the sampling bit is set in the TraceFlags.
 func (tf TraceFlags) IsSampled() bool {
 	return tf&FlagsSampled == FlagsSampled
@@ -168,14 +212,34 @@ func (tf TraceFlags) String() string {
 	return hex.EncodeToString([]byte{byte(tf)}[:])
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for TraceFlags.
+// It expects the JSON to be a hex string (as produced by MarshalJSON).
+func (tf *TraceFlags) UnmarshalJSON(data []byte) error {
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	decoded, err := hex.DecodeString(raw)
+	if err != nil {
+		return err
+	}
+	if len(decoded) != 1 {
+		return errInvalidTraceFlagsLength
+	}
+	*tf = TraceFlags(decoded[0])
+	return nil
+}
+
 // SpanContextConfig contains mutable fields usable for constructing
 // an immutable SpanContext.
+// JSON tags match OTel API Specification:
+// https://github.com/open-telemetry/opentelemetry-specification/blob/815598814f3cf461ad5493ccbddd53633fb5cf24/specification/trace/api.md#spancontext
 type SpanContextConfig struct {
-	TraceID    TraceID
-	SpanID     SpanID
-	TraceFlags TraceFlags
-	TraceState TraceState
-	Remote     bool
+	TraceID    TraceID    `json:"TraceId"`
+	SpanID     SpanID     `json:"SpanId"`
+	TraceFlags TraceFlags `json:"TraceFlags"`
+	TraceState TraceState `json:"TraceState"`
+	Remote     bool       `json:"IsRemote"`
 }
 
 // NewSpanContext constructs a SpanContext using values from the provided
@@ -199,7 +263,11 @@ type SpanContext struct {
 	remote     bool
 }
 
-var _ json.Marshaler = SpanContext{}
+var (
+	nilSpanContext SpanContext
+	_              json.Marshaler   = nilSpanContext
+	_              json.Unmarshaler = &nilSpanContext
+)
 
 // IsValid returns if the SpanContext is valid. A valid span context has a
 // valid TraceID and SpanID.
@@ -320,4 +388,15 @@ func (sc SpanContext) MarshalJSON() ([]byte, error) {
 		TraceState: sc.traceState,
 		Remote:     sc.remote,
 	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for SpanContext.
+// It expects the JSON to be an object with fields matching SpanContextConfig.
+func (sc *SpanContext) UnmarshalJSON(data []byte) error {
+	var cfg SpanContextConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return err
+	}
+	*sc = NewSpanContext(cfg)
+	return nil
 }
