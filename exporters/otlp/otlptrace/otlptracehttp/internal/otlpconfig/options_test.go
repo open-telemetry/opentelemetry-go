@@ -483,6 +483,24 @@ func TestConfigs(t *testing.T) {
 				assert.Nil(t, c.Traces.Proxy)
 			},
 		},
+
+		// HTTP Client Tests
+		{
+			name: "Test With HTTP Client",
+			opts: []GenericOption{
+				WithHTTPClient(http.DefaultClient),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, http.DefaultClient, c.Traces.HTTPClient)
+			},
+		},
+		{
+			name: "Test Without HTTP Client",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Traces.HTTPClient)
+			},
+		},
 	}
 
 	for _, tt := range tests {
