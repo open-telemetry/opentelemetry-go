@@ -56,6 +56,7 @@ type (
 		Compression Compression
 		Timeout     time.Duration
 		URLPath     string
+		QueryParams map[string]string // New variable to store query params
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -290,6 +291,17 @@ func WithEndpointURL(v string) GenericOption {
 		cfg.Metrics.URLPath = u.Path
 		cfg.Metrics.Insecure = u.Scheme != "https"
 
+		// Extract and store query parameters
+		if u.RawQuery != "" {
+			queryParams := make(map[string]string)
+			for key, values := range u.Query() {
+				if len(values) > 0 {
+					queryParams[key] = values[0]
+				}
+			}
+			cfg.Metrics.QueryParams = queryParams // New variable to store query params
+		}
+
 		return cfg
 	})
 }
@@ -370,6 +382,18 @@ func WithAggregationSelector(selector metric.AggregationSelector) GenericOption 
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Proxy = pf
+		return cfg
+	})
+}
+
+func WithQueryParams(params map[string]string) HTTPOption {
+	return NewHTTPOption(func(cfg Config) Config {
+		if cfg.Metrics.QueryParams == nil {
+			cfg.Metrics.QueryParams = make(map[string]string)
+		}
+		for key, value := range params {
+			cfg.Metrics.QueryParams[key] = value
+		}
 		return cfg
 	})
 }
