@@ -94,9 +94,14 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 // removed. If urlPath is empty or cleaning it results in an empty string,
 // defaultPath is returned instead.
 func cleanPath(urlPath string, defaultPath string) string {
-	tmp := path.Clean(strings.TrimSpace(urlPath))
+	trimmedURL := strings.TrimSpace(urlPath)
+	tmp := path.Clean(trimmedURL)
 	if tmp == "." {
 		return defaultPath
+	}
+	// If the trailing slash was stripped by path.Clean, restore it.
+	if strings.HasSuffix(trimmedURL, "/") && !strings.HasSuffix(tmp, "/") {
+		tmp = tmp + "/"
 	}
 	if !path.IsAbs(tmp) {
 		tmp = "/" + tmp
