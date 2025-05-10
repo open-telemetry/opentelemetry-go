@@ -4,6 +4,7 @@
 package trace
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -61,6 +62,35 @@ func TestNewSpanConfig(t *testing.T) {
 		{
 			[]SpanStartOption{
 				WithAttributes(k1v1, k1v2, k2v2),
+			},
+			SpanConfig{
+				// No uniqueness is guaranteed by the API.
+				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithAttributesLazy(func() []attribute.KeyValue { return []attribute.KeyValue{k1v1} }),
+			},
+			SpanConfig{
+				attributes: []attribute.KeyValue{k1v1},
+			},
+		},
+		{
+			// Multiple calls should append not overwrite.
+			[]SpanStartOption{
+				WithAttributesLazy(func() []attribute.KeyValue { return []attribute.KeyValue{k1v1} }),
+				WithAttributesLazy(func() []attribute.KeyValue { return []attribute.KeyValue{k1v2} }),
+				WithAttributesLazy(func() []attribute.KeyValue { return []attribute.KeyValue{k2v2} }),
+			},
+			SpanConfig{
+				// No uniqueness is guaranteed by the API.
+				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithAttributesLazy(func() []attribute.KeyValue { return []attribute.KeyValue{k1v1, k1v2, k2v2} }),
 			},
 			SpanConfig{
 				// No uniqueness is guaranteed by the API.
@@ -176,6 +206,39 @@ func TestSpanStartConfigAttributeMutability(t *testing.T) {
 	assert.Equal(t, want, conf)
 }
 
+func TestSpanStartConfigLazyAttributeMutability(t *testing.T) {
+	a := attribute.String("a", "val")
+	b := attribute.String("b", "val")
+	attrs := []attribute.KeyValue{a, b}
+	conf := NewSpanStartConfig(WithAttributesLazy(func() []attribute.KeyValue {
+		return attrs
+	}))
+
+	// Mutating passed arg should not change configured attributes.
+	attrs[0] = attribute.String("c", "val")
+
+	want := SpanConfig{attributes: []attribute.KeyValue{a, b}}
+	assert.Equal(t, want, conf)
+}
+
+func TestSpanStartConfigLazyAttributeMultipleCalls(t *testing.T) {
+	callCount := int64(0)
+	lazyAttrs := WithAttributesLazy(func() []attribute.KeyValue {
+		return []attribute.KeyValue{
+			attribute.Int64("a", atomic.AddInt64(&callCount, 1)),
+		}
+	})
+
+	conf1 := NewSpanStartConfig(lazyAttrs)
+	conf2 := NewSpanStartConfig(lazyAttrs)
+
+	wantConf1 := SpanConfig{attributes: []attribute.KeyValue{attribute.Int64("a", 1)}}
+	assert.Equal(t, wantConf1, conf1)
+
+	wantConf2 := SpanConfig{attributes: []attribute.KeyValue{attribute.Int64("a", 2)}}
+	assert.Equal(t, wantConf2, conf2)
+}
+
 func TestEndSpanConfig(t *testing.T) {
 	timestamp := time.Unix(0, 0)
 
@@ -286,6 +349,16 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			},
 		},
 		{
+			name: "with attributes lazy",
+			options: []SpanStartOption{
+				WithAttributesLazy(func() []attribute.KeyValue {
+					return []attribute.KeyValue{
+						attribute.Bool("key", true),
+					}
+				}),
+			},
+		},
+		{
 			name: "with attributes set multiple times",
 			options: []SpanStartOption{
 				WithAttributes(attribute.Bool("key", true)),
@@ -379,6 +452,16 @@ func BenchmarkNewEventConfig(b *testing.B) {
 			name: "with attributes",
 			options: []EventOption{
 				WithAttributes(attribute.Bool("key", true)),
+			},
+		},
+		{
+			name: "with attributes lazy",
+			options: []EventOption{
+				WithAttributesLazy(func() []attribute.KeyValue {
+					return []attribute.KeyValue{
+						attribute.Bool("key", true),
+					}
+				}),
 			},
 		},
 		{
