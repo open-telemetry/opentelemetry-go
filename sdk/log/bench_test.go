@@ -36,13 +36,19 @@ func BenchmarkProcessor(b *testing.B) {
 			},
 		},
 		{
+			name: "SimpleDelayExporter",
+			f: func() []LoggerProviderOption {
+				return []LoggerProviderOption{WithProcessor(NewSimpleProcessor(mockDelayExporter{}))}
+			},
+		},
+		{
 			name: "Batch",
 			f: func() []LoggerProviderOption {
 				return []LoggerProviderOption{WithProcessor(NewBatchProcessor(noopExporter{}))}
 			},
 		},
 		{
-			name: "BatchSimulateExport",
+			name: "BatchDelayExporter",
 			f: func() []LoggerProviderOption {
 				return []LoggerProviderOption{WithProcessor(NewBatchProcessor(mockDelayExporter{}))}
 			},
