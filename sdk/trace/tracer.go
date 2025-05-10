@@ -5,8 +5,8 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	"time"
 
+	"go.opentelemetry.io/otel/internal/epoch"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -122,10 +122,7 @@ func (tr *tracer) newRecordingSpan(
 	sr SamplingResult,
 	config *trace.SpanConfig,
 ) *recordingSpan {
-	startTime := config.Timestamp()
-	if startTime.IsZero() {
-		startTime = time.Now()
-	}
+	startTime := epoch.NanosNowOrDefault(config.Timestamp())
 
 	s := &recordingSpan{
 		// Do not pre-allocate the attributes slice here! Doing so will
