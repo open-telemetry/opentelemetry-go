@@ -1,7 +1,7 @@
 # HELP bar_total meter bar
 # TYPE bar_total counter
-bar_total{otel_scope_name="ma",otel_scope_version="v0.1.0",type="bar"} 100
-bar_total{otel_scope_name="mb",otel_scope_version="v0.1.0",type="bar"} 100
+bar_total{otel_scope_name="ma",otel_scope_schema_url="",otel_scope_version="v0.1.0",type="bar"} 100
+bar_total{otel_scope_name="mb",otel_scope_schema_url="",otel_scope_version="v0.1.0",type="bar"} 100
 # HELP otel_scope_info Instrumentation Scope metadata
 # TYPE otel_scope_info gauge
 otel_scope_info{otel_scope_name="ma",otel_scope_version="v0.1.0"} 1

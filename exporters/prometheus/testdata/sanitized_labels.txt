@@ -1,6 +1,6 @@
 # HELP foo_total a sanitary counter
 # TYPE foo_total counter
-foo_total{A_B="Q",C_D="Y;Z",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 24.3
+foo_total{A_B="Q",C_D="Y;Z",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 24.3
 # HELP otel_scope_info Instrumentation Scope metadata
 # TYPE otel_scope_info gauge
 otel_scope_info{fizz="buzz",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1
