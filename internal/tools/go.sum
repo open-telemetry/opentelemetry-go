@@ -295,8 +295,8 @@ github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/macabu/inamedparam v0.2.0 h1:VyPYpOc10nkhI2qeNUdh3Zket4fcZjEWe35poddBCpE=
 github.com/macabu/inamedparam v0.2.0/go.mod h1:+Pee9/YfGe5LJ62pYXqB89lJ+0k5bsR8Wgz/C0Zlq3U=
-github.com/manuelarte/funcorder v0.3.0 h1:mV1joNYIjIUnnyZ6wfaC+sCWB6IvG62ay3xuhbklHps=
-github.com/manuelarte/funcorder v0.3.0/go.mod h1:wBFktqsi8PyQvNYEUpF5Lt+V/xqgaevfCi4SSpUhyPo=
+github.com/manuelarte/funcorder v0.5.0 h1:llMuHXXbg7tD0i/LNw8vGnkDTHFpTnWqKPI85Rknc+8=
+github.com/manuelarte/funcorder v0.5.0/go.mod h1:Yt3CiUQthSBMBxjShjdXMexmzpP8YGvGLjrxJNkO2hA=
 github.com/maratori/testableexamples v1.0.0 h1:dU5alXRrD8WKSjOUnmJZuzdxWOEQ57+7s93SLMxb2vI=
 github.com/maratori/testableexamples v1.0.0/go.mod h1:4rhjL1n20TUTT4vdh3RDqSizKLyXp7K2u6HgraZCGzE=
 github.com/maratori/testpackage v1.1.1 h1:S58XVV5AD7HADMmD0fNnziNHqKvSdDuEKdPD1rNTU04=
