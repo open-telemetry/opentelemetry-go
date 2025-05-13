@@ -22,7 +22,7 @@ require (
 	4d63.com/gochecknoglobals v0.2.2 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/4meepo/tagalign v1.4.2 // indirect
-	github.com/Abirdcfly/dupword v0.1.3 // indirect
+	github.com/Abirdcfly/dupword v0.1.4 // indirect
 	github.com/Antonboom/errname v1.1.0 // indirect
 	github.com/Antonboom/nilnil v1.1.0 // indirect
 	github.com/Antonboom/testifylint v1.6.1 // indirect
@@ -132,7 +132,7 @@ require (
 	github.com/leonklingele/grouper v1.1.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/macabu/inamedparam v0.2.0 // indirect
-	github.com/manuelarte/funcorder v0.3.0 // indirect
+	github.com/manuelarte/funcorder v0.5.0 // indirect
 	github.com/maratori/testableexamples v1.0.0 // indirect
 	github.com/maratori/testpackage v1.1.1 // indirect
 	github.com/matoous/godox v1.1.0 // indirect
