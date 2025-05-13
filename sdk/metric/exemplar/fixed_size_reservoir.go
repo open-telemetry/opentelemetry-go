@@ -57,6 +57,12 @@ func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
 // randomFloat64 returns, as a float64, a uniform pseudo-random number in the
 // open interval (0.0,1.0).
 func (r *FixedSizeReservoir) randomFloat64() float64 {
+	// TODO: Use an algorithm that avoids rejection sampling. For example:
+	//
+	//   const precision = 1 << 53 // 2^53
+	//   // Generate an integer in [1, 2^53 - 1]
+	//   v := rand.Uint64() % (precision - 1) + 1
+	//   return float64(v) / float64(precision)
 	f := rand.Float64()
 	for f == 0 {
 		f = rand.Float64()

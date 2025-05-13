@@ -5,7 +5,6 @@ package internal // import "go.opentelemetry.io/otel/bridge/opentracing/internal
 
 import (
 	"context"
-	crand "crypto/rand"
 	"math/rand/v2"
 	"reflect"
 	"sync"
@@ -54,8 +53,8 @@ var (
 )
 
 func NewMockTracer() *MockTracer {
-	var seed [32]byte
-	crand.Read(seed[:]) //nolint // crypto/rand never errors
+	u := rand.Uint32()
+	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
 	return &MockTracer{
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
