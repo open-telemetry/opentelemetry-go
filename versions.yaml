@@ -9,7 +9,6 @@ module-sets:
       - go.opentelemetry.io/otel/bridge/opencensus
       - go.opentelemetry.io/otel/bridge/opencensus/test
       - go.opentelemetry.io/otel/bridge/opentracing
-      - go.opentelemetry.io/otel/bridge/opentracing/test
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace
