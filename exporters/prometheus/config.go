@@ -125,9 +125,8 @@ func WithoutCounterSuffixes() Option {
 	})
 }
 
-// WithoutScopeInfo configures the Exporter to not export the otel_scope_info metric.
-// If not specified, the Exporter will create a otel_scope_info metric containing
-// the metrics' Instrumentation Scope, and also add labels about Instrumentation Scope to all metric points.
+// WithoutScopeInfo configures the Exporter to not export
+// labels about Instrumentation Scope to all metric points.
 func WithoutScopeInfo() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.disableScopeInfo = true
@@ -136,7 +135,7 @@ func WithoutScopeInfo() Option {
 }
 
 // WithNamespace configures the Exporter to prefix metric with the given namespace.
-// Metadata metrics such as target_info and otel_scope_info are not prefixed since these
+// Metadata metrics such as target_info are not prefixed since these
 // have special behavior based on their name.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
