@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
 - Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
 - Remove `ScopeRecords`, `EmittedRecord`, and `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6507)
+- `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#?)
 
 ### Changed
 
