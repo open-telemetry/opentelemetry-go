@@ -106,18 +106,18 @@ func expectedJSON(now time.Time) string {
 	return `{
 	"Name": "/foo",
 	"SpanContext": {
-		"TraceID": "0102030405060708090a0b0c0d0e0f10",
-		"SpanID": "0102030405060708",
+		"TraceId": "0102030405060708090a0b0c0d0e0f10",
+		"SpanId": "0102030405060708",
 		"TraceFlags": "00",
 		"TraceState": "key=val",
-		"Remote": false
+		"IsRemote": false
 	},
 	"Parent": {
-		"TraceID": "00000000000000000000000000000000",
-		"SpanID": "0000000000000000",
+		"TraceId": "00000000000000000000000000000000",
+		"SpanId": "0000000000000000",
 		"TraceFlags": "00",
 		"TraceState": "",
-		"Remote": false
+		"IsRemote": false
 	},
 	"SpanKind": 1,
 	"StartTime": ` + string(serializedNow) + `,

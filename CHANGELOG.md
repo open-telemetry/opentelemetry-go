@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.31.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
 - Add `Recording`, `Scope`, and `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6507)
+- Add explicit JSON Unmarshaler interface methods for `SpanContext`, `TraceID`, `SpanID`, and `TraceFlags` in `go.opentelemetry.io/otel/trace`. (#6738)
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6688)
 
 ### Removed
@@ -34,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/sdk/log/logtest` is now a separate Go module. (#6466)
 - `Recorder` in `go.opentelemetry.io/otel/log/logtest` no longer separately stores records emitted by loggers with the same instrumentation scope. (#6507)
 - Improve performance of `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` by not exporting when exporter cannot accept more. (#6569, #6641)
+- Update JSON tags for `TraceId`, `SpanId`, and `IsRemote` in `go.opentelemetry.io/otel/trace` to match [OpenTelemetry API specification for SpanContext items](https://github.com/open-telemetry/opentelemetry-specification/blob/815598814f3cf461ad5493ccbddd53633fb5cf24/specification/trace/api.md#spancontext) (#6738)
 
 ### Deprecated
 
