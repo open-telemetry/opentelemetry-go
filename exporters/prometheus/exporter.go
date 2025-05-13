@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -38,15 +37,11 @@ const (
 	spanIDExemplarKey  = "span_id"
 )
 
-var (
-	errScopeInvalid = errors.New("invalid scope")
-
-	metricsPool = sync.Pool{
-		New: func() interface{} {
-			return &metricdata.ResourceMetrics{}
-		},
-	}
-)
+var metricsPool = sync.Pool{
+	New: func() interface{} {
+		return &metricdata.ResourceMetrics{}
+	},
+}
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
@@ -94,8 +89,6 @@ type collector struct {
 	mu                sync.Mutex // mu protects all members below from the concurrent access.
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
-	scopeInfos        map[instrumentation.Scope]prometheus.Metric
-	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
 	resourceKeyVals   keyVals
 }
