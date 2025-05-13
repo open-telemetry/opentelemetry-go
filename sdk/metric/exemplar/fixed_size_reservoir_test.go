@@ -27,7 +27,10 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	intensity := 0.1
 	sampleSize := 1000
 
-	rng := rand.New(rand.NewChaCha8([32]byte{}))
+	u := rand.Uint32()
+	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
+	t.Logf("rng seed: %x", seed)
+	rng := rand.New(rand.NewChaCha8(seed))
 
 	data := make([]float64, sampleSize*1000)
 	for i := range data {
