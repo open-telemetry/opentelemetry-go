@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
@@ -154,6 +155,20 @@ func TestAssertEqualRecord(t *testing.T) {
 				Attributes: []log.KeyValue{log.Int("n", 1)},
 			},
 			want: false,
+		},
+		{
+			name: "WithCmpOpts",
+			a: Record{
+				Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
+			},
+			b: Record{
+				Timestamp:  y2k,
+				Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
+			},
+			opts: []AssertOption{
+				WithCmpOpts(cmpopts.IgnoreTypes(time.Time{})), // Ignore Timestamps.
+			},
+			want: true,
 		},
 	}
 

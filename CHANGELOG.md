@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#6752)
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6688)
 - Add `AssertEqual` function in `go.opentelemetry.io/otel/log/logtest`. (#6662)
+- Add `WithCmpOpts` option in `go.opentelemetry.io/otel/log/logtest`. (#?) 
 
 ### Removed
 
