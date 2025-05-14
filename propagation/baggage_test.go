@@ -133,7 +133,7 @@ func TestExtractValidBaggage(t *testing.T) {
 			assert.Equal(t, expected, baggage.FromContext(ctx), "should extract baggage for HeaderCarrier")
 
 			// test with map carrier (which does not implement ValuesGetter)
-			ctx = prop.Extract(context.Background(), mapCarr)
+			ctx = prop.Extract(context.Background(), mapCarr, "should extract baggage for MapCarrier")
 			expected = tt.want.Baggage(t)
 			assert.Equal(t, expected, baggage.FromContext(ctx))
 		})
