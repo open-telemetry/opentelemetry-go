@@ -307,8 +307,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			otel.Handle(err)
 			continue
 		}
-
-		// TODO(GiedriusS): add exemplars here after https://github.com/prometheus/client_golang/pull/1654#pullrequestreview-2434669425 is done.
+		m = addExemplars(m, dp.Exemplars)
 		ch <- m
 	}
 }
