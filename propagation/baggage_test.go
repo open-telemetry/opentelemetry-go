@@ -130,7 +130,7 @@ func TestExtractValidBaggage(t *testing.T) {
 			// test with http header carrier (which implements ValuesGetter)
 			ctx := prop.Extract(context.Background(), propagation.HeaderCarrier(req.Header))
 			expected := tt.want.Baggage(t)
-			assert.Equal(t, expected, baggage.FromContext(ctx))
+			assert.Equal(t, expected, baggage.FromContext(ctx), "should extract baggage for HeaderCarrier")
 
 			// test with map carrier (which does not implement ValuesGetter)
 			ctx = prop.Extract(context.Background(), mapCarr)
