@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/logtest"
 )
