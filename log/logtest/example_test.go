@@ -46,7 +46,7 @@ func Example() {
 	}
 	got := rec.Result()
 	logtest.AssertEqual(t, want, got,
-		logtest.WithCmpOpts(cmpopts.IgnoreTypes(time.Time{})), // Ignore Timestamps.)
+		logtest.WithCmpOpts(cmpopts.IgnoreTypes(time.Time{})), // Ignore Timestamps.
 	)
 	// Output:
 	//
