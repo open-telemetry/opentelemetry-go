@@ -34,6 +34,7 @@ func (EnvCarrier) Get(key string) string {
 
 // Set stores the key-value pair in the environment variable.
 // The key is uppercased before being used to set the environment variable.
+// If SetEnvFunc is not set, this method does nothing.
 func (e EnvCarrier) Set(key, value string) {
 	if e.SetEnvFunc == nil {
 		return
