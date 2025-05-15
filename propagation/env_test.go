@@ -118,7 +118,6 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 				if got := os.Getenv(k); got != v {
 					t.Errorf("got %s=%s, want %s=%s", k, got, k, v)
 				}
-
 			}
 		})
 	}
