@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"encoding/json"
 	"reflect"
 	"regexp"
 	"testing"
@@ -346,6 +347,14 @@ func args(m reflect.Method) []reflect.Value {
 		out[i] = reflect.New(aType).Elem()
 	}
 	return out
+}
+
+func TestJSONMarshal(t *testing.T) {
+	const want = `[{"Key":"A","Value":{"Type":"STRING","Value":"a"}},{"Key":"B","Value":{"Type":"STRING","Value":"b"}}]`
+	set := attribute.NewSet(attribute.String("A", "a"), attribute.String("B", "b"))
+	data, err := json.Marshal(set)
+	require.NoError(t, err)
+	require.Equal(t, want, string(data))
 }
 
 func BenchmarkFiltering(b *testing.B) {

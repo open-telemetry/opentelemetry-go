@@ -382,7 +382,7 @@ func computeDistinctReflect(kvs []KeyValue) interface{} {
 }
 
 // MarshalJSON returns the JSON encoding of the Set.
-func (l *Set) MarshalJSON() ([]byte, error) {
+func (l Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.equivalent.iface)
 }
 
