@@ -1,5 +1,7 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Package httpconv provides types and functionality for OpenTelemetry semantic
+// conventions in the "vcs" namespace.
 package vcsconv
 
 import (
