@@ -349,7 +349,7 @@ func args(m reflect.Method) []reflect.Value {
 	return out
 }
 
-func TestJSONMarshal(t *testing.T) {
+func TestJSONMarshaling(t *testing.T) {
 	const want = `[{"Key":"A","Value":{"Type":"STRING","Value":"a"}},{"Key":"B","Value":{"Type":"STRING","Value":"b"}}]`
 	set := attribute.NewSet(attribute.String("A", "a"), attribute.String("B", "b"))
 	data, err := json.Marshal(set)
