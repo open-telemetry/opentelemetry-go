@@ -22,6 +22,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Values` method to `HeaderCarrier` to implement the new `ValuesGetter` interface in `go.opentelemetry.io/otel/propagation`. (#5973)
 - Update `Baggage` in `go.opentelemetry.io/otel/propagation` to retrieve multiple values for a key when the carrier implements `ValuesGetter`. (#5973)
 - Add `AssertEqual` function in `go.opentelemetry.io/otel/log/logtest`. (#6662)
+- The `go.opentelemetry.io/otel/semconv/v1.32.0` package.
+  The package contains semantic conventions from the `v1.32.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.32.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.31.0`(#6782)
 
 ### Removed
 
