@@ -15,7 +15,13 @@ import (
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
 // operating systems and environments.
-type EnvCarrier struct{}
+type EnvCarrier struct {
+	// SetEnvFunc is a function that sets the environment variable.
+	// Usually, you want to set the environment variable for processes
+	// that are spawned by the current process.
+	// By default implementation, it does nothing.
+	SetEnvFunc func(key, value string) error
+}
 
 var _ TextMapCarrier = EnvCarrier{}
 
@@ -28,9 +34,12 @@ func (EnvCarrier) Get(key string) string {
 
 // Set stores the key-value pair in the environment variable.
 // The key is uppercased before being used to set the environment variable.
-func (EnvCarrier) Set(key, value string) {
+func (e EnvCarrier) Set(key, value string) {
+	if e.SetEnvFunc == nil {
+		return
+	}
 	k := strings.ToUpper(key)
-	_ = os.Setenv(k, value)
+	_ = e.SetEnvFunc(k, value)
 }
 
 // Keys lists the keys stored in this carrier.
