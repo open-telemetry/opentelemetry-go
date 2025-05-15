@@ -354,7 +354,7 @@ func TestJSONMarshal(t *testing.T) {
 	set := attribute.NewSet(attribute.String("A", "a"), attribute.String("B", "b"))
 	data, err := json.Marshal(set)
 	require.NoError(t, err)
-	require.Equal(t, want, string(data))
+	require.JSONEq(t, want, string(data))
 }
 
 func BenchmarkFiltering(b *testing.B) {
