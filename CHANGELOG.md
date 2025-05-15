@@ -18,6 +18,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#6751)
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#6752)
 - Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6688)
+- Add `ValuesGetter` in `go.opentelemetry.io/otel/propagation`, a `TextMapCarrier` that supports retrieving multiple values for a single key. (#5973)
+- Add `Values` method to `HeaderCarrier` to implement the new `ValuesGetter` interface in `go.opentelemetry.io/otel/propagation`. (#5973)
+- Update `Baggage` in `go.opentelemetry.io/otel/propagation` to retrieve multiple values for a key when the carrier implements `ValuesGetter`. (#5973)
 - Add `AssertEqual` function in `go.opentelemetry.io/otel/log/logtest`. (#6662)
 
 ### Removed
