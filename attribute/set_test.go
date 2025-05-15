@@ -350,11 +350,62 @@ func args(m reflect.Method) []reflect.Value {
 }
 
 func TestJSONMarshaling(t *testing.T) {
-	const want = `[{"Key":"A","Value":{"Type":"STRING","Value":"a"}},{"Key":"B","Value":{"Type":"STRING","Value":"b"}}]`
-	set := attribute.NewSet(attribute.String("A", "a"), attribute.String("B", "b"))
-	data, err := json.Marshal(set)
-	require.NoError(t, err)
-	require.JSONEq(t, want, string(data))
+	valueTests := []struct {
+		name string
+		set  attribute.Set
+		want string
+	}{
+		{
+			name: "Empty",
+			set:  attribute.NewSet(),
+			want: "[]",
+		},
+		{
+			name: "NonEmpty",
+			set:  attribute.NewSet(attribute.Int("A", 1)),
+			want: `[{"Key":"A","Value":{"Type":"INT64","Value":1}}]`,
+		},
+	}
+	for _, tt := range valueTests {
+		t.Run("Value/"+tt.name, func(t *testing.T) {
+			data, err := json.Marshal(tt.set)
+			require.NoError(t, err)
+			require.JSONEq(t, tt.want, string(data))
+		})
+	}
+
+	pointerTests := []struct {
+		name string
+		set  *attribute.Set
+		want string
+	}{
+		{
+			name: "Nil",
+			set:  nil,
+			want: "null",
+		},
+		{
+			name: "Empty",
+			set:  pointerToSet(attribute.NewSet()),
+			want: `[]`,
+		},
+		{
+			name: "NonEmpty",
+			set:  pointerToSet(attribute.NewSet(attribute.Int("A", 1))),
+			want: `[{"Key":"A","Value":{"Type":"INT64","Value":1}}]`,
+		},
+	}
+	for _, tt := range pointerTests {
+		t.Run("Pointer/"+tt.name, func(t *testing.T) {
+			data, err := json.Marshal(tt.set)
+			require.NoError(t, err)
+			require.JSONEq(t, tt.want, string(data))
+		})
+	}
+}
+
+func pointerToSet(set attribute.Set) *attribute.Set {
+	return &set
 }
 
 func BenchmarkFiltering(b *testing.B) {
