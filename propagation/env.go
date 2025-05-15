@@ -30,7 +30,7 @@ func (EnvCarrier) Get(key string) string {
 // The key is uppercased before being used to set the environment variable.
 func (EnvCarrier) Set(key, value string) {
 	k := strings.ToUpper(key)
-	os.Setenv(k, value)
+	_ = os.Setenv(k, value)
 }
 
 // Keys lists the keys stored in this carrier.
