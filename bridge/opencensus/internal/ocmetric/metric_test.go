@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"strconv"
 	"testing"
@@ -1189,7 +1189,7 @@ func BenchmarkConvertExemplar(b *testing.B) {
 	for i := range data {
 		a := make(ocmetricdata.Attachments, attchmentsN)
 		for j := 0; j < attchmentsN; j++ {
-			a[strconv.Itoa(j)] = rand.Int63()
+			a[strconv.Itoa(j)] = rand.Int64()
 		}
 		data[i] = &ocmetricdata.Exemplar{
 			Value:       rand.NormFloat64(),
