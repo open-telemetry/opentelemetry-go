@@ -13,7 +13,16 @@
 {%- endfor -%}
 {%- endmacro -%}
 
-{%- macro to_go_name(fqn) -%}
+{%- macro to_go_name(fqn="", pkg="") -%}
+{%- if pkg != "" -%}
+{%- set n = pkg | length -%}
+{%- if pkg == fqn[:n] -%}
+{%- set fqn = fqn[n:] -%}
+{%- if fqn[0] == "." or fqn[0] == "." -%}
+{%- set fqn = fqn[1:] -%}
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
 {{ repl(smart_title_case(fqn | replace(" ", "") | replace("_", ".") | acronym)) }}
 {%- endmacro -%}
 
@@ -49,26 +58,30 @@ Examples: {{ attr.examples | trim("[]") }}
 {%- endfor -%}
 {%- endmacro -%}
 
-{%- macro it_reps(brief) -%}
+{%- macro prefix_brief(brief, prefix="") -%}
 {%- set norms = [
-	"MUST", "REQUIRED", "SHALL",
-	"SHOULD", "RECOMMENDED",
-	"MAY", "OPTIONAL"
+       "MUST", "REQUIRED", "SHALL",
+       "SHOULD", "RECOMMENDED",
+       "MAY", "OPTIONAL"
 ] -%}
-{%- set brief = brief | trim() | trim(".") -%}
+{%- set brief = brief | trim() -%}
 {%- if first_word(brief) is in norms -%}
 It {{ brief }}.
 {%- else -%}
-It represents {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
-  {{ lower_first(brief) }}.
+{{ prefix }} {% if brief[:2] == "A " or brief[:3] == "An " or brief[:4] == "The " -%}
+  {{ lower_first(brief) | trim(".") }}.
 {%- else -%}
-  the {{ lower_first(brief) }}.
+  the {{ lower_first(brief) | trim(".") }}.
 {%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
 
-{%- macro keydoc(attr) -%}
-{{ to_go_name(attr.name) }}Key is the attribute Key conforming to the "{{ attr.name }}" semantic conventions. {{ it_reps(attr.brief) }}
+{%- macro it_reps(brief) -%}
+{{ prefix_brief(brief, "It represents") }}
+{%- endmacro -%}
+
+{%- macro keydoc(attr, pkg="") -%}
+{{ to_go_name(attr.name, pkg) }}Key is the attribute Key conforming to the "{{ attr.name }}" semantic conventions. {{ it_reps(attr.brief) }}
 
 {% if attr is enum -%}
 Type: Enum
@@ -82,7 +95,7 @@ Stability: {{ attr.stability | title }}
 {{ deprecated_doc(attr) }}
 {%- endmacro -%}
 
-{%- macro generate_consts(group) -%}
+{%- macro generate_consts(group, pkg="") -%}
 {#- TODO: generate with group docs (i.e group by registry namespace) #}
 
 {{ ["Namespace: " ~ group.root_namespace] | comment(format="go") }}
@@ -91,26 +104,26 @@ const (
 {#- TODO: Handle template attributes. #}
 {%- if not attribute.type is template_type %}
 {{ keydoc(attribute) | comment(format="go_1tab") }}
-	{{to_go_name(attribute.name)}}Key = attribute.Key("{{attribute.name}}")
+	{{to_go_name(attribute.name, pkg=pkg)}}Key = attribute.Key("{{attribute.name}}")
 {% endif -%}
 {%- endfor -%}
 )
 {%- endmacro -%}
 
-{%- macro generate_funcs(group) -%}
+{%- macro generate_funcs(group, pkg="") -%}
 {%- for attribute in group.attributes if not attribute is enum %}
 {#- TODO: Handle template attributes. #}
 {%- if not attribute.type is template_type %}
 
-{{ [to_go_name(attribute.name) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
-func {{to_go_name(attribute.name)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
-	return {{to_go_name(attribute.name)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
+{{ [to_go_name(attribute.name, pkg) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
+func {{to_go_name(attribute.name, pkg)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return {{to_go_name(attribute.name, pkg)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
 {%- endif %}
 {%- endfor %}
 {%- endmacro -%}
 
-{%- macro generate_vars(group) -%}
+{%- macro generate_vars(group, pkg="") -%}
 {#- Render values for enums #}
 {%- for attribute in group.attributes %}
 {%- if attribute is enum %}
@@ -123,17 +136,47 @@ var (
 {%- else %}
 {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(format="go_1tab") }}
 {%- endif %}
-	{{to_go_name(attribute.name ~ "." ~ value.id)}} = {{ to_go_name(attribute.name) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
+	{{to_go_name(attribute.name ~ "." ~ value.id, pkg=pkg)}} = {{ to_go_name(attribute.name, pkg=pkg) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
 {%- endfor %}
 )
 {%- endif %}
 {%- endfor %}
 {%- endmacro -%}
 
-{%- macro metric_keydoc(metric) -%}
+{%- macro metric_keydoc(metric, pkg="") -%}
 {%- if not metric.brief -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions.
 {%- else -%}
-{{ to_go_name(metric.metric_name) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is the metric conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
 {%- endif %}
 {%- endmacro -%}
+
+{%- macro metric_typedoc(metric, pkg="") -%}
+{%- if not metric.brief -%}
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions.
+{%- else -%}
+{{ to_go_name(metric.metric_name, pkg=pkg) }} is an instrument used to record metric values conforming to the "{{ metric.metric_name}}" semantic conventions. {{ it_reps(metric.brief)|trim(".") }}.
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro member_type(member) %}
+{%- if member.value is string %}string{%- endif %}
+{%- if member.value is boolean %}bool{%- endif %}
+{%- if member.value is int %}int64{%- endif %}
+{%- if member.value is float %}float64{%- endif %}
+{%- endmacro %}
+
+{%- macro attr_type(attribute) %}
+{%- if attribute.type is mapping %}
+{{- member_type(attribute.type.members[0]) }}
+{%- elif attribute.type == "template[boolean]" %}boolean
+{%- elif attribute.type == "template[int]" %}int
+{%- elif attribute.type == "template[double]" %}double
+{%- elif attribute.type == "template[string]" %}string
+{%- elif attribute.type == "template[boolean[]]" %}boolean[]
+{%- elif attribute.type == "template[int[]]" %}int[]
+{%- elif attribute.type == "template[double[]]" %}double[]
+{%- elif attribute.type == "template[string[]]" %}string[]
+{%- else %}{{ attribute.type | trim }}
+{%- endif %}
+{%- endmacro %}
