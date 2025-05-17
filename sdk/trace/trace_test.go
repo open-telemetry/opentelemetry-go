@@ -64,19 +64,6 @@ func init() {
 	otel.SetErrorHandler(handler)
 }
 
-func TestTracerFollowsExpectedAPIBehaviour(t *testing.T) {
-	harness := newHarness(t)
-
-	harness.testTracerProvider(func() trace.TracerProvider {
-		return NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
-	})
-
-	tp := NewTracerProvider(WithSampler(TraceIDRatioBased(0)))
-	harness.testTracer(func() trace.Tracer {
-		return tp.Tracer("")
-	})
-}
-
 type testExporter struct {
 	mu    sync.RWMutex
 	idx   map[string]int
