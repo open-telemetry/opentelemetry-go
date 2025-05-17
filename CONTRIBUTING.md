@@ -109,10 +109,9 @@ A PR is considered **ready to merge** when:
 
   This is not enforced through automation, but needs to be validated by the
   maintainer merging.
-  * The qualified approvals need to be from [Approver]s/[Maintainer]s
-    affiliated with different companies. Two qualified approvals from
-    [Approver]s or [Maintainer]s affiliated with the same company counts as a
-    single qualified approval.
+  * At least one of the qualified approvals need to be from an
+    [Approver]/[Maintainer] affiliated with a different company than the author
+    of the PR.
   * PRs introducing changes that have already been discussed and consensus
     reached only need one qualified approval. The discussion and resolution
     needs to be linked to the PR.
