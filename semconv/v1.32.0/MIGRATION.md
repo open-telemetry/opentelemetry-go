@@ -719,6 +719,9 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `NetworkIoDirectionTransmit` | `NetworkIODirectionTransmit` |
 | `OciManifestDigest` | `OCIManifestDigest` |
 | `OciManifestDigestKey` | `OCIManifestDigestKey` |
+| `OpentracingRefTypeChildOf` | `OpenTracingRefTypeChildOf` |
+| `OpentracingRefTypeFollowsFrom` | `OpenTracingRefTypeFollowsFrom` |
+| `OpentracingRefTypeKey` | `OpenTracingRefTypeKey` |
 | `ProcessExecutableBuildIDGnu` | `ProcessExecutableBuildIDGNU` |
 | `ProcessExecutableBuildIDGnuKey` | `ProcessExecutableBuildIDGNUKey` |
 

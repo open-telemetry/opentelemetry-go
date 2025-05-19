@@ -9144,7 +9144,7 @@ func OCIManifestDigest(val string) attribute.KeyValue {
 
 // Namespace: opentracing
 const (
-	// OpentracingRefTypeKey is the attribute Key conforming to the
+	// OpenTracingRefTypeKey is the attribute Key conforming to the
 	// "opentracing.ref_type" semantic conventions. It represents the parent-child
 	// Reference type.
 	//
@@ -9154,17 +9154,17 @@ const (
 	//
 	// Examples:
 	// Note: The causal relationship between a child Span and a parent Span.
-	OpentracingRefTypeKey = attribute.Key("opentracing.ref_type")
+	OpenTracingRefTypeKey = attribute.Key("opentracing.ref_type")
 )
 
 // Enum values for opentracing.ref_type
 var (
 	// The parent Span depends on the child Span in some capacity
 	// Stability: development
-	OpentracingRefTypeChildOf = OpentracingRefTypeKey.String("child_of")
+	OpenTracingRefTypeChildOf = OpenTracingRefTypeKey.String("child_of")
 	// The parent Span doesn't depend in any way on the result of the child Span
 	// Stability: development
-	OpentracingRefTypeFollowsFrom = OpentracingRefTypeKey.String("follows_from")
+	OpenTracingRefTypeFollowsFrom = OpenTracingRefTypeKey.String("follows_from")
 )
 
 // Namespace: os
