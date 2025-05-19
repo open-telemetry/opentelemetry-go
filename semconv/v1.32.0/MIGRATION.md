@@ -717,6 +717,8 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `NetworkIoDirectionKey` | `NetworkIODirectionKey` |
 | `NetworkIoDirectionReceive` | `NetworkIODirectionReceive` |
 | `NetworkIoDirectionTransmit` | `NetworkIODirectionTransmit` |
+| `OciManifestDigest` | `OCIManifestDigest` |
+| `OciManifestDigestKey` | `OCIManifestDigestKey` |
 | `ProcessExecutableBuildIDGnu` | `ProcessExecutableBuildIDGNU` |
 | `ProcessExecutableBuildIDGnuKey` | `ProcessExecutableBuildIDGNUKey` |
 

@@ -9113,7 +9113,7 @@ var (
 
 // Namespace: oci
 const (
-	// OciManifestDigestKey is the attribute Key conforming to the
+	// OCIManifestDigestKey is the attribute Key conforming to the
 	// "oci.manifest.digest" semantic conventions. It represents the digest of the
 	// OCI image manifest. For container images specifically is the digest by which
 	// the container image is known.
@@ -9131,15 +9131,15 @@ const (
 	// [OCI Image Manifest Specification]: https://github.com/opencontainers/image-spec/blob/main/manifest.md
 	// [Digest property]: https://github.com/opencontainers/image-spec/blob/main/descriptor.md#digests
 	// [Example Image Manifest]: https://github.com/opencontainers/image-spec/blob/main/manifest.md#example-image-manifest
-	OciManifestDigestKey = attribute.Key("oci.manifest.digest")
+	OCIManifestDigestKey = attribute.Key("oci.manifest.digest")
 )
 
-// OciManifestDigest returns an attribute KeyValue conforming to the
+// OCIManifestDigest returns an attribute KeyValue conforming to the
 // "oci.manifest.digest" semantic conventions. It represents the digest of the
 // OCI image manifest. For container images specifically is the digest by which
 // the container image is known.
-func OciManifestDigest(val string) attribute.KeyValue {
-	return OciManifestDigestKey.String(val)
+func OCIManifestDigest(val string) attribute.KeyValue {
+	return OCIManifestDigestKey.String(val)
 }
 
 // Namespace: opentracing
