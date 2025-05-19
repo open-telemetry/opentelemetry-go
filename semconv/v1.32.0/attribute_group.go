@@ -8166,7 +8166,7 @@ const (
 	// Stability: Development
 	MessagingRabbitmqMessageDeliveryTagKey = attribute.Key("messaging.rabbitmq.message.delivery_tag")
 
-	// MessagingRocketmqConsumptionModelKey is the attribute Key conforming to the
+	// MessagingRocketMQConsumptionModelKey is the attribute Key conforming to the
 	// "messaging.rocketmq.consumption_model" semantic conventions. It represents
 	// the model of message consumption. This only applies to consumer spans.
 	//
@@ -8175,9 +8175,9 @@ const (
 	// Stability: Development
 	//
 	// Examples:
-	MessagingRocketmqConsumptionModelKey = attribute.Key("messaging.rocketmq.consumption_model")
+	MessagingRocketMQConsumptionModelKey = attribute.Key("messaging.rocketmq.consumption_model")
 
-	// MessagingRocketmqMessageDelayTimeLevelKey is the attribute Key conforming to
+	// MessagingRocketMQMessageDelayTimeLevelKey is the attribute Key conforming to
 	// the "messaging.rocketmq.message.delay_time_level" semantic conventions. It
 	// represents the delay time level for delay message, which determines the
 	// message delay time.
@@ -8185,9 +8185,9 @@ const (
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingRocketmqMessageDelayTimeLevelKey = attribute.Key("messaging.rocketmq.message.delay_time_level")
+	MessagingRocketMQMessageDelayTimeLevelKey = attribute.Key("messaging.rocketmq.message.delay_time_level")
 
-	// MessagingRocketmqMessageDeliveryTimestampKey is the attribute Key conforming
+	// MessagingRocketMQMessageDeliveryTimestampKey is the attribute Key conforming
 	// to the "messaging.rocketmq.message.delivery_timestamp" semantic conventions.
 	// It represents the timestamp in milliseconds that the delay message is
 	// expected to be delivered to consumer.
@@ -8195,9 +8195,9 @@ const (
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingRocketmqMessageDeliveryTimestampKey = attribute.Key("messaging.rocketmq.message.delivery_timestamp")
+	MessagingRocketMQMessageDeliveryTimestampKey = attribute.Key("messaging.rocketmq.message.delivery_timestamp")
 
-	// MessagingRocketmqMessageGroupKey is the attribute Key conforming to the
+	// MessagingRocketMQMessageGroupKey is the attribute Key conforming to the
 	// "messaging.rocketmq.message.group" semantic conventions. It represents the it
 	// is essential for FIFO message. Messages that belong to the same message group
 	// are always processed one by one within the same consumer group.
@@ -8207,9 +8207,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: myMessageGroup
-	MessagingRocketmqMessageGroupKey = attribute.Key("messaging.rocketmq.message.group")
+	MessagingRocketMQMessageGroupKey = attribute.Key("messaging.rocketmq.message.group")
 
-	// MessagingRocketmqMessageKeysKey is the attribute Key conforming to the
+	// MessagingRocketMQMessageKeysKey is the attribute Key conforming to the
 	// "messaging.rocketmq.message.keys" semantic conventions. It represents the
 	// key(s) of message, another way to mark message besides message id.
 	//
@@ -8218,9 +8218,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "keyA", "keyB"
-	MessagingRocketmqMessageKeysKey = attribute.Key("messaging.rocketmq.message.keys")
+	MessagingRocketMQMessageKeysKey = attribute.Key("messaging.rocketmq.message.keys")
 
-	// MessagingRocketmqMessageTagKey is the attribute Key conforming to the
+	// MessagingRocketMQMessageTagKey is the attribute Key conforming to the
 	// "messaging.rocketmq.message.tag" semantic conventions. It represents the
 	// secondary classifier of message besides topic.
 	//
@@ -8229,9 +8229,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: tagA
-	MessagingRocketmqMessageTagKey = attribute.Key("messaging.rocketmq.message.tag")
+	MessagingRocketMQMessageTagKey = attribute.Key("messaging.rocketmq.message.tag")
 
-	// MessagingRocketmqMessageTypeKey is the attribute Key conforming to the
+	// MessagingRocketMQMessageTypeKey is the attribute Key conforming to the
 	// "messaging.rocketmq.message.type" semantic conventions. It represents the
 	// type of message.
 	//
@@ -8240,9 +8240,9 @@ const (
 	// Stability: Development
 	//
 	// Examples:
-	MessagingRocketmqMessageTypeKey = attribute.Key("messaging.rocketmq.message.type")
+	MessagingRocketMQMessageTypeKey = attribute.Key("messaging.rocketmq.message.type")
 
-	// MessagingRocketmqNamespaceKey is the attribute Key conforming to the
+	// MessagingRocketMQNamespaceKey is the attribute Key conforming to the
 	// "messaging.rocketmq.namespace" semantic conventions. It represents the
 	// namespace of RocketMQ resources, resources in different namespaces are
 	// individual.
@@ -8252,7 +8252,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: myNamespace
-	MessagingRocketmqNamespaceKey = attribute.Key("messaging.rocketmq.namespace")
+	MessagingRocketMQNamespaceKey = attribute.Key("messaging.rocketmq.namespace")
 
 	// MessagingServicebusDispositionStatusKey is the attribute Key conforming to
 	// the "messaging.servicebus.disposition_status" semantic conventions. It
@@ -8482,50 +8482,50 @@ func MessagingRabbitmqMessageDeliveryTag(val int) attribute.KeyValue {
 	return MessagingRabbitmqMessageDeliveryTagKey.Int(val)
 }
 
-// MessagingRocketmqMessageDelayTimeLevel returns an attribute KeyValue
+// MessagingRocketMQMessageDelayTimeLevel returns an attribute KeyValue
 // conforming to the "messaging.rocketmq.message.delay_time_level" semantic
 // conventions. It represents the delay time level for delay message, which
 // determines the message delay time.
-func MessagingRocketmqMessageDelayTimeLevel(val int) attribute.KeyValue {
-	return MessagingRocketmqMessageDelayTimeLevelKey.Int(val)
+func MessagingRocketMQMessageDelayTimeLevel(val int) attribute.KeyValue {
+	return MessagingRocketMQMessageDelayTimeLevelKey.Int(val)
 }
 
-// MessagingRocketmqMessageDeliveryTimestamp returns an attribute KeyValue
+// MessagingRocketMQMessageDeliveryTimestamp returns an attribute KeyValue
 // conforming to the "messaging.rocketmq.message.delivery_timestamp" semantic
 // conventions. It represents the timestamp in milliseconds that the delay
 // message is expected to be delivered to consumer.
-func MessagingRocketmqMessageDeliveryTimestamp(val int) attribute.KeyValue {
-	return MessagingRocketmqMessageDeliveryTimestampKey.Int(val)
+func MessagingRocketMQMessageDeliveryTimestamp(val int) attribute.KeyValue {
+	return MessagingRocketMQMessageDeliveryTimestampKey.Int(val)
 }
 
-// MessagingRocketmqMessageGroup returns an attribute KeyValue conforming to the
+// MessagingRocketMQMessageGroup returns an attribute KeyValue conforming to the
 // "messaging.rocketmq.message.group" semantic conventions. It represents the it
 // is essential for FIFO message. Messages that belong to the same message group
 // are always processed one by one within the same consumer group.
-func MessagingRocketmqMessageGroup(val string) attribute.KeyValue {
-	return MessagingRocketmqMessageGroupKey.String(val)
+func MessagingRocketMQMessageGroup(val string) attribute.KeyValue {
+	return MessagingRocketMQMessageGroupKey.String(val)
 }
 
-// MessagingRocketmqMessageKeys returns an attribute KeyValue conforming to the
+// MessagingRocketMQMessageKeys returns an attribute KeyValue conforming to the
 // "messaging.rocketmq.message.keys" semantic conventions. It represents the
 // key(s) of message, another way to mark message besides message id.
-func MessagingRocketmqMessageKeys(val ...string) attribute.KeyValue {
-	return MessagingRocketmqMessageKeysKey.StringSlice(val)
+func MessagingRocketMQMessageKeys(val ...string) attribute.KeyValue {
+	return MessagingRocketMQMessageKeysKey.StringSlice(val)
 }
 
-// MessagingRocketmqMessageTag returns an attribute KeyValue conforming to the
+// MessagingRocketMQMessageTag returns an attribute KeyValue conforming to the
 // "messaging.rocketmq.message.tag" semantic conventions. It represents the
 // secondary classifier of message besides topic.
-func MessagingRocketmqMessageTag(val string) attribute.KeyValue {
-	return MessagingRocketmqMessageTagKey.String(val)
+func MessagingRocketMQMessageTag(val string) attribute.KeyValue {
+	return MessagingRocketMQMessageTagKey.String(val)
 }
 
-// MessagingRocketmqNamespace returns an attribute KeyValue conforming to the
+// MessagingRocketMQNamespace returns an attribute KeyValue conforming to the
 // "messaging.rocketmq.namespace" semantic conventions. It represents the
 // namespace of RocketMQ resources, resources in different namespaces are
 // individual.
-func MessagingRocketmqNamespace(val string) attribute.KeyValue {
-	return MessagingRocketmqNamespaceKey.String(val)
+func MessagingRocketMQNamespace(val string) attribute.KeyValue {
+	return MessagingRocketMQNamespaceKey.String(val)
 }
 
 // MessagingServicebusMessageDeliveryCount returns an attribute KeyValue
@@ -8582,26 +8582,26 @@ var (
 var (
 	// Clustering consumption model
 	// Stability: development
-	MessagingRocketmqConsumptionModelClustering = MessagingRocketmqConsumptionModelKey.String("clustering")
+	MessagingRocketMQConsumptionModelClustering = MessagingRocketMQConsumptionModelKey.String("clustering")
 	// Broadcasting consumption model
 	// Stability: development
-	MessagingRocketmqConsumptionModelBroadcasting = MessagingRocketmqConsumptionModelKey.String("broadcasting")
+	MessagingRocketMQConsumptionModelBroadcasting = MessagingRocketMQConsumptionModelKey.String("broadcasting")
 )
 
 // Enum values for messaging.rocketmq.message.type
 var (
 	// Normal message
 	// Stability: development
-	MessagingRocketmqMessageTypeNormal = MessagingRocketmqMessageTypeKey.String("normal")
+	MessagingRocketMQMessageTypeNormal = MessagingRocketMQMessageTypeKey.String("normal")
 	// FIFO message
 	// Stability: development
-	MessagingRocketmqMessageTypeFifo = MessagingRocketmqMessageTypeKey.String("fifo")
+	MessagingRocketMQMessageTypeFifo = MessagingRocketMQMessageTypeKey.String("fifo")
 	// Delay message
 	// Stability: development
-	MessagingRocketmqMessageTypeDelay = MessagingRocketmqMessageTypeKey.String("delay")
+	MessagingRocketMQMessageTypeDelay = MessagingRocketMQMessageTypeKey.String("delay")
 	// Transaction message
 	// Stability: development
-	MessagingRocketmqMessageTypeTransaction = MessagingRocketmqMessageTypeKey.String("transaction")
+	MessagingRocketMQMessageTypeTransaction = MessagingRocketMQMessageTypeKey.String("transaction")
 )
 
 // Enum values for messaging.servicebus.disposition_status
@@ -8651,7 +8651,7 @@ var (
 	MessagingSystemRabbitmq = MessagingSystemKey.String("rabbitmq")
 	// Apache RocketMQ
 	// Stability: development
-	MessagingSystemRocketmq = MessagingSystemKey.String("rocketmq")
+	MessagingSystemRocketMQ = MessagingSystemKey.String("rocketmq")
 	// Apache Pulsar
 	// Stability: development
 	MessagingSystemPulsar = MessagingSystemKey.String("pulsar")

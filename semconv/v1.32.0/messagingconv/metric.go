@@ -77,8 +77,8 @@ var (
 	SystemKafka SystemAttr = "kafka"
 	// SystemRabbitmq is the rabbitMQ.
 	SystemRabbitmq SystemAttr = "rabbitmq"
-	// SystemRocketmq is the apache RocketMQ.
-	SystemRocketmq SystemAttr = "rocketmq"
+	// SystemRocketMQ is the apache RocketMQ.
+	SystemRocketMQ SystemAttr = "rocketmq"
 	// SystemPulsar is the apache Pulsar.
 	SystemPulsar SystemAttr = "pulsar"
 )

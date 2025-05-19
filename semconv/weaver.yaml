@@ -176,6 +176,7 @@ acronyms:
   - ReplicaSet
   - ReplicationController
   - ResourceQuota
+  - RocketMQ
   - SAP
   - SCF
   - SDK
