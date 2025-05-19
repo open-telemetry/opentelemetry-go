@@ -61,8 +61,8 @@ var (
 type SystemAttr string
 
 var (
-	// SystemOpenai is the openAI.
-	SystemOpenai SystemAttr = "openai"
+	// SystemOpenAI is the openAI.
+	SystemOpenAI SystemAttr = "openai"
 	// SystemVertexAI is the vertex AI.
 	SystemVertexAI SystemAttr = "vertex_ai"
 	// SystemGemini is the gemini.
@@ -73,8 +73,8 @@ var (
 	SystemCohere SystemAttr = "cohere"
 	// SystemAzAIInference is the azure AI Inference.
 	SystemAzAIInference SystemAttr = "az.ai.inference"
-	// SystemAzAIOpenai is the azure OpenAI.
-	SystemAzAIOpenai SystemAttr = "az.ai.openai"
+	// SystemAzAIOpenAI is the azure OpenAI.
+	SystemAzAIOpenAI SystemAttr = "az.ai.openai"
 	// SystemIBMWatsonxAI is the IBM Watsonx AI.
 	SystemIBMWatsonxAI SystemAttr = "ibm.watsonx.ai"
 	// SystemAWSBedrock is the AWS Bedrock.

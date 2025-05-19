@@ -673,7 +673,16 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `GCPGceInstanceHostnameKey` | `GCPGCEInstanceHostnameKey` |
 | `GCPGceInstanceName` | `GCPGCEInstanceName` |
 | `GCPGceInstanceNameKey` | `GCPGCEInstanceNameKey` |
+| `GenAIOpenaiRequestServiceTierAuto` | `GenAIOpenAIRequestServiceTierAuto` |
+| `GenAIOpenaiRequestServiceTierDefault` | `GenAIOpenAIRequestServiceTierDefault` |
+| `GenAIOpenaiRequestServiceTierKey` | `GenAIOpenAIRequestServiceTierKey` |
+| `GenAIOpenaiResponseServiceTier` | `GenAIOpenAIResponseServiceTier` |
+| `GenAIOpenaiResponseServiceTierKey` | `GenAIOpenAIResponseServiceTierKey` |
+| `GenAIOpenaiResponseSystemFingerprint` | `GenAIOpenAIResponseSystemFingerprint` |
+| `GenAIOpenaiResponseSystemFingerprintKey` | `GenAIOpenAIResponseSystemFingerprintKey` |
+| `GenAISystemAzAIOpenai` | `GenAISystemAzAIOpenAI` |
 | `GenAISystemIbmWatsonxAI` | `GenAISystemIBMWatsonxAI` |
+| `GenAISystemOpenai` | `GenAISystemOpenAI` |
 | `GraphqlDocument` | `GraphQLDocument` |
 | `GraphqlDocumentKey` | `GraphQLDocumentKey` |
 | `GraphqlOperationName` | `GraphQLOperationName` |

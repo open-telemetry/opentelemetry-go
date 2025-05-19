@@ -5399,7 +5399,7 @@ const (
 	// Examples: "Math Tutor", "Fiction Writer"
 	GenAIAgentNameKey = attribute.Key("gen_ai.agent.name")
 
-	// GenAIOpenaiRequestServiceTierKey is the attribute Key conforming to the
+	// GenAIOpenAIRequestServiceTierKey is the attribute Key conforming to the
 	// "gen_ai.openai.request.service_tier" semantic conventions. It represents the
 	// service tier requested. May be a specific tier, default, or auto.
 	//
@@ -5408,9 +5408,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "auto", "default"
-	GenAIOpenaiRequestServiceTierKey = attribute.Key("gen_ai.openai.request.service_tier")
+	GenAIOpenAIRequestServiceTierKey = attribute.Key("gen_ai.openai.request.service_tier")
 
-	// GenAIOpenaiResponseServiceTierKey is the attribute Key conforming to the
+	// GenAIOpenAIResponseServiceTierKey is the attribute Key conforming to the
 	// "gen_ai.openai.response.service_tier" semantic conventions. It represents the
 	// service tier used for the response.
 	//
@@ -5419,9 +5419,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "scale", "default"
-	GenAIOpenaiResponseServiceTierKey = attribute.Key("gen_ai.openai.response.service_tier")
+	GenAIOpenAIResponseServiceTierKey = attribute.Key("gen_ai.openai.response.service_tier")
 
-	// GenAIOpenaiResponseSystemFingerprintKey is the attribute Key conforming to
+	// GenAIOpenAIResponseSystemFingerprintKey is the attribute Key conforming to
 	// the "gen_ai.openai.response.system_fingerprint" semantic conventions. It
 	// represents a fingerprint to track any eventual change in the Generative AI
 	// environment.
@@ -5431,7 +5431,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: "fp_44709d6fcb"
-	GenAIOpenaiResponseSystemFingerprintKey = attribute.Key("gen_ai.openai.response.system_fingerprint")
+	GenAIOpenAIResponseSystemFingerprintKey = attribute.Key("gen_ai.openai.response.system_fingerprint")
 
 	// GenAIOperationNameKey is the attribute Key conforming to the
 	// "gen_ai.operation.name" semantic conventions. It represents the name of the
@@ -5747,19 +5747,19 @@ func GenAIAgentName(val string) attribute.KeyValue {
 	return GenAIAgentNameKey.String(val)
 }
 
-// GenAIOpenaiResponseServiceTier returns an attribute KeyValue conforming to the
+// GenAIOpenAIResponseServiceTier returns an attribute KeyValue conforming to the
 // "gen_ai.openai.response.service_tier" semantic conventions. It represents the
 // service tier used for the response.
-func GenAIOpenaiResponseServiceTier(val string) attribute.KeyValue {
-	return GenAIOpenaiResponseServiceTierKey.String(val)
+func GenAIOpenAIResponseServiceTier(val string) attribute.KeyValue {
+	return GenAIOpenAIResponseServiceTierKey.String(val)
 }
 
-// GenAIOpenaiResponseSystemFingerprint returns an attribute KeyValue conforming
+// GenAIOpenAIResponseSystemFingerprint returns an attribute KeyValue conforming
 // to the "gen_ai.openai.response.system_fingerprint" semantic conventions. It
 // represents a fingerprint to track any eventual change in the Generative AI
 // environment.
-func GenAIOpenaiResponseSystemFingerprint(val string) attribute.KeyValue {
-	return GenAIOpenaiResponseSystemFingerprintKey.String(val)
+func GenAIOpenAIResponseSystemFingerprint(val string) attribute.KeyValue {
+	return GenAIOpenAIResponseSystemFingerprintKey.String(val)
 }
 
 // GenAIRequestChoiceCount returns an attribute KeyValue conforming to the
@@ -5900,10 +5900,10 @@ func GenAIUsageOutputTokens(val int) attribute.KeyValue {
 var (
 	// The system will utilize scale tier credits until they are exhausted.
 	// Stability: development
-	GenAIOpenaiRequestServiceTierAuto = GenAIOpenaiRequestServiceTierKey.String("auto")
+	GenAIOpenAIRequestServiceTierAuto = GenAIOpenAIRequestServiceTierKey.String("auto")
 	// The system will utilize the default scale tier.
 	// Stability: development
-	GenAIOpenaiRequestServiceTierDefault = GenAIOpenaiRequestServiceTierKey.String("default")
+	GenAIOpenAIRequestServiceTierDefault = GenAIOpenAIRequestServiceTierKey.String("default")
 )
 
 // Enum values for gen_ai.operation.name
@@ -5951,7 +5951,7 @@ var (
 var (
 	// OpenAI
 	// Stability: development
-	GenAISystemOpenai = GenAISystemKey.String("openai")
+	GenAISystemOpenAI = GenAISystemKey.String("openai")
 	// Vertex AI
 	// Stability: development
 	GenAISystemVertexAI = GenAISystemKey.String("vertex_ai")
@@ -5969,7 +5969,7 @@ var (
 	GenAISystemAzAIInference = GenAISystemKey.String("az.ai.inference")
 	// Azure OpenAI
 	// Stability: development
-	GenAISystemAzAIOpenai = GenAISystemKey.String("az.ai.openai")
+	GenAISystemAzAIOpenAI = GenAISystemKey.String("az.ai.openai")
 	// IBM Watsonx AI
 	// Stability: development
 	GenAISystemIBMWatsonxAI = GenAISystemKey.String("ibm.watsonx.ai")
