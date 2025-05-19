@@ -717,6 +717,8 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `NetworkIoDirectionKey` | `NetworkIODirectionKey` |
 | `NetworkIoDirectionReceive` | `NetworkIODirectionReceive` |
 | `NetworkIoDirectionTransmit` | `NetworkIODirectionTransmit` |
+| `ProcessExecutableBuildIDGnu` | `ProcessExecutableBuildIDGNU` |
+| `ProcessExecutableBuildIDGnuKey` | `ProcessExecutableBuildIDGNUKey` |
 
 [OpenTelemetry Semantic Conventions]: https://github.com/open-telemetry/semantic-conventions
 [open an issue]: https://github.com/open-telemetry/opentelemetry-go/issues/new?template=Blank+issue

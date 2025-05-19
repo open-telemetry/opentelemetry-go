@@ -9604,7 +9604,7 @@ const (
 	// Examples: "2023-11-21T09:25:34.853Z"
 	ProcessCreationTimeKey = attribute.Key("process.creation.time")
 
-	// ProcessExecutableBuildIDGnuKey is the attribute Key conforming to the
+	// ProcessExecutableBuildIDGNUKey is the attribute Key conforming to the
 	// "process.executable.build_id.gnu" semantic conventions. It represents the GNU
 	// build ID as found in the `.note.gnu.build-id` ELF section (hex string).
 	//
@@ -9613,7 +9613,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: "c89b11207f6479603b0d49bf291c092c2b719293"
-	ProcessExecutableBuildIDGnuKey = attribute.Key("process.executable.build_id.gnu")
+	ProcessExecutableBuildIDGNUKey = attribute.Key("process.executable.build_id.gnu")
 
 	// ProcessExecutableBuildIDGoKey is the attribute Key conforming to the
 	// "process.executable.build_id.go" semantic conventions. It represents the Go
@@ -9965,11 +9965,11 @@ func ProcessCreationTime(val string) attribute.KeyValue {
 	return ProcessCreationTimeKey.String(val)
 }
 
-// ProcessExecutableBuildIDGnu returns an attribute KeyValue conforming to the
+// ProcessExecutableBuildIDGNU returns an attribute KeyValue conforming to the
 // "process.executable.build_id.gnu" semantic conventions. It represents the GNU
 // build ID as found in the `.note.gnu.build-id` ELF section (hex string).
-func ProcessExecutableBuildIDGnu(val string) attribute.KeyValue {
-	return ProcessExecutableBuildIDGnuKey.String(val)
+func ProcessExecutableBuildIDGNU(val string) attribute.KeyValue {
+	return ProcessExecutableBuildIDGNUKey.String(val)
 }
 
 // ProcessExecutableBuildIDGo returns an attribute KeyValue conforming to the
