@@ -5186,7 +5186,7 @@ const (
 	// [`CLOUD_RUN_TASK_INDEX`]: https://cloud.google.com/run/docs/container-contract#jobs-env-vars
 	GCPCloudRunJobTaskIndexKey = attribute.Key("gcp.cloud_run.job.task_index")
 
-	// GCPGceInstanceHostnameKey is the attribute Key conforming to the
+	// GCPGCEInstanceHostnameKey is the attribute Key conforming to the
 	// "gcp.gce.instance.hostname" semantic conventions. It represents the hostname
 	// of a GCE instance. This is the full value of the default or [custom hostname]
 	// .
@@ -5199,9 +5199,9 @@ const (
 	// "sample-vm.us-west1-b.c.my-project.internal"
 	//
 	// [custom hostname]: https://cloud.google.com/compute/docs/instances/custom-hostname-vm
-	GCPGceInstanceHostnameKey = attribute.Key("gcp.gce.instance.hostname")
+	GCPGCEInstanceHostnameKey = attribute.Key("gcp.gce.instance.hostname")
 
-	// GCPGceInstanceNameKey is the attribute Key conforming to the
+	// GCPGCEInstanceNameKey is the attribute Key conforming to the
 	// "gcp.gce.instance.name" semantic conventions. It represents the instance name
 	// of a GCE instance. This is the value provided by `host.name`, the visible
 	// name of the instance in the Cloud Console UI, and the prefix for the default
@@ -5214,7 +5214,7 @@ const (
 	// Examples: "instance-1", "my-vm-name"
 	//
 	// [default internal DNS name]: https://cloud.google.com/compute/docs/internal-dns#instance-fully-qualified-domain-names
-	GCPGceInstanceNameKey = attribute.Key("gcp.gce.instance.name")
+	GCPGCEInstanceNameKey = attribute.Key("gcp.gce.instance.name")
 )
 
 // GCPApphubApplicationContainer returns an attribute KeyValue conforming to the
@@ -5280,25 +5280,25 @@ func GCPCloudRunJobTaskIndex(val int) attribute.KeyValue {
 	return GCPCloudRunJobTaskIndexKey.Int(val)
 }
 
-// GCPGceInstanceHostname returns an attribute KeyValue conforming to the
+// GCPGCEInstanceHostname returns an attribute KeyValue conforming to the
 // "gcp.gce.instance.hostname" semantic conventions. It represents the hostname
 // of a GCE instance. This is the full value of the default or [custom hostname]
 // .
 //
 // [custom hostname]: https://cloud.google.com/compute/docs/instances/custom-hostname-vm
-func GCPGceInstanceHostname(val string) attribute.KeyValue {
-	return GCPGceInstanceHostnameKey.String(val)
+func GCPGCEInstanceHostname(val string) attribute.KeyValue {
+	return GCPGCEInstanceHostnameKey.String(val)
 }
 
-// GCPGceInstanceName returns an attribute KeyValue conforming to the
+// GCPGCEInstanceName returns an attribute KeyValue conforming to the
 // "gcp.gce.instance.name" semantic conventions. It represents the instance name
 // of a GCE instance. This is the value provided by `host.name`, the visible name
 // of the instance in the Cloud Console UI, and the prefix for the default
 // hostname of the instance as defined by the [default internal DNS name].
 //
 // [default internal DNS name]: https://cloud.google.com/compute/docs/internal-dns#instance-fully-qualified-domain-names
-func GCPGceInstanceName(val string) attribute.KeyValue {
-	return GCPGceInstanceNameKey.String(val)
+func GCPGCEInstanceName(val string) attribute.KeyValue {
+	return GCPGCEInstanceNameKey.String(val)
 }
 
 // Enum values for gcp.apphub.service.criticality_type

@@ -669,6 +669,10 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `DiskIoDirectionKey` | `DiskIODirectionKey` |
 | `DiskIoDirectionRead` | `DiskIODirectionRead` |
 | `DiskIoDirectionWrite` | `DiskIODirectionWrite` |
+| `GCPGceInstanceHostname` | `GCPGCEInstanceHostname` |
+| `GCPGceInstanceHostnameKey` | `GCPGCEInstanceHostnameKey` |
+| `GCPGceInstanceName` | `GCPGCEInstanceName` |
+| `GCPGceInstanceNameKey` | `GCPGCEInstanceNameKey` |
 | `GenAISystemIbmWatsonxAI` | `GenAISystemIBMWatsonxAI` |
 | `GraphqlDocument` | `GraphQLDocument` |
 | `GraphqlDocumentKey` | `GraphQLDocumentKey` |
