@@ -6197,7 +6197,7 @@ var (
 
 // Namespace: graphql
 const (
-	// GraphqlDocumentKey is the attribute Key conforming to the "graphql.document"
+	// GraphQLDocumentKey is the attribute Key conforming to the "graphql.document"
 	// semantic conventions. It represents the GraphQL document being executed.
 	//
 	// Type: string
@@ -6206,9 +6206,9 @@ const (
 	//
 	// Examples: query findBookById { bookById(id: ?) { name } }
 	// Note: The value may be sanitized to exclude sensitive information.
-	GraphqlDocumentKey = attribute.Key("graphql.document")
+	GraphQLDocumentKey = attribute.Key("graphql.document")
 
-	// GraphqlOperationNameKey is the attribute Key conforming to the
+	// GraphQLOperationNameKey is the attribute Key conforming to the
 	// "graphql.operation.name" semantic conventions. It represents the name of the
 	// operation being executed.
 	//
@@ -6217,9 +6217,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: findBookById
-	GraphqlOperationNameKey = attribute.Key("graphql.operation.name")
+	GraphQLOperationNameKey = attribute.Key("graphql.operation.name")
 
-	// GraphqlOperationTypeKey is the attribute Key conforming to the
+	// GraphQLOperationTypeKey is the attribute Key conforming to the
 	// "graphql.operation.type" semantic conventions. It represents the type of the
 	// operation being executed.
 	//
@@ -6228,34 +6228,34 @@ const (
 	// Stability: Development
 	//
 	// Examples: "query", "mutation", "subscription"
-	GraphqlOperationTypeKey = attribute.Key("graphql.operation.type")
+	GraphQLOperationTypeKey = attribute.Key("graphql.operation.type")
 )
 
-// GraphqlDocument returns an attribute KeyValue conforming to the
+// GraphQLDocument returns an attribute KeyValue conforming to the
 // "graphql.document" semantic conventions. It represents the GraphQL document
 // being executed.
-func GraphqlDocument(val string) attribute.KeyValue {
-	return GraphqlDocumentKey.String(val)
+func GraphQLDocument(val string) attribute.KeyValue {
+	return GraphQLDocumentKey.String(val)
 }
 
-// GraphqlOperationName returns an attribute KeyValue conforming to the
+// GraphQLOperationName returns an attribute KeyValue conforming to the
 // "graphql.operation.name" semantic conventions. It represents the name of the
 // operation being executed.
-func GraphqlOperationName(val string) attribute.KeyValue {
-	return GraphqlOperationNameKey.String(val)
+func GraphQLOperationName(val string) attribute.KeyValue {
+	return GraphQLOperationNameKey.String(val)
 }
 
 // Enum values for graphql.operation.type
 var (
 	// GraphQL query
 	// Stability: development
-	GraphqlOperationTypeQuery = GraphqlOperationTypeKey.String("query")
+	GraphQLOperationTypeQuery = GraphQLOperationTypeKey.String("query")
 	// GraphQL mutation
 	// Stability: development
-	GraphqlOperationTypeMutation = GraphqlOperationTypeKey.String("mutation")
+	GraphQLOperationTypeMutation = GraphQLOperationTypeKey.String("mutation")
 	// GraphQL subscription
 	// Stability: development
-	GraphqlOperationTypeSubscription = GraphqlOperationTypeKey.String("subscription")
+	GraphQLOperationTypeSubscription = GraphQLOperationTypeKey.String("subscription")
 )
 
 // Namespace: heroku

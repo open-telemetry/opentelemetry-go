@@ -670,6 +670,14 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `DiskIoDirectionRead` | `DiskIODirectionRead` |
 | `DiskIoDirectionWrite` | `DiskIODirectionWrite` |
 | `GenAISystemIbmWatsonxAI` | `GenAISystemIBMWatsonxAI` |
+| `GraphqlDocument` | `GraphQLDocument` |
+| `GraphqlDocumentKey` | `GraphQLDocumentKey` |
+| `GraphqlOperationName` | `GraphQLOperationName` |
+| `GraphqlOperationNameKey` | `GraphQLOperationNameKey` |
+| `GraphqlOperationTypeKey` | `GraphQLOperationTypeKey` |
+| `GraphqlOperationTypeMutation` | `GraphQLOperationTypeMutation` |
+| `GraphqlOperationTypeQuery` | `GraphQLOperationTypeQuery` |
+| `GraphqlOperationTypeSubscription` | `GraphQLOperationTypeSubscription` |
 | `NetworkIoDirectionKey` | `NetworkIODirectionKey` |
 | `NetworkIoDirectionReceive` | `NetworkIODirectionReceive` |
 | `NetworkIoDirectionTransmit` | `NetworkIODirectionTransmit` |
