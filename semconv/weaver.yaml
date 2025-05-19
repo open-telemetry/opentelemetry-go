@@ -99,12 +99,10 @@ acronyms:
   - CPU
   - CSI
   - CSS
+  - CVM
   - ClickHouse
-  - CloudCVM
   - CloudEvents
   - CloudFoundry
-  - CloudOKE
-  - CloudSCF
   - CockroachDB
   - CosmosDB
   - CouchDB
@@ -156,6 +154,7 @@ acronyms:
   - MongoDB
   - MySQL
   - NetBSD
+  - OKE
   - OS
   - OTel
   - OpenBSD
@@ -175,6 +174,7 @@ acronyms:
   - ReplicationController
   - ResourceQuota
   - SAP
+  - SCF
   - SDK
   - SLA
   - SMTP

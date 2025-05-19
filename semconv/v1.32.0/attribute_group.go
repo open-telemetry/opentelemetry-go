@@ -2243,16 +2243,16 @@ var (
 	CloudPlatformOracleCloudCompute = CloudPlatformKey.String("oracle_cloud_compute")
 	// Kubernetes Engine (OKE) on Oracle Cloud Infrastructure (OCI)
 	// Stability: development
-	CloudPlatformOracleCloudOke = CloudPlatformKey.String("oracle_cloud_oke")
+	CloudPlatformOracleCloudOKE = CloudPlatformKey.String("oracle_cloud_oke")
 	// Tencent Cloud Cloud Virtual Machine (CVM)
 	// Stability: development
-	CloudPlatformTencentCloudCvm = CloudPlatformKey.String("tencent_cloud_cvm")
+	CloudPlatformTencentCloudCVM = CloudPlatformKey.String("tencent_cloud_cvm")
 	// Tencent Cloud Elastic Kubernetes Service (EKS)
 	// Stability: development
 	CloudPlatformTencentCloudEKS = CloudPlatformKey.String("tencent_cloud_eks")
 	// Tencent Cloud Serverless Cloud Function (SCF)
 	// Stability: development
-	CloudPlatformTencentCloudScf = CloudPlatformKey.String("tencent_cloud_scf")
+	CloudPlatformTencentCloudSCF = CloudPlatformKey.String("tencent_cloud_scf")
 )
 
 // Enum values for cloud.provider

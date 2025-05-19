@@ -617,6 +617,9 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `CloudPlatformAzureOpenshift` | `CloudPlatformAzureOpenShift` |
 | `CloudPlatformGCPOpenshift` | `CloudPlatformGCPOpenShift` |
 | `CloudPlatformIbmCloudOpenshift` | `CloudPlatformIBMCloudOpenShift` |
+| `CloudPlatformOracleCloudOke` | `CloudPlatformOracleCloudOKE` |
+| `CloudPlatformTencentCloudCvm` | `CloudPlatformTencentCloudCVM` |
+| `CloudPlatformTencentCloudScf` | `CloudPlatformTencentCloudSCF` |
 | `CloudProviderIbmCloud` | `CloudProviderIBMCloud` |
 | `CloudeventsEventID` | `CloudEventsEventID` |
 | `CloudeventsEventIDKey` | `CloudEventsEventIDKey` |
