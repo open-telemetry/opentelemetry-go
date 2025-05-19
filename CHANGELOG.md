@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Values` method to `HeaderCarrier` to implement the new `ValuesGetter` interface in `go.opentelemetry.io/otel/propagation`. (#5973)
 - Update `Baggage` in `go.opentelemetry.io/otel/propagation` to retrieve multiple values for a key when the carrier implements `ValuesGetter`. (#5973)
 - Add `AssertEqual` function in `go.opentelemetry.io/otel/log/logtest`. (#6662)
-- Add `Transform` option in `go.opentelemetry.io/otel/log/logtest`. (#?)
+- Add `Transform` option in `go.opentelemetry.io/otel/log/logtest`. (#6794)
 
 
 ### Removed
