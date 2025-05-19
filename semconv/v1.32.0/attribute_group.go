@@ -8681,7 +8681,7 @@ const (
 	// Examples: 310
 	NetworkCarrierMccKey = attribute.Key("network.carrier.mcc")
 
-	// NetworkCarrierMncKey is the attribute Key conforming to the
+	// NetworkCarrierMNCKey is the attribute Key conforming to the
 	// "network.carrier.mnc" semantic conventions. It represents the mobile carrier
 	// network code.
 	//
@@ -8690,7 +8690,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: 001
-	NetworkCarrierMncKey = attribute.Key("network.carrier.mnc")
+	NetworkCarrierMNCKey = attribute.Key("network.carrier.mnc")
 
 	// NetworkCarrierNameKey is the attribute Key conforming to the
 	// "network.carrier.name" semantic conventions. It represents the name of the
@@ -8884,11 +8884,11 @@ func NetworkCarrierMcc(val string) attribute.KeyValue {
 	return NetworkCarrierMccKey.String(val)
 }
 
-// NetworkCarrierMnc returns an attribute KeyValue conforming to the
+// NetworkCarrierMNC returns an attribute KeyValue conforming to the
 // "network.carrier.mnc" semantic conventions. It represents the mobile carrier
 // network code.
-func NetworkCarrierMnc(val string) attribute.KeyValue {
-	return NetworkCarrierMncKey.String(val)
+func NetworkCarrierMNC(val string) attribute.KeyValue {
+	return NetworkCarrierMNCKey.String(val)
 }
 
 // NetworkCarrierName returns an attribute KeyValue conforming to the

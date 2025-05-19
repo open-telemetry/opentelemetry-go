@@ -712,6 +712,8 @@ Be sure to update any use from `go.opentelemetry.io/otel/semconv/v1.31.0` with t
 | `MessagingRocketmqNamespace` | `MessagingRocketMQNamespace` |
 | `MessagingRocketmqNamespaceKey` | `MessagingRocketMQNamespaceKey` |
 | `MessagingSystemRocketmq` | `MessagingSystemRocketMQ` |
+| `NetworkCarrierMnc` | `NetworkCarrierMNC` |
+| `NetworkCarrierMncKey` | `NetworkCarrierMNCKey` |
 | `NetworkIoDirectionKey` | `NetworkIODirectionKey` |
 | `NetworkIoDirectionReceive` | `NetworkIODirectionReceive` |
 | `NetworkIoDirectionTransmit` | `NetworkIODirectionTransmit` |
