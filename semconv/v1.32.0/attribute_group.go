@@ -2168,10 +2168,10 @@ var (
 	CloudPlatformAlibabaCloudECS = CloudPlatformKey.String("alibaba_cloud_ecs")
 	// Alibaba Cloud Function Compute
 	// Stability: development
-	CloudPlatformAlibabaCloudFc = CloudPlatformKey.String("alibaba_cloud_fc")
+	CloudPlatformAlibabaCloudFC = CloudPlatformKey.String("alibaba_cloud_fc")
 	// Red Hat OpenShift on Alibaba Cloud
 	// Stability: development
-	CloudPlatformAlibabaCloudOpenshift = CloudPlatformKey.String("alibaba_cloud_openshift")
+	CloudPlatformAlibabaCloudOpenShift = CloudPlatformKey.String("alibaba_cloud_openshift")
 	// AWS Elastic Compute Cloud
 	// Stability: development
 	CloudPlatformAWSEC2 = CloudPlatformKey.String("aws_ec2")
@@ -2192,7 +2192,7 @@ var (
 	CloudPlatformAWSAppRunner = CloudPlatformKey.String("aws_app_runner")
 	// Red Hat OpenShift on AWS (ROSA)
 	// Stability: development
-	CloudPlatformAWSOpenshift = CloudPlatformKey.String("aws_openshift")
+	CloudPlatformAWSOpenShift = CloudPlatformKey.String("aws_openshift")
 	// Azure Virtual Machines
 	// Stability: development
 	CloudPlatformAzureVM = CloudPlatformKey.String("azure_vm")
@@ -2213,7 +2213,7 @@ var (
 	CloudPlatformAzureAppService = CloudPlatformKey.String("azure_app_service")
 	// Azure Red Hat OpenShift
 	// Stability: development
-	CloudPlatformAzureOpenshift = CloudPlatformKey.String("azure_openshift")
+	CloudPlatformAzureOpenShift = CloudPlatformKey.String("azure_openshift")
 	// Google Bare Metal Solution (BMS)
 	// Stability: development
 	CloudPlatformGCPBareMetalSolution = CloudPlatformKey.String("gcp_bare_metal_solution")
@@ -2234,10 +2234,10 @@ var (
 	CloudPlatformGCPAppEngine = CloudPlatformKey.String("gcp_app_engine")
 	// Red Hat OpenShift on Google Cloud
 	// Stability: development
-	CloudPlatformGCPOpenshift = CloudPlatformKey.String("gcp_openshift")
+	CloudPlatformGCPOpenShift = CloudPlatformKey.String("gcp_openshift")
 	// Red Hat OpenShift on IBM Cloud
 	// Stability: development
-	CloudPlatformIbmCloudOpenshift = CloudPlatformKey.String("ibm_cloud_openshift")
+	CloudPlatformIBMCloudOpenShift = CloudPlatformKey.String("ibm_cloud_openshift")
 	// Compute on Oracle Cloud Infrastructure (OCI)
 	// Stability: development
 	CloudPlatformOracleCloudCompute = CloudPlatformKey.String("oracle_cloud_compute")
@@ -2274,7 +2274,7 @@ var (
 	CloudProviderHeroku = CloudProviderKey.String("heroku")
 	// IBM Cloud
 	// Stability: development
-	CloudProviderIbmCloud = CloudProviderKey.String("ibm_cloud")
+	CloudProviderIBMCloud = CloudProviderKey.String("ibm_cloud")
 	// Oracle Cloud Infrastructure (OCI)
 	// Stability: development
 	CloudProviderOracleCloud = CloudProviderKey.String("oracle_cloud")
@@ -2285,7 +2285,7 @@ var (
 
 // Namespace: cloudevents
 const (
-	// CloudeventsEventIDKey is the attribute Key conforming to the
+	// CloudEventsEventIDKey is the attribute Key conforming to the
 	// "cloudevents.event_id" semantic conventions. It represents the [event_id]
 	// uniquely identifies the event.
 	//
@@ -2296,9 +2296,9 @@ const (
 	// Examples: "123e4567-e89b-12d3-a456-426614174000", "0001"
 	//
 	// [event_id]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#id
-	CloudeventsEventIDKey = attribute.Key("cloudevents.event_id")
+	CloudEventsEventIDKey = attribute.Key("cloudevents.event_id")
 
-	// CloudeventsEventSourceKey is the attribute Key conforming to the
+	// CloudEventsEventSourceKey is the attribute Key conforming to the
 	// "cloudevents.event_source" semantic conventions. It represents the [source]
 	// identifies the context in which an event happened.
 	//
@@ -2310,9 +2310,9 @@ const (
 	// "my-service"
 	//
 	// [source]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#source-1
-	CloudeventsEventSourceKey = attribute.Key("cloudevents.event_source")
+	CloudEventsEventSourceKey = attribute.Key("cloudevents.event_source")
 
-	// CloudeventsEventSpecVersionKey is the attribute Key conforming to the
+	// CloudEventsEventSpecVersionKey is the attribute Key conforming to the
 	// "cloudevents.event_spec_version" semantic conventions. It represents the
 	// [version of the CloudEvents specification] which the event uses.
 	//
@@ -2323,9 +2323,9 @@ const (
 	// Examples: 1.0
 	//
 	// [version of the CloudEvents specification]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#specversion
-	CloudeventsEventSpecVersionKey = attribute.Key("cloudevents.event_spec_version")
+	CloudEventsEventSpecVersionKey = attribute.Key("cloudevents.event_spec_version")
 
-	// CloudeventsEventSubjectKey is the attribute Key conforming to the
+	// CloudEventsEventSubjectKey is the attribute Key conforming to the
 	// "cloudevents.event_subject" semantic conventions. It represents the [subject]
 	//  of the event in the context of the event producer (identified by source).
 	//
@@ -2336,9 +2336,9 @@ const (
 	// Examples: mynewfile.jpg
 	//
 	// [subject]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#subject
-	CloudeventsEventSubjectKey = attribute.Key("cloudevents.event_subject")
+	CloudEventsEventSubjectKey = attribute.Key("cloudevents.event_subject")
 
-	// CloudeventsEventTypeKey is the attribute Key conforming to the
+	// CloudEventsEventTypeKey is the attribute Key conforming to the
 	// "cloudevents.event_type" semantic conventions. It represents the [event_type]
 	//  contains a value describing the type of event related to the originating
 	// occurrence.
@@ -2350,58 +2350,58 @@ const (
 	// Examples: "com.github.pull_request.opened", "com.example.object.deleted.v2"
 	//
 	// [event_type]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#type
-	CloudeventsEventTypeKey = attribute.Key("cloudevents.event_type")
+	CloudEventsEventTypeKey = attribute.Key("cloudevents.event_type")
 )
 
-// CloudeventsEventID returns an attribute KeyValue conforming to the
+// CloudEventsEventID returns an attribute KeyValue conforming to the
 // "cloudevents.event_id" semantic conventions. It represents the [event_id]
 // uniquely identifies the event.
 //
 // [event_id]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#id
-func CloudeventsEventID(val string) attribute.KeyValue {
-	return CloudeventsEventIDKey.String(val)
+func CloudEventsEventID(val string) attribute.KeyValue {
+	return CloudEventsEventIDKey.String(val)
 }
 
-// CloudeventsEventSource returns an attribute KeyValue conforming to the
+// CloudEventsEventSource returns an attribute KeyValue conforming to the
 // "cloudevents.event_source" semantic conventions. It represents the [source]
 // identifies the context in which an event happened.
 //
 // [source]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#source-1
-func CloudeventsEventSource(val string) attribute.KeyValue {
-	return CloudeventsEventSourceKey.String(val)
+func CloudEventsEventSource(val string) attribute.KeyValue {
+	return CloudEventsEventSourceKey.String(val)
 }
 
-// CloudeventsEventSpecVersion returns an attribute KeyValue conforming to the
+// CloudEventsEventSpecVersion returns an attribute KeyValue conforming to the
 // "cloudevents.event_spec_version" semantic conventions. It represents the
 // [version of the CloudEvents specification] which the event uses.
 //
 // [version of the CloudEvents specification]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#specversion
-func CloudeventsEventSpecVersion(val string) attribute.KeyValue {
-	return CloudeventsEventSpecVersionKey.String(val)
+func CloudEventsEventSpecVersion(val string) attribute.KeyValue {
+	return CloudEventsEventSpecVersionKey.String(val)
 }
 
-// CloudeventsEventSubject returns an attribute KeyValue conforming to the
+// CloudEventsEventSubject returns an attribute KeyValue conforming to the
 // "cloudevents.event_subject" semantic conventions. It represents the [subject]
 // of the event in the context of the event producer (identified by source).
 //
 // [subject]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#subject
-func CloudeventsEventSubject(val string) attribute.KeyValue {
-	return CloudeventsEventSubjectKey.String(val)
+func CloudEventsEventSubject(val string) attribute.KeyValue {
+	return CloudEventsEventSubjectKey.String(val)
 }
 
-// CloudeventsEventType returns an attribute KeyValue conforming to the
+// CloudEventsEventType returns an attribute KeyValue conforming to the
 // "cloudevents.event_type" semantic conventions. It represents the [event_type]
 // contains a value describing the type of event related to the originating
 // occurrence.
 //
 // [event_type]: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#type
-func CloudeventsEventType(val string) attribute.KeyValue {
-	return CloudeventsEventTypeKey.String(val)
+func CloudEventsEventType(val string) attribute.KeyValue {
+	return CloudEventsEventTypeKey.String(val)
 }
 
 // Namespace: cloudfoundry
 const (
-	// CloudfoundryAppIDKey is the attribute Key conforming to the
+	// CloudFoundryAppIDKey is the attribute Key conforming to the
 	// "cloudfoundry.app.id" semantic conventions. It represents the guid of the
 	// application.
 	//
@@ -2413,9 +2413,9 @@ const (
 	// Note: Application instrumentation should use the value from environment
 	// variable `VCAP_APPLICATION.application_id`. This is the same value as
 	// reported by `cf app <app-name> --guid`.
-	CloudfoundryAppIDKey = attribute.Key("cloudfoundry.app.id")
+	CloudFoundryAppIDKey = attribute.Key("cloudfoundry.app.id")
 
-	// CloudfoundryAppInstanceIDKey is the attribute Key conforming to the
+	// CloudFoundryAppInstanceIDKey is the attribute Key conforming to the
 	// "cloudfoundry.app.instance.id" semantic conventions. It represents the index
 	// of the application instance. 0 when just one instance is active.
 	//
@@ -2434,9 +2434,9 @@ const (
 	// variable `CF_INSTANCE_INDEX`.
 	//
 	// [Loggregator v2 envelope]: https://github.com/cloudfoundry/loggregator-api#v2-envelope
-	CloudfoundryAppInstanceIDKey = attribute.Key("cloudfoundry.app.instance.id")
+	CloudFoundryAppInstanceIDKey = attribute.Key("cloudfoundry.app.instance.id")
 
-	// CloudfoundryAppNameKey is the attribute Key conforming to the
+	// CloudFoundryAppNameKey is the attribute Key conforming to the
 	// "cloudfoundry.app.name" semantic conventions. It represents the name of the
 	// application.
 	//
@@ -2448,9 +2448,9 @@ const (
 	// Note: Application instrumentation should use the value from environment
 	// variable `VCAP_APPLICATION.application_name`. This is the same value
 	// as reported by `cf apps`.
-	CloudfoundryAppNameKey = attribute.Key("cloudfoundry.app.name")
+	CloudFoundryAppNameKey = attribute.Key("cloudfoundry.app.name")
 
-	// CloudfoundryOrgIDKey is the attribute Key conforming to the
+	// CloudFoundryOrgIDKey is the attribute Key conforming to the
 	// "cloudfoundry.org.id" semantic conventions. It represents the guid of the
 	// CloudFoundry org the application is running in.
 	//
@@ -2462,9 +2462,9 @@ const (
 	// Note: Application instrumentation should use the value from environment
 	// variable `VCAP_APPLICATION.org_id`. This is the same value as
 	// reported by `cf org <org-name> --guid`.
-	CloudfoundryOrgIDKey = attribute.Key("cloudfoundry.org.id")
+	CloudFoundryOrgIDKey = attribute.Key("cloudfoundry.org.id")
 
-	// CloudfoundryOrgNameKey is the attribute Key conforming to the
+	// CloudFoundryOrgNameKey is the attribute Key conforming to the
 	// "cloudfoundry.org.name" semantic conventions. It represents the name of the
 	// CloudFoundry organization the app is running in.
 	//
@@ -2476,9 +2476,9 @@ const (
 	// Note: Application instrumentation should use the value from environment
 	// variable `VCAP_APPLICATION.org_name`. This is the same value as
 	// reported by `cf orgs`.
-	CloudfoundryOrgNameKey = attribute.Key("cloudfoundry.org.name")
+	CloudFoundryOrgNameKey = attribute.Key("cloudfoundry.org.name")
 
-	// CloudfoundryProcessIDKey is the attribute Key conforming to the
+	// CloudFoundryProcessIDKey is the attribute Key conforming to the
 	// "cloudfoundry.process.id" semantic conventions. It represents the UID
 	// identifying the process.
 	//
@@ -2491,9 +2491,9 @@ const (
 	// variable `VCAP_APPLICATION.process_id`. It is supposed to be equal to
 	// `VCAP_APPLICATION.app_id` for applications deployed to the runtime.
 	// For system components, this could be the actual PID.
-	CloudfoundryProcessIDKey = attribute.Key("cloudfoundry.process.id")
+	CloudFoundryProcessIDKey = attribute.Key("cloudfoundry.process.id")
 
-	// CloudfoundryProcessTypeKey is the attribute Key conforming to the
+	// CloudFoundryProcessTypeKey is the attribute Key conforming to the
 	// "cloudfoundry.process.type" semantic conventions. It represents the type of
 	// process.
 	//
@@ -2505,9 +2505,9 @@ const (
 	// Note: CloudFoundry applications can consist of multiple jobs. Usually the
 	// main process will be of type `web`. There can be additional background
 	// tasks or side-cars with different process types.
-	CloudfoundryProcessTypeKey = attribute.Key("cloudfoundry.process.type")
+	CloudFoundryProcessTypeKey = attribute.Key("cloudfoundry.process.type")
 
-	// CloudfoundrySpaceIDKey is the attribute Key conforming to the
+	// CloudFoundrySpaceIDKey is the attribute Key conforming to the
 	// "cloudfoundry.space.id" semantic conventions. It represents the guid of the
 	// CloudFoundry space the application is running in.
 	//
@@ -2519,9 +2519,9 @@ const (
 	// Note: Application instrumentation should use the value from environment
 	// variable `VCAP_APPLICATION.space_id`. This is the same value as
 	// reported by `cf space <space-name> --guid`.
-	CloudfoundrySpaceIDKey = attribute.Key("cloudfoundry.space.id")
+	CloudFoundrySpaceIDKey = attribute.Key("cloudfoundry.space.id")
 
-	// CloudfoundrySpaceNameKey is the attribute Key conforming to the
+	// CloudFoundrySpaceNameKey is the attribute Key conforming to the
 	// "cloudfoundry.space.name" semantic conventions. It represents the name of the
 	// CloudFoundry space the application is running in.
 	//
@@ -2533,9 +2533,9 @@ const (
 	// Note: Application instrumentation should use the value from environment
 	// variable `VCAP_APPLICATION.space_name`. This is the same value as
 	// reported by `cf spaces`.
-	CloudfoundrySpaceNameKey = attribute.Key("cloudfoundry.space.name")
+	CloudFoundrySpaceNameKey = attribute.Key("cloudfoundry.space.name")
 
-	// CloudfoundrySystemIDKey is the attribute Key conforming to the
+	// CloudFoundrySystemIDKey is the attribute Key conforming to the
 	// "cloudfoundry.system.id" semantic conventions. It represents a guid or
 	// another name describing the event source.
 	//
@@ -2556,9 +2556,9 @@ const (
 	//
 	// [Loggregator v2 envelope]: https://github.com/cloudfoundry/loggregator-api#v2-envelope
 	// [Bosh spec]: https://bosh.io/docs/jobs/#properties-spec
-	CloudfoundrySystemIDKey = attribute.Key("cloudfoundry.system.id")
+	CloudFoundrySystemIDKey = attribute.Key("cloudfoundry.system.id")
 
-	// CloudfoundrySystemInstanceIDKey is the attribute Key conforming to the
+	// CloudFoundrySystemInstanceIDKey is the attribute Key conforming to the
 	// "cloudfoundry.system.instance.id" semantic conventions. It represents a guid
 	// describing the concrete instance of the event source.
 	//
@@ -2578,84 +2578,84 @@ const (
 	//
 	// [Loggregator v2 envelope]: https://github.com/cloudfoundry/loggregator-api#v2-envelope
 	// [Bosh spec]: https://bosh.io/docs/jobs/#properties-spec
-	CloudfoundrySystemInstanceIDKey = attribute.Key("cloudfoundry.system.instance.id")
+	CloudFoundrySystemInstanceIDKey = attribute.Key("cloudfoundry.system.instance.id")
 )
 
-// CloudfoundryAppID returns an attribute KeyValue conforming to the
+// CloudFoundryAppID returns an attribute KeyValue conforming to the
 // "cloudfoundry.app.id" semantic conventions. It represents the guid of the
 // application.
-func CloudfoundryAppID(val string) attribute.KeyValue {
-	return CloudfoundryAppIDKey.String(val)
+func CloudFoundryAppID(val string) attribute.KeyValue {
+	return CloudFoundryAppIDKey.String(val)
 }
 
-// CloudfoundryAppInstanceID returns an attribute KeyValue conforming to the
+// CloudFoundryAppInstanceID returns an attribute KeyValue conforming to the
 // "cloudfoundry.app.instance.id" semantic conventions. It represents the index
 // of the application instance. 0 when just one instance is active.
-func CloudfoundryAppInstanceID(val string) attribute.KeyValue {
-	return CloudfoundryAppInstanceIDKey.String(val)
+func CloudFoundryAppInstanceID(val string) attribute.KeyValue {
+	return CloudFoundryAppInstanceIDKey.String(val)
 }
 
-// CloudfoundryAppName returns an attribute KeyValue conforming to the
+// CloudFoundryAppName returns an attribute KeyValue conforming to the
 // "cloudfoundry.app.name" semantic conventions. It represents the name of the
 // application.
-func CloudfoundryAppName(val string) attribute.KeyValue {
-	return CloudfoundryAppNameKey.String(val)
+func CloudFoundryAppName(val string) attribute.KeyValue {
+	return CloudFoundryAppNameKey.String(val)
 }
 
-// CloudfoundryOrgID returns an attribute KeyValue conforming to the
+// CloudFoundryOrgID returns an attribute KeyValue conforming to the
 // "cloudfoundry.org.id" semantic conventions. It represents the guid of the
 // CloudFoundry org the application is running in.
-func CloudfoundryOrgID(val string) attribute.KeyValue {
-	return CloudfoundryOrgIDKey.String(val)
+func CloudFoundryOrgID(val string) attribute.KeyValue {
+	return CloudFoundryOrgIDKey.String(val)
 }
 
-// CloudfoundryOrgName returns an attribute KeyValue conforming to the
+// CloudFoundryOrgName returns an attribute KeyValue conforming to the
 // "cloudfoundry.org.name" semantic conventions. It represents the name of the
 // CloudFoundry organization the app is running in.
-func CloudfoundryOrgName(val string) attribute.KeyValue {
-	return CloudfoundryOrgNameKey.String(val)
+func CloudFoundryOrgName(val string) attribute.KeyValue {
+	return CloudFoundryOrgNameKey.String(val)
 }
 
-// CloudfoundryProcessID returns an attribute KeyValue conforming to the
+// CloudFoundryProcessID returns an attribute KeyValue conforming to the
 // "cloudfoundry.process.id" semantic conventions. It represents the UID
 // identifying the process.
-func CloudfoundryProcessID(val string) attribute.KeyValue {
-	return CloudfoundryProcessIDKey.String(val)
+func CloudFoundryProcessID(val string) attribute.KeyValue {
+	return CloudFoundryProcessIDKey.String(val)
 }
 
-// CloudfoundryProcessType returns an attribute KeyValue conforming to the
+// CloudFoundryProcessType returns an attribute KeyValue conforming to the
 // "cloudfoundry.process.type" semantic conventions. It represents the type of
 // process.
-func CloudfoundryProcessType(val string) attribute.KeyValue {
-	return CloudfoundryProcessTypeKey.String(val)
+func CloudFoundryProcessType(val string) attribute.KeyValue {
+	return CloudFoundryProcessTypeKey.String(val)
 }
 
-// CloudfoundrySpaceID returns an attribute KeyValue conforming to the
+// CloudFoundrySpaceID returns an attribute KeyValue conforming to the
 // "cloudfoundry.space.id" semantic conventions. It represents the guid of the
 // CloudFoundry space the application is running in.
-func CloudfoundrySpaceID(val string) attribute.KeyValue {
-	return CloudfoundrySpaceIDKey.String(val)
+func CloudFoundrySpaceID(val string) attribute.KeyValue {
+	return CloudFoundrySpaceIDKey.String(val)
 }
 
-// CloudfoundrySpaceName returns an attribute KeyValue conforming to the
+// CloudFoundrySpaceName returns an attribute KeyValue conforming to the
 // "cloudfoundry.space.name" semantic conventions. It represents the name of the
 // CloudFoundry space the application is running in.
-func CloudfoundrySpaceName(val string) attribute.KeyValue {
-	return CloudfoundrySpaceNameKey.String(val)
+func CloudFoundrySpaceName(val string) attribute.KeyValue {
+	return CloudFoundrySpaceNameKey.String(val)
 }
 
-// CloudfoundrySystemID returns an attribute KeyValue conforming to the
+// CloudFoundrySystemID returns an attribute KeyValue conforming to the
 // "cloudfoundry.system.id" semantic conventions. It represents a guid or another
 // name describing the event source.
-func CloudfoundrySystemID(val string) attribute.KeyValue {
-	return CloudfoundrySystemIDKey.String(val)
+func CloudFoundrySystemID(val string) attribute.KeyValue {
+	return CloudFoundrySystemIDKey.String(val)
 }
 
-// CloudfoundrySystemInstanceID returns an attribute KeyValue conforming to the
+// CloudFoundrySystemInstanceID returns an attribute KeyValue conforming to the
 // "cloudfoundry.system.instance.id" semantic conventions. It represents a guid
 // describing the concrete instance of the event source.
-func CloudfoundrySystemInstanceID(val string) attribute.KeyValue {
-	return CloudfoundrySystemInstanceIDKey.String(val)
+func CloudFoundrySystemInstanceID(val string) attribute.KeyValue {
+	return CloudFoundrySystemInstanceIDKey.String(val)
 }
 
 // Namespace: code
@@ -2820,7 +2820,7 @@ const (
 	// Examples: "otelcontribcol --config config.yaml"
 	ContainerCommandLineKey = attribute.Key("container.command_line")
 
-	// ContainerCsiPluginNameKey is the attribute Key conforming to the
+	// ContainerCSIPluginNameKey is the attribute Key conforming to the
 	// "container.csi.plugin.name" semantic conventions. It represents the name of
 	// the CSI ([Container Storage Interface]) plugin used by the volume.
 	//
@@ -2833,9 +2833,9 @@ const (
 	// This should represent the `name` field of the GetPluginInfo RPC.
 	//
 	// [Container Storage Interface]: https://github.com/container-storage-interface/spec
-	ContainerCsiPluginNameKey = attribute.Key("container.csi.plugin.name")
+	ContainerCSIPluginNameKey = attribute.Key("container.csi.plugin.name")
 
-	// ContainerCsiVolumeIDKey is the attribute Key conforming to the
+	// ContainerCSIVolumeIDKey is the attribute Key conforming to the
 	// "container.csi.volume.id" semantic conventions. It represents the unique
 	// volume ID returned by the CSI ([Container Storage Interface]) plugin.
 	//
@@ -2849,7 +2849,7 @@ const (
 	// spec.
 	//
 	// [Container Storage Interface]: https://github.com/container-storage-interface/spec
-	ContainerCsiVolumeIDKey = attribute.Key("container.csi.volume.id")
+	ContainerCSIVolumeIDKey = attribute.Key("container.csi.volume.id")
 
 	// ContainerIDKey is the attribute Key conforming to the "container.id" semantic
 	// conventions. It represents the container ID. Usually a UUID, as for example
@@ -2975,22 +2975,22 @@ func ContainerCommandLine(val string) attribute.KeyValue {
 	return ContainerCommandLineKey.String(val)
 }
 
-// ContainerCsiPluginName returns an attribute KeyValue conforming to the
+// ContainerCSIPluginName returns an attribute KeyValue conforming to the
 // "container.csi.plugin.name" semantic conventions. It represents the name of
 // the CSI ([Container Storage Interface]) plugin used by the volume.
 //
 // [Container Storage Interface]: https://github.com/container-storage-interface/spec
-func ContainerCsiPluginName(val string) attribute.KeyValue {
-	return ContainerCsiPluginNameKey.String(val)
+func ContainerCSIPluginName(val string) attribute.KeyValue {
+	return ContainerCSIPluginNameKey.String(val)
 }
 
-// ContainerCsiVolumeID returns an attribute KeyValue conforming to the
+// ContainerCSIVolumeID returns an attribute KeyValue conforming to the
 // "container.csi.volume.id" semantic conventions. It represents the unique
 // volume ID returned by the CSI ([Container Storage Interface]) plugin.
 //
 // [Container Storage Interface]: https://github.com/container-storage-interface/spec
-func ContainerCsiVolumeID(val string) attribute.KeyValue {
-	return ContainerCsiVolumeIDKey.String(val)
+func ContainerCSIVolumeID(val string) attribute.KeyValue {
+	return ContainerCSIVolumeIDKey.String(val)
 }
 
 // ContainerID returns an attribute KeyValue conforming to the "container.id"
@@ -3449,12 +3449,12 @@ var (
 	// Stability: development
 	//
 	// [ClickHouse]: https://clickhouse.com/
-	DBSystemNameClickhouse = DBSystemNameKey.String("clickhouse")
+	DBSystemNameClickHouse = DBSystemNameKey.String("clickhouse")
 	// [CockroachDB]
 	// Stability: development
 	//
 	// [CockroachDB]: https://www.cockroachlabs.com/
-	DBSystemNameCockroachdb = DBSystemNameKey.String("cockroachdb")
+	DBSystemNameCockroachDB = DBSystemNameKey.String("cockroachdb")
 	// [Couchbase]
 	// Stability: development
 	//
@@ -3479,7 +3479,7 @@ var (
 	// Stability: development
 	//
 	// [Firebird]: https://www.firebirdsql.org/
-	DBSystemNameFirebirdsql = DBSystemNameKey.String("firebirdsql")
+	DBSystemNameFirebirdSQL = DBSystemNameKey.String("firebirdsql")
 	// [Google Cloud Spanner]
 	// Stability: development
 	//
@@ -3514,17 +3514,17 @@ var (
 	// Stability: development
 	//
 	// [IBM Db2]: https://www.ibm.com/db2
-	DBSystemNameIbmDb2 = DBSystemNameKey.String("ibm.db2")
+	DBSystemNameIBMDB2 = DBSystemNameKey.String("ibm.db2")
 	// [IBM Informix]
 	// Stability: development
 	//
 	// [IBM Informix]: https://www.ibm.com/products/informix
-	DBSystemNameIbmInformix = DBSystemNameKey.String("ibm.informix")
+	DBSystemNameIBMInformix = DBSystemNameKey.String("ibm.informix")
 	// [IBM Netezza]
 	// Stability: development
 	//
 	// [IBM Netezza]: https://www.ibm.com/products/netezza
-	DBSystemNameIbmNetezza = DBSystemNameKey.String("ibm.netezza")
+	DBSystemNameIBMNetezza = DBSystemNameKey.String("ibm.netezza")
 	// [InfluxDB]
 	// Stability: development
 	//
@@ -3569,7 +3569,7 @@ var (
 	// Stability: development
 	//
 	// [OpenSearch]: https://opensearch.org/
-	DBSystemNameOpensearch = DBSystemNameKey.String("opensearch")
+	DBSystemNameOpenSearch = DBSystemNameKey.String("opensearch")
 	// [Oracle Database]
 	// Stability: development
 	//
@@ -3589,12 +3589,12 @@ var (
 	// Stability: development
 	//
 	// [SAP HANA]: https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html
-	DBSystemNameSapHana = DBSystemNameKey.String("sap.hana")
+	DBSystemNameSAPHANA = DBSystemNameKey.String("sap.hana")
 	// [SAP MaxDB]
 	// Stability: development
 	//
 	// [SAP MaxDB]: https://maxdb.sap.com/
-	DBSystemNameSapMaxDB = DBSystemNameKey.String("sap.maxdb")
+	DBSystemNameSAPMaxDB = DBSystemNameKey.String("sap.maxdb")
 	// [SQLite]
 	// Stability: development
 	//
@@ -5972,7 +5972,7 @@ var (
 	GenAISystemAzAIOpenai = GenAISystemKey.String("az.ai.openai")
 	// IBM Watsonx AI
 	// Stability: development
-	GenAISystemIbmWatsonxAI = GenAISystemKey.String("ibm.watsonx.ai")
+	GenAISystemIBMWatsonxAI = GenAISystemKey.String("ibm.watsonx.ai")
 	// AWS Bedrock
 	// Stability: development
 	GenAISystemAWSBedrock = GenAISystemKey.String("aws.bedrock")

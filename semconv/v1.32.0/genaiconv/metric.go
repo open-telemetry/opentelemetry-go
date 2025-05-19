@@ -75,8 +75,8 @@ var (
 	SystemAzAIInference SystemAttr = "az.ai.inference"
 	// SystemAzAIOpenai is the azure OpenAI.
 	SystemAzAIOpenai SystemAttr = "az.ai.openai"
-	// SystemIbmWatsonxAI is the IBM Watsonx AI.
-	SystemIbmWatsonxAI SystemAttr = "ibm.watsonx.ai"
+	// SystemIBMWatsonxAI is the IBM Watsonx AI.
+	SystemIBMWatsonxAI SystemAttr = "ibm.watsonx.ai"
 	// SystemAWSBedrock is the AWS Bedrock.
 	SystemAWSBedrock SystemAttr = "aws.bedrock"
 	// SystemPerplexity is the perplexity.

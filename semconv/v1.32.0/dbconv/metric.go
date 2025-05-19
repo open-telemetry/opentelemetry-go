@@ -96,14 +96,14 @@ var (
 	//
 	// [Apache Cassandra]: https://cassandra.apache.org/
 	SystemNameCassandra SystemNameAttr = "cassandra"
-	// SystemNameClickhouse is the [ClickHouse].
+	// SystemNameClickHouse is the [ClickHouse].
 	//
 	// [ClickHouse]: https://clickhouse.com/
-	SystemNameClickhouse SystemNameAttr = "clickhouse"
-	// SystemNameCockroachdb is the [CockroachDB].
+	SystemNameClickHouse SystemNameAttr = "clickhouse"
+	// SystemNameCockroachDB is the [CockroachDB].
 	//
 	// [CockroachDB]: https://www.cockroachlabs.com/
-	SystemNameCockroachdb SystemNameAttr = "cockroachdb"
+	SystemNameCockroachDB SystemNameAttr = "cockroachdb"
 	// SystemNameCouchbase is the [Couchbase].
 	//
 	// [Couchbase]: https://www.couchbase.com/
@@ -120,10 +120,10 @@ var (
 	//
 	// [Elasticsearch]: https://www.elastic.co/elasticsearch
 	SystemNameElasticsearch SystemNameAttr = "elasticsearch"
-	// SystemNameFirebirdsql is the [Firebird].
+	// SystemNameFirebirdSQL is the [Firebird].
 	//
 	// [Firebird]: https://www.firebirdsql.org/
-	SystemNameFirebirdsql SystemNameAttr = "firebirdsql"
+	SystemNameFirebirdSQL SystemNameAttr = "firebirdsql"
 	// SystemNameGCPSpanner is the [Google Cloud Spanner].
 	//
 	// [Google Cloud Spanner]: https://cloud.google.com/spanner
@@ -148,18 +148,18 @@ var (
 	//
 	// [HyperSQL Database]: https://hsqldb.org/
 	SystemNameHSQLDB SystemNameAttr = "hsqldb"
-	// SystemNameIbmDb2 is the [IBM Db2].
+	// SystemNameIBMDB2 is the [IBM Db2].
 	//
 	// [IBM Db2]: https://www.ibm.com/db2
-	SystemNameIbmDb2 SystemNameAttr = "ibm.db2"
-	// SystemNameIbmInformix is the [IBM Informix].
+	SystemNameIBMDB2 SystemNameAttr = "ibm.db2"
+	// SystemNameIBMInformix is the [IBM Informix].
 	//
 	// [IBM Informix]: https://www.ibm.com/products/informix
-	SystemNameIbmInformix SystemNameAttr = "ibm.informix"
-	// SystemNameIbmNetezza is the [IBM Netezza].
+	SystemNameIBMInformix SystemNameAttr = "ibm.informix"
+	// SystemNameIBMNetezza is the [IBM Netezza].
 	//
 	// [IBM Netezza]: https://www.ibm.com/products/netezza
-	SystemNameIbmNetezza SystemNameAttr = "ibm.netezza"
+	SystemNameIBMNetezza SystemNameAttr = "ibm.netezza"
 	// SystemNameInfluxdb is the [InfluxDB].
 	//
 	// [InfluxDB]: https://www.influxdata.com/
@@ -192,10 +192,10 @@ var (
 	//
 	// [Neo4j]: https://neo4j.com/
 	SystemNameNeo4j SystemNameAttr = "neo4j"
-	// SystemNameOpensearch is the [OpenSearch].
+	// SystemNameOpenSearch is the [OpenSearch].
 	//
 	// [OpenSearch]: https://opensearch.org/
-	SystemNameOpensearch SystemNameAttr = "opensearch"
+	SystemNameOpenSearch SystemNameAttr = "opensearch"
 	// SystemNameOracleDB is the [Oracle Database].
 	//
 	// [Oracle Database]: https://www.oracle.com/database/
@@ -208,14 +208,14 @@ var (
 	//
 	// [Redis]: https://redis.io/
 	SystemNameRedis SystemNameAttr = "redis"
-	// SystemNameSapHana is the [SAP HANA].
+	// SystemNameSAPHANA is the [SAP HANA].
 	//
 	// [SAP HANA]: https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html
-	SystemNameSapHana SystemNameAttr = "sap.hana"
-	// SystemNameSapMaxDB is the [SAP MaxDB].
+	SystemNameSAPHANA SystemNameAttr = "sap.hana"
+	// SystemNameSAPMaxDB is the [SAP MaxDB].
 	//
 	// [SAP MaxDB]: https://maxdb.sap.com/
-	SystemNameSapMaxDB SystemNameAttr = "sap.maxdb"
+	SystemNameSAPMaxDB SystemNameAttr = "sap.maxdb"
 	// SystemNameSqlite is the [SQLite].
 	//
 	// [SQLite]: https://www.sqlite.org/

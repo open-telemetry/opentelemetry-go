@@ -97,11 +97,20 @@ acronyms:
   - CICD
   - CPP
   - CPU
+  - CSI
   - CSS
+  - ClickHouse
+  - CloudCVM
+  - CloudEvents
+  - CloudFoundry
+  - CloudOKE
+  - CloudSCF
+  - CockroachDB
   - CosmosDB
   - CouchDB
   - CronJob
   - DB
+  - DB2
   - DC
   - DNS
   - DaemonSet
@@ -112,13 +121,16 @@ acronyms:
   - EDB
   - EKS
   - EOF
+  - FC
   - FaaS
+  - FirebirdSQL
   - FirstSQL
   - FreeBSD
   - GC
   - GCP
   - GRPC
   - GUID
+  - HANA
   - HBase
   - HPUX
   - HSQLDB
@@ -127,6 +139,7 @@ acronyms:
   - HTTPS
   - HanaDB
   - IA64
+  - IBM
   - ID
   - IO
   - IP
@@ -146,6 +159,8 @@ acronyms:
   - OS
   - OTel
   - OpenBSD
+  - OpenSearch
+  - OpenShift
   - PHP
   - PID
   - PPC32
@@ -159,6 +174,7 @@ acronyms:
   - ReplicaSet
   - ReplicationController
   - ResourceQuota
+  - SAP
   - SDK
   - SLA
   - SMTP
