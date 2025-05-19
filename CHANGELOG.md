@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.36.0/0.58.0/0.12.0] 2025-03-05
+
 ### Added
 
 - Add exponential histogram support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6421)
@@ -51,9 +56,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
 - Ensure the `noopSpan.tracerProvider` method is not inlined in `go.opentelemetry.io/otel/trace` so the `go.opentelemetry.io/auto` instrumentation can instrument non-recording spans. (#6456)
 - Use a `sync.Pool` instead of allocating `metricdata.ResourceMetrics` in `go.opentelemetry.io/otel/exporters/prometheus`. (#6472)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.35.0/0.57.0/0.11.0] 2025-03-05
 
