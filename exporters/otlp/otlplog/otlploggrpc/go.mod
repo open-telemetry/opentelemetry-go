@@ -8,15 +8,14 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/log v0.12.0
-	go.opentelemetry.io/otel/sdk v1.35.0
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/sdk/log v0.12.0
+	go.opentelemetry.io/otel/sdk/log/logtest v0.12.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	go.opentelemetry.io/proto/otlp v1.6.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9
 	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
-	o.opentelemetry.io/otel/sdk/log/logtest v0.0.0-00000000000000-000000000000
 )
 
 require (
@@ -39,8 +38,6 @@ replace go.opentelemetry.io/otel => ../../../..
 
 replace go.opentelemetry.io/otel/sdk/log => ../../../../sdk/log
 
-replace go.opentelemetry.io/otel/sdk/log/logtest => ../../../../sdk/log/logtest
-
 replace go.opentelemetry.io/otel/sdk => ../../../../sdk
 
 replace go.opentelemetry.io/otel/log => ../../../../log
@@ -48,3 +45,5 @@ replace go.opentelemetry.io/otel/log => ../../../../log
 replace go.opentelemetry.io/otel/trace => ../../../../trace
 
 replace go.opentelemetry.io/otel/metric => ../../../../metric
+
+replace go.opentelemetry.io/otel/sdk/log/logtest => ../../../../sdk/log/logtest
