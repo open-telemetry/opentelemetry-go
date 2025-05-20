@@ -45,7 +45,16 @@ func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOp
 	cmpOpts = append(cmpOpts, cfg.cmpOpts...)
 
 	if diff := cmp.Diff(want, got, cmpOpts...); diff != "" {
-		t.Errorf("mismatch (-want +got):\n%s", diff)
+		msg := "mismatch (-want +got):\n%s"
+		if cfg.msg != "" {
+			msg = cfg.msg + "\n" + msg
+		}
+
+		args := make([]any, 0, len(cfg.args)+1)
+		args = append(args, cfg.args...)
+		args = append(args, diff)
+
+		t.Errorf(msg, args...)
 		return false
 	}
 	return true
@@ -53,6 +62,8 @@ func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOp
 
 type assertConfig struct {
 	cmpOpts []cmp.Option
+	msg     string
+	args    []any
 }
 
 // AssertOption allows for fine grain control over how AssertEqual operates.
@@ -72,6 +83,16 @@ func (fn fnOption) apply(cfg assertConfig) assertConfig {
 func Transform[A, B any](f func(A) B) AssertOption {
 	return fnOption(func(cfg assertConfig) assertConfig {
 		cfg.cmpOpts = append(cfg.cmpOpts, cmp.Transformer("", f))
+		return cfg
+	})
+}
+
+// Message sets a prepended assertion failure message.
+// The message is formatted with the arguments using fmt.Sprintf.
+func Message(msg string, args ...any) AssertOption {
+	return fnOption(func(cfg assertConfig) assertConfig {
+		cfg.msg = msg
+		cfg.args = args
 		return cfg
 	})
 }
