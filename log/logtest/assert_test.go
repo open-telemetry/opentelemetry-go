@@ -189,7 +189,7 @@ func TestAssertEqualRecord(t *testing.T) {
 	}
 }
 
-func TestMessage(t *testing.T) {
+func TestDesc(t *testing.T) {
 	mockT := &mockTestingT{}
 	a := Record{
 		Attributes: []log.KeyValue{log.String("foo", "bar")},
@@ -198,7 +198,7 @@ func TestMessage(t *testing.T) {
 		Attributes: []log.KeyValue{log.Int("n", 1)},
 	}
 
-	assertEqual(mockT, a, b, Message("custom message, %s", "test"))
+	assertEqual(mockT, a, b, Desc("custom message, %s", "test"))
 
 	require.Len(t, mockT.errors, 1, "expected one error")
 	assert.Contains(t, mockT.errors[0], "custom message, test\n", "expected custom message")

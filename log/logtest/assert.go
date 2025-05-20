@@ -87,11 +87,11 @@ func Transform[A, B any](f func(A) B) AssertOption {
 	})
 }
 
-// Message sets a prepended assertion failure message.
-// The message is formatted with the arguments using fmt.Sprintf.
-func Message(msg string, args ...any) AssertOption {
+// Desc prepends the given text to an assertion failure message.
+// The text is formatted with the args using fmt.Sprintf.
+func Desc(text string, args ...any) AssertOption {
 	return fnOption(func(cfg assertConfig) assertConfig {
-		cfg.msg = msg
+		cfg.msg = text
 		cfg.args = args
 		return cfg
 	})
