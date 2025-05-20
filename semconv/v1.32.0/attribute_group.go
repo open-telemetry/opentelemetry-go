@@ -3095,7 +3095,7 @@ var (
 	CPUModeIdle = CPUModeKey.String("idle")
 	// iowait
 	// Stability: development
-	CPUModeIowait = CPUModeKey.String("iowait")
+	CPUModeIOWait = CPUModeKey.String("iowait")
 	// interrupt
 	// Stability: development
 	CPUModeInterrupt = CPUModeKey.String("interrupt")
@@ -3529,7 +3529,7 @@ var (
 	// Stability: development
 	//
 	// [InfluxDB]: https://www.influxdata.com/
-	DBSystemNameInfluxdb = DBSystemNameKey.String("influxdb")
+	DBSystemNameInfluxDB = DBSystemNameKey.String("influxdb")
 	// [Instant]
 	// Stability: development
 	//
@@ -3599,7 +3599,7 @@ var (
 	// Stability: development
 	//
 	// [SQLite]: https://www.sqlite.org/
-	DBSystemNameSqlite = DBSystemNameKey.String("sqlite")
+	DBSystemNameSQLite = DBSystemNameKey.String("sqlite")
 	// [Teradata]
 	// Stability: development
 	//
@@ -4491,7 +4491,7 @@ var (
 	FaaSTriggerHTTP = FaaSTriggerKey.String("http")
 	// A function is set to be executed when messages are sent to a messaging system
 	// Stability: development
-	FaaSTriggerPubsub = FaaSTriggerKey.String("pubsub")
+	FaaSTriggerPubSub = FaaSTriggerKey.String("pubsub")
 	// A function is scheduled to be executed regularly
 	// Stability: development
 	FaaSTriggerTimer = FaaSTriggerKey.String("timer")
@@ -5031,7 +5031,7 @@ func FileSymbolicLinkTargetPath(val string) attribute.KeyValue {
 
 // Namespace: gcp
 const (
-	// GCPApphubApplicationContainerKey is the attribute Key conforming to the
+	// GCPAppHubApplicationContainerKey is the attribute Key conforming to the
 	// "gcp.apphub.application.container" semantic conventions. It represents the
 	// container within GCP where the AppHub application is defined.
 	//
@@ -5040,9 +5040,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "projects/my-container-project"
-	GCPApphubApplicationContainerKey = attribute.Key("gcp.apphub.application.container")
+	GCPAppHubApplicationContainerKey = attribute.Key("gcp.apphub.application.container")
 
-	// GCPApphubApplicationIDKey is the attribute Key conforming to the
+	// GCPAppHubApplicationIDKey is the attribute Key conforming to the
 	// "gcp.apphub.application.id" semantic conventions. It represents the name of
 	// the application as configured in AppHub.
 	//
@@ -5051,9 +5051,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "my-application"
-	GCPApphubApplicationIDKey = attribute.Key("gcp.apphub.application.id")
+	GCPAppHubApplicationIDKey = attribute.Key("gcp.apphub.application.id")
 
-	// GCPApphubApplicationLocationKey is the attribute Key conforming to the
+	// GCPAppHubApplicationLocationKey is the attribute Key conforming to the
 	// "gcp.apphub.application.location" semantic conventions. It represents the GCP
 	// zone or region where the application is defined.
 	//
@@ -5062,9 +5062,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "us-central1"
-	GCPApphubApplicationLocationKey = attribute.Key("gcp.apphub.application.location")
+	GCPAppHubApplicationLocationKey = attribute.Key("gcp.apphub.application.location")
 
-	// GCPApphubServiceCriticalityTypeKey is the attribute Key conforming to the
+	// GCPAppHubServiceCriticalityTypeKey is the attribute Key conforming to the
 	// "gcp.apphub.service.criticality_type" semantic conventions. It represents the
 	// criticality of a service indicates its importance to the business.
 	//
@@ -5076,9 +5076,9 @@ const (
 	// Note: [See AppHub type enum]
 	//
 	// [See AppHub type enum]: https://cloud.google.com/app-hub/docs/reference/rest/v1/Attributes#type
-	GCPApphubServiceCriticalityTypeKey = attribute.Key("gcp.apphub.service.criticality_type")
+	GCPAppHubServiceCriticalityTypeKey = attribute.Key("gcp.apphub.service.criticality_type")
 
-	// GCPApphubServiceEnvironmentTypeKey is the attribute Key conforming to the
+	// GCPAppHubServiceEnvironmentTypeKey is the attribute Key conforming to the
 	// "gcp.apphub.service.environment_type" semantic conventions. It represents the
 	// environment of a service is the stage of a software lifecycle.
 	//
@@ -5090,9 +5090,9 @@ const (
 	// Note: [See AppHub environment type]
 	//
 	// [See AppHub environment type]: https://cloud.google.com/app-hub/docs/reference/rest/v1/Attributes#type_1
-	GCPApphubServiceEnvironmentTypeKey = attribute.Key("gcp.apphub.service.environment_type")
+	GCPAppHubServiceEnvironmentTypeKey = attribute.Key("gcp.apphub.service.environment_type")
 
-	// GCPApphubServiceIDKey is the attribute Key conforming to the
+	// GCPAppHubServiceIDKey is the attribute Key conforming to the
 	// "gcp.apphub.service.id" semantic conventions. It represents the name of the
 	// service as configured in AppHub.
 	//
@@ -5101,9 +5101,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "my-service"
-	GCPApphubServiceIDKey = attribute.Key("gcp.apphub.service.id")
+	GCPAppHubServiceIDKey = attribute.Key("gcp.apphub.service.id")
 
-	// GCPApphubWorkloadCriticalityTypeKey is the attribute Key conforming to the
+	// GCPAppHubWorkloadCriticalityTypeKey is the attribute Key conforming to the
 	// "gcp.apphub.workload.criticality_type" semantic conventions. It represents
 	// the criticality of a workload indicates its importance to the business.
 	//
@@ -5115,9 +5115,9 @@ const (
 	// Note: [See AppHub type enum]
 	//
 	// [See AppHub type enum]: https://cloud.google.com/app-hub/docs/reference/rest/v1/Attributes#type
-	GCPApphubWorkloadCriticalityTypeKey = attribute.Key("gcp.apphub.workload.criticality_type")
+	GCPAppHubWorkloadCriticalityTypeKey = attribute.Key("gcp.apphub.workload.criticality_type")
 
-	// GCPApphubWorkloadEnvironmentTypeKey is the attribute Key conforming to the
+	// GCPAppHubWorkloadEnvironmentTypeKey is the attribute Key conforming to the
 	// "gcp.apphub.workload.environment_type" semantic conventions. It represents
 	// the environment of a workload is the stage of a software lifecycle.
 	//
@@ -5129,9 +5129,9 @@ const (
 	// Note: [See AppHub environment type]
 	//
 	// [See AppHub environment type]: https://cloud.google.com/app-hub/docs/reference/rest/v1/Attributes#type_1
-	GCPApphubWorkloadEnvironmentTypeKey = attribute.Key("gcp.apphub.workload.environment_type")
+	GCPAppHubWorkloadEnvironmentTypeKey = attribute.Key("gcp.apphub.workload.environment_type")
 
-	// GCPApphubWorkloadIDKey is the attribute Key conforming to the
+	// GCPAppHubWorkloadIDKey is the attribute Key conforming to the
 	// "gcp.apphub.workload.id" semantic conventions. It represents the name of the
 	// workload as configured in AppHub.
 	//
@@ -5140,7 +5140,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: "my-workload"
-	GCPApphubWorkloadIDKey = attribute.Key("gcp.apphub.workload.id")
+	GCPAppHubWorkloadIDKey = attribute.Key("gcp.apphub.workload.id")
 
 	// GCPClientServiceKey is the attribute Key conforming to the
 	// "gcp.client.service" semantic conventions. It represents the identifies the
@@ -5217,39 +5217,39 @@ const (
 	GCPGCEInstanceNameKey = attribute.Key("gcp.gce.instance.name")
 )
 
-// GCPApphubApplicationContainer returns an attribute KeyValue conforming to the
+// GCPAppHubApplicationContainer returns an attribute KeyValue conforming to the
 // "gcp.apphub.application.container" semantic conventions. It represents the
 // container within GCP where the AppHub application is defined.
-func GCPApphubApplicationContainer(val string) attribute.KeyValue {
-	return GCPApphubApplicationContainerKey.String(val)
+func GCPAppHubApplicationContainer(val string) attribute.KeyValue {
+	return GCPAppHubApplicationContainerKey.String(val)
 }
 
-// GCPApphubApplicationID returns an attribute KeyValue conforming to the
+// GCPAppHubApplicationID returns an attribute KeyValue conforming to the
 // "gcp.apphub.application.id" semantic conventions. It represents the name of
 // the application as configured in AppHub.
-func GCPApphubApplicationID(val string) attribute.KeyValue {
-	return GCPApphubApplicationIDKey.String(val)
+func GCPAppHubApplicationID(val string) attribute.KeyValue {
+	return GCPAppHubApplicationIDKey.String(val)
 }
 
-// GCPApphubApplicationLocation returns an attribute KeyValue conforming to the
+// GCPAppHubApplicationLocation returns an attribute KeyValue conforming to the
 // "gcp.apphub.application.location" semantic conventions. It represents the GCP
 // zone or region where the application is defined.
-func GCPApphubApplicationLocation(val string) attribute.KeyValue {
-	return GCPApphubApplicationLocationKey.String(val)
+func GCPAppHubApplicationLocation(val string) attribute.KeyValue {
+	return GCPAppHubApplicationLocationKey.String(val)
 }
 
-// GCPApphubServiceID returns an attribute KeyValue conforming to the
+// GCPAppHubServiceID returns an attribute KeyValue conforming to the
 // "gcp.apphub.service.id" semantic conventions. It represents the name of the
 // service as configured in AppHub.
-func GCPApphubServiceID(val string) attribute.KeyValue {
-	return GCPApphubServiceIDKey.String(val)
+func GCPAppHubServiceID(val string) attribute.KeyValue {
+	return GCPAppHubServiceIDKey.String(val)
 }
 
-// GCPApphubWorkloadID returns an attribute KeyValue conforming to the
+// GCPAppHubWorkloadID returns an attribute KeyValue conforming to the
 // "gcp.apphub.workload.id" semantic conventions. It represents the name of the
 // workload as configured in AppHub.
-func GCPApphubWorkloadID(val string) attribute.KeyValue {
-	return GCPApphubWorkloadIDKey.String(val)
+func GCPAppHubWorkloadID(val string) attribute.KeyValue {
+	return GCPAppHubWorkloadIDKey.String(val)
 }
 
 // GCPClientService returns an attribute KeyValue conforming to the
@@ -5305,64 +5305,64 @@ func GCPGCEInstanceName(val string) attribute.KeyValue {
 var (
 	// Mission critical service.
 	// Stability: development
-	GCPApphubServiceCriticalityTypeMissionCritical = GCPApphubServiceCriticalityTypeKey.String("MISSION_CRITICAL")
+	GCPAppHubServiceCriticalityTypeMissionCritical = GCPAppHubServiceCriticalityTypeKey.String("MISSION_CRITICAL")
 	// High impact.
 	// Stability: development
-	GCPApphubServiceCriticalityTypeHigh = GCPApphubServiceCriticalityTypeKey.String("HIGH")
+	GCPAppHubServiceCriticalityTypeHigh = GCPAppHubServiceCriticalityTypeKey.String("HIGH")
 	// Medium impact.
 	// Stability: development
-	GCPApphubServiceCriticalityTypeMedium = GCPApphubServiceCriticalityTypeKey.String("MEDIUM")
+	GCPAppHubServiceCriticalityTypeMedium = GCPAppHubServiceCriticalityTypeKey.String("MEDIUM")
 	// Low impact.
 	// Stability: development
-	GCPApphubServiceCriticalityTypeLow = GCPApphubServiceCriticalityTypeKey.String("LOW")
+	GCPAppHubServiceCriticalityTypeLow = GCPAppHubServiceCriticalityTypeKey.String("LOW")
 )
 
 // Enum values for gcp.apphub.service.environment_type
 var (
 	// Production environment.
 	// Stability: development
-	GCPApphubServiceEnvironmentTypeProduction = GCPApphubServiceEnvironmentTypeKey.String("PRODUCTION")
+	GCPAppHubServiceEnvironmentTypeProduction = GCPAppHubServiceEnvironmentTypeKey.String("PRODUCTION")
 	// Staging environment.
 	// Stability: development
-	GCPApphubServiceEnvironmentTypeStaging = GCPApphubServiceEnvironmentTypeKey.String("STAGING")
+	GCPAppHubServiceEnvironmentTypeStaging = GCPAppHubServiceEnvironmentTypeKey.String("STAGING")
 	// Test environment.
 	// Stability: development
-	GCPApphubServiceEnvironmentTypeTest = GCPApphubServiceEnvironmentTypeKey.String("TEST")
+	GCPAppHubServiceEnvironmentTypeTest = GCPAppHubServiceEnvironmentTypeKey.String("TEST")
 	// Development environment.
 	// Stability: development
-	GCPApphubServiceEnvironmentTypeDevelopment = GCPApphubServiceEnvironmentTypeKey.String("DEVELOPMENT")
+	GCPAppHubServiceEnvironmentTypeDevelopment = GCPAppHubServiceEnvironmentTypeKey.String("DEVELOPMENT")
 )
 
 // Enum values for gcp.apphub.workload.criticality_type
 var (
 	// Mission critical service.
 	// Stability: development
-	GCPApphubWorkloadCriticalityTypeMissionCritical = GCPApphubWorkloadCriticalityTypeKey.String("MISSION_CRITICAL")
+	GCPAppHubWorkloadCriticalityTypeMissionCritical = GCPAppHubWorkloadCriticalityTypeKey.String("MISSION_CRITICAL")
 	// High impact.
 	// Stability: development
-	GCPApphubWorkloadCriticalityTypeHigh = GCPApphubWorkloadCriticalityTypeKey.String("HIGH")
+	GCPAppHubWorkloadCriticalityTypeHigh = GCPAppHubWorkloadCriticalityTypeKey.String("HIGH")
 	// Medium impact.
 	// Stability: development
-	GCPApphubWorkloadCriticalityTypeMedium = GCPApphubWorkloadCriticalityTypeKey.String("MEDIUM")
+	GCPAppHubWorkloadCriticalityTypeMedium = GCPAppHubWorkloadCriticalityTypeKey.String("MEDIUM")
 	// Low impact.
 	// Stability: development
-	GCPApphubWorkloadCriticalityTypeLow = GCPApphubWorkloadCriticalityTypeKey.String("LOW")
+	GCPAppHubWorkloadCriticalityTypeLow = GCPAppHubWorkloadCriticalityTypeKey.String("LOW")
 )
 
 // Enum values for gcp.apphub.workload.environment_type
 var (
 	// Production environment.
 	// Stability: development
-	GCPApphubWorkloadEnvironmentTypeProduction = GCPApphubWorkloadEnvironmentTypeKey.String("PRODUCTION")
+	GCPAppHubWorkloadEnvironmentTypeProduction = GCPAppHubWorkloadEnvironmentTypeKey.String("PRODUCTION")
 	// Staging environment.
 	// Stability: development
-	GCPApphubWorkloadEnvironmentTypeStaging = GCPApphubWorkloadEnvironmentTypeKey.String("STAGING")
+	GCPAppHubWorkloadEnvironmentTypeStaging = GCPAppHubWorkloadEnvironmentTypeKey.String("STAGING")
 	// Test environment.
 	// Stability: development
-	GCPApphubWorkloadEnvironmentTypeTest = GCPApphubWorkloadEnvironmentTypeKey.String("TEST")
+	GCPAppHubWorkloadEnvironmentTypeTest = GCPAppHubWorkloadEnvironmentTypeKey.String("TEST")
 	// Development environment.
 	// Stability: development
-	GCPApphubWorkloadEnvironmentTypeDevelopment = GCPApphubWorkloadEnvironmentTypeKey.String("DEVELOPMENT")
+	GCPAppHubWorkloadEnvironmentTypeDevelopment = GCPAppHubWorkloadEnvironmentTypeKey.String("DEVELOPMENT")
 )
 
 // Namespace: gen_ai
@@ -6018,7 +6018,7 @@ const (
 	// Examples:
 	GeoContinentCodeKey = attribute.Key("geo.continent.code")
 
-	// GeoCountryIsoCodeKey is the attribute Key conforming to the
+	// GeoCountryISOCodeKey is the attribute Key conforming to the
 	// "geo.country.iso_code" semantic conventions. It represents the two-letter ISO
 	// Country Code ([ISO 3166-1 alpha2]).
 	//
@@ -6029,7 +6029,7 @@ const (
 	// Examples: "CA"
 	//
 	// [ISO 3166-1 alpha2]: https://wikipedia.org/wiki/ISO_3166-1#Codes
-	GeoCountryIsoCodeKey = attribute.Key("geo.country.iso_code")
+	GeoCountryISOCodeKey = attribute.Key("geo.country.iso_code")
 
 	// GeoLocalityNameKey is the attribute Key conforming to the "geo.locality.name"
 	// semantic conventions. It represents the locality name. Represents the name of
@@ -6080,7 +6080,7 @@ const (
 	// Examples: "94040"
 	GeoPostalCodeKey = attribute.Key("geo.postal_code")
 
-	// GeoRegionIsoCodeKey is the attribute Key conforming to the
+	// GeoRegionISOCodeKey is the attribute Key conforming to the
 	// "geo.region.iso_code" semantic conventions. It represents the region ISO code
 	// ([ISO 3166-2]).
 	//
@@ -6091,16 +6091,16 @@ const (
 	// Examples: "CA-QC"
 	//
 	// [ISO 3166-2]: https://wikipedia.org/wiki/ISO_3166-2
-	GeoRegionIsoCodeKey = attribute.Key("geo.region.iso_code")
+	GeoRegionISOCodeKey = attribute.Key("geo.region.iso_code")
 )
 
-// GeoCountryIsoCode returns an attribute KeyValue conforming to the
+// GeoCountryISOCode returns an attribute KeyValue conforming to the
 // "geo.country.iso_code" semantic conventions. It represents the two-letter ISO
 // Country Code ([ISO 3166-1 alpha2]).
 //
 // [ISO 3166-1 alpha2]: https://wikipedia.org/wiki/ISO_3166-1#Codes
-func GeoCountryIsoCode(val string) attribute.KeyValue {
-	return GeoCountryIsoCodeKey.String(val)
+func GeoCountryISOCode(val string) attribute.KeyValue {
+	return GeoCountryISOCodeKey.String(val)
 }
 
 // GeoLocalityName returns an attribute KeyValue conforming to the
@@ -6136,13 +6136,13 @@ func GeoPostalCode(val string) attribute.KeyValue {
 	return GeoPostalCodeKey.String(val)
 }
 
-// GeoRegionIsoCode returns an attribute KeyValue conforming to the
+// GeoRegionISOCode returns an attribute KeyValue conforming to the
 // "geo.region.iso_code" semantic conventions. It represents the region ISO code
 // ([ISO 3166-2]).
 //
 // [ISO 3166-2]: https://wikipedia.org/wiki/ISO_3166-2
-func GeoRegionIsoCode(val string) attribute.KeyValue {
-	return GeoRegionIsoCodeKey.String(val)
+func GeoRegionISOCode(val string) attribute.KeyValue {
+	return GeoRegionISOCodeKey.String(val)
 }
 
 // Enum values for geo.continent.code
@@ -7046,7 +7046,7 @@ var (
 
 // Namespace: ios
 const (
-	// IosAppStateKey is the attribute Key conforming to the "ios.app.state"
+	// IOSAppStateKey is the attribute Key conforming to the "ios.app.state"
 	// semantic conventions. It represents the this attribute represents the state
 	// of the application.
 	//
@@ -7060,7 +7060,7 @@ const (
 	// column values are derived.
 	//
 	// [UIApplicationDelegate documentation]: https://developer.apple.com/documentation/uikit/uiapplicationdelegate
-	IosAppStateKey = attribute.Key("ios.app.state")
+	IOSAppStateKey = attribute.Key("ios.app.state")
 )
 
 // Enum values for ios.app.state
@@ -7069,27 +7069,27 @@ var (
 	// `applicationDidBecomeActive`.
 	//
 	// Stability: development
-	IosAppStateActive = IosAppStateKey.String("active")
+	IOSAppStateActive = IOSAppStateKey.String("active")
 	// The app is now `inactive`. Associated with UIKit notification
 	// `applicationWillResignActive`.
 	//
 	// Stability: development
-	IosAppStateInactive = IosAppStateKey.String("inactive")
+	IOSAppStateInactive = IOSAppStateKey.String("inactive")
 	// The app is now in the background. This value is associated with UIKit
 	// notification `applicationDidEnterBackground`.
 	//
 	// Stability: development
-	IosAppStateBackground = IosAppStateKey.String("background")
+	IOSAppStateBackground = IOSAppStateKey.String("background")
 	// The app is now in the foreground. This value is associated with UIKit
 	// notification `applicationWillEnterForeground`.
 	//
 	// Stability: development
-	IosAppStateForeground = IosAppStateKey.String("foreground")
+	IOSAppStateForeground = IOSAppStateKey.String("foreground")
 	// The app is about to terminate. Associated with UIKit notification
 	// `applicationWillTerminate`.
 	//
 	// Stability: development
-	IosAppStateTerminate = IosAppStateKey.String("terminate")
+	IOSAppStateTerminate = IOSAppStateKey.String("terminate")
 )
 
 // Namespace: k8s
@@ -7237,7 +7237,7 @@ const (
 	// Examples: "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff"
 	K8SDeploymentUIDKey = attribute.Key("k8s.deployment.uid")
 
-	// K8SHpaNameKey is the attribute Key conforming to the "k8s.hpa.name" semantic
+	// K8SHPANameKey is the attribute Key conforming to the "k8s.hpa.name" semantic
 	// conventions. It represents the name of the horizontal pod autoscaler.
 	//
 	// Type: string
@@ -7245,9 +7245,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "opentelemetry"
-	K8SHpaNameKey = attribute.Key("k8s.hpa.name")
+	K8SHPANameKey = attribute.Key("k8s.hpa.name")
 
-	// K8SHpaUIDKey is the attribute Key conforming to the "k8s.hpa.uid" semantic
+	// K8SHPAUIDKey is the attribute Key conforming to the "k8s.hpa.uid" semantic
 	// conventions. It represents the UID of the horizontal pod autoscaler.
 	//
 	// Type: string
@@ -7255,7 +7255,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: "275ecb36-5aa8-4c2a-9c47-d8bb681b9aff"
-	K8SHpaUIDKey = attribute.Key("k8s.hpa.uid")
+	K8SHPAUIDKey = attribute.Key("k8s.hpa.uid")
 
 	// K8SJobNameKey is the attribute Key conforming to the "k8s.job.name" semantic
 	// conventions. It represents the name of the Job.
@@ -7530,16 +7530,16 @@ func K8SDeploymentUID(val string) attribute.KeyValue {
 	return K8SDeploymentUIDKey.String(val)
 }
 
-// K8SHpaName returns an attribute KeyValue conforming to the "k8s.hpa.name"
+// K8SHPAName returns an attribute KeyValue conforming to the "k8s.hpa.name"
 // semantic conventions. It represents the name of the horizontal pod autoscaler.
-func K8SHpaName(val string) attribute.KeyValue {
-	return K8SHpaNameKey.String(val)
+func K8SHPAName(val string) attribute.KeyValue {
+	return K8SHPANameKey.String(val)
 }
 
-// K8SHpaUID returns an attribute KeyValue conforming to the "k8s.hpa.uid"
+// K8SHPAUID returns an attribute KeyValue conforming to the "k8s.hpa.uid"
 // semantic conventions. It represents the UID of the horizontal pod autoscaler.
-func K8SHpaUID(val string) attribute.KeyValue {
-	return K8SHpaUIDKey.String(val)
+func K8SHPAUID(val string) attribute.KeyValue {
+	return K8SHPAUIDKey.String(val)
 }
 
 // K8SJobName returns an attribute KeyValue conforming to the "k8s.job.name"
@@ -7985,7 +7985,7 @@ const (
 	// Examples:
 	MessagingDestinationTemporaryKey = attribute.Key("messaging.destination.temporary")
 
-	// MessagingEventhubsMessageEnqueuedTimeKey is the attribute Key conforming to
+	// MessagingEventHubsMessageEnqueuedTimeKey is the attribute Key conforming to
 	// the "messaging.eventhubs.message.enqueued_time" semantic conventions. It
 	// represents the UTC epoch seconds at which the message has been accepted and
 	// stored in the entity.
@@ -7993,9 +7993,9 @@ const (
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingEventhubsMessageEnqueuedTimeKey = attribute.Key("messaging.eventhubs.message.enqueued_time")
+	MessagingEventHubsMessageEnqueuedTimeKey = attribute.Key("messaging.eventhubs.message.enqueued_time")
 
-	// MessagingGCPPubsubMessageAckDeadlineKey is the attribute Key conforming to
+	// MessagingGCPPubSubMessageAckDeadlineKey is the attribute Key conforming to
 	// the "messaging.gcp_pubsub.message.ack_deadline" semantic conventions. It
 	// represents the ack deadline in seconds set for the modify ack deadline
 	// request.
@@ -8003,9 +8003,9 @@ const (
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingGCPPubsubMessageAckDeadlineKey = attribute.Key("messaging.gcp_pubsub.message.ack_deadline")
+	MessagingGCPPubSubMessageAckDeadlineKey = attribute.Key("messaging.gcp_pubsub.message.ack_deadline")
 
-	// MessagingGCPPubsubMessageAckIDKey is the attribute Key conforming to the
+	// MessagingGCPPubSubMessageAckIDKey is the attribute Key conforming to the
 	// "messaging.gcp_pubsub.message.ack_id" semantic conventions. It represents the
 	// ack id for a given message.
 	//
@@ -8014,18 +8014,18 @@ const (
 	// Stability: Development
 	//
 	// Examples: ack_id
-	MessagingGCPPubsubMessageAckIDKey = attribute.Key("messaging.gcp_pubsub.message.ack_id")
+	MessagingGCPPubSubMessageAckIDKey = attribute.Key("messaging.gcp_pubsub.message.ack_id")
 
-	// MessagingGCPPubsubMessageDeliveryAttemptKey is the attribute Key conforming
+	// MessagingGCPPubSubMessageDeliveryAttemptKey is the attribute Key conforming
 	// to the "messaging.gcp_pubsub.message.delivery_attempt" semantic conventions.
 	// It represents the delivery attempt for a given message.
 	//
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingGCPPubsubMessageDeliveryAttemptKey = attribute.Key("messaging.gcp_pubsub.message.delivery_attempt")
+	MessagingGCPPubSubMessageDeliveryAttemptKey = attribute.Key("messaging.gcp_pubsub.message.delivery_attempt")
 
-	// MessagingGCPPubsubMessageOrderingKeyKey is the attribute Key conforming to
+	// MessagingGCPPubSubMessageOrderingKeyKey is the attribute Key conforming to
 	// the "messaging.gcp_pubsub.message.ordering_key" semantic conventions. It
 	// represents the ordering key for a given message. If the attribute is not
 	// present, the message does not have an ordering key.
@@ -8035,7 +8035,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: ordering_key
-	MessagingGCPPubsubMessageOrderingKeyKey = attribute.Key("messaging.gcp_pubsub.message.ordering_key")
+	MessagingGCPPubSubMessageOrderingKeyKey = attribute.Key("messaging.gcp_pubsub.message.ordering_key")
 
 	// MessagingKafkaMessageKeyKey is the attribute Key conforming to the
 	// "messaging.kafka.message.key" semantic conventions. It represents the message
@@ -8146,7 +8146,7 @@ const (
 	// Note: If a custom value is used, it MUST be of low cardinality.
 	MessagingOperationTypeKey = attribute.Key("messaging.operation.type")
 
-	// MessagingRabbitmqDestinationRoutingKeyKey is the attribute Key conforming to
+	// MessagingRabbitMQDestinationRoutingKeyKey is the attribute Key conforming to
 	// the "messaging.rabbitmq.destination.routing_key" semantic conventions. It
 	// represents the rabbitMQ message routing key.
 	//
@@ -8155,16 +8155,16 @@ const (
 	// Stability: Development
 	//
 	// Examples: myKey
-	MessagingRabbitmqDestinationRoutingKeyKey = attribute.Key("messaging.rabbitmq.destination.routing_key")
+	MessagingRabbitMQDestinationRoutingKeyKey = attribute.Key("messaging.rabbitmq.destination.routing_key")
 
-	// MessagingRabbitmqMessageDeliveryTagKey is the attribute Key conforming to the
+	// MessagingRabbitMQMessageDeliveryTagKey is the attribute Key conforming to the
 	// "messaging.rabbitmq.message.delivery_tag" semantic conventions. It represents
 	// the rabbitMQ message delivery tag.
 	//
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingRabbitmqMessageDeliveryTagKey = attribute.Key("messaging.rabbitmq.message.delivery_tag")
+	MessagingRabbitMQMessageDeliveryTagKey = attribute.Key("messaging.rabbitmq.message.delivery_tag")
 
 	// MessagingRocketMQConsumptionModelKey is the attribute Key conforming to the
 	// "messaging.rocketmq.consumption_model" semantic conventions. It represents
@@ -8254,7 +8254,7 @@ const (
 	// Examples: myNamespace
 	MessagingRocketMQNamespaceKey = attribute.Key("messaging.rocketmq.namespace")
 
-	// MessagingServicebusDispositionStatusKey is the attribute Key conforming to
+	// MessagingServiceBusDispositionStatusKey is the attribute Key conforming to
 	// the "messaging.servicebus.disposition_status" semantic conventions. It
 	// represents the describes the [settlement type].
 	//
@@ -8265,9 +8265,9 @@ const (
 	// Examples:
 	//
 	// [settlement type]: https://learn.microsoft.com/azure/service-bus-messaging/message-transfers-locks-settlement#peeklock
-	MessagingServicebusDispositionStatusKey = attribute.Key("messaging.servicebus.disposition_status")
+	MessagingServiceBusDispositionStatusKey = attribute.Key("messaging.servicebus.disposition_status")
 
-	// MessagingServicebusMessageDeliveryCountKey is the attribute Key conforming to
+	// MessagingServiceBusMessageDeliveryCountKey is the attribute Key conforming to
 	// the "messaging.servicebus.message.delivery_count" semantic conventions. It
 	// represents the number of deliveries that have been attempted for this
 	// message.
@@ -8275,9 +8275,9 @@ const (
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingServicebusMessageDeliveryCountKey = attribute.Key("messaging.servicebus.message.delivery_count")
+	MessagingServiceBusMessageDeliveryCountKey = attribute.Key("messaging.servicebus.message.delivery_count")
 
-	// MessagingServicebusMessageEnqueuedTimeKey is the attribute Key conforming to
+	// MessagingServiceBusMessageEnqueuedTimeKey is the attribute Key conforming to
 	// the "messaging.servicebus.message.enqueued_time" semantic conventions. It
 	// represents the UTC epoch seconds at which the message has been accepted and
 	// stored in the entity.
@@ -8285,7 +8285,7 @@ const (
 	// Type: int
 	// RequirementLevel: Recommended
 	// Stability: Development
-	MessagingServicebusMessageEnqueuedTimeKey = attribute.Key("messaging.servicebus.message.enqueued_time")
+	MessagingServiceBusMessageEnqueuedTimeKey = attribute.Key("messaging.servicebus.message.enqueued_time")
 
 	// MessagingSystemKey is the attribute Key conforming to the "messaging.system"
 	// semantic conventions. It represents the messaging system as identified by the
@@ -8371,42 +8371,42 @@ func MessagingDestinationTemporary(val bool) attribute.KeyValue {
 	return MessagingDestinationTemporaryKey.Bool(val)
 }
 
-// MessagingEventhubsMessageEnqueuedTime returns an attribute KeyValue conforming
+// MessagingEventHubsMessageEnqueuedTime returns an attribute KeyValue conforming
 // to the "messaging.eventhubs.message.enqueued_time" semantic conventions. It
 // represents the UTC epoch seconds at which the message has been accepted and
 // stored in the entity.
-func MessagingEventhubsMessageEnqueuedTime(val int) attribute.KeyValue {
-	return MessagingEventhubsMessageEnqueuedTimeKey.Int(val)
+func MessagingEventHubsMessageEnqueuedTime(val int) attribute.KeyValue {
+	return MessagingEventHubsMessageEnqueuedTimeKey.Int(val)
 }
 
-// MessagingGCPPubsubMessageAckDeadline returns an attribute KeyValue conforming
+// MessagingGCPPubSubMessageAckDeadline returns an attribute KeyValue conforming
 // to the "messaging.gcp_pubsub.message.ack_deadline" semantic conventions. It
 // represents the ack deadline in seconds set for the modify ack deadline
 // request.
-func MessagingGCPPubsubMessageAckDeadline(val int) attribute.KeyValue {
-	return MessagingGCPPubsubMessageAckDeadlineKey.Int(val)
+func MessagingGCPPubSubMessageAckDeadline(val int) attribute.KeyValue {
+	return MessagingGCPPubSubMessageAckDeadlineKey.Int(val)
 }
 
-// MessagingGCPPubsubMessageAckID returns an attribute KeyValue conforming to the
+// MessagingGCPPubSubMessageAckID returns an attribute KeyValue conforming to the
 // "messaging.gcp_pubsub.message.ack_id" semantic conventions. It represents the
 // ack id for a given message.
-func MessagingGCPPubsubMessageAckID(val string) attribute.KeyValue {
-	return MessagingGCPPubsubMessageAckIDKey.String(val)
+func MessagingGCPPubSubMessageAckID(val string) attribute.KeyValue {
+	return MessagingGCPPubSubMessageAckIDKey.String(val)
 }
 
-// MessagingGCPPubsubMessageDeliveryAttempt returns an attribute KeyValue
+// MessagingGCPPubSubMessageDeliveryAttempt returns an attribute KeyValue
 // conforming to the "messaging.gcp_pubsub.message.delivery_attempt" semantic
 // conventions. It represents the delivery attempt for a given message.
-func MessagingGCPPubsubMessageDeliveryAttempt(val int) attribute.KeyValue {
-	return MessagingGCPPubsubMessageDeliveryAttemptKey.Int(val)
+func MessagingGCPPubSubMessageDeliveryAttempt(val int) attribute.KeyValue {
+	return MessagingGCPPubSubMessageDeliveryAttemptKey.Int(val)
 }
 
-// MessagingGCPPubsubMessageOrderingKey returns an attribute KeyValue conforming
+// MessagingGCPPubSubMessageOrderingKey returns an attribute KeyValue conforming
 // to the "messaging.gcp_pubsub.message.ordering_key" semantic conventions. It
 // represents the ordering key for a given message. If the attribute is not
 // present, the message does not have an ordering key.
-func MessagingGCPPubsubMessageOrderingKey(val string) attribute.KeyValue {
-	return MessagingGCPPubsubMessageOrderingKeyKey.String(val)
+func MessagingGCPPubSubMessageOrderingKey(val string) attribute.KeyValue {
+	return MessagingGCPPubSubMessageOrderingKeyKey.String(val)
 }
 
 // MessagingKafkaMessageKey returns an attribute KeyValue conforming to the
@@ -8468,18 +8468,18 @@ func MessagingOperationName(val string) attribute.KeyValue {
 	return MessagingOperationNameKey.String(val)
 }
 
-// MessagingRabbitmqDestinationRoutingKey returns an attribute KeyValue
+// MessagingRabbitMQDestinationRoutingKey returns an attribute KeyValue
 // conforming to the "messaging.rabbitmq.destination.routing_key" semantic
 // conventions. It represents the rabbitMQ message routing key.
-func MessagingRabbitmqDestinationRoutingKey(val string) attribute.KeyValue {
-	return MessagingRabbitmqDestinationRoutingKeyKey.String(val)
+func MessagingRabbitMQDestinationRoutingKey(val string) attribute.KeyValue {
+	return MessagingRabbitMQDestinationRoutingKeyKey.String(val)
 }
 
-// MessagingRabbitmqMessageDeliveryTag returns an attribute KeyValue conforming
+// MessagingRabbitMQMessageDeliveryTag returns an attribute KeyValue conforming
 // to the "messaging.rabbitmq.message.delivery_tag" semantic conventions. It
 // represents the rabbitMQ message delivery tag.
-func MessagingRabbitmqMessageDeliveryTag(val int) attribute.KeyValue {
-	return MessagingRabbitmqMessageDeliveryTagKey.Int(val)
+func MessagingRabbitMQMessageDeliveryTag(val int) attribute.KeyValue {
+	return MessagingRabbitMQMessageDeliveryTagKey.Int(val)
 }
 
 // MessagingRocketMQMessageDelayTimeLevel returns an attribute KeyValue
@@ -8528,20 +8528,20 @@ func MessagingRocketMQNamespace(val string) attribute.KeyValue {
 	return MessagingRocketMQNamespaceKey.String(val)
 }
 
-// MessagingServicebusMessageDeliveryCount returns an attribute KeyValue
+// MessagingServiceBusMessageDeliveryCount returns an attribute KeyValue
 // conforming to the "messaging.servicebus.message.delivery_count" semantic
 // conventions. It represents the number of deliveries that have been attempted
 // for this message.
-func MessagingServicebusMessageDeliveryCount(val int) attribute.KeyValue {
-	return MessagingServicebusMessageDeliveryCountKey.Int(val)
+func MessagingServiceBusMessageDeliveryCount(val int) attribute.KeyValue {
+	return MessagingServiceBusMessageDeliveryCountKey.Int(val)
 }
 
-// MessagingServicebusMessageEnqueuedTime returns an attribute KeyValue
+// MessagingServiceBusMessageEnqueuedTime returns an attribute KeyValue
 // conforming to the "messaging.servicebus.message.enqueued_time" semantic
 // conventions. It represents the UTC epoch seconds at which the message has been
 // accepted and stored in the entity.
-func MessagingServicebusMessageEnqueuedTime(val int) attribute.KeyValue {
-	return MessagingServicebusMessageEnqueuedTimeKey.Int(val)
+func MessagingServiceBusMessageEnqueuedTime(val int) attribute.KeyValue {
+	return MessagingServiceBusMessageEnqueuedTimeKey.Int(val)
 }
 
 // Enum values for messaging.operation.type
@@ -8608,47 +8608,47 @@ var (
 var (
 	// Message is completed
 	// Stability: development
-	MessagingServicebusDispositionStatusComplete = MessagingServicebusDispositionStatusKey.String("complete")
+	MessagingServiceBusDispositionStatusComplete = MessagingServiceBusDispositionStatusKey.String("complete")
 	// Message is abandoned
 	// Stability: development
-	MessagingServicebusDispositionStatusAbandon = MessagingServicebusDispositionStatusKey.String("abandon")
+	MessagingServiceBusDispositionStatusAbandon = MessagingServiceBusDispositionStatusKey.String("abandon")
 	// Message is sent to dead letter queue
 	// Stability: development
-	MessagingServicebusDispositionStatusDeadLetter = MessagingServicebusDispositionStatusKey.String("dead_letter")
+	MessagingServiceBusDispositionStatusDeadLetter = MessagingServiceBusDispositionStatusKey.String("dead_letter")
 	// Message is deferred
 	// Stability: development
-	MessagingServicebusDispositionStatusDefer = MessagingServicebusDispositionStatusKey.String("defer")
+	MessagingServiceBusDispositionStatusDefer = MessagingServiceBusDispositionStatusKey.String("defer")
 )
 
 // Enum values for messaging.system
 var (
 	// Apache ActiveMQ
 	// Stability: development
-	MessagingSystemActivemq = MessagingSystemKey.String("activemq")
+	MessagingSystemActiveMQ = MessagingSystemKey.String("activemq")
 	// Amazon Simple Queue Service (SQS)
 	// Stability: development
-	MessagingSystemAWSSqs = MessagingSystemKey.String("aws_sqs")
+	MessagingSystemAWSSQS = MessagingSystemKey.String("aws_sqs")
 	// Azure Event Grid
 	// Stability: development
-	MessagingSystemEventgrid = MessagingSystemKey.String("eventgrid")
+	MessagingSystemEventGrid = MessagingSystemKey.String("eventgrid")
 	// Azure Event Hubs
 	// Stability: development
-	MessagingSystemEventhubs = MessagingSystemKey.String("eventhubs")
+	MessagingSystemEventHubs = MessagingSystemKey.String("eventhubs")
 	// Azure Service Bus
 	// Stability: development
-	MessagingSystemServicebus = MessagingSystemKey.String("servicebus")
+	MessagingSystemServiceBus = MessagingSystemKey.String("servicebus")
 	// Google Cloud Pub/Sub
 	// Stability: development
-	MessagingSystemGCPPubsub = MessagingSystemKey.String("gcp_pubsub")
+	MessagingSystemGCPPubSub = MessagingSystemKey.String("gcp_pubsub")
 	// Java Message Service
 	// Stability: development
-	MessagingSystemJms = MessagingSystemKey.String("jms")
+	MessagingSystemJMS = MessagingSystemKey.String("jms")
 	// Apache Kafka
 	// Stability: development
 	MessagingSystemKafka = MessagingSystemKey.String("kafka")
 	// RabbitMQ
 	// Stability: development
-	MessagingSystemRabbitmq = MessagingSystemKey.String("rabbitmq")
+	MessagingSystemRabbitMQ = MessagingSystemKey.String("rabbitmq")
 	// Apache RocketMQ
 	// Stability: development
 	MessagingSystemRocketMQ = MessagingSystemKey.String("rocketmq")
@@ -8659,7 +8659,7 @@ var (
 
 // Namespace: network
 const (
-	// NetworkCarrierIccKey is the attribute Key conforming to the
+	// NetworkCarrierICCKey is the attribute Key conforming to the
 	// "network.carrier.icc" semantic conventions. It represents the ISO 3166-1
 	// alpha-2 2-character country code associated with the mobile carrier network.
 	//
@@ -8668,9 +8668,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: DE
-	NetworkCarrierIccKey = attribute.Key("network.carrier.icc")
+	NetworkCarrierICCKey = attribute.Key("network.carrier.icc")
 
-	// NetworkCarrierMccKey is the attribute Key conforming to the
+	// NetworkCarrierMCCKey is the attribute Key conforming to the
 	// "network.carrier.mcc" semantic conventions. It represents the mobile carrier
 	// country code.
 	//
@@ -8679,7 +8679,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: 310
-	NetworkCarrierMccKey = attribute.Key("network.carrier.mcc")
+	NetworkCarrierMCCKey = attribute.Key("network.carrier.mcc")
 
 	// NetworkCarrierMNCKey is the attribute Key conforming to the
 	// "network.carrier.mnc" semantic conventions. It represents the mobile carrier
@@ -8870,18 +8870,18 @@ const (
 	NetworkTypeKey = attribute.Key("network.type")
 )
 
-// NetworkCarrierIcc returns an attribute KeyValue conforming to the
+// NetworkCarrierICC returns an attribute KeyValue conforming to the
 // "network.carrier.icc" semantic conventions. It represents the ISO 3166-1
 // alpha-2 2-character country code associated with the mobile carrier network.
-func NetworkCarrierIcc(val string) attribute.KeyValue {
-	return NetworkCarrierIccKey.String(val)
+func NetworkCarrierICC(val string) attribute.KeyValue {
+	return NetworkCarrierICCKey.String(val)
 }
 
-// NetworkCarrierMcc returns an attribute KeyValue conforming to the
+// NetworkCarrierMCC returns an attribute KeyValue conforming to the
 // "network.carrier.mcc" semantic conventions. It represents the mobile carrier
 // country code.
-func NetworkCarrierMcc(val string) attribute.KeyValue {
-	return NetworkCarrierMccKey.String(val)
+func NetworkCarrierMCC(val string) attribute.KeyValue {
+	return NetworkCarrierMCCKey.String(val)
 }
 
 // NetworkCarrierMNC returns an attribute KeyValue conforming to the
@@ -9105,10 +9105,10 @@ var (
 var (
 	// IPv4
 	// Stability: stable
-	NetworkTypeIpv4 = NetworkTypeKey.String("ipv4")
+	NetworkTypeIPv4 = NetworkTypeKey.String("ipv4")
 	// IPv6
 	// Stability: stable
-	NetworkTypeIpv6 = NetworkTypeKey.String("ipv6")
+	NetworkTypeIPv6 = NetworkTypeKey.String("ipv6")
 )
 
 // Namespace: oci
@@ -10294,7 +10294,7 @@ const (
 	// [numeric status code]: https://github.com/grpc/grpc/blob/v1.33.2/doc/statuscodes.md
 	RPCGRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 
-	// RPCJsonrpcErrorCodeKey is the attribute Key conforming to the
+	// RPCJSONRPCErrorCodeKey is the attribute Key conforming to the
 	// "rpc.jsonrpc.error_code" semantic conventions. It represents the `error.code`
 	//  property of response if it is an error response.
 	//
@@ -10303,9 +10303,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: -32700, 100
-	RPCJsonrpcErrorCodeKey = attribute.Key("rpc.jsonrpc.error_code")
+	RPCJSONRPCErrorCodeKey = attribute.Key("rpc.jsonrpc.error_code")
 
-	// RPCJsonrpcErrorMessageKey is the attribute Key conforming to the
+	// RPCJSONRPCErrorMessageKey is the attribute Key conforming to the
 	// "rpc.jsonrpc.error_message" semantic conventions. It represents the
 	// `error.message` property of response if it is an error response.
 	//
@@ -10314,9 +10314,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "Parse error", "User already exists"
-	RPCJsonrpcErrorMessageKey = attribute.Key("rpc.jsonrpc.error_message")
+	RPCJSONRPCErrorMessageKey = attribute.Key("rpc.jsonrpc.error_message")
 
-	// RPCJsonrpcRequestIDKey is the attribute Key conforming to the
+	// RPCJSONRPCRequestIDKey is the attribute Key conforming to the
 	// "rpc.jsonrpc.request_id" semantic conventions. It represents the `id`
 	// property of request or response. Since protocol allows id to be int, string,
 	// `null` or missing (for notifications), value is expected to be cast to string
@@ -10328,9 +10328,9 @@ const (
 	// Stability: Development
 	//
 	// Examples: "10", "request-7", ""
-	RPCJsonrpcRequestIDKey = attribute.Key("rpc.jsonrpc.request_id")
+	RPCJSONRPCRequestIDKey = attribute.Key("rpc.jsonrpc.request_id")
 
-	// RPCJsonrpcVersionKey is the attribute Key conforming to the
+	// RPCJSONRPCVersionKey is the attribute Key conforming to the
 	// "rpc.jsonrpc.version" semantic conventions. It represents the protocol
 	// version as in `jsonrpc` property of request/response. Since JSON-RPC 1.0
 	// doesn't specify this, the value can be omitted.
@@ -10340,7 +10340,7 @@ const (
 	// Stability: Development
 	//
 	// Examples: "2.0", "1.0"
-	RPCJsonrpcVersionKey = attribute.Key("rpc.jsonrpc.version")
+	RPCJSONRPCVersionKey = attribute.Key("rpc.jsonrpc.version")
 
 	// RPCMessageCompressedSizeKey is the attribute Key conforming to the
 	// "rpc.message.compressed_size" semantic conventions. It represents the
@@ -10433,36 +10433,36 @@ const (
 	RPCSystemKey = attribute.Key("rpc.system")
 )
 
-// RPCJsonrpcErrorCode returns an attribute KeyValue conforming to the
+// RPCJSONRPCErrorCode returns an attribute KeyValue conforming to the
 // "rpc.jsonrpc.error_code" semantic conventions. It represents the `error.code`
 // property of response if it is an error response.
-func RPCJsonrpcErrorCode(val int) attribute.KeyValue {
-	return RPCJsonrpcErrorCodeKey.Int(val)
+func RPCJSONRPCErrorCode(val int) attribute.KeyValue {
+	return RPCJSONRPCErrorCodeKey.Int(val)
 }
 
-// RPCJsonrpcErrorMessage returns an attribute KeyValue conforming to the
+// RPCJSONRPCErrorMessage returns an attribute KeyValue conforming to the
 // "rpc.jsonrpc.error_message" semantic conventions. It represents the
 // `error.message` property of response if it is an error response.
-func RPCJsonrpcErrorMessage(val string) attribute.KeyValue {
-	return RPCJsonrpcErrorMessageKey.String(val)
+func RPCJSONRPCErrorMessage(val string) attribute.KeyValue {
+	return RPCJSONRPCErrorMessageKey.String(val)
 }
 
-// RPCJsonrpcRequestID returns an attribute KeyValue conforming to the
+// RPCJSONRPCRequestID returns an attribute KeyValue conforming to the
 // "rpc.jsonrpc.request_id" semantic conventions. It represents the `id` property
 // of request or response. Since protocol allows id to be int, string, `null` or
 // missing (for notifications), value is expected to be cast to string for
 // simplicity. Use empty string in case of `null` value. Omit entirely if this is
 // a notification.
-func RPCJsonrpcRequestID(val string) attribute.KeyValue {
-	return RPCJsonrpcRequestIDKey.String(val)
+func RPCJSONRPCRequestID(val string) attribute.KeyValue {
+	return RPCJSONRPCRequestIDKey.String(val)
 }
 
-// RPCJsonrpcVersion returns an attribute KeyValue conforming to the
+// RPCJSONRPCVersion returns an attribute KeyValue conforming to the
 // "rpc.jsonrpc.version" semantic conventions. It represents the protocol version
 // as in `jsonrpc` property of request/response. Since JSON-RPC 1.0 doesn't
 // specify this, the value can be omitted.
-func RPCJsonrpcVersion(val string) attribute.KeyValue {
-	return RPCJsonrpcVersionKey.String(val)
+func RPCJSONRPCVersion(val string) attribute.KeyValue {
+	return RPCJSONRPCVersionKey.String(val)
 }
 
 // RPCMessageCompressedSize returns an attribute KeyValue conforming to the
@@ -11007,7 +11007,7 @@ func SessionPreviousID(val string) attribute.KeyValue {
 
 // Namespace: signalr
 const (
-	// SignalrConnectionStatusKey is the attribute Key conforming to the
+	// SignalRConnectionStatusKey is the attribute Key conforming to the
 	// "signalr.connection.status" semantic conventions. It represents the signalR
 	// HTTP connection closure status.
 	//
@@ -11016,9 +11016,9 @@ const (
 	// Stability: Stable
 	//
 	// Examples: "app_shutdown", "timeout"
-	SignalrConnectionStatusKey = attribute.Key("signalr.connection.status")
+	SignalRConnectionStatusKey = attribute.Key("signalr.connection.status")
 
-	// SignalrTransportKey is the attribute Key conforming to the
+	// SignalRTransportKey is the attribute Key conforming to the
 	// "signalr.transport" semantic conventions. It represents the
 	// [SignalR transport type].
 	//
@@ -11029,33 +11029,33 @@ const (
 	// Examples: "web_sockets", "long_polling"
 	//
 	// [SignalR transport type]: https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/TransportProtocols.md
-	SignalrTransportKey = attribute.Key("signalr.transport")
+	SignalRTransportKey = attribute.Key("signalr.transport")
 )
 
 // Enum values for signalr.connection.status
 var (
 	// The connection was closed normally.
 	// Stability: stable
-	SignalrConnectionStatusNormalClosure = SignalrConnectionStatusKey.String("normal_closure")
+	SignalRConnectionStatusNormalClosure = SignalRConnectionStatusKey.String("normal_closure")
 	// The connection was closed due to a timeout.
 	// Stability: stable
-	SignalrConnectionStatusTimeout = SignalrConnectionStatusKey.String("timeout")
+	SignalRConnectionStatusTimeout = SignalRConnectionStatusKey.String("timeout")
 	// The connection was closed because the app is shutting down.
 	// Stability: stable
-	SignalrConnectionStatusAppShutdown = SignalrConnectionStatusKey.String("app_shutdown")
+	SignalRConnectionStatusAppShutdown = SignalRConnectionStatusKey.String("app_shutdown")
 )
 
 // Enum values for signalr.transport
 var (
 	// ServerSentEvents protocol
 	// Stability: stable
-	SignalrTransportServerSentEvents = SignalrTransportKey.String("server_sent_events")
+	SignalRTransportServerSentEvents = SignalRTransportKey.String("server_sent_events")
 	// LongPolling protocol
 	// Stability: stable
-	SignalrTransportLongPolling = SignalrTransportKey.String("long_polling")
+	SignalRTransportLongPolling = SignalRTransportKey.String("long_polling")
 	// WebSockets protocol
 	// Stability: stable
-	SignalrTransportWebSockets = SignalrTransportKey.String("web_sockets")
+	SignalRTransportWebSockets = SignalRTransportKey.String("web_sockets")
 )
 
 // Namespace: source
@@ -11488,7 +11488,7 @@ var (
 	TelemetrySDKLanguageSwift = TelemetrySDKLanguageKey.String("swift")
 	// webjs
 	// Stability: stable
-	TelemetrySDKLanguageWebjs = TelemetrySDKLanguageKey.String("webjs")
+	TelemetrySDKLanguageWebJS = TelemetrySDKLanguageKey.String("webjs")
 )
 
 // Namespace: test

@@ -29,9 +29,9 @@ var (
 	TriggerDatasource TriggerAttr = "datasource"
 	// TriggerHTTP is the to provide an answer to an inbound HTTP request.
 	TriggerHTTP TriggerAttr = "http"
-	// TriggerPubsub is a function is set to be executed when messages are sent to a
+	// TriggerPubSub is a function is set to be executed when messages are sent to a
 	// messaging system.
-	TriggerPubsub TriggerAttr = "pubsub"
+	TriggerPubSub TriggerAttr = "pubsub"
 	// TriggerTimer is a function is scheduled to be executed regularly.
 	TriggerTimer TriggerAttr = "timer"
 	// TriggerOther is the if none of the others apply.

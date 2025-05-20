@@ -160,10 +160,10 @@ var (
 	//
 	// [IBM Netezza]: https://www.ibm.com/products/netezza
 	SystemNameIBMNetezza SystemNameAttr = "ibm.netezza"
-	// SystemNameInfluxdb is the [InfluxDB].
+	// SystemNameInfluxDB is the [InfluxDB].
 	//
 	// [InfluxDB]: https://www.influxdata.com/
-	SystemNameInfluxdb SystemNameAttr = "influxdb"
+	SystemNameInfluxDB SystemNameAttr = "influxdb"
 	// SystemNameInstantDB is the [Instant].
 	//
 	// [Instant]: https://www.instantdb.com/
@@ -216,10 +216,10 @@ var (
 	//
 	// [SAP MaxDB]: https://maxdb.sap.com/
 	SystemNameSAPMaxDB SystemNameAttr = "sap.maxdb"
-	// SystemNameSqlite is the [SQLite].
+	// SystemNameSQLite is the [SQLite].
 	//
 	// [SQLite]: https://www.sqlite.org/
-	SystemNameSqlite SystemNameAttr = "sqlite"
+	SystemNameSQLite SystemNameAttr = "sqlite"
 	// SystemNameTeradata is the [Teradata].
 	//
 	// [Teradata]: https://www.teradata.com/

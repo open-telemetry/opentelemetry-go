@@ -59,24 +59,24 @@ var (
 type SystemAttr string
 
 var (
-	// SystemActivemq is the apache ActiveMQ.
-	SystemActivemq SystemAttr = "activemq"
-	// SystemAWSSqs is the amazon Simple Queue Service (SQS).
-	SystemAWSSqs SystemAttr = "aws_sqs"
-	// SystemEventgrid is the azure Event Grid.
-	SystemEventgrid SystemAttr = "eventgrid"
-	// SystemEventhubs is the azure Event Hubs.
-	SystemEventhubs SystemAttr = "eventhubs"
-	// SystemServicebus is the azure Service Bus.
-	SystemServicebus SystemAttr = "servicebus"
-	// SystemGCPPubsub is the google Cloud Pub/Sub.
-	SystemGCPPubsub SystemAttr = "gcp_pubsub"
-	// SystemJms is the java Message Service.
-	SystemJms SystemAttr = "jms"
+	// SystemActiveMQ is the apache ActiveMQ.
+	SystemActiveMQ SystemAttr = "activemq"
+	// SystemAWSSQS is the amazon Simple Queue Service (SQS).
+	SystemAWSSQS SystemAttr = "aws_sqs"
+	// SystemEventGrid is the azure Event Grid.
+	SystemEventGrid SystemAttr = "eventgrid"
+	// SystemEventHubs is the azure Event Hubs.
+	SystemEventHubs SystemAttr = "eventhubs"
+	// SystemServiceBus is the azure Service Bus.
+	SystemServiceBus SystemAttr = "servicebus"
+	// SystemGCPPubSub is the google Cloud Pub/Sub.
+	SystemGCPPubSub SystemAttr = "gcp_pubsub"
+	// SystemJMS is the java Message Service.
+	SystemJMS SystemAttr = "jms"
 	// SystemKafka is the apache Kafka.
 	SystemKafka SystemAttr = "kafka"
-	// SystemRabbitmq is the rabbitMQ.
-	SystemRabbitmq SystemAttr = "rabbitmq"
+	// SystemRabbitMQ is the rabbitMQ.
+	SystemRabbitMQ SystemAttr = "rabbitmq"
 	// SystemRocketMQ is the apache RocketMQ.
 	SystemRocketMQ SystemAttr = "rocketmq"
 	// SystemPulsar is the apache Pulsar.

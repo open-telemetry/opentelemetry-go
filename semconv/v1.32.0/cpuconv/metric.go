@@ -31,8 +31,8 @@ var (
 	ModeNice ModeAttr = "nice"
 	// ModeIdle is the none.
 	ModeIdle ModeAttr = "idle"
-	// ModeIowait is the none.
-	ModeIowait ModeAttr = "iowait"
+	// ModeIOWait is the none.
+	ModeIOWait ModeAttr = "iowait"
 	// ModeInterrupt is the none.
 	ModeInterrupt ModeAttr = "interrupt"
 	// ModeSteal is the none.

@@ -586,22 +586,22 @@ func (m DeploymentDesiredPods) Add(ctx context.Context, incr int64, attrs ...att
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
-// HpaCurrentPods is an instrument used to record metric values conforming to the
+// HPACurrentPods is an instrument used to record metric values conforming to the
 // "k8s.hpa.current_pods" semantic conventions. It represents the current number
 // of replica pods managed by this horizontal pod autoscaler, as last seen by the
 // autoscaler.
-type HpaCurrentPods struct {
+type HPACurrentPods struct {
 	metric.Int64UpDownCounter
 }
 
-// NewHpaCurrentPods returns a new HpaCurrentPods instrument.
-func NewHpaCurrentPods(
+// NewHPACurrentPods returns a new HPACurrentPods instrument.
+func NewHPACurrentPods(
 	m metric.Meter,
 	opt ...metric.Int64UpDownCounterOption,
-) (HpaCurrentPods, error) {
+) (HPACurrentPods, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HpaCurrentPods{noop.Int64UpDownCounter{}}, nil
+		return HPACurrentPods{noop.Int64UpDownCounter{}}, nil
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -612,28 +612,28 @@ func NewHpaCurrentPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HpaCurrentPods{noop.Int64UpDownCounter{}}, err
+	    return HPACurrentPods{noop.Int64UpDownCounter{}}, err
 	}
-	return HpaCurrentPods{i}, nil
+	return HPACurrentPods{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HpaCurrentPods) Inst() metric.Int64UpDownCounter {
+func (m HPACurrentPods) Inst() metric.Int64UpDownCounter {
 	return m.Int64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HpaCurrentPods) Name() string {
+func (HPACurrentPods) Name() string {
 	return "k8s.hpa.current_pods"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (HpaCurrentPods) Unit() string {
+func (HPACurrentPods) Unit() string {
 	return "{pod}"
 }
 
 // Description returns the semantic convention description of the instrument
-func (HpaCurrentPods) Description() string {
+func (HPACurrentPods) Description() string {
 	return "Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler"
 }
 
@@ -647,7 +647,7 @@ func (HpaCurrentPods) Description() string {
 //
 // [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
 // [`k8s.hpa`]: ../resource/k8s.md#horizontalpodautoscaler
-func (m HpaCurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+func (m HPACurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -663,22 +663,22 @@ func (m HpaCurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
-// HpaDesiredPods is an instrument used to record metric values conforming to the
+// HPADesiredPods is an instrument used to record metric values conforming to the
 // "k8s.hpa.desired_pods" semantic conventions. It represents the desired number
 // of replica pods managed by this horizontal pod autoscaler, as last calculated
 // by the autoscaler.
-type HpaDesiredPods struct {
+type HPADesiredPods struct {
 	metric.Int64UpDownCounter
 }
 
-// NewHpaDesiredPods returns a new HpaDesiredPods instrument.
-func NewHpaDesiredPods(
+// NewHPADesiredPods returns a new HPADesiredPods instrument.
+func NewHPADesiredPods(
 	m metric.Meter,
 	opt ...metric.Int64UpDownCounterOption,
-) (HpaDesiredPods, error) {
+) (HPADesiredPods, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HpaDesiredPods{noop.Int64UpDownCounter{}}, nil
+		return HPADesiredPods{noop.Int64UpDownCounter{}}, nil
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -689,28 +689,28 @@ func NewHpaDesiredPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HpaDesiredPods{noop.Int64UpDownCounter{}}, err
+	    return HPADesiredPods{noop.Int64UpDownCounter{}}, err
 	}
-	return HpaDesiredPods{i}, nil
+	return HPADesiredPods{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HpaDesiredPods) Inst() metric.Int64UpDownCounter {
+func (m HPADesiredPods) Inst() metric.Int64UpDownCounter {
 	return m.Int64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HpaDesiredPods) Name() string {
+func (HPADesiredPods) Name() string {
 	return "k8s.hpa.desired_pods"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (HpaDesiredPods) Unit() string {
+func (HPADesiredPods) Unit() string {
 	return "{pod}"
 }
 
 // Description returns the semantic convention description of the instrument
-func (HpaDesiredPods) Description() string {
+func (HPADesiredPods) Description() string {
 	return "Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler"
 }
 
@@ -724,7 +724,7 @@ func (HpaDesiredPods) Description() string {
 //
 // [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
 // [`k8s.hpa`]: ../resource/k8s.md#horizontalpodautoscaler
-func (m HpaDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+func (m HPADesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -740,21 +740,21 @@ func (m HpaDesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
-// HpaMaxPods is an instrument used to record metric values conforming to the
+// HPAMaxPods is an instrument used to record metric values conforming to the
 // "k8s.hpa.max_pods" semantic conventions. It represents the upper limit for the
 // number of replica pods to which the autoscaler can scale up.
-type HpaMaxPods struct {
+type HPAMaxPods struct {
 	metric.Int64UpDownCounter
 }
 
-// NewHpaMaxPods returns a new HpaMaxPods instrument.
-func NewHpaMaxPods(
+// NewHPAMaxPods returns a new HPAMaxPods instrument.
+func NewHPAMaxPods(
 	m metric.Meter,
 	opt ...metric.Int64UpDownCounterOption,
-) (HpaMaxPods, error) {
+) (HPAMaxPods, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HpaMaxPods{noop.Int64UpDownCounter{}}, nil
+		return HPAMaxPods{noop.Int64UpDownCounter{}}, nil
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -765,28 +765,28 @@ func NewHpaMaxPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HpaMaxPods{noop.Int64UpDownCounter{}}, err
+	    return HPAMaxPods{noop.Int64UpDownCounter{}}, err
 	}
-	return HpaMaxPods{i}, nil
+	return HPAMaxPods{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HpaMaxPods) Inst() metric.Int64UpDownCounter {
+func (m HPAMaxPods) Inst() metric.Int64UpDownCounter {
 	return m.Int64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HpaMaxPods) Name() string {
+func (HPAMaxPods) Name() string {
 	return "k8s.hpa.max_pods"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (HpaMaxPods) Unit() string {
+func (HPAMaxPods) Unit() string {
 	return "{pod}"
 }
 
 // Description returns the semantic convention description of the instrument
-func (HpaMaxPods) Description() string {
+func (HPAMaxPods) Description() string {
 	return "The upper limit for the number of replica pods to which the autoscaler can scale up"
 }
 
@@ -800,7 +800,7 @@ func (HpaMaxPods) Description() string {
 //
 // [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
 // [`k8s.hpa`]: ../resource/k8s.md#horizontalpodautoscaler
-func (m HpaMaxPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+func (m HPAMaxPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -816,21 +816,21 @@ func (m HpaMaxPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyV
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
-// HpaMinPods is an instrument used to record metric values conforming to the
+// HPAMinPods is an instrument used to record metric values conforming to the
 // "k8s.hpa.min_pods" semantic conventions. It represents the lower limit for the
 // number of replica pods to which the autoscaler can scale down.
-type HpaMinPods struct {
+type HPAMinPods struct {
 	metric.Int64UpDownCounter
 }
 
-// NewHpaMinPods returns a new HpaMinPods instrument.
-func NewHpaMinPods(
+// NewHPAMinPods returns a new HPAMinPods instrument.
+func NewHPAMinPods(
 	m metric.Meter,
 	opt ...metric.Int64UpDownCounterOption,
-) (HpaMinPods, error) {
+) (HPAMinPods, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HpaMinPods{noop.Int64UpDownCounter{}}, nil
+		return HPAMinPods{noop.Int64UpDownCounter{}}, nil
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -841,28 +841,28 @@ func NewHpaMinPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HpaMinPods{noop.Int64UpDownCounter{}}, err
+	    return HPAMinPods{noop.Int64UpDownCounter{}}, err
 	}
-	return HpaMinPods{i}, nil
+	return HPAMinPods{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HpaMinPods) Inst() metric.Int64UpDownCounter {
+func (m HPAMinPods) Inst() metric.Int64UpDownCounter {
 	return m.Int64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
-func (HpaMinPods) Name() string {
+func (HPAMinPods) Name() string {
 	return "k8s.hpa.min_pods"
 }
 
 // Unit returns the semantic convention unit of the instrument
-func (HpaMinPods) Unit() string {
+func (HPAMinPods) Unit() string {
 	return "{pod}"
 }
 
 // Description returns the semantic convention description of the instrument
-func (HpaMinPods) Description() string {
+func (HPAMinPods) Description() string {
 	return "The lower limit for the number of replica pods to which the autoscaler can scale down"
 }
 
@@ -876,7 +876,7 @@ func (HpaMinPods) Description() string {
 //
 // [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
 // [`k8s.hpa`]: ../resource/k8s.md#horizontalpodautoscaler
-func (m HpaMinPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+func (m HPAMinPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return

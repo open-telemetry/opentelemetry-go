@@ -94,6 +94,8 @@ acronyms:
   - ASCII
   - ASPNETCore
   - AWS
+  - ActiveMQ
+  - AppHub
   - CICD
   - CPP
   - CPU
@@ -119,6 +121,8 @@ acronyms:
   - EDB
   - EKS
   - EOF
+  - EventGrid
+  - EventHubs
   - FC
   - FaaS
   - FirebirdSQL
@@ -133,6 +137,7 @@ acronyms:
   - GraphQL
   - HANA
   - HBase
+  - HPA
   - HPUX
   - HSQLDB
   - HTML
@@ -141,16 +146,26 @@ acronyms:
   - HanaDB
   - IA64
   - IBM
+  - ICC
   - ID
   - IO
+  - IOS
+  - IOWait
   - IP
+  - IPv4
+  - IPv6
+  - ISO
   - InProc
+  - InfluxDB
   - InstantDB
   - JDBC
+  - JMS
   - JSON
+  - JSONRPC
   - JVM
   - K8S
   - LHS
+  - MCC
   - MNC
   - MSSQL
   - MariaDB
@@ -172,11 +187,13 @@ acronyms:
   - PPC32
   - PPC64
   - PostgreSQL
+  - PubSub
   - QPS
   - QUIC
   - RAM
   - RHS
   - RPC
+  - RabbitMQ
   - ReplicaSet
   - ReplicationController
   - ResourceQuota
@@ -188,7 +205,11 @@ acronyms:
   - SMTP
   - SPDY
   - SQL
+  - SQLite
+  - SQS
   - SSH
+  - ServiceBus
+  - SignalR
   - StatefulSet
   - TCP
   - TLS
@@ -204,6 +225,7 @@ acronyms:
   - VCS
   - VM
   - WebEngine
+  - WebJS
   - XML
   - XMPP
   - XSRF

@@ -33,8 +33,8 @@ var (
 	CPUModeNice CPUModeAttr = "nice"
 	// CPUModeIdle is the none.
 	CPUModeIdle CPUModeAttr = "idle"
-	// CPUModeIowait is the none.
-	CPUModeIowait CPUModeAttr = "iowait"
+	// CPUModeIOWait is the none.
+	CPUModeIOWait CPUModeAttr = "iowait"
 	// CPUModeInterrupt is the none.
 	CPUModeInterrupt CPUModeAttr = "interrupt"
 	// CPUModeSteal is the none.
