@@ -155,6 +155,22 @@ func TestAssertEqualRecord(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "Transform to ignore timestamps",
+			a: Record{
+				Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
+			},
+			b: Record{
+				Timestamp:  y2k,
+				Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
+			},
+			opts: []AssertOption{
+				Transform(func(time.Time) time.Time {
+					return time.Time{}
+				}),
+			},
+			want: true,
+		},
 	}
 
 	for _, tc := range tests {
