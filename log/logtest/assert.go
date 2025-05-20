@@ -25,9 +25,14 @@ type testingT interface {
 	Errorf(format string, args ...any)
 }
 
-func assertEqual[T Recording | Record](t testingT, want, got T, _ ...AssertOption) bool {
+func assertEqual[T Recording | Record](t testingT, want, got T, opts ...AssertOption) bool {
 	if h, ok := t.(interface{ Helper() }); ok {
 		h.Helper()
+	}
+
+	var cfg assertConfig
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
 	}
 
 	cmpOpts := []cmp.Option{
@@ -37,6 +42,7 @@ func assertEqual[T Recording | Record](t testingT, want, got T, _ ...AssertOptio
 		), // Unordered compare of the key values.
 		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
 	}
+	cmpOpts = append(cmpOpts, cfg.cmpOpts...)
 
 	if diff := cmp.Diff(want, got, cmpOpts...); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
@@ -45,9 +51,27 @@ func assertEqual[T Recording | Record](t testingT, want, got T, _ ...AssertOptio
 	return true
 }
 
-type assertConfig struct{}
+type assertConfig struct {
+	cmpOpts []cmp.Option
+}
 
 // AssertOption allows for fine grain control over how AssertEqual operates.
 type AssertOption interface {
 	apply(cfg assertConfig) assertConfig
+}
+
+type fnOption func(cfg assertConfig) assertConfig
+
+func (fn fnOption) apply(cfg assertConfig) assertConfig {
+	return fn(cfg)
+}
+
+// Transform applies a transformation f function that
+// converts values of a certain type into that of another.
+// f must not mutate A in any way.
+func Transform[A, B any](f func(A) B) AssertOption {
+	return fnOption(func(cfg assertConfig) assertConfig {
+		cfg.cmpOpts = append(cfg.cmpOpts, cmp.Transformer("", f))
+		return cfg
+	})
 }
