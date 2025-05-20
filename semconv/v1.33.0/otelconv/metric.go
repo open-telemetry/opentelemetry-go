@@ -698,7 +698,7 @@ func (SDKExporterOperationDuration) AttrComponentType(val ComponentTypeAttr) att
 // "rpc.grpc.status_code" semantic convention. It represents the gRPC status code
 // of the last gRPC requests performed in scope of this export call.
 func (SDKExporterOperationDuration) AttrRPCGRPCStatusCode(val RPCGRPCStatusCodeAttr) attribute.KeyValue {
-	return attribute.int64("rpc.grpc.status_code", int64(val))
+	return attribute.Int64("rpc.grpc.status_code", int64(val))
 }
 
 // AttrServerAddress returns an optional attribute for the "server.address"
