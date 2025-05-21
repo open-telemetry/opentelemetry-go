@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.32.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.32.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.31.0`(#6782)
 - Add `Transform` option in `go.opentelemetry.io/otel/log/logtest`. (#6794)
+- Add `Desc` option in `go.opentelemetry.io/otel/log/logtest`. (#6796)
 
 ### Removed
 
