@@ -2,6 +2,11 @@ module go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
 
 go 1.23.0
 
+retract (
+	// Contains broken dependency on go.opentelemetry.io/otel/sdk/log/logtest.
+	v0.12.0
+)
+
 require (
 	github.com/cenkalti/backoff/v5 v5.0.2
 	github.com/google/go-cmp v0.7.0
