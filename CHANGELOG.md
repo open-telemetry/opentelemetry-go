@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` module that contains invalid dependencies. (#6804)
 - Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` module that contains invalid dependencies. (#6804)
-- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`` module that contains invalid dependencies. (#6804)
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module that contains invalid dependencies. (#6804)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
