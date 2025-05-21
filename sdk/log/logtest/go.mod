@@ -5,9 +5,9 @@ go 1.23.0
 require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.36.0
-	go.opentelemetry.io/otel/log v0.12.0
+	go.opentelemetry.io/otel/log v0.12.1
 	go.opentelemetry.io/otel/sdk v1.36.0
-	go.opentelemetry.io/otel/sdk/log v0.12.0
+	go.opentelemetry.io/otel/sdk/log v0.12.1
 	go.opentelemetry.io/otel/trace v1.36.0
 )
 
