@@ -10,7 +10,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixes
 
-- Use the proper dependency version for the `go.opentelemetry.io/otel/sdk/log/logtest`. (#6800)
+- Use the proper dependency version of `go.opentelemetry.io/otel/sdk/log/logtest` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#6800)
+- Use the proper dependency version of `go.opentelemetry.io/otel/sdk/log/logtest` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6800)
+- Use the proper dependency version of `go.opentelemetry.io/otel/sdk/log/logtest` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#6800)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
