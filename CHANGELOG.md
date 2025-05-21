@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixes
+
+- Use the proper dependency version for the `go.opentelemetry.io/otel/sdk/log/logtest`. (#6800)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
