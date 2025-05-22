@@ -162,6 +162,14 @@ func TestEquivalence(t *testing.T) {
 		}
 	})
 
+	t.Run("Equality operator", func(t *testing.T) {
+		for _, p := range pairs {
+			if p[0] != p[1] {
+				t.Errorf("Expected %v to be equal to %v", p[0], p[1])
+			}
+		}
+	})
+
 	t.Run("Set", func(t *testing.T) {
 		// Maintain backwards compatibility.
 		for _, p := range pairs {
