@@ -1073,7 +1073,7 @@ const (
 	// "arn:aws:secretsmanager:us-east-1:123456789012:secret:SecretName-6RandomCharacters"
 	AWSSecretsmanagerSecretARNKey = attribute.Key("aws.secretsmanager.secret.arn")
 
-	// AWSSnsTopicARNKey is the attribute Key conforming to the "aws.sns.topic.arn"
+	// AWSSNSTopicARNKey is the attribute Key conforming to the "aws.sns.topic.arn"
 	// semantic conventions. It represents the ARN of the AWS SNS Topic. An Amazon
 	// SNS [topic] is a logical access point that acts as a communication channel.
 	//
@@ -1084,7 +1084,7 @@ const (
 	// Examples: "arn:aws:sns:us-east-1:123456789012:mystack-mytopic-NZJ5JSMVGFIE"
 	//
 	// [topic]: https://docs.aws.amazon.com/sns/latest/dg/sns-create-topic.html
-	AWSSnsTopicARNKey = attribute.Key("aws.sns.topic.arn")
+	AWSSNSTopicARNKey = attribute.Key("aws.sns.topic.arn")
 
 	// AWSSQSQueueURLKey is the attribute Key conforming to the "aws.sqs.queue.url"
 	// semantic conventions. It represents the URL of the AWS SQS Queue. It's a
@@ -1491,14 +1491,14 @@ func AWSSecretsmanagerSecretARN(val string) attribute.KeyValue {
 	return AWSSecretsmanagerSecretARNKey.String(val)
 }
 
-// AWSSnsTopicARN returns an attribute KeyValue conforming to the
+// AWSSNSTopicARN returns an attribute KeyValue conforming to the
 // "aws.sns.topic.arn" semantic conventions. It represents the ARN of the AWS SNS
 // Topic. An Amazon SNS [topic] is a logical access point that acts as a
 // communication channel.
 //
 // [topic]: https://docs.aws.amazon.com/sns/latest/dg/sns-create-topic.html
-func AWSSnsTopicARN(val string) attribute.KeyValue {
-	return AWSSnsTopicARNKey.String(val)
+func AWSSNSTopicARN(val string) attribute.KeyValue {
+	return AWSSNSTopicARNKey.String(val)
 }
 
 // AWSSQSQueueURL returns an attribute KeyValue conforming to the
