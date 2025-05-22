@@ -52,6 +52,7 @@ text_maps:
     string: String
     string[]: StringSlice
     int: Int
+    int64: Int64
     int[]: IntSlice
     double: Float64
     double[]: FloatSlice
