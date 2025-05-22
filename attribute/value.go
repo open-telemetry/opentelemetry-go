@@ -149,6 +149,7 @@ func SliceValue(v []Value) Value {
 }
 
 // MapValue creates a MAP Value.
+// v is sorted by key.
 func MapValue(v []KeyValue) Value {
 	sv := make([]KeyValue, len(v))
 	copy(sv, v)

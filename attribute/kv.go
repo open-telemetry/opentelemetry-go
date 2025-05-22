@@ -74,6 +74,7 @@ func Slice(k string, v []Value) KeyValue {
 }
 
 // Map creates a KeyValue with a Map Value type.
+// v are sorted by key.
 func Map(k string, v []KeyValue) KeyValue {
 	return Key(k).Map(v)
 }

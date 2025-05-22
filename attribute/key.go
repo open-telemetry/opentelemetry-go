@@ -129,6 +129,7 @@ func (k Key) Slice(v []Value) KeyValue {
 }
 
 // Map creates a KeyValue instance with a MAP Value.
+// v is sorted by key.
 //
 // If creating both a key and value at the same time, use the provided
 // convenience function instead -- Map(name, value).
