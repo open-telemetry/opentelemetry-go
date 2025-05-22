@@ -17,6 +17,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+## [0.12.2] 2025-05-22
+
+### Fixed
+
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` module that contains invalid dependencies. (#6804)
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` module that contains invalid dependencies. (#6804)
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module that contains invalid dependencies. (#6804)
+
 ## [0.12.1] 2025-05-21
 
 ### Fixes
@@ -3303,7 +3311,8 @@ It contains api and sdk for trace and meter.
 - CODEOWNERS file to track owners of this project.
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.36.0...HEAD
-[0.12.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/logs-v0.12.1
+[0.12.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.2
+[0.12.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.1
 [1.36.0/0.58.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.36.0
 [1.35.0/0.57.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.35.0
 [1.34.0/0.56.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.34.0

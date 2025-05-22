@@ -66,8 +66,6 @@ linters:
               desc: Do not use cross-module internal packages.
             - pkg: go.opentelemetry.io/otel/internal/internaltest
               desc: Do not use cross-module internal packages.
-            - pkg: go.opentelemetry.io/otel/internal/matchers
-              desc: Do not use cross-module internal packages.
         otlp-internal:
           files:
             - '!**/exporters/otlp/internal/**/*.go'
