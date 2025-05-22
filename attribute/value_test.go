@@ -188,6 +188,93 @@ func TestEquivalence(t *testing.T) {
 	})
 }
 
+func TestNotEquivalence(t *testing.T) {
+	pairs := [][2]attribute.KeyValue{
+		{
+			attribute.Bool("Bool", true),
+			attribute.Bool("Bool", false),
+		},
+		{
+			attribute.BoolSlice("BoolSlice", []bool{true, false, true}),
+			attribute.BoolSlice("BoolSlice", []bool{true, true, true}),
+		},
+		{
+			attribute.Int("Int", 34),
+			attribute.Int("Int", 32),
+		},
+		{
+			attribute.IntSlice("IntSlice", []int{312, 1, -2}),
+			attribute.IntSlice("IntSlice", []int{312, 2, -2}),
+		},
+		{
+			attribute.Int64("Int64", 98),
+			attribute.Int64("Int64", 97),
+		},
+		{
+			attribute.Int64Slice("Int64Slice", []int64{12, 1298, -219, 2}),
+			attribute.Int64Slice("Int64Slice", []int64{12, 1298, -219, 1}),
+		},
+		{
+			attribute.Float64("Float64", 19.09),
+			attribute.Float64("Float64", 22.09),
+		},
+		{
+			attribute.Float64Slice("Float64Slice", []float64{12398.1, -37.1713873737, 3}),
+			attribute.Float64Slice("Float64Slice", []float64{12398.1, -37.1713873737, 5}),
+		},
+		{
+			attribute.String("String", "string value"),
+			attribute.String("String", "another value"),
+		},
+		{
+			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+			attribute.StringSlice("StringSlice", []string{"one", "two"}),
+		},
+	}
+
+	t.Run("Distinct", func(t *testing.T) {
+		for _, p := range pairs {
+			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
+			m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
+			_, ok := m[s1.Equivalent()]
+			assert.Falsef(t, ok, "Distinct comparison of %s type: equivalent", p[0].Value.Type())
+			assert.Falsef(
+				t,
+				ok,
+				"Distinct comparison of %s type: equivalent: %s == %s",
+				p[0].Value.Type(),
+				s0.Encoded(attribute.DefaultEncoder()),
+				s1.Encoded(attribute.DefaultEncoder()),
+			)
+		}
+	})
+
+	t.Run("Equality operator", func(t *testing.T) {
+		for _, p := range pairs {
+			if p[0] == p[1] {
+				t.Errorf("Expected %v to not be equal to %v", p[0], p[1])
+			}
+		}
+	})
+
+	t.Run("Set", func(t *testing.T) {
+		// Maintain backwards compatibility.
+		for _, p := range pairs {
+			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
+			m := map[attribute.Set]struct{}{s0: {}}
+			_, ok := m[s1]
+			assert.Falsef(
+				t,
+				ok,
+				"Set comparison of %s type: t equivalent: %s == %s",
+				p[0].Value.Type(),
+				s0.Encoded(attribute.DefaultEncoder()),
+				s1.Encoded(attribute.DefaultEncoder()),
+			)
+		}
+	})
+}
+
 func TestAsSlice(t *testing.T) {
 	bs1 := []bool{true, false, true}
 	kv := attribute.BoolSlice("BoolSlice", bs1)
