@@ -86,11 +86,10 @@ func TestKeyValueValid(t *testing.T) {
 			kv:    attribute.Key("").Bool(true),
 		},
 		{
-			desc:  "INVALID value type should be invalid",
-			valid: false,
+			desc:  "empty value type should be valid",
+			valid: true,
 			kv: attribute.KeyValue{
-				Key: attribute.Key("valid key"),
-				// Default type is INVALID.
+				Key:   attribute.Key("valid key"),
 				Value: attribute.Value{},
 			},
 		},

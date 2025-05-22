@@ -26,24 +26,46 @@ type Value struct {
 }
 
 const (
-	// INVALID is used for a Value with no value set.
-	INVALID Type = iota
+	// EMPTY is used for a Value with no value set.
+	EMPTY Type = iota
+
 	// BOOL is a boolean Type Value.
 	BOOL
+
 	// INT64 is a 64-bit signed integral Type Value.
 	INT64
+
 	// FLOAT64 is a 64-bit floating point Type Value.
 	FLOAT64
+
 	// STRING is a string Type Value.
 	STRING
+
 	// BOOLSLICE is a slice of booleans Type Value.
 	BOOLSLICE
+
 	// INT64SLICE is a slice of 64-bit signed integral numbers Type Value.
 	INT64SLICE
+
 	// FLOAT64SLICE is a slice of 64-bit floating point numbers Type Value.
 	FLOAT64SLICE
+
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+
+	// BYTES is a slice of bytes Type value.
+	BYTES
+
+	// SLICE is a slice of heterogeneous values Type value.
+	SLICE
+
+	// MAP is a map of heterogeneous values Type value.
+	MAP
+
+	// INVALID is used for a Value with no value set.
+	//
+	// Deprecated: Use EMPTY instead as an empty value is a valid value.
+	INVALID = EMPTY
 )
 
 // BoolValue creates a BOOL Value.
