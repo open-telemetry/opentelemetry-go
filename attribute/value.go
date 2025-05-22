@@ -138,6 +138,14 @@ func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, iface: attribute.StringSliceValue(v)}
 }
 
+// SliceValue creates a SLICE Value.
+func SliceValue(v []Value) Value {
+	var zero Value
+	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero))).Elem()
+	reflect.Copy(cp, reflect.ValueOf(v))
+	return Value{vtype: SLICE, iface: cp.Interface()}
+}
+
 // Type returns a type of the Value.
 func (v Value) Type() Type {
 	return v.vtype
