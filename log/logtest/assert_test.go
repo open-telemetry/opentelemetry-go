@@ -5,10 +5,12 @@ package logtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
 )
@@ -20,7 +22,7 @@ type mockTestingT struct {
 }
 
 func (m *mockTestingT) Errorf(format string, args ...any) {
-	m.errors = append(m.errors, format)
+	m.errors = append(m.errors, fmt.Sprintf(format, args...))
 }
 
 func TestAssertEqual(t *testing.T) {
@@ -185,4 +187,19 @@ func TestAssertEqualRecord(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDesc(t *testing.T) {
+	mockT := &mockTestingT{}
+	a := Record{
+		Attributes: []log.KeyValue{log.String("foo", "bar")},
+	}
+	b := Record{
+		Attributes: []log.KeyValue{log.Int("n", 1)},
+	}
+
+	assertEqual(mockT, a, b, Desc("custom message, %s", "test"))
+
+	require.Len(t, mockT.errors, 1, "expected one error")
+	assert.Contains(t, mockT.errors[0], "custom message, test\n", "expected custom message")
 }
