@@ -4,9 +4,11 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
@@ -144,6 +146,20 @@ func SliceValue(v []Value) Value {
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero))).Elem()
 	reflect.Copy(cp, reflect.ValueOf(v))
 	return Value{vtype: SLICE, iface: cp.Interface()}
+}
+
+// MapValue creates a MAP Value.
+func MapValue(v []KeyValue) Value {
+	sv := make([]KeyValue, len(v))
+	copy(sv, v)
+	slices.SortFunc(sv, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	var zero KeyValue
+	cp := reflect.New(reflect.ArrayOf(len(sv), reflect.TypeOf(zero))).Elem()
+	reflect.Copy(cp, reflect.ValueOf(sv))
+	return Value{vtype: MAP, iface: cp.Interface()}
 }
 
 // Type returns a type of the Value.

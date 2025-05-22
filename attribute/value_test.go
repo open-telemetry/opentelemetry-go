@@ -147,6 +147,10 @@ func TestEquivalence(t *testing.T) {
 			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.SliceValue([]attribute.Value{attribute.IntValue(3)})}),
 			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.SliceValue([]attribute.Value{attribute.IntValue(3)})}),
 		},
+		{
+			attribute.Map("Map", []attribute.KeyValue{attribute.Int("foo", 1), attribute.Int("bar", 2)}),
+			attribute.Map("Map", []attribute.KeyValue{attribute.Int("bar", 2), attribute.Int("foo", 1)}),
+		},
 	}
 
 	t.Run("Distinct", func(t *testing.T) {
@@ -237,6 +241,10 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.SliceValue([]attribute.Value{attribute.IntValue(3)})}),
 			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.SliceValue([]attribute.Value{attribute.IntValue(5)})}),
+		},
+		{
+			attribute.Map("Map", []attribute.KeyValue{attribute.Int("key", 1)}),
+			attribute.Map("Map", []attribute.KeyValue{attribute.Int("key", 2)}),
 		},
 	}
 
