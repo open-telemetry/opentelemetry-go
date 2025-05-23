@@ -146,7 +146,6 @@ func TestOTelSpanContextToOC(t *testing.T) {
 }
 
 func TestInstallTraceBridge(t *testing.T) {
-	// Store the original DefaultTracer to restore it later
 	originalTracer := octrace.DefaultTracer
 	defer func() {
 		octrace.DefaultTracer = originalTracer
@@ -160,7 +159,7 @@ func TestInstallTraceBridge(t *testing.T) {
 		{
 			name:             "install with default options",
 			opts:             nil,
-			expectValidSpans: false, // Default uses global no-op tracer provider
+			expectValidSpans: false,
 		},
 		{
 			name: "install with custom tracer provider",
@@ -185,29 +184,56 @@ func TestInstallTraceBridge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beforeTracer := octrace.DefaultTracer
+
 			InstallTraceBridge(tt.opts...)
 
-			// Verify that DefaultTracer was changed
-			assert.NotEqual(t, beforeTracer, octrace.DefaultTracer, "DefaultTracer should be updated after InstallTraceBridge")
-			assert.NotNil(t, octrace.DefaultTracer, "DefaultTracer should not be nil after InstallTraceBridge")
+			assert.NotEqual(
+				t,
+				beforeTracer,
+				octrace.DefaultTracer,
+				"DefaultTracer should be updated",
+			)
+			assert.NotNil(
+				t,
+				octrace.DefaultTracer,
+				"DefaultTracer should not be nil",
+			)
 
-			// Verify that the installed tracer can create spans
-			ctx, span := octrace.DefaultTracer.StartSpan(context.Background(), "test-span")
-			assert.NotNil(t, span, "Should be able to create spans with the installed tracer")
+			ctx, span := octrace.DefaultTracer.StartSpan(
+				context.Background(),
+				"test-span",
+			)
+			assert.NotNil(
+				t,
+				span,
+				"Should be able to create spans",
+			)
 			assert.NotNil(t, ctx, "Should return a valid context")
 
-			// Verify the span has a span context (may be empty for no-op tracers)
 			spanContext := span.SpanContext()
 			if tt.expectValidSpans {
-				// For real tracer providers, expect non-zero IDs
-				assert.NotEqual(t, octrace.TraceID{}, spanContext.TraceID, "Span should have a non-zero TraceID")
-				assert.NotEqual(t, octrace.SpanID{}, spanContext.SpanID, "Span should have a non-zero SpanID")
+				assert.NotEqual(
+					t,
+					octrace.TraceID{},
+					spanContext.TraceID,
+					"Span should have a non-zero TraceID",
+				)
+				assert.NotEqual(
+					t,
+					octrace.SpanID{},
+					spanContext.SpanID,
+					"Span should have a non-zero SpanID",
+				)
 			}
+
 			span.End()
 
-			// Verify that the tracer can be used to get spans from context
 			spanFromContext := octrace.DefaultTracer.FromContext(ctx)
-			assert.NotNil(t, spanFromContext, "Should be able to get span from context")
+			assert.NotNil(
+				t,
+				spanFromContext,
+				"Should be able to get span from context",
+			)
 		})
 	}
 }
