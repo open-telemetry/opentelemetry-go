@@ -305,7 +305,9 @@ func TestPrometheusExporter(t *testing.T) {
 			name:          "empty resource",
 			emptyResource: true,
 			expectedFile:  "testdata/empty_resource.txt",
-			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+			recordMetrics: func(ctx context.Context, _ otelmetric.Meter) {
+				// No instrumentation name/version/attributes
+				meter := metric.NewMeterProvider().Meter("")
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
