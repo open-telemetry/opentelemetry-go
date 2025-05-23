@@ -44,10 +44,15 @@ func (e EnvCarrier) Set(key, value string) {
 }
 
 // Keys lists the keys stored in this carrier.
-// This method is not implemented for EnvCarrier as it is not possible to
-// list all environment variables in a portable way.
+// This returns all the keys in the environment variables.
 func (EnvCarrier) Keys() []string {
-	// I don't know why TextMapCarrier even has a Keys method.
-	// It looks like it was some mistake in the original design.
-	return nil
+	keys := make([]string, 0, len(os.Environ()))
+	for _, kv := range os.Environ() {
+		kvPair := strings.SplitN(kv, "=", 2)
+		if len(kvPair) < 1 {
+			continue
+		}
+		keys = append(keys, kvPair[0])
+	}
+	return keys
 }
