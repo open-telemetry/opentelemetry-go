@@ -113,7 +113,7 @@ const (
 {%- macro generate_funcs(group, pkg="") -%}
 {%- for attribute in group.attributes if not attribute is enum %}
 {#- TODO: Handle template attributes. #}
-{%- if not attribute.type is template_type %}
+{%- if not attribute.type is template_type and attribute.type != "any" %}
 
 {{ [to_go_name(attribute.name, pkg) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
 func {{to_go_name(attribute.name, pkg)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
