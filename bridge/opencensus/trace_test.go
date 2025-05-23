@@ -113,7 +113,6 @@ func TestOTelSpanContextToOC(t *testing.T) {
 
 			assert.Equal(t, tt.expected.TraceID, got.TraceID, "TraceID should be correctly converted")
 
-			// Verify SpanID
 			assert.Equal(t, tt.expected.SpanID, got.SpanID, "SpanID should be correctly converted")
 
 			assert.Equal(t, tt.expected.TraceOptions, got.TraceOptions, "TraceOptions should be correctly converted")
