@@ -111,7 +111,6 @@ func TestOTelSpanContextToOC(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := OTelSpanContextToOC(tt.input)
 
-			// Verify TraceID
 			assert.Equal(t, tt.expected.TraceID, got.TraceID, "TraceID should be correctly converted")
 
 			// Verify SpanID
