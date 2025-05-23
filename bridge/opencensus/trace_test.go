@@ -116,7 +116,6 @@ func TestOTelSpanContextToOC(t *testing.T) {
 			// Verify SpanID
 			assert.Equal(t, tt.expected.SpanID, got.SpanID, "SpanID should be correctly converted")
 
-			// Verify TraceOptions
 			assert.Equal(t, tt.expected.TraceOptions, got.TraceOptions, "TraceOptions should be correctly converted")
 
 			// Verify Tracestate is populated when input has tracestate
