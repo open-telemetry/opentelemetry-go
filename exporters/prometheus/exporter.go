@@ -273,6 +273,17 @@ func addExponentialHistogramMetric[N int64 | float64](
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 
+		// Prometheus native histograms support scales in the range [-4, 8]
+		scale := dp.Scale
+		if scale < -4 {
+			// Reject scales below -4 as they cannot be represented in Prometheus
+			otel.Handle(fmt.Errorf("exponential histogram scale %d is below minimum supported scale -4, skipping data point", scale))
+			continue
+		}
+		if scale > 8 {
+			scale = 8
+		}
+
 		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
 		positiveBuckets := make(map[int]int64)
 		for i, c := range dp.PositiveBucket.Counts {
@@ -299,7 +310,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			positiveBuckets,
 			negativeBuckets,
 			dp.ZeroCount,
-			dp.Scale,
+			scale,
 			dp.ZeroThreshold,
 			dp.StartTime,
 			values...)

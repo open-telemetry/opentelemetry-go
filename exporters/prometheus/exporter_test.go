@@ -10,6 +10,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -22,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
@@ -1179,4 +1181,90 @@ func TestExemplars(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExponentialHistogramScaleValidation(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("normal_exponential_histogram_works", func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+		require.NoError(t, err)
+
+		provider := metric.NewMeterProvider(
+			metric.WithReader(exporter),
+			metric.WithResource(resource.Default()),
+		)
+		defer func() {
+			err := provider.Shutdown(ctx)
+			require.NoError(t, err)
+		}()
+
+		// Create a histogram with a valid scale
+		meter := provider.Meter("test")
+		hist, err := meter.Float64Histogram(
+			"test_exponential_histogram",
+			otelmetric.WithDescription("test histogram"),
+		)
+		require.NoError(t, err)
+		hist.Record(ctx, 1.0)
+		hist.Record(ctx, 10.0)
+		hist.Record(ctx, 100.0)
+
+		metricFamilies, err := registry.Gather()
+		require.NoError(t, err)
+		assert.Greater(t, len(metricFamilies), 0)
+	})
+
+	t.Run("error_handling_for_invalid_scales", func(t *testing.T) {
+		var capturedError error
+		originalHandler := otel.GetErrorHandler()
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			capturedError = err
+		}))
+		defer otel.SetErrorHandler(originalHandler)
+
+		now := time.Now()
+		invalidScaleData := metricdata.ExponentialHistogramDataPoint[float64]{
+			Attributes:    attribute.NewSet(),
+			StartTime:     now,
+			Time:          now,
+			Count:         1,
+			Sum:           10.0,
+			Scale:         -5, // Invalid scale below -4
+			ZeroCount:     0,
+			ZeroThreshold: 0.0,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: 1,
+				Counts: []uint64{1},
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: 1,
+				Counts: []uint64{},
+			},
+		}
+
+		ch := make(chan prometheus.Metric, 10)
+		defer close(ch)
+
+		histogram := metricdata.ExponentialHistogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{invalidScaleData},
+		}
+
+		m := metricdata.Metrics{
+			Name:        "test_histogram",
+			Description: "test",
+		}
+
+		addExponentialHistogramMetric(ch, histogram, m, "test_histogram", keyVals{})
+		assert.Error(t, capturedError)
+		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
+		select {
+		case <-ch:
+			t.Error("Expected no metrics to be produced for invalid scale")
+		default:
+			// No metrics were produced for the invalid scale
+		}
+	})
 }
