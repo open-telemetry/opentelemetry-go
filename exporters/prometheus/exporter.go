@@ -30,9 +30,6 @@ const (
 	targetInfoMetricName  = "target_info"
 	targetInfoDescription = "Target metadata"
 
-	scopeInfoMetricName  = "otel_scope_info"
-	scopeInfoDescription = "Instrumentation Scope metadata"
-
 	scopeLabelPrefix  = "otel_scope_"
 	scopeNameLabel    = scopeLabelPrefix + "name"
 	scopeVersionLabel = scopeLabelPrefix + "version"
