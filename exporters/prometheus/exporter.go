@@ -34,10 +34,10 @@ const (
 	scopeInfoMetricName  = "otel_scope_info"
 	scopeInfoDescription = "Instrumentation Scope metadata"
 
-	scopeLabelPrefix     = "otel_scope_"
-	scopeNameLabel     = scopeLabelPrefix + "_name"
-	scopeVersionLabel  = scopeLabelPrefix + "_version"
-	scopeSchemaLabel = scopeLabelPrefix + "_schema_url"
+	scopeLabelPrefix  = "otel_scope_"
+	scopeNameLabel    = scopeLabelPrefix + "_name"
+	scopeVersionLabel = scopeLabelPrefix + "_version"
+	scopeSchemaLabel  = scopeLabelPrefix + "_schema_url"
 
 	traceIDExemplarKey = "trace_id"
 	spanIDExemplarKey  = "span_id"
@@ -221,7 +221,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes)
 			for i := range attrKeys {
-				attrKeys[i] = scopeAttrsLabelPrefix + attrKeys[i]
+				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
 			}
 			kv.keys = append(kv.keys, attrKeys...)
 			kv.vals = append(kv.vals, attrVals...)
