@@ -35,9 +35,9 @@ const (
 	scopeInfoDescription = "Instrumentation Scope metadata"
 
 	scopeLabelPrefix  = "otel_scope_"
-	scopeNameLabel    = scopeLabelPrefix + "_name"
-	scopeVersionLabel = scopeLabelPrefix + "_version"
-	scopeSchemaLabel  = scopeLabelPrefix + "_schema_url"
+	scopeNameLabel    = scopeLabelPrefix + "name"
+	scopeVersionLabel = scopeLabelPrefix + "version"
+	scopeSchemaLabel  = scopeLabelPrefix + "schema_url"
 
 	traceIDExemplarKey = "trace_id"
 	spanIDExemplarKey  = "span_id"
