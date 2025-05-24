@@ -42,7 +42,9 @@ const (
 )
 
 var (
-	errScopeInvalid = errors.New("invalid scope")
+	errScopeInvalid        = errors.New("invalid scope")
+	errEmptyOtelScopeInfo  = errors.New("empty otel_scope_info")
+	errEmptyOtelTargetInfo = errors.New("empty otel_target_info")
 
 	metricsPool = sync.Pool{
 		New: func() interface{} {
@@ -176,7 +178,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		if c.targetInfo == nil && !c.disableTargetInfo {
 			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
 			if err != nil {
-				// If the target info metric is invalid, disable sending it.
+				// If the target info metric is invalid or empty, disable sending it.
 				c.disableTargetInfo = true
 				otel.Handle(err)
 				return
@@ -186,7 +188,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}()
 
-	if !c.disableTargetInfo {
+	if !c.disableTargetInfo && c.targetInfo != nil {
 		ch <- c.targetInfo
 	}
 
@@ -203,8 +205,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 		if !c.disableScopeInfo {
 			scopeInfo, err := c.scopeInfo(scopeMetrics.Scope)
-			if errors.Is(err, errScopeInvalid) {
-				// Do not report the same error multiple times.
+			if errors.Is(err, errScopeInvalid) || scopeInfo == nil {
+				// Do not report the same error multiple times or if scopeInfo is nil.
 				continue
 			}
 			if err != nil {
@@ -435,13 +437,19 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 }
 
 func createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
+	if res.Set().Len() == 0 {
+		return nil, errEmptyOtelTargetInfo
+	}
 	keys, values := getAttrs(*res.Set())
 	desc := prometheus.NewDesc(name, description, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
 func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, error) {
-	attrs := make([]attribute.KeyValue, 0, scope.Attributes.Len()+2) // resource attrs + scope name + scope version
+	if scope.Attributes.Len() == 0 {
+		return nil, errEmptyOtelScopeInfo
+	}
+	attrs := make([]attribute.KeyValue, 0, scope.Attributes.Len()+2)
 	attrs = append(attrs, scope.Attributes.ToSlice()...)
 	attrs = append(attrs, attribute.String(scopeNameLabel, scope.Name))
 	attrs = append(attrs, attribute.String(scopeVersionLabel, scope.Version))
