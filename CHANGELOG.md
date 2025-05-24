@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add metric's schema URL as `otel_scope_schema_url` label in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
 - Add metric's scope attributes as `otel_scope_[attribute]` labels in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
 
+### Fixed
+
+- Validate exponential histogram scale range for Prometheus compatibility in `go.opentelemetry.io/otel/exporters/prometheus`. (#6779)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
