@@ -30,8 +30,13 @@ const (
 	targetInfoMetricName  = "target_info"
 	targetInfoDescription = "Target metadata"
 
-	scopeNameLabel    = "otel_scope_name"
-	scopeVersionLabel = "otel_scope_version"
+	scopeInfoMetricName  = "otel_scope_info"
+	scopeInfoDescription = "Instrumentation Scope metadata"
+
+	scopeLabelPrefix  = "otel_scope_"
+	scopeNameLabel    = scopeLabelPrefix + "name"
+	scopeVersionLabel = scopeLabelPrefix + "version"
+	scopeSchemaLabel  = scopeLabelPrefix + "schema_url"
 
 	traceIDExemplarKey = "trace_id"
 	spanIDExemplarKey  = "span_id"
@@ -190,8 +195,15 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		if !c.disableScopeInfo {
-			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel)
-			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version)
+			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
+			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
+
+			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes)
+			for i := range attrKeys {
+				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
+			}
+			kv.keys = append(kv.keys, attrKeys...)
+			kv.vals = append(kv.vals, attrVals...)
 		}
 
 		kv.keys = append(kv.keys, c.resourceKeyVals.keys...)
