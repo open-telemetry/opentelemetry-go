@@ -3,6 +3,7 @@ module go.opentelemetry.io/otel/internal/tools
 go 1.23.0
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golangci/golangci-lint/v2 v2.1.6
