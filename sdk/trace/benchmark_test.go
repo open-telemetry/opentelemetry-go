@@ -6,8 +6,13 @@ package trace_test
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"sync"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/trace/embedded"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -388,4 +393,49 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			span.End()
 		}
 	}
+}
+
+func BenchmarkTracerCleanup(b *testing.B) {
+	b.Run("WithWeakAndCleanup", func(b *testing.B) {
+		p := sdktrace.NewTracerProvider()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			func() {
+				tr := p.Tracer(fmt.Sprintf("tracer-%d", i))
+				_ = tr
+			}()
+
+			if i%100 == 0 {
+				runtime.GC()
+			}
+		}
+	})
+
+	b.Run("NoWeak, NoCleanup", func(b *testing.B) {
+		type tracer struct {
+			embedded.Tracer
+			provider             *sdktrace.TracerProvider
+			instrumentationScope instrumentation.Scope
+		}
+
+		p := sdktrace.NewTracerProvider()
+		var namedTracer sync.Map
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			func() {
+				name := fmt.Sprintf("tracer-%d", i)
+				scope := instrumentation.Scope{Name: name}
+				_, _ = namedTracer.LoadOrStore(name, &tracer{provider: p, instrumentationScope: scope})
+			}()
+			if i%100 == 0 {
+				runtime.GC()
+			}
+		}
+	})
 }
