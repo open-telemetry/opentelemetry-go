@@ -57,4 +57,5 @@ type FilterProcessor interface {
 type EnabledParameters struct {
 	InstrumentationScope instrumentation.Scope
 	Severity             log.Severity
+	EventName            string
 }

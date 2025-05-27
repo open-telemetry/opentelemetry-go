@@ -52,6 +52,7 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	p := EnabledParameters{
 		InstrumentationScope: l.instrumentationScope,
 		Severity:             param.Severity,
+		EventName:            param.EventName,
 	}
 
 	// If there are more Processors than FilterProcessors,
