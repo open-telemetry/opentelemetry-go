@@ -134,8 +134,8 @@ func render(src, dest string, data any) error {
 // It will first check for hint within root and return that value if found. If
 // not found, it will find all directories in root with a version name and
 // return the version that is less than and closest to the curr version.
-func prevVer(root, curr, hint string) (string, error) {
-	slog.Debug("prevVer", "root", root, "curr", curr, "hint", hint)
+func prevVer(root, cur, hint string) (string, error) {
+	slog.Debug("prevVer", "root", root, "current", cur, "hint", hint)
 	info, err := os.Stat(root)
 	if err != nil {
 		return "", fmt.Errorf("root directory %q not found: %w", root, err)
@@ -153,9 +153,9 @@ func prevVer(root, curr, hint string) (string, error) {
 		}
 	}
 
-	v, err := semver.NewVersion(curr)
+	v, err := semver.NewVersion(cur)
 	if err != nil {
-		return "", fmt.Errorf("invalid current version %q: %w", curr, err)
+		return "", fmt.Errorf("invalid current version %q: %w", cur, err)
 	}
 
 	entries, err := os.ReadDir(root)
@@ -203,7 +203,7 @@ func (sc SemanticConventions) SemVer() string {
 // Migration contains the details about the migration from the previous
 // semantic conventions to the current one.
 type Migration struct {
-	CurrVer  string
+	CurVer   string
 	PrevVer  string
 	Removals []string
 	Renames  []Rename
@@ -214,10 +214,10 @@ type Rename struct {
 	Old, New string
 }
 
-func newMigration(curr, prev string) (*Migration, error) {
-	cDecl, err := decls.GetNames(curr, parse)
+func newMigration(cur, prev string) (*Migration, error) {
+	cDecl, err := decls.GetNames(cur, parse)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing current version %q: %w", curr, err)
+		return nil, fmt.Errorf("error parsing current version %q: %w", cur, err)
 	}
 
 	pDecl, err := decls.GetNames(prev, parse)
@@ -226,7 +226,7 @@ func newMigration(curr, prev string) (*Migration, error) {
 	}
 
 	m := Migration{
-		CurrVer:  filepath.Base(curr),
+		CurVer:   filepath.Base(cur),
 		PrevVer:  filepath.Base(prev),
 		Removals: inAnotB(pDecl, cDecl),
 		Renames:  renames(pDecl, cDecl),
