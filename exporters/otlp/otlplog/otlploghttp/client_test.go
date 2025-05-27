@@ -38,7 +38,7 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	"go.opentelemetry.io/otel/sdk/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 var (
