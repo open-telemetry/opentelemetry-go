@@ -18,6 +18,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add metric's schema URL as `otel_scope_schema_url` label in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
 - Add metric's scope attributes as `otel_scope_[attribute]` labels in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
 
+### Changed
+
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#6830)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#6830)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
