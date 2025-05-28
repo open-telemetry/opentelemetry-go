@@ -24,6 +24,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
 
+### Changed
+
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/bridge/opentracing`. (#6827)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
