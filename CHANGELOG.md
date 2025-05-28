@@ -17,6 +17,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.34.0` version of the OpenTelemetry Semantic Conventions. (#6812)
 - Add metric's schema URL as `otel_scope_schema_url` label in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
 - Add metric's scope attributes as `otel_scope_[attribute]` labels in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
+- Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
+- Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
+
+### Removed
+
+- `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
