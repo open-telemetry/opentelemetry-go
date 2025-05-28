@@ -144,3 +144,96 @@ func TestOTelSpanContextToOC(t *testing.T) {
 		})
 	}
 }
+
+func TestInstallTraceBridge(t *testing.T) {
+	originalTracer := octrace.DefaultTracer
+	defer func() {
+		octrace.DefaultTracer = originalTracer
+	}()
+
+	tests := []struct {
+		name             string
+		opts             []TraceOption
+		expectValidSpans bool
+	}{
+		{
+			name:             "install with default options",
+			opts:             nil,
+			expectValidSpans: false,
+		},
+		{
+			name: "install with custom tracer provider",
+			opts: []TraceOption{
+				WithTracerProvider(trace.NewTracerProvider()),
+			},
+			expectValidSpans: true,
+		},
+		{
+			name: "install with tracer provider with exporter",
+			opts: []TraceOption{
+				WithTracerProvider(
+					trace.NewTracerProvider(
+						trace.WithSyncer(tracetest.NewInMemoryExporter()),
+					),
+				),
+			},
+			expectValidSpans: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beforeTracer := octrace.DefaultTracer
+
+			InstallTraceBridge(tt.opts...)
+
+			assert.NotEqual(
+				t,
+				beforeTracer,
+				octrace.DefaultTracer,
+				"DefaultTracer should be updated",
+			)
+			assert.NotNil(
+				t,
+				octrace.DefaultTracer,
+				"DefaultTracer should not be nil",
+			)
+
+			ctx, span := octrace.DefaultTracer.StartSpan(
+				context.Background(),
+				"test-span",
+			)
+			assert.NotNil(
+				t,
+				span,
+				"Should be able to create spans",
+			)
+			assert.NotNil(t, ctx, "Should return a valid context")
+
+			spanContext := span.SpanContext()
+			if tt.expectValidSpans {
+				assert.NotEqual(
+					t,
+					octrace.TraceID{},
+					spanContext.TraceID,
+					"Span should have a non-zero TraceID",
+				)
+				assert.NotEqual(
+					t,
+					octrace.SpanID{},
+					spanContext.SpanID,
+					"Span should have a non-zero SpanID",
+				)
+			}
+
+			span.End()
+
+			spanFromContext := octrace.DefaultTracer.FromContext(ctx)
+			assert.NotNil(
+				t,
+				spanFromContext,
+				"Should be able to get span from context",
+			)
+		})
+	}
+}
