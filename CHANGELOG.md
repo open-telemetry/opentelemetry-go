@@ -20,6 +20,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
 
+### Removed
+
+- `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
