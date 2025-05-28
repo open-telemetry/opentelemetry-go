@@ -1484,35 +1484,35 @@ func (m MemoryShared) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 // "system.memory.usage" semantic conventions. It represents the reports memory
 // in use by state.
 type MemoryUsage struct {
-	metric.Int64ObservableGauge
+	metric.Int64ObservableUpDownCounter
 }
 
 // NewMemoryUsage returns a new MemoryUsage instrument.
 func NewMemoryUsage(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (MemoryUsage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return MemoryUsage{noop.Int64ObservableGauge{}}, nil
+		return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Int64ObservableUpDownCounter(
 		"system.memory.usage",
-		append([]metric.Int64ObservableGaugeOption{
+		append([]metric.Int64ObservableUpDownCounterOption{
 			metric.WithDescription("Reports memory in use by state."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64ObservableGauge{}}, err
+	    return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m MemoryUsage) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m MemoryUsage) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
