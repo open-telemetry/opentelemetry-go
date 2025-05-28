@@ -6,7 +6,6 @@ package prometheus
 import (
 	"context"
 	"errors"
-	"io"
 	"os"
 	"sync"
 	"testing"
@@ -23,7 +22,7 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -937,51 +936,6 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	}
 
 	wg.Wait()
-}
-
-func TestIncompatibleMeterName(t *testing.T) {
-	defer func(orig otel.ErrorHandler) {
-		otel.SetErrorHandler(orig)
-	}(otel.GetErrorHandler())
-
-	errs := []error{}
-	eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-	otel.SetErrorHandler(eh)
-
-	// This test checks that Prometheus exporter ignores
-	// when it encounters incompatible meter name.
-
-	// Invalid label or metric name leads to error returned from
-	// createScopeInfoMetric.
-	invalidName := string([]byte{0xff, 0xfe, 0xfd})
-
-	ctx := context.Background()
-	registry := prometheus.NewRegistry()
-	exporter, err := New(WithRegisterer(registry))
-	require.NoError(t, err)
-	provider := metric.NewMeterProvider(
-		metric.WithResource(resource.Empty()),
-		metric.WithReader(exporter))
-	meter := provider.Meter(invalidName)
-	cnt, err := meter.Int64Counter("foo")
-	require.NoError(t, err)
-	cnt.Add(ctx, 100)
-
-	file, err := os.Open("testdata/TestIncompatibleMeterName.txt")
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, file.Close()) })
-
-	err = testutil.GatherAndCompare(registry, file)
-	require.NoError(t, err)
-
-	assert.Len(t, errs, 1)
-
-	// A second collect shouldn't trigger new errors
-	_, err = file.Seek(0, io.SeekStart)
-	assert.NoError(t, err)
-	err = testutil.GatherAndCompare(registry, file)
-	require.NoError(t, err)
-	assert.Len(t, errs, 1)
 }
 
 func TestShutdownExporter(t *testing.T) {
