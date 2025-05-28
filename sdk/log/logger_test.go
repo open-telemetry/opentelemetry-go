@@ -231,6 +231,7 @@ func TestLoggerEnabled(t *testing.T) {
 		name             string
 		logger           *logger
 		ctx              context.Context
+		param            log.EnabledParameters
 		expected         bool
 		expectedP0Params []EnabledParameters
 		expectedP1Params []EnabledParameters
@@ -248,10 +249,16 @@ func TestLoggerEnabled(t *testing.T) {
 				WithProcessor(p0),
 				WithProcessor(p1),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:      context.Background(),
+			ctx: context.Background(),
+			param: log.EnabledParameters{
+				Severity:  log.SeverityInfo,
+				EventName: "test_event",
+			},
 			expected: true,
 			expectedP0Params: []EnabledParameters{{
 				InstrumentationScope: instrumentation.Scope{Name: "scope"},
+				Severity:             log.SeverityInfo,
+				EventName:            "test_event",
 			}},
 			expectedP1Params: nil,
 		},
@@ -295,7 +302,7 @@ func TestLoggerEnabled(t *testing.T) {
 			p1.params = nil
 			p2WithDisabled.params = nil
 
-			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
+			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, tc.param))
 			assert.Equal(t, tc.expectedP0Params, p0.params)
 			assert.Equal(t, tc.expectedP1Params, p1.params)
 			assert.Equal(t, tc.expectedP2Params, p2WithDisabled.params)
