@@ -1,0 +1,40 @@
+<!-- Generated. DO NOT MODIFY. -->
+{{ if .PrevVer -}} 
+# Migration from {{ .PrevVer }} to {{ .CurVer }}
+{{ if or .Removals .Renames }}
+The `go.opentelemetry.io/otel/semconv/{{ .CurVer }}` package should be a drop-in replacement for `go.opentelemetry.io/otel/semconv/{{ .PrevVer }}` with the following exceptions.
+{{ if .Renames }}
+## Renames
+
+The following renames have been introduced to better match Go and industry naming standards.
+Be sure to update any use from `go.opentelemetry.io/otel/semconv/{{ .PrevVer }}` with the equivalent in `go.opentelemetry.io/otel/semconv/{{ .CurVer }}`.
+
+| `{{ .PrevVer }}` | `{{ .CurVer }}` |
+| --- | --- |
+{{ range .Renames -}}
+| `{{ .Old }}` | `{{ .New }}` |
+{{ end -}}
+{{ end -}}
+{{ if .Removals }}
+## Removed
+
+The following declarations have been removed.
+Refer to the [OpenTelemetry Semantic Conventions documentation] for deprecation instructions.
+
+If the type is not listed in the documentation as deprecated, it has been removed in this version due to lack of applicability or use.
+If you use any of these non-deprecated declarations in your Go application, please [open an issue] describing your use-case.
+
+{{ range .Removals -}}
+- `{{ . }}`
+{{ end }}
+[OpenTelemetry Semantic Conventions documentation]: https://github.com/open-telemetry/semantic-conventions
+[open an issue]: https://github.com/open-telemetry/opentelemetry-go/issues/new?template=Blank+issue
+{{ end -}}
+{{ else }}
+The `go.opentelemetry.io/otel/semconv/{{ .CurVer }}` package should be a drop-in replacement for `go.opentelemetry.io/otel/semconv/{{ .PrevVer }}`.
+{{ end -}}
+{{ else }}
+# {{ .CurVer }} Migration
+
+The `go.opentelemetry.io/otel/semconv/{{ .CurVer }}` package should be a drop-in replacement for previous versions of the prior `go.opentelemetry.io/otel/semconv`.
+{{ end -}}
