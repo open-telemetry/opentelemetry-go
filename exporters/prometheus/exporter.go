@@ -291,29 +291,9 @@ func downscaleExponentialBucket(bucket metricdata.ExponentialBucket, scaleDelta 
 		}
 	}
 
-	// Trim leading and trailing zeros to minimize memory usage
-	firstNonZero := 0
-	for firstNonZero < len(newCounts) && newCounts[firstNonZero] == 0 {
-		firstNonZero++
-	}
-
-	if firstNonZero == len(newCounts) {
-		// All zeros
-		return metricdata.ExponentialBucket{
-			Offset: newOffset,
-			Counts: []uint64{},
-		}
-	}
-
-	lastNonZero := len(newCounts) - 1
-	for lastNonZero > firstNonZero && newCounts[lastNonZero] == 0 {
-		lastNonZero--
-	}
-
 	return metricdata.ExponentialBucket{
-		//nolint:gosec // firstNonZero is bounded by newCounts length
-		Offset: newOffset + int32(firstNonZero),
-		Counts: newCounts[firstNonZero : lastNonZero+1],
+		Offset: newOffset,
+		Counts: newCounts,
 	}
 }
 
