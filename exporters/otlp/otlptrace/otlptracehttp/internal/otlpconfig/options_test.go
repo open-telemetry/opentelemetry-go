@@ -103,15 +103,6 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test With Endpoint URL With Trailing Slash",
-			opts: []GenericOption{
-				WithEndpointURL("http://someendpoint/somepath/"),
-			},
-			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				assert.Equal(t, "/somepath/", c.Traces.URLPath)
-			},
-		},
-		{
 			name: "Test With Secure Endpoint URL",
 			opts: []GenericOption{
 				WithEndpointURL("https://someendpoint/somepath"),
@@ -196,17 +187,6 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, "env.traces.endpoint", c.Traces.Endpoint)
 				if !grpcOption {
 					assert.Equal(t, "/", c.Traces.URLPath)
-				}
-			},
-		},
-		{
-			name: "Test Environment Signal Specific Endpoint With Trailing Slash",
-			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://env.traces/endpoint/",
-			},
-			asserts: func(t *testing.T, c *Config, grpcOption bool) {
-				if !grpcOption {
-					assert.Equal(t, "/endpoint/", c.Traces.URLPath)
 				}
 			},
 		},
@@ -571,10 +551,10 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "clean traces path",
 			args: args{
-				urlPath:     "https://env_endpoint",
+				urlPath:     "https://env_endpoint/ ",
 				defaultPath: "DefaultTracesPath",
 			},
-			want: "/https:/env_endpoint",
+			want: "/https://env_endpoint/",
 		},
 		{
 			name: "spaces trimmed",
@@ -582,14 +562,6 @@ func TestCleanPath(t *testing.T) {
 				urlPath: " /dir",
 			},
 			want: "/dir",
-		},
-		{
-			name: "clean path empty",
-			args: args{
-				urlPath:     "dir/..",
-				defaultPath: "DefaultTracesPath",
-			},
-			want: "DefaultTracesPath",
 		},
 		{
 			name: "make absolute",
