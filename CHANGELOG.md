@@ -43,7 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
 - Ensure the `noopSpan.tracerProvider` method is not inlined in `go.opentelemetry.io/otel/trace` so the `go.opentelemetry.io/auto` instrumentation can instrument non-recording spans. (#6456)
 - Use a `sync.Pool` instead of allocating `metricdata.ResourceMetrics` in `go.opentelemetry.io/otel/exporters/prometheus`. (#6472)
-- Stop stripping trailing slashes from configured trace endpoint URLs. (#6710)
+- Stop stripping trailing slashes from configured endpoint URLs. (#6710)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
