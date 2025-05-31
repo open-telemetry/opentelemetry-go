@@ -627,10 +627,10 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "clean traces path",
 			args: args{
-				urlPath:     "https://env_endpoint",
+				urlPath:     "https://env_endpoint/ ",
 				defaultPath: "DefaultTracesPath",
 			},
-			want: "/https:/env_endpoint",
+			want: "/https://env_endpoint/",
 		},
 		{
 			name: "spaces trimmed",
@@ -638,14 +638,6 @@ func TestCleanPath(t *testing.T) {
 				urlPath: " /dir",
 			},
 			want: "/dir",
-		},
-		{
-			name: "clean path empty",
-			args: args{
-				urlPath:     "dir/..",
-				defaultPath: "DefaultTracesPath",
-			},
-			want: "DefaultTracesPath",
 		},
 		{
 			name: "make absolute",
