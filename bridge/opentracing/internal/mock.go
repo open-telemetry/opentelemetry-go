@@ -5,7 +5,7 @@ package internal // import "go.opentelemetry.io/otel/bridge/opentracing/internal
 
 import (
 	"context"
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"sync"
 	"time"
@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -44,7 +44,7 @@ type MockTracer struct {
 	TraceFlags            trace.TraceFlags
 
 	randLock sync.Mutex
-	rand     *rand.Rand
+	rand     *rand.ChaCha8
 }
 
 var (
@@ -53,13 +53,15 @@ var (
 )
 
 func NewMockTracer() *MockTracer {
+	u := rand.Uint32()
+	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
 	return &MockTracer{
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
 		SpareContextKeyValues: nil,
 
-		rand: rand.New(rand.NewSource(time.Now().Unix())),
+		rand: rand.NewChaCha8(seed),
 	}
 }
 

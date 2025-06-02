@@ -5,7 +5,7 @@ package baggage
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"strings"
 	"testing"
@@ -17,12 +17,8 @@ import (
 	"go.opentelemetry.io/otel/internal/baggage"
 )
 
-var rng *rand.Rand
-
-func init() {
-	// Seed with a static value to ensure deterministic results.
-	rng = rand.New(rand.NewSource(1))
-}
+// Seed with a static value to ensure deterministic results.
+var rng = rand.New(rand.NewChaCha8([32]byte{}))
 
 func TestValidateKeyChar(t *testing.T) {
 	// ASCII only
@@ -255,7 +251,7 @@ func key(n int) string {
 
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = r[rng.Intn(len(r))]
+		b[i] = r[rng.IntN(len(r))]
 	}
 	return string(b)
 }

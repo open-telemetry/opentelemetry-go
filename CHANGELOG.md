@@ -10,18 +10,81 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- The `go.opentelemetry.io/otel/semconv/v1.33.0` package.
+  The package contains semantic conventions from the `v1.33.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.33.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.32.0.`(#6799)
+- The `go.opentelemetry.io/otel/semconv/v1.34.0` package.
+  The package contains semantic conventions from the `v1.34.0` version of the OpenTelemetry Semantic Conventions. (#6812)
+- Add metric's schema URL as `otel_scope_schema_url` label in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
+- Add metric's scope attributes as `otel_scope_[attribute]` labels in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
+- Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
+- Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
+
+### Removed
+
+- `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
+
+### Changed
+
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/bridge/opentracing`. (#6827)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/exporters/zipkin`. (#6829)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/metric`. (#6832)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/sdk/resource`. (#6834)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/sdk/trace`. (#6835)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/trace`. (#6836)
+
+### Fixed
+
+- Stop stripping trailing slashes from configured endpoint URLs. (#6710)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [0.12.2] 2025-05-22
+
+### Fixed
+
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` module that contains invalid dependencies. (#6804)
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` module that contains invalid dependencies. (#6804)
+- Retract `v0.12.0` release of `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module that contains invalid dependencies. (#6804)
+
+## [0.12.1] 2025-05-21
+
+### Fixes
+
+- Use the proper dependency version of `go.opentelemetry.io/otel/sdk/log/logtest` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#6800)
+- Use the proper dependency version of `go.opentelemetry.io/otel/sdk/log/logtest` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6800)
+- Use the proper dependency version of `go.opentelemetry.io/otel/sdk/log/logtest` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#6800)
+
+## [1.36.0/0.58.0/0.12.0] 2025-05-20
+
+### Added
+
 - Add exponential histogram support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6421)
 - The `go.opentelemetry.io/otel/semconv/v1.31.0` package.
   The package contains semantic conventions from the `v1.31.0` version of the OpenTelemetry Semantic Conventions.
-  See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`(#6479)
+  See the [migration documentation](./semconv/v1.31.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.30.0`. (#6479)
 - Add `Recording`, `Scope`, and `Record` types in `go.opentelemetry.io/otel/log/logtest`. (#6507)
+- Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#6751)
+- Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#6752)
+- Add `WithHTTPClient` option to configure the `http.Client` used by `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6688)
+- Add `ValuesGetter` in `go.opentelemetry.io/otel/propagation`, a `TextMapCarrier` that supports retrieving multiple values for a single key. (#5973)
+- Add `Values` method to `HeaderCarrier` to implement the new `ValuesGetter` interface in `go.opentelemetry.io/otel/propagation`. (#5973)
+- Update `Baggage` in `go.opentelemetry.io/otel/propagation` to retrieve multiple values for a key when the carrier implements `ValuesGetter`. (#5973)
+- Add `AssertEqual` function in `go.opentelemetry.io/otel/log/logtest`. (#6662)
+- The `go.opentelemetry.io/otel/semconv/v1.32.0` package.
+  The package contains semantic conventions from the `v1.32.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.32.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.31.0`(#6782)
+- Add `Transform` option in `go.opentelemetry.io/otel/log/logtest`. (#6794)
+- Add `Desc` option in `go.opentelemetry.io/otel/log/logtest`. (#6796)
 
 ### Removed
 
 - Drop support for [Go 1.22]. (#6381, #6418)
 - Remove `Resource` field from `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6494)
-- Remove `RecordFactory` type from  `go.opentelemetry.io/otel/log/logtest`. (#6492)
+- Remove `RecordFactory` type from `go.opentelemetry.io/otel/log/logtest`. (#6492)
 - Remove `ScopeRecords`, `EmittedRecord`, and `RecordFactory` types from `go.opentelemetry.io/otel/log/logtest`. (#6507)
+- Remove `AssertRecordEqual` function in `go.opentelemetry.io/otel/log/logtest`, use `AssertEqual` instead. (#6662)
 
 ### Changed
 
@@ -43,10 +106,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Stop percent encoding header environment variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#6392)
 - Ensure the `noopSpan.tracerProvider` method is not inlined in `go.opentelemetry.io/otel/trace` so the `go.opentelemetry.io/auto` instrumentation can instrument non-recording spans. (#6456)
 - Use a `sync.Pool` instead of allocating `metricdata.ResourceMetrics` in `go.opentelemetry.io/otel/exporters/prometheus`. (#6472)
-- Stop stripping trailing slashes from configured endpoint URLs. (#6710)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.35.0/0.57.0/0.11.0] 2025-03-05
 
@@ -3274,7 +3333,10 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.35.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.36.0...HEAD
+[0.12.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.2
+[0.12.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.1
+[1.36.0/0.58.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.36.0
 [1.35.0/0.57.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.35.0
 [1.34.0/0.56.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.34.0
 [1.33.0/0.55.0/0.9.0/0.0.12]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.33.0
