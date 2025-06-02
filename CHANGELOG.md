@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add metric's scope attributes as `otel_scope_[attribute]` labels in `go.opentelemetry.io/otel/exporters/prometheus`. (#5947)
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
+- Changed handling of `go.opentelemetry.io/otel/exporters/prometheus` metric renaming to add unit suffixes when it doesn't match one of the pre-defined values in the unit suffix map. (#6839)
 
 ### Removed
 
