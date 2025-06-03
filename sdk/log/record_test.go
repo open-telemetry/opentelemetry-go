@@ -125,7 +125,7 @@ func TestRecordResource(t *testing.T) {
 	res := resource.NewSchemaless(attribute.Bool("key", true))
 	r.resource = res
 	got := r.Resource()
-	assert.True(t, res.Equal(&got))
+	assert.Equal(t, res, got)
 }
 
 func TestRecordInstrumentationScope(t *testing.T) {
