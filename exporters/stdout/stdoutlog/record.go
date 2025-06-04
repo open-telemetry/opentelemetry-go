@@ -106,7 +106,7 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 		Attributes: make([]keyValue, 0, r.AttributesLen()),
 
-		Resource: &res,
+		Resource: res,
 		Scope:    r.InstrumentationScope(),
 
 		DroppedAttributes: r.DroppedAttributes(),

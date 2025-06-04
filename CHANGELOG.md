@@ -33,6 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/sdk/resource`. (#6834)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/sdk/trace`. (#6835)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/otel/trace`. (#6836)
+- `Record.Resource` now returns `*resource.Resource` instead of `resource.Resource` in `go.opentelemetry.io/otel/sdk/log`. (#6864)
 
 ### Fixed
 
