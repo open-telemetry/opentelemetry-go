@@ -205,6 +205,10 @@ linters:
           - revive
         path: example.*_test\.go
         text: calls to (.+) only in main[(][)] or init[(][)] functions
+      - linters:
+          - revive
+        path: ^schema/v1\.(0|1)/types/types\.go$
+        text: avoid meaningless package names
       # It's okay to not run gosec and perfsprint in a test.
       - linters:
           - gosec
