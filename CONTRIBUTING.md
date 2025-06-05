@@ -651,9 +651,9 @@ should be canceled.
 
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [David Ashpole](https://github.com/dashpole), Google
-- [Robert Pająk](https://github.com/pellared), Splunk
+- [Robert Pająk](https://github.com/pellared), Splunk ([GPG](https://pgp.mit.edu/pks/lookup?op=get&search=0xE5F7C35A4DBE90C2))
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
-- [Tyler Yahn](https://github.com/MrAlias), Splunk
+- [Tyler Yahn](https://github.com/MrAlias), Splunk ([GPG](https://pgp.mit.edu/pks/lookup?search=0x46B0F3E1A8B1BA5A))
 
 ### Emeritus
 
