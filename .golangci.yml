@@ -205,6 +205,8 @@ linters:
           - revive
         path: example.*_test\.go
         text: calls to (.+) only in main[(][)] or init[(][)] functions
+      # Ignore the meaningless types package name until we settle on a better name.
+      # See https://github.com/open-telemetry/opentelemetry-go/issues/6869
       - linters:
           - revive
         path: ^schema/v1\.(0|1)/types/types\.go$
