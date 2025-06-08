@@ -47,6 +47,7 @@ OTEL_EXPORTER_OTLP_CERTIFICATE, OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE (default: no
 the filepath to the trusted certificate to use when verifying a server's TLS credentials.
 OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE takes precedence over OTEL_EXPORTER_OTLP_CERTIFICATE.
 The configuration can be overridden by [WithTLSCredentials], [WithGRPCConn] options.
+For self-signed certificates, this configuration should be used together with [WithTLSCredentials].
 
 OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE, OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE (default: none) -
 the filepath to the client certificate/chain trust for client's private key to use in mTLS communication in PEM format.
