@@ -38,8 +38,8 @@ func Example() {
 	// telemetry.
 }
 
-// ExampleWithTLSCredentials demonstrates how to configure the exporter with certificates, including self-signed certificates.
-func ExampleWithTLSCredentials() {
+// Demonstrates how to configure the exporter using self-signed certificates.
+func Example_selfSignedCertificates() {
 	ctx := context.Background()
 	var grpcExpOpt []otlploggrpc.Option
 	// the filepath to the server's CA certificate
