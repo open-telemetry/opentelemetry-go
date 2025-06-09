@@ -38,15 +38,16 @@ func Example() {
 	// telemetry.
 }
 
+// ExampleWithTLSCredentials demonstrates how to configure the exporter with certificates, including self-signed certificates.
 func ExampleWithTLSCredentials() {
 	ctx := context.Background()
 	var grpcExpOpt []otlploggrpc.Option
-	// the trusted certificate to use when verifying a server's TLS credentials
-	caFile := os.Getenv("OTEL_EXPORTER_OTLP_CERTIFICATE")
-	// the filepath to the client certificate
-	clientCert := os.Getenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE")
+	// the filepath to the server's CA certificate
+	caFile := os.Getenv("CUSTOM_SERVER_CA_CERTIFICATE")
+	// the filepath to the client's certificate
+	clientCert := os.Getenv("CUSTOM_CLIENT_CERTIFICATE")
 	// the filepath to the client's private key
-	clientKey := os.Getenv("OTEL_EXPORTER_OTLP_CLIENT_KEY")
+	clientKey := os.Getenv("CUSTOM_CLIENT_KEY")
 	if caFile != "" && clientCert != "" && clientKey != "" {
 		// mTLS connection
 		tlsCfg := tls.Config{
