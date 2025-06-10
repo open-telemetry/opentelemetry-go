@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
 - Changed handling of `go.opentelemetry.io/otel/exporters/prometheus` metric renaming to add unit suffixes when it doesn't match one of the pre-defined values in the unit suffix map. (#6839)
-- Add example doc for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` Document how to use OTLP exporters with self-signed certificates. (#6661)
+
 ### Removed
 
 - `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
