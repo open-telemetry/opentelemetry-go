@@ -54,7 +54,7 @@ func Example_selfSignedCertificates() {
 			InsecureSkipVerify: false,
 		}
 		// loads CA certificate
-		pool, _ := x509.SystemCertPool()
+		pool := x509.NewCertPool()
 		data, err := os.ReadFile(caFile)
 		if err != nil {
 			panic(err)
