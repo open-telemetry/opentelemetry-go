@@ -423,7 +423,7 @@ func (m Member) String() string {
 
 // Baggage is a list of baggage members representing the baggage-string as
 // defined by the W3C Baggage specification.
-type Baggage struct { //nolint:golint
+type Baggage struct { // nolint:golint
 	list baggage.List
 }
 

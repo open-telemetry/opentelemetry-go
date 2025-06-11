@@ -21,7 +21,7 @@ import (
 // A zero value is valid and represents an empty value.
 type Value struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() // nolint: unused  // This is indeed used.
 
 	// num holds the value for Int64, Float64, and Bool. It holds the length
 	// for String, Bytes, Slice, Map.
@@ -102,7 +102,7 @@ func Float64Value(v float64) Value {
 }
 
 // BoolValue returns a [Value] for a bool.
-func BoolValue(v bool) Value { //nolint:revive // Not a control flag.
+func BoolValue(v bool) Value { // nolint:revive // Not a control flag.
 	var n uint64
 	if v {
 		n = 1

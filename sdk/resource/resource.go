@@ -96,7 +96,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	return &Resource{attrs: s} //nolint
+	return &Resource{attrs: s} // nolint
 }
 
 // String implements the Stringer interface and provides a

@@ -98,7 +98,7 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() // nolint: unused  // This is indeed used.
 }
 
 // NewBatchProcessor decorates the provided exporter

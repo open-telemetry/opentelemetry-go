@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-//nolint:revive // ignoring missing comments for unexported global variables in an internal package.
+// nolint:revive // ignoring missing comments for unexported global variables in an internal package.
 var (
 	ComponentKey     = attribute.Key("component")
 	ServiceKey       = attribute.Key("service")

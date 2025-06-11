@@ -18,7 +18,7 @@ const attributesInlineCount = 5
 // A log record with non-empty event name is interpreted as an event record.
 type Record struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() // nolint: unused  // This is indeed used.
 
 	eventName         string
 	timestamp         time.Time

@@ -66,7 +66,7 @@ type LoggerOption interface {
 // LoggerConfig contains options for a [Logger].
 type LoggerConfig struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() // nolint: unused  // This is indeed used.
 
 	version   string
 	schemaURL string

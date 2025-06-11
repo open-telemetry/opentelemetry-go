@@ -87,7 +87,7 @@ func Float64Value(v float64) Value {
 }
 
 // BoolValue returns a [Value] for a bool.
-func BoolValue(v bool) Value { //nolint:revive // Not a control flag.
+func BoolValue(v bool) Value { // nolint:revive // Not a control flag.
 	var n uint64
 	if v {
 		n = 1

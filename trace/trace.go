@@ -141,7 +141,7 @@ func decodeHex(h string, b []byte) error {
 }
 
 // TraceFlags contains flags that can be set on a SpanContext.
-type TraceFlags byte //nolint:revive // revive complains about stutter of `trace.TraceFlags`.
+type TraceFlags byte // nolint:revive // revive complains about stutter of `trace.TraceFlags`.
 
 // IsSampled returns if the sampling bit is set in the TraceFlags.
 func (tf TraceFlags) IsSampled() bool {

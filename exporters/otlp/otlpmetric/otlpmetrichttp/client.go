@@ -340,7 +340,7 @@ func evaluate(err error) (bool, time.Duration) {
 	// Do not use errors.As here, this should only be flattened one layer. If
 	// there are several chained errors, all the errors above it will be
 	// discarded if errors.As is used instead.
-	rErr, ok := err.(retryableError) //nolint:errorlint
+	rErr, ok := err.(retryableError) // nolint:errorlint
 	if !ok {
 		return false, 0
 	}

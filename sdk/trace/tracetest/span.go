@@ -63,7 +63,7 @@ type SpanStub struct {
 	InstrumentationScope instrumentation.Scope
 
 	// Deprecated: use InstrumentationScope instead.
-	InstrumentationLibrary instrumentation.Library //nolint:staticcheck // This method needs to be define for backwards compatibility
+	InstrumentationLibrary instrumentation.Library // nolint:staticcheck // This method needs to be define for backwards compatibility
 }
 
 // SpanStubFromReadOnlySpan returns a SpanStub populated from ro.
@@ -161,6 +161,6 @@ func (s spanSnapshot) InstrumentationScope() instrumentation.Scope {
 	return s.instrumentationScope
 }
 
-func (s spanSnapshot) InstrumentationLibrary() instrumentation.Library { //nolint:staticcheck // This method needs to be define for backwards compatibility
+func (s spanSnapshot) InstrumentationLibrary() instrumentation.Library { // nolint:staticcheck // This method needs to be define for backwards compatibility
 	return s.instrumentationScope
 }

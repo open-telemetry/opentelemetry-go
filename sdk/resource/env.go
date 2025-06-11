@@ -17,7 +17,7 @@ import (
 
 const (
 	// resourceAttrKey is the environment variable name OpenTelemetry Resource information will be read from.
-	resourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES" //nolint:gosec // False positive G101: Potential hardcoded credentials
+	resourceAttrKey = "OTEL_RESOURCE_ATTRIBUTES" // nolint:gosec // False positive G101: Potential hardcoded credentials
 
 	// svcNameKey is the environment variable name that Service Name information will be read from.
 	svcNameKey = "OTEL_SERVICE_NAME"

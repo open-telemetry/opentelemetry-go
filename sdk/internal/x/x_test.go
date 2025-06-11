@@ -31,7 +31,7 @@ func run(steps ...func(*testing.T)) func(*testing.T) {
 	}
 }
 
-func setenv(k, v string) func(t *testing.T) { //nolint:unparam
+func setenv(k, v string) func(t *testing.T) { // nolint:unparam
 	return func(t *testing.T) { t.Setenv(k, v) }
 }
 
