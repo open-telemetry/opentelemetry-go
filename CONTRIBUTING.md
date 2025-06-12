@@ -651,7 +651,7 @@ should be canceled.
 
 - [Damien Mathieu](https://github.com/dmathieu), Elastic ([GPG](https://keys.openpgp.org/search?q=408B8E44F0873832)
 - [David Ashpole](https://github.com/dashpole), Google
-- [Robert Pająk](https://github.com/pellared), Splunk ([GPG](https://keys.openpgp.org/search?q=0xE5F7C35A4DBE90C2))
+- [Robert Pająk](https://github.com/pellared), Splunk ([GPG](https://keys.openpgp.org/search?q=CDAD3A60476A3DE599AA5092E5F7C35A4DBE90C2))
 - [Sam Xie](https://github.com/XSAM), Splunk ([GPG](https://keys.openpgp.org/search?q=AEA033782371ABB18EE39188B8044925D6FEEBEA))
 - [Tyler Yahn](https://github.com/MrAlias), Splunk ([GPG](https://pgp.mit.edu/pks/lookup?search=0x46B0F3E1A8B1BA5A))
 
