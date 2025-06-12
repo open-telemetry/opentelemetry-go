@@ -150,7 +150,7 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 	)
 
 	if c.exportTimeout > 0 {
-		ctx, cancel = context.WithTimeoutCause(parent, c.exportTimeout, errors.New("export timeout"))
+		ctx, cancel = context.WithTimeoutCause(parent, c.exportTimeout, errors.New("exporter export timeout"))
 	} else {
 		ctx, cancel = context.WithCancel(parent)
 	}
