@@ -268,7 +268,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 	if bsp.o.ExportTimeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeoutCause(ctx, bsp.o.ExportTimeout, errors.New("processor export timeout exceeded"))
+		ctx, cancel = context.WithTimeoutCause(ctx, bsp.o.ExportTimeout, errors.New("processor export timeout"))
 		defer cancel()
 	}
 
