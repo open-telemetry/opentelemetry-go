@@ -498,6 +498,13 @@ func createInfoMetric(name, description string, res *resource.Resource) (prometh
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
+func unitMapGetOrDefault(unit string) string {
+	if promUnit, ok := unitSuffixes[unit]; ok {
+		return promUnit
+	}
+	return unit
+}
+
 var unitSuffixes = map[string]string{
 	// Time
 	"d":   "days",
@@ -556,7 +563,7 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	if c.namespace != "" {
 		name = c.namespace + name
 	}
-	if suffix, ok := unitSuffixes[m.Unit]; ok && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
+	if suffix := unitMapGetOrDefault(m.Unit); suffix != "" && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
 		name += "_" + suffix
 	}
 	if addCounterSuffix {
