@@ -188,6 +188,10 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      - linters:
+          - revive
+        path: schema/v.*/types/.*
+        text: avoid meaningless package names
       # TODO: Having appropriate comments for exported objects helps development,
       # even for objects in internal packages. Appropriate comments for all
       # exported objects should be added and this exclusion removed.
