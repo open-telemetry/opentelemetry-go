@@ -11,14 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/internal/matchers"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func basicTracerProvider(t *testing.T) *TracerProvider {
@@ -61,12 +60,10 @@ func (h *harness) testTracerProvider(subjectFactory func() trace.TracerProvider)
 		t.Run("allow creating an arbitrary number of TracerProvider instances", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
-
 			tp1 := subjectFactory()
 			tp2 := subjectFactory()
 
-			e.Expect(tp1).NotToEqual(tp2)
+			require.NotEqual(t, tp1, tp2)
 		})
 		t.Run("all methods are safe to be called concurrently", func(t *testing.T) {
 			t.Parallel()
@@ -88,18 +85,19 @@ func (h *harness) testTracerProvider(subjectFactory func() trace.TracerProvider)
 				return done
 			}
 
-			matchers.NewExpecter(t).Expect(func() {
-				// Run with multiple TracerProvider to ensure they encapsulate
-				// their own Tracers.
-				tp1 := subjectFactory()
-				tp2 := subjectFactory()
+			require.NotPanics(t,
+				func() {
+					// Run with multiple TracerProvider to ensure they encapsulate
+					// their own Tracers.
+					tp1 := subjectFactory()
+					tp2 := subjectFactory()
 
-				done1 := runner(tp1)
-				done2 := runner(tp2)
+					done1 := runner(tp1)
+					done2 := runner(tp2)
 
-				<-done1
-				<-done2
-			}).NotToPanic()
+					<-done1
+					<-done2
+				})
 		})
 	})
 }
@@ -111,7 +109,6 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 		t.Run("propagates the original context", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			ctxKey := testCtxKey{}
@@ -120,39 +117,34 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			ctx, _ = subject.Start(ctx, "test")
 
-			e.Expect(ctx.Value(ctxKey)).ToEqual(ctxValue)
+			require.Equal(t, ctx.Value(ctxKey), ctxValue)
 		})
 
 		t.Run("returns a span containing the expected properties", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			_, span := subject.Start(context.Background(), "test")
 
-			e.Expect(span).NotToBeNil()
-
-			e.Expect(span.SpanContext().IsValid()).ToBeTrue()
+			require.NotNil(t, span)
+			require.True(t, span.SpanContext().IsValid())
 		})
 
 		t.Run("stores the span on the provided context", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			ctx, span := subject.Start(context.Background(), "test")
 
-			e.Expect(span).NotToBeNil()
-			e.Expect(span.SpanContext()).NotToEqual(trace.SpanContext{})
-			e.Expect(trace.SpanFromContext(ctx)).ToEqual(span)
+			require.NotNil(t, span)
+			require.Equal(t, trace.SpanFromContext(ctx), span)
 		})
 
 		t.Run("starts spans with unique trace and span IDs", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			_, span1 := subject.Start(context.Background(), "span1")
@@ -161,14 +153,13 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 			sc1 := span1.SpanContext()
 			sc2 := span2.SpanContext()
 
-			e.Expect(sc1.TraceID()).NotToEqual(sc2.TraceID())
-			e.Expect(sc1.SpanID()).NotToEqual(sc2.SpanID())
+			require.NotEqual(t, sc1.TraceID(), sc2.TraceID())
+			require.NotEqual(t, sc1.SpanID(), sc2.SpanID())
 		})
 
 		t.Run("propagates a parent's trace ID through the context", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			ctx, parent := subject.Start(context.Background(), "parent")
@@ -177,14 +168,13 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 			psc := parent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
-			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
+			require.Equal(t, csc.TraceID(), psc.TraceID())
+			require.NotEqual(t, csc.SpanID(), psc.SpanID())
 		})
 
 		t.Run("ignores parent's trace ID when new root is requested", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			ctx, parent := subject.Start(context.Background(), "parent")
@@ -193,14 +183,13 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 			psc := parent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID()).NotToEqual(psc.TraceID())
-			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
+			require.NotEqual(t, csc.TraceID(), psc.TraceID())
+			require.NotEqual(t, csc.SpanID(), psc.SpanID())
 		})
 
 		t.Run("propagates remote parent's trace ID through the context", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			_, remoteParent := subject.Start(context.Background(), "remote parent")
@@ -210,14 +199,13 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 			psc := remoteParent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
-			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
+			require.Equal(t, csc.TraceID(), psc.TraceID())
+			require.NotEqual(t, csc.SpanID(), psc.SpanID())
 		})
 
 		t.Run("ignores remote parent's trace ID when new root is requested", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			subject := subjectFactory()
 
 			_, remoteParent := subject.Start(context.Background(), "remote parent")
@@ -227,14 +215,13 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 			psc := remoteParent.SpanContext()
 			csc := child.SpanContext()
 
-			e.Expect(csc.TraceID()).NotToEqual(psc.TraceID())
-			e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
+			require.NotEqual(t, csc.TraceID(), psc.TraceID())
+			require.NotEqual(t, csc.SpanID(), psc.SpanID())
 		})
 
 		t.Run("all methods are safe to be called concurrently", func(t *testing.T) {
 			t.Parallel()
 
-			e := matchers.NewExpecter(t)
 			tracer := subjectFactory()
 
 			ctx, parent := tracer.Start(context.Background(), "span")
@@ -252,8 +239,8 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 							psc := parent.SpanContext()
 							csc := child.SpanContext()
 
-							e.Expect(csc.TraceID()).ToEqual(psc.TraceID())
-							e.Expect(csc.SpanID()).NotToEqual(psc.SpanID())
+							require.Equal(t, csc.TraceID(), psc.TraceID())
+							require.NotEqual(t, csc.SpanID(), psc.SpanID())
 						}(fmt.Sprintf("span %d", i))
 					}
 					wg.Wait()
@@ -262,11 +249,11 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 				return done
 			}
 
-			e.Expect(func() {
+			require.NotPanics(t, func() {
 				done := runner(tracer)
 
 				<-done
-			}).NotToPanic()
+			})
 		})
 	})
 
