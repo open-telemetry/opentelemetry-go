@@ -5,6 +5,7 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -192,7 +193,7 @@ func (c *client) exportContext(parent context.Context) (context.Context, context
 	)
 
 	if c.exportTimeout > 0 {
-		ctx, cancel = context.WithTimeout(parent, c.exportTimeout)
+		ctx, cancel = context.WithTimeoutCause(parent, c.exportTimeout, errors.New("exporter export timeout"))
 	} else {
 		ctx, cancel = context.WithCancel(parent)
 	}
@@ -228,6 +229,8 @@ func retryable(err error) (bool, time.Duration) {
 
 func retryableGRPCStatus(s *status.Status) (bool, time.Duration) {
 	switch s.Code() {
+	// Follows the retryable error codes defined in
+	// https://opentelemetry.io/docs/specs/otlp/#failures
 	case codes.Canceled,
 		codes.DeadlineExceeded,
 		codes.Aborted,
