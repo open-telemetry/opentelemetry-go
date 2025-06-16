@@ -244,6 +244,59 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
+// downscaleExponentialBucket re-aggregates bucket counts when downscaling to a coarser resolution.
+func downscaleExponentialBucket(bucket metricdata.ExponentialBucket, scaleDelta int32) metricdata.ExponentialBucket {
+	if len(bucket.Counts) == 0 || scaleDelta < 1 {
+		return metricdata.ExponentialBucket{
+			Offset: bucket.Offset >> scaleDelta,
+			Counts: append([]uint64(nil), bucket.Counts...), // copy slice
+		}
+	}
+
+	// The new offset is scaled down
+	newOffset := bucket.Offset >> scaleDelta
+
+	// Pre-calculate the new bucket count to avoid growing slice
+	// Each group of 2^scaleDelta buckets will merge into one bucket
+	//nolint:gosec // Length is bounded by slice allocation
+	lastBucketIdx := bucket.Offset + int32(len(bucket.Counts)) - 1
+	lastNewIdx := lastBucketIdx >> scaleDelta
+	newBucketCount := int(lastNewIdx - newOffset + 1)
+
+	if newBucketCount <= 0 {
+		return metricdata.ExponentialBucket{
+			Offset: newOffset,
+			Counts: []uint64{},
+		}
+	}
+
+	newCounts := make([]uint64, newBucketCount)
+
+	// Merge buckets according to the scale difference
+	for i, count := range bucket.Counts {
+		if count == 0 {
+			continue
+		}
+
+		// Calculate which new bucket this count belongs to
+		//nolint:gosec // Index is bounded by loop iteration
+		originalIdx := bucket.Offset + int32(i)
+		newIdx := originalIdx >> scaleDelta
+
+		// Calculate the position in the new counts array
+		position := newIdx - newOffset
+		//nolint:gosec // Length is bounded by allocation
+		if position >= 0 && position < int32(len(newCounts)) {
+			newCounts[position] += count
+		}
+	}
+
+	return metricdata.ExponentialBucket{
+		Offset: newOffset,
+		Counts: newCounts,
+	}
+}
+
 func addExponentialHistogramMetric[N int64 | float64](
 	ch chan<- prometheus.Metric,
 	histogram metricdata.ExponentialHistogram[N],
@@ -258,23 +311,43 @@ func addExponentialHistogramMetric[N int64 | float64](
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 
+		// Prometheus native histograms support scales in the range [-4, 8]
+		scale := dp.Scale
+		if scale < -4 {
+			// Reject scales below -4 as they cannot be represented in Prometheus
+			otel.Handle(fmt.Errorf(
+				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
+				scale))
+			continue
+		}
+
+		// If scale > 8, we need to downscale the buckets to match the clamped scale
+		positiveBucket := dp.PositiveBucket
+		negativeBucket := dp.NegativeBucket
+		if scale > 8 {
+			scaleDelta := scale - 8
+			positiveBucket = downscaleExponentialBucket(dp.PositiveBucket, scaleDelta)
+			negativeBucket = downscaleExponentialBucket(dp.NegativeBucket, scaleDelta)
+			scale = 8
+		}
+
 		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
 		positiveBuckets := make(map[int]int64)
-		for i, c := range dp.PositiveBucket.Counts {
+		for i, c := range positiveBucket.Counts {
 			if c > math.MaxInt64 {
 				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", c))
 				continue
 			}
-			positiveBuckets[int(dp.PositiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
+			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
 		negativeBuckets := make(map[int]int64)
-		for i, c := range dp.NegativeBucket.Counts {
+		for i, c := range negativeBucket.Counts {
 			if c > math.MaxInt64 {
 				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", c))
 				continue
 			}
-			negativeBuckets[int(dp.NegativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
+			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
 		m, err := prometheus.NewConstNativeHistogram(
@@ -284,7 +357,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			positiveBuckets,
 			negativeBuckets,
 			dp.ZeroCount,
-			dp.Scale,
+			scale,
 			dp.ZeroThreshold,
 			dp.StartTime,
 			values...)
@@ -425,6 +498,13 @@ func createInfoMetric(name, description string, res *resource.Resource) (prometh
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
+func unitMapGetOrDefault(unit string) string {
+	if promUnit, ok := unitSuffixes[unit]; ok {
+		return promUnit
+	}
+	return unit
+}
+
 var unitSuffixes = map[string]string{
 	// Time
 	"d":   "days",
@@ -483,7 +563,7 @@ func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	if c.namespace != "" {
 		name = c.namespace + name
 	}
-	if suffix, ok := unitSuffixes[m.Unit]; ok && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
+	if suffix := unitMapGetOrDefault(m.Unit); suffix != "" && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
 		name += "_" + suffix
 	}
 	if addCounterSuffix {
