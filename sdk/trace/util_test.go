@@ -139,6 +139,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 			ctx, span := subject.Start(context.Background(), "test")
 
 			require.NotNil(t, span)
+			require.NotEqual(t, trace.SpanContext{}, span.SpanContext())
 			require.Equal(t, trace.SpanFromContext(ctx), span)
 		})
 
