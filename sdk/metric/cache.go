@@ -15,7 +15,7 @@ import (
 //
 // All methods of a cache are safe to call concurrently.
 type cache[K comparable, V any] struct {
-	sync.Mutex
+	sync.RWMutex
 	data map[K]V
 }
 
@@ -26,17 +26,21 @@ type cache[K comparable, V any] struct {
 // Lookup is safe to call concurrently. It will hold the cache lock, so f
 // should not block excessively.
 func (c *cache[K, V]) Lookup(key K, f func() V) V {
+	c.RLock()
+	v, ok := c.data[key]
+	c.RUnlock()
+	if ok {
+		return v
+	}
+
 	c.Lock()
 	defer c.Unlock()
-
 	if c.data == nil {
 		val := f()
 		c.data = map[K]V{key: val}
 		return val
 	}
-	if v, ok := c.data[key]; ok {
-		return v
-	}
+
 	val := f()
 	c.data[key] = val
 	return val
@@ -46,8 +50,8 @@ func (c *cache[K, V]) Lookup(key K, f func() V) V {
 //
 // HasKey is safe to call concurrently.
 func (c *cache[K, V]) HasKey(key K) bool {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 	_, ok := c.data[key]
 	return ok
 }
