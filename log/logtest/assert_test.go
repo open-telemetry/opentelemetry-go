@@ -17,6 +17,14 @@ import (
 
 var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
+// Compile-time check to ensure testing structs implement TestingT.
+var (
+	_ TestingT = (*testing.T)(nil)
+	_ TestingT = (*testing.B)(nil)
+	_ TestingT = (*testing.F)(nil)
+	_ TestingT = (*mockTestingT)(nil)
+)
+
 type mockTestingT struct {
 	errors []string
 }
@@ -37,15 +45,8 @@ func TestAssertEqual(t *testing.T) {
 		},
 	}
 
-	t.Run("use testing.T", func(t *testing.T) {
-		got := AssertEqual(t, a, b)
-		assert.True(t, got, "expected recordings to be equal")
-	})
-
-	t.Run("use testing.B", func(t *testing.T) {
-		got := AssertEqual(&testing.B{}, a, b)
-		assert.True(t, got, "expected recordings to be equal")
-	})
+	got := AssertEqual(t, a, b)
+	assert.True(t, got, "expected recordings to be equal")
 }
 
 func TestAssertEqualRecording(t *testing.T) {
@@ -121,7 +122,7 @@ func TestAssertEqualRecording(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockT := &mockTestingT{}
-			result := assertEqual(mockT, tc.a, tc.b, tc.opts...)
+			result := AssertEqual(mockT, tc.a, tc.b, tc.opts...)
 			if result != tc.want {
 				t.Errorf("AssertEqual() = %v, want %v", result, tc.want)
 			}
@@ -185,7 +186,7 @@ func TestAssertEqualRecord(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockT := &mockTestingT{}
-			result := assertEqual(mockT, tc.a, tc.b, tc.opts...)
+			result := AssertEqual(mockT, tc.a, tc.b, tc.opts...)
 			if result != tc.want {
 				t.Errorf("AssertEqual() = %v, want %v", result, tc.want)
 			}
@@ -205,7 +206,7 @@ func TestDesc(t *testing.T) {
 		Attributes: []log.KeyValue{log.Int("n", 1)},
 	}
 
-	assertEqual(mockT, a, b, Desc("custom message, %s", "test"))
+	AssertEqual(mockT, a, b, Desc("custom message, %s", "test"))
 
 	require.Len(t, mockT.errors, 1, "expected one error")
 	assert.Contains(t, mockT.errors[0], "custom message, test\n", "expected custom message")
