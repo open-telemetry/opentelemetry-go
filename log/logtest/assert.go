@@ -14,9 +14,9 @@ import (
 )
 
 // AssertEqual asserts that the two concrete data-types from the logtest package are equal.
-func AssertEqual[T Recording | Record](t *testing.T, want, got T, opts ...AssertOption) bool {
-	t.Helper()
-	return assertEqual(t, want, got, opts...)
+func AssertEqual[T Recording | Record](tb testing.TB, want, got T, opts ...AssertOption) bool {
+	tb.Helper()
+	return assertEqual(tb, want, got, opts...)
 }
 
 // testingT reports failure messages.
