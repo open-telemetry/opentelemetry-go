@@ -37,24 +37,15 @@ func TestAssertEqual(t *testing.T) {
 		},
 	}
 
-	got := AssertEqual(t, a, b)
-	assert.True(t, got, "expected recordings to be equal")
-}
+	t.Run("use testing.T", func(t *testing.T) {
+		got := AssertEqual(t, a, b)
+		assert.True(t, got, "expected recordings to be equal")
+	})
 
-func BenchmarkAssertEqual(b *testing.B) {
-	ar := Recording{
-		Scope{Name: b.Name()}: []Record{
-			{Body: log.StringValue("msg"), Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)}},
-		},
-	}
-	br := Recording{
-		Scope{Name: b.Name()}: []Record{
-			{Body: log.StringValue("msg"), Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")}},
-		},
-	}
-
-	got := AssertEqual(b, ar, br)
-	assert.True(b, got, "expected recordings to be equal")
+	t.Run("use testing.B", func(t *testing.T) {
+		got := AssertEqual(&testing.B{}, a, b)
+		assert.True(t, got, "expected recordings to be equal")
+	})
 }
 
 func TestAssertEqualRecording(t *testing.T) {
