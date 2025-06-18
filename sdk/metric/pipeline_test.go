@@ -614,6 +614,10 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 	}
 }
 
+// TestPipelineProduceErrors tests the issue described in https://github.com/open-telemetry/opentelemetry-go/issues/6344.
+// Earlier implementations of the pipeline produce method could corrupt metric data point state when the passed context
+// was canceled during execution of callbacks. In this case, corroption was the result of some or all callbacks being
+// invoked without instrument compAgg functions called.
 func TestPipelineProduceErrors(t *testing.T) {
 	// Create a test pipeline with aggregations
 	pipeReader := NewManualReader()
