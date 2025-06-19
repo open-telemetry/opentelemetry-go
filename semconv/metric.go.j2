@@ -2,7 +2,7 @@
 {% import 'instrument.j2' as i -%}
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package {{ ctx.root_namespace | camel_case | lower }}conv provides types and functionality for OpenTelemetry semantic
 // conventions in the "{{ ctx.root_namespace }}" namespace.
 package {{ ctx.root_namespace | camel_case | lower }}conv
 
