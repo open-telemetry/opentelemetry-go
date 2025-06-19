@@ -93,6 +93,9 @@ type Record struct {
 	attributeValueLengthLimit int
 	attributeCountLimit       int
 
+	// specifies whether we should dedupe attributes or not
+	dontDedupAttributes bool
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -192,56 +195,60 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
 		var drop int
-		attrs, drop = dedup(attrs)
-		r.setDropped(drop)
+		if !r.dontDedupAttributes {
+			attrs, drop = dedup(attrs)
+			r.setDropped(drop)
+		}
 
-		attrs, drop = head(attrs, r.attributeCountLimit)
+		attrs, drop := head(attrs, r.attributeCountLimit)
 		r.addDropped(drop)
 
 		r.addAttrs(attrs)
 		return
 	}
 
-	// Used to find duplicates between attrs and existing attributes in r.
-	rIndex := r.attrIndex()
-	defer putIndex(rIndex)
+	if !r.dontDedupAttributes {
+		// Used to find duplicates between attrs and existing attributes in r.
+		rIndex := r.attrIndex()
+		defer putIndex(rIndex)
 
-	// Unique attrs that need to be added to r. This uses the same underlying
-	// array as attrs.
-	//
-	// Note, do not iterate attrs twice by just calling dedup(attrs) here.
-	unique := attrs[:0]
-	// Used to find duplicates within attrs itself. The index value is the
-	// index of the element in unique.
-	uIndex := getIndex()
-	defer putIndex(uIndex)
+		// Unique attrs that need to be added to r. This uses the same underlying
+		// array as attrs.
+		//
+		// Note, do not iterate attrs twice by just calling dedup(attrs) here.
+		unique := attrs[:0]
+		// Used to find duplicates within attrs itself. The index value is the
+		// index of the element in unique.
+		uIndex := getIndex()
+		defer putIndex(uIndex)
 
-	// Deduplicate attrs within the scope of all existing attributes.
-	for _, a := range attrs {
-		// Last-value-wins for any duplicates in attrs.
-		idx, found := uIndex[a.Key]
-		if found {
-			r.addDropped(1)
-			unique[idx] = a
-			continue
-		}
-
-		idx, found = rIndex[a.Key]
-		if found {
-			// New attrs overwrite any existing with the same key.
-			r.addDropped(1)
-			if idx < 0 {
-				r.front[-(idx + 1)] = a
-			} else {
-				r.back[idx] = a
+		// Deduplicate attrs within the scope of all existing attributes.
+		for _, a := range attrs {
+			// Last-value-wins for any duplicates in attrs.
+			idx, found := uIndex[a.Key]
+			if found {
+				r.addDropped(1)
+				unique[idx] = a
+				continue
 			}
-		} else {
-			// Unique attribute.
-			unique = append(unique, a)
-			uIndex[a.Key] = len(unique) - 1
+
+			idx, found = rIndex[a.Key]
+			if found {
+				// New attrs overwrite any existing with the same key.
+				r.addDropped(1)
+				if idx < 0 {
+					r.front[-(idx + 1)] = a
+				} else {
+					r.back[idx] = a
+				}
+			} else {
+				// Unique attribute.
+				unique = append(unique, a)
+				uIndex[a.Key] = len(unique) - 1
+			}
 		}
+		attrs = unique
 	}
-	attrs = unique
 
 	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
 		// Truncate the now unique attributes to comply with limit.
@@ -297,8 +304,11 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
-	attrs, drop = dedup(attrs)
-	r.setDropped(drop)
+	r.setDropped(0)
+	if !r.dontDedupAttributes {
+		attrs, drop = dedup(attrs)
+		r.setDropped(drop)
+	}
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
 	r.addDropped(drop)
