@@ -32,8 +32,7 @@ type mockContextKeyValue struct {
 	Value interface{}
 }
 
-// MockTracer is a mock Tracer implementation for testing.
-type MockTracer struct {
+type mockTracer struct {
 	embedded.Tracer
 
 	FinishedSpans         []*mockSpan
@@ -47,14 +46,14 @@ type MockTracer struct {
 }
 
 var (
-	_ trace.Tracer                                  = &MockTracer{}
-	_ migration.DeferredContextSetupTracerExtension = &MockTracer{}
+	_ trace.Tracer                                  = &mockTracer{}
+	_ migration.DeferredContextSetupTracerExtension = &mockTracer{}
 )
 
-func newMockTracer() *MockTracer {
+func newmockTracer() *mockTracer {
 	u := rand.Uint32()
 	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
-	return &MockTracer{
+	return &mockTracer{
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -65,7 +64,7 @@ func newMockTracer() *MockTracer {
 }
 
 // Start returns a new trace span with the given name and options.
-func (t *MockTracer) Start(
+func (t *mockTracer) Start(
 	ctx context.Context,
 	name string,
 	opts ...trace.SpanStartOption,
@@ -81,7 +80,7 @@ func (t *MockTracer) Start(
 		TraceFlags: t.TraceFlags,
 	})
 	span := &mockSpan{
-		MockTracer:     t,
+		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
 		Attributes:     config.Attributes(),
@@ -98,7 +97,7 @@ func (t *MockTracer) Start(
 	return ctx, span
 }
 
-func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
+func (t *mockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	if len(t.SpareContextKeyValues) > 0 {
 		pair := t.SpareContextKeyValues[0]
 		t.SpareContextKeyValues[0] = mockContextKeyValue{}
@@ -111,7 +110,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
+func (t *mockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.TraceID()
 	}
@@ -126,21 +125,21 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) t
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
+func (t *mockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.SpanID()
 	}
 	return trace.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
+func (t *mockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
 	if !config.NewRoot() {
 		return trace.SpanContextFromContext(ctx)
 	}
 	return trace.SpanContext{}
 }
 
-func (t *MockTracer) getSpanID() trace.SpanID {
+func (t *mockTracer) getSpanID() trace.SpanID {
 	if len(t.SpareSpanIDs) > 0 {
 		spanID := t.SpareSpanIDs[0]
 		t.SpareSpanIDs = t.SpareSpanIDs[1:]
@@ -152,7 +151,7 @@ func (t *MockTracer) getSpanID() trace.SpanID {
 	return t.getRandSpanID()
 }
 
-func (t *MockTracer) getRandSpanID() trace.SpanID {
+func (t *mockTracer) getRandSpanID() trace.SpanID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
@@ -162,7 +161,7 @@ func (t *MockTracer) getRandSpanID() trace.SpanID {
 	return sid
 }
 
-func (t *MockTracer) getRandTraceID() trace.TraceID {
+func (t *mockTracer) getRandTraceID() trace.TraceID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
@@ -173,7 +172,7 @@ func (t *MockTracer) getRandTraceID() trace.TraceID {
 }
 
 // DeferredContextSetupHook implements the DeferredContextSetupTracerExtension interface.
-func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
+func (t *mockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
 	return t.addSpareContextValue(ctx)
 }
 
@@ -191,7 +190,7 @@ type mockLink struct {
 type mockSpan struct {
 	embedded.Span
 
-	MockTracer     *MockTracer
+	mockTracer     *mockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext
 	SpanKind       trace.SpanKind
@@ -266,7 +265,7 @@ func (s *mockSpan) End(options ...trace.SpanEndOption) {
 		endTime = time.Now()
 	}
 	s.EndTime = endTime
-	s.MockTracer.FinishedSpans = append(s.MockTracer.FinishedSpans, s)
+	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
 func (s *mockSpan) RecordError(err error, opts ...trace.EventOption) {

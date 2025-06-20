@@ -19,9 +19,9 @@ import (
 type mixedAPIsTestCase struct {
 	desc string
 
-	setup func(*testing.T, *MockTracer)
+	setup func(*testing.T, *mockTracer)
 	run   func(*testing.T, context.Context)
-	check func(*testing.T, *MockTracer)
+	check func(*testing.T, *mockTracer)
 }
 
 func getMixedAPIsTestCases() []mixedAPIsTestCase {
@@ -98,7 +98,7 @@ func getMixedAPIsTestCases() []mixedAPIsTestCase {
 func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
 		t.Logf("Running test case %d: %s", idx, tc.desc)
-		mockOtelTracer := newMockTracer()
+		mockOtelTracer := newmockTracer()
 		ctx, otTracer, otelProvider := NewTracerPairWithContext(context.Background(), mockOtelTracer)
 		otTracer.SetWarningHandler(func(msg string) {
 			t.Log(msg)
@@ -127,12 +127,12 @@ func newSimpleTest() *simpleTest {
 	}
 }
 
-func (st *simpleTest) setup(t *testing.T, tracer *MockTracer) {
+func (st *simpleTest) setup(t *testing.T, tracer *mockTracer) {
 	tracer.SpareTraceIDs = append(tracer.SpareTraceIDs, st.traceID)
 	tracer.SpareSpanIDs = append(tracer.SpareSpanIDs, st.spanIDs...)
 }
 
-func (st *simpleTest) check(t *testing.T, tracer *MockTracer) {
+func (st *simpleTest) check(t *testing.T, tracer *mockTracer) {
 	checkTraceAndSpans(t, tracer, st.traceID, st.spanIDs)
 }
 
@@ -165,7 +165,7 @@ func newCurrentActiveSpanTest() *currentActiveSpanTest {
 	}
 }
 
-func (cast *currentActiveSpanTest) setup(t *testing.T, tracer *MockTracer) {
+func (cast *currentActiveSpanTest) setup(t *testing.T, tracer *mockTracer) {
 	tracer.SpareTraceIDs = append(tracer.SpareTraceIDs, cast.traceID)
 	tracer.SpareSpanIDs = append(tracer.SpareSpanIDs, cast.spanIDs...)
 
@@ -173,7 +173,7 @@ func (cast *currentActiveSpanTest) setup(t *testing.T, tracer *MockTracer) {
 	cast.recordedActiveOTSpanIDs = nil
 }
 
-func (cast *currentActiveSpanTest) check(t *testing.T, tracer *MockTracer) {
+func (cast *currentActiveSpanTest) check(t *testing.T, tracer *mockTracer) {
 	checkTraceAndSpans(t, tracer, cast.traceID, cast.spanIDs)
 	if len(cast.recordedCurrentOtelSpanIDs) != len(cast.spanIDs) {
 		t.Errorf(
@@ -272,14 +272,14 @@ func newContextIntactTest() *contextIntactTest {
 	}
 }
 
-func (coin *contextIntactTest) setup(t *testing.T, tracer *MockTracer) {
+func (coin *contextIntactTest) setup(t *testing.T, tracer *mockTracer) {
 	tracer.SpareContextKeyValues = append(tracer.SpareContextKeyValues, coin.contextKeyValues...)
 
 	coin.recordedContextValues = nil
 	coin.recordIdx = 0
 }
 
-func (coin *contextIntactTest) check(t *testing.T, tracer *MockTracer) {
+func (coin *contextIntactTest) check(t *testing.T, tracer *mockTracer) {
 	if len(coin.recordedContextValues) != len(coin.contextKeyValues) {
 		t.Errorf(
 			"Expected to have %d recorded context values, got %d",
@@ -351,12 +351,12 @@ func newBaggageItemsPreservationTest() *baggageItemsPreservationTest {
 	}
 }
 
-func (bip *baggageItemsPreservationTest) setup(t *testing.T, tracer *MockTracer) {
+func (bip *baggageItemsPreservationTest) setup(t *testing.T, tracer *mockTracer) {
 	bip.step = 0
 	bip.recordedBaggage = nil
 }
 
-func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *MockTracer) {
+func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *mockTracer) {
 	if len(bip.recordedBaggage) != len(bip.baggageItems) {
 		t.Errorf("Expected %d recordings, got %d", len(bip.baggageItems), len(bip.recordedBaggage))
 	}
@@ -449,13 +449,13 @@ func newBaggageInteroperationTest() *baggageInteroperationTest {
 	}
 }
 
-func (bio *baggageInteroperationTest) setup(t *testing.T, tracer *MockTracer) {
+func (bio *baggageInteroperationTest) setup(t *testing.T, tracer *mockTracer) {
 	bio.step = 0
 	bio.recordedOTBaggage = nil
 	bio.recordedOtelBaggage = nil
 }
 
-func (bio *baggageInteroperationTest) check(t *testing.T, tracer *MockTracer) {
+func (bio *baggageInteroperationTest) check(t *testing.T, tracer *mockTracer) {
 	checkBIORecording(t, "OT", bio.baggageItems, bio.recordedOTBaggage)
 	checkBIORecording(t, "Otel", bio.baggageItems, bio.recordedOtelBaggage)
 }
@@ -578,7 +578,7 @@ func generateBaggageKeys(key string) (otKey, otelKey string) {
 
 func checkTraceAndSpans(
 	t *testing.T,
-	tracer *MockTracer,
+	tracer *mockTracer,
 	expectedTraceID trace.TraceID,
 	expectedSpanIDs []trace.SpanID,
 ) {

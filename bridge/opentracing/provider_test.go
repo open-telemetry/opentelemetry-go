@@ -11,50 +11,50 @@ import (
 	"go.opentelemetry.io/otel/trace/embedded"
 )
 
-type namedMockTracer struct {
+type namedmockTracer struct {
 	name string
-	*MockTracer
+	*mockTracer
 }
 
-type namedMockTracerProvider struct{ embedded.TracerProvider }
+type namedmockTracerProvider struct{ embedded.TracerProvider }
 
-var _ trace.TracerProvider = (*namedMockTracerProvider)(nil)
+var _ trace.TracerProvider = (*namedmockTracerProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperTracerProvider.
-func (p *namedMockTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
-	return &namedMockTracer{
+func (p *namedmockTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	return &namedmockTracer{
 		name:       name,
-		MockTracer: newMockTracer(),
+		mockTracer: newmockTracer(),
 	}
 }
 
 func TestTracerProvider(t *testing.T) {
-	// assertMockTracerName casts tracer into a named mock tracer provided by
-	// namedMockTracerProvider, and asserts against its name
-	assertMockTracerName := func(t *testing.T, tracer trace.Tracer, name string) {
+	// assertmockTracerName casts tracer into a named mock tracer provided by
+	// namedmockTracerProvider, and asserts against its name
+	assertmockTracerName := func(t *testing.T, tracer trace.Tracer, name string) {
 		// Unwrap the tracer
 		wrapped := tracer.(*WrapperTracer)
 		tracer = wrapped.tracer
 
 		// Cast into the underlying type and assert
-		if mock, ok := tracer.(*namedMockTracer); ok {
+		if mock, ok := tracer.(*namedmockTracer); ok {
 			if name != mock.name {
 				t.Errorf("expected name %q, got %q", name, mock.name)
 			}
 		} else if !ok {
-			t.Errorf("expected *namedMockTracer, got %T", mock)
+			t.Errorf("expected *namedmockTracer, got %T", mock)
 		}
 	}
 
 	var (
 		foobar   = "foobar"
 		bazbar   = "bazbar"
-		provider = NewTracerProvider(nil, &namedMockTracerProvider{})
+		provider = NewTracerProvider(nil, &namedmockTracerProvider{})
 	)
 
 	t.Run("Tracers should be created with foobar from provider", func(t *testing.T) {
 		tracer := provider.Tracer(foobar)
-		assertMockTracerName(t, tracer, foobar)
+		assertmockTracerName(t, tracer, foobar)
 	})
 
 	t.Run("Repeated requests to create a tracer should provide the existing tracer", func(t *testing.T) {
