@@ -466,7 +466,7 @@ func Test_otTagToOTelAttr(t *testing.T) {
 }
 
 func TestBridgeSpan_SetTag(t *testing.T) {
-	tracer := newmockTracer()
+	tracer := newMockTracer()
 	b, _ := NewTracerPair(tracer)
 
 	testCases := []struct {
@@ -523,7 +523,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 }
 
 func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
-	tracer := newmockTracer()
+	tracer := newMockTracer()
 	sc := &bridgeSpanContext{}
 
 	testCases := []struct {
@@ -583,7 +583,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := newmockTracer()
+			tracer := newMockTracer()
 			tracer.TraceFlags = tc.flags
 
 			b, _ := NewTracerPair(tracer)
@@ -687,7 +687,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	for _, c := range carriers {
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
-				mockOtelTracer := newmockTracer()
+				mockOtelTracer := newMockTracer()
 				b, _ := NewTracerPair(mockOtelTracer)
 				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 					propagation.TraceContext{},
@@ -880,7 +880,7 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := newmockTracer()
+			tracer := newMockTracer()
 			b, _ := NewTracerPair(tracer)
 			span := b.StartSpan("test")
 
@@ -982,7 +982,7 @@ func TestBridgeSpan_LogKV(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := newmockTracer()
+			tracer := newMockTracer()
 			b, _ := NewTracerPair(tracer)
 			span := b.StartSpan("test")
 			span.LogKV(tc.kv[0], tc.kv[1])

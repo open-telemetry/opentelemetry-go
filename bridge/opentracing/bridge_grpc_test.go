@@ -54,7 +54,7 @@ func startTestGRPCServer(t *testing.T, tracer ot.Tracer) (*grpc.Server, net.Addr
 }
 
 func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
-	tracer := newmockTracer()
+	tracer := newMockTracer()
 	bridge := newBridgeTracer()
 	bridge.SetOpenTelemetryTracer(tracer)
 	bridge.SetTextMapPropagator(propagation.TraceContext{})

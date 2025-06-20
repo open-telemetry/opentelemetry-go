@@ -50,7 +50,7 @@ var (
 	_ migration.DeferredContextSetupTracerExtension = &mockTracer{}
 )
 
-func newmockTracer() *mockTracer {
+func newMockTracer() *mockTracer {
 	u := rand.Uint32()
 	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
 	return &mockTracer{
