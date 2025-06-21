@@ -1013,3 +1013,75 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 		return true
 	})
 }
+
+func TestBridgeSpan_LogEventMethods(t *testing.T) {
+	tracer := internal.NewMockTracer()
+	b, _ := NewTracerPair(tracer)
+	span := b.StartSpan("test").(*bridgeSpan)
+
+	t.Run("LogEvent", func(t *testing.T) {
+		span.LogEvent("event1")
+		mockSpan := span.otelSpan.(*internal.MockSpan)
+		if len(mockSpan.Events) == 0 {
+			t.Fatalf("expected at least one event, got none")
+		}
+		found := false
+		for _, e := range mockSpan.Events {
+			for _, attr := range e.Attributes {
+				if attr.Key == "event" && attr.Value.AsString() == "event1" {
+					found = true
+				}
+			}
+		}
+		if !found {
+			t.Errorf("LogEvent did not log expected event attribute")
+		}
+	})
+
+	t.Run("LogEventWithPayload", func(t *testing.T) {
+		span2 := b.StartSpan("test2").(*bridgeSpan)
+		span2.LogEventWithPayload("event2", "payload2")
+		mockSpan := span2.otelSpan.(*internal.MockSpan)
+		foundEvent, foundPayload := false, false
+		for _, e := range mockSpan.Events {
+			for _, attr := range e.Attributes {
+				if attr.Key == "event" && attr.Value.AsString() == "event2" {
+					foundEvent = true
+				}
+				if attr.Key == "payload" && attr.Value.AsString() == "payload2" {
+					foundPayload = true
+				}
+			}
+		}
+		if !foundEvent {
+			t.Errorf("LogEventWithPayload did not log expected event attribute")
+		}
+		if !foundPayload {
+			t.Errorf("LogEventWithPayload did not log expected payload attribute")
+		}
+	})
+
+	t.Run("Log", func(t *testing.T) {
+		span3 := b.StartSpan("test3").(*bridgeSpan)
+		logData := ot.LogData{Event: "event3", Payload: "payload3"}
+		span3.Log(logData)
+		mockSpan := span3.otelSpan.(*internal.MockSpan)
+		foundEvent, foundPayload := false, false
+		for _, e := range mockSpan.Events {
+			for _, attr := range e.Attributes {
+				if attr.Key == "event" && attr.Value.AsString() == "event3" {
+					foundEvent = true
+				}
+				if attr.Key == "payload" && attr.Value.AsString() == "payload3" {
+					foundPayload = true
+				}
+			}
+		}
+		if !foundEvent {
+			t.Errorf("Log did not log expected event attribute")
+		}
+		if !foundPayload {
+			t.Errorf("Log did not log expected payload attribute")
+		}
+	})
+}
