@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal // import "go.opentelemetry.io/otel/bridge/opentracing/internal"
+package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 
 import (
 	"context"
@@ -21,26 +21,24 @@ import (
 
 //nolint:revive // ignoring missing comments for unexported global variables in an internal package.
 var (
-	ComponentKey     = attribute.Key("component")
-	ServiceKey       = attribute.Key("service")
-	StatusCodeKey    = attribute.Key("status.code")
-	StatusMessageKey = attribute.Key("status.message")
-	ErrorKey         = attribute.Key("error")
-	NameKey          = attribute.Key("name")
+	statusCodeKey    = attribute.Key("status.code")
+	statusMessageKey = attribute.Key("status.message")
+	errorKey         = attribute.Key("error")
+	nameKey          = attribute.Key("name")
 )
 
-type MockContextKeyValue struct {
+type mockContextKeyValue struct {
 	Key   interface{}
 	Value interface{}
 }
 
-type MockTracer struct {
+type mockTracer struct {
 	embedded.Tracer
 
-	FinishedSpans         []*MockSpan
+	FinishedSpans         []*mockSpan
 	SpareTraceIDs         []trace.TraceID
 	SpareSpanIDs          []trace.SpanID
-	SpareContextKeyValues []MockContextKeyValue
+	SpareContextKeyValues []mockContextKeyValue
 	TraceFlags            trace.TraceFlags
 
 	randLock sync.Mutex
@@ -48,14 +46,14 @@ type MockTracer struct {
 }
 
 var (
-	_ trace.Tracer                                  = &MockTracer{}
-	_ migration.DeferredContextSetupTracerExtension = &MockTracer{}
+	_ trace.Tracer                                  = &mockTracer{}
+	_ migration.DeferredContextSetupTracerExtension = &mockTracer{}
 )
 
-func NewMockTracer() *MockTracer {
+func newMockTracer() *mockTracer {
 	u := rand.Uint32()
 	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
-	return &MockTracer{
+	return &mockTracer{
 		FinishedSpans:         nil,
 		SpareTraceIDs:         nil,
 		SpareSpanIDs:          nil,
@@ -65,7 +63,8 @@ func NewMockTracer() *MockTracer {
 	}
 }
 
-func (t *MockTracer) Start(
+// Start returns a new trace span with the given name and options.
+func (t *mockTracer) Start(
 	ctx context.Context,
 	name string,
 	opts ...trace.SpanStartOption,
@@ -80,7 +79,7 @@ func (t *MockTracer) Start(
 		SpanID:     t.getSpanID(),
 		TraceFlags: t.TraceFlags,
 	})
-	span := &MockSpan{
+	span := &mockSpan{
 		mockTracer:     t,
 		officialTracer: t,
 		spanContext:    spanContext,
@@ -98,10 +97,10 @@ func (t *MockTracer) Start(
 	return ctx, span
 }
 
-func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
+func (t *mockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	if len(t.SpareContextKeyValues) > 0 {
 		pair := t.SpareContextKeyValues[0]
-		t.SpareContextKeyValues[0] = MockContextKeyValue{}
+		t.SpareContextKeyValues[0] = mockContextKeyValue{}
 		t.SpareContextKeyValues = t.SpareContextKeyValues[1:]
 		if len(t.SpareContextKeyValues) == 0 {
 			t.SpareContextKeyValues = nil
@@ -111,7 +110,7 @@ func (t *MockTracer) addSpareContextValue(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
+func (t *mockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) trace.TraceID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.TraceID()
 	}
@@ -126,21 +125,21 @@ func (t *MockTracer) getTraceID(ctx context.Context, config *trace.SpanConfig) t
 	return t.getRandTraceID()
 }
 
-func (t *MockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
+func (t *mockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConfig) trace.SpanID {
 	if parent := t.getParentSpanContext(ctx, config); parent.IsValid() {
 		return parent.SpanID()
 	}
 	return trace.SpanID{}
 }
 
-func (t *MockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
+func (t *mockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
 	if !config.NewRoot() {
 		return trace.SpanContextFromContext(ctx)
 	}
 	return trace.SpanContext{}
 }
 
-func (t *MockTracer) getSpanID() trace.SpanID {
+func (t *mockTracer) getSpanID() trace.SpanID {
 	if len(t.SpareSpanIDs) > 0 {
 		spanID := t.SpareSpanIDs[0]
 		t.SpareSpanIDs = t.SpareSpanIDs[1:]
@@ -152,7 +151,7 @@ func (t *MockTracer) getSpanID() trace.SpanID {
 	return t.getRandSpanID()
 }
 
-func (t *MockTracer) getRandSpanID() trace.SpanID {
+func (t *mockTracer) getRandSpanID() trace.SpanID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
@@ -162,7 +161,7 @@ func (t *MockTracer) getRandSpanID() trace.SpanID {
 	return sid
 }
 
-func (t *MockTracer) getRandTraceID() trace.TraceID {
+func (t *mockTracer) getRandTraceID() trace.TraceID {
 	t.randLock.Lock()
 	defer t.randLock.Unlock()
 
@@ -172,25 +171,26 @@ func (t *MockTracer) getRandTraceID() trace.TraceID {
 	return tid
 }
 
-func (t *MockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
+// DeferredContextSetupHook implements the DeferredContextSetupTracerExtension interface.
+func (t *mockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
 	return t.addSpareContextValue(ctx)
 }
 
-type MockEvent struct {
+type mockEvent struct {
 	Timestamp  time.Time
 	Name       string
 	Attributes []attribute.KeyValue
 }
 
-type MockLink struct {
+type mockLink struct {
 	SpanContext trace.SpanContext
 	Attributes  []attribute.KeyValue
 }
 
-type MockSpan struct {
+type mockSpan struct {
 	embedded.Span
 
-	mockTracer     *MockTracer
+	mockTracer     *mockTracer
 	officialTracer trace.Tracer
 	spanContext    trace.SpanContext
 	SpanKind       trace.SpanKind
@@ -200,40 +200,40 @@ type MockSpan struct {
 	StartTime    time.Time
 	EndTime      time.Time
 	ParentSpanID trace.SpanID
-	Events       []MockEvent
-	Links        []MockLink
+	Events       []mockEvent
+	Links        []mockLink
 }
 
 var (
-	_ trace.Span                            = &MockSpan{}
-	_ migration.OverrideTracerSpanExtension = &MockSpan{}
+	_ trace.Span                            = &mockSpan{}
+	_ migration.OverrideTracerSpanExtension = &mockSpan{}
 )
 
-func (s *MockSpan) SpanContext() trace.SpanContext {
+func (s *mockSpan) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
-func (s *MockSpan) IsRecording() bool {
+func (s *mockSpan) IsRecording() bool {
 	return s.recording
 }
 
-func (s *MockSpan) SetStatus(code codes.Code, msg string) {
-	s.SetAttributes(StatusCodeKey.Int(int(code)), StatusMessageKey.String(msg))
+func (s *mockSpan) SetStatus(code codes.Code, msg string) {
+	s.SetAttributes(statusCodeKey.Int(int(code)), statusMessageKey.String(msg))
 }
 
-func (s *MockSpan) SetName(name string) {
-	s.SetAttributes(NameKey.String(name))
+func (s *mockSpan) SetName(name string) {
+	s.SetAttributes(nameKey.String(name))
 }
 
-func (s *MockSpan) SetError(v bool) {
-	s.SetAttributes(ErrorKey.Bool(v))
+func (s *mockSpan) SetError(v bool) {
+	s.SetAttributes(errorKey.Bool(v))
 }
 
-func (s *MockSpan) SetAttributes(attributes ...attribute.KeyValue) {
+func (s *mockSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	s.applyUpdate(attributes)
 }
 
-func (s *MockSpan) applyUpdate(update []attribute.KeyValue) {
+func (s *mockSpan) applyUpdate(update []attribute.KeyValue) {
 	updateM := make(map[attribute.Key]attribute.Value, len(update))
 	for _, kv := range update {
 		updateM[kv.Key] = kv.Value
@@ -255,7 +255,7 @@ func (s *MockSpan) applyUpdate(update []attribute.KeyValue) {
 	}
 }
 
-func (s *MockSpan) End(options ...trace.SpanEndOption) {
+func (s *mockSpan) End(options ...trace.SpanEndOption) {
 	if !s.EndTime.IsZero() {
 		return // already finished
 	}
@@ -268,7 +268,7 @@ func (s *MockSpan) End(options ...trace.SpanEndOption) {
 	s.mockTracer.FinishedSpans = append(s.mockTracer.FinishedSpans, s)
 }
 
-func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
+func (s *mockSpan) RecordError(err error, opts ...trace.EventOption) {
 	if err == nil {
 		return // no-op on nil error
 	}
@@ -285,28 +285,28 @@ func (s *MockSpan) RecordError(err error, opts ...trace.EventOption) {
 	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
-func (s *MockSpan) Tracer() trace.Tracer {
+func (s *mockSpan) Tracer() trace.Tracer {
 	return s.officialTracer
 }
 
-func (s *MockSpan) AddEvent(name string, o ...trace.EventOption) {
+func (s *mockSpan) AddEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	s.Events = append(s.Events, MockEvent{
+	s.Events = append(s.Events, mockEvent{
 		Timestamp:  c.Timestamp(),
 		Name:       name,
 		Attributes: c.Attributes(),
 	})
 }
 
-func (s *MockSpan) AddLink(link trace.Link) {
-	s.Links = append(s.Links, MockLink{
+func (s *mockSpan) AddLink(link trace.Link) {
+	s.Links = append(s.Links, mockLink{
 		SpanContext: link.SpanContext,
 		Attributes:  link.Attributes,
 	})
 }
 
-func (s *MockSpan) OverrideTracer(tracer trace.Tracer) {
+func (s *mockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *MockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }
+func (s *mockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }

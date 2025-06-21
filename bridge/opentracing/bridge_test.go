@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -250,7 +249,7 @@ type samplable interface {
 }
 
 func TestBridgeTracer_ExtractAndInject(t *testing.T) {
-	bridge := NewBridgeTracer()
+	bridge := newBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
 	tmc := newTextCarrier()
@@ -417,7 +416,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var warningMessages []string
-			bridge := NewBridgeTracer()
+			bridge := newBridgeTracer()
 			bridge.SetWarningHandler(func(msg string) {
 				warningMessages = append(warningMessages, msg)
 			})
@@ -467,7 +466,7 @@ func Test_otTagToOTelAttr(t *testing.T) {
 }
 
 func TestBridgeSpan_SetTag(t *testing.T) {
-	tracer := internal.NewMockTracer()
+	tracer := newMockTracer()
 	b, _ := NewTracerPair(tracer)
 
 	testCases := []struct {
@@ -513,7 +512,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 			span := b.StartSpan("test")
 
 			span.SetTag(tc.tagKey, tc.tagValue)
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*mockSpan)
 			if tc.expected != nil {
 				assert.Contains(t, mockSpan.Attributes, tc.expected)
 			} else {
@@ -524,7 +523,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 }
 
 func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
-	tracer := internal.NewMockTracer()
+	tracer := newMockTracer()
 	sc := &bridgeSpanContext{}
 
 	testCases := []struct {
@@ -559,7 +558,7 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 			b, _ := NewTracerPair(tracer)
 
 			s := b.StartSpan(tc.name, tc.opt...)
-			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind)
+			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*mockSpan).SpanKind)
 		})
 	}
 }
@@ -584,7 +583,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			tracer.TraceFlags = tc.flags
 
 			b, _ := NewTracerPair(tracer)
@@ -597,7 +596,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 }
 
 func TestBridgeSpanContextPromotedMethods(t *testing.T) {
-	bridge := NewBridgeTracer()
+	bridge := newBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
 	tmc := newTextCarrier()
@@ -688,7 +687,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	for _, c := range carriers {
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
-				mockOtelTracer := internal.NewMockTracer()
+				mockOtelTracer := newMockTracer()
 				b, _ := NewTracerPair(mockOtelTracer)
 				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 					propagation.TraceContext{},
@@ -881,12 +880,12 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			b, _ := NewTracerPair(tracer)
 			span := b.StartSpan("test")
 
 			span.LogFields(tc.field)
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*mockSpan)
 			event := mockSpan.Events[0]
 			assert.Contains(t, event.Attributes, tc.expected)
 		})
@@ -983,11 +982,11 @@ func TestBridgeSpan_LogKV(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			b, _ := NewTracerPair(tracer)
 			span := b.StartSpan("test")
 			span.LogKV(tc.kv[0], tc.kv[1])
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*mockSpan)
 			event := mockSpan.Events[0]
 			assert.Contains(t, event.Attributes, tc.expected)
 		})
@@ -995,7 +994,7 @@ func TestBridgeSpan_LogKV(t *testing.T) {
 }
 
 func TestBridgeSpan_BaggageItem(t *testing.T) {
-	tracer := NewBridgeTracer()
+	tracer := newBridgeTracer()
 
 	span := tracer.StartSpan("span")
 
