@@ -50,9 +50,7 @@ func Example_selfSignedCertificates() {
 	clientKey := os.Getenv("CUSTOM_CLIENT_KEY")
 	if caFile != "" && clientCert != "" && clientKey != "" {
 		// mTLS connection
-		tlsCfg := tls.Config{
-			InsecureSkipVerify: false,
-		}
+		tlsCfg := tls.Config{}
 		// loads CA certificate
 		pool := x509.NewCertPool()
 		data, err := os.ReadFile(caFile)
