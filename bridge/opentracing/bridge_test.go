@@ -249,7 +249,7 @@ type samplable interface {
 }
 
 func TestBridgeTracer_ExtractAndInject(t *testing.T) {
-	bridge := newBridgeTracer()
+	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
 	tmc := newTextCarrier()
@@ -416,7 +416,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var warningMessages []string
-			bridge := newBridgeTracer()
+			bridge := NewBridgeTracer()
 			bridge.SetWarningHandler(func(msg string) {
 				warningMessages = append(warningMessages, msg)
 			})
@@ -596,7 +596,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 }
 
 func TestBridgeSpanContextPromotedMethods(t *testing.T) {
-	bridge := newBridgeTracer()
+	bridge := NewBridgeTracer()
 	bridge.SetTextMapPropagator(new(testTextMapPropagator))
 
 	tmc := newTextCarrier()
@@ -994,7 +994,7 @@ func TestBridgeSpan_LogKV(t *testing.T) {
 }
 
 func TestBridgeSpan_BaggageItem(t *testing.T) {
-	tracer := newBridgeTracer()
+	tracer := NewBridgeTracer()
 
 	span := tracer.StartSpan("span")
 

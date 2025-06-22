@@ -16,7 +16,7 @@ import (
 // returned to the caller and the caller is expected to register BridgeTracer
 // with opentracing and WrapperTracerProvider with opentelemetry.
 func NewTracerPair(tracer trace.Tracer) (*BridgeTracer, *WrapperTracerProvider) {
-	bridgeTracer := newBridgeTracer()
+	bridgeTracer := NewBridgeTracer()
 	wrapperProvider := NewWrappedTracerProvider(bridgeTracer, tracer)
 	bridgeTracer.SetOpenTelemetryTracer(wrapperProvider.Tracer(""))
 	return bridgeTracer, wrapperProvider

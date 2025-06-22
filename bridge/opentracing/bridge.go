@@ -317,7 +317,7 @@ var (
 // overridden with the SetOpenTelemetryTracer function. The warnings
 // handler does nothing by default, so to override it use the
 // SetWarningHandler function.
-func newBridgeTracer() *BridgeTracer {
+func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
 			warningHandler: func(msg string) {},
