@@ -191,7 +191,7 @@ func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 
 func TestSchemaURL(t *testing.T) {
 	stp := NewTracerProvider()
-	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
+	schemaURL := "https://opentelemetry.io/schemas/1.21.0"
 	tracerIface := stp.Tracer("tracername", trace.WithSchemaURL(schemaURL))
 
 	// Verify that the SchemaURL of the constructed Tracer is correctly populated.

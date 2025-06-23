@@ -415,7 +415,7 @@ func TestNew(t *testing.T) {
 						func() (string, error) { return "", errors.New("fail") },
 					),
 				),
-				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.21.0"),
 			},
 			resourceValues: map[string]string{
 				string(semconv.HostNameKey): func() (hostname string) {
