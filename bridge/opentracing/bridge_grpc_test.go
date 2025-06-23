@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package test
+package opentracing
 
 import (
 	"context"
@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	ototel "go.opentelemetry.io/otel/bridge/opentracing"
-	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -56,9 +54,8 @@ func startTestGRPCServer(t *testing.T, tracer ot.Tracer) (*grpc.Server, net.Addr
 }
 
 func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
-	tracer := internal.NewMockTracer()
-
-	bridge := ototel.NewBridgeTracer()
+	tracer := newMockTracer()
+	bridge := NewBridgeTracer()
 	bridge.SetOpenTelemetryTracer(tracer)
 	bridge.SetTextMapPropagator(propagation.TraceContext{})
 
