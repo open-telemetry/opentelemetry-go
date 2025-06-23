@@ -1014,13 +1014,13 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 }
 
 func TestBridgeSpan_LogEventMethods(t *testing.T) {
-	tracer := internal.NewMockTracer()
+	tracer := newMockTracer()
 	b, _ := NewTracerPair(tracer)
 	span := b.StartSpan("test").(*bridgeSpan)
 
 	t.Run("LogEvent", func(t *testing.T) {
 		span.LogEvent("event1")
-		mockSpan := span.otelSpan.(*internal.MockSpan)
+		mockSpan := span.otelSpan.(*mockSpan)
 		if len(mockSpan.Events) == 0 {
 			t.Fatalf("expected at least one event, got none")
 		}
@@ -1040,7 +1040,7 @@ func TestBridgeSpan_LogEventMethods(t *testing.T) {
 	t.Run("LogEventWithPayload", func(t *testing.T) {
 		span2 := b.StartSpan("test2").(*bridgeSpan)
 		span2.LogEventWithPayload("event2", "payload2")
-		mockSpan := span2.otelSpan.(*internal.MockSpan)
+		mockSpan := span2.otelSpan.(*mockSpan)
 		foundEvent, foundPayload := false, false
 		for _, e := range mockSpan.Events {
 			for _, attr := range e.Attributes {
@@ -1064,7 +1064,7 @@ func TestBridgeSpan_LogEventMethods(t *testing.T) {
 		span3 := b.StartSpan("test3").(*bridgeSpan)
 		logData := ot.LogData{Event: "event3", Payload: "payload3"}
 		span3.Log(logData)
-		mockSpan := span3.otelSpan.(*internal.MockSpan)
+		mockSpan := span3.otelSpan.(*mockSpan)
 		foundEvent, foundPayload := false, false
 		for _, e := range mockSpan.Events {
 			for _, attr := range e.Attributes {
