@@ -8,10 +8,10 @@ retract v0.12.0
 require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.37.0
-	go.opentelemetry.io/otel/log v0.12.2
+	go.opentelemetry.io/otel/log v0.13.0
 	go.opentelemetry.io/otel/sdk v1.37.0
-	go.opentelemetry.io/otel/sdk/log v0.12.2
-	go.opentelemetry.io/otel/sdk/log/logtest v0.0.0-20250521073539-a85ae98dcedc
+	go.opentelemetry.io/otel/sdk/log v0.13.0
+	go.opentelemetry.io/otel/sdk/log/logtest v0.13.0
 	go.opentelemetry.io/otel/trace v1.37.0
 )
 

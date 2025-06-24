@@ -6,7 +6,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.37.0
-	go.opentelemetry.io/otel/log v0.12.2
+	go.opentelemetry.io/otel/log v0.13.0
 )
 
 require (
