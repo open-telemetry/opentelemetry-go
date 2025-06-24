@@ -649,8 +649,8 @@ should be canceled.
 
 ### Maintainers
 
-- [Damien Mathieu](https://github.com/dmathieu), Elastic ([GPG](https://keys.openpgp.org/search?q=5A126B972A81A6CE443E5E1B408B8E44F0873832)
-- [David Ashpole](https://github.com/dashpole), Google ([GPG](https://keys.openpgp.org/search?q=C0D1BDDCAAEAE573673085F176327DA4D864DC70)
+- [Damien Mathieu](https://github.com/dmathieu), Elastic ([GPG](https://keys.openpgp.org/search?q=5A126B972A81A6CE443E5E1B408B8E44F0873832))
+- [David Ashpole](https://github.com/dashpole), Google ([GPG](https://keys.openpgp.org/search?q=C0D1BDDCAAEAE573673085F176327DA4D864DC70))
 - [Robert Pająk](https://github.com/pellared), Splunk ([GPG](https://keys.openpgp.org/search?q=CDAD3A60476A3DE599AA5092E5F7C35A4DBE90C2))
 - [Sam Xie](https://github.com/XSAM), Splunk ([GPG](https://keys.openpgp.org/search?q=AEA033782371ABB18EE39188B8044925D6FEEBEA))
 - [Tyler Yahn](https://github.com/MrAlias), Splunk ([GPG](https://keys.openpgp.org/search?q=0x46B0F3E1A8B1BA5A))
