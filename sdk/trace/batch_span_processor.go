@@ -127,6 +127,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		ExportTimeout:      time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
 		MaxQueueSize:       maxQueueSize,
 		MaxExportBatchSize: maxExportBatchSize,
+		meterProvider:      otel.GetMeterProvider(),
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -162,7 +163,7 @@ func nextProcessorID() int64 {
 
 // configureSelfObservability configures metrics for the batch span processor.
 func (bsp *batchSpanProcessor) configureSelfObservability() {
-	mp := otel.GetMeterProvider()
+	mp := bsp.o.meterProvider
 	if !x.SelfObservability.Enabled() {
 		mp = metric.MeterProvider(noop.NewMeterProvider())
 	}
