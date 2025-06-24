@@ -101,6 +101,7 @@ type collector struct {
 	scopeInfosInvalid map[instrumentation.Scope]struct{}
 	metricFamilies    map[string]*dto.MetricFamily
 	resourceKeyVals   keyVals
+	validationScheme  model.ValidationScheme
 }
 
 // prometheus counters MUST have a _total suffix by default:
@@ -127,6 +128,7 @@ func New(opts ...Option) (*Exporter, error) {
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                cfg.namespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
+		validationScheme:         cfg.validationScheme,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -174,7 +176,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		defer c.mu.Unlock()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
-			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource, c.validationScheme)
 			if err != nil {
 				// If the target info metric is invalid, disable sending it.
 				c.disableTargetInfo = true
@@ -239,21 +241,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv)
+				addHistogramMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv)
+				addHistogramMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv)
+				addSumMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv)
+				addSumMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv)
+				addGaugeMetric(ch, v, m, name, kv, c.validationScheme)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv)
+				addGaugeMetric(ch, v, m, name, kv, c.validationScheme)
 			}
 		}
 	}
@@ -265,9 +267,10 @@ func addExponentialHistogramMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	validationScheme model.ValidationScheme,
 ) {
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, validationScheme)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -319,9 +322,10 @@ func addHistogramMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	validationScheme model.ValidationScheme,
 ) {
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, validationScheme)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -349,6 +353,7 @@ func addSumMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	validationScheme model.ValidationScheme,
 ) {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
@@ -356,7 +361,7 @@ func addSumMetric[N int64 | float64](
 	}
 
 	for _, dp := range sum.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, validationScheme)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -381,9 +386,10 @@ func addGaugeMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	validationScheme model.ValidationScheme,
 ) {
 	for _, dp := range gauge.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, validationScheme)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -399,12 +405,12 @@ func addGaugeMetric[N int64 | float64](
 
 // getAttrs converts the attribute.Set to two lists of matching Prometheus-style
 // keys and values.
-func getAttrs(attrs attribute.Set) ([]string, []string) {
+func getAttrs(attrs attribute.Set, validationScheme model.ValidationScheme) ([]string, []string) {
 	keys := make([]string, 0, attrs.Len())
 	values := make([]string, 0, attrs.Len())
 	itr := attrs.Iter()
 
-	if model.NameValidationScheme == model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+	if validationScheme == model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Do not perform sanitization if prometheus supports UTF-8.
 		for itr.Next() {
 			kv := itr.Attribute()
@@ -434,19 +440,19 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	return keys, values
 }
 
-func createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
-	keys, values := getAttrs(*res.Set())
+func createInfoMetric(name, description string, res *resource.Resource, validationScheme model.ValidationScheme) (prometheus.Metric, error) {
+	keys, values := getAttrs(*res.Set(), validationScheme)
 	desc := prometheus.NewDesc(name, description, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
-func createScopeInfoMetric(scope instrumentation.Scope) (prometheus.Metric, error) {
+func createScopeInfoMetric(scope instrumentation.Scope, validationScheme model.ValidationScheme) (prometheus.Metric, error) {
 	attrs := make([]attribute.KeyValue, 0, scope.Attributes.Len()+2) // resource attrs + scope name + scope version
 	attrs = append(attrs, scope.Attributes.ToSlice()...)
 	attrs = append(attrs, attribute.String(scopeNameLabel, scope.Name))
 	attrs = append(attrs, attribute.String(scopeVersionLabel, scope.Version))
 
-	keys, values := getAttrs(attribute.NewSet(attrs...))
+	keys, values := getAttrs(attribute.NewSet(attrs...), validationScheme)
 	desc := prometheus.NewDesc(scopeInfoMetricName, scopeInfoDescription, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
@@ -490,7 +496,7 @@ var unitSuffixes = map[string]string{
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
 func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
 	name := m.Name
-	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+	if c.validationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
 		// Only sanitize if prometheus does not support UTF-8.
 		logDeprecatedLegacyScheme()
 		name = model.EscapeName(name, model.NameEscapingScheme)
@@ -552,7 +558,7 @@ func (c *collector) createResourceAttributes(res *resource.Resource) {
 	defer c.mu.Unlock()
 
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
-	resourceKeys, resourceValues := getAttrs(resourceAttrs)
+	resourceKeys, resourceValues := getAttrs(resourceAttrs, c.validationScheme)
 	c.resourceKeyVals = keyVals{keys: resourceKeys, vals: resourceValues}
 }
 
@@ -569,7 +575,7 @@ func (c *collector) scopeInfo(scope instrumentation.Scope) (prometheus.Metric, e
 		return nil, errScopeInvalid
 	}
 
-	scopeInfo, err := createScopeInfoMetric(scope)
+	scopeInfo, err := createScopeInfoMetric(scope, c.validationScheme)
 	if err != nil {
 		c.scopeInfosInvalid[scope] = struct{}{}
 		return nil, fmt.Errorf("cannot create scope info metric: %w", err)
