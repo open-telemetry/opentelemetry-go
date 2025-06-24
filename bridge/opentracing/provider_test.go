@@ -66,7 +66,7 @@ func TestTracerProvider(t *testing.T) {
 				return provider.Tracer(bazbar)
 			},
 			func() trace.Tracer {
-				return provider.Tracer(foobar, trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"))
+				return provider.Tracer(foobar, trace.WithSchemaURL("http://opentelemetry.io/schemas/1.21.0"))
 			},
 			func() trace.Tracer {
 				return provider.Tracer(foobar, trace.WithInstrumentationAttributes(attribute.String("foo", "bar")))
@@ -74,7 +74,7 @@ func TestTracerProvider(t *testing.T) {
 			func() trace.Tracer {
 				return provider.Tracer(
 					foobar,
-					trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+					trace.WithSchemaURL("https://opentelemetry.io/schemas/1.21.0"),
 					trace.WithInstrumentationAttributes(attribute.String("foo", "bar")),
 				)
 			},
