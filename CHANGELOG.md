@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
 - Changed handling of `go.opentelemetry.io/otel/exporters/prometheus` metric renaming to add unit suffixes when it doesn't match one of the pre-defined values in the unit suffix map. (#6839)
+- Changed `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmark tests. (#6908)
 
 ### Removed
 
