@@ -640,13 +640,6 @@ should be canceled.
 
 ## Approvers and Maintainers
 
-### Triagers
-
-- [Alex Kats](https://github.com/akats7), Capital One
-- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
-
-### Approvers
-
 ### Maintainers
 
 - [Damien Mathieu](https://github.com/dmathieu), Elastic ([GPG](https://keys.openpgp.org/search?q=5A126B972A81A6CE443E5E1B408B8E44F0873832))
@@ -654,6 +647,15 @@ should be canceled.
 - [Robert Pająk](https://github.com/pellared), Splunk ([GPG](https://keys.openpgp.org/search?q=CDAD3A60476A3DE599AA5092E5F7C35A4DBE90C2))
 - [Sam Xie](https://github.com/XSAM), Splunk ([GPG](https://keys.openpgp.org/search?q=AEA033782371ABB18EE39188B8044925D6FEEBEA))
 - [Tyler Yahn](https://github.com/MrAlias), Splunk ([GPG](https://keys.openpgp.org/search?q=0x46B0F3E1A8B1BA5A))
+
+For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#maintainer).
+
+### Triagers
+
+- [Alex Kats](https://github.com/akats7), Capital One
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+
+For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#triagers).
 
 ### Emeritus
 
@@ -664,6 +666,8 @@ should be canceled.
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
 - [Liz Fong-Jones](https://github.com/lizthegrey)
+
+For more information about the emeritus role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#emeritus-maintainerapprovertriager).
 
 ### Become an Approver or a Maintainer
 
