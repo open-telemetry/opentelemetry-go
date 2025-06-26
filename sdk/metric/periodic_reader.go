@@ -31,12 +31,14 @@ type periodicReaderConfig struct {
 	timeout                  time.Duration
 	producers                []Producer
 	cardinalityLimitSelector CardinalityLimitSelector
+	baseCtx                  context.Context
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
+		baseCtx:                  context.Background(),
 		interval:                 envDuration(envInterval, defaultInterval),
 		timeout:                  envDuration(envTimeout, defaultTimeout),
 		cardinalityLimitSelector: defaultCardinalityLimitSelector,
@@ -99,6 +101,21 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 	})
 }
 
+// WithContext sets the parent context for the PeriodicReader. All periodic
+// collection runs derive from this context. If the context is cancelled, the
+// periodic collection loop stops, but pending telemetry is not flushed —
+// call Shutdown explicitly to drain remaining data. If this option is not
+// used, context.Background() is used as the default.
+func WithContext(ctx context.Context) PeriodicReaderOption {
+	return periodicReaderOptionFunc(func(conf periodicReaderConfig) periodicReaderConfig {
+		if ctx == nil {
+			return conf
+		}
+		conf.baseCtx = ctx
+		return conf
+	})
+}
+
 // NewPeriodicReader returns a Reader that collects and exports metric data to
 // the exporter at a defined interval. By default, the returned Reader will
 // collect and export data every 60 seconds, and will cancel any attempts that
@@ -110,9 +127,7 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // exporter. That is left to the user to accomplish.
 func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *PeriodicReader {
 	conf := newPeriodicReaderConfig(options)
-	ctx, cancel := context.WithCancel( //nolint:gosec  // cancel called during PeriodicReader shutdown.
-		context.Background(),
-	)
+	ctx, cancel := context.WithCancel(conf.baseCtx) //nolint:gosec  // cancel called during PeriodicReader shutdown.
 	r := &PeriodicReader{
 		interval:                 conf.interval,
 		timeout:                  conf.timeout,
