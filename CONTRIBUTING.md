@@ -648,14 +648,14 @@ should be canceled.
 - [Sam Xie](https://github.com/XSAM), Splunk ([GPG](https://keys.openpgp.org/search?q=AEA033782371ABB18EE39188B8044925D6FEEBEA))
 - [Tyler Yahn](https://github.com/MrAlias), Splunk ([GPG](https://keys.openpgp.org/search?q=0x46B0F3E1A8B1BA5A))
 
-For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#maintainer).
+For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#maintainer).
 
 ### Triagers
 
 - [Alex Kats](https://github.com/akats7), Capital One
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
 
-For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#triagers).
+For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
 ### Emeritus
 
