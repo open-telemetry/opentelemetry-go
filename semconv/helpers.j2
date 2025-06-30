@@ -119,6 +119,12 @@ const (
 func {{to_go_name(attribute.name, pkg)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
 	return {{to_go_name(attribute.name, pkg)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
+{%- elif attribute.type is template_type %}
+
+{{ [to_go_name(attribute.name, pkg) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
+func {{to_go_name(attribute.name, pkg)}}(key string, val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return attribute.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}("{{attribute.name}}."+key, val)
+}
 {%- endif %}
 {%- endfor %}
 {%- endmacro -%}
