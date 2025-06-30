@@ -650,6 +650,12 @@ should be canceled.
 
 For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#maintainer).
 
+### Approvers
+
+None at this time
+
+For more information about the approver role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#approver).
+
 ### Triagers
 
 - [Alex Kats](https://github.com/akats7), Capital One
