@@ -1082,6 +1082,21 @@ func TestExemplars(t *testing.T) {
 			escapingScheme:        model.NoEscaping,
 			validationScheme:      model.UTF8Validation,
 		},
+		{
+			name: "exponential histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Float64Histogram("exponential_histogram_foo",
+					otelmetric.WithDescription("a very nice histogram"),
+					otelmetric.WithUnit("By"),
+				)
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			escapingScheme:        model.NoEscaping,
+			validationScheme:      model.UTF8Validation,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			originalEscapingScheme := model.NameEscapingScheme
@@ -1112,17 +1127,27 @@ func TestExemplars(t *testing.T) {
 			provider := metric.NewMeterProvider(
 				metric.WithReader(exporter),
 				metric.WithResource(res),
-				metric.WithView(metric.NewView(
-					metric.Instrument{Name: "*"},
-					metric.Stream{
-						// filter out all attributes so they are added as filtered
-						// attributes to the exemplar
-						AttributeFilter: attribute.NewAllowKeysFilter(),
-					},
-				)),
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "exponential_histogram_*"},
+						metric.Stream{
+							Aggregation: metric.AggregationBase2ExponentialHistogram{
+								MaxSize: 10,
+							},
+							AttributeFilter: attribute.NewAllowKeysFilter(),
+						},
+					),
+					metric.NewView(
+						metric.Instrument{Name: "*"},
+						metric.Stream{
+							// filter out all attributes so they are added as filtered
+							// attributes to the exemplar
+							AttributeFilter: attribute.NewAllowKeysFilter(),
+						},
+					),
+				),
 			)
 			meter := provider.Meter("meter", otelmetric.WithInstrumentationVersion("v0.1.0"))
-
 			// Add a sampled span context so that measurements get exemplars added
 			sc := trace.NewSpanContext(trace.SpanContextConfig{
 				SpanID:     trace.SpanID{0o1},

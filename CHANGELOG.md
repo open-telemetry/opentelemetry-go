@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCConnectRPCResponseMetadata`
   - `RPCGRPCRequestMetadata`
   - `RPCGRPCResponseMetadata`
+- Export exemplars on native histograms in `go.opentelemetry.io/otel/exporters/prometheus`. (#22731)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
