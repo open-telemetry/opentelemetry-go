@@ -1,5 +1,12 @@
 params:
-  excluded_namespaces: ["aspnetcore", "dotnet", "jvm", "nodejs", "v8js"]
+  excluded_namespaces:
+    - "aspnetcore"
+    - "cpython"
+    - "dotnet"
+    - "jvm"
+    - "kestrel"
+    - "nodejs"
+    - "v8js"
   excluded_attributes: ["messaging.client_id"]
 templates:
   - pattern: attribute_group.go.j2
@@ -16,12 +23,12 @@ templates:
     file_name: attribute_group.go
   - pattern: metric.go.j2
     filter: >
-      semconv_metrics({
+      semconv_grouped_metrics({
+        "exclude_deprecated": true,
         "exclude_root_namespace": $excluded_namespaces,
       })
-      | sort_by(.metric_name)
-    application_mode: single
-    file_name: metric.go
+    application_mode: each
+    file_name: "{{ctx.root_namespace | camel_case | lower }}conv/metric.go"
 comment_formats:
   go:
     format: markdown
@@ -45,6 +52,7 @@ text_maps:
     string: String
     string[]: StringSlice
     int: Int
+    int64: Int64
     int[]: IntSlice
     double: Float64
     double[]: FloatSlice
@@ -59,6 +67,20 @@ text_maps:
     double[]: "...float64"
     boolean: bool
     boolean[]: "...bool"
+  instrument:
+    cpu.time: Float64ObservableCounter
+    go.config.gogc: Int64ObservableUpDownCounter
+    go.goroutine.count: Int64ObservableUpDownCounter
+    go.memory.allocated: Int64ObservableCounter
+    go.memory.allocations: Int64ObservableCounter
+    go.memory.gc.goal: Int64ObservableUpDownCounter
+    go.memory.limit: Int64ObservableUpDownCounter
+    go.memory.used: Int64ObservableUpDownCounter
+    go.processor.limit: Int64ObservableUpDownCounter
+    process.cpu.time: Float64ObservableCounter
+    system.memory.usage: Int64ObservableUpDownCounter
+    system.memory.utilization: Float64ObservableGauge
+    system.network.io: Int64ObservableCounter
 acronyms:
   - ACL
   - AI
@@ -73,14 +95,23 @@ acronyms:
   - ASCII
   - ASPNETCore
   - AWS
+  - ActiveMQ
+  - AppHub
   - CICD
   - CPP
   - CPU
+  - CSI
   - CSS
+  - CVM
+  - ClickHouse
+  - CloudEvents
+  - CloudFoundry
+  - CockroachDB
   - CosmosDB
   - CouchDB
   - CronJob
   - DB
+  - DB2
   - DC
   - DNS
   - DaemonSet
@@ -91,14 +122,23 @@ acronyms:
   - EDB
   - EKS
   - EOF
+  - EventGrid
+  - EventHubs
+  - FC
   - FaaS
+  - FirebirdSQL
   - FirstSQL
   - FreeBSD
   - GC
+  - GCE
   - GCP
+  - GNU
   - GRPC
   - GUID
+  - GraphQL
+  - HANA
   - HBase
+  - HPA
   - HPUX
   - HSQLDB
   - HTML
@@ -106,43 +146,72 @@ acronyms:
   - HTTPS
   - HanaDB
   - IA64
+  - IBM
+  - ICC
   - ID
+  - IO
+  - IOS
+  - IOWait
   - IP
+  - IPv4
+  - IPv6
+  - ISO
   - InProc
+  - InfluxDB
   - InstantDB
   - JDBC
+  - JMS
   - JSON
+  - JSONRPC
   - JVM
   - K8S
   - LHS
+  - MCC
+  - MNC
   - MSSQL
   - MariaDB
   - MaxDB
   - MongoDB
   - MySQL
   - NetBSD
+  - OCI
+  - OKE
   - OS
   - OTel
+  - OpenAI
   - OpenBSD
+  - OpenSearch
+  - OpenShift
+  - OpenTracing
   - PHP
   - PID
   - PPC32
   - PPC64
   - PostgreSQL
+  - PubSub
   - QPS
   - QUIC
   - RAM
   - RHS
   - RPC
+  - RabbitMQ
   - ReplicaSet
   - ReplicationController
   - ResourceQuota
+  - RocketMQ
+  - SAP
+  - SCF
   - SDK
   - SLA
   - SMTP
+  - SNS
   - SPDY
   - SQL
+  - SQLite
+  - SQS
   - SSH
+  - ServiceBus
+  - SignalR
   - StatefulSet
   - TCP
   - TLS
@@ -158,9 +227,9 @@ acronyms:
   - VCS
   - VM
   - WebEngine
+  - WebJS
   - XML
   - XMPP
   - XSRF
   - XSS
   - ZOS
-  

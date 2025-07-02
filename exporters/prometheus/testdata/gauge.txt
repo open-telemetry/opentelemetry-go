@@ -1,9 +1,6 @@
 # HELP bar_ratio a fun little gauge
 # TYPE bar_ratio gauge
-bar_ratio{A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} .75
-# HELP otel_scope_info Instrumentation Scope metadata
-# TYPE otel_scope_info gauge
-otel_scope_info{fizz="buzz",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1
+bar_ratio{A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} .75
 # HELP target_info Target metadata
 # TYPE target_info gauge
 target_info{"service.name"="prometheus_test","telemetry.sdk.language"="go","telemetry.sdk.name"="opentelemetry","telemetry.sdk.version"="latest"} 1

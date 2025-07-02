@@ -212,7 +212,7 @@ func TestEndSpanConfig(t *testing.T) {
 func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
-	schemaURL := "https://opentelemetry.io/schemas/1.2.0"
+	schemaURL := "https://opentelemetry.io/schemas/1.21.0"
 	attrs := attribute.NewSet(
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
