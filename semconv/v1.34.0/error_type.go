@@ -10,9 +10,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// ErrorType returns an attribute KeyValue that identifies the type of the given error.
-// It uses reflection to determine the fully qualified type name for observability and monitoring.
+// ErrorType returns an [attribute.KeyValue] identifying the error type of err.
 func ErrorType(err error) attribute.KeyValue {
+	if err == nil {
+		return ErrorTypeOther
+	}
 	t := reflect.TypeOf(err)
 	var value string
 	if t.PkgPath() == "" && t.Name() == "" {
