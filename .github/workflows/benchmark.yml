@@ -12,6 +12,8 @@ env:
   DEFAULT_GO_VERSION: "~1.24.0"
 jobs:
   benchmark:
+    permissions:
+      contents: write # required for pushing to gh-pages branch
     name: Benchmarks
     runs-on: equinix-bare-metal
     steps:
