@@ -195,8 +195,8 @@ github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32 h1:WUvBfQL6EW/40l6Om
 github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32/go.mod h1:NUw9Zr2Sy7+HxzdjIULge71wI6yEg1lWQr7Evcu8K0E=
 github.com/golangci/go-printf-func-name v0.1.0 h1:dVokQP+NMTO7jwO4bwsRwLWeudOVUPPyAKJuzv8pEJU=
 github.com/golangci/go-printf-func-name v0.1.0/go.mod h1:wqhWFH5mUdJQhweRnldEywnR5021wTdZSNgwYceV14s=
-github.com/golangci/gofmt v0.0.0-20250413222143-f2e10e00591b h1:Aa2SLCpcFsO9PI39l00IkHCP79z/D9gk3EwZBoJGv1k=
-github.com/golangci/gofmt v0.0.0-20250413222143-f2e10e00591b/go.mod h1:ivJ9QDg0XucIkmwhzCDsqcnxxlDStoTl89jDMIoNxKY=
+github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6 h1:jlKy3uQkETB3zMBK8utduvojT+If2nDAM1pWpEzXjaY=
+github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6/go.mod h1:OyaRySOXorMn8zJqFku8YsKptIhPkANyKKTMC+rqMCs=
 github.com/golangci/golangci-lint/v2 v2.2.1 h1:01r5ueY3oq8gtqgA5TGtBcS+LYZ/dEzZ59/AN1NsT2E=
 github.com/golangci/golangci-lint/v2 v2.2.1/go.mod h1:Wu5txvpvWB2r+vjSNS6zn3WuCiJ7HAerKNiH+sEqWZA=
 github.com/golangci/golines v0.0.0-20250217232252-b35a6149b587 h1:RXtAfHDBWAv49/t94l3j9Iqvy6eXL/nm56EejqrZuQc=
