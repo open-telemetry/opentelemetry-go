@@ -1,0 +1,66 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package semconv // import "go.opentelemetry.io/otel/semconv/v1.34.0"
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"testing"
+
+	"go.opentelemetry.io/otel/attribute"
+)
+
+type CustomError struct{}
+
+func (CustomError) Error() string {
+	return "custom error"
+}
+
+func TestErrorType(t *testing.T) {
+	customErr := CustomError{}
+	builtinErr := errors.New("something went wrong")
+	var nilErr error
+
+	wantCustomType := reflect.TypeOf(customErr)
+	wantCustomStr := fmt.Sprintf("%s.%s", wantCustomType.PkgPath(), wantCustomType.Name())
+
+	tests := []struct {
+		name    string
+		err     error
+		want    attribute.KeyValue
+		wantStr string
+	}{
+		{
+			name: "BuiltinError",
+			err:  builtinErr,
+			want: attribute.String("error.type", "*errors.errorString"),
+		},
+		{
+			name:    "CustomError",
+			err:     customErr,
+			wantStr: wantCustomStr,
+		},
+		{
+			name: "NilError",
+			err:  nilErr,
+			want: ErrorTypeOther,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ErrorType(tt.err)
+			if tt.name == "CustomError" {
+				if got.Value.AsString() != tt.wantStr {
+					t.Errorf("Want %s, got %s", tt.wantStr, got.Value.AsString())
+				}
+			} else {
+				if got != tt.want {
+					t.Errorf("Want %v, got %v", tt.want, got)
+				}
+			}
+		})
+	}
+}
