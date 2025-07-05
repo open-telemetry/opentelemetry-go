@@ -54,11 +54,11 @@ func TestErrorType(t *testing.T) {
 			got := ErrorType(tt.err)
 			if tt.name == "CustomError" {
 				if got.Value.AsString() != tt.wantStr {
-					t.Errorf("Expected %s, got %s", tt.wantStr, got.Value.AsString())
+					t.Errorf("Want %s, got %s", tt.wantStr, got.Value.AsString())
 				}
 			} else {
 				if got != tt.want {
-					t.Errorf("Expected %v, got %v", tt.want, got)
+					t.Errorf("Want %v, got %v", tt.want, got)
 				}
 			}
 		})
