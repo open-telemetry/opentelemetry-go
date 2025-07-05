@@ -10,10 +10,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add template attribute functions to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6939)
+- Add template attribute functions to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
   - `ContainerLabel`
   - `DBOperationParameter`
   - `DBSystemParameter`
+  - `ErrorType`
   - `HTTPRequestHeader`
   - `HTTPResponseHeader`
   - `K8SCronJobAnnotation`
@@ -39,7 +40,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCConnectRPCResponseMetadata`
   - `RPCGRPCRequestMetadata`
   - `RPCGRPCResponseMetadata`
-  - `ErrorType`
 
 ### Changed
 
