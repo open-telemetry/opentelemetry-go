@@ -43,11 +43,7 @@ func Example_selfSignedCertificates_TLS() {
 	ctx := context.Background()
 	var grpcExpOpt []otlploggrpc.Option
 	// the filepath to the server's CA certificate
-	caFile := os.Getenv("CUSTOM_SERVER_CA_CERTIFICATE")
-	if caFile == "" {
-		panic(errors.New("environment variable CUSTOM_SERVER_CA_CERTIFICATE is required for TLS connections"))
-	}
-
+	var caFile string
 	// TLS connection
 	creds, err := credentials.NewClientTLSFromFile(caFile, "")
 	if err != nil {
@@ -79,20 +75,11 @@ func Example_selfSignedCertificates_mTLS() {
 	ctx := context.Background()
 	var grpcExpOpt []otlploggrpc.Option
 	// the filepath to the server's CA certificate
-	caFile := os.Getenv("CUSTOM_SERVER_CA_CERTIFICATE")
+	var caFile string
 	// the filepath to the client's certificate
-	clientCert := os.Getenv("CUSTOM_CLIENT_CERTIFICATE")
+	var clientCert string
 	// the filepath to the client's private key
-	clientKey := os.Getenv("CUSTOM_CLIENT_KEY")
-	if caFile == "" {
-		panic(errors.New("CUSTOM_SERVER_CA_CERTIFICATE environment variable is required for mTLS connections"))
-	}
-	if clientCert == "" {
-		panic(errors.New("CUSTOM_CLIENT_CERTIFICATE environment variable is required for mTLS connections"))
-	}
-	if clientKey == "" {
-		panic(errors.New("CUSTOM_CLIENT_KEY environment variable is required for mTLS connections"))
-	}
+	var clientKey string
 	// mTLS connection
 	tlsCfg := tls.Config{}
 	// loads CA certificate
