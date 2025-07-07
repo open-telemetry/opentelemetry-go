@@ -242,6 +242,15 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 			want:  make([]log.KeyValue, 10),
 		},
 		{
+			name: "MapKey",
+			attrs: []log.KeyValue{
+				log.Map("key", log.Int("key", 5), log.Int("key", 10)),
+			},
+			want: []log.KeyValue{
+				log.Map("key", log.Int("key", 10)),
+			},
+		},
+		{
 			name: "NonEmptyKey",
 			attrs: []log.KeyValue{
 				log.Bool("key", true),
