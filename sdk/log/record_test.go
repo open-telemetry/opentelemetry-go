@@ -378,7 +378,6 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 				want := append(tc.want, tc.want...)
 				validate(t, r, want)
 			})
-
 		})
 	}
 }
