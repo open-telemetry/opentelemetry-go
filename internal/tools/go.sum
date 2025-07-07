@@ -10,8 +10,8 @@ github.com/4meepo/tagalign v1.4.2 h1:0hcLHPGMjDyM1gHG58cS73aQF8J4TdVR96TZViorO9E
 github.com/4meepo/tagalign v1.4.2/go.mod h1:+p4aMyFM+ra7nb41CnFG6aSDXqRxU/w1VQqScKqDARI=
 github.com/Abirdcfly/dupword v0.1.6 h1:qeL6u0442RPRe3mcaLcbaCi2/Y/hOcdtw6DE9odjz9c=
 github.com/Abirdcfly/dupword v0.1.6/go.mod h1:s+BFMuL/I4YSiFv29snqyjwzDp4b65W2Kvy+PKzZ6cw=
-github.com/AlwxSin/noinlineerr v1.0.3 h1:9b5edChzzwX30BuBci13LHVZHF5q7hW9qtrs+wJdDog=
-github.com/AlwxSin/noinlineerr v1.0.3/go.mod h1:+QgkkoYrMH7RHvcdxdlI7vYYEdgeoFOVjU9sUhw/rQc=
+github.com/AlwxSin/noinlineerr v1.0.4 h1:+WeO27L9bora38Quw+we2Tt0tr/UKJLP5bOMxwEeO5Y=
+github.com/AlwxSin/noinlineerr v1.0.4/go.mod h1:+QgkkoYrMH7RHvcdxdlI7vYYEdgeoFOVjU9sUhw/rQc=
 github.com/Antonboom/errname v1.1.0 h1:A+ucvdpMwlo/myWrkHEUEBWc/xuXdud23S8tmTb/oAE=
 github.com/Antonboom/errname v1.1.0/go.mod h1:O1NMrzgUcVBGIfi3xlVuvX8Q/VP/73sseCaAppfjqZw=
 github.com/Antonboom/nilnil v1.1.0 h1:jGxJxjgYS3VUUtOTNk8Z1icwT5ESpLH/426fjmQG+ng=
@@ -195,8 +195,8 @@ github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32 h1:WUvBfQL6EW/40l6Om
 github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32/go.mod h1:NUw9Zr2Sy7+HxzdjIULge71wI6yEg1lWQr7Evcu8K0E=
 github.com/golangci/go-printf-func-name v0.1.0 h1:dVokQP+NMTO7jwO4bwsRwLWeudOVUPPyAKJuzv8pEJU=
 github.com/golangci/go-printf-func-name v0.1.0/go.mod h1:wqhWFH5mUdJQhweRnldEywnR5021wTdZSNgwYceV14s=
-github.com/golangci/gofmt v0.0.0-20250413222143-f2e10e00591b h1:Aa2SLCpcFsO9PI39l00IkHCP79z/D9gk3EwZBoJGv1k=
-github.com/golangci/gofmt v0.0.0-20250413222143-f2e10e00591b/go.mod h1:ivJ9QDg0XucIkmwhzCDsqcnxxlDStoTl89jDMIoNxKY=
+github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6 h1:jlKy3uQkETB3zMBK8utduvojT+If2nDAM1pWpEzXjaY=
+github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6/go.mod h1:OyaRySOXorMn8zJqFku8YsKptIhPkANyKKTMC+rqMCs=
 github.com/golangci/golangci-lint/v2 v2.2.1 h1:01r5ueY3oq8gtqgA5TGtBcS+LYZ/dEzZ59/AN1NsT2E=
 github.com/golangci/golangci-lint/v2 v2.2.1/go.mod h1:Wu5txvpvWB2r+vjSNS6zn3WuCiJ7HAerKNiH+sEqWZA=
 github.com/golangci/golines v0.0.0-20250217232252-b35a6149b587 h1:RXtAfHDBWAv49/t94l3j9Iqvy6eXL/nm56EejqrZuQc=
