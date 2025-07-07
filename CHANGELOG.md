@@ -40,6 +40,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCGRPCRequestMetadata`
   - `RPCGRPCResponseMetadata`
 
+### Changed
+
+- Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
