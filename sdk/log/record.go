@@ -93,8 +93,8 @@ type Record struct {
 	attributeValueLengthLimit int
 	attributeCountLimit       int
 
-	// specifies whether we should dedupe attributes or not
-	allowDupAttrs bool
+	// specifies whether we should deduplicate any key value collections or not
+	allowDupKeys bool
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -195,7 +195,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
 		var drop int
-		if !r.allowDupAttrs {
+		if !r.allowDupKeys {
 			attrs, drop = dedup(attrs)
 			r.setDropped(drop)
 		}
@@ -207,7 +207,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		return
 	}
 
-	if !r.allowDupAttrs {
+	if !r.allowDupKeys {
 		// Used to find duplicates between attrs and existing attributes in r.
 		rIndex := r.attrIndex()
 		defer putIndex(rIndex)
@@ -305,7 +305,7 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
 	r.setDropped(0)
-	if !r.allowDupAttrs {
+	if !r.allowDupKeys {
 		attrs, drop = dedup(attrs)
 		r.setDropped(drop)
 	}

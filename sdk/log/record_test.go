@@ -355,7 +355,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r := new(Record)
-				r.allowDupAttrs = true
+				r.allowDupKeys = true
 				r.attributeValueLengthLimit = -1
 				r.SetAttributes(tc.attrs...)
 				validate(t, r, tc.want)
@@ -363,7 +363,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 
 			t.Run("AddAttributes/Empty", func(t *testing.T) {
 				r := new(Record)
-				r.allowDupAttrs = true
+				r.allowDupKeys = true
 				r.attributeValueLengthLimit = -1
 				r.AddAttributes(tc.attrs...)
 				validate(t, r, tc.want)
@@ -371,7 +371,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 
 			t.Run("AddAttributes/Twice", func(t *testing.T) {
 				r := new(Record)
-				r.allowDupAttrs = true
+				r.allowDupKeys = true
 				r.attributeValueLengthLimit = -1
 				r.AddAttributes(tc.attrs...)
 				r.AddAttributes(tc.attrs...)
@@ -918,7 +918,7 @@ func BenchmarkSetAddAttributes(b *testing.B) {
 	b.Run("SetAttributes/AllowDuplicates", func(b *testing.B) {
 		records := make([]Record, b.N)
 		for _, r := range records {
-			r.allowDupAttrs = true
+			r.allowDupKeys = true
 		}
 
 		b.ResetTimer()
@@ -941,7 +941,7 @@ func BenchmarkSetAddAttributes(b *testing.B) {
 	b.Run("AddAttributes/AllowDuplicates", func(b *testing.B) {
 		records := make([]Record, b.N)
 		for _, r := range records {
-			r.allowDupAttrs = true
+			r.allowDupKeys = true
 		}
 
 		b.ResetTimer()
