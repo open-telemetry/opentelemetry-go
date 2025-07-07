@@ -516,8 +516,8 @@ go.opentelemetry.io/build-tools v0.24.0 h1:QSJT16EVjg76YaYKCqNXZq3cenfGpbX5w1BY1
 go.opentelemetry.io/build-tools v0.24.0/go.mod h1:F07+v9sUChamQK4BY+lTZqDna3YoFy2hcYRnAygO7rY=
 go.opentelemetry.io/build-tools/crosslink v0.24.0 h1:ckF7keUjIDP/g8PtZTldjZD84eCq0QY7ZZZaODv57IA=
 go.opentelemetry.io/build-tools/crosslink v0.24.0/go.mod h1:NBavdwrfwPHRjfW3+oJXqXWyr0U7x5z6Av2e+jRztnU=
-go.opentelemetry.io/build-tools/gotmpl v0.23.1 h1:iA+oEJVhig4jBfrAYT9AuSxpbx4lYxwHPaQzSS3/txY=
-go.opentelemetry.io/build-tools/gotmpl v0.23.1/go.mod h1:cCN6ZsIuDiBH8eEBU9pqfra7gzaNtXleIwzGBpOJOZo=
+go.opentelemetry.io/build-tools/gotmpl v0.24.0 h1:p3+xDG2SarFa8w611uFVmExQJ5Us3yonOMPBFxs885Y=
+go.opentelemetry.io/build-tools/gotmpl v0.24.0/go.mod h1:cCN6ZsIuDiBH8eEBU9pqfra7gzaNtXleIwzGBpOJOZo=
 go.opentelemetry.io/build-tools/multimod v0.24.0 h1:s7B7HFX8cpVPP5n8o9enqnWPKHnmUXYctJ5yuKadcTc=
 go.opentelemetry.io/build-tools/multimod v0.24.0/go.mod h1:ewtzaLwDYqBH/d0j50ZV4r/soTWVn+h78WnTmVv2RT0=
 go.uber.org/automaxprocs v1.6.0 h1:O3y2/QNTOdbF+e/dpXNNW7Rx2hZ4sTIPyybbxyNqTUs=
