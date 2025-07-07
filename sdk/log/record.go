@@ -436,7 +436,6 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 		}
 		val = log.SliceValue(sl...)
 	case log.KindMap:
-		// TODO: Do these needs to be deduped
 		// Deduplicate then truncate. Do not do at the same time to avoid
 		// wasted truncation operations.
 		kvs, dropped := dedup(val.AsMap())
