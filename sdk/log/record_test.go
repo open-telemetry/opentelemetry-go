@@ -247,7 +247,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 				log.Map("key", log.Int("key", 5), log.Int("key", 10)),
 			},
 			want: []log.KeyValue{
-				log.Map("key", log.Int("key", 10)),
+				log.Map("key", log.Int("key", 5), log.Int("key", 10)),
 			},
 		},
 		{
