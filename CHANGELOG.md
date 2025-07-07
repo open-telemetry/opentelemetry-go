@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCConnectRPCResponseMetadata`
   - `RPCGRPCRequestMetadata`
   - `RPCGRPCResponseMetadata`
+- Add `go.opentelemetry.io/otel/sdk/log.WithoutAttributeDeduplication` which can be used to disable attribute deduplication for log records (#6968)
 
 ### Changed
 
