@@ -27,11 +27,12 @@ const (
 )
 
 type providerConfig struct {
-	resource       *resource.Resource
-	processors     []Processor
-	fltrProcessors []FilterProcessor
-	attrCntLim     setting[int]
-	attrValLenLim  setting[int]
+	resource            *resource.Resource
+	processors          []Processor
+	fltrProcessors      []FilterProcessor
+	attrCntLim          setting[int]
+	attrValLenLim       setting[int]
+	attrAllowDuplicates setting[bool]
 }
 
 func newProviderConfig(opts []LoggerProviderOption) providerConfig {
@@ -67,6 +68,7 @@ type LoggerProvider struct {
 	fltrProcessors            []FilterProcessor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
+	attributeAllowDuplicates  bool
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -93,6 +95,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		fltrProcessors:            cfg.fltrProcessors,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
+		attributeAllowDuplicates:  cfg.attrAllowDuplicates.Value,
 	}
 }
 
@@ -251,6 +254,20 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.attrValLenLim = newSetting(limit)
+		return cfg
+	})
+}
+
+// WithoutAttributeDeduplication sets whether log attribute deduplication is performed.
+//
+// By default, log attributes are deduplicated to comply with the OpenTelemetry specification.
+// Disabling deduplication with this option can improve performance when setting or adding attributes.
+//
+// Note: If you disable deduplication, you are responsible for ensuring that duplicate
+// attributes are not emitted, or that the telemetry receiver can handle duplicate attributes.
+func WithoutAttributeDeduplication() LoggerProviderOption {
+	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
+		cfg.attrAllowDuplicates = newSetting(true)
 		return cfg
 	})
 }

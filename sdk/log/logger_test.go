@@ -47,6 +47,11 @@ func TestLoggerEmit(t *testing.T) {
 	rWithNoObservedTimestamp := r
 	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
+	rWithoutDeduplicateAttributes := r
+	rWithoutDeduplicateAttributes.AddAttributes(
+		log.String("k1", "str1"),
+	)
+
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		context.Background(),
 		trace.NewSpanContext(trace.SpanContextConfig{
@@ -203,6 +208,40 @@ func TestLoggerEmit(t *testing.T) {
 						log.Float64("k2", 1.0),
 					},
 					nFront: 2,
+				},
+			},
+		},
+		{
+			name: "WithoutAttributeDeduplication",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+				WithAttributeValueLengthLimit(5),
+				WithAttributeCountLimit(5),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				WithoutAttributeDeduplication(),
+			), instrumentation.Scope{Name: "scope"}),
+			ctx:    context.Background(),
+			record: rWithoutDeduplicateAttributes,
+			expectedRecords: []Record{
+				{
+					eventName:                 r.EventName(),
+					timestamp:                 r.Timestamp(),
+					body:                      r.Body(),
+					severity:                  r.Severity(),
+					severityText:              r.SeverityText(),
+					observedTimestamp:         r.ObservedTimestamp(),
+					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
+					attributeValueLengthLimit: 5,
+					attributeCountLimit:       5,
+					scope:                     &instrumentation.Scope{Name: "scope"},
+					front: [attributesInlineCount]log.KeyValue{
+						log.String("k1", "str"),
+						log.Float64("k2", 1.0),
+						log.String("k1", "str1"),
+					},
+					nFront:        3,
+					allowDupAttrs: true,
 				},
 			},
 		},
