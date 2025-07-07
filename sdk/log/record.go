@@ -94,7 +94,7 @@ type Record struct {
 	attributeCountLimit       int
 
 	// specifies whether we should dedupe attributes or not
-	dontDedupAttributes bool
+	allowDupAttrs bool
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -195,7 +195,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
 		var drop int
-		if !r.dontDedupAttributes {
+		if !r.allowDupAttrs {
 			attrs, drop = dedup(attrs)
 			r.setDropped(drop)
 		}
@@ -207,7 +207,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		return
 	}
 
-	if !r.dontDedupAttributes {
+	if !r.allowDupAttrs {
 		// Used to find duplicates between attrs and existing attributes in r.
 		rIndex := r.attrIndex()
 		defer putIndex(rIndex)
@@ -305,7 +305,7 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
 	r.setDropped(0)
-	if !r.dontDedupAttributes {
+	if !r.allowDupAttrs {
 		attrs, drop = dedup(attrs)
 		r.setDropped(drop)
 	}
@@ -436,6 +436,7 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 		}
 		val = log.SliceValue(sl...)
 	case log.KindMap:
+		// TODO: Do these needs to be deduped
 		// Deduplicate then truncate. Do not do at the same time to avoid
 		// wasted truncation operations.
 		kvs, dropped := dedup(val.AsMap())
