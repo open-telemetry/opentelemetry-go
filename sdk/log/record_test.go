@@ -916,8 +916,34 @@ func BenchmarkSetAddAttributes(b *testing.B) {
 		}
 	})
 
+	b.Run("SetAttributes/AllowDuplicates", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for _, r := range records {
+			r.allowDupAttrs = true
+		}
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].SetAttributes(kv)
+		}
+	})
+
 	b.Run("AddAttributes", func(b *testing.B) {
 		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].AddAttributes(kv)
+		}
+	})
+
+	b.Run("AddAttributes/AllowDuplicates", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for _, r := range records {
+			r.allowDupAttrs = true
+		}
 
 		b.ResetTimer()
 		b.ReportAllocs()
