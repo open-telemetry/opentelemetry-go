@@ -8,6 +8,38 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add template attribute functions to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6939)
+  - `ContainerLabel`
+  - `DBOperationParameter`
+  - `DBSystemParameter`
+  - `HTTPRequestHeader`
+  - `HTTPResponseHeader`
+  - `K8SCronJobAnnotation`
+  - `K8SCronJobLabel`
+  - `K8SDaemonSetAnnotation`
+  - `K8SDaemonSetLabel`
+  - `K8SDeploymentAnnotation`
+  - `K8SDeploymentLabel`
+  - `K8SJobAnnotation`
+  - `K8SJobLabel`
+  - `K8SNamespaceAnnotation`
+  - `K8SNamespaceLabel`
+  - `K8SNodeAnnotation`
+  - `K8SNodeLabel`
+  - `K8SPodAnnotation`
+  - `K8SPodLabel`
+  - `K8SReplicaSetAnnotation`
+  - `K8SReplicaSetLabel`
+  - `K8SStatefulSetAnnotation`
+  - `K8SStatefulSetLabel`
+  - `ProcessEnvironmentVariable`
+  - `RPCConnectRPCRequestMetadata`
+  - `RPCConnectRPCResponseMetadata`
+  - `RPCGRPCRequestMetadata`
+  - `RPCGRPCResponseMetadata`
+
 ### Changed
 
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
