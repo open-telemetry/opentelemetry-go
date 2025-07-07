@@ -219,7 +219,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithAttributeValueLengthLimit(5),
 				WithAttributeCountLimit(5),
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-				WithoutAttributeDeduplication(),
+				AllowKeyDuplication(),
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    context.Background(),
 			record: rWithoutDeduplicateAttributes,

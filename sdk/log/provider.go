@@ -32,7 +32,7 @@ type providerConfig struct {
 	fltrProcessors      []FilterProcessor
 	attrCntLim          setting[int]
 	attrValLenLim       setting[int]
-	attrAllowDuplicates setting[bool]
+	keysAllowDuplicates setting[bool]
 }
 
 func newProviderConfig(opts []LoggerProviderOption) providerConfig {
@@ -68,7 +68,7 @@ type LoggerProvider struct {
 	fltrProcessors            []FilterProcessor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
-	attributeAllowDuplicates  bool
+	keysAllowDuplicates       bool
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -95,7 +95,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		fltrProcessors:            cfg.fltrProcessors,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
-		attributeAllowDuplicates:  cfg.attrAllowDuplicates.Value,
+		keysAllowDuplicates:       cfg.keysAllowDuplicates.Value,
 	}
 }
 
@@ -258,16 +258,20 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	})
 }
 
-// WithoutAttributeDeduplication sets whether log attribute deduplication is performed.
+// AllowKeyDuplication sets whether deduplication is skipped for log attributes or other key-value collections.
 //
-// By default, log attributes are deduplicated to comply with the OpenTelemetry specification.
+// By default, log attributes (and key-value collections within log attributes) are deduplicated to comply with the OpenTelemetry specification,
+// Deduplication means that if multiple key–value pairs with the same key are present, only the last occurrence
+// is retained and earlier ones are discarded.
+//
 // Disabling deduplication with this option can improve performance when setting or adding attributes.
 //
 // Note: If you disable deduplication, you are responsible for ensuring that duplicate
-// attributes are not emitted, or that the telemetry receiver can handle duplicate attributes.
-func WithoutAttributeDeduplication() LoggerProviderOption {
+// attributes (i.e. multiple key-value pairs with the same key in a single collection)
+// are not emitted, or that the telemetry receiver can handle duplicate attributes.
+func AllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.attrAllowDuplicates = newSetting(true)
+		cfg.keysAllowDuplicates = newSetting(true)
 		return cfg
 	})
 }
