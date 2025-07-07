@@ -2,5 +2,6 @@ http://localhost
 http://jaeger-collector
 https://github.com/open-telemetry/opentelemetry-go/milestone/
 https://github.com/open-telemetry/opentelemetry-go/projects
+https://github.com/open-telemetry/semantic-conventions/archive/refs/tags/$(TAG).zip[model]
 file:///home/runner/work/opentelemetry-go/opentelemetry-go/libraries
 file:///home/runner/work/opentelemetry-go/opentelemetry-go/manual
