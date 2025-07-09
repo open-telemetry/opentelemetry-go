@@ -40,7 +40,7 @@ func TestErrorType(t *testing.T) {
 		{
 			name:    "CustomError",
 			err:     customErr,
-			wantStr: wantCustomStr,
+			want: attribute.String("error.type", wantCustomStr),
 		},
 		{
 			name: "NilError",
