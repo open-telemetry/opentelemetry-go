@@ -23,8 +23,12 @@ import (
 // cover 95% of all use-cases (https://go.dev/blog/slog#performance).
 const attributesInlineCount = 5
 
-var logAttrDropped = sync.OnceFunc(func() {
-	global.Warn("limit reached: dropping log Record attributes")
+// var logAttrDropped = sync.OnceFunc(func() {
+// 	global.Warn("limit reached: dropping log Record attributes")
+// })
+
+var logKeyValuePairDropped = sync.OnceFunc(func() {
+	global.Warn("key duplication: dropping key-value pair")
 })
 
 // indexPool is a pool of index maps used for de-duplication.
@@ -97,12 +101,12 @@ type Record struct {
 }
 
 func (r *Record) addDropped(n int) {
-	logAttrDropped()
+	logKeyValuePairDropped()
 	r.dropped += n
 }
 
 func (r *Record) setDropped(n int) {
-	logAttrDropped()
+	logKeyValuePairDropped()
 	r.dropped = n
 }
 
@@ -197,6 +201,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 
 		attrs, drop = head(attrs, r.attributeCountLimit)
 		r.addDropped(drop)
+		logKeyValuePairDropped()
 
 		r.addAttrs(attrs)
 		return
@@ -302,6 +307,7 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
 	r.addDropped(drop)
+	logKeyValuePairDropped()
 
 	r.nFront = 0
 	var i int
@@ -430,6 +436,7 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 		// wasted truncation operations.
 		kvs, dropped := dedup(val.AsMap())
 		r.addDropped(dropped)
+		logKeyValuePairDropped()
 		for i := range kvs {
 			kvs[i] = r.applyAttrLimits(kvs[i])
 		}
