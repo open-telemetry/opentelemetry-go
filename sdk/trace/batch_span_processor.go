@@ -21,7 +21,7 @@ const (
 	DefaultMaxQueueSize = 2048
 	// DefaultScheduleDelay is the delay interval between two consecutive exports, in milliseconds.
 	DefaultScheduleDelay = 5000
-	// DefaultExportTimeout is 30000 msec. It must be multiplied by time.Millisecond when passed to WithExportTimeout.
+	// DefaultExportTimeout is the duration after which an export is cancelled, in milliseconds.
 	DefaultExportTimeout      = 30000
 	DefaultMaxExportBatchSize = 512
 )
