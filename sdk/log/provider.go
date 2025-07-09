@@ -260,15 +260,15 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 
 // AllowKeyDuplication sets whether deduplication is skipped for log attributes or other key-value collections.
 //
-// By default, log attributes (and key-value collections within log attributes) are deduplicated to comply with the OpenTelemetry specification,
+// By default, the key-value collections within a log record are deduplicated to comply with the OpenTelemetry Specification,
 // Deduplication means that if multiple key–value pairs with the same key are present, only the last occurrence
 // is retained and earlier ones are discarded.
 //
-// Disabling deduplication with this option can improve performance when setting or adding attributes.
+// Disabling deduplication with this option can improve performance e.g. of adding attributes to the log record.
 //
 // Note: If you disable deduplication, you are responsible for ensuring that duplicate
-// attributes (i.e. multiple key-value pairs with the same key in a single collection)
-// are not emitted, or that the telemetry receiver can handle duplicate attributes.
+// key-value pairs within in a single collection are not emitted,
+// or that the telemetry receiver can handle such duplicates.
 func AllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.keysAllowDuplicates = newSetting(true)
