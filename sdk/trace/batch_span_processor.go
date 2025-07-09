@@ -19,7 +19,7 @@ import (
 // Defaults for BatchSpanProcessorOptions.
 const (
 	DefaultMaxQueueSize = 2048
-	// DefaultScheduleDelay is 5000 msec. It must be multiplied by time.Millisecond when passed to WithBatchTimeout.
+	// DefaultScheduleDelay is the delay interval between two consecutive exports, in milliseconds.
 	DefaultScheduleDelay = 5000
 	// DefaultExportTimeout is 30000 msec. It must be multiplied by time.Millisecond when passed to WithExportTimeout.
 	DefaultExportTimeout      = 30000
