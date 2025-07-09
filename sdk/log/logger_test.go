@@ -47,7 +47,7 @@ func TestLoggerEmit(t *testing.T) {
 	rWithNoObservedTimestamp := r
 	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
-	rWithoutDeduplicateAttributes := r.Clone()
+	rWithoutDeduplicateAttributes := r
 	rWithoutDeduplicateAttributes.AddAttributes(
 		log.String("k1", "str1"),
 	)
