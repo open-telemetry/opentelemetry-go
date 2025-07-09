@@ -27,10 +27,9 @@ func TestErrorType(t *testing.T) {
 	wantCustomStr := fmt.Sprintf("%s.%s", wantCustomType.PkgPath(), wantCustomType.Name())
 
 	tests := []struct {
-		name    string
-		err     error
-		want    attribute.KeyValue
-		wantStr string
+		name string
+		err  error
+		want attribute.KeyValue
 	}{
 		{
 			name: "BuiltinError",
@@ -38,8 +37,8 @@ func TestErrorType(t *testing.T) {
 			want: attribute.String("error.type", "*errors.errorString"),
 		},
 		{
-			name:    "CustomError",
-			err:     customErr,
+			name: "CustomError",
+			err:  customErr,
 			want: attribute.String("error.type", wantCustomStr),
 		},
 		{
@@ -52,14 +51,8 @@ func TestErrorType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ErrorType(tt.err)
-			if tt.name == "CustomError" {
-				if got.Value.AsString() != tt.wantStr {
-					t.Errorf("ErrorType(%v) = %v, want %v", tt.err, got, tt.wantStr)
-				}
-			} else {
-				if got != tt.want {
-					t.Errorf("ErrorType(%v) = %v, want %v", tt.err, got, tt.wantStr)
-				}
+			if got != tt.want {
+				t.Errorf("ErrorType(%v) = %v, want %v", tt.err, got, tt.want)
 			}
 		})
 	}
