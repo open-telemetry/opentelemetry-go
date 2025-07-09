@@ -9,10 +9,9 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.2.1
 	github.com/jcchavezs/porto v0.7.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.23.1
-	go.opentelemetry.io/build-tools/gotmpl v0.23.1
-	go.opentelemetry.io/build-tools/multimod v0.23.1
-	go.opentelemetry.io/build-tools/semconvgen v0.23.1
+	go.opentelemetry.io/build-tools/crosslink v0.24.0
+	go.opentelemetry.io/build-tools/gotmpl v0.24.0
+	go.opentelemetry.io/build-tools/multimod v0.24.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 	golang.org/x/tools v0.34.0
 	golang.org/x/vuln v1.1.4
@@ -111,7 +110,9 @@ require (
 	github.com/gostaticanalysis/comment v1.5.0 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.2.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix/v2 v2.1.0 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
@@ -215,7 +216,7 @@ require (
 	go-simpler.org/sloglint v0.11.0 // indirect
 	go.augendre.info/arangolint v0.2.0 // indirect
 	go.augendre.info/fatcontext v0.8.0 // indirect
-	go.opentelemetry.io/build-tools v0.23.1 // indirect
+	go.opentelemetry.io/build-tools v0.24.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
@@ -225,7 +226,7 @@ require (
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/telemetry v0.0.0-20250701142123-2f1f7721456e // indirect
+	golang.org/x/telemetry v0.0.0-20250708141652-5a6bbb13955f // indirect
 	golang.org/x/text v0.26.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
