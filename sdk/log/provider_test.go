@@ -122,7 +122,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				processors:                []Processor{p0, p1},
 				attributeCountLimit:       attrCntLim,
 				attributeValueLengthLimit: attrValLenLim,
-				keysAllowDuplicates:       true,
+				allowDupKeys:              true,
 			},
 		},
 		{

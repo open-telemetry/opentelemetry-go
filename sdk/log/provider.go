@@ -27,12 +27,12 @@ const (
 )
 
 type providerConfig struct {
-	resource            *resource.Resource
-	processors          []Processor
-	fltrProcessors      []FilterProcessor
-	attrCntLim          setting[int]
-	attrValLenLim       setting[int]
-	keysAllowDuplicates setting[bool]
+	resource       *resource.Resource
+	processors     []Processor
+	fltrProcessors []FilterProcessor
+	attrCntLim     setting[int]
+	attrValLenLim  setting[int]
+	allowDupKeys   setting[bool]
 }
 
 func newProviderConfig(opts []LoggerProviderOption) providerConfig {
@@ -68,7 +68,7 @@ type LoggerProvider struct {
 	fltrProcessors            []FilterProcessor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
-	keysAllowDuplicates       bool
+	allowDupKeys              bool
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -95,7 +95,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		fltrProcessors:            cfg.fltrProcessors,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
-		keysAllowDuplicates:       cfg.keysAllowDuplicates.Value,
+		allowDupKeys:              cfg.allowDupKeys.Value,
 	}
 }
 
@@ -271,7 +271,7 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 // or that the telemetry receiver can handle such duplicates.
 func AllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.keysAllowDuplicates = newSetting(true)
+		cfg.allowDupKeys = newSetting(true)
 		return cfg
 	})
 }
