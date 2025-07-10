@@ -42,7 +42,7 @@ func Example() {
 func Example_selfSignedCertificates_TLS() {
 	ctx := context.Background()
 	var grpcExpOpt []otlploggrpc.Option
-	// the filepath to the server's CA certificate
+	// The filepath to the server's CA certificate provided by the user.
 	var caFile string
 	// TLS connection
 	creds, err := credentials.NewClientTLSFromFile(caFile, "")
