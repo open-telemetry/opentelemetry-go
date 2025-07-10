@@ -49,9 +49,7 @@ func Example_selfSignedCertificates_TLS() {
 	if err != nil {
 		panic(err)
 	}
-	option := otlploggrpc.WithTLSCredentials(creds)
-	grpcExpOpt = append(grpcExpOpt, option)
-	exp, err := otlploggrpc.New(ctx, grpcExpOpt...)
+	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithTLSCredentials(creds))
 	if err != nil {
 		panic(err)
 	}
