@@ -23,9 +23,9 @@ import (
 // cover 95% of all use-cases (https://go.dev/blog/slog#performance).
 const attributesInlineCount = 5
 
-// var logAttrDropped = sync.OnceFunc(func() {
-// 	global.Warn("limit reached: dropping log Record attributes")
-// })
+var logAttrDropped = sync.OnceFunc(func() {
+	global.Warn("limit reached: dropping log Record attributes")
+})
 
 var logKeyValuePairDropped = sync.OnceFunc(func() {
 	global.Warn("key duplication: dropping key-value pair")
@@ -101,12 +101,10 @@ type Record struct {
 }
 
 func (r *Record) addDropped(n int) {
-	logKeyValuePairDropped()
 	r.dropped += n
 }
 
 func (r *Record) setDropped(n int) {
-	logKeyValuePairDropped()
 	r.dropped = n
 }
 
@@ -196,12 +194,15 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
 		var drop int
-		attrs, drop = dedup(attrs)
-		r.setDropped(drop)
+		attrs = dedup(attrs)
+		r.setDropped(0)
 
 		attrs, drop = head(attrs, r.attributeCountLimit)
+
 		r.addDropped(drop)
-		logKeyValuePairDropped()
+		if drop > 0 {
+			logAttrDropped()
+		}
 
 		r.addAttrs(attrs)
 		return
@@ -226,7 +227,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		// Last-value-wins for any duplicates in attrs.
 		idx, found := uIndex[a.Key]
 		if found {
-			r.addDropped(1)
+			logKeyValuePairDropped()
 			unique[idx] = a
 			continue
 		}
@@ -234,7 +235,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		idx, found = rIndex[a.Key]
 		if found {
 			// New attrs overwrite any existing with the same key.
-			r.addDropped(1)
+			logKeyValuePairDropped()
 			if idx < 0 {
 				r.front[-(idx + 1)] = a
 			} else {
@@ -254,7 +255,12 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		// Do not use head(attrs, r.attributeCountLimit - n) here. If
 		// (r.attributeCountLimit - n) <= 0 attrs needs to be emptied.
 		last := max(0, r.attributeCountLimit-n)
-		r.addDropped(len(attrs) - last)
+		dropped := len(attrs) - last
+		r.addDropped(dropped)
+
+		if dropped > 0 {
+			logAttrDropped()
+		}
 		attrs = attrs[:last]
 	}
 
@@ -302,12 +308,15 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
-	attrs, drop = dedup(attrs)
-	r.setDropped(drop)
+	attrs = dedup(attrs)
+	r.setDropped(0)
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
 	r.addDropped(drop)
-	logKeyValuePairDropped()
+
+	if drop > 0 {
+		logAttrDropped()
+	}
 
 	r.nFront = 0
 	var i int
@@ -333,7 +342,7 @@ func head(kvs []log.KeyValue, n int) (out []log.KeyValue, dropped int) {
 }
 
 // dedup deduplicates kvs front-to-back with the last value saved.
-func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
+func dedup(kvs []log.KeyValue) (unique []log.KeyValue) {
 	index := getIndex()
 	defer putIndex(index)
 
@@ -341,14 +350,14 @@ func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	for _, a := range kvs {
 		idx, found := index[a.Key]
 		if found {
-			dropped++
 			unique[idx] = a
+			logKeyValuePairDropped()
 		} else {
 			unique = append(unique, a)
 			index[a.Key] = len(unique) - 1
 		}
 	}
-	return unique, dropped
+	return unique
 }
 
 // AttributesLen returns the number of attributes in the log record.
@@ -434,9 +443,8 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 	case log.KindMap:
 		// Deduplicate then truncate. Do not do at the same time to avoid
 		// wasted truncation operations.
-		kvs, dropped := dedup(val.AsMap())
-		r.addDropped(dropped)
-		logKeyValuePairDropped()
+		kvs := dedup(val.AsMap())
+
 		for i := range kvs {
 			kvs[i] = r.applyAttrLimits(kvs[i])
 		}
