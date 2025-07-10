@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCConnectRPCResponseMetadata`
   - `RPCGRPCRequestMetadata`
   - `RPCGRPCResponseMetadata`
+- Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
 
 ### Changed
 
