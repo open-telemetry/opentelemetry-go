@@ -41,17 +41,14 @@ func Example() {
 // Demonstrates how to configure the exporter using self-signed certificates for TLS connections.
 func Example_selfSignedCertificates_TLS() {
 	ctx := context.Background()
-	var grpcExpOpt []otlploggrpc.Option
-	// the filepath to the server's CA certificate
+	// The filepath to the server's CA certificate provided by the user.
 	var caFile string
-	// TLS connection
+	// Configure TLS connection.
 	creds, err := credentials.NewClientTLSFromFile(caFile, "")
 	if err != nil {
 		panic(err)
 	}
-	option := otlploggrpc.WithTLSCredentials(creds)
-	grpcExpOpt = append(grpcExpOpt, option)
-	exp, err := otlploggrpc.New(ctx, grpcExpOpt...)
+	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithTLSCredentials(creds))
 	if err != nil {
 		panic(err)
 	}
@@ -73,16 +70,14 @@ func Example_selfSignedCertificates_TLS() {
 // Demonstrates how to configure the exporter using self-signed certificates for mutual TLS (mTLS) connections.
 func Example_selfSignedCertificates_mTLS() {
 	ctx := context.Background()
-	var grpcExpOpt []otlploggrpc.Option
-	// the filepath to the server's CA certificate
+	// The filepath to the server's CA certificate provided by the user.
 	var caFile string
-	// the filepath to the client's certificate
+	// The filepath to the client's certificate provided by the user.
 	var clientCert string
-	// the filepath to the client's private key
+	// The filepath to the client's private key provided by the user.
 	var clientKey string
-	// mTLS connection
+	// Configure mTLS connection.
 	tlsCfg := tls.Config{}
-	// loads CA certificate
 	pool := x509.NewCertPool()
 	data, err := os.ReadFile(caFile)
 	if err != nil {
@@ -92,19 +87,17 @@ func Example_selfSignedCertificates_mTLS() {
 		panic(errors.New("failed to add CA certificate to root CA pool"))
 	}
 	tlsCfg.RootCAs = pool
-	// load client cert and key
 	keypair, err := tls.LoadX509KeyPair(clientCert, clientKey)
 	if err != nil {
 		panic(err)
 	}
 	tlsCfg.Certificates = []tls.Certificate{keypair}
 	creds := credentials.NewTLS(&tlsCfg)
-	option := otlploggrpc.WithTLSCredentials(creds)
-	grpcExpOpt = append(grpcExpOpt, option)
-	exp, err := otlploggrpc.New(ctx, grpcExpOpt...)
+	exp, err := otlploggrpc.New(ctx, otlploggrpc.WithTLSCredentials(creds))
 	if err != nil {
 		panic(err)
 	}
+
 	processor := log.NewBatchProcessor(exp)
 	provider := log.NewLoggerProvider(log.WithProcessor(processor))
 	defer func() {
