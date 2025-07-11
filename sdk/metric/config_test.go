@@ -353,7 +353,7 @@ func TestWithCardinalityLimit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(envVar, tc.envValue)
+			t.Setenv(envVar, tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})
