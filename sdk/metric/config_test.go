@@ -308,8 +308,8 @@ func TestWithExemplarFilterOff(t *testing.T) {
 
 func TestWithCardinalityLimit(t *testing.T) {
 	cases := []struct {
-		name         string
-		options      []Option
+		name          string
+		options       []Option
 		expectedLimit int
 	}{
 		{
