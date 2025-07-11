@@ -6,7 +6,7 @@
 
 // Package transform provides transformation functionality from the
 // sdk/log data-types into OTLP data-types.
-package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/transform"
+package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 
 import (
 	"time"
