@@ -307,13 +307,29 @@ func TestWithExemplarFilterOff(t *testing.T) {
 }
 
 func TestWithCardinalityLimit(t *testing.T) {
-	c := newConfig([]Option{WithCardinalityLimit(1000)})
-	assert.Equal(t, 1000, c.cardinalityLimit)
-}
+	cases := []struct {
+		name             string
+		options          []Option
+		expectedLimit    int
+	}{
+		{
+			name:          "explicit cardinality limit",
+			options:       []Option{WithCardinalityLimit(1000)},
+			expectedLimit: 1000,
+		},
+		{
+			name:          "default cardinality limit",
+			options:       []Option{},
+			expectedLimit: 2000,
+		},
+	}
 
-func TestWithDefaultCardinalityLimit(t *testing.T) {
-	c := newConfig([]Option{})
-	assert.Equal(t, 2000, c.cardinalityLimit)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newConfig(tc.options)
+			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
+		})
+	}
 }
 
 func sample(parent context.Context) context.Context {
