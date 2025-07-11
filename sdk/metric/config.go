@@ -199,6 +199,7 @@ func cardinalityLimitFromEnv() int {
 	}
 	n, err := strconv.Atoi(v)
 	if err != nil {
+		otel.Handle(err)
 		return defaultCardinalityLimit
 	}
 	return n
