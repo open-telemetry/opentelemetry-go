@@ -40,9 +40,13 @@ func Example() {
 
 // Demonstrates how to configure the exporter using self-signed certificates for TLS connections.
 func Example_selfSignedCertificates_TLS() {
+	// Variables provided by the user.
+	var (
+		caFile string // The filepath to the server's CA certificate.
+	)
+
 	ctx := context.Background()
-	// The filepath to the server's CA certificate provided by the user.
-	var caFile string
+
 	// Configure TLS connection.
 	creds, err := credentials.NewClientTLSFromFile(caFile, "")
 	if err != nil {
@@ -69,13 +73,15 @@ func Example_selfSignedCertificates_TLS() {
 
 // Demonstrates how to configure the exporter using self-signed certificates for mutual TLS (mTLS) connections.
 func Example_selfSignedCertificates_mTLS() {
+	// Variables provided by the user.
+	var (
+		caFile     string // The filepath to the server's CA certificate.
+		clientCert string // The filepath to the client's certificate.
+		clientKey  string // The filepath to the client's private key.
+	)
+
 	ctx := context.Background()
-	// The filepath to the server's CA certificate provided by the user.
-	var caFile string
-	// The filepath to the client's certificate provided by the user.
-	var clientCert string
-	// The filepath to the client's private key provided by the user.
-	var clientKey string
+
 	// Configure mTLS connection.
 	tlsCfg := tls.Config{}
 	pool := x509.NewCertPool()
