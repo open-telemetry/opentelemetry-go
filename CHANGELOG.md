@@ -10,6 +10,49 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add template attribute functions to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6939)
+  - `ContainerLabel`
+  - `DBOperationParameter`
+  - `DBSystemParameter`
+  - `HTTPRequestHeader`
+  - `HTTPResponseHeader`
+  - `K8SCronJobAnnotation`
+  - `K8SCronJobLabel`
+  - `K8SDaemonSetAnnotation`
+  - `K8SDaemonSetLabel`
+  - `K8SDeploymentAnnotation`
+  - `K8SDeploymentLabel`
+  - `K8SJobAnnotation`
+  - `K8SJobLabel`
+  - `K8SNamespaceAnnotation`
+  - `K8SNamespaceLabel`
+  - `K8SNodeAnnotation`
+  - `K8SNodeLabel`
+  - `K8SPodAnnotation`
+  - `K8SPodLabel`
+  - `K8SReplicaSetAnnotation`
+  - `K8SReplicaSetLabel`
+  - `K8SStatefulSetAnnotation`
+  - `K8SStatefulSetLabel`
+  - `ProcessEnvironmentVariable`
+  - `RPCConnectRPCRequestMetadata`
+  - `RPCConnectRPCResponseMetadata`
+  - `RPCGRPCRequestMetadata`
+  - `RPCGRPCResponseMetadata`
+- Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
+- Add `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` which can be used to disable deduplication for log records. (#6968)
+
+### Changed
+
+- Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.37.0/0.59.0/0.13.0] 2025-06-25
+
+### Added
+
 - The `go.opentelemetry.io/otel/semconv/v1.33.0` package.
   The package contains semantic conventions from the `v1.33.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.33.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.32.0.`(#6799)
@@ -20,10 +63,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/log`. (#6825)
 - Add `EventName` to `EnabledParameters` in `go.opentelemetry.io/otel/sdk/log`. (#6825)
 - Changed handling of `go.opentelemetry.io/otel/exporters/prometheus` metric renaming to add unit suffixes when it doesn't match one of the pre-defined values in the unit suffix map. (#6839)
-
-### Removed
-
-- `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
 
 ### Changed
 
@@ -45,8 +84,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Validate exponential histogram scale range for Prometheus compatibility in `go.opentelemetry.io/otel/exporters/prometheus`. (#6822)
 - Context cancellation during metric pipeline produce does not corrupt data in `go.opentelemetry.io/otel/sdk/metric`. (#6914)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Removed
+
+- `go.opentelemetry.io/otel/exporters/prometheus` no longer exports `otel_scope_info` metric. (#6770)
 
 ## [0.12.2] 2025-05-22
 
@@ -3341,7 +3381,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.36.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.37.0...HEAD
+[1.37.0/0.59.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.37.0
 [0.12.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.2
 [0.12.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.1
 [1.36.0/0.58.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.36.0
