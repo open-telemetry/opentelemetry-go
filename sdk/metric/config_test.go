@@ -6,6 +6,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -307,18 +308,44 @@ func TestWithExemplarFilterOff(t *testing.T) {
 }
 
 func TestWithCardinalityLimit(t *testing.T) {
+	const envVar = "OTEL_GO_X_CARDINALITY_LIMIT"
+
+	originalEnv := os.Getenv(envVar)
+	defer t.Setenv(envVar, originalEnv)
+
 	cases := []struct {
 		name          string
+		envValue      string
 		options       []Option
 		expectedLimit int
 	}{
 		{
-			name:          "explicit cardinality limit",
+			name:          "only cardinality limit from option",
+			envValue:      "",
 			options:       []Option{WithCardinalityLimit(1000)},
 			expectedLimit: 1000,
 		},
 		{
-			name:          "default cardinality limit",
+			name:          "cardinality limit from option overrides env",
+			envValue:      "500",
+			options:       []Option{WithCardinalityLimit(1000)},
+			expectedLimit: 1000,
+		},
+		{
+			name:          "cardinality limit from env",
+			envValue:      "1234",
+			options:       []Option{},
+			expectedLimit: 1234,
+		},
+		{
+			name:          "invalid env value uses default",
+			envValue:      "not-a-number",
+			options:       []Option{},
+			expectedLimit: defaultCardinalityLimit,
+		},
+		{
+			name:          "empty env and no option uses default",
+			envValue:      "",
 			options:       []Option{},
 			expectedLimit: defaultCardinalityLimit,
 		},
@@ -326,6 +353,7 @@ func TestWithCardinalityLimit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			os.Setenv(envVar, tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})

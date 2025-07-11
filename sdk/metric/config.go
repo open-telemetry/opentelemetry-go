@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -75,7 +76,7 @@ func newConfig(options []Option) config {
 	conf := config{
 		res:              resource.Default(),
 		exemplarFilter:   exemplar.TraceBasedFilter,
-		cardinalityLimit: defaultCardinalityLimit,
+		cardinalityLimit: cardinalityLimitFromEnv(),
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
@@ -188,4 +189,17 @@ func meterProviderOptionsFromEnv() []Option {
 		opts = append(opts, WithExemplarFilter(exemplar.TraceBasedFilter))
 	}
 	return opts
+}
+
+func cardinalityLimitFromEnv() int {
+	const cardinalityLimitKey = "OTEL_GO_X_CARDINALITY_LIMIT"
+	v := strings.TrimSpace(os.Getenv(cardinalityLimitKey))
+	if v == "" {
+		return defaultCardinalityLimit
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return defaultCardinalityLimit
+	}
+	return n
 }
