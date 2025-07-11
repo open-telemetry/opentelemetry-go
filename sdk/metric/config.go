@@ -25,7 +25,6 @@ type config struct {
 	cardinalityLimit int
 }
 
-// default cardinality limit.
 const defaultCardinalityLimit = 2000
 
 // readerSignals returns a force-flush and shutdown function for a
