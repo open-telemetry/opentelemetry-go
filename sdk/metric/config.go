@@ -166,7 +166,8 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // that can be collected for a single instrument.
 //
 // By default, the cardinality limit is set to 2000.
-// To disable the limit, set the value to 0 or a negative number.
+//
+// Setting this to a zero or negative value means no limit is applied.
 func WithCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
