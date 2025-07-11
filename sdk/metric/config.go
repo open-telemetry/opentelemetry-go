@@ -162,11 +162,11 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 
 // WithCardinalityLimit sets the cardinality limit for the MeterProvider.
 //
-// The cardinality limit is the maximum number of unique label sets that can be
-// recorded for a given instrument. If the limit is exceeded, the SDK will
-// drop the data point.
+// The cardinality limit is the hard limit on the number of metric streams
+// that can be collected for a single instrument.
 //
 // By default, the cardinality limit is set to 2000.
+// To disable the limit, set the value to 0 or a negative number.
 func WithCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
