@@ -307,8 +307,6 @@ func TestWithExemplarFilterOff(t *testing.T) {
 }
 
 func TestWithCardinalityLimit(t *testing.T) {
-	const envVar = "OTEL_GO_X_CARDINALITY_LIMIT"
-
 	cases := []struct {
 		name          string
 		envValue      string
@@ -349,7 +347,7 @@ func TestWithCardinalityLimit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(envVar, tc.envValue)
+			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})
