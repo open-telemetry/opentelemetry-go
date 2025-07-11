@@ -17,10 +17,11 @@ import (
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res            *resource.Resource
-	readers        []Reader
-	views          []View
-	exemplarFilter exemplar.Filter
+	res              *resource.Resource
+	readers          []Reader
+	views            []View
+	exemplarFilter   exemplar.Filter
+	cardinalityLimit int
 }
 
 // readerSignals returns a force-flush and shutdown function for a
@@ -69,8 +70,9 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
-		res:            resource.Default(),
-		exemplarFilter: exemplar.TraceBasedFilter,
+		res:              resource.Default(),
+		exemplarFilter:   exemplar.TraceBasedFilter,
+		cardinalityLimit: 2000, // Default cardinality limit.
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
@@ -151,6 +153,20 @@ func WithView(views ...View) Option {
 func WithExemplarFilter(filter exemplar.Filter) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.exemplarFilter = filter
+		return cfg
+	})
+}
+
+// WithCardinalityLimit sets the cardinality limit for the MeterProvider.
+//
+// The cardinality limit is the maximum number of unique label sets that can be
+// recorded for a given instrument. If the limit is exceeded, the SDK will
+// drop the data point.
+//
+// By default, the cardinality limit is set to 2000.
+func WithCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimit = limit
 		return cfg
 	})
 }
