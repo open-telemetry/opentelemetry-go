@@ -41,6 +41,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCGRPCResponseMetadata`
 - Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
 
+- Add `cardinalityLimit` Configuration Option. (#6976)
+
 ### Changed
 
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
