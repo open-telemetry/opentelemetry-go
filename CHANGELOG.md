@@ -41,7 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCGRPCResponseMetadata`
 - Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
 
-- Add `cardinalityLimit` Configuration Option. (#6976)
+- Add `cardinalityLimit` Configuration Option. (#6996)
 
 ### Changed
 
