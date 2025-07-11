@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otlpconfig provides configuration for the otlptrace exporters.
-package otlpconfig
+package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 
 import (
 	"crypto/tls"
