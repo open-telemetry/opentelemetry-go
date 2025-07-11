@@ -71,7 +71,7 @@ func TestRecordFactory(t *testing.T) {
 	assert.Equal(t, spanID, got.SpanID())
 	assert.Equal(t, traceFlags, got.TraceFlags())
 	assert.Equal(t, scope, got.InstrumentationScope())
-	assert.Equal(t, *r, got.Resource())
+	assert.Equal(t, r, got.Resource())
 }
 
 func TestRecordFactoryMultiple(t *testing.T) {

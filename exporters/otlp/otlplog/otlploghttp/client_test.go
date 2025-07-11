@@ -38,7 +38,7 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	"go.opentelemetry.io/otel/sdk/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 var (
@@ -771,6 +771,28 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithProxy(func(r *http.Request) (*url.URL, error) {
 			r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
 			return r.URL, nil
+		}))
+		ctx := context.Background()
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, headerKeySetInProxy)
+		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
+	})
+
+	t.Run("WithHTTPClient", func(t *testing.T) {
+		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
+		headerValueSetInProxy := "true"
+		exp, coll := factoryFunc("", nil, WithHTTPClient(&http.Client{
+			Transport: &http.Transport{
+				Proxy: func(r *http.Request) (*url.URL, error) {
+					r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
+					return r.URL, nil
+				},
+			},
 		}))
 		ctx := context.Background()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })

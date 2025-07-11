@@ -47,6 +47,11 @@ func TestLoggerEmit(t *testing.T) {
 	rWithNoObservedTimestamp := r
 	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
+	rWithoutDeduplicateAttributes := r
+	rWithoutDeduplicateAttributes.AddAttributes(
+		log.String("k1", "str1"),
+	)
+
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		context.Background(),
 		trace.NewSpanContext(trace.SpanContextConfig{
@@ -206,6 +211,40 @@ func TestLoggerEmit(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "WithoutAttributeDeduplication",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+				WithAttributeValueLengthLimit(5),
+				WithAttributeCountLimit(5),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				WithAllowKeyDuplication(),
+			), instrumentation.Scope{Name: "scope"}),
+			ctx:    context.Background(),
+			record: rWithoutDeduplicateAttributes,
+			expectedRecords: []Record{
+				{
+					eventName:                 r.EventName(),
+					timestamp:                 r.Timestamp(),
+					body:                      r.Body(),
+					severity:                  r.Severity(),
+					severityText:              r.SeverityText(),
+					observedTimestamp:         r.ObservedTimestamp(),
+					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
+					attributeValueLengthLimit: 5,
+					attributeCountLimit:       5,
+					scope:                     &instrumentation.Scope{Name: "scope"},
+					front: [attributesInlineCount]log.KeyValue{
+						log.String("k1", "str"),
+						log.Float64("k2", 1.0),
+						log.String("k1", "str1"),
+					},
+					nFront:       3,
+					allowDupKeys: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -231,6 +270,7 @@ func TestLoggerEnabled(t *testing.T) {
 		name             string
 		logger           *logger
 		ctx              context.Context
+		param            log.EnabledParameters
 		expected         bool
 		expectedP0Params []EnabledParameters
 		expectedP1Params []EnabledParameters
@@ -248,10 +288,16 @@ func TestLoggerEnabled(t *testing.T) {
 				WithProcessor(p0),
 				WithProcessor(p1),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:      context.Background(),
+			ctx: context.Background(),
+			param: log.EnabledParameters{
+				Severity:  log.SeverityInfo,
+				EventName: "test_event",
+			},
 			expected: true,
 			expectedP0Params: []EnabledParameters{{
 				InstrumentationScope: instrumentation.Scope{Name: "scope"},
+				Severity:             log.SeverityInfo,
+				EventName:            "test_event",
 			}},
 			expectedP1Params: nil,
 		},
@@ -295,7 +341,7 @@ func TestLoggerEnabled(t *testing.T) {
 			p1.params = nil
 			p2WithDisabled.params = nil
 
-			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, log.EnabledParameters{}))
+			assert.Equal(t, tc.expected, tc.logger.Enabled(tc.ctx, tc.param))
 			assert.Equal(t, tc.expectedP0Params, p0.params)
 			assert.Equal(t, tc.expectedP1Params, p1.params)
 			assert.Equal(t, tc.expectedP2Params, p2WithDisabled.params)

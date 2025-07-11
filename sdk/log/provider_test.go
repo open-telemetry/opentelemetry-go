@@ -115,12 +115,14 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				WithProcessor(p1),
 				WithAttributeCountLimit(attrCntLim),
 				WithAttributeValueLengthLimit(attrValLenLim),
+				WithAllowKeyDuplication(),
 			},
 			want: &LoggerProvider{
 				resource:                  res,
 				processors:                []Processor{p0, p1},
 				attributeCountLimit:       attrCntLim,
 				attributeValueLengthLimit: attrValLenLim,
+				allowDupKeys:              true,
 			},
 		},
 		{

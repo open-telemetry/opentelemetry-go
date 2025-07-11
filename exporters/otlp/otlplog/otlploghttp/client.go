@@ -44,20 +44,23 @@ func newNoopClient() *client {
 
 // newHTTPClient creates a new HTTP log client.
 func newHTTPClient(cfg config) (*client, error) {
-	hc := &http.Client{
-		Transport: ourTransport,
-		Timeout:   cfg.timeout.Value,
-	}
-
-	if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
-		clonedTransport := ourTransport.Clone()
-		hc.Transport = clonedTransport
-
-		if cfg.tlsCfg.Value != nil {
-			clonedTransport.TLSClientConfig = cfg.tlsCfg.Value
+	hc := cfg.httpClient
+	if hc == nil {
+		hc = &http.Client{
+			Transport: ourTransport,
+			Timeout:   cfg.timeout.Value,
 		}
-		if cfg.proxy.Value != nil {
-			clonedTransport.Proxy = cfg.proxy.Value
+
+		if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
+			clonedTransport := ourTransport.Clone()
+			hc.Transport = clonedTransport
+
+			if cfg.tlsCfg.Value != nil {
+				clonedTransport.TLSClientConfig = cfg.tlsCfg.Value
+			}
+			if cfg.proxy.Value != nil {
+				clonedTransport.Proxy = cfg.proxy.Value
+			}
 		}
 	}
 

@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -61,6 +61,7 @@ type ReadOnlySpan interface {
 	InstrumentationScope() instrumentation.Scope
 	// InstrumentationLibrary returns information about the instrumentation
 	// library that created the span.
+	//
 	// Deprecated: please use InstrumentationScope instead.
 	InstrumentationLibrary() instrumentation.Library //nolint:staticcheck // This method needs to be define for backwards compatibility
 	// Resource returns information about the entity that produced the span.

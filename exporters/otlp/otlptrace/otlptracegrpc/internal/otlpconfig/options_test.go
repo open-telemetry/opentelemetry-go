@@ -483,6 +483,24 @@ func TestConfigs(t *testing.T) {
 				assert.Nil(t, c.Traces.Proxy)
 			},
 		},
+
+		// HTTP Client Tests
+		{
+			name: "Test With HTTP Client",
+			opts: []GenericOption{
+				WithHTTPClient(http.DefaultClient),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, http.DefaultClient, c.Traces.HTTPClient)
+			},
+		},
+		{
+			name: "Test Without HTTP Client",
+			opts: []GenericOption{},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Nil(t, c.Traces.HTTPClient)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -551,10 +569,10 @@ func TestCleanPath(t *testing.T) {
 		{
 			name: "clean traces path",
 			args: args{
-				urlPath:     "https://env_endpoint",
+				urlPath:     "https://env_endpoint/ ",
 				defaultPath: "DefaultTracesPath",
 			},
-			want: "/https:/env_endpoint",
+			want: "/https://env_endpoint/",
 		},
 		{
 			name: "spaces trimmed",
@@ -562,14 +580,6 @@ func TestCleanPath(t *testing.T) {
 				urlPath: " /dir",
 			},
 			want: "/dir",
-		},
-		{
-			name: "clean path empty",
-			args: args{
-				urlPath:     "dir/..",
-				defaultPath: "DefaultTracesPath",
-			},
-			want: "DefaultTracesPath",
 		},
 		{
 			name: "make absolute",

@@ -20,7 +20,7 @@ import (
 	semconv120 "go.opentelemetry.io/otel/semconv/v1.20.0"
 	semconv121 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 )
 

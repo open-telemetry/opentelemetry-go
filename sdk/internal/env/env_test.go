@@ -7,9 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	ottest "go.opentelemetry.io/otel/sdk/internal/internaltest"
 )
 
 func TestEnvParse(t *testing.T) {
@@ -91,10 +88,6 @@ func TestEnvParse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, key := range tc.keys {
 				t.Run(key, func(t *testing.T) {
-					envStore := ottest.NewEnvStore()
-					t.Cleanup(func() { require.NoError(t, envStore.Restore()) })
-					envStore.Record(key)
-
 					assert.Equal(t, defVal, tc.f(defVal), "environment variable unset")
 
 					t.Setenv(key, envValStr)

@@ -71,20 +71,24 @@ var _ otlptrace.Client = (*client)(nil)
 func NewClient(opts ...Option) otlptrace.Client {
 	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
 
-	httpClient := &http.Client{
-		Transport: ourTransport,
-		Timeout:   cfg.Traces.Timeout,
-	}
+	httpClient := cfg.Traces.HTTPClient
 
-	if cfg.Traces.TLSCfg != nil || cfg.Traces.Proxy != nil {
-		clonedTransport := ourTransport.Clone()
-		httpClient.Transport = clonedTransport
-
-		if cfg.Traces.TLSCfg != nil {
-			clonedTransport.TLSClientConfig = cfg.Traces.TLSCfg
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Transport: ourTransport,
+			Timeout:   cfg.Traces.Timeout,
 		}
-		if cfg.Traces.Proxy != nil {
-			clonedTransport.Proxy = cfg.Traces.Proxy
+
+		if cfg.Traces.TLSCfg != nil || cfg.Traces.Proxy != nil {
+			clonedTransport := ourTransport.Clone()
+			httpClient.Transport = clonedTransport
+
+			if cfg.Traces.TLSCfg != nil {
+				clonedTransport.TLSClientConfig = cfg.Traces.TLSCfg
+			}
+			if cfg.Traces.Proxy != nil {
+				clonedTransport.Proxy = cfg.Traces.Proxy
+			}
 		}
 	}
 

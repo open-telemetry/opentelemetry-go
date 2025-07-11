@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 var (
@@ -155,22 +155,22 @@ func TestMerge(t *testing.T) {
 		},
 		{
 			name:      "Merge with first resource with schema",
-			a:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
+			a:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.21.0", kv41),
 			b:         resource.NewSchemaless(kv42),
 			want:      []attribute.KeyValue{kv42},
-			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
+			schemaURL: "https://opentelemetry.io/schemas/1.21.0",
 		},
 		{
 			name:      "Merge with second resource with schema",
 			a:         resource.NewSchemaless(kv41),
-			b:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv42),
+			b:         resource.NewWithAttributes("https://opentelemetry.io/schemas/1.21.0", kv42),
 			want:      []attribute.KeyValue{kv42},
-			schemaURL: "https://opentelemetry.io/schemas/1.4.0",
+			schemaURL: "https://opentelemetry.io/schemas/1.21.0",
 		},
 		{
 			name:  "Merge with different schemas",
-			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.4.0", kv41),
-			b:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0", kv42),
+			a:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.21.0", kv41),
+			b:     resource.NewWithAttributes("https://opentelemetry.io/schemas/1.20.0", kv42),
 			want:  []attribute.KeyValue{kv42},
 			isErr: true,
 		},
@@ -378,21 +378,25 @@ func TestNew(t *testing.T) {
 			envars: "",
 			options: []resource.Option{
 				resource.WithAttributes(attribute.String("A", "B")),
-				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.0.0"),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.21.0"),
 			},
 			resourceValues: map[string]string{
 				"A": "B",
 			},
-			schemaURL: "https://opentelemetry.io/schemas/1.0.0",
+			schemaURL: "https://opentelemetry.io/schemas/1.21.0",
 		},
 		{
 			name:   "With conflicting schema urls",
 			envars: "",
 			options: []resource.Option{
 				resource.WithDetectors(
-					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
+					resource.StringDetector(
+						"https://opentelemetry.io/schemas/1.20.0",
+						semconv.HostNameKey,
+						os.Hostname,
+					),
 				),
-				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.1.0"),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.21.0"),
 			},
 			resourceValues: map[string]string{
 				string(semconv.HostNameKey): func() (hostname string) {
@@ -408,14 +412,18 @@ func TestNew(t *testing.T) {
 			envars: "",
 			options: []resource.Option{
 				resource.WithDetectors(
-					resource.StringDetector("https://opentelemetry.io/schemas/1.0.0", semconv.HostNameKey, os.Hostname),
 					resource.StringDetector(
-						"https://opentelemetry.io/schemas/1.1.0",
+						"https://opentelemetry.io/schemas/1.19.0",
+						semconv.HostNameKey,
+						os.Hostname,
+					),
+					resource.StringDetector(
+						"https://opentelemetry.io/schemas/1.20.0",
 						semconv.HostNameKey,
 						func() (string, error) { return "", errors.New("fail") },
 					),
 				),
-				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+				resource.WithSchemaURL("https://opentelemetry.io/schemas/1.21.0"),
 			},
 			resourceValues: map[string]string{
 				string(semconv.HostNameKey): func() (hostname string) {
@@ -791,7 +799,7 @@ type fakeDetector struct{}
 func (f fakeDetector) Detect(_ context.Context) (*resource.Resource, error) {
 	// A bit pedantic, but resource.NewWithAttributes returns an empty Resource when
 	// no attributes specified. We want to make sure that this is concurrent-safe.
-	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.3.0"), nil
+	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.21.0"), nil
 }
 
 var _ resource.Detector = &fakeDetector{}

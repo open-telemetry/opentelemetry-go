@@ -57,13 +57,15 @@ type (
 		Timeout     time.Duration
 		URLPath     string
 
-		// gRPC configurations
-		GRPCCredentials credentials.TransportCredentials
-
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
 
-		Proxy HTTPTransportProxyFunc
+		// gRPC configurations
+		GRPCCredentials credentials.TransportCredentials
+
+		// HTTP configurations
+		Proxy      HTTPTransportProxyFunc
+		HTTPClient *http.Client
 	}
 
 	Config struct {
@@ -103,12 +105,11 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 	return cfg
 }
 
-// cleanPath returns a path with all spaces trimmed and all redundancies
-// removed. If urlPath is empty or cleaning it results in an empty string,
+// cleanPath returns a path with all spaces trimmed. If urlPath is empty,
 // defaultPath is returned instead.
 func cleanPath(urlPath string, defaultPath string) string {
-	tmp := path.Clean(strings.TrimSpace(urlPath))
-	if tmp == "." {
+	tmp := strings.TrimSpace(urlPath)
+	if tmp == "" || tmp == "." {
 		return defaultPath
 	}
 	if !path.IsAbs(tmp) {
@@ -370,6 +371,13 @@ func WithAggregationSelector(selector metric.AggregationSelector) GenericOption 
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Proxy = pf
+		return cfg
+	})
+}
+
+func WithHTTPClient(c *http.Client) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.HTTPClient = c
 		return cfg
 	})
 }

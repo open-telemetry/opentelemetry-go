@@ -1,35 +1,32 @@
 # HELP bar a fun little gauge
 # TYPE bar gauge
-bar{A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 75
+bar{A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 75
 # HELP "0invalid.counter.name_total" a counter with an invalid name
 # TYPE "0invalid.counter.name_total" counter
-{"0invalid.counter.name_total",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 100
+{"0invalid.counter.name_total",A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 100
 # HELP "invalid.gauge.name" a gauge with an invalid name
 # TYPE "invalid.gauge.name" gauge
-{"invalid.gauge.name",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 100
+{"invalid.gauge.name",A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 100
 # HELP "invalid.hist.name" a histogram with an invalid name
 # TYPE "invalid.hist.name" histogram
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="0"} 0
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="5"} 0
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="10"} 0
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="25"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="50"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="75"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="100"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="250"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="500"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="750"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="1000"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="2500"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="5000"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="7500"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="10000"} 1
-{"invalid.hist.name_bucket",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0",le="+Inf"} 1
-{"invalid.hist.name_sum",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 23
-{"invalid.hist.name_count",A="B",C="D",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1
-# HELP otel_scope_info Instrumentation Scope metadata
-# TYPE otel_scope_info gauge
-otel_scope_info{fizz="buzz",otel_scope_name="testmeter",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="0",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 0
+{"invalid.hist.name_bucket",A="B",C="D",le="5",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 0
+{"invalid.hist.name_bucket",A="B",C="D",le="10",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 0
+{"invalid.hist.name_bucket",A="B",C="D",le="25",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="50",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="75",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="100",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="250",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="500",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="750",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="1000",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="2500",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="5000",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="7500",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="10000",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_bucket",A="B",C="D",le="+Inf",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
+{"invalid.hist.name_sum",A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 23
+{"invalid.hist.name_count",A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 1
 # HELP target_info Target metadata
 # TYPE target_info gauge
 target_info{"service.name"="prometheus_test","telemetry.sdk.language"="go","telemetry.sdk.name"="opentelemetry","telemetry.sdk.version"="latest"} 1

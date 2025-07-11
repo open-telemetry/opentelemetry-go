@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/bridge/opentracing/internal"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -467,7 +466,7 @@ func Test_otTagToOTelAttr(t *testing.T) {
 }
 
 func TestBridgeSpan_SetTag(t *testing.T) {
-	tracer := internal.NewMockTracer()
+	tracer := newMockTracer()
 	b, _ := NewTracerPair(tracer)
 
 	testCases := []struct {
@@ -513,7 +512,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 			span := b.StartSpan("test")
 
 			span.SetTag(tc.tagKey, tc.tagValue)
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*mockSpan)
 			if tc.expected != nil {
 				assert.Contains(t, mockSpan.Attributes, tc.expected)
 			} else {
@@ -524,7 +523,7 @@ func TestBridgeSpan_SetTag(t *testing.T) {
 }
 
 func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
-	tracer := internal.NewMockTracer()
+	tracer := newMockTracer()
 	sc := &bridgeSpanContext{}
 
 	testCases := []struct {
@@ -559,7 +558,7 @@ func Test_otTagsToOTelAttributesKindAndError(t *testing.T) {
 			b, _ := NewTracerPair(tracer)
 
 			s := b.StartSpan(tc.name, tc.opt...)
-			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*internal.MockSpan).SpanKind)
+			assert.Equal(t, tc.expected, s.(*bridgeSpan).otelSpan.(*mockSpan).SpanKind)
 		})
 	}
 }
@@ -584,7 +583,7 @@ func TestBridge_SpanContext_IsSampled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			tracer.TraceFlags = tc.flags
 
 			b, _ := NewTracerPair(tracer)
@@ -688,7 +687,7 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	for _, c := range carriers {
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
-				mockOtelTracer := internal.NewMockTracer()
+				mockOtelTracer := newMockTracer()
 				b, _ := NewTracerPair(mockOtelTracer)
 				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 					propagation.TraceContext{},
@@ -881,12 +880,12 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			b, _ := NewTracerPair(tracer)
 			span := b.StartSpan("test")
 
 			span.LogFields(tc.field)
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*mockSpan)
 			event := mockSpan.Events[0]
 			assert.Contains(t, event.Attributes, tc.expected)
 		})
@@ -983,11 +982,11 @@ func TestBridgeSpan_LogKV(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tracer := internal.NewMockTracer()
+			tracer := newMockTracer()
 			b, _ := NewTracerPair(tracer)
 			span := b.StartSpan("test")
 			span.LogKV(tc.kv[0], tc.kv[1])
-			mockSpan := span.(*bridgeSpan).otelSpan.(*internal.MockSpan)
+			mockSpan := span.(*bridgeSpan).otelSpan.(*mockSpan)
 			event := mockSpan.Events[0]
 			assert.Contains(t, event.Attributes, tc.expected)
 		})
@@ -1011,5 +1010,77 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 		assert.Equal(t, "key", k)
 		assert.Equal(t, "val", v)
 		return true
+	})
+}
+
+func TestBridgeSpan_LogEventMethods(t *testing.T) {
+	tracer := newMockTracer()
+	b, _ := NewTracerPair(tracer)
+	span := b.StartSpan("test").(*bridgeSpan)
+
+	t.Run("LogEvent", func(t *testing.T) {
+		span.LogEvent("event1")
+		mockSpan := span.otelSpan.(*mockSpan)
+		if len(mockSpan.Events) == 0 {
+			t.Fatalf("expected at least one event, got none")
+		}
+		found := false
+		for _, e := range mockSpan.Events {
+			for _, attr := range e.Attributes {
+				if attr.Key == "event" && attr.Value.AsString() == "event1" {
+					found = true
+				}
+			}
+		}
+		if !found {
+			t.Errorf("LogEvent did not log expected event attribute")
+		}
+	})
+
+	t.Run("LogEventWithPayload", func(t *testing.T) {
+		span2 := b.StartSpan("test2").(*bridgeSpan)
+		span2.LogEventWithPayload("event2", "payload2")
+		mockSpan := span2.otelSpan.(*mockSpan)
+		foundEvent, foundPayload := false, false
+		for _, e := range mockSpan.Events {
+			for _, attr := range e.Attributes {
+				if attr.Key == "event" && attr.Value.AsString() == "event2" {
+					foundEvent = true
+				}
+				if attr.Key == "payload" && attr.Value.AsString() == "payload2" {
+					foundPayload = true
+				}
+			}
+		}
+		if !foundEvent {
+			t.Errorf("LogEventWithPayload did not log expected event attribute")
+		}
+		if !foundPayload {
+			t.Errorf("LogEventWithPayload did not log expected payload attribute")
+		}
+	})
+
+	t.Run("Log", func(t *testing.T) {
+		span3 := b.StartSpan("test3").(*bridgeSpan)
+		logData := ot.LogData{Event: "event3", Payload: "payload3"}
+		span3.Log(logData)
+		mockSpan := span3.otelSpan.(*mockSpan)
+		foundEvent, foundPayload := false, false
+		for _, e := range mockSpan.Events {
+			for _, attr := range e.Attributes {
+				if attr.Key == "event" && attr.Value.AsString() == "event3" {
+					foundEvent = true
+				}
+				if attr.Key == "payload" && attr.Value.AsString() == "payload3" {
+					foundPayload = true
+				}
+			}
+		}
+		if !foundEvent {
+			t.Errorf("Log did not log expected event attribute")
+		}
+		if !foundPayload {
+			t.Errorf("Log did not log expected payload attribute")
+		}
 	})
 }

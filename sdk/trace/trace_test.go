@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1515,7 +1515,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
 		trace.WithInstrumentationVersion("v0.1.0"),
-		trace.WithSchemaURL("https://opentelemetry.io/schemas/1.2.0"),
+		trace.WithSchemaURL("https://opentelemetry.io/schemas/1.21.0"),
 	).Start(ctx, "span0")
 	got, err := endSpan(te, span)
 	if err != nil {
@@ -1533,7 +1533,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 		instrumentationScope: instrumentation.Scope{
 			Name:      "WithInstrumentationVersion",
 			Version:   "v0.1.0",
-			SchemaURL: "https://opentelemetry.io/schemas/1.2.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.21.0",
 		},
 	}
 	if diff := cmpDiff(got, want); diff != "" {

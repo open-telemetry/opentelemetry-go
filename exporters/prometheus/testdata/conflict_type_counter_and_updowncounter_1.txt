@@ -1,9 +1,6 @@
 # HELP foo_total meter foo
 # TYPE foo_total counter
-foo_total{otel_scope_name="ma",otel_scope_version="v0.1.0",type="foo"} 100
-# HELP otel_scope_info Instrumentation Scope metadata
-# TYPE otel_scope_info gauge
-otel_scope_info{otel_scope_name="ma",otel_scope_version="v0.1.0"} 1
+foo_total{otel_scope_name="ma",otel_scope_schema_url="",otel_scope_version="v0.1.0",type="foo"} 100
 # HELP target_info Target metadata
 # TYPE target_info gauge
 target_info{"service.name"="prometheus_test","telemetry.sdk.language"="go","telemetry.sdk.name"="opentelemetry","telemetry.sdk.version"="latest"} 1
