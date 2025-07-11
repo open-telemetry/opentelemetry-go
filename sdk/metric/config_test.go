@@ -6,7 +6,6 @@ package metric
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -309,9 +308,6 @@ func TestWithExemplarFilterOff(t *testing.T) {
 
 func TestWithCardinalityLimit(t *testing.T) {
 	const envVar = "OTEL_GO_X_CARDINALITY_LIMIT"
-
-	originalEnv := os.Getenv(envVar)
-	defer t.Setenv(envVar, originalEnv)
 
 	cases := []struct {
 		name          string
