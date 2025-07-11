@@ -306,6 +306,16 @@ func TestWithExemplarFilterOff(t *testing.T) {
 	}
 }
 
+func TestWithCardinalityLimit(t *testing.T) {
+	c := newConfig([]Option{WithCardinalityLimit(1000)})
+	assert.Equal(t, 1000, c.cardinalityLimit)
+}
+
+func TestWithDefaultCardinalityLimit(t *testing.T) {
+	c := newConfig([]Option{})
+	assert.Equal(t, 2000, c.cardinalityLimit)
+}
+
 func sample(parent context.Context) context.Context {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x01},
