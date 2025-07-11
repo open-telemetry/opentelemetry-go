@@ -320,7 +320,7 @@ func TestWithCardinalityLimit(t *testing.T) {
 		{
 			name:          "default cardinality limit",
 			options:       []Option{},
-			expectedLimit: 2000,
+			expectedLimit: defaultCardinalityLimit,
 		},
 	}
 

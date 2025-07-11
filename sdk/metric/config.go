@@ -24,6 +24,9 @@ type config struct {
 	cardinalityLimit int
 }
 
+// default cardinality limit.
+const defaultCardinalityLimit = 2000
+
 // readerSignals returns a force-flush and shutdown function for a
 // MeterProvider to call in their respective options. All Readers c contains
 // will have their force-flush and shutdown methods unified into returned
@@ -72,7 +75,7 @@ func newConfig(options []Option) config {
 	conf := config{
 		res:              resource.Default(),
 		exemplarFilter:   exemplar.TraceBasedFilter,
-		cardinalityLimit: 2000, // Default cardinality limit.
+		cardinalityLimit: defaultCardinalityLimit,
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
