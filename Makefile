@@ -281,7 +281,7 @@ semconv-generate: $(SEMCONVKIT)
 	docker run --rm \
 		-u $(DOCKER_USER) \
 		--env HOME=/tmp/weaver \
-		--mount 'type=bind,source=$(PWD)/semconv,target=/home/weaver/templates/registry/go,readonly' \
+		--mount 'type=bind,source=$(PWD)/semconv/templates,target=/home/weaver/templates,readonly' \
 		--mount 'type=bind,source=$(PWD)/semconv/${TAG},target=/home/weaver/target' \
 		--mount 'type=bind,source=$(HOME)/.weaver,target=/tmp/weaver/.weaver' \
 		$(WEAVER_IMAGE) registry generate \
