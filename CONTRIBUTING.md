@@ -233,6 +233,10 @@ For a non-comprehensive but foundational overview of these best practices
 the [Effective Go](https://golang.org/doc/effective_go.html) documentation
 is an excellent starting place.
 
+We also recommend following the
+[Go Code Review Comments](https://go.dev/wiki/CodeReviewComments)
+that collects common comments made during reviews of Go code.
+
 As a convenience for developers building this project the `make precommit`
 will format, lint, validate, and in some cases fix the changes you plan to
 submit. This check will need to pass for your changes to be able to be
@@ -585,6 +589,10 @@ See also:
 [Keeping Your Modules Compatible: Working with interfaces](https://go.dev/blog/module-compatibility#working-with-interfaces).
 
 ### Testing
+
+We allow using [`testify`](https://github.com/stretchr/testify) even though
+it is seen as non-idiomatic according to
+the [Go Test Comments](https://go.dev/wiki/TestComments#assert-libraries) page.
 
 The tests should never leak goroutines.
 
