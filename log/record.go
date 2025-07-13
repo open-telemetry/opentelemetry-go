@@ -143,10 +143,10 @@ func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
 }
 
-// Clone returns a copy of the record with no shared state. 
+// Clone returns a copy of the record with no shared state.
 // The original record and the clone can both be modified without interfering with each other.
 func (r *Record) Clone() Record {
-    res := *r
-    res.back = slices.Clone(r.back)
-    return res
+	res := *r
+	res.back = slices.Clone(r.back)
+	return res
 }
