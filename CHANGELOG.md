@@ -49,6 +49,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+### Fixes
+
+- sdk/log: Deduplicate key-value collections in log body in `go.opentelemetry.io/otel/sdk/log`, as per OTel spec. (#7002)
+
 ## [1.37.0/0.59.0/0.13.0] 2025-06-25
 
 ### Added
