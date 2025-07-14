@@ -170,7 +170,7 @@ func (r *Record) Body() log.Value {
 
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v log.Value) {
-	r.body = v
+	r.body = r.dedupeAndApplyValueLimits(v, false, false) // We don't want to limit the body nor track any duplicate dropped
 }
 
 // WalkAttributes walks all attributes the log record holds by calling f for
@@ -418,21 +418,23 @@ func (r *Record) Clone() Record {
 }
 
 func (r *Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
-	attr.Value = r.applyValueLimits(attr.Value)
+	attr.Value = r.dedupeAndApplyValueLimits(attr.Value, true, true)
 	return attr
 }
 
-func (r *Record) applyValueLimits(val log.Value) log.Value {
+func (r *Record) dedupeAndApplyValueLimits(val log.Value, applyLimits, trackDropped bool) log.Value {
 	switch val.Kind() {
 	case log.KindString:
-		s := val.AsString()
-		if len(s) > r.attributeValueLengthLimit {
-			val = log.StringValue(truncate(r.attributeValueLengthLimit, s))
+		if applyLimits {
+			s := val.AsString()
+			if r.attributeValueLengthLimit > 0 && len(s) > r.attributeValueLengthLimit {
+				val = log.StringValue(truncate(r.attributeValueLengthLimit, s))
+			}
 		}
 	case log.KindSlice:
 		sl := val.AsSlice()
 		for i := range sl {
-			sl[i] = r.applyValueLimits(sl[i])
+			sl[i] = r.dedupeAndApplyValueLimits(sl[i], applyLimits, trackDropped)
 		}
 		val = log.SliceValue(sl...)
 	case log.KindMap:
@@ -442,10 +444,12 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 			// wasted truncation operations.
 			var dropped int
 			kvs, dropped = dedup(kvs)
-			r.addDropped(dropped)
+			if trackDropped {
+				r.addDropped(dropped)
+			}
 		}
 		for i := range kvs {
-			kvs[i] = r.applyAttrLimits(kvs[i])
+			kvs[i].Value = r.dedupeAndApplyValueLimits(kvs[i].Value, applyLimits, trackDropped)
 		}
 		val = log.MapValue(kvs...)
 	}
