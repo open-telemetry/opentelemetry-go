@@ -176,6 +176,7 @@ func TestRecordClone(t *testing.T) {
 	r0.SetBody(val0)
 	r0.AddAttributes(attr0)
 
+	// Clone and modify the clone
 	now1 := now0.Add(time.Second)
 	sev1 := log.SeverityDebug
 	text1 := "string"
@@ -190,21 +191,33 @@ func TestRecordClone(t *testing.T) {
 	r1.SetBody(val1)
 	r1.AddAttributes(attr1)
 
+	//  Assertions on original record (r0)
 	assert.Equal(t, now0, r0.Timestamp())
 	assert.Equal(t, now0, r0.ObservedTimestamp())
 	assert.Equal(t, sev0, r0.Severity())
 	assert.Equal(t, text0, r0.SeverityText())
 	assert.True(t, val0.Equal(r0.Body()))
-	r0.WalkAttributes(func(kv log.KeyValue) bool {
-		return assert.Truef(t, kv.Equal(attr0), "%v != %v", kv, attr0)
-	})
 
+	var r0Attrs []log.KeyValue
+	r0.WalkAttributes(func(kv log.KeyValue) bool {
+		r0Attrs = append(r0Attrs, kv)
+		return true
+	})
+	assert.Contains(t, r0Attrs, attr0)
+	assert.NotContains(t, r0Attrs, attr1)
+
+	// ✅ Assertions on cloned record (r1)
 	assert.Equal(t, now1, r1.Timestamp())
 	assert.Equal(t, now1, r1.ObservedTimestamp())
 	assert.Equal(t, sev1, r1.Severity())
 	assert.Equal(t, text1, r1.SeverityText())
 	assert.True(t, val1.Equal(r1.Body()))
+
+	var r1Attrs []log.KeyValue
 	r1.WalkAttributes(func(kv log.KeyValue) bool {
-		return assert.Truef(t, kv.Equal(attr1), "%v != %v", kv, attr1)
+		r1Attrs = append(r1Attrs, kv)
+		return true
 	})
+	assert.Contains(t, r1Attrs, attr0)
+	assert.Contains(t, r1Attrs, attr1)
 }
