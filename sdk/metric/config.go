@@ -163,11 +163,14 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // WithCardinalityLimit sets the cardinality limit for the MeterProvider.
 //
 // The cardinality limit is the hard limit on the number of metric streams
-// that can be collected for a single instrument.
+// that can be collected for a single instrument in a single collect cycle.
 //
 // By default, the cardinality limit is set to 2000.
 //
 // Setting this to a zero or negative value means no limit is applied.
+//
+// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
+// can also be used to set this value.
 func WithCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
