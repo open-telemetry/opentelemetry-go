@@ -56,10 +56,68 @@ func TestRecordSeverityText(t *testing.T) {
 }
 
 func TestRecordBody(t *testing.T) {
-	v := log.BoolValue(true)
-	r := new(Record)
-	r.SetBody(v)
-	assert.True(t, v.Equal(r.Body()))
+	testcases := []struct {
+		name string
+		body log.Value
+		want log.Value
+	}{
+		{
+			name: "Bool",
+			body: log.BoolValue(true),
+			want: log.BoolValue(true),
+		},
+		{
+			name: "slice",
+			body: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
+			want: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
+		},
+		{
+			name: "map",
+			body: log.MapValue(
+				log.Bool("0", true),
+				log.Int64("1", 2), // This should be removed
+				log.Float64("2", 3.0),
+				log.String("3", "forth"),
+				log.Slice("4", log.Int64Value(1)),
+				log.Map("5", log.Int("key", 2)),
+				log.Bytes("6", []byte("six")),
+				log.Int64("1", 3),
+			),
+			want: log.MapValue(
+				log.Bool("0", true),
+				log.Float64("2", 3.0),
+				log.String("3", "forth"),
+				log.Slice("4", log.Int64Value(1)),
+				log.Map("5", log.Int("key", 2)),
+				log.Bytes("6", []byte("six")),
+				log.Int64("1", 3),
+			),
+		},
+		{
+			name: "nestedMap",
+			body: log.MapValue(
+				log.Map("key",
+					log.Int64("key", 1),
+					log.Int64("key", 2),
+				),
+			),
+			want: log.MapValue(
+				log.Map("key",
+					log.Int64("key", 2),
+				),
+			),
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := new(Record)
+			r.SetBody(tc.body)
+			assert.True(t, tc.want.Equal(r.Body()), "body is not equal")
+			t.Logf("wanted %v", tc.want)
+			t.Logf("got %v", r.Body())
+		})
+	}
+
 }
 
 func TestRecordAttributes(t *testing.T) {
