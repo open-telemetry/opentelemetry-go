@@ -206,7 +206,7 @@ func TestRecordClone(t *testing.T) {
 	assert.Contains(t, r0Attrs, attr0)
 	assert.NotContains(t, r0Attrs, attr1)
 
-	// ✅ Assertions on cloned record (r1)
+	//  Assertions on cloned record (r1)
 	assert.Equal(t, now1, r1.Timestamp())
 	assert.Equal(t, now1, r1.ObservedTimestamp())
 	assert.Equal(t, sev1, r1.Severity())
