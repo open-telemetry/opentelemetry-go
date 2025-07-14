@@ -117,7 +117,6 @@ func TestRecordBody(t *testing.T) {
 			t.Logf("got %v", r.Body())
 		})
 	}
-
 }
 
 func TestRecordAttributes(t *testing.T) {
