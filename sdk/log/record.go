@@ -170,7 +170,9 @@ func (r *Record) Body() log.Value {
 
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v log.Value) {
-	r.body = r.dedupeAndApplyValueLimits(v, false, false) // We don't want to limit the body nor track any duplicate dropped
+	if !r.allowDupKeys {
+		r.body = r.dedupeBodyCollections(v)
+	}
 }
 
 // WalkAttributes walks all attributes the log record holds by calling f for
@@ -418,23 +420,21 @@ func (r *Record) Clone() Record {
 }
 
 func (r *Record) applyAttrLimits(attr log.KeyValue) log.KeyValue {
-	attr.Value = r.dedupeAndApplyValueLimits(attr.Value, true, true)
+	attr.Value = r.applyValueLimits(attr.Value)
 	return attr
 }
 
-func (r *Record) dedupeAndApplyValueLimits(val log.Value, applyLimits, trackDropped bool) log.Value {
+func (r *Record) applyValueLimits(val log.Value) log.Value {
 	switch val.Kind() {
 	case log.KindString:
-		if applyLimits {
-			s := val.AsString()
-			if r.attributeValueLengthLimit > 0 && len(s) > r.attributeValueLengthLimit {
-				val = log.StringValue(truncate(r.attributeValueLengthLimit, s))
-			}
+		s := val.AsString()
+		if len(s) > r.attributeValueLengthLimit {
+			val = log.StringValue(truncate(r.attributeValueLengthLimit, s))
 		}
 	case log.KindSlice:
 		sl := val.AsSlice()
 		for i := range sl {
-			sl[i] = r.dedupeAndApplyValueLimits(sl[i], applyLimits, trackDropped)
+			sl[i] = r.applyValueLimits(sl[i])
 		}
 		val = log.SliceValue(sl...)
 	case log.KindMap:
@@ -444,12 +444,28 @@ func (r *Record) dedupeAndApplyValueLimits(val log.Value, applyLimits, trackDrop
 			// wasted truncation operations.
 			var dropped int
 			kvs, dropped = dedup(kvs)
-			if trackDropped {
-				r.addDropped(dropped)
-			}
+			r.addDropped(dropped)
 		}
 		for i := range kvs {
-			kvs[i].Value = r.dedupeAndApplyValueLimits(kvs[i].Value, applyLimits, trackDropped)
+			kvs[i] = r.applyAttrLimits(kvs[i])
+		}
+		val = log.MapValue(kvs...)
+	}
+	return val
+}
+
+func (r *Record) dedupeBodyCollections(val log.Value) log.Value {
+	switch val.Kind() {
+	case log.KindSlice:
+		sl := val.AsSlice()
+		for i := range sl {
+			sl[i] = r.applyValueLimits(sl[i])
+		}
+		val = log.SliceValue(sl...)
+	case log.KindMap:
+		kvs, _ := dedup(val.AsMap())
+		for i := range kvs {
+			kvs[i].Value = r.dedupeBodyCollections(kvs[i].Value)
 		}
 		val = log.MapValue(kvs...)
 	}
