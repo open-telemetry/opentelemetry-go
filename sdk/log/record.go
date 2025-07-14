@@ -172,6 +172,8 @@ func (r *Record) Body() log.Value {
 func (r *Record) SetBody(v log.Value) {
 	if !r.allowDupKeys {
 		r.body = r.dedupeBodyCollections(v)
+	} else {
+		r.body = v
 	}
 }
 
