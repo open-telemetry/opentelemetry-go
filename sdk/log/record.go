@@ -461,7 +461,7 @@ func (r *Record) dedupeBodyCollections(val log.Value) log.Value {
 	case log.KindSlice:
 		sl := val.AsSlice()
 		for i := range sl {
-			sl[i] = r.applyValueLimits(sl[i])
+			sl[i] = r.dedupeBodyCollections(sl[i])
 		}
 		val = log.SliceValue(sl...)
 	case log.KindMap:
