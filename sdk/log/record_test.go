@@ -58,9 +58,9 @@ func TestRecordSeverityText(t *testing.T) {
 func TestRecordBody(t *testing.T) {
 	testcases := []struct {
 		name            string
+		allowDuplicates bool
 		body            log.Value
 		want            log.Value
-		allowDuplicates bool
 	}{
 		{
 			name: "Bool",
@@ -110,6 +110,7 @@ func TestRecordBody(t *testing.T) {
 		},
 		{
 			name: "map - allow duplicates",
+			allowDuplicates: true,
 			body: log.MapValue(
 				log.Int64("1", 2),
 				log.Int64("1", 3),
@@ -118,7 +119,6 @@ func TestRecordBody(t *testing.T) {
 				log.Int64("1", 2),
 				log.Int64("1", 3),
 			),
-			allowDuplicates: true,
 		},
 	}
 	for _, tc := range testcases {
@@ -126,9 +126,10 @@ func TestRecordBody(t *testing.T) {
 			r := new(Record)
 			r.allowDupKeys = tc.allowDuplicates
 			r.SetBody(tc.body)
-			assert.True(t, tc.want.Equal(r.Body()), "body is not equal")
-			t.Logf("wanted %v", tc.want)
-			t.Logf("got %v", r.Body())
+			got := r.Body()
+			if !got.Equal(want) {
+				t.Errorf("r.Body() = %v, want %v", got, tc.want)
+			}
 		})
 	}
 }
