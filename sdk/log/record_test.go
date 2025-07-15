@@ -127,7 +127,7 @@ func TestRecordBody(t *testing.T) {
 			r.allowDupKeys = tc.allowDuplicates
 			r.SetBody(tc.body)
 			got := r.Body()
-			if !got.Equal(want) {
+			if !got.Equal(tc.want) {
 				t.Errorf("r.Body() = %v, want %v", got, tc.want)
 			}
 		})
