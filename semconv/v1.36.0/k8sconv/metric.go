@@ -4145,8 +4145,7 @@ func NewResourceQuotaCPULimitHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.limit.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU limits in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("{cpu}"),
 		}, opt...)...,
 	)
@@ -4173,8 +4172,7 @@ func (ResourceQuotaCPULimitHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaCPULimitHard) Description() string {
-	return "The CPU limits in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4222,8 +4220,7 @@ func NewResourceQuotaCPULimitUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.limit.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU limits in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("{cpu}"),
 		}, opt...)...,
 	)
@@ -4250,8 +4247,7 @@ func (ResourceQuotaCPULimitUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaCPULimitUsed) Description() string {
-	return "The CPU limits in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4299,8 +4295,7 @@ func NewResourceQuotaCPURequestHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.request.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("{cpu}"),
 		}, opt...)...,
 	)
@@ -4327,8 +4322,7 @@ func (ResourceQuotaCPURequestHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaCPURequestHard) Description() string {
-	return "The CPU requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4376,8 +4370,7 @@ func NewResourceQuotaCPURequestUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.request.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("{cpu}"),
 		}, opt...)...,
 	)
@@ -4404,8 +4397,7 @@ func (ResourceQuotaCPURequestUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaCPURequestUsed) Description() string {
-	return "The CPU requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4454,8 +4446,7 @@ func NewResourceQuotaEphemeralStorageLimitHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.limit.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage limits in the namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -4482,8 +4473,7 @@ func (ResourceQuotaEphemeralStorageLimitHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaEphemeralStorageLimitHard) Description() string {
-	return "The sum of local ephemeral storage limits in the namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4532,8 +4522,7 @@ func NewResourceQuotaEphemeralStorageLimitUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.limit.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage limits in the namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -4560,8 +4549,7 @@ func (ResourceQuotaEphemeralStorageLimitUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaEphemeralStorageLimitUsed) Description() string {
-	return "The sum of local ephemeral storage limits in the namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4610,8 +4598,7 @@ func NewResourceQuotaEphemeralStorageRequestHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.request.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage requests in the namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -4638,8 +4625,7 @@ func (ResourceQuotaEphemeralStorageRequestHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaEphemeralStorageRequestHard) Description() string {
-	return "The sum of local ephemeral storage requests in the namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4688,8 +4674,7 @@ func NewResourceQuotaEphemeralStorageRequestUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.request.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage requests in the namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -4716,8 +4701,7 @@ func (ResourceQuotaEphemeralStorageRequestUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaEphemeralStorageRequestUsed) Description() string {
-	return "The sum of local ephemeral storage requests in the namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4766,8 +4750,7 @@ func NewResourceQuotaHugepageCountRequestHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.hugepage_count.request.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The huge page requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("{hugepage}"),
 		}, opt...)...,
 	)
@@ -4794,8 +4777,7 @@ func (ResourceQuotaHugepageCountRequestHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaHugepageCountRequestHard) Description() string {
-	return "The huge page requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4855,8 +4837,7 @@ func NewResourceQuotaHugepageCountRequestUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.hugepage_count.request.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The huge page requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("{hugepage}"),
 		}, opt...)...,
 	)
@@ -4883,8 +4864,7 @@ func (ResourceQuotaHugepageCountRequestUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaHugepageCountRequestUsed) Description() string {
-	return "The huge page requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -4943,8 +4923,7 @@ func NewResourceQuotaMemoryLimitHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.limit.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory limits in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -4971,8 +4950,7 @@ func (ResourceQuotaMemoryLimitHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaMemoryLimitHard) Description() string {
-	return "The memory limits in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5020,8 +4998,7 @@ func NewResourceQuotaMemoryLimitUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.limit.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory limits in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -5048,8 +5025,7 @@ func (ResourceQuotaMemoryLimitUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaMemoryLimitUsed) Description() string {
-	return "The memory limits in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5097,8 +5073,7 @@ func NewResourceQuotaMemoryRequestHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.request.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -5125,8 +5100,7 @@ func (ResourceQuotaMemoryRequestHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaMemoryRequestHard) Description() string {
-	return "The memory requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5174,8 +5148,7 @@ func NewResourceQuotaMemoryRequestUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.request.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -5202,8 +5175,7 @@ func (ResourceQuotaMemoryRequestUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaMemoryRequestUsed) Description() string {
-	return "The memory requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5251,8 +5223,7 @@ func NewResourceQuotaObjectCountHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.object_count.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The object count limits in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("{object}"),
 		}, opt...)...,
 	)
@@ -5279,8 +5250,7 @@ func (ResourceQuotaObjectCountHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaObjectCountHard) Description() string {
-	return "The object count limits in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5340,8 +5310,7 @@ func NewResourceQuotaObjectCountUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.object_count.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The object count limits in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("{object}"),
 		}, opt...)...,
 	)
@@ -5368,8 +5337,7 @@ func (ResourceQuotaObjectCountUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaObjectCountUsed) Description() string {
-	return "The object count limits in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5431,8 +5399,7 @@ func NewResourceQuotaPersistentvolumeclaimCountHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.persistentvolumeclaim_count.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("{persistentvolumeclaim}"),
 		}, opt...)...,
 	)
@@ -5459,8 +5426,7 @@ func (ResourceQuotaPersistentvolumeclaimCountHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaPersistentvolumeclaimCountHard) Description() string {
-	return "The total number of PersistentVolumeClaims that can exist in the namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5530,8 +5496,7 @@ func NewResourceQuotaPersistentvolumeclaimCountUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.persistentvolumeclaim_count.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("{persistentvolumeclaim}"),
 		}, opt...)...,
 	)
@@ -5558,8 +5523,7 @@ func (ResourceQuotaPersistentvolumeclaimCountUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaPersistentvolumeclaimCountUsed) Description() string {
-	return "The total number of PersistentVolumeClaims that can exist in the namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5627,8 +5591,7 @@ func NewResourceQuotaStorageRequestHard(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.storage.request.hard",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The storage requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."),
+			metric.WithDescription("The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -5655,8 +5618,7 @@ func (ResourceQuotaStorageRequestHard) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaStorageRequestHard) Description() string {
-	return "The storage requests in a specific namespace.
-The value represents the configured quota limit of the resource in the namespace."
+	return "The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.
@@ -5724,8 +5686,7 @@ func NewResourceQuotaStorageRequestUsed(
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.storage.request.used",
 		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The storage requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."),
+			metric.WithDescription("The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 			metric.WithUnit("By"),
 		}, opt...)...,
 	)
@@ -5752,8 +5713,7 @@ func (ResourceQuotaStorageRequestUsed) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaStorageRequestUsed) Description() string {
-	return "The storage requests in a specific namespace.
-The value represents the current observed total usage of the resource in the namespace."
+	return "The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // Add adds incr to the existing count.

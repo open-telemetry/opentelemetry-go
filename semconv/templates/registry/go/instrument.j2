@@ -218,3 +218,7 @@ func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lowe
 }
 {%- endif -%}
 {%- endmacro -%}
+
+{%- macro desc(metric) -%}
+{{metric.brief | replace('\n', ' ') | trim}}
+{%- endmacro -%}
