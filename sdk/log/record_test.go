@@ -109,7 +109,7 @@ func TestRecordBody(t *testing.T) {
 			),
 		},
 		{
-			name: "map - allow duplicates",
+			name:            "map - allow duplicates",
 			allowDuplicates: true,
 			body: log.MapValue(
 				log.Int64("1", 2),
