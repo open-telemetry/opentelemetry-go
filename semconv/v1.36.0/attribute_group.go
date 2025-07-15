@@ -6504,10 +6504,6 @@ var (
 	// Gemini
 	// Stability: development
 	GenAISystemGCPGemini = GenAISystemKey.String("gcp.gemini")
-	// Deprecated: Use 'gcp.vertex_ai' instead.
-	GenAISystemVertexAI = GenAISystemKey.String("vertex_ai")
-	// Deprecated: Use 'gcp.gemini' instead.
-	GenAISystemGemini = GenAISystemKey.String("gemini")
 	// Anthropic
 	// Stability: development
 	GenAISystemAnthropic = GenAISystemKey.String("anthropic")
@@ -6520,10 +6516,6 @@ var (
 	// Azure OpenAI
 	// Stability: development
 	GenAISystemAzureAIOpenAI = GenAISystemKey.String("azure.ai.openai")
-	// Deprecated: Replaced by azure.ai.inference.
-	GenAISystemAzAIInference = GenAISystemKey.String("az.ai.inference")
-	// Deprecated: Replaced by azure.ai.openai.
-	GenAISystemAzAIOpenAI = GenAISystemKey.String("azure.ai.openai")
 	// IBM Watsonx AI
 	// Stability: development
 	GenAISystemIBMWatsonxAI = GenAISystemKey.String("ibm.watsonx.ai")
@@ -6552,8 +6544,6 @@ var (
 	// Input tokens (prompt, input, etc.)
 	// Stability: development
 	GenAITokenTypeInput = GenAITokenTypeKey.String("input")
-	// Deprecated: Replaced by `output`.
-	GenAITokenTypeCompletion = GenAITokenTypeKey.String("output")
 	// Output tokens (completion, response, etc.)
 	// Stability: development
 	GenAITokenTypeOutput = GenAITokenTypeKey.String("output")
@@ -9596,10 +9586,6 @@ var (
 	//
 	// Stability: development
 	MessagingOperationTypeSettle = MessagingOperationTypeKey.String("settle")
-	// Deprecated: Replaced by `process`.
-	MessagingOperationTypeDeliver = MessagingOperationTypeKey.String("deliver")
-	// Deprecated: Replaced by `send`.
-	MessagingOperationTypePublish = MessagingOperationTypeKey.String("publish")
 )
 
 // Enum values for messaging.rocketmq.consumption_model
@@ -10312,8 +10298,6 @@ var (
 	// SunOS, Oracle Solaris
 	// Stability: development
 	OSTypeSolaris = OSTypeKey.String("solaris")
-	// Deprecated: Replaced by `zos`.
-	OSTypeZOS = OSTypeKey.String("z_os")
 	// IBM z/OS
 	// Stability: development
 	OSTypeZOS = OSTypeKey.String("zos")
@@ -12419,9 +12403,6 @@ var (
 	// free
 	// Stability: development
 	SystemMemoryStateFree = SystemMemoryStateKey.String("free")
-	// Deprecated: Removed, report shared memory usage with
-	// `metric.system.memory.shared` metric.
-	SystemMemoryStateShared = SystemMemoryStateKey.String("shared")
 	// buffers
 	// Stability: development
 	SystemMemoryStateBuffers = SystemMemoryStateKey.String("buffers")
@@ -14320,8 +14301,6 @@ var (
 	//
 	// [GitLab]: https://gitlab.com
 	VCSProviderNameGitlab = VCSProviderNameKey.String("gitlab")
-	// Deprecated: Replaced by `gitea`.
-	VCSProviderNameGittea = VCSProviderNameKey.String("gittea")
 	// [Gitea]
 	// Stability: development
 	//

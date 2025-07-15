@@ -15,6 +15,15 @@ If you use any of these non-deprecated declarations in your Go application, plea
 - `AzNamespaceKey`
 - `AzServiceRequestID`
 - `AzServiceRequestIDKey`
+- `GenAISystemAzAIInference`
+- `GenAISystemAzAIOpenAI`
+- `GenAISystemGemini`
+- `GenAISystemVertexAI`
+- `GenAITokenTypeCompletion`
+- `MessagingOperationTypeDeliver`
+- `MessagingOperationTypePublish`
+- `SystemMemoryStateShared`
+- `VCSProviderNameGittea`
 
 [OpenTelemetry Semantic Conventions documentation]: https://github.com/open-telemetry/semantic-conventions
 [open an issue]: https://github.com/open-telemetry/opentelemetry-go/issues/new?template=Blank+issue
