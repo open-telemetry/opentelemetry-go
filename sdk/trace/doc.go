@@ -9,9 +9,9 @@ See https://opentelemetry.io.
 
 # Self-Observability (Experimental)
 
-The SDK provides a self-observability feature that allows you to monitor the SDK itself.
+This feature is experimental and may change in backwards incompatible ways in future releases.
 
-This feature is experimental and may change in future releases.
+The SDK provides a self-observability feature that allows you to monitor the SDK itself.
 
 To opt-in, set the environment variable OTEL_GO_X_SELF_OBSERVABILITY to "true".
 
