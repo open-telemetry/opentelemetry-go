@@ -30,36 +30,6 @@ var (
 	ClientConnectionStateUsed ClientConnectionStateAttr = "used"
 )
 
-// ClientConnectionsStateAttr is an attribute conforming to the
-// db.client.connections.state semantic conventions. It represents the
-// deprecated, use `db.client.connection.state` instead.
-type ClientConnectionsStateAttr string
-
-var (
-	// ClientConnectionsStateIdle is the none.
-	ClientConnectionsStateIdle ClientConnectionsStateAttr = "idle"
-	// ClientConnectionsStateUsed is the none.
-	ClientConnectionsStateUsed ClientConnectionsStateAttr = "used"
-)
-
-// CosmosDBConsistencyLevelAttr is an attribute conforming to the
-// db.cosmosdb.consistency_level semantic conventions. It represents the
-// deprecated, use `cosmosdb.consistency.level` instead.
-type CosmosDBConsistencyLevelAttr string
-
-var (
-	// CosmosDBConsistencyLevelStrong is the none.
-	CosmosDBConsistencyLevelStrong CosmosDBConsistencyLevelAttr = "Strong"
-	// CosmosDBConsistencyLevelBoundedStaleness is the none.
-	CosmosDBConsistencyLevelBoundedStaleness CosmosDBConsistencyLevelAttr = "BoundedStaleness"
-	// CosmosDBConsistencyLevelSession is the none.
-	CosmosDBConsistencyLevelSession CosmosDBConsistencyLevelAttr = "Session"
-	// CosmosDBConsistencyLevelEventual is the none.
-	CosmosDBConsistencyLevelEventual CosmosDBConsistencyLevelAttr = "Eventual"
-	// CosmosDBConsistencyLevelConsistentPrefix is the none.
-	CosmosDBConsistencyLevelConsistentPrefix CosmosDBConsistencyLevelAttr = "ConsistentPrefix"
-)
-
 // SystemNameAttr is an attribute conforming to the db.system.name semantic
 // conventions. It represents the database management system (DBMS) product as
 // identified by the client instrumentation.

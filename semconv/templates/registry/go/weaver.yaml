@@ -23,10 +23,12 @@ templates:
     file_name: attribute_group.go
   - pattern: metric.go.j2
     filter: >
-      semconv_grouped_metrics({
+      semconv_metrics({
         "exclude_deprecated": true,
         "exclude_root_namespace": $excluded_namespaces,
-      })
+      }) 
+      | map(select(has("deprecated") | not))
+      | semconv_group_metrics_by_root_namespace
     application_mode: each
     file_name: "{{ctx.root_namespace | camel_case | lower }}conv/metric.go"
 comment_formats:
