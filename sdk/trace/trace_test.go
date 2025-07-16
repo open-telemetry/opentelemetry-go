@@ -2210,6 +2210,9 @@ func TestSelfObservabilty(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanLive{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+							),
 							Value: 1,
 						},
 					},
@@ -2224,6 +2227,9 @@ func TestSelfObservabilty(t *testing.T) {
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+							),
 							Value: 1,
 						},
 					},
@@ -2253,6 +2259,9 @@ func TestSelfObservabilty(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanLive{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+							),
 							Value: 0, // No live spans at this point.
 						},
 					},
@@ -2267,6 +2276,9 @@ func TestSelfObservabilty(t *testing.T) {
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+							),
 							Value: 1,
 						},
 					},

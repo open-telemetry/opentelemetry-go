@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -76,8 +77,16 @@ func (tr *tracer) Start(
 
 	s := tr.newSpan(ctx, name, &config)
 	if tr.selfObservabilityEnabled {
-		// TODO: Add attributes to the metrics.
-		tr.spanStartedMetric.Add(context.Background(), 1)
+		var samplingResultAttr attribute.KeyValue
+		if s.SpanContext().IsSampled() && s.IsRecording() {
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample)
+		} else if s.IsRecording() {
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+		} else {
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
+		}
+		// TODO: Add otel.span.parent.origin attribute.
+		tr.spanStartedMetric.Add(context.Background(), 1, samplingResultAttr)
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
@@ -188,8 +197,13 @@ func (tr *tracer) newRecordingSpan(
 	s.SetAttributes(config.Attributes()...)
 
 	if tr.selfObservabilityEnabled {
-		// TODO: Add attributes to the metrics.
-		tr.spanLiveMetric.Add(context.Background(), 1)
+		var samplingResultAttr attribute.KeyValue
+		if s.spanContext.IsSampled() {
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample)
+		} else {
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+		}
+		tr.spanLiveMetric.Add(context.Background(), 1, samplingResultAttr)
 	}
 
 	return s

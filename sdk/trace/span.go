@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -498,8 +499,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 
 	defer func() {
 		if s.tracer.selfObservabilityEnabled {
-			// TODO: Add attributes to the metrics.
-			s.tracer.spanLiveMetric.Add(context.Background(), -1)
+			var samplingResultAttr attribute.KeyValue
+			if s.spanContext.IsSampled() {
+				samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample)
+			} else {
+				samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			}
+			s.tracer.spanLiveMetric.Add(context.Background(), -1, samplingResultAttr)
 		}
 	}()
 
