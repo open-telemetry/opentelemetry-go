@@ -26,7 +26,7 @@ type tracer struct {
 
 	selfObservabilityEnabled bool
 	spanLiveMetric           otelconv.SDKSpanLive
-	spanStartedMetric        otelconv.SDKSpanEnded // TODO: Replace with otelconv.SDKSpanStarted when it is available.
+	spanStartedMetric        otelconv.SDKSpanEnded // TODO (#7027): Replace with otelconv.SDKSpanStarted when it is available.
 }
 
 var _ trace.Tracer = &tracer{}
@@ -87,7 +87,7 @@ func (tr *tracer) Start(
 		} else {
 			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
 		}
-		// TODO: Add otel.span.parent.origin attribute.
+		// TODO (#7027): Add otel.span.parent.origin attribute when it is available.
 		tr.spanStartedMetric.Add(context.Background(), 1, samplingResultAttr)
 	}
 
