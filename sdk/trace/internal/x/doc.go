@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package x contains and documents support for OpenTelemetry Trace SDK experimental features.
+Package x documents experimental features for [go.opentelemetry.io/otel/sdk/trace].
 
 # Compatibility and Stability
 
-Experimental features may change in backwards incompatible ways as feedback is applied.
-
 Experimental features do not fall within the scope of the [OpenTelemetry Go versioning and stability policy].
+These features may change in backwards incompatible ways as feedback is applied.
 These features may be removed or modified in successive version releases, including patch versions.
 
 When an experimental feature is promoted to a stable feature, a migration path will be included in the changelog entry of the release.
