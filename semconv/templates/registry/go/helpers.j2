@@ -136,12 +136,8 @@ func {{to_go_name(attribute.name, pkg)}}(key string, val {{attribute.type | inst
 
 {{ ["Enum values for " ~ attribute.name] | comment(format="go") }}
 var (
-{%- for value in attribute.type.members %}
-{%- if value.deprecated %}
-{{ ["Deprecated: " ~ value.deprecated | trim(".") ~ "." ] | comment(format="go_1tab") }}
-{%- else %}
+{%- for value in attribute.type.members if not value.deprecated %}
 {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(format="go_1tab") }}
-{%- endif %}
 	{{to_go_name(attribute.name ~ "." ~ value.id, pkg=pkg)}} = {{ to_go_name(attribute.name, pkg=pkg) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
 {%- endfor %}
 )
