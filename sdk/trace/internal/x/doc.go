@@ -14,8 +14,6 @@ When an experimental feature is promoted to a stable feature, a migration path w
 There is no guarantee that any environment variable feature flags that enabled the experimental feature will be supported by the stable version.
 If they are supported, they may be accompanied with a deprecation notice stating a timeline for the removal of that support.
 
-[OpenTelemetry Go versioning and stability policy: https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md
-
 # Self-Observability
 
 The SDK provides a self-observability feature that allows you to monitor the SDK itself.
@@ -28,6 +26,7 @@ When enabled, the SDK will create following metrics using the global MeterProvid
 
 Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
 
+[OpenTelemetry Go versioning and stability policy]: https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md
 [Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.36.0/docs/otel/sdk-metrics.md
 */
 package x // import "go.opentelemetry.io/otel/sdk/trace/internal/x"
