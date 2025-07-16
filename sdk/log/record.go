@@ -102,10 +102,16 @@ type Record struct {
 
 func (r *Record) addDropped(n int) {
 	r.dropped += n
+	if n > 0 {
+		logAttrDropped()
+	}
 }
 
 func (r *Record) setDropped(n int) {
 	r.dropped = n
+	if n > 0 {
+		logAttrDropped()
+	}
 }
 
 // EventName returns the event name.
@@ -200,10 +206,6 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		attrs, drop = head(attrs, r.attributeCountLimit)
 
 		r.addDropped(drop)
-		if drop > 0 {
-			logAttrDropped()
-		}
-
 		r.addAttrs(attrs)
 		return
 	}
@@ -257,10 +259,6 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		last := max(0, r.attributeCountLimit-n)
 		dropped := len(attrs) - last
 		r.addDropped(dropped)
-
-		if dropped > 0 {
-			logAttrDropped()
-		}
 		attrs = attrs[:last]
 	}
 
@@ -313,10 +311,6 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
 	r.addDropped(drop)
-
-	if drop > 0 {
-		logAttrDropped()
-	}
 
 	r.nFront = 0
 	var i int
