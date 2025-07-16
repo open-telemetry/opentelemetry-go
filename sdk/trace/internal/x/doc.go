@@ -16,7 +16,7 @@ If they are supported, they may be accompanied with a deprecation notice stating
 
 [OpenTelemetry Go versioning and stability policy: https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md
 
-# Self-Observability (Experimental)
+# Self-Observability
 
 The SDK provides a self-observability feature that allows you to monitor the SDK itself.
 
