@@ -25,7 +25,7 @@ type config struct {
 	cardinalityLimit int
 }
 
-const defaultCardinalityLimit = 2000
+const defaultCardinalityLimit = 0
 
 // readerSignals returns a force-flush and shutdown function for a
 // MeterProvider to call in their respective options. All Readers c contains
@@ -165,13 +165,12 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // The cardinality limit is the hard limit on the number of metric streams
 // that can be collected for a single instrument in a single collect cycle.
 //
-// By default, the cardinality limit is set to 2000.
+// By default, the cardinality limit is set to 0.
 //
 // Setting this to a zero or negative value means no limit is applied.
-//
-// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
-// can also be used to set this value.
 func WithCardinalityLimit(limit int) Option {
+	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
+	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
 		return cfg
