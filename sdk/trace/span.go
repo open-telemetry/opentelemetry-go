@@ -504,6 +504,11 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	for _, sp := range sps {
 		sp.sp.OnEnd(snap)
 	}
+
+	if s.tracer.selfObservabilityEnabled {
+		// TODO: Add attributes to the metrics.
+		s.tracer.spanLiveMetric.Add(context.Background(), -1)
+	}
 }
 
 // monotonicEndTime returns the end time at present but offset from start,

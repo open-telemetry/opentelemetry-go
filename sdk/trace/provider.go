@@ -6,6 +6,8 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -158,6 +160,10 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 			t = &tracer{
 				provider:             p,
 				instrumentationScope: is,
+			}
+			env := os.Getenv("OTEL_GO_X_SELF_OBSERVABILITY")
+			if strings.ToLower(env) == "true" {
+				t.initSelfObservability(otel.GetMeterProvider())
 			}
 			p.namedTracer[is] = t
 		}

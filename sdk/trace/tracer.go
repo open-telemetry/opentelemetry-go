@@ -7,7 +7,12 @@ import (
 	"context"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -17,9 +22,33 @@ type tracer struct {
 
 	provider             *TracerProvider
 	instrumentationScope instrumentation.Scope
+
+	selfObservabilityEnabled bool
+	spanLiveMetric           otelconv.SDKSpanLive
+	spanStartedMetric        otelconv.SDKSpanEnded // TODO: Replace with otelconv.SDKSpanStarted when it is available.
 }
 
 var _ trace.Tracer = &tracer{}
+
+func (tr *tracer) initSelfObservability(mp metric.MeterProvider) {
+	if mp == nil {
+		// If no MeterProvider is set, we cannot create self-observability metrics.
+		return
+	}
+
+	tr.selfObservabilityEnabled = true
+	m := mp.Meter("go.opentelemetry.io/otel/sdk/trace",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if tr.spanLiveMetric, err = otelconv.NewSDKSpanLive(m); err != nil {
+		otel.Handle(err)
+	}
+	if tr.spanStartedMetric, err = otelconv.NewSDKSpanEnded(m); err != nil {
+		otel.Handle(err)
+	}
+}
 
 // Start starts a Span and returns it along with a context containing it.
 //
@@ -46,6 +75,11 @@ func (tr *tracer) Start(
 	}
 
 	s := tr.newSpan(ctx, name, &config)
+	if tr.selfObservabilityEnabled {
+		// TODO: Add attributes to the metrics.
+		tr.spanStartedMetric.Add(context.Background(), 1)
+	}
+
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
 		sps := tr.provider.getSpanProcessors()
 		for _, sp := range sps {
@@ -152,6 +186,11 @@ func (tr *tracer) newRecordingSpan(
 
 	s.SetAttributes(sr.Attributes...)
 	s.SetAttributes(config.Attributes()...)
+
+	if tr.selfObservabilityEnabled {
+		// TODO: Add attributes to the metrics.
+		tr.spanLiveMetric.Add(context.Background(), 1)
+	}
 
 	return s
 }
