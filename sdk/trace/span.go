@@ -496,6 +496,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
+	defer func() {
+		if s.tracer.selfObservabilityEnabled {
+			// TODO: Add attributes to the metrics.
+			s.tracer.spanLiveMetric.Add(context.Background(), -1)
+		}
+	}()
+
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
 		return
@@ -503,11 +510,6 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	snap := s.snapshot()
 	for _, sp := range sps {
 		sp.sp.OnEnd(snap)
-	}
-
-	if s.tracer.selfObservabilityEnabled {
-		// TODO: Add attributes to the metrics.
-		s.tracer.spanLiveMetric.Add(context.Background(), -1)
 	}
 }
 

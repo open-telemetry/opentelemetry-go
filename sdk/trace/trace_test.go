@@ -22,9 +22,14 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -2175,6 +2180,104 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	if diff := cmpDiff(got, want); diff != "" {
 		t.Errorf("AddLinkToNonRecordingSpan: -got +want %s", diff)
 	}
+}
+
+func TestSelfObservabilty(t *testing.T) {
+	var got metricdata.ResourceMetrics
+
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+	prev := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(prev)
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otel.SetMeterProvider(mp)
+
+	tp := NewTracerProvider()
+	_, span := tp.Tracer("").Start(context.Background(), "StartSpan")
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/sdk/trace",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKSpanLive{}.Name(),
+				Description: otelconv.SDKSpanLive{}.Description(),
+				Unit:        otelconv.SDKSpanLive{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKSpanEnded{}.Name(),
+				Description: otelconv.SDKSpanEnded{}.Description(),
+				Unit:        otelconv.SDKSpanEnded{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+						},
+					},
+				},
+			},
+		},
+	}
+	err := r.Collect(context.Background(), &got)
+	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+
+	span.End()
+
+	want = metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/sdk/trace",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKSpanLive{}.Name(),
+				Description: otelconv.SDKSpanLive{}.Description(),
+				Unit:        otelconv.SDKSpanLive{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 0, // No live spans at this point.
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKSpanEnded{}.Name(),
+				Description: otelconv.SDKSpanEnded{}.Description(),
+				Unit:        otelconv.SDKSpanEnded{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+						},
+					},
+				},
+			},
+		},
+	}
+	err = r.Collect(context.Background(), &got)
+	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 }
 
 func BenchmarkTraceStart(b *testing.B) {
