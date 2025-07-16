@@ -42,6 +42,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
 - Add `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` which can be used to disable deduplication for log records. (#6968)
 - Add `Clone` method to `Record` in `go.opentelemetry.io/otel/log` that returns a copy of the record with no shared state. (#7001)
+- Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
+  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
 
 ### Changed
 
