@@ -79,7 +79,9 @@ func (tr *tracer) Start(
 	if tr.selfObservabilityEnabled {
 		var samplingResultAttr attribute.KeyValue
 		if s.SpanContext().IsSampled() && s.IsRecording() {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample)
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+				otelconv.SpanSamplingResultRecordAndSample,
+			)
 		} else if s.IsRecording() {
 			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		} else {
@@ -199,7 +201,9 @@ func (tr *tracer) newRecordingSpan(
 	if tr.selfObservabilityEnabled {
 		var samplingResultAttr attribute.KeyValue
 		if s.spanContext.IsSampled() {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample)
+			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+				otelconv.SpanSamplingResultRecordAndSample,
+			)
 		} else {
 			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		}

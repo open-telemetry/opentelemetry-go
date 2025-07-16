@@ -501,7 +501,9 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		if s.tracer.selfObservabilityEnabled {
 			var samplingResultAttr attribute.KeyValue
 			if s.spanContext.IsSampled() {
-				samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample)
+				samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+					otelconv.SpanSamplingResultRecordAndSample,
+				)
 			} else {
 				samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 			}
