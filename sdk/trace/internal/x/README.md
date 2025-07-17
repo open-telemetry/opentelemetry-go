@@ -25,7 +25,6 @@ Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentatio
 
 [Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.36.0/docs/otel/sdk-metrics.md
 
-
 ## Compatibility and Stability
 
 Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../VERSIONING.md).
