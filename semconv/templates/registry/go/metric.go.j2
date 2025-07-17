@@ -60,7 +60,7 @@ func New{{ metric_name }}(
 	i, err := m.{{ metric_inst }}(
 		"{{metric.metric_name}}",
 		append([]metric.{{ metric_inst }}Option{
-			metric.WithDescription("{{metric.brief | trim}}"),
+			metric.WithDescription("{{ i.desc(metric) }}"),
 			metric.WithUnit("{{metric.unit}}"),
 		}, opt...)...,
 	)
@@ -88,7 +88,7 @@ func ({{ metric_name }}) Unit() string {
 
 // Description returns the semantic convention description of the instrument
 func ({{ metric_name }}) Description() string {
-	return "{{ metric.brief | trim }}"
+	return "{{ i.desc(metric) }}"
 }
 {%- endif %}
 {%- if "Observable" is in metric_inst %}
