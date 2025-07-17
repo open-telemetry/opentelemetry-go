@@ -79,6 +79,10 @@ text_maps:
     go.memory.limit: Int64ObservableUpDownCounter
     go.memory.used: Int64ObservableUpDownCounter
     go.processor.limit: Int64ObservableUpDownCounter
+    otel.sdk.processor.log.queue.capacity: Int64ObservableUpDownCounter
+    otel.sdk.processor.log.queue.size: Int64ObservableUpDownCounter
+    otel.sdk.processor.span.queue.capacity: Int64ObservableUpDownCounter
+    otel.sdk.processor.span.queue.size: Int64ObservableUpDownCounter
     process.cpu.time: Float64ObservableCounter
     system.memory.usage: Int64ObservableUpDownCounter
     system.memory.utilization: Float64ObservableGauge
