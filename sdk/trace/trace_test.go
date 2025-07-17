@@ -2663,14 +2663,12 @@ func TestRecordOnlySampler(t *testing.T) {
 
 	_, span := tp.Tracer("RecordOnly").Start(context.Background(), "test-span")
 
-	// Span should be recording but not sampled
-	assert.True(t, span.IsRecording())
-	assert.False(t, span.SpanContext().IsSampled())
+	assert.True(t, span.IsRecording(), "span should be recording")
+	assert.False(t, span.SpanContext().IsSampled(), "span should not be sampled")
 
 	span.End()
 
-	// No spans should be exported
-	assert.Equal(t, 0, te.Len())
+	assert.Zero(t, te.Len(), "no spans should be exported")
 }
 
 func BenchmarkTraceStart(b *testing.B) {
