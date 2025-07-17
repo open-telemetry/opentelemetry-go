@@ -2182,7 +2182,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
-func TestSelfObservabilty(t *testing.T) {
+func TestSelfObservabiltySampledSpan(t *testing.T) {
 	var got metricdata.ResourceMetrics
 
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
@@ -2301,6 +2301,57 @@ func TestSelfObservabilty(t *testing.T) {
 		},
 	}
 	err = r.Collect(context.Background(), &got)
+	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+}
+
+func TestSelfObservabilityNonRecordingSpan(t *testing.T) {
+	var got metricdata.ResourceMetrics
+
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+	prev := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(prev)
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otel.SetMeterProvider(mp)
+
+	// Create a tracer provider with NeverSample sampler to get non-recording spans.
+	tp := NewTracerProvider(WithSampler(NeverSample()))
+	tp.Tracer("").Start(context.Background(), "NonRecordingSpan")
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/sdk/trace",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKSpanStarted{}.Name(),
+				Description: otelconv.SDKSpanStarted{}.Description(),
+				Unit:        otelconv.SDKSpanStarted{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+									otelconv.SpanParentOriginNone,
+								),
+								otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+									otelconv.SpanSamplingResultDrop,
+								),
+							),
+							Value: 1,
+						},
+					},
+				},
+			},
+		},
+	}
+	err := r.Collect(context.Background(), &got)
 	require.NoError(t, err)
 	require.Len(t, got.ScopeMetrics, 1)
 	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
