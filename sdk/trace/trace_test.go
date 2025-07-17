@@ -2416,7 +2416,6 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name: "LocalParentSpan",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
-				// Create a local parent span first
 				tp := NewTracerProvider()
 				ctx, parentSpan := tp.Tracer("").Start(context.Background(), "ParentSpan")
 				_, childSpan := tp.Tracer("").Start(ctx, "ChildSpan")
@@ -2485,7 +2484,6 @@ func TestSelfObservability(t *testing.T) {
 				got := scopeMetrics()
 				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 
-				// End spans and check metrics again
 				childSpan.End()
 				parentSpan.End()
 
