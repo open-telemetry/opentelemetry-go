@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -2221,16 +2221,16 @@ func TestSelfObservabilty(t *testing.T) {
 				},
 			},
 			{
-				Name:        otelconv.SDKSpanEnded{}.Name(),
-				Description: otelconv.SDKSpanEnded{}.Description(),
-				Unit:        otelconv.SDKSpanEnded{}.Unit(),
+				Name:        otelconv.SDKSpanStarted{}.Name(),
+				Description: otelconv.SDKSpanStarted{}.Description(),
+				Unit:        otelconv.SDKSpanStarted{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+								otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
 									otelconv.SpanSamplingResultRecordAndSample,
 								),
 							),
@@ -2274,16 +2274,16 @@ func TestSelfObservabilty(t *testing.T) {
 				},
 			},
 			{
-				Name:        otelconv.SDKSpanEnded{}.Name(),
-				Description: otelconv.SDKSpanEnded{}.Description(),
-				Unit:        otelconv.SDKSpanEnded{}.Unit(),
+				Name:        otelconv.SDKSpanStarted{}.Name(),
+				Description: otelconv.SDKSpanStarted{}.Description(),
+				Unit:        otelconv.SDKSpanStarted{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+								otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
 									otelconv.SpanSamplingResultRecordAndSample,
 								),
 							),

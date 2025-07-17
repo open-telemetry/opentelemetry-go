@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -26,7 +26,7 @@ type tracer struct {
 
 	selfObservabilityEnabled bool
 	spanLiveMetric           otelconv.SDKSpanLive
-	spanStartedMetric        otelconv.SDKSpanEnded // TODO (#7027): Replace with otelconv.SDKSpanStarted when it is available.
+	spanStartedMetric        otelconv.SDKSpanStarted
 }
 
 var _ trace.Tracer = &tracer{}
@@ -46,7 +46,7 @@ func (tr *tracer) initSelfObservability(mp metric.MeterProvider) {
 	if tr.spanLiveMetric, err = otelconv.NewSDKSpanLive(m); err != nil {
 		otel.Handle(err)
 	}
-	if tr.spanStartedMetric, err = otelconv.NewSDKSpanEnded(m); err != nil {
+	if tr.spanStartedMetric, err = otelconv.NewSDKSpanStarted(m); err != nil {
 		otel.Handle(err)
 	}
 }
@@ -79,13 +79,13 @@ func (tr *tracer) Start(
 	if tr.selfObservabilityEnabled {
 		var samplingResultAttr attribute.KeyValue
 		if s.SpanContext().IsSampled() && s.IsRecording() {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
 		} else if s.IsRecording() {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		} else {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
+			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
 		}
 		// TODO (#7027): Add otel.span.parent.origin attribute when it is available.
 		tr.spanStartedMetric.Add(context.Background(), 1, samplingResultAttr)
@@ -201,11 +201,11 @@ func (tr *tracer) newRecordingSpan(
 	if tr.selfObservabilityEnabled {
 		var samplingResultAttr attribute.KeyValue
 		if s.spanContext.IsSampled() {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(
+			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
 		} else {
-			samplingResultAttr = otelconv.SDKSpanEnded{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		}
 		tr.spanLiveMetric.Add(context.Background(), 1, samplingResultAttr)
 	}
