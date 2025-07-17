@@ -1241,36 +1241,36 @@ func (SDKProcessorLogProcessed) AttrComponentType(val ComponentTypeAttr) attribu
 // conventions. It represents the maximum number of log records the queue of a
 // given instance of an SDK Log Record processor can hold.
 type SDKProcessorLogQueueCapacity struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
 // NewSDKProcessorLogQueueCapacity returns a new SDKProcessorLogQueueCapacity
 // instrument.
 func NewSDKProcessorLogQueueCapacity(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (SDKProcessorLogQueueCapacity, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return SDKProcessorLogQueueCapacity{noop.Int64UpDownCounter{}}, nil
+		return SDKProcessorLogQueueCapacity{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"otel.sdk.processor.log.queue.capacity",
-		append([]metric.Int64UpDownCounterOption{
+		append([]metric.Int64ObservableUpDownCounterOption{
 			metric.WithDescription("The maximum number of log records the queue of a given instance of an SDK Log Record processor can hold"),
 			metric.WithUnit("{log_record}"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogQueueCapacity{noop.Int64UpDownCounter{}}, err
+	    return SDKProcessorLogQueueCapacity{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorLogQueueCapacity{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m SDKProcessorLogQueueCapacity) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m SDKProcessorLogQueueCapacity) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1286,33 +1286,6 @@ func (SDKProcessorLogQueueCapacity) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (SDKProcessorLogQueueCapacity) Description() string {
 	return "The maximum number of log records the queue of a given instance of an SDK Log Record processor can hold"
-}
-
-// Add adds incr to the existing count.
-//
-// All additional attrs passed are included in the recorded value.
-//
-// Only applies to Log Record processors which use a queue, e.g. the SDK Batching
-// Log Record Processor.
-func (m SDKProcessorLogQueueCapacity) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AttrComponentName returns an optional attribute for the "otel.component.name"
@@ -1334,35 +1307,35 @@ func (SDKProcessorLogQueueCapacity) AttrComponentType(val ComponentTypeAttr) att
 // represents the number of log records in the queue of a given instance of an
 // SDK log processor.
 type SDKProcessorLogQueueSize struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
 // NewSDKProcessorLogQueueSize returns a new SDKProcessorLogQueueSize instrument.
 func NewSDKProcessorLogQueueSize(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (SDKProcessorLogQueueSize, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return SDKProcessorLogQueueSize{noop.Int64UpDownCounter{}}, nil
+		return SDKProcessorLogQueueSize{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"otel.sdk.processor.log.queue.size",
-		append([]metric.Int64UpDownCounterOption{
+		append([]metric.Int64ObservableUpDownCounterOption{
 			metric.WithDescription("The number of log records in the queue of a given instance of an SDK log processor"),
 			metric.WithUnit("{log_record}"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogQueueSize{noop.Int64UpDownCounter{}}, err
+	    return SDKProcessorLogQueueSize{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorLogQueueSize{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m SDKProcessorLogQueueSize) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m SDKProcessorLogQueueSize) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1378,33 +1351,6 @@ func (SDKProcessorLogQueueSize) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (SDKProcessorLogQueueSize) Description() string {
 	return "The number of log records in the queue of a given instance of an SDK log processor"
-}
-
-// Add adds incr to the existing count.
-//
-// All additional attrs passed are included in the recorded value.
-//
-// Only applies to log record processors which use a queue, e.g. the SDK Batching
-// Log Record Processor.
-func (m SDKProcessorLogQueueSize) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AttrComponentName returns an optional attribute for the "otel.component.name"
@@ -1530,36 +1476,36 @@ func (SDKProcessorSpanProcessed) AttrComponentType(val ComponentTypeAttr) attrib
 // conventions. It represents the maximum number of spans the queue of a given
 // instance of an SDK span processor can hold.
 type SDKProcessorSpanQueueCapacity struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
 // NewSDKProcessorSpanQueueCapacity returns a new SDKProcessorSpanQueueCapacity
 // instrument.
 func NewSDKProcessorSpanQueueCapacity(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (SDKProcessorSpanQueueCapacity, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return SDKProcessorSpanQueueCapacity{noop.Int64UpDownCounter{}}, nil
+		return SDKProcessorSpanQueueCapacity{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"otel.sdk.processor.span.queue.capacity",
-		append([]metric.Int64UpDownCounterOption{
+		append([]metric.Int64ObservableUpDownCounterOption{
 			metric.WithDescription("The maximum number of spans the queue of a given instance of an SDK span processor can hold"),
 			metric.WithUnit("{span}"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanQueueCapacity{noop.Int64UpDownCounter{}}, err
+	    return SDKProcessorSpanQueueCapacity{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorSpanQueueCapacity{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m SDKProcessorSpanQueueCapacity) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m SDKProcessorSpanQueueCapacity) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1575,33 +1521,6 @@ func (SDKProcessorSpanQueueCapacity) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (SDKProcessorSpanQueueCapacity) Description() string {
 	return "The maximum number of spans the queue of a given instance of an SDK span processor can hold"
-}
-
-// Add adds incr to the existing count.
-//
-// All additional attrs passed are included in the recorded value.
-//
-// Only applies to span processors which use a queue, e.g. the SDK Batching Span
-// Processor.
-func (m SDKProcessorSpanQueueCapacity) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AttrComponentName returns an optional attribute for the "otel.component.name"
@@ -1623,36 +1542,36 @@ func (SDKProcessorSpanQueueCapacity) AttrComponentType(val ComponentTypeAttr) at
 // It represents the number of spans in the queue of a given instance of an SDK
 // span processor.
 type SDKProcessorSpanQueueSize struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
 // NewSDKProcessorSpanQueueSize returns a new SDKProcessorSpanQueueSize
 // instrument.
 func NewSDKProcessorSpanQueueSize(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (SDKProcessorSpanQueueSize, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return SDKProcessorSpanQueueSize{noop.Int64UpDownCounter{}}, nil
+		return SDKProcessorSpanQueueSize{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"otel.sdk.processor.span.queue.size",
-		append([]metric.Int64UpDownCounterOption{
+		append([]metric.Int64ObservableUpDownCounterOption{
 			metric.WithDescription("The number of spans in the queue of a given instance of an SDK span processor"),
 			metric.WithUnit("{span}"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanQueueSize{noop.Int64UpDownCounter{}}, err
+	    return SDKProcessorSpanQueueSize{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorSpanQueueSize{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m SDKProcessorSpanQueueSize) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m SDKProcessorSpanQueueSize) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1668,33 +1587,6 @@ func (SDKProcessorSpanQueueSize) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (SDKProcessorSpanQueueSize) Description() string {
 	return "The number of spans in the queue of a given instance of an SDK span processor"
-}
-
-// Add adds incr to the existing count.
-//
-// All additional attrs passed are included in the recorded value.
-//
-// Only applies to span processors which use a queue, e.g. the SDK Batching Span
-// Processor.
-func (m SDKProcessorSpanQueueSize) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AttrComponentName returns an optional attribute for the "otel.component.name"
