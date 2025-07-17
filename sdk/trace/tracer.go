@@ -82,13 +82,13 @@ func (tr *tracer) Start(
 	if tr.selfObservabilityEnabled {
 		var samplingResultAttr attribute.KeyValue
 		if s.SpanContext().IsSampled() && s.IsRecording() {
-			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+			samplingResultAttr = tr.spanStartedMetric.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
 		} else if s.IsRecording() {
-			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			samplingResultAttr = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		} else {
-			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
+			samplingResultAttr = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
 		}
 		// TODO (#7027): Add otel.span.parent.origin attribute when it is available.
 		tr.spanStartedMetric.Add(context.Background(), 1, samplingResultAttr)
@@ -204,11 +204,11 @@ func (tr *tracer) newRecordingSpan(
 	if tr.selfObservabilityEnabled {
 		var samplingResultAttr attribute.KeyValue
 		if s.spanContext.IsSampled() {
-			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+			samplingResultAttr = tr.spanLiveMetric.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
 		} else {
-			samplingResultAttr = otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			samplingResultAttr = tr.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		}
 		tr.spanLiveMetric.Add(context.Background(), 1, samplingResultAttr)
 	}
