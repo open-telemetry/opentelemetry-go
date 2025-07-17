@@ -2413,6 +2413,147 @@ func TestSelfObservability(t *testing.T) {
 				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 			},
 		},
+		{
+			name: "LocalParentSpan",
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				// Create a local parent span first
+				tp := NewTracerProvider()
+				ctx, parentSpan := tp.Tracer("").Start(context.Background(), "ParentSpan")
+				_, childSpan := tp.Tracer("").Start(ctx, "ChildSpan")
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKSpanLive{}.Name(),
+							Description: otelconv.SDKSpanLive{}.Description(),
+							Unit:        otelconv.SDKSpanLive{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 2, // Both parent and child spans are active.
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKSpanStarted{}.Name(),
+							Description: otelconv.SDKSpanStarted{}.Description(),
+							Unit:        otelconv.SDKSpanStarted{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginNone,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 1, // Parent span with no parent of its own.
+									},
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginLocal,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 1, // Child span with local parent.
+									},
+								},
+							},
+						},
+					},
+				}
+
+				got := scopeMetrics()
+				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+
+				// End spans and check metrics again
+				childSpan.End()
+				parentSpan.End()
+
+				want = metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKSpanLive{}.Name(),
+							Description: otelconv.SDKSpanLive{}.Description(),
+							Unit:        otelconv.SDKSpanLive{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 0, // No live spans after ending both.
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKSpanStarted{}.Name(),
+							Description: otelconv.SDKSpanStarted{}.Description(),
+							Unit:        otelconv.SDKSpanStarted{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginNone,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 1,
+									},
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginLocal,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				got = scopeMetrics()
+				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
