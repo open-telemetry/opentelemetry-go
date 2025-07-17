@@ -162,7 +162,7 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 
 // WithCardinalityLimit sets the cardinality limit for the MeterProvider.
 //
-// The cardinality limit is the hard limit on the number of metric streams
+// The cardinality limit is the hard limit on the number of metric datapoints
 // that can be collected for a single instrument in a single collect cycle.
 //
 // By default, there is no limit applied.
