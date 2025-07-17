@@ -80,18 +80,31 @@ func (tr *tracer) Start(
 
 	s := tr.newSpan(ctx, name, &config)
 	if tr.selfObservabilityEnabled {
-		var samplingResultAttr attribute.KeyValue
+		// Check if the span has a parent span and set the origin attribute accordingly.
+		var attrParentOrigin attribute.KeyValue
+		if psc := trace.SpanContextFromContext(ctx); psc.IsValid() {
+			if psc.IsRemote() {
+				attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote)
+			} else {
+				attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal)
+			}
+		} else {
+			attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginNone)
+		}
+
+		// Determine the sampling result and create the corresponding attribute.
+		var attrSamplingResult attribute.KeyValue
 		if s.SpanContext().IsSampled() && s.IsRecording() {
-			samplingResultAttr = tr.spanStartedMetric.AttrSpanSamplingResult(
+			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
 		} else if s.IsRecording() {
-			samplingResultAttr = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		} else {
-			samplingResultAttr = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
+			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
 		}
-		// TODO (#7027): Add otel.span.parent.origin attribute when it is available.
-		tr.spanStartedMetric.Add(context.Background(), 1, samplingResultAttr)
+
+		tr.spanStartedMetric.Add(context.Background(), 1, attrParentOrigin, attrSamplingResult)
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
@@ -202,15 +215,17 @@ func (tr *tracer) newRecordingSpan(
 	s.SetAttributes(config.Attributes()...)
 
 	if tr.selfObservabilityEnabled {
-		var samplingResultAttr attribute.KeyValue
+		// Determine the sampling result and create the corresponding attribute.
+		var attrSamplingResult attribute.KeyValue
 		if s.spanContext.IsSampled() {
-			samplingResultAttr = tr.spanLiveMetric.AttrSpanSamplingResult(
+			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
 		} else {
-			samplingResultAttr = tr.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		}
-		tr.spanLiveMetric.Add(context.Background(), 1, samplingResultAttr)
+
+		tr.spanLiveMetric.Add(context.Background(), 1, attrSamplingResult)
 	}
 
 	return s

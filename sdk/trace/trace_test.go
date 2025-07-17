@@ -2230,6 +2230,9 @@ func TestSelfObservabilty(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
+								otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+									otelconv.SpanParentOriginNone,
+								),
 								otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
 									otelconv.SpanSamplingResultRecordAndSample,
 								),
@@ -2283,6 +2286,9 @@ func TestSelfObservabilty(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
+								otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+									otelconv.SpanParentOriginNone,
+								),
 								otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
 									otelconv.SpanSamplingResultRecordAndSample,
 								),

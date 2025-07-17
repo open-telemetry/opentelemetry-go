@@ -499,15 +499,17 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 
 	defer func() {
 		if s.tracer.selfObservabilityEnabled {
-			var samplingResultAttr attribute.KeyValue
+			// Determine the sampling result and create the corresponding attribute.
+			var attrSamplingResult attribute.KeyValue
 			if s.spanContext.IsSampled() {
-				samplingResultAttr = s.tracer.spanLiveMetric.AttrSpanSamplingResult(
+				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(
 					otelconv.SpanSamplingResultRecordAndSample,
 				)
 			} else {
-				samplingResultAttr = s.tracer.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 			}
-			s.tracer.spanLiveMetric.Add(context.Background(), -1, samplingResultAttr)
+
+			s.tracer.spanLiveMetric.Add(context.Background(), -1, attrSamplingResult)
 		}
 	}()
 
