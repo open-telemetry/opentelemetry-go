@@ -5,6 +5,8 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"os"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -31,13 +33,14 @@ type tracer struct {
 
 var _ trace.Tracer = &tracer{}
 
-func (tr *tracer) initSelfObservability(mp metric.MeterProvider) {
-	if mp == nil {
-		// If no MeterProvider is set, we cannot create self-observability metrics.
+func (tr *tracer) initSelfObservability() {
+	env := os.Getenv("OTEL_GO_X_SELF_OBSERVABILITY")
+	if strings.ToLower(env) != "true" {
 		return
 	}
 
 	tr.selfObservabilityEnabled = true
+	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/sdk/trace",
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL))
