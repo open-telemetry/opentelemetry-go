@@ -2344,6 +2344,67 @@ func TestSelfObservability(t *testing.T) {
 			},
 		},
 		{
+			name: "OnlyRecordingSpan",
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				// Create a tracer provider with NeverSample sampler to get non-recording spans.
+				tp := NewTracerProvider(WithSampler(RecordingOnly()))
+				tp.Tracer("").Start(context.Background(), "OnlyRecordingSpan")
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKSpanLive{}.Name(),
+							Description: otelconv.SDKSpanLive{}.Description(),
+							Unit:        otelconv.SDKSpanLive{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordOnly,
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKSpanStarted{}.Name(),
+							Description: otelconv.SDKSpanStarted{}.Description(),
+							Unit:        otelconv.SDKSpanStarted{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginNone,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordOnly,
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				got := scopeMetrics()
+				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+			},
+		},
+		{
 			name: "RemoteParentSpan",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a remote parent context
@@ -2572,6 +2633,44 @@ func TestSelfObservability(t *testing.T) {
 			tc.test(t, scopeMetrics)
 		})
 	}
+}
+
+// RecordingOnly creates a Sampler that samples no traces, but enables recording.
+// The created sampler maintains any tracestate from the parent span context.
+func RecordingOnly() Sampler {
+	return recordOnlySampler{}
+}
+
+type recordOnlySampler struct{}
+
+// ShouldSample implements Sampler interface. It always returns Record but not Sample.
+func (s recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
+	psc := trace.SpanContextFromContext(p.ParentContext)
+	return SamplingResult{
+		Decision:   RecordOnly,
+		Tracestate: psc.TraceState(),
+	}
+}
+
+// Description returns description of the sampler.
+func (recordOnlySampler) Description() string {
+	return "RecordingOnly"
+}
+
+func TestRecordOnlySampler(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithSampler(RecordingOnly()))
+
+	_, span := tp.Tracer("RecordOnly").Start(context.Background(), "test-span")
+
+	// Span should be recording but not sampled
+	assert.True(t, span.IsRecording())
+	assert.False(t, span.SpanContext().IsSampled())
+
+	span.End()
+
+	// No spans should be exported
+	assert.Equal(t, 0, te.Len())
 }
 
 func BenchmarkTraceStart(b *testing.B) {
