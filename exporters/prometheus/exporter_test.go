@@ -44,6 +44,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter",
 			expectedFile: "testdata/counter.txt",
+			disableUTF8:  true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -72,7 +73,8 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 		{
 			name:         "counter that already has the unit suffix",
-			expectedFile: "testdata/counter_with_unit_suffix.txt",
+			expectedFile: "testdata/counter_noutf8_with_unit_suffix.txt",
+			disableUTF8:  true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -131,6 +133,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter that already has a total suffix",
 			expectedFile: "testdata/counter.txt",
+			disableUTF8:  true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
