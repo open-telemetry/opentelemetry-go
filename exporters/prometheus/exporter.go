@@ -93,7 +93,6 @@ type collector struct {
 	metricNamer       otlptranslator.MetricNamer
 	labelNamer        otlptranslator.LabelNamer
 	unitNamer         otlptranslator.UnitNamer
-	utf8Allowed       bool
 }
 
 // New returns a Prometheus Exporter.
@@ -105,8 +104,8 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.readerOpts...)
 
-	utf8Allowed := model.NameValidationScheme == model.UTF8Validation
-	if !utf8Allowed { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+	utf8Allowed := model.NameValidationScheme == model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+	if !utf8Allowed {
 		// Only sanitize if prometheus does not support UTF-8.
 		logDeprecatedLegacyScheme()
 	}
@@ -128,9 +127,8 @@ func New(opts ...Option) (*Exporter, error) {
 			WithMetricSuffixes: true,
 			UTF8Allowed:        utf8Allowed,
 		},
-		unitNamer:   otlptranslator.UnitNamer{UTF8Allowed: utf8Allowed},
-		labelNamer:  labelNamer,
-		utf8Allowed: utf8Allowed,
+		unitNamer:  otlptranslator.UnitNamer{UTF8Allowed: utf8Allowed},
+		labelNamer: labelNamer,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -178,7 +176,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		defer c.mu.Unlock()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
-			targetInfo, err := c.createInfoMetric(otlptranslator.TargetInfoMetricName, targetInfoDescription, metrics.Resource)
+			targetInfo, err := c.createInfoMetric(
+				otlptranslator.TargetInfoMetricName,
+				targetInfoDescription,
+				metrics.Resource,
+			)
 			if err != nil {
 				// If the target info metric is invalid, disable sending it.
 				c.disableTargetInfo = true
@@ -209,7 +211,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes, c.utf8Allowed, c.labelNamer)
+			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			for i := range attrKeys {
 				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
 			}
@@ -238,21 +240,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv, c.utf8Allowed, c.labelNamer)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
 			}
 		}
 	}
@@ -317,11 +319,10 @@ func addExponentialHistogramMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
-	utf8Allowed bool,
 	labelNamer otlptranslator.LabelNamer,
 ) {
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes, utf8Allowed, labelNamer)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -393,11 +394,10 @@ func addHistogramMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
-	utf8Allowed bool,
 	labelNamer otlptranslator.LabelNamer,
 ) {
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes, utf8Allowed, labelNamer)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -425,7 +425,6 @@ func addSumMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
-	utf8Allowed bool,
 	labelNamer otlptranslator.LabelNamer,
 ) {
 	valueType := prometheus.CounterValue
@@ -434,7 +433,7 @@ func addSumMetric[N int64 | float64](
 	}
 
 	for _, dp := range sum.DataPoints {
-		keys, values := getAttrs(dp.Attributes, utf8Allowed, labelNamer)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -459,11 +458,10 @@ func addGaugeMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
-	utf8Allowed bool,
 	labelNamer otlptranslator.LabelNamer,
 ) {
 	for _, dp := range gauge.DataPoints {
-		keys, values := getAttrs(dp.Attributes, utf8Allowed, labelNamer)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -479,12 +477,12 @@ func addGaugeMetric[N int64 | float64](
 
 // getAttrs converts the attribute.Set to two lists of matching Prometheus-style
 // keys and values.
-func getAttrs(attrs attribute.Set, utf8Allowed bool, labelNamer otlptranslator.LabelNamer) ([]string, []string) {
+func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string) {
 	keys := make([]string, 0, attrs.Len())
 	values := make([]string, 0, attrs.Len())
 	itr := attrs.Iter()
 
-	if utf8Allowed {
+	if labelNamer.UTF8Allowed {
 		// Do not perform sanitization if prometheus supports UTF-8.
 		for itr.Next() {
 			kv := itr.Attribute()
@@ -515,7 +513,7 @@ func getAttrs(attrs attribute.Set, utf8Allowed bool, labelNamer otlptranslator.L
 }
 
 func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
-	keys, values := getAttrs(*res.Set(), c.utf8Allowed, c.labelNamer)
+	keys, values := getAttrs(*res.Set(), c.labelNamer)
 	desc := prometheus.NewDesc(name, description, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
@@ -588,7 +586,7 @@ func (c *collector) createResourceAttributes(res *resource.Resource) {
 	defer c.mu.Unlock()
 
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
-	resourceKeys, resourceValues := getAttrs(resourceAttrs, c.utf8Allowed, c.labelNamer)
+	resourceKeys, resourceValues := getAttrs(resourceAttrs, c.labelNamer)
 	c.resourceKeyVals = keyVals{keys: resourceKeys, vals: resourceValues}
 }
 
@@ -630,7 +628,11 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 	return false, ""
 }
 
-func addExemplars[N int64 | float64](m prometheus.Metric, exemplars []metricdata.Exemplar[N], labelNamer otlptranslator.LabelNamer) prometheus.Metric {
+func addExemplars[N int64 | float64](
+	m prometheus.Metric,
+	exemplars []metricdata.Exemplar[N],
+	labelNamer otlptranslator.LabelNamer,
+) prometheus.Metric {
 	if len(exemplars) == 0 {
 		return m
 	}

@@ -1243,7 +1243,14 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			Description: "test",
 		}
 
-		addExponentialHistogramMetric(ch, histogram, m, "test_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
+		addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_histogram",
+			keyVals{},
+			otlptranslator.LabelNamer{},
+		)
 		assert.Error(t, capturedError)
 		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
 		select {
@@ -1400,7 +1407,14 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should not produce any errors and should properly downscale buckets
-		addExponentialHistogramMetric(ch, histogram, m, "test_high_scale_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
+		addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_high_scale_histogram",
+			keyVals{},
+			otlptranslator.LabelNamer{},
+		)
 
 		// Verify a metric was produced
 		select {
@@ -1455,7 +1469,14 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should not produce any errors and should properly downscale buckets
-		addExponentialHistogramMetric(ch, histogram, m, "test_very_high_scale_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
+		addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_very_high_scale_histogram",
+			keyVals{},
+			otlptranslator.LabelNamer{},
+		)
 
 		// Verify a metric was produced
 		select {
@@ -1510,7 +1531,14 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should handle negative buckets correctly
-		addExponentialHistogramMetric(ch, histogram, m, "test_histogram_with_negative_buckets", keyVals{}, false, otlptranslator.LabelNamer{})
+		addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_histogram_with_negative_buckets",
+			keyVals{},
+			otlptranslator.LabelNamer{},
+		)
 
 		// Verify a metric was produced
 		select {
@@ -1559,7 +1587,14 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should handle int64 exponential histograms correctly
-		addExponentialHistogramMetric(ch, histogram, m, "test_int64_exponential_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
+		addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_int64_exponential_histogram",
+			keyVals{},
+			otlptranslator.LabelNamer{},
+		)
 
 		// Verify a metric was produced
 		select {
