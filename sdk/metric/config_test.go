@@ -306,6 +306,54 @@ func TestWithExemplarFilterOff(t *testing.T) {
 	}
 }
 
+func TestWithCardinalityLimit(t *testing.T) {
+	cases := []struct {
+		name          string
+		envValue      string
+		options       []Option
+		expectedLimit int
+	}{
+		{
+			name:          "only cardinality limit from option",
+			envValue:      "",
+			options:       []Option{WithCardinalityLimit(1000)},
+			expectedLimit: 1000,
+		},
+		{
+			name:          "cardinality limit from option overrides env",
+			envValue:      "500",
+			options:       []Option{WithCardinalityLimit(1000)},
+			expectedLimit: 1000,
+		},
+		{
+			name:          "cardinality limit from env",
+			envValue:      "1234",
+			options:       []Option{},
+			expectedLimit: 1234,
+		},
+		{
+			name:          "invalid env value uses default",
+			envValue:      "not-a-number",
+			options:       []Option{},
+			expectedLimit: defaultCardinalityLimit,
+		},
+		{
+			name:          "empty env and no option uses default",
+			envValue:      "",
+			options:       []Option{},
+			expectedLimit: defaultCardinalityLimit,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
+			c := newConfig(tc.options)
+			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
+		})
+	}
+}
+
 func sample(parent context.Context) context.Context {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x01},
