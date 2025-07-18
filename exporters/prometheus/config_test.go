@@ -113,17 +113,17 @@ func TestNewConfig(t *testing.T) {
 			},
 			wantConfig: config{
 				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test_",
+				namespace:  "test",
 			},
 		},
 		{
 			name: "with namespace with trailing underscore",
 			options: []Option{
-				WithNamespace("test_"),
+				WithNamespace("test"),
 			},
 			wantConfig: config{
 				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test_",
+				namespace:  "test",
 			},
 		},
 		{
@@ -133,7 +133,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			wantConfig: config{
 				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test/_",
+				namespace:  "test/",
 			},
 		},
 	}
