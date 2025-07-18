@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/otlptranslator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -194,14 +195,13 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				gauge, err := meter.Float64UpDownCounter(
+				gauge, err := meter.Float64Gauge(
 					"bar",
 					otelmetric.WithDescription("a fun little gauge"),
 					otelmetric.WithUnit("1"),
 				)
 				require.NoError(t, err)
-				gauge.Add(ctx, 1.0, opt)
-				gauge.Add(ctx, -.25, opt)
+				gauge.Record(ctx, .75, opt)
 			},
 		},
 		{
@@ -398,14 +398,13 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A").String("B"),
 					attribute.Key("C").String("D"),
 				)
-				gauge, err := meter.Int64UpDownCounter(
+				gauge, err := meter.Int64Gauge(
 					"bar",
 					otelmetric.WithDescription("a fun little gauge"),
 					otelmetric.WithUnit("1"),
 				)
 				require.NoError(t, err)
-				gauge.Add(ctx, 2, opt)
-				gauge.Add(ctx, -1, opt)
+				gauge.Record(ctx, 1, opt)
 			},
 		},
 		{
@@ -1011,20 +1010,20 @@ func TestExemplars(t *testing.T) {
 		attribute.Key("F.4").Int(42),
 	)
 	expectedNonEscapedLabels := map[string]string{
-		traceIDExemplarKey: "01000000000000000000000000000000",
-		spanIDExemplarKey:  "0100000000000000",
-		"A.1":              "B",
-		"C.2":              "D",
-		"E.3":              "true",
-		"F.4":              "42",
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"A.1":                             "B",
+		"C.2":                             "D",
+		"E.3":                             "true",
+		"F.4":                             "42",
 	}
 	expectedEscapedLabels := map[string]string{
-		traceIDExemplarKey: "01000000000000000000000000000000",
-		spanIDExemplarKey:  "0100000000000000",
-		"A_1":              "B",
-		"C_2":              "D",
-		"E_3":              "true",
-		"F_4":              "42",
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"A_1":                             "B",
+		"C_2":                             "D",
+		"E_3":                             "true",
+		"F_4":                             "42",
 	}
 	for _, tc := range []struct {
 		name                  string
@@ -1241,7 +1240,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			Description: "test",
 		}
 
-		addExponentialHistogramMetric(ch, histogram, m, "test_histogram", keyVals{})
+		addExponentialHistogramMetric(ch, histogram, m, "test_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
 		assert.Error(t, capturedError)
 		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
 		select {
@@ -1398,7 +1397,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should not produce any errors and should properly downscale buckets
-		addExponentialHistogramMetric(ch, histogram, m, "test_high_scale_histogram", keyVals{})
+		addExponentialHistogramMetric(ch, histogram, m, "test_high_scale_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
 
 		// Verify a metric was produced
 		select {
@@ -1453,7 +1452,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should not produce any errors and should properly downscale buckets
-		addExponentialHistogramMetric(ch, histogram, m, "test_very_high_scale_histogram", keyVals{})
+		addExponentialHistogramMetric(ch, histogram, m, "test_very_high_scale_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
 
 		// Verify a metric was produced
 		select {
@@ -1508,7 +1507,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should handle negative buckets correctly
-		addExponentialHistogramMetric(ch, histogram, m, "test_histogram_with_negative_buckets", keyVals{})
+		addExponentialHistogramMetric(ch, histogram, m, "test_histogram_with_negative_buckets", keyVals{}, false, otlptranslator.LabelNamer{})
 
 		// Verify a metric was produced
 		select {
@@ -1557,7 +1556,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 		}
 
 		// This should handle int64 exponential histograms correctly
-		addExponentialHistogramMetric(ch, histogram, m, "test_int64_exponential_histogram", keyVals{})
+		addExponentialHistogramMetric(ch, histogram, m, "test_int64_exponential_histogram", keyVals{}, false, otlptranslator.LabelNamer{})
 
 		// Verify a metric was produced
 		select {
