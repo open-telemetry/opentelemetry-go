@@ -159,6 +159,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 				provider:             p,
 				instrumentationScope: is,
 			}
+			t.initSelfObservability()
 			p.namedTracer[is] = t
 		}
 		return t, ok
