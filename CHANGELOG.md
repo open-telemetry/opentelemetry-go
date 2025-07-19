@@ -45,6 +45,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
   The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
+- Add `OTEL_GO_X_SELF_OBSERVABILITY` environment variable to control whether self-observability metrics and traces are produced by SDKs. (#6393)
+- Add experimental `otel.sdk.processor.span.queue.size`, `otel.sdk.processor.span.queue.capacity`, and `otel.sdk.processor.span.processed.count` metrics to the trace batch span processor in `go.opentelemetry.io/otel/sdk/trace`. (#6393)
 
 ### Changed
 
