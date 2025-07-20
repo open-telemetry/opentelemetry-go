@@ -117,6 +117,29 @@ func (k Key) StringSlice(v []string) KeyValue {
 	}
 }
 
+// Slice creates a KeyValue instance with a SLICE Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Slice(name, value).
+func (k Key) Slice(v []Value) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: SliceValue(v),
+	}
+}
+
+// Map creates a KeyValue instance with a MAP Value.
+// v is sorted by key.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Map(name, value).
+func (k Key) Map(v []KeyValue) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: MapValue(v),
+	}
+}
+
 // Defined returns true for non-empty keys.
 func (k Key) Defined() bool {
 	return len(k) != 0

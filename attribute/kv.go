@@ -15,7 +15,7 @@ type KeyValue struct {
 
 // Valid returns if kv is a valid OpenTelemetry attribute.
 func (kv KeyValue) Valid() bool {
-	return kv.Key.Defined() && kv.Value.Type() != INVALID
+	return kv.Key.Defined()
 }
 
 // Bool creates a KeyValue with a BOOL Value type.
@@ -66,6 +66,17 @@ func String(k, v string) KeyValue {
 // StringSlice creates a KeyValue with a STRINGSLICE Value type.
 func StringSlice(k string, v []string) KeyValue {
 	return Key(k).StringSlice(v)
+}
+
+// Slice creates a KeyValue with a SLICE Value type.
+func Slice(k string, v []Value) KeyValue {
+	return Key(k).Slice(v)
+}
+
+// Map creates a KeyValue with a Map Value type.
+// v are sorted by key.
+func Map(k string, v []KeyValue) KeyValue {
+	return Key(k).Map(v)
 }
 
 // Stringer creates a new key-value pair with a passed name and a string

@@ -4,9 +4,11 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
@@ -22,28 +24,50 @@ type Value struct {
 	vtype    Type
 	numeric  uint64
 	stringly string
-	slice    interface{}
+	iface    any
 }
 
 const (
-	// INVALID is used for a Value with no value set.
-	INVALID Type = iota
+	// EMPTY is used for a Value with no value set.
+	EMPTY Type = iota
+
 	// BOOL is a boolean Type Value.
 	BOOL
+
 	// INT64 is a 64-bit signed integral Type Value.
 	INT64
+
 	// FLOAT64 is a 64-bit floating point Type Value.
 	FLOAT64
+
 	// STRING is a string Type Value.
 	STRING
+
 	// BOOLSLICE is a slice of booleans Type Value.
 	BOOLSLICE
+
 	// INT64SLICE is a slice of 64-bit signed integral numbers Type Value.
 	INT64SLICE
+
 	// FLOAT64SLICE is a slice of 64-bit floating point numbers Type Value.
 	FLOAT64SLICE
+
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+
+	// BYTES is a slice of bytes Type value.
+	BYTES
+
+	// SLICE is a slice of heterogeneous values Type value.
+	SLICE
+
+	// MAP is a map of heterogeneous values Type value.
+	MAP
+
+	// INVALID is used for a Value with no value set.
+	//
+	// Deprecated: Use EMPTY instead as an empty value is a valid value.
+	INVALID = EMPTY
 )
 
 // BoolValue creates a BOOL Value.
@@ -56,7 +80,7 @@ func BoolValue(v bool) Value {
 
 // BoolSliceValue creates a BOOLSLICE Value.
 func BoolSliceValue(v []bool) Value {
-	return Value{vtype: BOOLSLICE, slice: attribute.BoolSliceValue(v)}
+	return Value{vtype: BOOLSLICE, iface: attribute.BoolSliceValue(v)}
 }
 
 // IntValue creates an INT64 Value.
@@ -73,7 +97,7 @@ func IntSliceValue(v []int) Value {
 	}
 	return Value{
 		vtype: INT64SLICE,
-		slice: cp.Elem().Interface(),
+		iface: cp.Elem().Interface(),
 	}
 }
 
@@ -87,7 +111,7 @@ func Int64Value(v int64) Value {
 
 // Int64SliceValue creates an INT64SLICE Value.
 func Int64SliceValue(v []int64) Value {
-	return Value{vtype: INT64SLICE, slice: attribute.Int64SliceValue(v)}
+	return Value{vtype: INT64SLICE, iface: attribute.Int64SliceValue(v)}
 }
 
 // Float64Value creates a FLOAT64 Value.
@@ -100,7 +124,7 @@ func Float64Value(v float64) Value {
 
 // Float64SliceValue creates a FLOAT64SLICE Value.
 func Float64SliceValue(v []float64) Value {
-	return Value{vtype: FLOAT64SLICE, slice: attribute.Float64SliceValue(v)}
+	return Value{vtype: FLOAT64SLICE, iface: attribute.Float64SliceValue(v)}
 }
 
 // StringValue creates a STRING Value.
@@ -113,7 +137,30 @@ func StringValue(v string) Value {
 
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
-	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+	return Value{vtype: STRINGSLICE, iface: attribute.StringSliceValue(v)}
+}
+
+// SliceValue creates a SLICE Value.
+func SliceValue(v []Value) Value {
+	var zero Value
+	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeOf(zero))).Elem()
+	reflect.Copy(cp, reflect.ValueOf(v))
+	return Value{vtype: SLICE, iface: cp.Interface()}
+}
+
+// MapValue creates a MAP Value.
+// v is sorted by key.
+func MapValue(v []KeyValue) Value {
+	sv := make([]KeyValue, len(v))
+	copy(sv, v)
+	slices.SortFunc(sv, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	var zero KeyValue
+	cp := reflect.New(reflect.ArrayOf(len(sv), reflect.TypeOf(zero))).Elem()
+	reflect.Copy(cp, reflect.ValueOf(sv))
+	return Value{vtype: MAP, iface: cp.Interface()}
 }
 
 // Type returns a type of the Value.
@@ -137,7 +184,7 @@ func (v Value) AsBoolSlice() []bool {
 }
 
 func (v Value) asBoolSlice() []bool {
-	return attribute.AsBoolSlice(v.slice)
+	return attribute.AsBoolSlice(v.iface)
 }
 
 // AsInt64 returns the int64 value. Make sure that the Value's type is
@@ -156,7 +203,7 @@ func (v Value) AsInt64Slice() []int64 {
 }
 
 func (v Value) asInt64Slice() []int64 {
-	return attribute.AsInt64Slice(v.slice)
+	return attribute.AsInt64Slice(v.iface)
 }
 
 // AsFloat64 returns the float64 value. Make sure that the Value's
@@ -175,7 +222,7 @@ func (v Value) AsFloat64Slice() []float64 {
 }
 
 func (v Value) asFloat64Slice() []float64 {
-	return attribute.AsFloat64Slice(v.slice)
+	return attribute.AsFloat64Slice(v.iface)
 }
 
 // AsString returns the string value. Make sure that the Value's type
@@ -194,7 +241,7 @@ func (v Value) AsStringSlice() []string {
 }
 
 func (v Value) asStringSlice() []string {
-	return attribute.AsStringSlice(v.slice)
+	return attribute.AsStringSlice(v.iface)
 }
 
 type unknownValueType struct{}
