@@ -160,3 +160,64 @@ func TestRecordAllocationLimits(t *testing.T) {
 	// Convince the linter these values are used.
 	_, _, _, _, _, _ = tStamp, sev, text, body, n, attr
 }
+
+func TestRecordClone(t *testing.T) {
+	now0 := time.Now()
+	sev0 := log.SeverityInfo
+	text0 := "text"
+	val0 := log.BoolValue(true)
+	attr0 := log.Bool("0", true)
+
+	r0 := log.Record{}
+	r0.SetTimestamp(now0)
+	r0.SetObservedTimestamp(now0)
+	r0.SetSeverity(sev0)
+	r0.SetSeverityText(text0)
+	r0.SetBody(val0)
+	r0.AddAttributes(attr0)
+
+	// Clone and modify the clone
+	now1 := now0.Add(time.Second)
+	sev1 := log.SeverityDebug
+	text1 := "string"
+	val1 := log.IntValue(1)
+	attr1 := log.Int64("1", 2)
+
+	r1 := r0.Clone()
+	r1.SetTimestamp(now1)
+	r1.SetObservedTimestamp(now1)
+	r1.SetSeverity(sev1)
+	r1.SetSeverityText(text1)
+	r1.SetBody(val1)
+	r1.AddAttributes(attr1)
+
+	//  Assertions on original record (r0)
+	assert.Equal(t, now0, r0.Timestamp())
+	assert.Equal(t, now0, r0.ObservedTimestamp())
+	assert.Equal(t, sev0, r0.Severity())
+	assert.Equal(t, text0, r0.SeverityText())
+	assert.True(t, val0.Equal(r0.Body()))
+
+	var r0Attrs []log.KeyValue
+	r0.WalkAttributes(func(kv log.KeyValue) bool {
+		r0Attrs = append(r0Attrs, kv)
+		return true
+	})
+	assert.Contains(t, r0Attrs, attr0)
+	assert.NotContains(t, r0Attrs, attr1)
+
+	//  Assertions on cloned record (r1)
+	assert.Equal(t, now1, r1.Timestamp())
+	assert.Equal(t, now1, r1.ObservedTimestamp())
+	assert.Equal(t, sev1, r1.Severity())
+	assert.Equal(t, text1, r1.SeverityText())
+	assert.True(t, val1.Equal(r1.Body()))
+
+	var r1Attrs []log.KeyValue
+	r1.WalkAttributes(func(kv log.KeyValue) bool {
+		r1Attrs = append(r1Attrs, kv)
+		return true
+	})
+	assert.Contains(t, r1Attrs, attr0)
+	assert.Contains(t, r1Attrs, attr1)
+}

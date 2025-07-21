@@ -97,6 +97,9 @@ type Record struct {
 	attributeValueLengthLimit int
 	attributeCountLimit       int
 
+	// specifies whether we should deduplicate any key value collections or not
+	allowDupKeys bool
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -200,19 +203,24 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
 		var drop int
-		attrs = dedup(attrs)
-		r.setDropped(0)
 
-		attrs, drop = head(attrs, r.attributeCountLimit)
+		if !r.allowDupKeys {
+			attrs = dedup(attrs)
+			r.setDropped(0)
+		}
 
+		attrs, drop := head(attrs, r.attributeCountLimit)
+    
 		r.addDropped(drop)
 		r.addAttrs(attrs)
 		return
 	}
 
-	// Used to find duplicates between attrs and existing attributes in r.
-	rIndex := r.attrIndex()
-	defer putIndex(rIndex)
+	if !r.allowDupKeys {
+		// Used to find duplicates between attrs and existing attributes in r.
+		rIndex := r.attrIndex()
+		defer putIndex(rIndex)
+
 
 	// Unique attrs that need to be added to r. This uses the same underlying
 	// array as attrs.
@@ -240,16 +248,17 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			logKeyValuePairDropped()
 			if idx < 0 {
 				r.front[-(idx + 1)] = a
+      }else {
+					r.back[idx] = a
+				}
 			} else {
-				r.back[idx] = a
+				// Unique attribute.
+				unique = append(unique, a)
+				uIndex[a.Key] = len(unique) - 1
 			}
-		} else {
-			// Unique attribute.
-			unique = append(unique, a)
-			uIndex[a.Key] = len(unique) - 1
 		}
+		attrs = unique
 	}
-	attrs = unique
 
 	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
 		// Truncate the now unique attributes to comply with limit.
@@ -306,8 +315,13 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
-	attrs = dedup(attrs)
+  
 	r.setDropped(0)
+  
+	if !r.allowDupKeys {
+		attrs = dedup(attrs)
+		r.setDropped(0)
+	}
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
 	r.addDropped(drop)
@@ -435,9 +449,14 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 		}
 		val = log.SliceValue(sl...)
 	case log.KindMap:
-		// Deduplicate then truncate. Do not do at the same time to avoid
-		// wasted truncation operations.
-		kvs := dedup(val.AsMap())
+
+		kvs := val.AsMap()
+		if !r.allowDupKeys {
+			// Deduplicate then truncate. Do not do at the same time to avoid
+			// wasted truncation operations.
+			var dropped int
+			kvs = dedup(kvs)
+		}
 
 		for i := range kvs {
 			kvs[i] = r.applyAttrLimits(kvs[i])
