@@ -46,6 +46,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
   The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
+- Added a new test function for the `tracetest` package in `go.opentelemetry.io/sdk/trace/tracetest` to verify span recording behavior.(#7051)
+
 
 ### Changed
 
@@ -54,6 +56,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
+### Fixed
+- Fixed import cycle issue in `go.opentelemetry.io/sdk/trace/tracetest/example_test.go`.
 
 ## [1.37.0/0.59.0/0.13.0] 2025-06-25
 
