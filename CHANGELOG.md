@@ -51,6 +51,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
 - Change `SDKProcessorLogQueueCapacity`, `SDKProcessorLogQueueSize`, `SDKProcessorSpanQueueSize`, and `SDKProcessorSpanQueueCapacity` in `go.opentelemetry.io/otel/semconv/v1.36.0/otelconv` to use a `Int64ObservableUpDownCounter`. (#7041)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [0.59.1] 2025-07-21
+
+### Changed
+
+- Retract `v0.59.0` release of `go.opentelemetry.io/otel/exporters/prometheus` module which appends incorrect unit suffixes. (#7046)
 - Change `go.opentelemetry.io/otel/exporters/prometheus` to no longer deduplicate suffixes when UTF8 is enabled.
   It is recommended to disable unit and counter suffixes in the exporter, and manually add suffixes if you rely on the existing behavior. (#7044)
 
@@ -58,9 +67,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` to properly handle unit suffixes when the unit is in brackets.
   E.g. `{spans}`. (#7044)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.37.0/0.59.0/0.13.0] 2025-06-25
 
