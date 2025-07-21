@@ -2,7 +2,11 @@ name: Markdown (Fail Fast)
 
 on:
   push:
+    paths:
+      - "**.md"
   pull_request:
+    paths:
+      - "**.md"
 
 permissions:
   contents: read
@@ -17,27 +21,34 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0
+          # Shallow clone, but enough for `git diff HEAD~1 HEAD`.
+          fetch-depth: 2
       - name: Get changed files
         id: changes
         env:
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
         shell: bash
         run: |
-          echo "PR_HEAD_SHA=$PR_HEAD_SHA"
+          echo "Detecting changed markdown files..."
 
-          base="$(git merge-base origin/main $PR_HEAD_SHA)"
-          echo "BASE_REF=$base"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            echo "Running in pull_request context"
+            echo "Base SHA: $BASE_SHA"
+            echo "Head SHA: $HEAD_SHA"
+            CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep '\.md$' || true)
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            echo "Running in push context"
+            CHANGED=$(git diff --name-only HEAD~1 HEAD | grep '\.md$' || true)
+          else
+            echo "Unsupported event type: $EVENT_NAME"
+            exit 1
+          fi
 
-          changed="$(git diff --name-only --diff-filter=ACMRTUXB $base $PR_HEAD_SHA)"
-          echo "CHANGED=$changed"
-
-          filtered="$(grep '.md$' <<<"$changed" || true)"
-          echo "filtered=$filtered"
-
-          md="$(echo $filtered | xargs -d '\n' echo)"
-          echo "md=$md"
-          echo "md=$md" >> $GITHUB_OUTPUT
+          MD=$(echo "$CHANGED" | tr '\n' ' ' | xargs)
+          echo "Markdown files changed: $MD"
+          echo "md=$MD" >> "$GITHUB_OUTPUT"
 
   lint:
     name: lint markdown files
