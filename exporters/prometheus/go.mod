@@ -2,6 +2,10 @@ module go.opentelemetry.io/otel/exporters/prometheus
 
 go 1.23.0
 
+// v0.59.0 produces incorrect metric names when bracketed units are used.
+// https://github.com/open-telemetry/opentelemetry-go/issues/7039
+retract v0.59.0
+
 require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.2
