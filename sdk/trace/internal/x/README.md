@@ -16,7 +16,7 @@ The SDK provides a self-observability feature that allows you to monitor the SDK
 
 To opt-in, set the environment variable `OTEL_GO_X_SELF_OBSERVABILITY` to `true`.
 
-When enabled, the SDK will create following metrics using the global `MeterProvider`:
+When enabled, the SDK will create the following metrics using the global `MeterProvider`:
 
 - `otel.sdk.span.live`
 - `otel.sdk.span.started`
