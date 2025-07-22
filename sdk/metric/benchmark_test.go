@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -445,5 +448,59 @@ func newRM(a metricdata.Aggregation) *metricdata.ResourceMetrics {
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{Metrics: []metricdata.Metrics{{Data: a}}},
 		},
+	}
+}
+
+func BenchmarkConcurrentIncrement(b *testing.B) {
+	numIter := 1_000
+
+	for _, numGoroutines := range []int{1, 10, 100, 1000, 10_000} {
+		b.Run("numGoroutines="+strconv.Itoa(numGoroutines), func(b *testing.B) {
+			b.Run("baseline", func(b *testing.B) {
+				// no sdk usage in here - just to know how much overhead we're adding
+				for b.Loop() {
+					var wg sync.WaitGroup
+					for range numGoroutines {
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+							counter := 0
+							runtime.KeepAlive(counter)
+							for range numIter {
+								counter++
+								runtime.KeepAlive(counter)
+							}
+							runtime.KeepAlive(counter)
+						}()
+					}
+					wg.Wait()
+				}
+			})
+			b.Run("otel", func(b *testing.B) {
+				for b.Loop() {
+					meterProvider := NewMeterProvider(
+						WithReader(NewManualReader()),
+						WithResource(resource.NewSchemaless()),
+					)
+					meter, err := meterProvider.Meter("otel").Int64Counter("counter")
+					require.NoError(b, err)
+
+					var wg sync.WaitGroup
+
+					for i := range numGoroutines {
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+							// attribute.NewSet contributes a _lot_ of overhead
+							attrSet := attribute.NewSet(attribute.Int("worker", i))
+							for range numIter {
+								meter.Add(b.Context(), 1, metric.WithAttributeSet(attrSet))
+							}
+						}()
+					}
+					wg.Wait()
+				}
+			})
+		})
 	}
 }
