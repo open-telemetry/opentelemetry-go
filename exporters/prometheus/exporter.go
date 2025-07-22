@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/otlptranslator"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -27,16 +28,12 @@ import (
 )
 
 const (
-	targetInfoMetricName  = "target_info"
 	targetInfoDescription = "Target metadata"
 
 	scopeLabelPrefix  = "otel_scope_"
 	scopeNameLabel    = scopeLabelPrefix + "name"
 	scopeVersionLabel = scopeLabelPrefix + "version"
 	scopeSchemaLabel  = scopeLabelPrefix + "schema_url"
-
-	traceIDExemplarKey = "trace_id"
-	spanIDExemplarKey  = "span_id"
 )
 
 var metricsPool = sync.Pool{
@@ -93,11 +90,10 @@ type collector struct {
 	targetInfo        prometheus.Metric
 	metricFamilies    map[string]*dto.MetricFamily
 	resourceKeyVals   keyVals
+	metricNamer       otlptranslator.MetricNamer
+	labelNamer        otlptranslator.LabelNamer
+	unitNamer         otlptranslator.UnitNamer
 }
-
-// prometheus counters MUST have a _total suffix by default:
-// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/compatibility/prometheus_and_openmetrics.md
-const counterSuffix = "total"
 
 // New returns a Prometheus Exporter.
 func New(opts ...Option) (*Exporter, error) {
@@ -108,6 +104,12 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.readerOpts...)
 
+	utf8Allowed := model.NameValidationScheme == model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+	if !utf8Allowed {
+		// Only sanitize if prometheus does not support UTF-8.
+		logDeprecatedLegacyScheme()
+	}
+	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: utf8Allowed}
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
@@ -115,8 +117,18 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 		disableScopeInfo:         cfg.disableScopeInfo,
 		metricFamilies:           make(map[string]*dto.MetricFamily),
-		namespace:                cfg.namespace,
+		namespace:                labelNamer.Build(cfg.namespace),
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
+		metricNamer: otlptranslator.MetricNamer{
+			Namespace: cfg.namespace,
+			// We decide whether to pass type and unit to the netricNamer based
+			// on whether units or counter suffixes are enabled, and keep this
+			// always enabled.
+			WithMetricSuffixes: true,
+			UTF8Allowed:        utf8Allowed,
+		},
+		unitNamer:  otlptranslator.UnitNamer{UTF8Allowed: utf8Allowed},
+		labelNamer: labelNamer,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
@@ -164,7 +176,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		defer c.mu.Unlock()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
-			targetInfo, err := createInfoMetric(targetInfoMetricName, targetInfoDescription, metrics.Resource)
+			targetInfo, err := c.createInfoMetric(
+				otlptranslator.TargetInfoMetricName,
+				targetInfoDescription,
+				metrics.Resource,
+			)
 			if err != nil {
 				// If the target info metric is invalid, disable sending it.
 				c.disableTargetInfo = true
@@ -195,7 +211,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes)
+			attrKeys, attrVals := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			for i := range attrKeys {
 				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
 			}
@@ -211,7 +227,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if typ == nil {
 				continue
 			}
-			name := c.getName(m, typ)
+			name := c.getName(m)
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
@@ -224,21 +240,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
 			}
 		}
 	}
@@ -303,9 +319,10 @@ func addExponentialHistogramMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	labelNamer otlptranslator.LabelNamer,
 ) {
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -377,9 +394,10 @@ func addHistogramMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	labelNamer otlptranslator.LabelNamer,
 ) {
 	for _, dp := range histogram.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -396,7 +414,7 @@ func addHistogramMetric[N int64 | float64](
 			otel.Handle(err)
 			continue
 		}
-		m = addExemplars(m, dp.Exemplars)
+		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
 	}
 }
@@ -407,6 +425,7 @@ func addSumMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	labelNamer otlptranslator.LabelNamer,
 ) {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
@@ -414,7 +433,7 @@ func addSumMetric[N int64 | float64](
 	}
 
 	for _, dp := range sum.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -427,7 +446,7 @@ func addSumMetric[N int64 | float64](
 		// GaugeValues don't support Exemplars at this time
 		// https://github.com/prometheus/client_golang/blob/aef8aedb4b6e1fb8ac1c90790645169125594096/prometheus/metric.go#L199
 		if valueType != prometheus.GaugeValue {
-			m = addExemplars(m, dp.Exemplars)
+			m = addExemplars(m, dp.Exemplars, labelNamer)
 		}
 		ch <- m
 	}
@@ -439,9 +458,10 @@ func addGaugeMetric[N int64 | float64](
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
+	labelNamer otlptranslator.LabelNamer,
 ) {
 	for _, dp := range gauge.DataPoints {
-		keys, values := getAttrs(dp.Attributes)
+		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
@@ -457,12 +477,12 @@ func addGaugeMetric[N int64 | float64](
 
 // getAttrs converts the attribute.Set to two lists of matching Prometheus-style
 // keys and values.
-func getAttrs(attrs attribute.Set) ([]string, []string) {
+func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string) {
 	keys := make([]string, 0, attrs.Len())
 	values := make([]string, 0, attrs.Len())
 	itr := attrs.Iter()
 
-	if model.NameValidationScheme == model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
+	if labelNamer.UTF8Allowed {
 		// Do not perform sanitization if prometheus supports UTF-8.
 		for itr.Next() {
 			kv := itr.Attribute()
@@ -475,7 +495,7 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 		keysMap := make(map[string][]string)
 		for itr.Next() {
 			kv := itr.Attribute()
-			key := model.EscapeName(string(kv.Key), model.NameEscapingScheme)
+			key := labelNamer.Build(string(kv.Key))
 			if _, ok := keysMap[key]; !ok {
 				keysMap[key] = []string{kv.Value.Emit()}
 			} else {
@@ -492,91 +512,22 @@ func getAttrs(attrs attribute.Set) ([]string, []string) {
 	return keys, values
 }
 
-func createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
-	keys, values := getAttrs(*res.Set())
+func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
+	keys, values := getAttrs(*res.Set(), c.labelNamer)
 	desc := prometheus.NewDesc(name, description, keys, nil)
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
-func unitMapGetOrDefault(unit string) string {
-	if promUnit, ok := unitSuffixes[unit]; ok {
-		return promUnit
-	}
-	return unit
-}
-
-var unitSuffixes = map[string]string{
-	// Time
-	"d":   "days",
-	"h":   "hours",
-	"min": "minutes",
-	"s":   "seconds",
-	"ms":  "milliseconds",
-	"us":  "microseconds",
-	"ns":  "nanoseconds",
-
-	// Bytes
-	"By":   "bytes",
-	"KiBy": "kibibytes",
-	"MiBy": "mebibytes",
-	"GiBy": "gibibytes",
-	"TiBy": "tibibytes",
-	"KBy":  "kilobytes",
-	"MBy":  "megabytes",
-	"GBy":  "gigabytes",
-	"TBy":  "terabytes",
-
-	// SI
-	"m": "meters",
-	"V": "volts",
-	"A": "amperes",
-	"J": "joules",
-	"W": "watts",
-	"g": "grams",
-
-	// Misc
-	"Cel": "celsius",
-	"Hz":  "hertz",
-	"1":   "ratio",
-	"%":   "percent",
-}
-
 // getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
-func (c *collector) getName(m metricdata.Metrics, typ *dto.MetricType) string {
-	name := m.Name
-	if model.NameValidationScheme != model.UTF8Validation { // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-		// Only sanitize if prometheus does not support UTF-8.
-		logDeprecatedLegacyScheme()
-		name = model.EscapeName(name, model.NameEscapingScheme)
+func (c *collector) getName(m metricdata.Metrics) string {
+	translatorMetric := otlptranslator.Metric{
+		Name: m.Name,
+		Type: c.namingMetricType(m),
 	}
-	addCounterSuffix := !c.withoutCounterSuffixes && *typ == dto.MetricType_COUNTER
-	if addCounterSuffix {
-		// Remove the _total suffix here, as we will re-add the total suffix
-		// later, and it needs to come after the unit suffix.
-		name = strings.TrimSuffix(name, counterSuffix)
-		// If the last character is an underscore, or would be converted to an underscore, trim it from the name.
-		// an underscore will be added back in later.
-		if convertsToUnderscore(rune(name[len(name)-1])) {
-			name = name[:len(name)-1]
-		}
+	if !c.withoutUnits {
+		translatorMetric.Unit = m.Unit
 	}
-	if c.namespace != "" {
-		name = c.namespace + name
-	}
-	if suffix := unitMapGetOrDefault(m.Unit); suffix != "" && !c.withoutUnits && !strings.HasSuffix(name, suffix) {
-		name += "_" + suffix
-	}
-	if addCounterSuffix {
-		name += "_" + counterSuffix
-	}
-	return name
-}
-
-// convertsToUnderscore returns true if the character would be converted to an
-// underscore when the escaping scheme is underscore escaping. This is meant to
-// capture any character that should be considered a "delimiter".
-func convertsToUnderscore(b rune) bool {
-	return (b < 'a' || b > 'z') && (b < 'A' || b > 'Z') && b != ':' && (b < '0' || b > '9')
+	return c.metricNamer.Build(translatorMetric)
 }
 
 func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
@@ -601,12 +552,41 @@ func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
 	return nil
 }
 
+// namingMetricType provides the metric type for naming purposes.
+func (c *collector) namingMetricType(m metricdata.Metrics) otlptranslator.MetricType {
+	switch v := m.Data.(type) {
+	case metricdata.ExponentialHistogram[int64], metricdata.ExponentialHistogram[float64]:
+		return otlptranslator.MetricTypeHistogram
+	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
+		return otlptranslator.MetricTypeHistogram
+	case metricdata.Sum[float64]:
+		// If counter suffixes are disabled, treat them like non-monotonic
+		// suffixes for the purposes of naming.
+		if v.IsMonotonic && !c.withoutCounterSuffixes {
+			return otlptranslator.MetricTypeMonotonicCounter
+		}
+		return otlptranslator.MetricTypeNonMonotonicCounter
+	case metricdata.Sum[int64]:
+		// If counter suffixes are disabled, treat them like non-monotonic
+		// suffixes for the purposes of naming.
+		if v.IsMonotonic && !c.withoutCounterSuffixes {
+			return otlptranslator.MetricTypeMonotonicCounter
+		}
+		return otlptranslator.MetricTypeNonMonotonicCounter
+	case metricdata.Gauge[int64], metricdata.Gauge[float64]:
+		return otlptranslator.MetricTypeGauge
+	case metricdata.Summary:
+		return otlptranslator.MetricTypeSummary
+	}
+	return otlptranslator.MetricTypeUnknown
+}
+
 func (c *collector) createResourceAttributes(res *resource.Resource) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
-	resourceKeys, resourceValues := getAttrs(resourceAttrs)
+	resourceKeys, resourceValues := getAttrs(resourceAttrs, c.labelNamer)
 	c.resourceKeyVals = keyVals{keys: resourceKeys, vals: resourceValues}
 }
 
@@ -648,16 +628,20 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 	return false, ""
 }
 
-func addExemplars[N int64 | float64](m prometheus.Metric, exemplars []metricdata.Exemplar[N]) prometheus.Metric {
+func addExemplars[N int64 | float64](
+	m prometheus.Metric,
+	exemplars []metricdata.Exemplar[N],
+	labelNamer otlptranslator.LabelNamer,
+) prometheus.Metric {
 	if len(exemplars) == 0 {
 		return m
 	}
 	promExemplars := make([]prometheus.Exemplar, len(exemplars))
 	for i, exemplar := range exemplars {
-		labels := attributesToLabels(exemplar.FilteredAttributes)
+		labels := attributesToLabels(exemplar.FilteredAttributes, labelNamer)
 		// Overwrite any existing trace ID or span ID attributes
-		labels[traceIDExemplarKey] = hex.EncodeToString(exemplar.TraceID[:])
-		labels[spanIDExemplarKey] = hex.EncodeToString(exemplar.SpanID[:])
+		labels[otlptranslator.ExemplarTraceIDKey] = hex.EncodeToString(exemplar.TraceID[:])
+		labels[otlptranslator.ExemplarSpanIDKey] = hex.EncodeToString(exemplar.SpanID[:])
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -674,11 +658,10 @@ func addExemplars[N int64 | float64](m prometheus.Metric, exemplars []metricdata
 	return metricWithExemplar
 }
 
-func attributesToLabels(attrs []attribute.KeyValue) prometheus.Labels {
+func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) prometheus.Labels {
 	labels := make(map[string]string)
 	for _, attr := range attrs {
-		key := model.EscapeName(string(attr.Key), model.NameEscapingScheme)
-		labels[key] = attr.Value.Emit()
+		labels[labelNamer.Build(string(attr.Key))] = attr.Value.Emit()
 	}
 	return labels
 }
