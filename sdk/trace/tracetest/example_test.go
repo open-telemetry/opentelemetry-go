@@ -74,11 +74,9 @@ func ExampleSpanRecorder() {
 	)
 	defer tp.Shutdown(context.Background())
 	
-	// Set up tracing
-	otel.SetTracerProvider(tp)
-	
 	// Create and end a span
-	tracer := otel.Tracer("example")
+	tracer := tp.Tracer("example")
+
 	_, span := tracer.Start(context.Background(), "example-operation")
 	span.SetAttributes(attribute.String("example.key", "example-value"))
 	span.End()
