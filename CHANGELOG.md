@@ -41,11 +41,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCGRPCResponseMetadata`
 - Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
 - Add `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` which can be used to disable deduplication for log records. (#6968)
+- Add `WithCardinalityLimit` option to configure the cardinality limit in `go.opentelemetry.io/otel/sdk/metric`. (#6996)
 - Add `Clone` method to `Record` in `go.opentelemetry.io/otel/log` that returns a copy of the record with no shared state. (#7001)
+- The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
+  The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
+- Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
+  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
 
 ### Changed
 
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
+- Change `SDKProcessorLogQueueCapacity`, `SDKProcessorLogQueueSize`, `SDKProcessorSpanQueueSize`, and `SDKProcessorSpanQueueCapacity` in `go.opentelemetry.io/otel/semconv/v1.36.0/otelconv` to use a `Int64ObservableUpDownCounter`. (#7041)
 
 ### Fixes
 
@@ -53,6 +60,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
+
+## [0.59.1] 2025-07-21
+
+### Changed
+
+- Retract `v0.59.0` release of `go.opentelemetry.io/otel/exporters/prometheus` module which appends incorrect unit suffixes. (#7046)
+- Change `go.opentelemetry.io/otel/exporters/prometheus` to no longer deduplicate suffixes when UTF8 is enabled.
+  It is recommended to disable unit and counter suffixes in the exporter, and manually add suffixes if you rely on the existing behavior. (#7044)
+
+### Fixed
+
+- Fix `go.opentelemetry.io/otel/exporters/prometheus` to properly handle unit suffixes when the unit is in brackets.
+  E.g. `{spans}`. (#7044)
 
 ## [1.37.0/0.59.0/0.13.0] 2025-06-25
 
