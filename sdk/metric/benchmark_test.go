@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -478,14 +477,13 @@ func BenchmarkConcurrentIncrement(b *testing.B) {
 			})
 			b.Run("otel", func(b *testing.B) {
 				for b.Loop() {
-					meterProvider := NewMeterProvider(
-						WithReader(NewManualReader()),
-						WithResource(resource.NewSchemaless()),
-					)
+					b.StopTimer()
+					meterProvider := NewMeterProvider()
 					meter, err := meterProvider.Meter("otel").Int64Counter("counter")
 					require.NoError(b, err)
 
 					var wg sync.WaitGroup
+					b.StartTimer()
 
 					for i := range numGoroutines {
 						wg.Add(1)
