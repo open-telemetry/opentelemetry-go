@@ -5,8 +5,6 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
-	"os"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -14,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/trace/internal/x"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
@@ -34,8 +33,7 @@ type tracer struct {
 var _ trace.Tracer = &tracer{}
 
 func (tr *tracer) initSelfObservability() {
-	env := os.Getenv("OTEL_GO_X_SELF_OBSERVABILITY")
-	if strings.ToLower(env) != "true" {
+	if !x.SelfObservability.Enabled() {
 		return
 	}
 
