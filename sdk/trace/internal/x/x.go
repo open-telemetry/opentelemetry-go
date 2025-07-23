@@ -56,7 +56,7 @@ func (f Feature[T]) Lookup() (v T, ok bool) {
 	return f.parse(vRaw)
 }
 
-// Enabled returns if the feature is enabled.
+// Enabled reports whether the feature is enabled.
 func (f Feature[T]) Enabled() bool {
 	_, ok := f.Lookup()
 	return ok
