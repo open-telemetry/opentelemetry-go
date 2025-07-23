@@ -9,72 +9,69 @@ import (
 
     "go.opentelemetry.io/otel"
     "go.opentelemetry.io/otel/attribute"
-    "go.opentelemetry.io/otel/sdk/trace"
+    sdktrace "go.opentelemetry.io/otel/sdk/trace"
     "go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-// simulateWorkflow creates a parent span with a nested child span.
+// simulateWorkflow starts a “workflow” span, then a nested “step-1” span.
+// It attaches attributes and an event to the child span.
 func simulateWorkflow(ctx context.Context) {
     tracer := otel.Tracer("example/workflow")
-    ctx, parent := tracer.Start(ctx, "workflow")
-    defer parent.End()
 
-    parent.SetAttributes(attribute.String("workflow.phase", "start"))
+    // Start parent span “workflow”
+    ctx, workflowSpan := tracer.Start(ctx, "workflow")
+    defer workflowSpan.End()
 
-    _, child := tracer.Start(ctx, "step-1")
-    child.SetAttributes(attribute.Int("step.order", 1))
-    child.AddEvent("Step 1 processing started")
-    child.End()
+    workflowSpan.SetAttributes(attribute.String("workflow.phase", "start"))
+
+    // Start child span “step-1”
+    _, stepSpan := tracer.Start(ctx, "step-1")
+    defer stepSpan.End()
+
+    stepSpan.SetAttributes(attribute.Int("step.order", 1))
+    stepSpan.AddEvent("Step 1 processing started")
 }
 
-// Example demonstrates parent and child span recording in unit tests.
-func Example() {
-    t := &testing.T{} // Provided by testing framework.
-    
+func TestSimulateWorkflowCreatesSpans(t *testing.T) {
+    // Prepare an in-memory recorder to capture completed spans.
     recorder := tracetest.NewSpanRecorder()
-    tp := trace.NewTracerProvider(trace.WithSpanProcessor(recorder))
+    tp := sdktrace.NewTracerProvider(
+        sdktrace.WithSpanProcessor(recorder),
+    )
     defer func() {
         if err := tp.Shutdown(context.Background()); err != nil {
-            panic(err)
+            t.Fatalf("failed to shut down tracer provider: %v", err)
         }
     }()
 
-    original := otel.GetTracerProvider()
+    // Swap in our test TracerProvider
+    originalProvider := otel.GetTracerProvider()
     otel.SetTracerProvider(tp)
-    defer otel.SetTracerProvider(original)
+    defer otel.SetTracerProvider(originalProvider)
 
+    // Run the workflow
     simulateWorkflow(context.Background())
 
-    // Verify expected spans were created
-    spans := recorder.Ended()
-    expectedSpanCount := 2
-    if len(spans) != expectedSpanCount {
-        t.Errorf("Expected %d spans, got %d", expectedSpanCount, len(spans))
-        return
+    endedSpans := recorder.Ended()
+    const wantSpanCount = 2
+    if len(endedSpans) != wantSpanCount {
+        t.Fatalf("expected %d spans, got %d", wantSpanCount, len(endedSpans))
     }
 
-    // Verify first span (step-1)
-    stepSpan := spans[0]
-    expectedName := "step-1"
-    if stepSpan.Name() != expectedName {
-        t.Errorf("Expected span name %s, got %s", expectedName, stepSpan.Name())
-        return
+    // The recorder yields spans in the order they ended: step-1, then workflow.
+
+    // Check child span “step-1”
+    stepSpan := endedSpans[0]
+    if got, want := stepSpan.Name(), "step-1"; got != want {
+        t.Errorf("child span name: got %q, want %q", got, want)
+    }
+    if len(stepSpan.Attributes()) != 1 {
+        t.Errorf("child span attribute count: got %d, want 1", len(stepSpan.Attributes()))
     }
 
-    expectedAttrCount := 1
-    if len(stepSpan.Attributes()) != expectedAttrCount {
-        t.Errorf("Expected %d attributes, got %d", expectedAttrCount, len(stepSpan.Attributes()))
-        return
+    // Check parent span “workflow”
+    workflowSpan := endedSpans[1]
+    if got, want := workflowSpan.Name(), "workflow"; got != want {
+        t.Errorf("parent span name: got %q, want %q", got, want)
     }
-
-    // Verify second span (workflow)
-    workflowSpan := spans[1]
-    expectedWorkflowName := "workflow"
-    if workflowSpan.Name() != expectedWorkflowName {
-        t.Errorf("Expected span name %s, got %s", expectedWorkflowName, workflowSpan.Name())
-        return
-    }
-
-    // Output:
-    //
 }
