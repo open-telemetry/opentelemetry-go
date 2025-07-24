@@ -1,32 +1,25 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains support for OTel metric SDK experimental features.
-//
-// This package should only be used for features defined in the specification.
-// It should not be used for experiments or new project ideas.
-package x // import "go.opentelemetry.io/otel/sdk/metric/internal/x"
+// Package x documents experimental features for [go.opentelemetry.io/otel/sdk/trace].
+package x // import "go.opentelemetry.io/otel/sdk/trace/internal/x"
 
 import (
-	"context"
 	"os"
-	"strconv"
+	"strings"
 )
 
-// CardinalityLimit is an experimental feature flag that defines if
-// cardinality limits should be applied to the recorded metric data-points.
+// SelfObservability is an experimental feature flag that determines if SDK
+// self-observability metrics are enabled.
 //
-// To enable this feature set the OTEL_GO_X_CARDINALITY_LIMIT environment
-// variable to the integer limit value you want to use.
-//
-// Setting OTEL_GO_X_CARDINALITY_LIMIT to a value less than or equal to 0
-// will disable the cardinality limits.
-var CardinalityLimit = newFeature("CARDINALITY_LIMIT", func(v string) (int, bool) {
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return 0, false
+// To enable this feature set the OTEL_GO_X_SELF_OBSERVABILITY environment variable
+// to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
+// will also enable this).
+var SelfObservability = newFeature("SELF_OBSERVABILITY", func(v string) (string, bool) {
+	if strings.ToLower(v) == "true" {
+		return v, true
 	}
-	return n, true
+	return "", false
 })
 
 // Feature is an experimental feature control flag. It provides a uniform way
@@ -67,15 +60,4 @@ func (f Feature[T]) Lookup() (v T, ok bool) {
 func (f Feature[T]) Enabled() bool {
 	_, ok := f.Lookup()
 	return ok
-}
-
-// EnabledInstrument informs whether the instrument is enabled.
-//
-// EnabledInstrument interface is implemented by synchronous instruments.
-type EnabledInstrument interface {
-	// Enabled reports whether the instrument will process measurements for the given context.
-	//
-	// This function can be used in places where measuring an instrument
-	// would result in computationally expensive operations.
-	Enabled(context.Context) bool
 }
