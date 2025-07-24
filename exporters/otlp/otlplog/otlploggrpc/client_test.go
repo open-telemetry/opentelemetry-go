@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -600,4 +601,21 @@ func TestConfig(t *testing.T) {
 		require.Contains(t, got, additionalKey)
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
+}
+
+func TestSelfObservability(t *testing.T) {
+	testCases := []struct {
+		name string
+		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
+	}{
+		{
+			name: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+		})
+	}
 }

@@ -9,6 +9,15 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -18,11 +27,6 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 // The methods of this type are not expected to be called concurrently.
@@ -38,6 +42,11 @@ type client struct {
 	ourConn bool
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
+
+	selfObservabilityEnabled  bool
+	logInflightMetric         otelconv.SDKExporterLogInflight
+	logExportedMetric         otelconv.SDKExporterLogExported
+	logExportedDurationMetric otelconv.SDKExporterOperationDuration
 }
 
 // Used for testing.
@@ -71,8 +80,31 @@ func newClient(cfg config) (*client, error) {
 	}
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
-
+	c.InitSelfObservability()
 	return c, nil
+}
+
+func (c *client) InitSelfObservability() {
+	if !x.SelfObservability.Enable() {
+		return
+	}
+
+	c.selfObservabilityEnabled = true
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if c.logInflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.logExportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.logExportedDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -132,9 +164,21 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	defer cancel()
 
 	return c.requestFunc(ctx, func(ctx context.Context) error {
+		var begin time.Time
+		if c.selfObservabilityEnabled {
+			begin = time.Now()
+			c.logInflightMetric.Int64UpDownCounter.Add(ctx, 1)
+		}
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
+
+		if c.selfObservabilityEnabled {
+			c.logExportedMetric.Add(ctx, 1)
+			duration := time.Since(begin)
+			c.logExportedDurationMetric.Record(ctx, duration.Seconds())
+		}
+
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
