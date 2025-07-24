@@ -398,7 +398,6 @@ func (i *inserter[N]) cachedAggregator(
 		// CardinalityLimit.Lookup returns 0 by default if unset (or
 		// unrecognized input). Use that value directly.
 		b.AggregationLimit = i.pipeline.cardinalityLimit
-		//
 		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
 		if err != nil {
 			return aggVal[N]{0, nil, err}
