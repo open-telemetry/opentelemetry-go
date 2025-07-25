@@ -95,11 +95,11 @@ func newClient(cfg config) (*client, error) {
 	}
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
-	c.InitSelfObservability()
+	c.initSelfObservability()
 	return c, nil
 }
 
-func (c *client) InitSelfObservability() {
+func (c *client) initSelfObservability() {
 	if !x.SelfObservability.Enabled() {
 		return
 	}
@@ -172,7 +172,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
-		c.recordLogInflightMetric(ctx, attribute.String("error.type", ctx.Err().Error()))
+		c.recordLogInflightMetric(context.Background(), attribute.String("error.type", ctx.Err().Error()))
 		return ctx.Err()
 	default:
 	}
@@ -201,10 +201,10 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				c.recordLogInflightMetric(ctx, attribute.String("error.type", err.Error()))
-				c.recordLogExportedMetric(ctx, attribute.String("error.type", err.Error()))
+				c.recordLogInflightMetric(context.Background(), attribute.String("error.type", err.Error()))
+				c.recordLogExportedMetric(context.Background(), attribute.String("error.type", err.Error()))
 				c.recordLogExportedDurationMetric(
-					ctx,
+					context.Background(),
 					duration.Seconds(),
 					c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
 						otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
@@ -218,15 +218,15 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
-			c.recordLogInflightMetric(ctx)
-			c.recordLogExportedMetric(ctx)
-			c.recordLogExportedDurationMetric(ctx, duration.Seconds())
+			c.recordLogInflightMetric(context.Background())
+			c.recordLogExportedMetric(context.Background())
+			c.recordLogExportedDurationMetric(context.Background(), duration.Seconds())
 			return nil
 		}
-		c.recordLogInflightMetric(ctx, attribute.String("error.type", err.Error()))
-		c.recordLogExportedMetric(ctx, attribute.String("error.type", err.Error()))
+		c.recordLogInflightMetric(context.Background(), attribute.String("error.type", err.Error()))
+		c.recordLogExportedMetric(context.Background(), attribute.String("error.type", err.Error()))
 		c.recordLogExportedDurationMetric(
-			ctx,
+			context.Background(),
 			duration.Seconds(),
 			c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
 				otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
