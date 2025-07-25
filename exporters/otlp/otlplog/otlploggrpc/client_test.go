@@ -14,13 +14,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -30,6 +23,14 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -615,8 +616,10 @@ func TestSelfObservability(t *testing.T) {
 		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
 	}{
 		{
-			name: "test self observability",
+			name: "upload success",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				ctx := context.Background()
+				client, coll := clientFactory(t, nil)
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -632,8 +635,17 @@ func TestSelfObservability(t *testing.T) {
 								Temporality: metricdata.CumulativeTemporality,
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
-										Attributes: attribute.NewSet(),
-										Value:      1,
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(
+												fmt.Sprintf("%s/%d", componentType, 1),
+											),
+											otelconv.SDKExporterLogInflight{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
+											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.getPort()),
+										),
+										Value: 1,
 									},
 								},
 							},
@@ -647,8 +659,17 @@ func TestSelfObservability(t *testing.T) {
 								IsMonotonic: true,
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
-										Attributes: attribute.NewSet(),
-										Value:      1,
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(
+												fmt.Sprintf("%s/%d", componentType, 1),
+											),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
+											otelconv.SDKExporterLogExported{}.AttrServerPort(client.getPort()),
+										),
+										Value: 1,
 									},
 								},
 							},
@@ -661,20 +682,25 @@ func TestSelfObservability(t *testing.T) {
 								Temporality: metricdata.CumulativeTemporality,
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
-										Attributes:   attribute.NewSet(),
-										Count:        1,
-										Bounds:       []float64{},
-										BucketCounts: []uint64{1},
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(
+												fmt.Sprintf("%s/%d", componentType, 1),
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
+												client.conn.Target(),
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.getPort()),
+										),
+										Count: 1,
 									},
 								},
 							},
 						},
 					},
 				}
-
-				ctx := context.Background()
-				client, coll := clientFactory(t, nil)
-
 				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 				require.NoError(t, client.Shutdown(ctx))
 				got := coll.Collect().Dump()
@@ -683,9 +709,155 @@ func TestSelfObservability(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("unexpected ResourceLogs:\n%s", diff)
 				}
+				g := scopeMetrics()
+				normalizeMetrics(&g)
+				metricdatatest.AssertEqual(t, want, g, metricdatatest.IgnoreTimestamp())
+			},
+		},
+		{
+			name: "PartialSuccess",
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				const n, msg = 2, "bad data"
+				rCh := make(chan exportResult, 1)
+				rCh <- exportResult{
+					Response: &collogpb.ExportLogsServiceResponse{
+						PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+							RejectedLogRecords: n,
+							ErrorMessage:       msg,
+						},
+					},
+				}
+				ctx := context.Background()
+				client, _ := clientFactory(t, rCh)
+
+				wantMetrics := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterLogInflight{}.Name(),
+							Description: otelconv.SDKExporterLogInflight{}.Description(),
+							Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(
+												fmt.Sprintf("%s/%d", componentType, 2),
+											),
+											otelconv.SDKExporterLogInflight{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
+											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.getPort()),
+											attribute.String(
+												"error.type",
+												fmt.Sprintf(
+													"OTLP partial success: %s (%d log records rejected)",
+													msg,
+													n,
+												),
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterLogExported{}.Name(),
+							Description: otelconv.SDKExporterLogExported{}.Description(),
+							Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(
+												fmt.Sprintf("%s/%d", componentType, 2),
+											),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
+											otelconv.SDKExporterLogExported{}.AttrServerPort(client.getPort()),
+											attribute.String(
+												"error.type",
+												fmt.Sprintf(
+													"OTLP partial success: %s (%d log records rejected)",
+													msg,
+													n,
+												),
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(
+												fmt.Sprintf("%s/%d", componentType, 2),
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
+												client.conn.Target(),
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.getPort()),
+											attribute.String(
+												"error.type",
+												fmt.Sprintf(
+													"OTLP partial success: %s (%d log records rejected)",
+													msg,
+													n,
+												),
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+												otelconv.RPCGRPCStatusCodeAttr(
+													status.Code(fmt.Errorf("%s (%d log records rejected)", msg, n)),
+												),
+											),
+										),
+										Count: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				defer func(orig otel.ErrorHandler) {
+					otel.SetErrorHandler(orig)
+				}(otel.GetErrorHandler())
+
+				var errs []error
+				eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+				otel.SetErrorHandler(eh)
+
+				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+
+				require.Len(t, errs, 1)
+				want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
+				assert.ErrorContains(t, errs[0], want)
 
 				g := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, g, metricdatatest.IgnoreTimestamp())
+				normalizeMetrics(&g)
+				metricdatatest.AssertEqual(t, wantMetrics, g, metricdatatest.IgnoreTimestamp())
 			},
 		},
 	}
@@ -707,5 +879,28 @@ func TestSelfObservability(t *testing.T) {
 			}
 			tc.test(t, scopeMetrics)
 		})
+	}
+}
+
+func normalizeMetrics(scopeMetrics *metricdata.ScopeMetrics) {
+	for i := range scopeMetrics.Metrics {
+		m := &scopeMetrics.Metrics[i]
+		if data, ok := m.Data.(metricdata.Histogram[float64]); ok {
+			name := otelconv.SDKExporterOperationDuration{}.Name()
+			if m.Name != name {
+				break
+			}
+			for j := range data.DataPoints {
+				dp := &data.DataPoints[j]
+				dp.StartTime = time.Time{}
+				dp.Time = time.Time{}
+				dp.Min = metricdata.Extrema[float64]{}
+				dp.Max = metricdata.Extrema[float64]{}
+				dp.Bounds = nil
+				dp.BucketCounts = nil
+				dp.Sum = 0
+			}
+			m.Data = data
+		}
 	}
 }
