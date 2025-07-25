@@ -29,8 +29,6 @@ func Example_simulateWorkflow() {
 
 	// Child span "step-1"
 	_, stepSpan := tracer.Start(ctx, "step-1")
-	stepSpan.SetAttributes(attribute.Int("step.order", 1))
-	stepSpan.AddEvent("Step 1 processing started")
 
 	// End spans in reverse order
 	stepSpan.End()
