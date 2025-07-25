@@ -20,7 +20,11 @@ func Example_simulateWorkflow() {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(recorder),
 	)
-	defer tp.Shutdown(ctx)
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			panic(fmt.Sprintf("failed to shutdown tracer provider: %v", err))
+		}
+	}()
 
 	tracer := tp.Tracer("example/workflow")
 
