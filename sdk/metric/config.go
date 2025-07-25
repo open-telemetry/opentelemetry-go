@@ -165,8 +165,6 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // The cardinality limit is the hard limit on the number of metric datapoints
 // that can be collected for a single instrument in a single collect cycle.
 //
-// By default, there is no limit applied.
-//
 // Setting this to a zero or negative value means no limit is applied.
 func WithCardinalityLimit(limit int) Option {
 	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`

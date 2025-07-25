@@ -63,7 +63,7 @@ func (f Feature[T]) Lookup() (v T, ok bool) {
 	return f.parse(vRaw)
 }
 
-// Enabled returns if the feature is enabled.
+// Enabled reports whether the feature is enabled.
 func (f Feature[T]) Enabled() bool {
 	_, ok := f.Lookup()
 	return ok
@@ -73,7 +73,7 @@ func (f Feature[T]) Enabled() bool {
 //
 // EnabledInstrument interface is implemented by synchronous instruments.
 type EnabledInstrument interface {
-	// Enabled returns whether the instrument will process measurements for the given context.
+	// Enabled reports whether the instrument will process measurements for the given context.
 	//
 	// This function can be used in places where measuring an instrument
 	// would result in computationally expensive operations.
