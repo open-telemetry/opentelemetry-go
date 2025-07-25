@@ -1023,3 +1023,23 @@ func BenchmarkSetAddAttributes(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkSetBody(b *testing.B) {
+	b.Run("SetBody", func(b *testing.B) {
+		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].SetBody(log.MapValue(
+				log.Bool("0", true),
+				log.Float64("2", 3.0),
+				log.String("3", "forth"),
+				log.Slice("4", log.Int64Value(1)),
+				log.Map("5", log.Int("key", 2)),
+				log.Bytes("6", []byte("six")),
+				log.Int64("1", 3),
+			))
+		}
+	})
+}
