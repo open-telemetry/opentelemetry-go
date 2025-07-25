@@ -39,7 +39,7 @@ func NewSpan(s trace.Span) *octrace.Span {
 	return octrace.NewSpan(&Span{otelSpan: s})
 }
 
-// IsRecordingEvents returns true if events are being recorded for this span.
+// IsRecordingEvents reports whether events are being recorded for this span.
 func (s *Span) IsRecordingEvents() bool {
 	return s.otelSpan.IsRecording()
 }

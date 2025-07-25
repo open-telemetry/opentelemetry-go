@@ -148,7 +148,7 @@ func (r *Resource) Iter() attribute.Iterator {
 	return r.attrs.Iter()
 }
 
-// Equal returns whether r and o represent the same resource. Two resources can
+// Equal reports whether r and o represent the same resource. Two resources can
 // be equal even if they have different schema URLs.
 //
 // See the documentation on the [Resource] type for the pitfalls of using ==

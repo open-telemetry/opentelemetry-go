@@ -70,7 +70,7 @@ func (d Distinct) reflectValue() reflect.Value {
 	return reflect.ValueOf(d.iface)
 }
 
-// Valid returns true if this value refers to a valid Set.
+// Valid reports whether this value refers to a valid Set.
 func (d Distinct) Valid() bool {
 	return d.iface != nil
 }
@@ -120,7 +120,7 @@ func (l *Set) Value(k Key) (Value, bool) {
 	return Value{}, false
 }
 
-// HasValue tests whether a key is defined in this set.
+// HasValue reports whether a key is defined in this set.
 func (l *Set) HasValue(k Key) bool {
 	if l == nil {
 		return false
@@ -155,7 +155,7 @@ func (l *Set) Equivalent() Distinct {
 	return l.equivalent
 }
 
-// Equals returns true if the argument set is equivalent to this set.
+// Equals reports whether the argument set is equivalent to this set.
 func (l *Set) Equals(o *Set) bool {
 	return l.Equivalent() == o.Equivalent()
 }
