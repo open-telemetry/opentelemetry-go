@@ -26,7 +26,6 @@ func Example_simulateWorkflow() {
 
 	// Parent span "workflow"
 	ctx, workflowSpan := tracer.Start(ctx, "workflow")
-	workflowSpan.SetAttributes(attribute.String("workflow.phase", "start"))
 
 	// Child span "step-1"
 	_, stepSpan := tracer.Start(ctx, "step-1")
