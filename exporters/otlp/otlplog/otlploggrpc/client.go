@@ -22,9 +22,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/attribute"
-
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/metric"
@@ -37,11 +36,11 @@ import (
 
 var (
 	componentType           = otelconv.ComponentTypeOtlpGRPCLogExporter
-	exporterInstanceCounter int64
+	exporterInstanceCounter atomic.Int64
 )
 
-func getExporterInstanceName() string {
-	return fmt.Sprintf("%s/%d", componentType, exporterInstanceCounter)
+func getComponentName() string {
+	return fmt.Sprintf("%s/%d", componentType, exporterInstanceCounter.Load())
 }
 
 // The methods of this type are not expected to be called concurrently.
@@ -58,6 +57,8 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
+	port                      int
+	componentName             string
 	selfObservabilityEnabled  bool
 	logInflightMetric         otelconv.SDKExporterLogInflight
 	logExportedMetric         otelconv.SDKExporterLogExported
@@ -103,9 +104,10 @@ func (c *client) initSelfObservability() {
 	if !x.SelfObservability.Enabled() {
 		return
 	}
-
+	exporterInstanceCounter.Add(1)
 	c.selfObservabilityEnabled = true
-	atomic.AddInt64(&exporterInstanceCounter, 1)
+	c.port = c.getPort()
+	c.componentName = getComponentName()
 	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 		metric.WithInstrumentationVersion(sdk.Version()),
@@ -172,7 +174,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
-		c.recordLogInflightMetric(context.Background(), attribute.String("error.type", ctx.Err().Error()))
+		c.recordLogInflightMetric(context.Background(), semconv.ErrorType(ctx.Err()))
 		return ctx.Err()
 	default:
 	}
@@ -201,15 +203,15 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				c.recordLogInflightMetric(context.Background(), attribute.String("error.type", err.Error()))
-				c.recordLogExportedMetric(context.Background(), attribute.String("error.type", err.Error()))
+				c.recordLogInflightMetric(context.Background(), semconv.ErrorType(err))
+				c.recordLogExportedMetric(context.Background(), semconv.ErrorType(err))
 				c.recordLogExportedDurationMetric(
 					context.Background(),
 					duration.Seconds(),
 					c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
 						otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
 					),
-					c.logExportedDurationMetric.AttrErrorType(otelconv.ErrorTypeAttr(err.Error())),
+					semconv.ErrorType(err),
 				)
 				otel.Handle(err)
 				return nil
@@ -223,8 +225,8 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			c.recordLogExportedDurationMetric(context.Background(), duration.Seconds())
 			return nil
 		}
-		c.recordLogInflightMetric(context.Background(), attribute.String("error.type", err.Error()))
-		c.recordLogExportedMetric(context.Background(), attribute.String("error.type", err.Error()))
+		c.recordLogInflightMetric(context.Background(), semconv.ErrorType(err))
+		c.recordLogExportedMetric(context.Background(), semconv.ErrorType(err))
 		c.recordLogExportedDurationMetric(
 			context.Background(),
 			duration.Seconds(),
@@ -242,10 +244,10 @@ func (c *client) recordLogInflightMetric(ctx context.Context, extraAttrs ...attr
 		return
 	}
 	attrs := []attribute.KeyValue{
-		c.logInflightMetric.AttrComponentName(getExporterInstanceName()),
+		c.logInflightMetric.AttrComponentName(c.componentName),
 		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
 		c.logInflightMetric.AttrServerAddress(c.conn.Target()),
-		c.logInflightMetric.AttrServerPort(c.getPort()),
+		c.logInflightMetric.AttrServerPort(c.port),
 	}
 
 	attrs = append(attrs, extraAttrs...)
@@ -259,7 +261,7 @@ func (c *client) recordLogExportedMetric(ctx context.Context, extraAttrs ...attr
 	}
 
 	attrs := []attribute.KeyValue{
-		c.logExportedMetric.AttrComponentName(getExporterInstanceName()),
+		c.logExportedMetric.AttrComponentName(c.componentName),
 		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
 		c.logExportedMetric.AttrServerAddress(c.conn.Target()),
 		c.logExportedMetric.AttrServerPort(c.getPort()),
@@ -279,7 +281,7 @@ func (c *client) recordLogExportedDurationMetric(
 	}
 
 	attrs := []attribute.KeyValue{
-		c.logExportedDurationMetric.AttrComponentName(getExporterInstanceName()),
+		c.logExportedDurationMetric.AttrComponentName(c.componentName),
 		c.logExportedDurationMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
 		c.logExportedDurationMetric.AttrServerAddress(c.conn.Target()),
 		c.logExportedMetric.AttrServerPort(c.getPort()),

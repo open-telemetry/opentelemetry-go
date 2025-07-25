@@ -636,14 +636,12 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogInflight{}.AttrComponentName(
-												fmt.Sprintf("%s/%d", componentType, 1),
-											),
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(client.componentName),
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.getPort()),
+											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.port),
 										),
 										Value: 1,
 									},
@@ -660,14 +658,12 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(
-												fmt.Sprintf("%s/%d", componentType, 1),
-											),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogExported{}.AttrServerPort(client.getPort()),
+											otelconv.SDKExporterLogExported{}.AttrServerPort(client.port),
 										),
 										Value: 1,
 									},
@@ -683,16 +679,14 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(
-												fmt.Sprintf("%s/%d", componentType, 1),
-											),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
 												client.conn.Target(),
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.getPort()),
+											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.port),
 										),
 										Count: 1,
 									},
@@ -730,6 +724,7 @@ func TestSelfObservability(t *testing.T) {
 				ctx := context.Background()
 				client, _ := clientFactory(t, rCh)
 
+				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -746,22 +741,13 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogInflight{}.AttrComponentName(
-												fmt.Sprintf("%s/%d", componentType, 2),
-											),
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(client.componentName),
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.getPort()),
-											attribute.String(
-												"error.type",
-												fmt.Sprintf(
-													"OTLP partial success: %s (%d log records rejected)",
-													msg,
-													n,
-												),
-											),
+											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.port),
+											semconv.ErrorType(wantErr),
 										),
 										Value: 1,
 									},
@@ -785,15 +771,8 @@ func TestSelfObservability(t *testing.T) {
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogExported{}.AttrServerPort(client.getPort()),
-											attribute.String(
-												"error.type",
-												fmt.Sprintf(
-													"OTLP partial success: %s (%d log records rejected)",
-													msg,
-													n,
-												),
-											),
+											otelconv.SDKExporterLogExported{}.AttrServerPort(client.port),
+											semconv.ErrorType(wantErr),
 										),
 										Value: 1,
 									},
@@ -809,9 +788,7 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(
-												fmt.Sprintf("%s/%d", componentType, 2),
-											),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
@@ -819,19 +796,12 @@ func TestSelfObservability(t *testing.T) {
 												client.conn.Target(),
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.getPort()),
-											attribute.String(
-												"error.type",
-												fmt.Sprintf(
-													"OTLP partial success: %s (%d log records rejected)",
-													msg,
-													n,
-												),
-											),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												otelconv.RPCGRPCStatusCodeAttr(
-													status.Code(fmt.Errorf("%s (%d log records rejected)", msg, n)),
+													status.Code(wantErr),
 												),
 											),
+											semconv.ErrorType(wantErr),
 										),
 										Count: 1,
 									},
@@ -858,6 +828,7 @@ func TestSelfObservability(t *testing.T) {
 				g := scopeMetrics()
 				normalizeMetrics(&g)
 				metricdatatest.AssertEqual(t, wantMetrics, g, metricdatatest.IgnoreTimestamp())
+				exporterInstanceCounter.Add(-1)
 			},
 		},
 	}
