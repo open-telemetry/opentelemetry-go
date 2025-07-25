@@ -14,7 +14,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,7 +33,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
@@ -609,13 +615,97 @@ func TestSelfObservability(t *testing.T) {
 		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
 	}{
 		{
-			name: "",
+			name: "test self observability",
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterLogInflight{}.Name(),
+							Description: otelconv.SDKExporterLogInflight{}.Description(),
+							Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(),
+										Value:      1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterLogExported{}.Name(),
+							Description: otelconv.SDKExporterLogExported{}.Description(),
+							Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(),
+										Value:      1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Attributes:   attribute.NewSet(),
+										Count:        1,
+										Bounds:       []float64{},
+										BucketCounts: []uint64{1},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				ctx := context.Background()
+				client, coll := clientFactory(t, nil)
+
+				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+				require.NoError(t, client.Shutdown(ctx))
+				got := coll.Collect().Dump()
+				require.Len(t, got, 1, "upload of one ResourceLogs")
+				diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
+				if diff != "" {
+					t.Fatalf("unexpected ResourceLogs:\n%s", diff)
+				}
+
+				g := scopeMetrics()
+				metricdatatest.AssertEqual(t, want, g, metricdatatest.IgnoreTimestamp())
+			},
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			prev := otel.GetMeterProvider()
+			defer otel.SetMeterProvider(prev)
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
 
+			scopeMetrics := func() metricdata.ScopeMetrics {
+				var got metricdata.ResourceMetrics
+				err := r.Collect(context.Background(), &got)
+				require.NoError(t, err)
+				require.Len(t, got.ScopeMetrics, 1)
+				return got.ScopeMetrics[0]
+			}
+			tc.test(t, scopeMetrics)
 		})
 	}
 }
