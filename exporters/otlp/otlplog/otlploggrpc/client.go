@@ -262,7 +262,7 @@ func (c *client) recordLogExportedMetric(ctx context.Context, extraAttrs ...attr
 		c.logExportedMetric.AttrComponentName(c.componentName),
 		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
 		c.logExportedMetric.AttrServerAddress(c.conn.Target()),
-		c.logExportedMetric.AttrServerPort(c.getPort()),
+		c.logExportedMetric.AttrServerPort(c.port),
 	}
 
 	attrs = append(attrs, extraAttrs...)
@@ -282,7 +282,7 @@ func (c *client) recordLogExportedDurationMetric(
 		c.logExportedDurationMetric.AttrComponentName(c.componentName),
 		c.logExportedDurationMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
 		c.logExportedDurationMetric.AttrServerAddress(c.conn.Target()),
-		c.logExportedMetric.AttrServerPort(c.getPort()),
+		c.logExportedMetric.AttrServerPort(c.port),
 	}
 
 	attrs = append(attrs, extraAttrs...)

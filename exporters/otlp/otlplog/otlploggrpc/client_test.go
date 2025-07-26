@@ -795,7 +795,7 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
 												client.conn.Target(),
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.getPort()),
+											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.port),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												otelconv.RPCGRPCStatusCodeAttr(
 													status.Code(wantErr),
