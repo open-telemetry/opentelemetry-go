@@ -898,7 +898,7 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 }
 
 func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
-	for code := 0; code < 1000; code++ {
+	for code := range 1000 {
 		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
 		got, msg := SpanStatusFromHTTPStatusCode(code)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
@@ -913,7 +913,7 @@ func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 }
 
 func TestSpanStatusFromHTTPStatusCodeAndSpanKind(t *testing.T) {
-	for code := 0; code < 1000; code++ {
+	for code := range 1000 {
 		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
 		got, msg := SpanStatusFromHTTPStatusCodeAndSpanKind(code, trace.SpanKindClient)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)

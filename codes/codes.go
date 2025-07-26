@@ -102,5 +102,5 @@ func (c *Code) MarshalJSON() ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid code: %d", *c)
 	}
-	return []byte(fmt.Sprintf("%q", str)), nil
+	return fmt.Appendf(nil, "%q", str), nil
 }
