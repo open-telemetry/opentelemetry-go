@@ -5,6 +5,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,8 +18,10 @@ import (
 
 // Defaults for BatchSpanProcessorOptions.
 const (
-	DefaultMaxQueueSize       = 2048
-	DefaultScheduleDelay      = 5000
+	DefaultMaxQueueSize = 2048
+	// DefaultScheduleDelay is the delay interval between two consecutive exports, in milliseconds.
+	DefaultScheduleDelay = 5000
+	// DefaultExportTimeout is the duration after which an export is cancelled, in milliseconds.
 	DefaultExportTimeout      = 30000
 	DefaultMaxExportBatchSize = 512
 )
@@ -267,7 +270,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 	if bsp.o.ExportTimeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, bsp.o.ExportTimeout)
+		ctx, cancel = context.WithTimeoutCause(ctx, bsp.o.ExportTimeout, errors.New("processor export timeout"))
 		defer cancel()
 	}
 

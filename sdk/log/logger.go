@@ -52,6 +52,7 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	p := EnabledParameters{
 		InstrumentationScope: l.instrumentationScope,
 		Severity:             param.Severity,
+		EventName:            param.EventName,
 	}
 
 	// If there are more Processors than FilterProcessors,
@@ -93,6 +94,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		scope:                     &l.instrumentationScope,
 		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
 		attributeCountLimit:       l.provider.attributeCountLimit,
+		allowDupKeys:              l.provider.allowDupKeys,
 	}
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.

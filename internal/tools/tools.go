@@ -15,7 +15,6 @@ import (
 	_ "go.opentelemetry.io/build-tools/crosslink"
 	_ "go.opentelemetry.io/build-tools/gotmpl"
 	_ "go.opentelemetry.io/build-tools/multimod"
-	_ "go.opentelemetry.io/build-tools/semconvgen"
 	_ "golang.org/x/exp/cmd/gorelease"
 	_ "golang.org/x/tools/cmd/stringer"
 	_ "golang.org/x/vuln/cmd/govulncheck"
