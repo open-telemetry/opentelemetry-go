@@ -898,7 +898,7 @@ func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
 }
 
 func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
-	for code := 0; code < 1000; code++ {
+	for code := range 1000 {
 		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
 		got, msg := SpanStatusFromHTTPStatusCode(code)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
@@ -913,7 +913,7 @@ func TestSpanStatusFromHTTPStatusCode(t *testing.T) {
 }
 
 func TestSpanStatusFromHTTPStatusCodeAndSpanKind(t *testing.T) {
-	for code := 0; code < 1000; code++ {
+	for code := range 1000 {
 		expected := getExpectedCodeForHTTPCode(code, trace.SpanKindClient)
 		got, msg := SpanStatusFromHTTPStatusCodeAndSpanKind(code, trace.SpanKindClient)
 		assert.Equalf(t, expected, got, "%s vs %s", expected, got)
@@ -954,7 +954,7 @@ func getExpectedCodeForHTTPCode(code int, spanKind trace.SpanKind) codes.Code {
 	return codes.Error
 }
 
-func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, format string, args ...interface{}) {
+func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, format string, args ...any) {
 	if !assert.ElementsMatchf(t, expected, got, format, args...) {
 		t.Log("expected:", kvStr(expected))
 		t.Log("got:", kvStr(got))

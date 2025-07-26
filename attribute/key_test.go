@@ -40,7 +40,7 @@ func TestDefined(t *testing.T) {
 }
 
 func TestJSONValue(t *testing.T) {
-	var kvs interface{} = [2]attribute.KeyValue{
+	var kvs any = [2]attribute.KeyValue{
 		attribute.String("A", "B"),
 		attribute.Int64("C", 1),
 	}
