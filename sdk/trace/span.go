@@ -20,7 +20,8 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -61,6 +62,7 @@ type ReadOnlySpan interface {
 	InstrumentationScope() instrumentation.Scope
 	// InstrumentationLibrary returns information about the instrumentation
 	// library that created the span.
+	//
 	// Deprecated: please use InstrumentationScope instead.
 	InstrumentationLibrary() instrumentation.Library //nolint:staticcheck // This method needs to be define for backwards compatibility
 	// Resource returns information about the entity that produced the span.
@@ -165,7 +167,7 @@ func (s *recordingSpan) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
-// IsRecording returns if this span is being recorded. If this span has ended
+// IsRecording reports whether this span is being recorded. If this span has ended
 // this will return false.
 func (s *recordingSpan) IsRecording() bool {
 	if s == nil {
@@ -177,7 +179,7 @@ func (s *recordingSpan) IsRecording() bool {
 	return s.isRecording()
 }
 
-// isRecording returns if this span is being recorded. If this span has ended
+// isRecording reports whether this span is being recorded. If this span has ended
 // this will return false.
 //
 // This method assumes s.mu.Lock is held by the caller.
@@ -494,6 +496,22 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		s.endTime = config.Timestamp()
 	}
 	s.mu.Unlock()
+
+	defer func() {
+		if s.tracer.selfObservabilityEnabled {
+			// Determine the sampling result and create the corresponding attribute.
+			var attrSamplingResult attribute.KeyValue
+			if s.spanContext.IsSampled() {
+				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(
+					otelconv.SpanSamplingResultRecordAndSample,
+				)
+			} else {
+				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
+			}
+
+			s.tracer.spanLiveMetric.Add(context.Background(), -1, attrSamplingResult)
+		}
+	}()
 
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {

@@ -119,6 +119,12 @@ const (
 func {{to_go_name(attribute.name, pkg)}}(val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
 	return {{to_go_name(attribute.name, pkg)}}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}(val)
 }
+{%- elif attribute.type is template_type %}
+
+{{ [to_go_name(attribute.name, pkg) ~ " returns an attribute KeyValue conforming to the \"" ~ attribute.name ~ "\" semantic conventions. " ~ it_reps(attribute.brief) ] | comment(format="go") }}
+func {{to_go_name(attribute.name, pkg)}}(key string, val {{attribute.type | instantiated_type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return attribute.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}("{{attribute.name}}."+key, val)
+}
 {%- endif %}
 {%- endfor %}
 {%- endmacro -%}
@@ -130,12 +136,8 @@ func {{to_go_name(attribute.name, pkg)}}(val {{attribute.type | instantiated_typ
 
 {{ ["Enum values for " ~ attribute.name] | comment(format="go") }}
 var (
-{%- for value in attribute.type.members %}
-{%- if value.deprecated %}
-{{ ["Deprecated: " ~ value.deprecated | trim(".") ~ "." ] | comment(format="go_1tab") }}
-{%- else %}
+{%- for value in attribute.type.members if not value.deprecated %}
 {{ [value.brief or value.id, "Stability: " ~ value.stability] | comment(format="go_1tab") }}
-{%- endif %}
 	{{to_go_name(attribute.name ~ "." ~ value.id, pkg=pkg)}} = {{ to_go_name(attribute.name, pkg=pkg) }}Key.{{attribute.type | instantiated_type | map_text("attribute_type_method")}}({{ value.value | print_member_value }})
 {%- endfor %}
 )

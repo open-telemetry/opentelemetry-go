@@ -20,7 +20,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
@@ -31,3 +31,5 @@ replace go.opentelemetry.io/otel/sdk => ../../../sdk
 replace go.opentelemetry.io/otel/trace => ../../../trace
 
 replace go.opentelemetry.io/otel/metric => ../../../metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
