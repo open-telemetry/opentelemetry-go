@@ -233,6 +233,7 @@ issues:
   max-same-issues: 0
 formatters:
   enable:
+    - gofmt
     - gofumpt
     - goimports
     - golines
@@ -242,6 +243,10 @@ formatters:
         - go.opentelemetry.io
     golines:
       max-len: 120
+    gofmt:
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
   exclusions:
     generated: lax
     paths:
