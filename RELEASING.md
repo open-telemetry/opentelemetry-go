@@ -4,6 +4,24 @@
 
 Create a `Version Release` issue to track the release process.
 
+## Semantic Convention Generation
+
+New versions of the [OpenTelemetry Semantic Conventions] mean new versions of the `semconv` package need to be generated.
+The `semconv-generate` make target is used for this.
+
+1. Set the `TAG` environment variable to the semantic convention tag you want to generate.
+2. Run the `make semconv-generate ...` target from this repository.
+
+For example,
+
+```sh
+export TAG="v1.30.0" # Change to the release version you are generating.
+make semconv-generate # Uses the exported TAG.
+```
+
+This should create a new sub-package of [`semconv`](./semconv).
+Ensure things look correct before submitting a pull request to include the addition.
+
 ## Breaking changes validation
 
 You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) to ensure that there are no unwanted changes done in the public API.
