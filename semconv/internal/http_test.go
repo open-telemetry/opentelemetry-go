@@ -954,7 +954,7 @@ func getExpectedCodeForHTTPCode(code int, spanKind trace.SpanKind) codes.Code {
 	return codes.Error
 }
 
-func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, format string, args ...interface{}) {
+func assertElementsMatch(t *testing.T, expected, got []attribute.KeyValue, format string, args ...any) {
 	if !assert.ElementsMatchf(t, expected, got, format, args...) {
 		t.Log("expected:", kvStr(expected))
 		t.Log("got:", kvStr(got))

@@ -67,7 +67,7 @@ func (c *Code) UnmarshalJSON(b []byte) error {
 		return errors.New("nil receiver passed to UnmarshalJSON")
 	}
 
-	var x interface{}
+	var x any
 	if err := json.Unmarshal(b, &x); err != nil {
 		return err
 	}
