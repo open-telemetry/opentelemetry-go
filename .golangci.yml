@@ -97,7 +97,6 @@ linters:
         - elseif
         - equalFold
         - emptyStringTest
-        - httpNoBody
         - hugeParam
         - ifElseChain
         - importShadow

@@ -230,7 +230,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 func (d *client) newRequest(body []byte) (request, error) {
 	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath}
-	r, err := http.NewRequest(http.MethodPost, u.String(), nil)
+	r, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return request{Request: r}, err
 	}
