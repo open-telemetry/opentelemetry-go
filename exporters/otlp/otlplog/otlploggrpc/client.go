@@ -290,11 +290,13 @@ func (c *client) recordLogExportedDurationMetric(
 func (c *client) getPort() int {
 	_, p, err := net.SplitHostPort(c.conn.Target())
 	if err != nil {
+		err = fmt.Errorf("OTLP getPort: failed to split host and port from target '%s': %w", c.conn.Target(), err)
 		otel.Handle(err)
 	}
 
 	port, err := strconv.Atoi(p)
 	if err != nil {
+		err = fmt.Errorf("OTLP getPort: failed to convert port string '%s' to integer: %w", p, err)
 		otel.Handle(err)
 	}
 	return port
