@@ -183,8 +183,8 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int)
 
 	var count int32
 	for high-low >= p.maxSize {
-		low = low >> 1
-		high = high >> 1
+		low >>= 1
+		high >>= 1
 		count++
 		if count > expoMaxScale-expoMinScale {
 			return count
@@ -264,7 +264,7 @@ func (b *expoBuckets) downscale(delta int32) {
 	// new Counts: [4, 14, 30, 10]
 
 	if len(b.counts) <= 1 || delta < 1 {
-		b.startBin = b.startBin >> delta
+		b.startBin >>= delta
 		return
 	}
 
@@ -282,7 +282,7 @@ func (b *expoBuckets) downscale(delta int32) {
 
 	lastIdx := (len(b.counts) - 1 + int(offset)) / int(steps)
 	b.counts = b.counts[:lastIdx+1]
-	b.startBin = b.startBin >> delta
+	b.startBin >>= delta
 }
 
 // newExponentialHistogram returns an Aggregator that summarizes a set of
