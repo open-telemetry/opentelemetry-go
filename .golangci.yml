@@ -101,7 +101,6 @@ linters:
         - ptrToRefParam
         - preferDecodeRune
         - rangeValCopy
-        - stringConcatSimplify
         - typeUnparen
         - unnamedResult
         - whyNoLint
