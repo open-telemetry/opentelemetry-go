@@ -199,7 +199,7 @@ func (v Value) asStringSlice() []string {
 
 type unknownValueType struct{}
 
-// AsInterface returns Value's data as interface{}.
+// AsInterface returns Value's data as any.
 func (v Value) AsInterface() any {
 	switch v.Type() {
 	case BOOL:
