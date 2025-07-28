@@ -102,7 +102,6 @@ linters:
         - paramTypeCombine
         - ptrToRefParam
         - preferDecodeRune
-        - preferStringWriter
         - rangeValCopy
         - stringConcatSimplify
         - typeUnparen
