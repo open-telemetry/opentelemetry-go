@@ -225,7 +225,7 @@ func (b *expoBuckets) record(bin int32) {
 			b.counts = append(b.counts, make([]uint64, newLength-len(b.counts))...)
 		}
 
-		copy(b.counts[shift:origLen+int(shift)], b.counts[:])
+		copy(b.counts[shift:origLen+int(shift)], b.counts)
 		b.counts = b.counts[:newLength]
 		for i := 1; i < int(shift); i++ {
 			b.counts[i] = 0

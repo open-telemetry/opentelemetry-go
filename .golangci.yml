@@ -112,7 +112,6 @@ linters:
         - stringConcatSimplify
         - typeUnparen
         - unnamedResult
-        - unslice
         - whyNoLint
       enable-all: true
     godot:
