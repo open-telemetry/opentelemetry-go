@@ -90,7 +90,6 @@ linters:
     gocritic:
       disabled-checks:
         - appendAssign
-        - appendCombine
         - assignOp
         - captLocal
         - commentedOutCode

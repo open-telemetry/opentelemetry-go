@@ -653,32 +653,31 @@ func TestPipelineProduceErrors(t *testing.T) {
 	var shouldReturnError bool   // When true, the third callback returns an error
 	var callbackCounts [3]int
 
-	// Callback 1: cancels the context during execution but continues to populate data
-	pipe.callbacks = append(pipe.callbacks, func(ctx context.Context) error {
-		callbackCounts[0]++
-		for _, m := range pipe.int64Measures[testObsID] {
-			m(ctx, 123, *attribute.EmptySet())
-		}
-		return nil
-	})
-
-	// Callback 2: populates int64 observable data
-	pipe.callbacks = append(pipe.callbacks, func(ctx context.Context) error {
-		callbackCounts[1]++
-		if shouldCancelContext {
-			cancelCtx()
-		}
-		return nil
-	})
-
-	// Callback 3: return an error
-	pipe.callbacks = append(pipe.callbacks, func(ctx context.Context) error {
-		callbackCounts[2]++
-		if shouldReturnError {
-			return fmt.Errorf("test callback error")
-		}
-		return nil
-	})
+	pipe.callbacks = append(pipe.callbacks,
+		// Callback 1: cancels the context during execution but continues to populate data
+		func(ctx context.Context) error {
+			callbackCounts[0]++
+			for _, m := range pipe.int64Measures[testObsID] {
+				m(ctx, 123, *attribute.EmptySet())
+			}
+			return nil
+		},
+		// Callback 2: populates int64 observable data
+		func(ctx context.Context) error {
+			callbackCounts[1]++
+			if shouldCancelContext {
+				cancelCtx()
+			}
+			return nil
+		},
+		// Callback 3: return an error
+		func(ctx context.Context) error {
+			callbackCounts[2]++
+			if shouldReturnError {
+				return fmt.Errorf("test callback error")
+			}
+			return nil
+		})
 
 	assertMetrics := func(rm *metricdata.ResourceMetrics, expectVal int64) {
 		require.Len(t, rm.ScopeMetrics, 1)
