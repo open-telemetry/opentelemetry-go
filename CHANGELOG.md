@@ -48,6 +48,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
 - Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
+- Add experimental self-observability metrics `exporter.log.inflight`, `exporter.log.exported`, and `exporter.operation.duration` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. 
+  Check the `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x` package documentation for more information. (#7084)
 
 ### Changed
 
