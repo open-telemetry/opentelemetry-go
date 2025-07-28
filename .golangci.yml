@@ -94,7 +94,6 @@ linters:
         - captLocal
         - commentedOutCode
         - dupArg
-        - elseif
         - hugeParam
         - importShadow
         - paramTypeCombine

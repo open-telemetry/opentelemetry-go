@@ -134,12 +134,10 @@ func TestOTelSpanContextToOC(t *testing.T) {
 					gotTraceState = strings.Join(gotTraceStateEntries, ",")
 				}
 				assert.Equal(t, expectedTraceState, gotTraceState, "Tracestate should preserve entries")
-			} else {
+			} else if got.Tracestate != nil {
 				// For empty tracestate cases, ensure the field is properly handled
-				if got.Tracestate != nil {
-					entries := got.Tracestate.Entries()
-					assert.Empty(t, entries, "Empty tracestate should result in empty entries")
-				}
+				entries := got.Tracestate.Entries()
+				assert.Empty(t, entries, "Empty tracestate should result in empty entries")
 			}
 		})
 	}
