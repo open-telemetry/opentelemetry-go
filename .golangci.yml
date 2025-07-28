@@ -104,7 +104,6 @@ linters:
         - ptrToRefParam
         - preferDecodeRune
         - preferStringWriter
-        - preferWriteByte
         - rangeValCopy
         - sloppyLen
         - stringConcatSimplify
