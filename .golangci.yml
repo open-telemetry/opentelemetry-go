@@ -168,6 +168,7 @@ linters:
             - fmt.Printf
             - fmt.Println
         - name: unnecessary-stmt
+        - name: use-any
         - name: useless-break
         - name: var-declaration
         - name: var-naming
@@ -175,7 +176,6 @@ linters:
             - ["ID"] # AllowList
             - ["Otel", "Aws", "Gcp"] # DenyList
         - name: waitgroup-by-value
-        - name: use-any
     testifylint:
       enable-all: true
       disable:
