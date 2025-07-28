@@ -105,7 +105,6 @@ linters:
         - preferDecodeRune
         - preferStringWriter
         - rangeValCopy
-        - sloppyLen
         - stringConcatSimplify
         - typeUnparen
         - unnamedResult
