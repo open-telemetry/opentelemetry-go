@@ -91,7 +91,6 @@ linters:
       disabled-checks:
         - appendAssign
         - assignOp
-        - captLocal
         - commentedOutCode
         - dupArg
         - hugeParam
