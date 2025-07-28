@@ -96,7 +96,6 @@ linters:
         - dupArg
         - elseif
         - equalFold
-        - emptyStringTest
         - hugeParam
         - ifElseChain
         - importShadow

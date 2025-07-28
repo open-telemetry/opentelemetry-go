@@ -203,7 +203,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
-		if len(respStr) == 0 {
+		if respStr == "" {
 			respStr = "(empty)"
 		}
 		bodyErr := fmt.Errorf("body: %s", respStr)

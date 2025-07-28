@@ -209,7 +209,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
-		if len(respStr) == 0 {
+		if respStr == "" {
 			respStr = "(empty)"
 		}
 		bodyErr := fmt.Errorf("body: %s", respStr)

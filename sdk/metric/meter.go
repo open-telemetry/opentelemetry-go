@@ -423,7 +423,7 @@ func (m *meter) Float64ObservableGauge(
 }
 
 func validateInstrumentName(name string) error {
-	if len(name) == 0 {
+	if name == "" {
 		return fmt.Errorf("%w: %s: is empty", ErrInstrumentName, name)
 	}
 	if len(name) > 255 {
