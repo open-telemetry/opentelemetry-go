@@ -96,7 +96,6 @@ linters:
         - dupArg
         - elseif
         - hugeParam
-        - ifElseChain
         - importShadow
         - paramTypeCombine
         - ptrToRefParam
