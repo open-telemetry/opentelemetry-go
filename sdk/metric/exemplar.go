@@ -69,6 +69,10 @@ func DefaultExemplarReservoirProviderSelector(agg Aggregation) exemplar.Reservoi
 		//   provided, the default size MAY be the number of possible
 		//   concurrent threads (e.g. number of CPUs) to help reduce
 		//   contention. Otherwise, a default size of 1 SHOULD be used.
+		//
+		// Use runtime.GOMAXPROCS instead of runtime.NumCPU to support
+		// containerized environments that may have less than the total number
+		// of logical CPUs available on the local machine allocated to it.
 		n = runtime.GOMAXPROCS(0)
 		if n < 1 {
 			// Should never be the case, but be defensive.
