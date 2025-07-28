@@ -514,7 +514,7 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 }
 
 type indefiniteExporter struct {
-	stop chan (struct{})
+	stop chan struct{}
 }
 
 func newIndefiniteExporter(t *testing.T) indefiniteExporter {

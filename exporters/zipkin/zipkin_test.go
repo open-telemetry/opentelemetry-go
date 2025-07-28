@@ -171,7 +171,7 @@ type logStore struct {
 }
 
 func (s *logStore) Write(p []byte) (n int, err error) {
-	msg := (string)(p)
+	msg := string(p)
 	if s.T != nil {
 		s.T.Logf("%s", msg)
 	}

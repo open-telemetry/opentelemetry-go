@@ -150,11 +150,11 @@ func toZipkinAnnotations(events []tracesdk.Event) []zkmodel.Annotation {
 func attributesToJSONMapString(attributes []attribute.KeyValue) string {
 	m := make(map[string]interface{}, len(attributes))
 	for _, a := range attributes {
-		m[(string)(a.Key)] = a.Value.AsInterface()
+		m[string(a.Key)] = a.Value.AsInterface()
 	}
 	// if an error happens, the result will be an empty string
 	jsonBytes, _ := json.Marshal(m)
-	return (string)(jsonBytes)
+	return string(jsonBytes)
 }
 
 // attributeToStringPair serializes each attribute to a string pair.
@@ -163,18 +163,18 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	// For slice attributes, serialize as JSON list string.
 	case attribute.BOOLSLICE:
 		data, _ := json.Marshal(kv.Value.AsBoolSlice())
-		return (string)(kv.Key), (string)(data)
+		return string(kv.Key), string(data)
 	case attribute.INT64SLICE:
 		data, _ := json.Marshal(kv.Value.AsInt64Slice())
-		return (string)(kv.Key), (string)(data)
+		return string(kv.Key), string(data)
 	case attribute.FLOAT64SLICE:
 		data, _ := json.Marshal(kv.Value.AsFloat64Slice())
-		return (string)(kv.Key), (string)(data)
+		return string(kv.Key), string(data)
 	case attribute.STRINGSLICE:
 		data, _ := json.Marshal(kv.Value.AsStringSlice())
-		return (string)(kv.Key), (string)(data)
+		return string(kv.Key), string(data)
 	default:
-		return (string)(kv.Key), kv.Value.Emit()
+		return string(kv.Key), kv.Value.Emit()
 	}
 }
 

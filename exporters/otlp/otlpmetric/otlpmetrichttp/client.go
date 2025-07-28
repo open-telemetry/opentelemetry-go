@@ -235,7 +235,7 @@ func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
 
 	switch c.compression {
 	case NoCompression:
-		r.ContentLength = (int64)(len(body))
+		r.ContentLength = int64(len(body))
 		req.bodyReader = bodyReader(body)
 	case GzipCompression:
 		// Ensure the content length is not used.

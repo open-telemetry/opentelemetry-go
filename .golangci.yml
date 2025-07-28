@@ -100,7 +100,6 @@ linters:
         - ptrToRefParam
         - preferDecodeRune
         - rangeValCopy
-        - typeUnparen
         - unnamedResult
         - whyNoLint
       enable-all: true

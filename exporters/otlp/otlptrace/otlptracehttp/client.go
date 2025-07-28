@@ -246,7 +246,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 	req := request{Request: r}
 	switch Compression(d.cfg.Compression) {
 	case NoCompression:
-		r.ContentLength = (int64)(len(body))
+		r.ContentLength = int64(len(body))
 		req.bodyReader = bodyReader(body)
 	case GzipCompression:
 		// Ensure the content length is not used.
