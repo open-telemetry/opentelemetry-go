@@ -84,7 +84,6 @@ func TestParsePlistFile(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result, err := resource.ParsePlistFile(tc.Plist)
 
@@ -154,7 +153,6 @@ func TestBuildOSRelease(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result := resource.BuildOSRelease(tc.Properties)
 			require.Equal(t, tc.OSRelease, result)

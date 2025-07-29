@@ -70,7 +70,6 @@ func TestHostIDReaderBSD(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderBSD{
 				readFile:    tc.fileReader,
@@ -118,7 +117,6 @@ func TestHostIDReaderLinux(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderLinux{
 				readFile: tc.fileReader,

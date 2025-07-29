@@ -92,7 +92,6 @@ func TestGetFirstAvailableFile(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.Name, func(t *testing.T) {
 			file, err := resource.GetFirstAvailableFile(tc.Candidates)
 
