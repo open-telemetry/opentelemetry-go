@@ -6,11 +6,11 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 )
 
@@ -26,6 +26,40 @@ const (
 	envarExpTimeout      = "OTEL_BLRP_EXPORT_TIMEOUT"
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
+
+// Compile-time check BatchProcessor implements Processor.
+var _ Processor = (*BatchProcessor)(nil)
+
+type recordsBufferPool struct {
+	pool sync.Pool
+}
+
+func newRecordsBufferPool(bufferSize int) *recordsBufferPool {
+	return &recordsBufferPool{
+		pool: sync.Pool{
+			New: func() any {
+				slice := make([]Record, bufferSize)
+				return &slice
+			},
+		},
+	}
+}
+
+func (p *recordsBufferPool) Get() *[]Record {
+	return p.pool.Get().(*[]Record)
+}
+
+func (p *recordsBufferPool) Put(recordsBuffer *[]Record) {
+	p.pool.Put(recordsBuffer)
+}
+
+type recordsBatch struct {
+	ctx     context.Context
+	buf     *[]Record
+	records int
+
+	respCh chan<- error
+}
 
 // Compile-time check BatchProcessor implements Processor.
 var _ Processor = (*BatchProcessor)(nil)
@@ -71,11 +105,10 @@ type BatchProcessor struct {
 	// cannot be flushed to the export buffer, the records will remain in the
 	// queue.
 
-	// exporter is the bufferedExporter all batches are exported with.
-	exporter *bufferExporter
+	exporter Exporter
 
-	// q is the active queue of records that have not yet been exported.
-	q *queue
+	// queue is the active queue of records that have not yet been exported.
+	queue *queue
 	// batchSize is the minimum number of records needed before an export is
 	// triggered (unless the interval expires).
 	batchSize int
@@ -98,6 +131,13 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
+	recordsBatches       chan recordsBatch
+	recordsBatchesClosed bool
+	recordsBatchesMu     sync.Mutex
+	recordsBatchesDone   chan struct{}
+
+	recordsBufPool *recordsBufferPool
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -117,17 +157,21 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
 	// Use a chunkExporter to ensure ForceFlush and Shutdown calls are batched
 	// appropriately on export.
-	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
+	// exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
 	b := &BatchProcessor{
-		exporter: newBufferExporter(exporter, cfg.expBufferSize.Value),
+		exporter: exporter,
 
-		q:           newQueue(cfg.maxQSize.Value),
+		queue:       newQueue(cfg.maxQSize.Value),
 		batchSize:   cfg.expMaxBatchSize.Value,
 		pollTrigger: make(chan struct{}, 1),
 		pollKill:    make(chan struct{}),
+
+		recordsBatches: make(chan recordsBatch, cfg.expBufferSize.Value),
+		recordsBufPool: newRecordsBufferPool(cfg.expMaxBatchSize.Value),
 	}
 	b.pollDone = b.poll(cfg.expInterval.Value)
+	b.recordsBatchesDone = b.processRecordsBatches()
 	return b
 }
 
@@ -137,8 +181,6 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
 
 	ticker := time.NewTicker(interval)
-	// TODO: investigate using a sync.Pool instead of cloning.
-	buf := make([]Record, b.batchSize)
 	go func() {
 		defer close(done)
 		defer ticker.Stop()
@@ -152,25 +194,12 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				return
 			}
 
-			if d := b.q.Dropped(); d > 0 {
+			if d := b.queue.Dropped(); d > 0 {
 				global.Warn("dropped log records", "dropped", d)
 			}
 
-			var qLen int
-			// Don't copy data from queue unless exporter can accept more, it is very expensive.
-			if b.exporter.Ready() {
-				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
-					ok := b.exporter.EnqueueExport(r)
-					if ok {
-						buf = slices.Clone(buf)
-					}
-					return ok
-				})
-			} else {
-				qLen = b.q.Len()
-			}
-
-			if qLen >= b.batchSize {
+			ok, recordsInQueue := b.tryDequeue(nil)
+			if !ok || recordsInQueue >= b.batchSize {
 				// There is another full batch ready. Immediately trigger
 				// another export attempt.
 				select {
@@ -181,17 +210,82 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			}
 		}
 	}()
+
 	return done
+}
+
+func (b *BatchProcessor) processRecordsBatches() (done chan struct{}) {
+	done = make(chan struct{})
+
+	go func() {
+		defer close(done)
+		for chunk := range b.recordsBatches {
+			err := b.exporter.Export(chunk.ctx, (*chunk.buf)[:chunk.records])
+
+			b.recordsBufPool.Put(chunk.buf)
+
+			select {
+			case chunk.respCh <- err:
+			default:
+				// e.respCh is nil or busy, default to otel.Handler.
+				if err != nil {
+					otel.Handle(err)
+				}
+			}
+		}
+	}()
+
+	return done
+}
+
+// Tries to write records batch from the queue to records batches channel.
+// If success, ok is true and queueLen is number of records remaining in the records queue.
+// If failure, ok is false and queueLen value does not have any meaning.
+func (b *BatchProcessor) tryDequeue(respCh chan<- error) (ok bool, queueLen int) {
+	b.recordsBatchesMu.Lock()
+	defer b.recordsBatchesMu.Unlock()
+
+	if b.recordsBatchesClosed {
+		if respCh != nil {
+			respCh <- nil
+		}
+		return true, 0
+	}
+
+	if len(b.recordsBatches) == cap(b.recordsBatches) {
+		if respCh != nil {
+			respCh <- nil
+		}
+		return false, 0
+	}
+
+	buf := b.recordsBufPool.Get()
+
+	queueLen, n := b.queue.Dequeue(*buf)
+	if n == 0 {
+		b.recordsBufPool.Put(buf)
+		if respCh != nil {
+			respCh <- nil
+		}
+		return true, 0
+	}
+
+	data := recordsBatch{ctx: context.Background(), respCh: respCh, buf: buf, records: n}
+
+	// push in sync as available space is guaranteed by len check and mutex
+	b.recordsBatches <- data
+
+	return true, queueLen
 }
 
 // OnEmit batches provided log record.
 func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
-	if b.stopped.Load() || b.q == nil {
+	if b.stopped.Load() || b.queue == nil {
 		return nil
 	}
 	// The record is cloned so that changes done by subsequent processors
 	// are not going to lead to a data race.
-	if n := b.q.Enqueue(r.Clone()); n >= b.batchSize {
+	if n := b.queue.Enqueue(r.Clone()); n >= b.batchSize {
 		select {
 		case b.pollTrigger <- struct{}{}:
 		default:
@@ -205,7 +299,7 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
-	if b.stopped.Swap(true) || b.q == nil {
+	if b.stopped.Swap(true) || b.queue == nil {
 		return nil
 	}
 
@@ -215,12 +309,27 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	case <-b.pollDone:
 	case <-ctx.Done():
 		// Out of time.
+		return errors.Join(ctx.Err(), b.shutdownExporter(ctx))
+	}
+
+	err := b.flush(ctx)
+
+	return errors.Join(err, b.shutdownExporter(ctx))
+}
+
+func (b *BatchProcessor) shutdownExporter(ctx context.Context) error {
+	b.recordsBatchesMu.Lock()
+	defer b.recordsBatchesMu.Unlock()
+	b.recordsBatchesClosed = true
+	close(b.recordsBatches)
+	select {
+	case <-b.recordsBatchesDone:
+	case <-ctx.Done():
+		// Out of time.
 		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
 	}
 
-	// Flush remaining queued before exporter shutdown.
-	err := b.exporter.Export(ctx, b.q.Flush())
-	return errors.Join(err, b.exporter.Shutdown(ctx))
+	return b.exporter.Shutdown(ctx)
 }
 
 var errPartialFlush = errors.New("partial flush: export buffer full")
@@ -232,130 +341,40 @@ var ctxErr = func(ctx context.Context) error {
 
 // ForceFlush flushes queued log records and flushes the decorated exporter.
 func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
-	if b.stopped.Load() || b.q == nil {
+	if b.stopped.Load() || b.queue == nil {
 		return nil
 	}
 
-	buf := make([]Record, b.q.cap)
-	notFlushed := func() bool {
-		var flushed bool
-		_ = b.q.TryDequeue(buf, func(r []Record) bool {
-			flushed = b.exporter.EnqueueExport(r)
-			return flushed
-		})
-		return !flushed
-	}
-	var err error
-	// For as long as ctx allows, try to make a single flush of the queue.
-	for notFlushed() {
-		// Use ctxErr instead of calling ctx.Err directly so we can test
-		// the partial error return.
-		if e := ctxErr(ctx); e != nil {
-			err = errors.Join(e, errPartialFlush)
-			break
-		}
-	}
+	err := b.flush(ctx)
+
 	return errors.Join(err, b.exporter.ForceFlush(ctx))
 }
 
-// queue holds a queue of logging records.
-//
-// When the queue becomes full, the oldest records in the queue are
-// overwritten.
-type queue struct {
-	sync.Mutex
+func (b *BatchProcessor) flush(ctx context.Context) error {
+	var err error
+	for {
+		respCh := make(chan error, 1)
+		ok, queueLen := b.tryDequeue(respCh)
 
-	dropped     atomic.Uint64
-	cap, len    int
-	read, write *ring
-}
+		select {
+		case respErr := <-respCh:
+			if respErr != nil {
+				err = errors.Join(respErr, errPartialFlush)
+			}
+		case <-ctx.Done():
+			err = errors.Join(ctxErr(ctx), errPartialFlush)
+		}
 
-func newQueue(size int) *queue {
-	r := newRing(size)
-	return &queue{
-		cap:   size,
-		read:  r,
-		write: r,
-	}
-}
+		if err != nil {
+			break
+		}
 
-func (q *queue) Len() int {
-	q.Lock()
-	defer q.Unlock()
-
-	return q.len
-}
-
-// Dropped returns the number of Records dropped during enqueueing since the
-// last time Dropped was called.
-func (q *queue) Dropped() uint64 {
-	return q.dropped.Swap(0)
-}
-
-// Enqueue adds r to the queue. The queue size, including the addition of r, is
-// returned.
-//
-// If enqueueing r will exceed the capacity of q, the oldest Record held in q
-// will be dropped and r retained.
-func (q *queue) Enqueue(r Record) int {
-	q.Lock()
-	defer q.Unlock()
-
-	q.write.Value = r
-	q.write = q.write.Next()
-
-	q.len++
-	if q.len > q.cap {
-		// Overflow. Advance read to be the new "oldest".
-		q.len = q.cap
-		q.read = q.read.Next()
-		q.dropped.Add(1)
-	}
-	return q.len
-}
-
-// TryDequeue attempts to dequeue up to len(buf) Records. The available Records
-// will be assigned into buf and passed to write. If write fails, returning
-// false, the Records will not be removed from the queue. If write succeeds,
-// returning true, the dequeued Records are removed from the queue. The number
-// of Records remaining in the queue are returned.
-//
-// When write is called the lock of q is held. The write function must not call
-// other methods of this q that acquire the lock.
-func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
-	q.Lock()
-	defer q.Unlock()
-
-	origRead := q.read
-
-	n := min(len(buf), q.len)
-	for i := 0; i < n; i++ {
-		buf[i] = q.read.Value
-		q.read = q.read.Next()
+		if ok && queueLen == 0 {
+			break
+		}
 	}
 
-	if write(buf[:n]) {
-		q.len -= n
-	} else {
-		q.read = origRead
-	}
-	return q.len
-}
-
-// Flush returns all the Records held in the queue and resets it to be
-// empty.
-func (q *queue) Flush() []Record {
-	q.Lock()
-	defer q.Unlock()
-
-	out := make([]Record, q.len)
-	for i := range out {
-		out[i] = q.read.Value
-		q.read = q.read.Next()
-	}
-	q.len = 0
-
-	return out
+	return err
 }
 
 type batchConfig struct {
