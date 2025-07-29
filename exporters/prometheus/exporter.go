@@ -37,7 +37,7 @@ const (
 )
 
 var metricsPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &metricdata.ResourceMetrics{}
 	},
 }
@@ -49,7 +49,7 @@ type Exporter struct {
 }
 
 // MarshalLog returns logging data about the Exporter.
-func (e *Exporter) MarshalLog() interface{} {
+func (e *Exporter) MarshalLog() any {
 	const t = "Prometheus exporter"
 
 	if r, ok := e.Reader.(*metric.ManualReader); ok {

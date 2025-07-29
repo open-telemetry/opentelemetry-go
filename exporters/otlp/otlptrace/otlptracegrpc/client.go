@@ -289,7 +289,7 @@ func throttleDelay(s *status.Status) (bool, time.Duration) {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Client.
-func (c *client) MarshalLog() interface{} {
+func (c *client) MarshalLog() any {
 	return struct {
 		Type     string
 		Endpoint string
