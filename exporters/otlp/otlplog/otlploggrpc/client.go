@@ -50,7 +50,7 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
-	port                      int
+	addressAttrs              []attribute.KeyValue
 	componentName             string
 	selfObservabilityEnabled  bool
 	logInflightMetric         otelconv.SDKExporterLogInflight
@@ -100,7 +100,7 @@ func (c *client) initSelfObservability() {
 
 	counter := grpcExporterCounter.Add(1)
 	c.selfObservabilityEnabled = true
-	c.port = c.getPort()
+	c.addressAttrs = c.serverAddrAttrs()
 	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, counter)
 
 	mp := otel.GetMeterProvider()
@@ -241,12 +241,10 @@ func (c *client) recordLogInflightMetric(ctx context.Context, extraAttrs ...attr
 	attrs := []attribute.KeyValue{
 		c.logInflightMetric.AttrComponentName(c.componentName),
 		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-		c.logInflightMetric.AttrServerAddress(c.conn.Target()),
-		c.logInflightMetric.AttrServerPort(c.port),
 	}
 
 	attrs = append(attrs, extraAttrs...)
-
+	attrs = append(attrs, c.addressAttrs...)
 	c.logInflightMetric.Add(ctx, 1, attrs...)
 }
 
@@ -258,11 +256,10 @@ func (c *client) recordLogExportedMetric(ctx context.Context, extraAttrs ...attr
 	attrs := []attribute.KeyValue{
 		c.logExportedMetric.AttrComponentName(c.componentName),
 		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-		c.logExportedMetric.AttrServerAddress(c.conn.Target()),
-		c.logExportedMetric.AttrServerPort(c.port),
 	}
 
 	attrs = append(attrs, extraAttrs...)
+	attrs = append(attrs, c.addressAttrs...)
 	c.logExportedMetric.Add(ctx, 1, attrs...)
 }
 
@@ -278,28 +275,28 @@ func (c *client) recordLogExportedDurationMetric(
 	attrs := []attribute.KeyValue{
 		c.logExportedDurationMetric.AttrComponentName(c.componentName),
 		c.logExportedDurationMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-		c.logExportedDurationMetric.AttrServerAddress(c.conn.Target()),
-		c.logExportedMetric.AttrServerPort(c.port),
 	}
 
 	attrs = append(attrs, extraAttrs...)
+	attrs = append(attrs, c.addressAttrs...)
 
 	c.logExportedDurationMetric.Record(ctx, duration, attrs...)
 }
 
-func (c *client) getPort() int {
-	_, p, err := net.SplitHostPort(c.conn.Target())
+func (c *client) serverAddrAttrs() []attribute.KeyValue {
+	host, pStr, err := net.SplitHostPort(c.conn.Target())
 	if err != nil {
-		err = fmt.Errorf("OTLP getPort: failed to split host and port from target '%s': %w", c.conn.Target(), err)
-		otel.Handle(err)
+		return []attribute.KeyValue{semconv.ServerAddress(c.conn.Target())}
 	}
 
-	port, err := strconv.Atoi(p)
+	port, err := strconv.Atoi(pStr)
 	if err != nil {
-		err = fmt.Errorf("OTLP getPort: failed to convert port string '%s' to integer: %w", p, err)
-		otel.Handle(err)
+		return []attribute.KeyValue{semconv.ServerAddress(host)}
 	}
-	return port
+	return []attribute.KeyValue{
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
+	}
 }
 
 // Shutdown shuts down the client, freeing all resources.

@@ -640,8 +640,8 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.port),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Value: 1,
 									},
@@ -662,8 +662,8 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogExported{}.AttrServerPort(client.port),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Value: 1,
 									},
@@ -683,10 +683,8 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
-												client.conn.Target(),
-											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.port),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Count: 1,
 									},
@@ -709,7 +707,7 @@ func TestSelfObservability(t *testing.T) {
 			},
 		},
 		{
-			name: "PartialSuccess",
+			name: "partial success",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				const n, msg = 2, "bad data"
 				rCh := make(chan exportResult, 1)
@@ -745,9 +743,9 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.port),
 											semconv.ErrorType(wantErr),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Value: 1,
 									},
@@ -768,9 +766,9 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogExported{}.AttrServerPort(client.port),
 											semconv.ErrorType(wantErr),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Value: 1,
 									},
@@ -790,16 +788,14 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
-												client.conn.Target(),
-											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.port),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												otelconv.RPCGRPCStatusCodeAttr(
 													status.Code(wantErr),
 												),
 											),
 											semconv.ErrorType(wantErr),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Count: 1,
 									},
@@ -863,8 +859,8 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterLogInflight{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogInflight{}.AttrServerPort(client.port),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 											wantErrTypeAttr,
 										),
 										Value: 1,
@@ -886,8 +882,8 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterLogExported{}.AttrServerAddress(client.conn.Target()),
-											otelconv.SDKExporterLogExported{}.AttrServerPort(client.port),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 											wantErrTypeAttr,
 										),
 										Value: 1,
@@ -908,16 +904,14 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerAddress(
-												client.conn.Target(),
-											),
-											otelconv.SDKExporterOperationDuration{}.AttrServerPort(client.port),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												wantGRPCStatusCodeAttr,
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrErrorType(
 												otelconv.ErrorTypeAttr(wantErr.Error()),
 											),
+											client.addressAttrs[0],
+											client.addressAttrs[1],
 										),
 										Count: 1,
 									},
