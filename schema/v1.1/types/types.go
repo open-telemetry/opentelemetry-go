@@ -13,4 +13,4 @@ type TelemetryVersion types10.TelemetryVersion
 type AttributeName string
 
 // AttributeValue is an attribute value.
-type AttributeValue interface{}
+type AttributeValue any

@@ -563,7 +563,7 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	s.addEvent(semconv.ExceptionEventName, opts...)
 }
 
-func typeStr(i interface{}) string {
+func typeStr(i any) string {
 	t := reflect.TypeOf(i)
 	if t.PkgPath() == "" && t.Name() == "" {
 		// Likely a builtin type.

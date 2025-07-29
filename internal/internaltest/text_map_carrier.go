@@ -4,6 +4,8 @@
 package internaltest // import "go.opentelemetry.io/otel/internal/internaltest"
 
 import (
+	"maps"
+	"slices"
 	"sync"
 	"testing"
 
@@ -25,9 +27,7 @@ var _ propagation.TextMapCarrier = (*TextMapCarrier)(nil)
 // NewTextMapCarrier returns a new *TextMapCarrier populated with data.
 func NewTextMapCarrier(data map[string]string) *TextMapCarrier {
 	copied := make(map[string]string, len(data))
-	for k, v := range data {
-		copied[k] = v
-	}
+	maps.Copy(copied, data)
 	return &TextMapCarrier{data: copied}
 }
 
@@ -55,10 +55,8 @@ func (c *TextMapCarrier) Get(key string) string {
 func (c *TextMapCarrier) GotKey(t *testing.T, key string) bool {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	for _, k := range c.gets {
-		if k == key {
-			return true
-		}
+	if slices.Contains(c.gets, key) {
+		return true
 	}
 	t.Errorf("TextMapCarrier.Get(%q) has not been called", key)
 	return false
@@ -117,9 +115,7 @@ func (c *TextMapCarrier) SetN(t *testing.T, n int) bool {
 // Reset zeros out the recording state and sets the carried values to data.
 func (c *TextMapCarrier) Reset(data map[string]string) {
 	copied := make(map[string]string, len(data))
-	for k, v := range data {
-		copied[k] = v
-	}
+	maps.Copy(copied, data)
 
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
