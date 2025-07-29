@@ -70,7 +70,7 @@ func DefaultExemplarReservoirProviderSelector(agg Aggregation) exemplar.Reservoi
 		// Use runtime.GOMAXPROCS instead of runtime.NumCPU to support
 		// containerized environments that may have less than the total number
 		// of logical CPUs available on the local machine allocated to it.
-    n = max(runtime.GOMAXPROCS(0), 1)
+		n = max(runtime.GOMAXPROCS(0), 1)
 	}
 
 	return exemplar.FixedSizeReservoirProvider(n)
