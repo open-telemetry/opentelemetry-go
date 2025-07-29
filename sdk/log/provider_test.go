@@ -115,12 +115,14 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				WithProcessor(p1),
 				WithAttributeCountLimit(attrCntLim),
 				WithAttributeValueLengthLimit(attrValLenLim),
+				WithAllowKeyDuplication(),
 			},
 			want: &LoggerProvider{
 				resource:                  res,
 				processors:                []Processor{p0, p1},
 				attributeCountLimit:       attrCntLim,
 				attributeValueLengthLimit: attrValLenLim,
+				allowDupKeys:              true,
 			},
 		},
 		{
@@ -237,7 +239,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := newProviderConfig(tc.options).resource
 			if diff := cmp.Diff(got, tc.want); diff != "" {
@@ -256,7 +257,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
 	const name = "testLogger"
 	ctx := context.Background()
-	for i := 0; i < goRoutineN; i++ {
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 
@@ -274,7 +275,7 @@ type logSink struct {
 
 	level         int
 	msg           string
-	keysAndValues []interface{}
+	keysAndValues []any
 }
 
 func (l *logSink) Enabled(int) bool { return true }

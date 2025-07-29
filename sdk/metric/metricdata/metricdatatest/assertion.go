@@ -121,10 +121,10 @@ func AssertEqual[T Datatypes](t TestingT, expected, actual T, opts ...Option) bo
 	cfg := newConfig(opts)
 
 	// Generic types cannot be type asserted. Use an interface instead.
-	aIface := interface{}(actual)
+	aIface := any(actual)
 
 	var r []string
-	switch e := interface{}(expected).(type) {
+	switch e := any(expected).(type) {
 	case metricdata.Exemplar[int64]:
 		r = equalExemplars(e, aIface.(metricdata.Exemplar[int64]), cfg)
 	case metricdata.Exemplar[float64]:
@@ -206,7 +206,7 @@ func AssertHasAttributes[T Datatypes](t TestingT, actual T, attrs ...attribute.K
 
 	var reasons []string
 
-	switch e := interface{}(actual).(type) {
+	switch e := any(actual).(type) {
 	case metricdata.Exemplar[int64]:
 		reasons = hasAttributesExemplars(e, attrs...)
 	case metricdata.Exemplar[float64]:

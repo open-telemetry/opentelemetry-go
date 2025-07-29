@@ -22,7 +22,7 @@ func benchmarkCollect(b *testing.B, n int) {
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 	meter := provider.Meter("testmeter")
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		counter, err := meter.Float64Counter(fmt.Sprintf("foo_%d", i))
 		require.NoError(b, err)
 		counter.Add(ctx, float64(i))

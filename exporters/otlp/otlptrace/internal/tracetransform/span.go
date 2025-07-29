@@ -154,7 +154,6 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 	for _, otLink := range links {
 		// This redefinition is necessary to prevent otLink.*ID[:] copies
 		// being reused -- in short we need a new otLink per iteration.
-		otLink := otLink
 
 		tid := otLink.SpanContext.TraceID()
 		sid := otLink.SpanContext.SpanID()
@@ -189,7 +188,7 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 
 	events := make([]*tracepb.Span_Event, len(es))
 	// Transform message events
-	for i := 0; i < len(es); i++ {
+	for i := range es {
 		events[i] = &tracepb.Span_Event{
 			Name:                   es[i].Name,
 			TimeUnixNano:           uint64(max(0, es[i].Time.UnixNano())), // nolint:gosec // Overflow checked.

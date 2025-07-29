@@ -173,7 +173,7 @@ func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	// Invoke Start numerous times, should return errAlreadyStarted
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if err := exp.Start(ctx); err == nil || !strings.Contains(err.Error(), "already started") {
 			t.Fatalf("#%d unexpected Start error: %v", i, err)
 		}
@@ -183,7 +183,7 @@ func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 		t.Fatalf("failed to Shutdown the exporter: %v", err)
 	}
 	// Invoke Shutdown numerous times
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if err := exp.Shutdown(ctx); err != nil {
 			t.Fatalf(`#%d got error (%v) expected none`, i, err)
 		}

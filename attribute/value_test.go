@@ -18,7 +18,7 @@ func TestValue(t *testing.T) {
 		name      string
 		value     attribute.Value
 		wantType  attribute.Type
-		wantValue interface{}
+		wantValue any
 	}{
 		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",

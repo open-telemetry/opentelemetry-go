@@ -497,7 +497,7 @@ func equalQuantileValue(a, b metricdata.QuantileValue, _ config) (reasons []stri
 	return reasons
 }
 
-func notEqualStr(prefix string, expected, actual interface{}) string {
+func notEqualStr(prefix string, expected, actual any) string {
 	return fmt.Sprintf("%s not equal:\nexpected: %v\nactual: %v", prefix, expected, actual)
 }
 
@@ -591,9 +591,9 @@ func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) 
 
 func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
 	visited := make([]bool, len(b))
-	for i := 0; i < len(a); i++ {
+	for i := range a {
 		found := false
-		for j := 0; j < len(b); j++ {
+		for j := range b {
 			if visited[j] {
 				continue
 			}
@@ -608,7 +608,7 @@ func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
 		}
 	}
 
-	for j := 0; j < len(b); j++ {
+	for j := range b {
 		if visited[j] {
 			continue
 		}

@@ -78,7 +78,7 @@ func DefaultEncoder() Encoder {
 	defaultEncoderOnce.Do(func() {
 		defaultEncoderInstance = &defaultAttrEncoder{
 			pool: sync.Pool{
-				New: func() interface{} {
+				New: func() any {
 					return &bytes.Buffer{}
 				},
 			},
@@ -128,8 +128,8 @@ func copyAndEscape(buf *bytes.Buffer, val string) {
 	}
 }
 
-// Valid returns true if this encoder ID was allocated by
-// `NewEncoderID`.  Invalid encoder IDs will not be cached.
+// Valid reports whether this encoder ID was allocated by
+// [NewEncoderID]. Invalid encoder IDs will not be cached.
 func (id EncoderID) Valid() bool {
 	return id.value != 0
 }

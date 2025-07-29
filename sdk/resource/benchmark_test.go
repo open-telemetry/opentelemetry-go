@@ -18,7 +18,7 @@ func makeAttrs(n int) (_, _ *resource.Resource) {
 	used := map[string]bool{}
 	l1 := make([]attribute.KeyValue, n)
 	l2 := make([]attribute.KeyValue, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		var k string
 		for {
 			k = fmt.Sprint("k", rand.IntN(1000000000))

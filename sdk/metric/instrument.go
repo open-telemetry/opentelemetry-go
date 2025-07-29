@@ -75,7 +75,7 @@ type Instrument struct {
 	nonComparable // nolint: unused
 }
 
-// IsEmpty returns if all Instrument fields are their zero-value.
+// IsEmpty reports whether all Instrument fields are their zero-value.
 func (i Instrument) IsEmpty() bool {
 	return i.Name == "" &&
 		i.Description == "" &&
