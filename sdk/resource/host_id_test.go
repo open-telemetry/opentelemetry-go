@@ -70,7 +70,6 @@ func TestHostIDReaderBSD(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderBSD{
@@ -119,7 +118,6 @@ func TestHostIDReaderLinux(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderLinux{
@@ -198,7 +196,6 @@ func TestHostIDReaderDarwin(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderDarwin{
 				execCommand: tc.commandExecutor,

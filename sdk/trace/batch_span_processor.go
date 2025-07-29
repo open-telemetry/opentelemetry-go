@@ -89,11 +89,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	maxExportBatchSize := env.BatchSpanProcessorMaxExportBatchSize(DefaultMaxExportBatchSize)
 
 	if maxExportBatchSize > maxQueueSize {
-		if DefaultMaxExportBatchSize > maxQueueSize {
-			maxExportBatchSize = maxQueueSize
-		} else {
-			maxExportBatchSize = DefaultMaxExportBatchSize
-		}
+		maxExportBatchSize = min(DefaultMaxExportBatchSize, maxQueueSize)
 	}
 
 	o := BatchSpanProcessorOptions{

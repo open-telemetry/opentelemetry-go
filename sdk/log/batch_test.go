@@ -207,7 +207,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Nanosecond),
 			WithExportTimeout(time.Hour),
 		)
-		for i := 0; i < size; i++ {
+		for range size {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 		var got []Record
@@ -230,7 +230,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		for i := 0; i < 10*batch; i++ {
+		for range 10 * batch {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 		assert.Eventually(t, func() bool {
@@ -253,7 +253,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
-		for i := 0; i < 2*batch; i++ {
+		for range 2 * batch {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 
@@ -293,7 +293,7 @@ func TestBatchProcessor(t *testing.T) {
 			b := NewBatchProcessor(e)
 
 			const shutdowns = 3
-			for i := 0; i < shutdowns; i++ {
+			for range shutdowns {
 				assert.NoError(t, b.Shutdown(ctx))
 			}
 			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
@@ -382,7 +382,7 @@ func TestBatchProcessor(t *testing.T) {
 			)
 
 			// Enqueue 10 x "batch size" amount of records.
-			for i := 0; i < 10*batch; i++ {
+			for range 10 * batch {
 				require.NoError(t, b.OnEmit(ctx, new(Record)))
 			}
 			assert.Eventually(t, func() bool {
@@ -490,7 +490,7 @@ func TestBatchProcessor(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
-		for i := 0; i < goRoutines-1; i++ {
+		for range goRoutines - 1 {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -582,7 +582,7 @@ func TestQueue(t *testing.T) {
 	t.Run("TryFlush", func(t *testing.T) {
 		const size = 3
 		q := newQueue(size)
-		for i := 0; i < size-1; i++ {
+		for range size - 1 {
 			q.write.Value = r
 			q.write = q.write.Next()
 			q.len++
@@ -627,7 +627,7 @@ func TestQueue(t *testing.T) {
 		wg.Add(goRoutines)
 
 		b := newQueue(goRoutines)
-		for i := 0; i < goRoutines; i++ {
+		for range goRoutines {
 			go func() {
 				defer wg.Done()
 				b.Enqueue(Record{})

@@ -180,14 +180,14 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 	)
 	idg := defaultIDGenerator()
 
-	for i := 0; i < numSamplers; i++ {
+	for range numSamplers {
 		ratioLo, ratioHi := rand.Float64(), rand.Float64()
 		if ratioHi < ratioLo {
 			ratioLo, ratioHi = ratioHi, ratioLo
 		}
 		samplerHi := TraceIDRatioBased(ratioHi)
 		samplerLo := TraceIDRatioBased(ratioLo)
-		for j := 0; j < numTraces; j++ {
+		for range numTraces {
 			traceID, _ := idg.NewIDs(context.Background())
 
 			params := SamplingParameters{TraceID: traceID}

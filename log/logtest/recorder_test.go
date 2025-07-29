@@ -157,7 +157,7 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 
 	r := &Recorder{}
 
-	for i := 0; i < goRoutineN; i++ {
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 

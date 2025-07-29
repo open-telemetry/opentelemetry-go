@@ -373,7 +373,7 @@ func TestLogDropAttrs(t *testing.T) {
 
 func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 	var attrs []attribute.KeyValue
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		attr := attribute.String(fmt.Sprintf("hello.attrib%d", i), fmt.Sprintf("goodbye.attrib%d", i))
 		attrs = append(attrs, attr)
 	}

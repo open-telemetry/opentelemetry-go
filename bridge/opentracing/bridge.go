@@ -6,6 +6,7 @@ package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -400,9 +401,7 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) i
 	// need to return a copy to ensure this.
 
 	merged := make(iBaggage.List, len(list))
-	for k, v := range list {
-		merged[k] = v
-	}
+	maps.Copy(merged, list)
 
 	for k, v := range items {
 		// Overwrite according to OpenTelemetry specification.

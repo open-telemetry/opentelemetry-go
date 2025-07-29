@@ -28,7 +28,7 @@ func TestNewInMemoryExporter(t *testing.T) {
 	assert.Empty(t, imsb.GetSpans())
 
 	input := make(SpanStubs, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		input[i] = SpanStub{Name: fmt.Sprintf("span %d", i)}
 	}
 	require.NoError(t, imsb.ExportSpans(context.Background(), input.Snapshots()))

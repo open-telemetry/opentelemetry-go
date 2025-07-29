@@ -57,7 +57,7 @@ func assertSum[N int64 | float64](
 		t.Helper()
 		requireN[N](t, n, meas, comps, err)
 
-		for m := 0; m < n; m++ {
+		for m := range n {
 			t.Logf("input/output number: %d", m)
 			in, out := meas[m], comps[m]
 			in(context.Background(), 1, *attribute.EmptySet())

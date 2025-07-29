@@ -2530,7 +2530,7 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 			}()
 
 			m := NewMeterProvider(WithReader(reader)).Meter("TestDuplicateInstrumentCreation")
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				require.NoError(t, tt.createInstrument(m))
 			}
 			internalMeter, ok := m.(*meter)
@@ -2553,7 +2553,7 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 func TestMeterProviderDelegation(t *testing.T) {
 	meter := otel.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { require.NoError(t, err) }))
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		int64Counter, err := meter.Int64ObservableCounter("observable.int64.counter")
 		require.NoError(t, err)
 		int64UpDownCounter, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")

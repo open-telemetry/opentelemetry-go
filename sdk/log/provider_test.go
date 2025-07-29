@@ -239,7 +239,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := newProviderConfig(tc.options).resource
 			if diff := cmp.Diff(got, tc.want); diff != "" {
@@ -258,7 +257,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
 	const name = "testLogger"
 	ctx := context.Background()
-	for i := 0; i < goRoutineN; i++ {
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 

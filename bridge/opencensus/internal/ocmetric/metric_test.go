@@ -1188,7 +1188,7 @@ func BenchmarkConvertExemplar(b *testing.B) {
 	data := make([]*ocmetricdata.Exemplar, b.N)
 	for i := range data {
 		a := make(ocmetricdata.Attachments, attchmentsN)
-		for j := 0; j < attchmentsN; j++ {
+		for j := range attchmentsN {
 			a[strconv.Itoa(j)] = rand.Int64()
 		}
 		data[i] = &ocmetricdata.Exemplar{
@@ -1214,7 +1214,7 @@ func BenchmarkConvertQuantiles(b *testing.B) {
 	data := make([]ocmetricdata.Snapshot, b.N)
 	for i := range data {
 		p := make(map[float64]float64, percentileN)
-		for j := 0; j < percentileN; j++ {
+		for range percentileN {
 			v := rand.Float64()
 			for v == 0 {
 				// Convert from [0, 1) interval to (0, 1).
