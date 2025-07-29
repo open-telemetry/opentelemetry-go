@@ -276,7 +276,7 @@ type logSink struct {
 
 	level         int
 	msg           string
-	keysAndValues []interface{}
+	keysAndValues []any
 }
 
 func (l *logSink) Enabled(int) bool { return true }

@@ -261,8 +261,8 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 		name               string
 		injectCarrierType  ot.BuiltinFormat
 		extractCarrierType ot.BuiltinFormat
-		extractCarrier     interface{}
-		injectCarrier      interface{}
+		extractCarrier     any
+		injectCarrier      any
 		extractErr         error
 		injectErr          error
 	}{
@@ -436,7 +436,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 func Test_otTagToOTelAttr(t *testing.T) {
 	key := attribute.Key("test")
 	testCases := []struct {
-		value    interface{}
+		value    any
 		expected attribute.KeyValue
 	}{
 		{
@@ -628,17 +628,17 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	carriers := []struct {
 		name    string
-		factory func() interface{}
+		factory func() any
 		format  ot.BuiltinFormat
 	}{
 		{
 			name:    "TextMapCarrier",
-			factory: func() interface{} { return ot.TextMapCarrier{} },
+			factory: func() any { return ot.TextMapCarrier{} },
 			format:  ot.TextMap,
 		},
 		{
 			name:    "HTTPHeadersCarrier",
-			factory: func() interface{} { return ot.HTTPHeadersCarrier{} },
+			factory: func() any { return ot.HTTPHeadersCarrier{} },
 			format:  ot.HTTPHeaders,
 		},
 	}
@@ -895,87 +895,87 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 func TestBridgeSpan_LogKV(t *testing.T) {
 	testCases := []struct {
 		name     string
-		kv       [2]interface{}
+		kv       [2]any
 		expected attribute.KeyValue
 	}{
 		{
 			name:     "string",
-			kv:       [2]interface{}{"string", "value"},
+			kv:       [2]any{"string", "value"},
 			expected: attribute.String("string", "value"),
 		},
 		{
 			name:     "bool",
-			kv:       [2]interface{}{"boolKey", true},
+			kv:       [2]any{"boolKey", true},
 			expected: attribute.Bool("boolKey", true),
 		},
 		{
 			name:     "int",
-			kv:       [2]interface{}{"intKey", int(12)},
+			kv:       [2]any{"intKey", int(12)},
 			expected: attribute.Int("intKey", 12),
 		},
 		{
 			name:     "int8",
-			kv:       [2]interface{}{"int8Key", int8(12)},
+			kv:       [2]any{"int8Key", int8(12)},
 			expected: attribute.Int64("int8Key", 12),
 		},
 		{
 			name:     "int16",
-			kv:       [2]interface{}{"int16Key", int16(12)},
+			kv:       [2]any{"int16Key", int16(12)},
 			expected: attribute.Int64("int16Key", 12),
 		},
 		{
 			name:     "int32",
-			kv:       [2]interface{}{"int32", int32(12)},
+			kv:       [2]any{"int32", int32(12)},
 			expected: attribute.Int64("int32", 12),
 		},
 		{
 			name:     "int64",
-			kv:       [2]interface{}{"int64Key", int64(12)},
+			kv:       [2]any{"int64Key", int64(12)},
 			expected: attribute.Int64("int64Key", 12),
 		},
 		{
 			name:     "uint",
-			kv:       [2]interface{}{"uintKey", uint(12)},
+			kv:       [2]any{"uintKey", uint(12)},
 			expected: attribute.String("uintKey", strconv.FormatUint(12, 10)),
 		},
 		{
 			name:     "uint8",
-			kv:       [2]interface{}{"uint8Key", uint8(12)},
+			kv:       [2]any{"uint8Key", uint8(12)},
 			expected: attribute.Int64("uint8Key", 12),
 		},
 		{
 			name:     "uint16",
-			kv:       [2]interface{}{"uint16Key", uint16(12)},
+			kv:       [2]any{"uint16Key", uint16(12)},
 			expected: attribute.Int64("uint16Key", 12),
 		},
 		{
 			name:     "uint32",
-			kv:       [2]interface{}{"uint32Key", uint32(12)},
+			kv:       [2]any{"uint32Key", uint32(12)},
 			expected: attribute.Int64("uint32Key", 12),
 		},
 		{
 			name:     "uint64",
-			kv:       [2]interface{}{"uint64Key", uint64(12)},
+			kv:       [2]any{"uint64Key", uint64(12)},
 			expected: attribute.String("uint64Key", strconv.FormatUint(12, 10)),
 		},
 		{
 			name:     "float32",
-			kv:       [2]interface{}{"float32Key", float32(12)},
+			kv:       [2]any{"float32Key", float32(12)},
 			expected: attribute.Float64("float32Key", float64(12)),
 		},
 		{
 			name:     "float64",
-			kv:       [2]interface{}{"float64Key", 1.1},
+			kv:       [2]any{"float64Key", 1.1},
 			expected: attribute.Float64("float64Key", 1.1),
 		},
 		{
 			name:     "error",
-			kv:       [2]interface{}{"errorKey", fmt.Errorf("error")},
+			kv:       [2]any{"errorKey", fmt.Errorf("error")},
 			expected: attribute.String("errorKey", "error"),
 		},
 		{
 			name:     "objectKey",
-			kv:       [2]interface{}{"objectKey", struct{}{}},
+			kv:       [2]any{"objectKey", struct{}{}},
 			expected: attribute.String("objectKey", "{}"),
 		},
 	}

@@ -232,7 +232,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 		argOptional         bool
 		description         string
 		errorType           error
-		invalidArgErrorType interface{}
+		invalidArgErrorType any
 	}
 
 	randFloat := rand.Float64()
@@ -353,7 +353,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 	}
 }
 
-func testStoredError(t *testing.T, target interface{}) {
+func testStoredError(t *testing.T, target any) {
 	t.Helper()
 
 	if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {

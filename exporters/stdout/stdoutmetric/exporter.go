@@ -77,7 +77,7 @@ func (e *exporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (e *exporter) MarshalLog() interface{} {
+func (e *exporter) MarshalLog() any {
 	return struct{ Type string }{Type: "STDOUT"}
 }
 

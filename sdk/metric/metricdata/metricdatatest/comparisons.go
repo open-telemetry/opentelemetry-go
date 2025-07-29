@@ -497,7 +497,7 @@ func equalQuantileValue(a, b metricdata.QuantileValue, _ config) (reasons []stri
 	return reasons
 }
 
-func notEqualStr(prefix string, expected, actual interface{}) string {
+func notEqualStr(prefix string, expected, actual any) string {
 	return fmt.Sprintf("%s not equal:\nexpected: %v\nactual: %v", prefix, expected, actual)
 }
 

@@ -403,7 +403,7 @@ func (bsp *batchSpanProcessor) enqueueDrop(_ context.Context, sd ReadOnlySpan) b
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Span Processor.
-func (bsp *batchSpanProcessor) MarshalLog() interface{} {
+func (bsp *batchSpanProcessor) MarshalLog() any {
 	return struct {
 		Type         string
 		SpanExporter SpanExporter

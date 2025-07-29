@@ -139,7 +139,7 @@ func (s *bridgeSpan) SetOperationName(operationName string) ot.Span {
 // - uint32 -> int64
 // - uint64 -> string
 // - float32 -> float64
-func (s *bridgeSpan) SetTag(key string, value interface{}) ot.Span {
+func (s *bridgeSpan) SetTag(key string, value any) ot.Span {
 	switch key {
 	case string(otext.SpanKind):
 		// TODO: Should we ignore it?
@@ -202,7 +202,7 @@ func (e *bridgeFieldEncoder) EmitFloat64(key string, value float64) {
 	e.emitCommon(key, value)
 }
 
-func (e *bridgeFieldEncoder) EmitObject(key string, value interface{}) {
+func (e *bridgeFieldEncoder) EmitObject(key string, value any) {
 	e.emitCommon(key, value)
 }
 
@@ -210,7 +210,7 @@ func (e *bridgeFieldEncoder) EmitLazyLogger(value otlog.LazyLogger) {
 	value(e)
 }
 
-func (e *bridgeFieldEncoder) emitCommon(key string, value interface{}) {
+func (e *bridgeFieldEncoder) emitCommon(key string, value any) {
 	e.pairs = append(e.pairs, otTagToOTelAttr(key, value))
 }
 
@@ -222,7 +222,7 @@ func otLogFieldsToOTelAttrs(fields []otlog.Field) []attribute.KeyValue {
 	return encoder.pairs
 }
 
-func (s *bridgeSpan) LogKV(alternatingKeyValues ...interface{}) {
+func (s *bridgeSpan) LogKV(alternatingKeyValues ...any) {
 	fields, err := otlog.InterleavedKVToFields(alternatingKeyValues...)
 	if err != nil {
 		return
@@ -259,7 +259,7 @@ func (s *bridgeSpan) LogEvent(event string) {
 	s.LogEventWithPayload(event, nil)
 }
 
-func (s *bridgeSpan) LogEventWithPayload(event string, payload interface{}) {
+func (s *bridgeSpan) LogEventWithPayload(event string, payload any) {
 	data := ot.LogData{
 		Event:   event,
 		Payload: payload,
@@ -497,7 +497,7 @@ func (t *BridgeTracer) ContextWithSpanHook(ctx context.Context, span ot.Span) co
 	return ctx
 }
 
-func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribute.KeyValue, trace.SpanKind, bool) {
+func otTagsToOTelAttributesKindAndError(tags map[string]any) ([]attribute.KeyValue, trace.SpanKind, bool) {
 	kind := trace.SpanKindInternal
 	err := false
 	var pairs []attribute.KeyValue
@@ -537,7 +537,7 @@ func otTagsToOTelAttributesKindAndError(tags map[string]interface{}) ([]attribut
 // - uint32 -> int64
 // - uint64 -> string
 // - float32 -> float64
-func otTagToOTelAttr(k string, v interface{}) attribute.KeyValue {
+func otTagToOTelAttr(k string, v any) attribute.KeyValue {
 	key := otTagToOTelAttrKey(k)
 	switch val := v.(type) {
 	case bool:
@@ -648,7 +648,7 @@ func (s fakeSpan) SpanContext() trace.SpanContext {
 // interface.
 //
 // Currently only the HTTPHeaders and TextMap formats are supported.
-func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier interface{}) error {
+func (t *BridgeTracer) Inject(sm ot.SpanContext, format any, carrier any) error {
 	bridgeSC, ok := sm.(*bridgeSpanContext)
 	if !ok {
 		return ot.ErrInvalidSpanContext
@@ -697,7 +697,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format interface{}, carrier int
 // interface.
 //
 // Currently only the HTTPHeaders and TextMap formats are supported.
-func (t *BridgeTracer) Extract(format interface{}, carrier interface{}) (ot.SpanContext, error) {
+func (t *BridgeTracer) Extract(format any, carrier any) (ot.SpanContext, error) {
 	builtinFormat, ok := format.(ot.BuiltinFormat)
 	if !ok {
 		return nil, ot.ErrUnsupportedFormat
@@ -791,7 +791,7 @@ func (t *textMapWrapper) loadMap() {
 	})
 }
 
-func newTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
+func newTextMapWrapperForExtract(carrier any) (*textMapWrapper, error) {
 	t := &textMapWrapper{}
 
 	reader, ok := carrier.(ot.TextMapReader)
@@ -811,7 +811,7 @@ func newTextMapWrapperForExtract(carrier interface{}) (*textMapWrapper, error) {
 	return t, nil
 }
 
-func newTextMapWrapperForInject(carrier interface{}) (*textMapWrapper, error) {
+func newTextMapWrapperForInject(carrier any) (*textMapWrapper, error) {
 	t := &textMapWrapper{}
 
 	writer, ok := carrier.(ot.TextMapWriter)

@@ -920,7 +920,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 	}
 }
 
-func cmpDiff(x, y interface{}) string {
+func cmpDiff(x, y any) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),

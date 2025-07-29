@@ -237,7 +237,7 @@ func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context
 type contextIntactTest struct {
 	contextKeyValues []mockContextKeyValue
 
-	recordedContextValues []interface{}
+	recordedContextValues []any
 	recordIdx             int
 }
 
@@ -721,7 +721,7 @@ func runOTOtelOT(
 func TestOtTagToOTelAttrCheckTypeConversions(t *testing.T) {
 	tableTest := []struct {
 		key               string
-		value             interface{}
+		value             any
 		expectedValueType attribute.Type
 	}{
 		{
