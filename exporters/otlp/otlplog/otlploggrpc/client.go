@@ -50,7 +50,7 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
-	addressAttrs              []attribute.KeyValue
+	presetAttrs               []attribute.KeyValue
 	componentName             string
 	selfObservabilityEnabled  bool
 	logInflightMetric         otelconv.SDKExporterLogInflight
@@ -100,7 +100,7 @@ func (c *client) initSelfObservability() {
 
 	counter := grpcExporterCounter.Add(1)
 	c.selfObservabilityEnabled = true
-	c.addressAttrs = c.serverAddrAttrs()
+	c.presetAttrs = c.serverAddrAttrs()
 	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, counter)
 
 	mp := otel.GetMeterProvider()
@@ -244,7 +244,7 @@ func (c *client) recordLogInflightMetric(ctx context.Context, extraAttrs ...attr
 	}
 
 	attrs = append(attrs, extraAttrs...)
-	attrs = append(attrs, c.addressAttrs...)
+	attrs = append(attrs, c.presetAttrs...)
 	c.logInflightMetric.Add(ctx, 1, attrs...)
 }
 
@@ -259,7 +259,7 @@ func (c *client) recordLogExportedMetric(ctx context.Context, extraAttrs ...attr
 	}
 
 	attrs = append(attrs, extraAttrs...)
-	attrs = append(attrs, c.addressAttrs...)
+	attrs = append(attrs, c.presetAttrs...)
 	c.logExportedMetric.Add(ctx, 1, attrs...)
 }
 
@@ -278,7 +278,7 @@ func (c *client) recordLogExportedDurationMetric(
 	}
 
 	attrs = append(attrs, extraAttrs...)
-	attrs = append(attrs, c.addressAttrs...)
+	attrs = append(attrs, c.presetAttrs...)
 
 	c.logExportedDurationMetric.Record(ctx, duration, attrs...)
 }
