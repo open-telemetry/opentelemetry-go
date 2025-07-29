@@ -110,7 +110,7 @@ func (ssp *simpleSpanProcessor) ForceFlush(context.Context) error {
 
 // MarshalLog is the marshaling function used by the logging system to represent
 // this Span Processor.
-func (ssp *simpleSpanProcessor) MarshalLog() interface{} {
+func (ssp *simpleSpanProcessor) MarshalLog() any {
 	return struct {
 		Type     string
 		Exporter SpanExporter

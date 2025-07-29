@@ -112,7 +112,7 @@ func (r *Resource) String() string {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Resource.
-func (r *Resource) MarshalLog() interface{} {
+func (r *Resource) MarshalLog() any {
 	return struct {
 		Attributes attribute.Set
 		SchemaURL  string

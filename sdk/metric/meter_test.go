@@ -1080,12 +1080,12 @@ func newLogSink(t *testing.T) *logSink {
 	return &logSink{LogSink: testr.New(t).GetSink()}
 }
 
-func (l *logSink) Info(level int, msg string, keysAndValues ...interface{}) {
+func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.messages = append(l.messages, msg)
 	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
-func (l *logSink) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *logSink) Error(err error, msg string, keysAndValues ...any) {
 	l.messages = append(l.messages, fmt.Sprintf("%s: %s", err, msg))
 	l.LogSink.Error(err, msg, keysAndValues...)
 }
@@ -2352,7 +2352,7 @@ func TestObservableDropAggregation(t *testing.T) {
 			otel.SetLogger(
 				funcr.NewJSON(
 					func(obj string) {
-						var entry map[string]interface{}
+						var entry map[string]any
 						_ = json.Unmarshal([]byte(obj), &entry)
 
 						// All unregistered observables should log `errUnregObserver` error.
@@ -2530,7 +2530,7 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 			}()
 
 			m := NewMeterProvider(WithReader(reader)).Meter("TestDuplicateInstrumentCreation")
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				require.NoError(t, tt.createInstrument(m))
 			}
 			internalMeter, ok := m.(*meter)
@@ -2553,7 +2553,7 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 func TestMeterProviderDelegation(t *testing.T) {
 	meter := otel.Meter("go.opentelemetry.io/otel/metric/internal/global/meter_test")
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { require.NoError(t, err) }))
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		int64Counter, err := meter.Int64ObservableCounter("observable.int64.counter")
 		require.NoError(t, err)
 		int64UpDownCounter, err := meter.Int64ObservableUpDownCounter("observable.int64.up.down.counter")

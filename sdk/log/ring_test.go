@@ -55,13 +55,13 @@ func verifyRing(t *testing.T, r *ring, N int, sum int) {
 }
 
 func TestNewRing(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		// Empty value.
 		r := newRing(i)
 		verifyRing(t, r, i, -1)
 	}
 
-	for n := 0; n < 10; n++ {
+	for n := range 10 {
 		r := newRing(n)
 		for i := 1; i <= n; i++ {
 			var rec Record

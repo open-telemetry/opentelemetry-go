@@ -28,8 +28,8 @@ var (
 )
 
 type mockContextKeyValue struct {
-	Key   interface{}
-	Value interface{}
+	Key   any
+	Value any
 }
 
 type mockTracer struct {

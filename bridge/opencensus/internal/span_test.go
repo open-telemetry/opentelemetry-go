@@ -272,7 +272,7 @@ func TestSpanAddLinkFails(t *testing.T) {
 	ocS.AddLink(octrace.Link{
 		TraceID: octrace.TraceID([16]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 		SpanID:  octrace.SpanID([8]byte{2, 0, 0, 0, 0, 0, 0, 0}),
-		Attributes: map[string]interface{}{
+		Attributes: map[string]any{
 			"foo":    "bar",
 			"number": int64(3),
 		},

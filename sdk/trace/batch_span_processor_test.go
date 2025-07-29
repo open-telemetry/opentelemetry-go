@@ -580,7 +580,7 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 
 	tracer := tp.Tracer("tracer")
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		_, span := tracer.Start(ctx, fmt.Sprintf("span%d", i))
 		span.End()
 
