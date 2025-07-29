@@ -27,7 +27,7 @@ type value struct {
 func (v value) MarshalJSON() ([]byte, error) {
 	var jsonVal struct {
 		Type  string
-		Value interface{}
+		Value any
 	}
 	jsonVal.Type = v.Kind().String()
 

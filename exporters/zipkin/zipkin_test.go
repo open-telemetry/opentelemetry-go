@@ -362,7 +362,7 @@ func TestErrorOnExportShutdownExporter(t *testing.T) {
 
 func TestLogrFormatting(t *testing.T) {
 	format := "string %q, int %d"
-	args := []interface{}{"s", 1}
+	args := []any{"s", 1}
 
 	var buf bytes.Buffer
 	l := funcr.New(func(prefix, args string) {

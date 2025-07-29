@@ -169,7 +169,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Int64Counter")
 			i, err := m.Int64Counter("int64-counter")
 			assert.NoError(b, err)
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				i.Add(ctx, 1, metric.WithAttributeSet(s))
 			}
 			return r
@@ -186,7 +186,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Float64Counter")
 			i, err := m.Float64Counter("float64-counter")
 			assert.NoError(b, err)
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				i.Add(ctx, 1, metric.WithAttributeSet(s))
 			}
 			return r
@@ -203,7 +203,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Int64UpDownCounter")
 			i, err := m.Int64UpDownCounter("int64-up-down-counter")
 			assert.NoError(b, err)
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				i.Add(ctx, 1, metric.WithAttributeSet(s))
 			}
 			return r
@@ -220,7 +220,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Float64UpDownCounter")
 			i, err := m.Float64UpDownCounter("float64-up-down-counter")
 			assert.NoError(b, err)
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				i.Add(ctx, 1, metric.WithAttributeSet(s))
 			}
 			return r
@@ -237,7 +237,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Int64Histogram")
 			i, err := m.Int64Histogram("int64-histogram")
 			assert.NoError(b, err)
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				i.Record(ctx, 1, metric.WithAttributeSet(s))
 			}
 			return r
@@ -254,7 +254,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Float64Histogram")
 			i, err := m.Float64Histogram("float64-histogram")
 			assert.NoError(b, err)
-			for n := 0; n < 10; n++ {
+			for range 10 {
 				i.Record(ctx, 1, metric.WithAttributeSet(s))
 			}
 			return r

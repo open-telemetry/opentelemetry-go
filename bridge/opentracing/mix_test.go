@@ -6,6 +6,7 @@ package opentracing
 import (
 	"context"
 	"fmt"
+	"maps"
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -237,7 +238,7 @@ func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context
 type contextIntactTest struct {
 	contextKeyValues []mockContextKeyValue
 
-	recordedContextValues []interface{}
+	recordedContextValues []any
 	recordIdx             int
 }
 
@@ -289,7 +290,7 @@ func (coin *contextIntactTest) check(t *testing.T, tracer *mockTracer) {
 	}
 
 	minLen := min(len(coin.recordedContextValues), len(coin.contextKeyValues))
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		key := coin.contextKeyValues[i].Key
 		value := coin.contextKeyValues[i].Value
 		gotValue := coin.recordedContextValues[i]
@@ -362,7 +363,7 @@ func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *mockTracer)
 	}
 	minLen := min(len(bip.recordedBaggage), len(bip.baggageItems))
 
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		recordedItems := bip.recordedBaggage[i]
 		if len(recordedItems) != i+1 {
 			t.Errorf(
@@ -373,7 +374,7 @@ func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *mockTracer)
 			)
 		}
 		minItemLen := min(len(bip.baggageItems), i+1)
-		for j := 0; j < minItemLen; j++ {
+		for j := range minItemLen {
 			expectedItem := bip.baggageItems[j]
 			if gotValue, ok := recordedItems[expectedItem.key]; !ok {
 				t.Errorf("Missing baggage item %q in recording %d", expectedItem.key, i+1)
@@ -474,7 +475,7 @@ func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, 
 		t.Errorf("Expected %d recordings from %s, got %d", len(initialItems), apiDesc, len(recordings))
 	}
 	minRecLen := min(len(initialItems), len(recordings))
-	for i := 0; i < minRecLen; i++ {
+	for i := range minRecLen {
 		recordedItems := recordings[i]
 		expectedItemsInStep := (i + 1) * 2
 		if expectedItemsInStep != len(recordedItems) {
@@ -487,9 +488,7 @@ func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, 
 			)
 		}
 		recordedItemsCopy := make(map[string]string, len(recordedItems))
-		for k, v := range recordedItems {
-			recordedItemsCopy[k] = v
-		}
+		maps.Copy(recordedItemsCopy, recordedItems)
 		for j := 0; j < i+1; j++ {
 			otKey, otelKey := generateBaggageKeys(initialItems[j].key)
 			value := initialItems[j].value
@@ -721,7 +720,7 @@ func runOTOtelOT(
 func TestOtTagToOTelAttrCheckTypeConversions(t *testing.T) {
 	tableTest := []struct {
 		key               string
-		value             interface{}
+		value             any
 		expectedValueType attribute.Type
 	}{
 		{

@@ -245,7 +245,7 @@ func TestExportSync(t *testing.T) {
 		const goRoutines = 10
 		var wg sync.WaitGroup
 		wg.Add(goRoutines)
-		for i := 0; i < goRoutines; i++ {
+		for i := range goRoutines {
 			go func(n int) {
 				defer wg.Done()
 
@@ -338,7 +338,7 @@ func TestBufferExporter(t *testing.T) {
 
 		stop := make(chan struct{})
 		var wg sync.WaitGroup
-		for i := 0; i < goRoutines; i++ {
+		for range goRoutines {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
