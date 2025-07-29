@@ -32,7 +32,7 @@ import (
 const contentTypeProto = "application/x-protobuf"
 
 var gzPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		w := gzip.NewWriter(io.Discard)
 		return w
 	},
@@ -274,7 +274,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Client.
-func (d *client) MarshalLog() interface{} {
+func (d *client) MarshalLog() any {
 	return struct {
 		Type     string
 		Endpoint string
@@ -340,7 +340,7 @@ func (e retryableError) Unwrap() error {
 	return e.err
 }
 
-func (e retryableError) As(target interface{}) bool {
+func (e retryableError) As(target any) bool {
 	if e.err == nil {
 		return false
 	}

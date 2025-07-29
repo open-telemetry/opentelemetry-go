@@ -183,6 +183,7 @@ linters:
             - fmt.Printf
             - fmt.Println
         - name: unnecessary-stmt
+        - name: use-any
         - name: useless-break
         - name: var-declaration
         - name: var-naming

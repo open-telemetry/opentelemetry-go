@@ -38,7 +38,7 @@ func TestAttributes(t *testing.T) {
 }
 
 func TestAttributesFromMap(t *testing.T) {
-	in := map[string]interface{}{
+	in := map[string]any{
 		"bool":    true,
 		"int64":   int64(49),
 		"float64": float64(1.618),

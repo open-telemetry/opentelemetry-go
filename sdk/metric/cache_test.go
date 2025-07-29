@@ -37,7 +37,7 @@ func TestCacheConcurrentSafe(t *testing.T) {
 
 	c := cache[string, int]{}
 	var wg sync.WaitGroup
-	for n := 0; n < goroutines; n++ {
+	for n := range goroutines {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()

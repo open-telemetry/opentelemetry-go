@@ -148,7 +148,7 @@ func toZipkinAnnotations(events []tracesdk.Event) []zkmodel.Annotation {
 }
 
 func attributesToJSONMapString(attributes []attribute.KeyValue) string {
-	m := make(map[string]interface{}, len(attributes))
+	m := make(map[string]any, len(attributes))
 	for _, a := range attributes {
 		m[string(a.Key)] = a.Value.AsInterface()
 	}

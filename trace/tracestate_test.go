@@ -278,7 +278,7 @@ var testcases = []struct {
 
 var maxMembers = func() TraceState {
 	members := make([]member, maxListMembers)
-	for i := 0; i < maxListMembers; i++ {
+	for i := range maxListMembers {
 		members[i] = member{
 			Key:   fmt.Sprintf("key%d", i+1),
 			Value: fmt.Sprintf("value%d", i+1),

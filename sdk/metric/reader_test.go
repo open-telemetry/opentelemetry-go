@@ -146,7 +146,7 @@ func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 
 	var wg sync.WaitGroup
 	const threads = 2
-	for i := 0; i < threads; i++ {
+	for range threads {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

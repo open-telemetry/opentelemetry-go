@@ -135,7 +135,7 @@ func (c shutdownClient) Shutdown(ctx context.Context) error {
 }
 
 // MarshalLog returns logging data about the Exporter.
-func (e *Exporter) MarshalLog() interface{} {
+func (e *Exporter) MarshalLog() any {
 	return struct{ Type string }{Type: "OTLP/gRPC"}
 }
 

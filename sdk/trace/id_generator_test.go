@@ -16,7 +16,7 @@ func TestNewIDs(t *testing.T) {
 	gen := defaultIDGenerator()
 	n := 1000
 
-	for i := 0; i < n; i++ {
+	for range n {
 		traceID, spanID := gen.NewIDs(context.Background())
 		assert.Truef(t, traceID.IsValid(), "trace id: %s", traceID.String())
 		assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
@@ -28,7 +28,7 @@ func TestNewSpanID(t *testing.T) {
 	testTraceID := [16]byte{123, 123}
 	n := 1000
 
-	for i := 0; i < n; i++ {
+	for range n {
 		spanID := gen.NewSpanID(context.Background(), testTraceID)
 		assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
 	}
