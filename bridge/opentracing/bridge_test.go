@@ -135,7 +135,7 @@ var (
 type testTextMapPropagator struct{}
 
 func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
-	carrier.Set(testHeader, strings.Join([]string{traceID.String(), spanID.String()}, ":"))
+	carrier.Set(testHeader, traceID.String()+":"+spanID.String())
 
 	// Test for panic
 	_ = carrier.Get("test")

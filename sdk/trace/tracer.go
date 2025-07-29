@@ -92,13 +92,14 @@ func (tr *tracer) Start(
 
 		// Determine the sampling result and create the corresponding attribute.
 		var attrSamplingResult attribute.KeyValue
-		if s.SpanContext().IsSampled() && s.IsRecording() {
+		switch {
+		case s.SpanContext().IsSampled() && s.IsRecording():
 			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(
 				otelconv.SpanSamplingResultRecordAndSample,
 			)
-		} else if s.IsRecording() {
+		case s.IsRecording():
 			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
-		} else {
+		default:
 			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
 		}
 

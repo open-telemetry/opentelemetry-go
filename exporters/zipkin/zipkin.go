@@ -146,7 +146,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 	req.Header.Set("Content-Type", "application/json")
 
 	for k, v := range e.headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			req.Host = v
 		} else {
 			req.Header.Set(k, v)

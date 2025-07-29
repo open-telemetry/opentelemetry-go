@@ -125,13 +125,11 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 	if int(r.count) < cap(r.store) {
 		r.store[r.count] = newMeasurement(ctx, t, n, a)
-	} else {
-		if r.count == r.next {
-			// Overwrite a random existing measurement with the one offered.
-			idx := int(rand.Int64N(int64(cap(r.store))))
-			r.store[idx] = newMeasurement(ctx, t, n, a)
-			r.advance()
-		}
+	} else if r.count == r.next {
+		// Overwrite a random existing measurement with the one offered.
+		idx := int(rand.Int64N(int64(cap(r.store))))
+		r.store[idx] = newMeasurement(ctx, t, n, a)
+		r.advance()
 	}
 	r.count++
 }
