@@ -1,7 +1,7 @@
 # Experimental Features
 
 The `otlploggrpc` exporter contains features that have not yet stabilized in the OpenTelemetry specification.
-These features are added to the  `otlploggrpc` exporter prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
+These features are added to the `otlploggrpc` exporter prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
 
 These feature may change in backwards incompatible ways as feedback is applied.
 See the [Compatibility and Stability](#compatibility-and-stability) section for more information.
@@ -12,7 +12,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ### Self-Observability
 
-The `otlploggrpc` exporter  provides a self-observability feature that allows you to monitor the exporter itself.
+The `otlploggrpc` exporter provides a self-observability feature that allows you to monitor the exporter itself.
 
 To opt-in, set the environment variable `OTEL_GO_X_SELF_OBSERVABILITY` to `true`.
 
