@@ -1008,7 +1008,7 @@ func kvStr(kvs []attribute.KeyValue) string {
 		if idx > 0 {
 			_, _ = sb.WriteString(", ")
 		}
-		_, _ = sb.WriteString((string)(attr.Key))
+		_, _ = sb.WriteString(string(attr.Key))
 		_, _ = sb.WriteString(": ")
 		_, _ = sb.WriteString(attr.Value.Emit())
 	}

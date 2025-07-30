@@ -209,7 +209,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
-		if len(respStr) == 0 {
+		if respStr == "" {
 			respStr = "(empty)"
 		}
 		bodyErr := fmt.Errorf("body: %s", respStr)
@@ -230,7 +230,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 func (d *client) newRequest(body []byte) (request, error) {
 	u := url.URL{Scheme: d.getScheme(), Host: d.cfg.Endpoint, Path: d.cfg.URLPath}
-	r, err := http.NewRequest(http.MethodPost, u.String(), nil)
+	r, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return request{Request: r}, err
 	}
@@ -246,7 +246,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 	req := request{Request: r}
 	switch Compression(d.cfg.Compression) {
 	case NoCompression:
-		r.ContentLength = (int64)(len(body))
+		r.ContentLength = int64(len(body))
 		req.bodyReader = bodyReader(body)
 	case GzipCompression:
 		// Ensure the content length is not used.
