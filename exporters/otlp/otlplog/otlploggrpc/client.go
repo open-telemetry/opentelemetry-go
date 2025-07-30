@@ -98,11 +98,11 @@ func (c *client) initSelfObservability() {
 		return
 	}
 
-	id := grpcExporterIDCounter.Add(1)
+	id := grpcExporterIDCounter.Add(1) - 1
 
 	c.selfObservabilityEnabled = true
 	c.presetAttrs = c.serverAddrAttrs()
-	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id-1)
+	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
