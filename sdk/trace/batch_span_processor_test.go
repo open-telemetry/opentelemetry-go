@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -872,7 +873,7 @@ func (e *blockingExporter) ExportSpans(ctx context.Context, s []ReadOnlySpan) er
 
 func (e *blockingExporter) waitForSpans(n int32) {
 	// Wait for all n spans to reach the export call
-	// nolint: revive // intentionally empty block
 	for e.total.Load() < n {
+		runtime.Gosched()
 	}
 }
