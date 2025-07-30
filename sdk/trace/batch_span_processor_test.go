@@ -505,7 +505,7 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 	spanDifference := want - got
 	if spanDifference < 0 {
-		spanDifference = spanDifference * -1
+		spanDifference *= -1
 	}
 	if spanDifference > maxDif {
 		t.Errorf("number of exported span not equal to or within %d less than: got %+v, want %+v\n",
@@ -514,7 +514,7 @@ func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
 }
 
 type indefiniteExporter struct {
-	stop chan (struct{})
+	stop chan struct{}
 }
 
 func newIndefiniteExporter(t *testing.T) indefiniteExporter {
@@ -580,7 +580,7 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 
 	tracer := tp.Tracer("tracer")
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		_, span := tracer.Start(ctx, fmt.Sprintf("span%d", i))
 		span.End()
 
