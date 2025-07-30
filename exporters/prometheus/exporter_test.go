@@ -989,7 +989,7 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	concurrencyLevel := 10
-	for i := 0; i < concurrencyLevel; i++ {
+	for range concurrencyLevel {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -1009,7 +1009,7 @@ func TestShutdownExporter(t *testing.T) {
 	ctx := context.Background()
 	registry := prometheus.NewRegistry()
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		exporter, err := New(WithRegisterer(registry))
 		require.NoError(t, err)
 		provider := metric.NewMeterProvider(

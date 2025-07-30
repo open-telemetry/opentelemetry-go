@@ -166,7 +166,7 @@ func ExampleMeter_gauge() {
 	go func() {
 		defer close(fanSpeedSubscription)
 
-		for idx := 0; idx < 5; idx++ {
+		for range 5 {
 			// Synchronous gauges are used when the measurement cycle is
 			// synchronous to an external change.
 			// Simulate that external cycle here.

@@ -383,7 +383,7 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			_, span := tracer.Start(ctx, "bench")
 			span.End()
 		}

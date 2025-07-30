@@ -185,7 +185,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := newConfig(tc.options).res
 			if diff := cmp.Diff(got, tc.want); diff != "" {

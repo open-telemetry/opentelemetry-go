@@ -89,11 +89,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	maxExportBatchSize := env.BatchSpanProcessorMaxExportBatchSize(DefaultMaxExportBatchSize)
 
 	if maxExportBatchSize > maxQueueSize {
-		if DefaultMaxExportBatchSize > maxQueueSize {
-			maxExportBatchSize = maxQueueSize
-		} else {
-			maxExportBatchSize = DefaultMaxExportBatchSize
-		}
+		maxExportBatchSize = min(DefaultMaxExportBatchSize, maxQueueSize)
 	}
 
 	o := BatchSpanProcessorOptions{
@@ -403,7 +399,7 @@ func (bsp *batchSpanProcessor) enqueueDrop(_ context.Context, sd ReadOnlySpan) b
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Span Processor.
-func (bsp *batchSpanProcessor) MarshalLog() interface{} {
+func (bsp *batchSpanProcessor) MarshalLog() any {
 	return struct {
 		Type         string
 		SpanExporter SpanExporter

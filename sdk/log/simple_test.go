@@ -107,7 +107,7 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 	ctx := context.Background()
 	e := &writerExporter{new(strings.Builder)}
 	s := log.NewSimpleProcessor(e)
-	for i := 0; i < goRoutineN; i++ {
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 

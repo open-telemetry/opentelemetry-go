@@ -8,28 +8,28 @@ import (
 	"testing"
 )
 
-var wrapFloat64SliceValue = func(v interface{}) interface{} {
+var wrapFloat64SliceValue = func(v any) any {
 	if vi, ok := v.([]float64); ok {
 		return Float64SliceValue(vi)
 	}
 	return nil
 }
 
-var wrapInt64SliceValue = func(v interface{}) interface{} {
+var wrapInt64SliceValue = func(v any) any {
 	if vi, ok := v.([]int64); ok {
 		return Int64SliceValue(vi)
 	}
 	return nil
 }
 
-var wrapBoolSliceValue = func(v interface{}) interface{} {
+var wrapBoolSliceValue = func(v any) any {
 	if vi, ok := v.([]bool); ok {
 		return BoolSliceValue(vi)
 	}
 	return nil
 }
 
-var wrapStringSliceValue = func(v interface{}) interface{} {
+var wrapStringSliceValue = func(v any) any {
 	if vi, ok := v.([]string); ok {
 		return StringSliceValue(vi)
 	}
@@ -37,21 +37,21 @@ var wrapStringSliceValue = func(v interface{}) interface{} {
 }
 
 var (
-	wrapAsBoolSlice    = func(v interface{}) interface{} { return AsBoolSlice(v) }
-	wrapAsInt64Slice   = func(v interface{}) interface{} { return AsInt64Slice(v) }
-	wrapAsFloat64Slice = func(v interface{}) interface{} { return AsFloat64Slice(v) }
-	wrapAsStringSlice  = func(v interface{}) interface{} { return AsStringSlice(v) }
+	wrapAsBoolSlice    = func(v any) any { return AsBoolSlice(v) }
+	wrapAsInt64Slice   = func(v any) any { return AsInt64Slice(v) }
+	wrapAsFloat64Slice = func(v any) any { return AsFloat64Slice(v) }
+	wrapAsStringSlice  = func(v any) any { return AsStringSlice(v) }
 )
 
 func TestSliceValue(t *testing.T) {
 	type args struct {
-		v interface{}
+		v any
 	}
 	tests := []struct {
 		name string
 		args args
-		want interface{}
-		fn   func(interface{}) interface{}
+		want any
+		fn   func(any) any
 	}{
 		{
 			name: "Float64SliceValue() two items",
@@ -136,7 +136,7 @@ func BenchmarkStringSliceValue(b *testing.B) {
 
 func BenchmarkAsFloat64Slice(b *testing.B) {
 	b.ReportAllocs()
-	var in interface{} = [2]float64{1, 2.3}
+	var in any = [2]float64{1, 2.3}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

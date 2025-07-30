@@ -75,7 +75,7 @@ func (s *Span) Annotate(attributes []octrace.Attribute, str string) {
 }
 
 // Annotatef adds a formatted annotation with attributes to this span.
-func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...interface{}) {
+func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...any) {
 	s.Annotate(attributes, fmt.Sprintf(format, a...))
 }
 

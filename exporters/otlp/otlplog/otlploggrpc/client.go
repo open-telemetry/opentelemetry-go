@@ -86,11 +86,12 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(cfg.serviceConfig.Value))
 	}
 	// Prioritize GRPCCredentials over Insecure (passing both is an error).
-	if cfg.gRPCCredentials.Value != nil {
+	switch {
+	case cfg.gRPCCredentials.Value != nil:
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(cfg.gRPCCredentials.Value))
-	} else if cfg.insecure.Value {
+	case cfg.insecure.Value:
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	} else {
+	default:
 		// Default to using the host's root CA.
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(
 			credentials.NewTLS(nil),
