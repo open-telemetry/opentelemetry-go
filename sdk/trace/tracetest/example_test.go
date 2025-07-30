@@ -15,9 +15,9 @@ func ExampleSpanRecorder() {
 	ctx := context.Background()
 
 	// Set up an in-memory span recorder and tracer provider.
-	recorder := tracetest.NewSpanRecorder()
+	sr := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(recorder),
+		sdktrace.WithSpanProcessor(sr),
 	)
 
 	defer func() {
@@ -37,7 +37,7 @@ func ExampleSpanRecorder() {
 	workflowSpan.End()
 
 	// Print span names in the order they ended.
-	for _, s := range recorder.Ended() {
+	for _, s := range sr.Ended() {
 		fmt.Println(s.Name())
 	}
 
