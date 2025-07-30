@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-func Example_simulateWorkflow() {
+func ExampleSpanRecorder() {
 	ctx := context.Background()
 
 	// Set up an in-memory span recorder and tracer provider.
