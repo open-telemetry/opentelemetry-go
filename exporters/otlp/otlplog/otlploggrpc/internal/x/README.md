@@ -1,7 +1,7 @@
 # Experimental Features
 
-The metric SDK contains features that have not yet stabilized in the OpenTelemetry specification.
-These features are added to the OpenTelemetry Go metric SDK prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
+The `otlploggrpc` exporter contains features that have not yet stabilized in the OpenTelemetry specification.
+These features are added to the  `otlploggrpc` exporter prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
 
 These feature may change in backwards incompatible ways as feedback is applied.
 See the [Compatibility and Stability](#compatibility-and-stability) section for more information.
@@ -12,11 +12,11 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ### Self-Observability
 
-The SDK provides a self-observability feature that allows you to monitor the SDK itself.
+The `otlploggrpc` exporter  provides a self-observability feature that allows you to monitor the exporter itself.
 
 To opt-in, set the environment variable `OTEL_GO_X_SELF_OBSERVABILITY` to `true`.
 
-When enabled, the SDK will create the following metrics using the global `MeterProvider`:
+When enabled, the exporter will create the following metrics using the global `MeterProvider`:
 
 - `otel.sdk.exporter.log.inflight`
 - `otel.sdk.exporter.log.exported`
@@ -28,7 +28,7 @@ Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentatio
 
 ## Compatibility and Stability
 
-Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../VERSIONING.md).
+Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../../../VERSIONING.md).
 These features may be removed or modified in successive version releases, including patch versions.
 
 When an experimental feature is promoted to a stable feature, a migration path will be included in the changelog entry of the release.

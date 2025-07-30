@@ -34,7 +34,7 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
-var grpcExporterCounter atomic.Int64
+var grpcExporterIDCounter atomic.Int64
 
 // The methods of this type are not expected to be called concurrently.
 type client struct {
@@ -98,10 +98,12 @@ func (c *client) initSelfObservability() {
 		return
 	}
 
-	counter := grpcExporterCounter.Add(1)
+	id := grpcExporterIDCounter.Load()
+	grpcExporterIDCounter.Add(1)
+
 	c.selfObservabilityEnabled = true
 	c.presetAttrs = c.serverAddrAttrs()
-	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, counter)
+	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
