@@ -240,11 +240,14 @@ func (c *client) recordLogInflightMetric(ctx context.Context, extraAttrs ...attr
 	if !c.selfObservabilityEnabled {
 		return
 	}
-	attrs := []attribute.KeyValue{
-		c.logInflightMetric.AttrComponentName(c.componentName),
-		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-	}
 
+	totalCap := len(extraAttrs) + len(c.presetAttrs) + 2
+	attrs := make([]attribute.KeyValue, 0, totalCap)
+
+	attrs = append(
+		attrs,
+		c.logInflightMetric.AttrComponentName(c.componentName),
+		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter))
 	attrs = append(attrs, extraAttrs...)
 	attrs = append(attrs, c.presetAttrs...)
 	c.logInflightMetric.Add(ctx, 1, attrs...)
@@ -255,11 +258,14 @@ func (c *client) recordLogExportedMetric(ctx context.Context, extraAttrs ...attr
 		return
 	}
 
-	attrs := []attribute.KeyValue{
+	totalCap := len(extraAttrs) + len(c.presetAttrs) + 2
+	attrs := make([]attribute.KeyValue, 0, totalCap)
+
+	attrs = append(
+		attrs,
 		c.logExportedMetric.AttrComponentName(c.componentName),
 		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-	}
-
+	)
 	attrs = append(attrs, extraAttrs...)
 	attrs = append(attrs, c.presetAttrs...)
 	c.logExportedMetric.Add(ctx, 1, attrs...)
@@ -274,10 +280,13 @@ func (c *client) recordLogExportedDurationMetric(
 		return
 	}
 
-	attrs := []attribute.KeyValue{
-		c.logExportedDurationMetric.AttrComponentName(c.componentName),
-		c.logExportedDurationMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-	}
+	totalCap := len(extraAttrs) + len(c.presetAttrs) + 2
+	attrs := make([]attribute.KeyValue, 0, totalCap)
+	attrs = append(
+		attrs,
+		c.logExportedMetric.AttrComponentName(c.componentName),
+		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
+	)
 
 	attrs = append(attrs, extraAttrs...)
 	attrs = append(attrs, c.presetAttrs...)
