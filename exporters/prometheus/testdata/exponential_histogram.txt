@@ -6,4 +6,3 @@ exponential_histogram_baz_bytes_count{A="B",C="D",otel_scope_fizz="buzz",otel_sc
 # HELP target_info Target metadata
 # TYPE target_info gauge
 target_info{"service.name"="prometheus_test","telemetry.sdk.language"="go","telemetry.sdk.name"="opentelemetry","telemetry.sdk.version"="latest"} 1
-

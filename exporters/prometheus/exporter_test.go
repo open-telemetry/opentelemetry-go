@@ -38,6 +38,7 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
+		// disableUTF8 is default off, which means most of these tests enable UTF-8.
 		disableUTF8         bool
 		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
@@ -962,6 +963,8 @@ func TestDuplicateMetrics(t *testing.T) {
 			// initialize registry exporter
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
+			// This test does not set the Translation Strategy, so it defaults to
+			// UnderscoreEscapingWithSuffixes.
 			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
 			require.NoError(t, err)
 
