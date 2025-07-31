@@ -382,7 +382,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			otel.Handle(err)
 			continue
 		}
-		m = addExemplars(m, dp.Exemplars)
+		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
 	}
 }
