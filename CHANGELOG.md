@@ -57,7 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix `go.opentelemetry.io/otel/exporters/prometheus` to deduplicate suffixes if already present in metric name when UTF8 is enabled. (#7086)
+- Fix `go.opentelemetry.io/otel/exporters/prometheus` to deduplicate suffixes if already present in metric name when UTF8 is enabled. (#7088)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
