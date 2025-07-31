@@ -4,32 +4,30 @@
 package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
-	"sync"
-
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/otlptranslator"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 // config contains options for the exporter.
 type config struct {
-	registerer               prometheus.Registerer
-	disableTargetInfo        bool
+	registerer        prometheus.Registerer
+	disableTargetInfo bool
+
+	// By default because withoutUnits, withoutCounterSuffixes, and allowUTF8 are
+	// false, the default translation mode is equivalent to applying the option
+	// WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes).
+
 	withoutUnits             bool
 	withoutCounterSuffixes   bool
+	allowUTF8                bool
 	readerOpts               []metric.ManualReaderOption
 	disableScopeInfo         bool
 	namespace                string
 	resourceAttributesFilter attribute.Filter
 }
-
-var logDeprecatedLegacyScheme = sync.OnceFunc(func() {
-	global.Warn(
-		"prometheus exporter legacy scheme deprecated: support for the legacy NameValidationScheme will be removed in a future release",
-	)
-})
 
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
@@ -95,6 +93,20 @@ func WithoutTargetInfo() Option {
 	})
 }
 
+// WithTranslationStrategy provides a standardized way to define how metric and
+// label names should be handled during translation to Prometheus format. The
+// recommended approach is to use either UnderscoreEscapingWithSuffixes for full
+// Prometheus-style compatibility (the default), or NoTranslation for Otel-style
+// names.
+func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.allowUTF8 = !strategy.ShouldEscape()
+		cfg.withoutCounterSuffixes = !strategy.ShouldAddSuffixes()
+		cfg.withoutUnits = !strategy.ShouldAddSuffixes()
+		return cfg
+	})
+}
+
 // WithoutUnits disables exporter's addition of unit suffixes to metric names,
 // and will also prevent unit comments from being added in OpenMetrics once
 // unit comments are supported.
@@ -103,6 +115,7 @@ func WithoutTargetInfo() Option {
 // conventions. For example, the counter metric request.duration, with unit
 // milliseconds would become request_duration_milliseconds_total.
 // With this option set, the name would instead be request_duration_total.
+// Deprecated: Use WithTranslationStrategy instead.
 func WithoutUnits() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutUnits = true
@@ -116,6 +129,7 @@ func WithoutUnits() Option {
 // conventions. For example, the counter metric happy.people would become
 // happy_people_total. With this option set, the name would instead be
 // happy_people.
+// Deprecated: Use WithTranslationStrategy instead.
 func WithoutCounterSuffixes() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutCounterSuffixes = true
@@ -132,9 +146,11 @@ func WithoutScopeInfo() Option {
 	})
 }
 
-// WithNamespace configures the Exporter to prefix metric with the given namespace.
-// Metadata metrics such as target_info are not prefixed since these
-// have special behavior based on their name.
+// WithNamespace configures the Exporter to prefix metric with the given
+// namespace. Metadata metrics such as target_info are not prefixed since these
+// have special behavior based on their name. Namespaces will be prepended even
+// if NoTranslation is set as a translation strategy. An empty string namepace
+// disables prepending.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.namespace = ns

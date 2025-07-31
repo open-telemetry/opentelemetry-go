@@ -6,6 +6,7 @@ package prometheus
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"sync"
@@ -38,6 +39,7 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
+		// disableUTF8 is default off, which means most of these tests enable UTF-8.
 		disableUTF8         bool
 		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
@@ -69,6 +71,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("F").Int(42),
 				)
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
 		},
 		{
@@ -112,7 +118,7 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("F").Int(42),
 				)
 				counter, err := meter.Float64Counter(
-					"foo",
+					"foo.dotted",
 					otelmetric.WithDescription("a simple counter"),
 					otelmetric.WithUnit("madeup"),
 				)
@@ -187,6 +193,10 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("F").Int(42),
 				)
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
 		},
 		{
@@ -521,6 +531,43 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter utf-8",
 			expectedFile: "testdata/counter_utf8.txt",
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A.G").String("B"),
+					attribute.Key("C.H").String("D"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.things",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A.G").String("D"),
+					attribute.Key("C.H").String("B"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "counter utf-8 notranslation",
+			expectedFile: "testdata/counter_utf8_notranslation.txt",
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.NoTranslation),
+			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A.G").String("B"),
@@ -587,16 +634,11 @@ func TestPrometheusExporter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.disableUTF8 {
-				model.NameValidationScheme = model.LegacyValidation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-				defer func() {
-					// Reset to defaults
-					model.NameValidationScheme = model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-				}()
-			}
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
-			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
+			opts := append(tc.options, WithRegisterer(registry))
+			opts = append(opts, withAllowUTF8(!tc.disableUTF8))
+			exporter, err := New(opts...)
 			require.NoError(t, err)
 
 			var res *resource.Resource
@@ -932,6 +974,8 @@ func TestDuplicateMetrics(t *testing.T) {
 			// initialize registry exporter
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
+			// This test does not set the Translation Strategy, so it defaults to
+			// UnderscoreEscapingWithSuffixes.
 			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
 			require.NoError(t, err)
 
@@ -1127,19 +1171,15 @@ func TestExemplars(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			originalEscapingScheme := model.NameEscapingScheme
-			originalValidationScheme := model.NameValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-			model.NameEscapingScheme = tc.escapingScheme
-			model.NameValidationScheme = tc.validationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-			// Restore original value after the test is complete
-			defer func() {
-				model.NameEscapingScheme = originalEscapingScheme
-				model.NameValidationScheme = originalValidationScheme // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-			}()
 			// initialize registry exporter
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
-			exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+			exporter, err := New(
+				WithRegisterer(registry),
+				WithoutTargetInfo(),
+				WithoutScopeInfo(),
+				withAllowUTF8(tc.validationScheme == model.UTF8Validation),
+			)
 			require.NoError(t, err)
 
 			// initialize resource
@@ -1702,5 +1742,116 @@ func TestDownscaleExponentialBucketEdgeCases(t *testing.T) {
 		}
 
 		assert.Equal(t, expected, result)
+	})
+}
+
+// TestEscapingErrorHandling increases test coverage by exercising some error
+// conditions.
+func TestEscapingErrorHandling(t *testing.T) {
+	testCases := []struct {
+		name                string
+		namespace           string
+		counterName         string
+		labelName           string
+		expectNewErr        string
+		expectMetricErr     string
+		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
+	}{
+		{
+			name:         "bad namespace",
+			namespace:    "$%^&",
+			counterName:  "foo",
+			expectNewErr: `normalization for label name "$%^&" resulted in invalid name "____"`,
+		},
+		{
+			name:        "good namespace, names should be escaped",
+			namespace:   "my-strange-namespace",
+			counterName: "foo",
+			labelName:   "bar",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						continue
+					}
+					require.Contains(t, mf.GetName(), "my_strange_namespace")
+					require.NotContains(t, mf.GetName(), "my-strange-namespace")
+				}
+			},
+		},
+		{
+			name:            "bad translated metric name",
+			counterName:     "$%^&",
+			expectMetricErr: `invalid instrument name: $%^&: must start with a letter`,
+		},
+		{
+			// label names are not translated and therefore not checked until
+			// collection time, and there is no place to catch and return this error.
+			// Instead we rename the bad label and pass it along.
+			name:        "bad translated label name",
+			counterName: "foo",
+			labelName:   "$%^&",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				foundInvalid := false
+				for _, mf := range mfs {
+					for _, l := range mf.GetMetric()[0].GetLabel() {
+						// require.Contains(tb, mf.GetMetric()[0].GetLabel(), thingy)
+						if l.GetName() == "invalid_label_name" {
+							foundInvalid = true
+							break
+						}
+					}
+				}
+				if !foundInvalid {
+					t.Error("did not find 'invalid_label_name")
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			registry := prometheus.NewRegistry()
+			exporter, err := New(
+				WithRegisterer(registry),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				WithNamespace(tc.namespace),
+			)
+			if tc.expectNewErr != "" {
+				require.ErrorContains(t, err, tc.expectNewErr)
+				return
+			}
+			require.NoError(t, err)
+
+			provider := metric.NewMeterProvider(
+				metric.WithReader(exporter),
+				metric.WithResource(resource.Default()),
+			)
+
+			fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
+				Int64Counter(
+					tc.counterName,
+					otelmetric.WithUnit("s"),
+					otelmetric.WithDescription(fmt.Sprintf(`meter %q counter`, tc.counterName)))
+			if tc.expectMetricErr != "" {
+				require.ErrorContains(t, err, tc.expectMetricErr)
+				return
+			}
+			require.NoError(t, err)
+
+			fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
+			got, err := registry.Gather()
+			require.NoError(t, err)
+			tc.checkMetricFamilies(t, got)
+		})
+	}
+}
+
+// withAllowUTF8 allows setting whether UTF-8 names should be allowed through
+// unedited, or escaped to underscores.
+func withAllowUTF8(allow bool) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.allowUTF8 = allow
+		return cfg
 	})
 }

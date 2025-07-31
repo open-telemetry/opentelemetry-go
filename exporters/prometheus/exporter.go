@@ -15,7 +15,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/otlptranslator"
 	"google.golang.org/protobuf/proto"
 
@@ -104,12 +103,17 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.readerOpts...)
 
-	utf8Allowed := model.NameValidationScheme == model.UTF8Validation // nolint:staticcheck // We need this check to keep supporting the legacy scheme.
-	if !utf8Allowed {
-		// Only sanitize if prometheus does not support UTF-8.
-		logDeprecatedLegacyScheme()
+	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: cfg.allowUTF8}
+	escapedNamespace := cfg.namespace
+	if escapedNamespace != "" {
+		var err error
+		// If the namespace needs to be escaped, do that now when creating the new
+		// Collector object. The escaping is not persisted in the Config itself.
+		escapedNamespace, err = labelNamer.Build(escapedNamespace)
+		if err != nil {
+			return nil, err
+		}
 	}
-	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: utf8Allowed}
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
@@ -117,17 +121,17 @@ func New(opts ...Option) (*Exporter, error) {
 		withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 		disableScopeInfo:         cfg.disableScopeInfo,
 		metricFamilies:           make(map[string]*dto.MetricFamily),
-		namespace:                labelNamer.Build(cfg.namespace),
+		namespace:                escapedNamespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
 		metricNamer: otlptranslator.MetricNamer{
-			Namespace: cfg.namespace,
+			Namespace: escapedNamespace,
 			// We decide whether to pass type and unit to the netricNamer based
 			// on whether units or counter suffixes are enabled, and keep this
 			// always enabled.
 			WithMetricSuffixes: true,
-			UTF8Allowed:        utf8Allowed,
+			UTF8Allowed:        cfg.allowUTF8,
 		},
-		unitNamer:  otlptranslator.UnitNamer{UTF8Allowed: utf8Allowed},
+		unitNamer:  otlptranslator.UnitNamer{UTF8Allowed: cfg.allowUTF8},
 		labelNamer: labelNamer,
 	}
 
@@ -227,7 +231,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			if typ == nil {
 				continue
 			}
-			name := c.getName(m)
+			name, err := c.getName(m)
+			if err != nil {
+				continue
+			}
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
@@ -494,7 +501,10 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 		keysMap := make(map[string][]string)
 		for itr.Next() {
 			kv := itr.Attribute()
-			key := labelNamer.Build(string(kv.Key))
+			key, err := labelNamer.Build(string(kv.Key))
+			if err != nil {
+				key = "invalid_label_name"
+			}
 			if _, ok := keysMap[key]; !ok {
 				keysMap[key] = []string{kv.Value.Emit()}
 			} else {
@@ -517,8 +527,9 @@ func (c *collector) createInfoMetric(name, description string, res *resource.Res
 	return prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(1), values...)
 }
 
-// getName returns the sanitized name, prefixed with the namespace and suffixed with unit.
-func (c *collector) getName(m metricdata.Metrics) string {
+// getName returns the sanitized name, translated according to the selected
+// TranslationStrategy and namespace option.
+func (c *collector) getName(m metricdata.Metrics) (string, error) {
 	translatorMetric := otlptranslator.Metric{
 		Name: m.Name,
 		Type: c.namingMetricType(m),
@@ -660,7 +671,11 @@ func addExemplars[N int64 | float64](
 func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) prometheus.Labels {
 	labels := make(map[string]string)
 	for _, attr := range attrs {
-		labels[labelNamer.Build(string(attr.Key))] = attr.Value.Emit()
+		name, err := labelNamer.Build(string(attr.Key))
+		if err != nil {
+			continue
+		}
+		labels[name] = attr.Value.Emit()
 	}
 	return labels
 }
