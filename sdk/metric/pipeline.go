@@ -395,7 +395,7 @@ func (i *inserter[N]) cachedAggregator(
 		b.Filter = stream.AttributeFilter
 		// A value less than or equal to zero will disable the aggregation
 		// limits for the builder (an all the created aggregates).
-		// CardinalityLimit.Lookup returns 0 by default if unset (or
+		// cardinalityLimit will be 0 by default if unset (or
 		// unrecognized input). Use that value directly.
 		b.AggregationLimit = i.pipeline.cardinalityLimit
 		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
