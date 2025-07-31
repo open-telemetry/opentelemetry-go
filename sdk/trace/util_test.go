@@ -72,7 +72,7 @@ func (h *harness) testTracerProvider(subjectFactory func() trace.TracerProvider)
 				done := make(chan struct{})
 				go func(tp trace.TracerProvider) {
 					var wg sync.WaitGroup
-					for i := 0; i < 20; i++ {
+					for i := range 20 {
 						wg.Add(1)
 						go func(name, version string) {
 							_ = tp.Tracer(name, trace.WithInstrumentationVersion(version))
@@ -231,7 +231,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 				done := make(chan struct{})
 				go func(tp trace.Tracer) {
 					var wg sync.WaitGroup
-					for i := 0; i < 20; i++ {
+					for i := range 20 {
 						wg.Add(1)
 						go func(name string) {
 							defer wg.Done()

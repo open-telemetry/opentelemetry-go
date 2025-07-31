@@ -165,7 +165,7 @@ func (tf TraceFlags) MarshalJSON() ([]byte, error) {
 
 // String returns the hex string representation form of TraceFlags.
 func (tf TraceFlags) String() string {
-	return hex.EncodeToString([]byte{byte(tf)}[:])
+	return hex.EncodeToString([]byte{byte(tf)})
 }
 
 // SpanContextConfig contains mutable fields usable for constructing

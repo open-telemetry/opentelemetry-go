@@ -57,7 +57,7 @@ func assertSum[N int64 | float64](
 		t.Helper()
 		requireN[N](t, n, meas, comps, err)
 
-		for m := 0; m < n; m++ {
+		for m := range n {
 			t.Logf("input/output number: %d", m)
 			in, out := meas[m], comps[m]
 			in(context.Background(), 1, *attribute.EmptySet())
@@ -601,7 +601,7 @@ type logCounter struct {
 	infoN uint32
 }
 
-func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
+func (l *logCounter) Info(level int, msg string, keysAndValues ...any) {
 	atomic.AddUint32(&l.infoN, 1)
 	l.LogSink.Info(level, msg, keysAndValues...)
 }
@@ -610,7 +610,7 @@ func (l *logCounter) InfoN() int {
 	return int(atomic.SwapUint32(&l.infoN, 0))
 }
 
-func (l *logCounter) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *logCounter) Error(err error, msg string, keysAndValues ...any) {
 	atomic.AddUint32(&l.errN, 1)
 	l.LogSink.Error(err, msg, keysAndValues...)
 }

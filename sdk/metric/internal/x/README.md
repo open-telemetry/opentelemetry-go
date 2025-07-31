@@ -1,7 +1,7 @@
 # Experimental Features
 
-The metric SDK contains features that have not yet stabilized in the OpenTelemetry specification.
-These features are added to the OpenTelemetry Go metric SDK prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
+The Metric SDK contains features that have not yet stabilized in the OpenTelemetry specification.
+These features are added to the OpenTelemetry Go Metric SDK prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
 
 These feature may change in backwards incompatible ways as feedback is applied.
 See the [Compatibility and Stability](#compatibility-and-stability) section for more information.

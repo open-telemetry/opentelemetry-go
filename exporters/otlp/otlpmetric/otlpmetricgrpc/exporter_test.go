@@ -37,7 +37,7 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 
 	done := make(chan struct{})
 	var wg, someWork sync.WaitGroup
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		wg.Add(1)
 		someWork.Add(1)
 		go func() {

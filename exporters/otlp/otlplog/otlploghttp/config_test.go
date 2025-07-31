@@ -460,10 +460,8 @@ func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
 
 	if want.Value.RootCAs == nil {
 		assert.Nil(t, got.Value.RootCAs, "*tls.Config.RootCAs")
-	} else {
-		if assert.NotNil(t, got.Value.RootCAs, "RootCAs") {
-			assert.True(t, want.Value.RootCAs.Equal(got.Value.RootCAs), "RootCAs equal")
-		}
+	} else if assert.NotNil(t, got.Value.RootCAs, "RootCAs") {
+		assert.True(t, want.Value.RootCAs.Equal(got.Value.RootCAs), "RootCAs equal")
 	}
 	assert.Equal(t, want.Value.Certificates, got.Value.Certificates, "Certificates")
 }

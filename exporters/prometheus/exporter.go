@@ -37,7 +37,7 @@ const (
 )
 
 var metricsPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &metricdata.ResourceMetrics{}
 	},
 }
@@ -49,7 +49,7 @@ type Exporter struct {
 }
 
 // MarshalLog returns logging data about the Exporter.
-func (e *Exporter) MarshalLog() interface{} {
+func (e *Exporter) MarshalLog() any {
 	const t = "Prometheus exporter"
 
 	if r, ok := e.Reader.(*metric.ManualReader); ok {
@@ -640,8 +640,8 @@ func addExemplars[N int64 | float64](
 	for i, exemplar := range exemplars {
 		labels := attributesToLabels(exemplar.FilteredAttributes, labelNamer)
 		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = hex.EncodeToString(exemplar.TraceID[:])
-		labels[otlptranslator.ExemplarSpanIDKey] = hex.EncodeToString(exemplar.SpanID[:])
+		labels[otlptranslator.ExemplarTraceIDKey] = hex.EncodeToString(exemplar.TraceID)
+		labels[otlptranslator.ExemplarSpanIDKey] = hex.EncodeToString(exemplar.SpanID)
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,

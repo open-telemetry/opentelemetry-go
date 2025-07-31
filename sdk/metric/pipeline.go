@@ -432,7 +432,7 @@ func (i *inserter[N]) logConflict(id instID) {
 	}
 
 	const msg = "duplicate metric stream definitions"
-	args := []interface{}{
+	args := []any{
 		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
 		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
 		"kinds", fmt.Sprintf("%s, %s", existing.Kind, id.Kind),

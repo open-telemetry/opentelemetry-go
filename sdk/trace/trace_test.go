@@ -283,13 +283,12 @@ func TestSampling(t *testing.T) {
 		"SampledParentSpanWithParentTraceIdRatioBased_.50":   {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: 1, parent: true, sampledParent: true},
 		"UnsampledParentSpanWithParentTraceIdRatioBased_.50": {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: 0, parent: true, sampledParent: false},
 	} {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			p := NewTracerProvider(WithSampler(tc.sampler))
 			tr := p.Tracer("test")
 			var sampled int
-			for i := 0; i < total; i++ {
+			for range total {
 				ctx := context.Background()
 				if tc.parent {
 					tid, sid := idg.NewIDs(ctx)
@@ -920,7 +919,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 	}
 }
 
-func cmpDiff(x, y interface{}) string {
+func cmpDiff(x, y any) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),
@@ -1479,7 +1478,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			te := NewTestExporter()
 			defaultOptions := []TracerProviderOption{WithSyncer(te), WithSampler(AlwaysSample())}
@@ -1895,7 +1893,6 @@ func TestSamplerTraceState(t *testing.T) {
 	}
 
 	for _, ts := range tests {
-		ts := ts
 		t.Run(ts.name, func(t *testing.T) {
 			te := NewTestExporter()
 			tp := NewTracerProvider(WithSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
@@ -1968,7 +1965,7 @@ func TestWithIDGenerator(t *testing.T) {
 		WithSyncer(te),
 		WithIDGenerator(gen),
 	)
-	for i := 0; i < numSpan; i++ {
+	for i := range numSpan {
 		func() {
 			_, span := tp.Tracer(t.Name()).Start(context.Background(), strconv.Itoa(i))
 			defer span.End()
