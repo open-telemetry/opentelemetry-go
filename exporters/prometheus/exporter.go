@@ -103,10 +103,6 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.readerOpts...)
 
-	if !cfg.allowUTF8 {
-		// Only sanitize if prometheus does not support UTF-8.
-		logDeprecatedLegacyScheme()
-	}
 	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: cfg.allowUTF8}
 	namespace := cfg.namespace
 	if namespace != "" {
@@ -235,7 +231,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 			name, err := c.getName(m)
 			if err != nil {
-				// XXXXXXXXX
+				continue
 			}
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
@@ -506,7 +502,7 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			kv := itr.Attribute()
 			key, err := labelNamer.Build(string(kv.Key))
 			if err != nil {
-				////XXXXXXXx
+				continue
 			}
 			if _, ok := keysMap[key]; !ok {
 				keysMap[key] = []string{kv.Value.Emit()}
@@ -675,7 +671,7 @@ func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.La
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
-			//XXXXXXXXx
+			continue
 		}
 		labels[name] = attr.Value.Emit()
 	}
