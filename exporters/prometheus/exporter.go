@@ -78,6 +78,7 @@ type keyVals struct {
 type collector struct {
 	reader metric.Reader
 
+	withoutUnits             bool
 	withoutCounterSuffixes   bool
 	disableScopeInfo         bool
 	namespace                string
@@ -102,11 +103,11 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.readerOpts...)
 
-	if cfg.translationStrategy.ShouldEscape() {
+	if !cfg.allowUTF8 {
 		// Only sanitize if prometheus does not support UTF-8.
 		logDeprecatedLegacyScheme()
 	}
-	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: !cfg.translationStrategy.ShouldEscape()}
+	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: cfg.allowUTF8}
 	namespace := cfg.namespace
 	if namespace != "" {
 		var err error
@@ -118,14 +119,22 @@ func New(opts ...Option) (*Exporter, error) {
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
-		withoutCounterSuffixes:   cfg.WithoutCounterSuffixes,
+		withoutUnits:             cfg.withoutUnits,
+		withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 		disableScopeInfo:         cfg.disableScopeInfo,
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                namespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
-		metricNamer:              otlptranslator.NewMetricNamer(cfg.namespace, cfg.translationStrategy),
-		unitNamer:                otlptranslator.UnitNamer{UTF8Allowed: !cfg.translationStrategy.ShouldEscape()},
-		labelNamer:               labelNamer,
+		metricNamer: otlptranslator.MetricNamer{
+			Namespace: cfg.namespace,
+			// We decide whether to pass type and unit to the netricNamer based
+			// on whether units or counter suffixes are enabled, and keep this
+			// always enabled.
+			WithMetricSuffixes: true,
+			UTF8Allowed:        cfg.allowUTF8,
+		},
+		unitNamer:  otlptranslator.UnitNamer{UTF8Allowed: cfg.allowUTF8},
+		labelNamer: labelNamer,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {
