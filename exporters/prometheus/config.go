@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/otlptranslator"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
@@ -17,8 +18,8 @@ import (
 type config struct {
 	registerer               prometheus.Registerer
 	disableTargetInfo        bool
-	withoutUnits             bool
-	withoutCounterSuffixes   bool
+	WithoutCounterSuffixes   bool
+	translationStrategy      otlptranslator.TranslationStrategyOption
 	readerOpts               []metric.ManualReaderOption
 	disableScopeInfo         bool
 	namespace                string
@@ -34,6 +35,11 @@ var logDeprecatedLegacyScheme = sync.OnceFunc(func() {
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
 	cfg := config{}
+
+	if cfg.translationStrategy == "" {
+		cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithSuffixes
+	}
+
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
 	}
@@ -95,6 +101,14 @@ func WithoutTargetInfo() Option {
 	})
 }
 
+// WithTranslationStrategy
+func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.translationStrategy = strategy
+		return cfg
+	})
+}
+
 // WithoutUnits disables exporter's addition of unit suffixes to metric names,
 // and will also prevent unit comments from being added in OpenMetrics once
 // unit comments are supported.
@@ -103,9 +117,15 @@ func WithoutTargetInfo() Option {
 // conventions. For example, the counter metric request.duration, with unit
 // milliseconds would become request_duration_milliseconds_total.
 // With this option set, the name would instead be request_duration_total.
+// Deprecated: Use WithTranslationStrategy instead
 func WithoutUnits() Option {
 	return optionFunc(func(cfg config) config {
-		cfg.withoutUnits = true
+		switch cfg.translationStrategy {
+		case otlptranslator.NoUTF8EscapingWithSuffixes:
+			cfg.translationStrategy = otlptranslator.NoTranslation
+		case otlptranslator.UnderscoreEscapingWithSuffixes:
+			cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithoutSuffixes
+		}
 		return cfg
 	})
 }
@@ -116,9 +136,10 @@ func WithoutUnits() Option {
 // conventions. For example, the counter metric happy.people would become
 // happy_people_total. With this option set, the name would instead be
 // happy_people.
+// Deprecated: Use WithTranslationStrategy instead
 func WithoutCounterSuffixes() Option {
 	return optionFunc(func(cfg config) config {
-		cfg.withoutCounterSuffixes = true
+		cfg.WithoutCounterSuffixes = true
 		return cfg
 	})
 }
