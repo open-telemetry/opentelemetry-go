@@ -50,6 +50,7 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
+	duration                  time.Duration
 	presetAttrs               []attribute.KeyValue
 	componentName             string
 	selfObservabilityEnabled  bool
@@ -180,20 +181,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	defer cancel()
 
 	return c.requestFunc(ctx, func(ctx context.Context) error {
-		var (
-			begin    time.Time
-			duration time.Duration
-		)
-		if c.selfObservabilityEnabled {
-			begin = time.Now()
-		}
-		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
-			ResourceLogs: rl,
-		})
-
-		if c.selfObservabilityEnabled {
-			duration = time.Since(begin)
-		}
+		resp, err := c.export(ctx, rl)
 
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
@@ -204,7 +192,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 				c.recordLogExportedMetric(context.Background(), semconv.ErrorType(err))
 				c.recordLogExportedDurationMetric(
 					context.Background(),
-					duration.Seconds(),
+					c.duration.Seconds(),
 					c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
 						otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
 					),
@@ -219,20 +207,32 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			// Success.
 			c.recordLogInflightMetric(context.Background())
 			c.recordLogExportedMetric(context.Background())
-			c.recordLogExportedDurationMetric(context.Background(), duration.Seconds())
+			c.recordLogExportedDurationMetric(context.Background(), c.duration.Seconds())
 			return nil
 		}
 		c.recordLogInflightMetric(context.Background(), semconv.ErrorType(err))
 		c.recordLogExportedMetric(context.Background(), semconv.ErrorType(err))
 		c.recordLogExportedDurationMetric(
 			context.Background(),
-			duration.Seconds(),
+			c.duration.Seconds(),
 			c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
 				otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
 			),
 			c.logExportedDurationMetric.AttrErrorType(otelconv.ErrorTypeAttr(err.Error())),
 		)
 		return err
+	})
+}
+
+func (c *client) export(ctx context.Context, rl []*logpb.ResourceLogs) (*collogpb.ExportLogsServiceResponse, error) {
+	if c.selfObservabilityEnabled {
+		begin := time.Now()
+		defer func() {
+			c.duration = time.Since(begin)
+		}()
+	}
+	return c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
+		ResourceLogs: rl,
 	})
 }
 
