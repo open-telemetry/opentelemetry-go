@@ -39,7 +39,7 @@ func NewSpan(s trace.Span) *octrace.Span {
 	return octrace.NewSpan(&Span{otelSpan: s})
 }
 
-// IsRecordingEvents returns true if events are being recorded for this span.
+// IsRecordingEvents reports whether events are being recorded for this span.
 func (s *Span) IsRecordingEvents() bool {
 	return s.otelSpan.IsRecording()
 }
@@ -75,7 +75,7 @@ func (s *Span) Annotate(attributes []octrace.Attribute, str string) {
 }
 
 // Annotatef adds a formatted annotation with attributes to this span.
-func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...interface{}) {
+func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...any) {
 	s.Annotate(attributes, fmt.Sprintf(format, a...))
 }
 

@@ -45,7 +45,7 @@ type tracerProviderConfig struct {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
-func (cfg tracerProviderConfig) MarshalLog() interface{} {
+func (cfg tracerProviderConfig) MarshalLog() any {
 	return struct {
 		SpanProcessors  []SpanProcessor
 		SamplerType     string
@@ -159,6 +159,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 				provider:             p,
 				instrumentationScope: is,
 			}
+			t.initSelfObservability()
 			p.namedTracer[is] = t
 		}
 		return t, ok

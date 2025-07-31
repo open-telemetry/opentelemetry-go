@@ -92,8 +92,7 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	}
 	attrs := make([]attribute.KeyValue, 0, n)
 
-	attrs = append(attrs, c.method(req.Method))
-	attrs = append(attrs, c.proto(req.Proto))
+	attrs = append(attrs, c.method(req.Method), c.proto(req.Proto))
 
 	var u string
 	if req.URL != nil {
@@ -104,9 +103,11 @@ func (c *HTTPConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 		// Restore any username/password info that was removed.
 		req.URL.User = userinfo
 	}
-	attrs = append(attrs, c.HTTPURLKey.String(u))
-
-	attrs = append(attrs, c.NetConv.PeerName(peer))
+	attrs = append(
+		attrs,
+		c.HTTPURLKey.String(u),
+		c.NetConv.PeerName(peer),
+	)
 	if port > 0 {
 		attrs = append(attrs, c.NetConv.PeerPort(port))
 	}
@@ -192,10 +193,13 @@ func (c *HTTPConv) ServerRequest(server string, req *http.Request) []attribute.K
 	}
 	attrs := make([]attribute.KeyValue, 0, n)
 
-	attrs = append(attrs, c.method(req.Method))
-	attrs = append(attrs, c.scheme(req.TLS != nil))
-	attrs = append(attrs, c.proto(req.Proto))
-	attrs = append(attrs, c.NetConv.HostName(host))
+	attrs = append(
+		attrs,
+		c.method(req.Method),
+		c.scheme(req.TLS != nil),
+		c.proto(req.Proto),
+		c.NetConv.HostName(host),
+	)
 
 	if hostPort > 0 {
 		attrs = append(attrs, c.NetConv.HostPort(hostPort))

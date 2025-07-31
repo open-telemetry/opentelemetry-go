@@ -48,7 +48,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 	tr2 := tp2.Tracer("test-tracer2")
 	// Now create few spans
 	m := 4
-	for i := 0; i < m; i++ {
+	for i := range m {
 		_, span := tr1.Start(ctx, "AlwaysSample")
 		span.SetAttributes(attribute.Int64("i", int64(i)))
 		span.End()
@@ -109,7 +109,7 @@ func RunEndToEndTest(ctx context.Context, t *testing.T, exp *otlptrace.Exporter,
 		if got, want := len(attrMap), m; got != want {
 			t.Fatalf("span attribute unique values: got %d  want %d", got, want)
 		}
-		for i := 0; i < m; i++ {
+		for i := range m {
 			_, ok := attrMap[int64(i)]
 			if !ok {
 				t.Fatalf("span with attribute %d missing", i)

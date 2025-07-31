@@ -38,7 +38,7 @@ var (
 	_          json.Marshaler = nilTraceID
 )
 
-// IsValid checks whether the trace TraceID is valid. A valid trace ID does
+// IsValid reports whether the trace TraceID is valid. A valid trace ID does
 // not consist of zeros only.
 func (t TraceID) IsValid() bool {
 	return !bytes.Equal(t[:], nilTraceID[:])
@@ -63,7 +63,7 @@ var (
 	_         json.Marshaler = nilSpanID
 )
 
-// IsValid checks whether the SpanID is valid. A valid SpanID does not consist
+// IsValid reports whether the SpanID is valid. A valid SpanID does not consist
 // of zeros only.
 func (s SpanID) IsValid() bool {
 	return !bytes.Equal(s[:], nilSpanID[:])
@@ -143,7 +143,7 @@ func decodeHex(h string, b []byte) error {
 // TraceFlags contains flags that can be set on a SpanContext.
 type TraceFlags byte //nolint:revive // revive complains about stutter of `trace.TraceFlags`.
 
-// IsSampled returns if the sampling bit is set in the TraceFlags.
+// IsSampled reports whether the sampling bit is set in the TraceFlags.
 func (tf TraceFlags) IsSampled() bool {
 	return tf&FlagsSampled == FlagsSampled
 }
@@ -165,7 +165,7 @@ func (tf TraceFlags) MarshalJSON() ([]byte, error) {
 
 // String returns the hex string representation form of TraceFlags.
 func (tf TraceFlags) String() string {
-	return hex.EncodeToString([]byte{byte(tf)}[:])
+	return hex.EncodeToString([]byte{byte(tf)})
 }
 
 // SpanContextConfig contains mutable fields usable for constructing
@@ -201,13 +201,13 @@ type SpanContext struct {
 
 var _ json.Marshaler = SpanContext{}
 
-// IsValid returns if the SpanContext is valid. A valid span context has a
+// IsValid reports whether the SpanContext is valid. A valid span context has a
 // valid TraceID and SpanID.
 func (sc SpanContext) IsValid() bool {
 	return sc.HasTraceID() && sc.HasSpanID()
 }
 
-// IsRemote indicates whether the SpanContext represents a remotely-created Span.
+// IsRemote reports whether the SpanContext represents a remotely-created Span.
 func (sc SpanContext) IsRemote() bool {
 	return sc.remote
 }
@@ -228,7 +228,7 @@ func (sc SpanContext) TraceID() TraceID {
 	return sc.traceID
 }
 
-// HasTraceID checks if the SpanContext has a valid TraceID.
+// HasTraceID reports whether the SpanContext has a valid TraceID.
 func (sc SpanContext) HasTraceID() bool {
 	return sc.traceID.IsValid()
 }
@@ -249,7 +249,7 @@ func (sc SpanContext) SpanID() SpanID {
 	return sc.spanID
 }
 
-// HasSpanID checks if the SpanContext has a valid SpanID.
+// HasSpanID reports whether the SpanContext has a valid SpanID.
 func (sc SpanContext) HasSpanID() bool {
 	return sc.spanID.IsValid()
 }
@@ -270,7 +270,7 @@ func (sc SpanContext) TraceFlags() TraceFlags {
 	return sc.traceFlags
 }
 
-// IsSampled returns if the sampling bit is set in the SpanContext's TraceFlags.
+// IsSampled reports whether the sampling bit is set in the SpanContext's TraceFlags.
 func (sc SpanContext) IsSampled() bool {
 	return sc.traceFlags.IsSampled()
 }
@@ -302,7 +302,7 @@ func (sc SpanContext) WithTraceState(state TraceState) SpanContext {
 	}
 }
 
-// Equal is a predicate that determines whether two SpanContext values are equal.
+// Equal reports whether two SpanContext values are equal.
 func (sc SpanContext) Equal(other SpanContext) bool {
 	return sc.traceID == other.traceID &&
 		sc.spanID == other.spanID &&

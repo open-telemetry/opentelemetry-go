@@ -361,7 +361,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 			const goroutines = 10
 			var wg sync.WaitGroup
 			wg.Add(goroutines)
-			for i := 0; i < goroutines; i++ {
+			for range goroutines {
 				go func() {
 					defer wg.Done()
 					err := exporter.Export(context.Background(), []sdklog.Record{{}})

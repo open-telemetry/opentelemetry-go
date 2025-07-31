@@ -22,7 +22,7 @@ func (tid TraceID) String() string {
 	return hex.EncodeToString(tid[:])
 }
 
-// IsEmpty returns false if id contains at least one non-zero byte.
+// IsEmpty reports whether the TraceID contains only zero bytes.
 func (tid TraceID) IsEmpty() bool {
 	return tid == [traceIDSize]byte{}
 }
@@ -50,7 +50,7 @@ func (sid SpanID) String() string {
 	return hex.EncodeToString(sid[:])
 }
 
-// IsEmpty returns true if the span ID contains at least one non-zero byte.
+// IsEmpty reports whether the SpanID contains only zero bytes.
 func (sid SpanID) IsEmpty() bool {
 	return sid == [spanIDSize]byte{}
 }
