@@ -85,6 +85,10 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 	if cfg.serviceConfig.Value != "" {
 		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(cfg.serviceConfig.Value))
 	}
+	// Convert tls config into gRPC credentials if gRPC credentials value is nil.
+	if cfg.gRPCCredentials.Value == nil && cfg.tlsCfg.Set {
+		cfg.gRPCCredentials.Value = credentials.NewTLS(cfg.tlsCfg.Value)
+	}
 	// Prioritize GRPCCredentials over Insecure (passing both is an error).
 	switch {
 	case cfg.gRPCCredentials.Value != nil:
