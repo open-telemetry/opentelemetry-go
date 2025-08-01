@@ -1210,6 +1210,7 @@ func TestExemplars(t *testing.T) {
 				if h.GetZeroThreshold() != 0 || h.GetZeroCount() != 0 ||
 					len(h.PositiveSpan) != 0 || len(h.NegativeSpan) != 0 {
 					require.NotNil(t, h.Exemplars)
+					exemplar = h.Exemplars[0]
 				}
 			}
 			require.NotNil(t, exemplar)
