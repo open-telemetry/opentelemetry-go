@@ -1155,7 +1155,8 @@ func TestExemplars(t *testing.T) {
 			provider := metric.NewMeterProvider(
 				metric.WithReader(exporter),
 				metric.WithResource(res),
-				metric.WithView(metric.NewView(metric.Instrument{Name: "foo"},
+				metric.WithView(metric.NewView(
+					metric.Instrument{Name: "foo"},
 					metric.Stream{
 						// filter out all attributes so they are added as filtered
 						// attributes to the exemplar
@@ -1163,7 +1164,8 @@ func TestExemplars(t *testing.T) {
 					},
 				),
 				),
-				metric.WithView(metric.NewView(metric.Instrument{Name: "exponential_histogram"},
+				metric.WithView(metric.NewView(
+					metric.Instrument{Name: "exponential_histogram"},
 					metric.Stream{
 						Aggregation: metric.AggregationBase2ExponentialHistogram{
 							MaxSize: 20,
