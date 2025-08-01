@@ -181,6 +181,7 @@ linters:
             - fmt.Print
             - fmt.Printf
             - fmt.Println
+        - name: unused-parameter
         - name: unnecessary-stmt
         - name: use-any
         - name: useless-break

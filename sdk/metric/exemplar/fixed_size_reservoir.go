@@ -14,7 +14,7 @@ import (
 
 // FixedSizeReservoirProvider returns a provider of [FixedSizeReservoir].
 func FixedSizeReservoirProvider(k int) ReservoirProvider {
-	return func(_ attribute.Set) Reservoir {
+	return func(attribute.Set) Reservoir {
 		return NewFixedSizeReservoir(k)
 	}
 }
