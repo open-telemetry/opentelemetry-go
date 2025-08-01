@@ -1200,8 +1200,8 @@ func TestExemplars(t *testing.T) {
 			case dto.MetricType_COUNTER:
 				exemplar = metric.GetCounter().GetExemplar()
 			case dto.MetricType_HISTOGRAM:
-				h := metric.Histogram
-				for _, b := range metric.GetHistogram().GetBucket() {
+				h := metric.GetHistogram()
+				for _, b := range h.GetBucket() {
 					if b.GetExemplar() != nil {
 						exemplar = b.GetExemplar()
 						continue
