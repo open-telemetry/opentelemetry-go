@@ -6,12 +6,13 @@ package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptr
 import (
 	"math"
 
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 // Spans transforms a slice of OpenTelemetry spans into a slice of OTLP

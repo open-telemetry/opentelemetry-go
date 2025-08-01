@@ -8,12 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
-
-	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
-
 	octrace "go.opencensus.io/trace"
 	"go.opencensus.io/trace/tracestate"
 
+	"go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
 	"go.opentelemetry.io/otel/trace"
 )
 
