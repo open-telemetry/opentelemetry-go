@@ -4,32 +4,30 @@
 package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
-	"sync"
-
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/otlptranslator"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 // config contains options for the exporter.
 type config struct {
-	registerer               prometheus.Registerer
-	disableTargetInfo        bool
+	registerer        prometheus.Registerer
+	disableTargetInfo bool
+
+	// By default because withoutUnits, withoutCounterSuffixes, and allowUTF8 are
+	// false, the default translation mode is equivalent to applying the option
+	// WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes).
+
 	withoutUnits             bool
 	withoutCounterSuffixes   bool
+	allowUTF8                bool
 	readerOpts               []metric.ManualReaderOption
 	disableScopeInfo         bool
 	namespace                string
 	resourceAttributesFilter attribute.Filter
 }
-
-var logDeprecatedLegacyScheme = sync.OnceFunc(func() {
-	global.Warn(
-		"prometheus exporter legacy scheme deprecated: support for the legacy NameValidationScheme will be removed in a future release",
-	)
-})
 
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
@@ -91,6 +89,29 @@ func WithProducer(producer metric.Producer) Option {
 func WithoutTargetInfo() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.disableTargetInfo = true
+		return cfg
+	})
+}
+
+// WithTranslationStrategy provides a standardized way to define how metric and
+// label names should be handled during translation to Prometheus format. The
+// recommended approach is to use either UnderscoreEscapingWithSuffixes for full
+// Prometheus-style compatibility (the default), or NoTranslation for Otel-style
+// names.
+func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.allowUTF8 = !strategy.ShouldEscape()
+		cfg.withoutCounterSuffixes = !strategy.ShouldAddSuffixes()
+		cfg.withoutUnits = !strategy.ShouldAddSuffixes()
+		return cfg
+	})
+}
+
+// WithAllowUTF8 allows setting whether UTF-8 names should be allowed through
+// unedited, or escaped to underscores.
+func WithAllowUTF8(allow bool) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.allowUTF8 = allow
 		return cfg
 	})
 }
