@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {

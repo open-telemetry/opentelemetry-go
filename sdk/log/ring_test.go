@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func verifyRing(t *testing.T, r *ring, num int, sum int) {
+func verifyRing(t *testing.T, r *ring, num, sum int) {
 	// Length.
 	assert.Equal(t, num, r.Len(), "r.Len()")
 
