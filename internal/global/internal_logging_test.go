@@ -12,11 +12,9 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/stdr"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoggerConcurrentSafe(t *testing.T) {

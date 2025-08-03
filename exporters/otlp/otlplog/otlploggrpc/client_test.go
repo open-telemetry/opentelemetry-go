@@ -14,6 +14,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,10 +31,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
-	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 )
 
 var (

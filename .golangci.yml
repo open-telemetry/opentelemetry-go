@@ -94,7 +94,6 @@ linters:
         - dupArg
         - hugeParam
         - importShadow
-        - paramTypeCombine
         - ptrToRefParam
         - preferDecodeRune
         - rangeValCopy
@@ -249,9 +248,11 @@ formatters:
     - goimports
     - golines
   settings:
+    gofumpt:
+      extra-rules: true
     goimports:
       local-prefixes:
-        - go.opentelemetry.io
+        - go.opentelemetry.io/otel
     golines:
       max-len: 120
   exclusions:
