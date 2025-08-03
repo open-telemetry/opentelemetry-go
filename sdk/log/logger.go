@@ -123,7 +123,9 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeCountLimit:       l.provider.attributeCountLimit,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
-	l.logCreatedMetric.Add(ctx, 1)
+	if l.selfObservabilityEnabled {
+		l.logCreatedMetric.Add(ctx, 1)
+	}
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
 	if newRecord.observedTimestamp.IsZero() {
