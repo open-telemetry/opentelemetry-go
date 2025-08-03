@@ -5,11 +5,23 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/log/internal/x"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 // Compile-time check SimpleProcessor implements Processor.
 var _ Processor = (*SimpleProcessor)(nil)
+
+// simpleProcessorInstanceCounter is used to generate unique component names.
+var simpleProcessorInstanceCounter atomic.Uint64
 
 // SimpleProcessor is an processor that synchronously exports log records.
 //
@@ -17,6 +29,10 @@ var _ Processor = (*SimpleProcessor)(nil)
 type SimpleProcessor struct {
 	mu       sync.Mutex
 	exporter Exporter
+
+	selfObservabilityEnabled bool
+	processedMetric          otelconv.SDKProcessorLogProcessed
+	componentName            string
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -30,7 +46,30 @@ type SimpleProcessor struct {
 // [NewBatchProcessor] instead. However, there may be exceptions where certain
 // [Exporter] implementations perform better with this Processor.
 func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimpleProcessor {
-	return &SimpleProcessor{exporter: exporter}
+	instanceID := simpleProcessorInstanceCounter.Add(1) - 1
+	s := &SimpleProcessor{
+		exporter:      exporter,
+		componentName: fmt.Sprintf("%s/%d", string(otelconv.ComponentTypeSimpleLogProcessor), instanceID),
+	}
+	s.initSelfObservability()
+	return s
+}
+
+func (s *SimpleProcessor) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	s.selfObservabilityEnabled = true
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/sdk/log",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if s.processedMetric, err = otelconv.NewSDKProcessorLogProcessed(m); err != nil {
+		otel.Handle(err)
+	}
 }
 
 var simpleProcRecordsPool = sync.Pool{
@@ -55,7 +94,22 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 		simpleProcRecordsPool.Put(records)
 	}()
 
-	return s.exporter.Export(ctx, *records)
+	err := s.exporter.Export(ctx, *records)
+
+	if s.selfObservabilityEnabled && err != nil {
+		s.processedMetric.Add(context.Background(), 1,
+			s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
+			s.processedMetric.AttrComponentName(s.componentName),
+			s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
+	}
+
+	if s.selfObservabilityEnabled && err == nil {
+		s.processedMetric.Add(context.Background(), 1,
+			s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
+			s.processedMetric.AttrComponentName(s.componentName))
+	}
+
+	return err
 }
 
 // Shutdown shuts down the exporter.

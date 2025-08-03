@@ -5,6 +5,7 @@ package log_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"sync"
@@ -13,7 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/log/internal/x"
+	metricSDK "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 type exporter struct {
@@ -118,6 +126,220 @@ func TestSimpleProcessorConcurrentSafe(*testing.T) {
 	}
 
 	wg.Wait()
+}
+
+type errorExporter struct {
+	err error
+}
+
+func (e *errorExporter) Export(_ context.Context, _ []log.Record) error {
+	return e.err
+}
+
+func (e *errorExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (e *errorExporter) ForceFlush(context.Context) error {
+	return nil
+}
+
+type failingMeterProvider struct {
+	noop.MeterProvider
+}
+
+func (mp *failingMeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
+	return &failingMeter{Meter: noop.NewMeterProvider().Meter(name, opts...)}
+}
+
+type failingMeter struct {
+	metric.Meter
+}
+
+func (m *failingMeter) Int64Counter(_ string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return nil, errors.New("failed to create counter")
+}
+
+func TestSimpleProcessorSelfObservability(t *testing.T) {
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	t.Run("self observability disabled", func(t *testing.T) {
+		t.Setenv(x.SelfObservability.Key(), "")
+
+		e := new(exporter)
+		s := log.NewSimpleProcessor(e)
+
+		r := new(log.Record)
+		r.SetSeverityText("test")
+		_ = s.OnEmit(context.Background(), r)
+
+		require.True(t, e.exportCalled)
+		assert.Equal(t, []log.Record{*r}, e.records)
+	})
+
+	t.Run("self observability enabled without error", func(t *testing.T) {
+		t.Setenv(x.SelfObservability.Key(), "true")
+
+		reader := metricSDK.NewManualReader()
+		mp := metricSDK.NewMeterProvider(metricSDK.WithReader(reader))
+		otel.SetMeterProvider(mp)
+
+		e := new(exporter)
+		s := log.NewSimpleProcessor(e)
+
+		r := new(log.Record)
+		r.SetSeverityText("test")
+
+		var err error
+		err = s.OnEmit(context.Background(), r)
+		require.NoError(t, err)
+
+		err = s.OnEmit(context.Background(), r)
+		require.NoError(t, err)
+
+		err = s.OnEmit(context.Background(), r)
+		require.NoError(t, err)
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+
+		var processedMetric *metricdata.ScopeMetrics
+		for _, scopeMetrics := range rm.ScopeMetrics {
+			for _, m := range scopeMetrics.Metrics {
+				if m.Name == "otel.sdk.processor.log.processed" {
+					processedMetric = &scopeMetrics
+					break
+				}
+			}
+		}
+
+		require.NotNil(t, processedMetric)
+
+		totalCount, _, hasComponentType, hasComponentName := extractProcessedLogMetrics(processedMetric, false)
+
+		assert.Equal(t, int64(3), totalCount)
+		assert.True(t, hasComponentType)
+		assert.True(t, hasComponentName)
+	})
+
+	t.Run("self observability enabled with error", func(t *testing.T) {
+		t.Setenv(x.SelfObservability.Key(), "true")
+
+		reader := metricSDK.NewManualReader()
+		mp := metricSDK.NewMeterProvider(metricSDK.WithReader(reader))
+		otel.SetMeterProvider(mp)
+
+		e := &errorExporter{err: errors.New("export failed")}
+		s := log.NewSimpleProcessor(e)
+
+		r := new(log.Record)
+		r.SetSeverityText("test")
+		_ = s.OnEmit(context.Background(), r)
+		_ = s.OnEmit(context.Background(), r)
+
+		rm := metricdata.ResourceMetrics{}
+		err := reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+
+		var processedMetric *metricdata.ScopeMetrics
+		for _, scopeMetrics := range rm.ScopeMetrics {
+			for _, m := range scopeMetrics.Metrics {
+				if m.Name == "otel.sdk.processor.log.processed" {
+					processedMetric = &scopeMetrics
+					break
+				}
+			}
+		}
+
+		require.NotNil(t, processedMetric)
+
+		totalCount, hasErrorType, hasComponentType, hasComponentName := extractProcessedLogMetrics(
+			processedMetric, true,
+		)
+
+		assert.Equal(t, int64(2), totalCount)
+		assert.True(t, hasErrorType)
+		assert.True(t, hasComponentType)
+		assert.True(t, hasComponentName)
+	})
+
+	t.Run("self observability enabled", func(t *testing.T) {
+		t.Setenv(x.SelfObservability.Key(), "true")
+
+		otel.SetMeterProvider(noop.NewMeterProvider())
+
+		e := new(exporter)
+		s := log.NewSimpleProcessor(e)
+
+		r := new(log.Record)
+		r.SetSeverityText("test")
+		assert.NotPanics(t, func() {
+			_ = s.OnEmit(context.Background(), r)
+		})
+
+		require.True(t, e.exportCalled)
+		assert.Equal(t, []log.Record{*r}, e.records)
+	})
+
+	t.Run("self observability metric creation error handled", func(t *testing.T) {
+		t.Setenv(x.SelfObservability.Key(), "true")
+
+		failingMP := &failingMeterProvider{}
+		otel.SetMeterProvider(failingMP)
+
+		assert.NotPanics(t, func() {
+			e := new(exporter)
+			s := log.NewSimpleProcessor(e)
+
+			r := new(log.Record)
+			r.SetSeverityText("test")
+			_ = s.OnEmit(context.Background(), r)
+
+			require.True(t, e.exportCalled)
+			assert.Equal(t, []log.Record{*r}, e.records)
+		})
+	})
+}
+
+func extractProcessedLogMetrics(
+	processedMetric *metricdata.ScopeMetrics,
+	checkError bool,
+) (totalCount int64, hasErrorType, hasComponentType, hasComponentName bool) {
+	for _, m := range processedMetric.Metrics {
+		if m.Name != "otel.sdk.processor.log.processed" {
+			continue
+		}
+
+		data, ok := m.Data.(metricdata.Sum[int64])
+		if !ok {
+			continue
+		}
+
+		for _, dataPoint := range data.DataPoints {
+			totalCount += dataPoint.Value
+			for _, attr := range dataPoint.Attributes.ToSlice() {
+				switch attr.Key {
+				case "error.type":
+					if checkError && attr.Value.AsString() == string(otelconv.ErrorTypeOther) {
+						hasErrorType = true
+					}
+				case "otel.component.type":
+					if attr.Value.AsString() == string(otelconv.ComponentTypeSimpleLogProcessor) {
+						hasComponentType = true
+					}
+				case "otel.component.name":
+					if strings.HasPrefix(attr.Value.AsString(), "simple_log_processor/") {
+						hasComponentName = true
+					} else if checkError {
+						hasComponentName = true
+					}
+				}
+			}
+		}
+	}
+	return totalCount, hasErrorType, hasComponentType, hasComponentName
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
