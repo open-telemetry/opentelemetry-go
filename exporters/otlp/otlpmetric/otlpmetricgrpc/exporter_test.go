@@ -62,8 +62,8 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 	}
 
 	someWork.Wait()
-	assert.NoError(t, exp.Shutdown(ctx))
-	assert.ErrorIs(t, exp.Shutdown(ctx), errShutdown)
+	require.NoError(t, exp.Shutdown(ctx))
+	require.ErrorIs(t, exp.Shutdown(ctx), errShutdown)
 
 	close(done)
 	wg.Wait()
@@ -90,7 +90,9 @@ func TestExporterDoesNotBlockTemporalityAndAggregation(t *testing.T) {
 		defer wg.Done()
 		rm := new(metricdata.ResourceMetrics)
 		t.Log("starting export")
-		require.NoError(t, exp.Export(ctx, rm))
+		if err := exp.Export(ctx, rm); err != nil {
+			t.Errorf("export failed: %v", err)
+		}
 		t.Log("export complete")
 	}()
 

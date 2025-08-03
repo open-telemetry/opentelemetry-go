@@ -25,6 +25,19 @@ var Resource = newFeature("RESOURCE", func(v string) (string, bool) {
 	return "", false
 })
 
+// SelfObservability is an experimental feature flag that defines if OTLP
+// exporters should include self-observability metrics.
+//
+// To enable this feature set the OTEL_GO_X_SELF_OBSERVABILITY environment variable
+// to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
+// will also enable this).
+var SelfObservability = newFeature("SELF_OBSERVABILITY", func(v string) (string, bool) {
+	if strings.EqualFold(v, "true") {
+		return v, true
+	}
+	return "", false
+})
+
 // Feature is an experimental feature control flag. It provides a uniform way
 // to interact with these feature flags and parse their values.
 type Feature[T any] struct {
