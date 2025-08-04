@@ -22,14 +22,15 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 
 // ExporterMetrics holds the self-observability metric instruments for an OTLP metric exporter.
 type ExporterMetrics struct {
-	exported metric.Int64Counter
-	inflight metric.Int64UpDownCounter
-	duration metric.Float64Histogram
+	exported otelconv.SDKExporterMetricDataPointExported
+	inflight otelconv.SDKExporterMetricDataPointInflight
+	duration otelconv.SDKExporterOperationDuration
 	attrs    []attribute.KeyValue
 	enabled  bool
 }
@@ -52,31 +53,19 @@ func NewExporterMetrics(componentType, serverAddress string, serverPort int) *Ex
 	)
 
 	var err error
-	em.exported, err = meter.Int64Counter(
-		"otel.sdk.exporter.metric_data_point.exported",
-		metric.WithDescription("Number of metric data points successfully exported"),
-		metric.WithUnit("{data_point}"),
-	)
+	em.exported, err = otelconv.NewSDKExporterMetricDataPointExported(meter)
 	if err != nil {
 		em.enabled = false
 		return em
 	}
 
-	em.inflight, err = meter.Int64UpDownCounter(
-		"otel.sdk.exporter.metric_data_point.inflight",
-		metric.WithDescription("Number of metric data points currently being exported"),
-		metric.WithUnit("{data_point}"),
-	)
+	em.inflight, err = otelconv.NewSDKExporterMetricDataPointInflight(meter)
 	if err != nil {
 		em.enabled = false
 		return em
 	}
 
-	em.duration, err = meter.Float64Histogram(
-		"otel.sdk.exporter.operation.duration",
-		metric.WithDescription("Duration of export operations"),
-		metric.WithUnit("s"),
-	)
+	em.duration, err = otelconv.NewSDKExporterOperationDuration(meter)
 	if err != nil {
 		em.enabled = false
 		return em
@@ -103,11 +92,11 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 	startTime := time.Now()
 
 	// Increment inflight counter
-	em.inflight.Add(ctx, dataPointCount, metric.WithAttributes(em.attrs...))
+	em.inflight.Add(ctx, dataPointCount, em.attrs...)
 
 	return func(err error) {
 		// Decrement inflight counter
-		em.inflight.Add(ctx, -dataPointCount, metric.WithAttributes(em.attrs...))
+		em.inflight.Add(ctx, -dataPointCount, em.attrs...)
 
 		// Record operation duration
 		duration := time.Since(startTime).Seconds()
@@ -115,11 +104,11 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 		if err != nil {
 			attrs = append(attrs, semconv.ErrorTypeOther)
 		}
-		em.duration.Record(ctx, duration, metric.WithAttributes(attrs...))
+		em.duration.Record(ctx, duration, attrs...)
 
 		// Record exported count (only on success)
 		if err == nil {
-			em.exported.Add(ctx, dataPointCount, metric.WithAttributes(em.attrs...))
+			em.exported.Add(ctx, dataPointCount, em.attrs...)
 		}
 	}
 }
