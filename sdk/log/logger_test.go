@@ -362,21 +362,18 @@ func TestLoggerSelfObservability(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		selfObservabilityEnabled bool
-		ctx                      context.Context
 		records                  []log.Record
 		wantLogRecordCount       int64
 	}{
 		{
 			name:                     "Disabled",
 			selfObservabilityEnabled: false,
-			ctx:                      context.Background(),
 			records:                  []log.Record{{}, {}},
 			wantLogRecordCount:       0,
 		},
 		{
 			name:                     "Enabled",
 			selfObservabilityEnabled: true,
-			ctx:                      context.Background(),
 			records:                  []log.Record{{}, {}, {}, {}, {}},
 			wantLogRecordCount:       5,
 		},
@@ -393,7 +390,7 @@ func TestLoggerSelfObservability(t *testing.T) {
 			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
 			for _, record := range tc.records {
-				l.Emit(tc.ctx, record)
+				l.Emit(context.Background(), record)
 			}
 
 			gotMetrics := new(metricdata.ResourceMetrics)
