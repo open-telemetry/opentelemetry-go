@@ -6,7 +6,9 @@ package otlptracegrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -18,10 +20,18 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type client struct {
@@ -45,10 +55,17 @@ type client struct {
 	conn    *grpc.ClientConn
 	tscMu   sync.RWMutex
 	tsc     coltracepb.TraceServiceClient
+
+	selfObservabilityEnabled bool
+	componentName            string
+	spanInFlightMetric       otelconv.SDKExporterSpanInflight
+	spanExportedMetric       otelconv.SDKExporterSpanExported
+	operationDurationMetric  otelconv.SDKExporterOperationDuration
 }
 
 // Compile time check *client implements otlptrace.Client.
 var _ otlptrace.Client = (*client)(nil)
+var grpcExporterIDCounter atomic.Int64
 
 // NewClient creates a new gRPC trace client.
 func NewClient(opts ...Option) otlptrace.Client {
@@ -73,6 +90,8 @@ func newClient(opts ...Option) *client {
 	if len(cfg.Traces.Headers) > 0 {
 		c.metadata = metadata.New(cfg.Traces.Headers)
 	}
+
+	c.initSelfObservability()
 
 	return c
 }
@@ -190,9 +209,11 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	defer cancel()
 
 	return c.requestFunc(ctx, func(iCtx context.Context) error {
+		start := time.Now()
 		resp, err := c.tsc.Export(iCtx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})
+		end := time.Now()
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedSpans()
@@ -201,6 +222,24 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				otel.Handle(err)
 			}
 		}
+
+		if c.selfObservabilityEnabled {
+			duration := end.Sub(start)
+			attrs := []attribute.KeyValue{
+				c.operationDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(status.Code(err))),
+				c.operationDurationMetric.AttrServerAddress(c.serverAddress),
+				c.operationDurationMetric.AttrServerPort(c.serverPort),
+			}
+
+			if err != nil {
+				c.operationDurationMetric.AttrErrorType(otelconv.ErrorTypeOther)
+			}
+
+			c.operationDurationMetric.Record(context.Background(), duration.Seconds(),
+				attrs...,
+			)
+		}
+
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
@@ -297,4 +336,34 @@ func (c *client) MarshalLog() any {
 		Type:     "otlptracegrpc",
 		Endpoint: c.endpoint,
 	}
+}
+
+func (c *client) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	c.selfObservabilityEnabled = true
+
+	// grpcExporterIDCounter starts at 1, but we want to start at 0, so we do a subtraction here
+	id := grpcExporterIDCounter.Add(1) - 1
+	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCSpanExporter, id)
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if c.spanInFlightMetric, err = otelconv.NewSDKExporterSpanInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.spanExportedMetric, err = otelconv.NewSDKExporterSpanExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
+
+	// TODO: figure out how to get host from client conn
 }
