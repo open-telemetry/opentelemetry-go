@@ -141,6 +141,7 @@ type EventNameProcessor struct{}
 
 // OnEmit sets the EventName on log records that have an attribute
 // with a key containing "event.name" and a value of type string.
+// The original attribute is not removed.
 func (p *EventNameProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv logapi.KeyValue) bool {
 		if strings.Contains(strings.ToLower(kv.Key), "event.name") && kv.Value.Kind() == logapi.KindString {
