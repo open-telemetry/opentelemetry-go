@@ -31,7 +31,7 @@ import (
 )
 
 // A meter should be able to make instruments concurrently.
-func TestMeterInstrumentConcurrentSafe(t *testing.T) {
+func TestMeterInstrumentConcurrentSafe(*testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(12)
 
@@ -92,7 +92,7 @@ func TestMeterInstrumentConcurrentSafe(t *testing.T) {
 var emptyCallback metric.Callback = func(context.Context, metric.Observer) error { return nil }
 
 // A Meter Should be able register Callbacks Concurrently.
-func TestMeterCallbackCreationConcurrency(t *testing.T) {
+func TestMeterCallbackCreationConcurrency(*testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 
@@ -1368,7 +1368,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 	}{
 		{
 			name: "ObservableFloat64Counter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64ObservableCounter("afcounter")
 				if err != nil {
 					return err
@@ -1394,7 +1394,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "ObservableFloat64UpDownCounter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64ObservableUpDownCounter("afupdowncounter")
 				if err != nil {
 					return err
@@ -1423,7 +1423,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "ObservableFloat64Gauge",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64ObservableGauge("afgauge")
 				if err != nil {
 					return err
@@ -1446,7 +1446,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "ObservableInt64Counter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64ObservableCounter("aicounter")
 				if err != nil {
 					return err
@@ -1472,7 +1472,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "ObservableInt64UpDownCounter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64ObservableUpDownCounter("aiupdowncounter")
 				if err != nil {
 					return err
@@ -1498,7 +1498,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "ObservableInt64Gauge",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64ObservableGauge("aigauge")
 				if err != nil {
 					return err
@@ -1521,7 +1521,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncFloat64Counter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64Counter("sfcounter")
 				if err != nil {
 					return err
@@ -1544,7 +1544,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncFloat64UpDownCounter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64UpDownCounter("sfupdowncounter")
 				if err != nil {
 					return err
@@ -1567,7 +1567,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncFloat64Histogram",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64Histogram("sfhistogram")
 				if err != nil {
 					return err
@@ -1600,7 +1600,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncInt64Counter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64Counter("sicounter")
 				if err != nil {
 					return err
@@ -1623,7 +1623,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncInt64UpDownCounter",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64UpDownCounter("siupdowncounter")
 				if err != nil {
 					return err
@@ -1646,7 +1646,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncInt64Histogram",
-			register: func(t *testing.T, mtr metric.Meter) error {
+			register: func(_ *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64Histogram("sihistogram")
 				if err != nil {
 					return err
@@ -2127,7 +2127,7 @@ func TestMalformedSelectors(t *testing.T) {
 			sfHistogram, err := meter.Float64Histogram("sync.float64.histogram")
 			require.NoError(t, err)
 
-			callback := func(ctx context.Context, obs metric.Observer) error {
+			callback := func(_ context.Context, obs metric.Observer) error {
 				obs.ObserveInt64(aiCounter, 1)
 				obs.ObserveInt64(aiUpDownCounter, 1)
 				obs.ObserveInt64(aiGauge, 1)
@@ -2274,7 +2274,7 @@ func TestObservableDropAggregation(t *testing.T) {
 		{
 			name: "drop all metrics",
 			views: []View{
-				func(i Instrument) (Stream, bool) {
+				func(Instrument) (Stream, bool) {
 					return Stream{Aggregation: AggregationDrop{}}, true
 				},
 			},
@@ -2393,7 +2393,7 @@ func TestObservableDropAggregation(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = meter.RegisterCallback(
-				func(ctx context.Context, obs metric.Observer) error {
+				func(_ context.Context, obs metric.Observer) error {
 					obs.ObserveInt64(intCnt, 1)
 					obs.ObserveInt64(intUDCnt, 1)
 					obs.ObserveInt64(intGaugeCnt, 1)
@@ -2566,7 +2566,7 @@ func TestMeterProviderDelegation(t *testing.T) {
 		require.NoError(t, err)
 		floatGauge, err := meter.Float64ObservableGauge("observable.float.gauge")
 		require.NoError(t, err)
-		_, err = meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+		_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(int64Counter, int64(10))
 			o.ObserveInt64(int64UpDownCounter, int64(10))
 			o.ObserveInt64(int64Gauge, int64(10))

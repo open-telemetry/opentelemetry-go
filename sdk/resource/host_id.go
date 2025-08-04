@@ -96,7 +96,7 @@ func (r *hostIDReaderLinux) read() (string, error) {
 type hostIDDetector struct{}
 
 // Detect returns a *Resource containing the platform specific host id.
-func (hostIDDetector) Detect(ctx context.Context) (*Resource, error) {
+func (hostIDDetector) Detect(context.Context) (*Resource, error) {
 	hostID, err := hostID()
 	if err != nil {
 		return nil, err
