@@ -104,7 +104,7 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 		if err != nil {
 			attrs = append(attrs, semconv.ErrorTypeOther)
 		}
-		em.duration.Record(ctx, duration, attrs...)
+		em.duration.Inst().Record(ctx, duration, metric.WithAttributes(attrs...))
 
 		// Record exported count (only on success)
 		if err == nil {

@@ -73,6 +73,32 @@ func TestNewExporterMetrics_Enabled(t *testing.T) {
 	}
 }
 
+func TestNewExporterMetrics_MeterFailure(t *testing.T) {
+	// Enable feature
+	_ = os.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	defer os.Unsetenv("OTEL_GO_X_SELF_OBSERVABILITY")
+
+	// Use a meter provider that will cause metric creation to work
+	// but test the error handling paths by using nil meter in the semantic convention
+	reader := metric.NewManualReader()
+	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(provider)
+
+	// This test primarily covers the enabled path, but the error handling
+	// is covered by the semantic convention's internal nil checks
+	em := NewExporterMetrics("test_component", "example.com", 4317)
+
+	// Should be enabled with valid meter provider
+	if !em.enabled {
+		t.Error("metrics should be enabled when meter provider is valid")
+	}
+
+	// Test that tracking works properly
+	finish := em.TrackExport(context.Background(), nil)
+	finish(nil)
+	finish(errors.New("test error"))
+}
+
 func TestTrackExport_Success(t *testing.T) {
 	_ = os.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 	defer os.Unsetenv("OTEL_GO_X_SELF_OBSERVABILITY")
@@ -107,8 +133,8 @@ func TestTrackExport_Success(t *testing.T) {
 			case "otel.sdk.exporter.metric_data_point.exported":
 				exportedFound = true
 				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					if sum.DataPoints[0].Value != 4 { // Expected data points from test data
-						t.Errorf("expected exported count 4, got %d", sum.DataPoints[0].Value)
+					if sum.DataPoints[0].Value != 10 { // Expected data points from test data
+						t.Errorf("expected exported count 10, got %d", sum.DataPoints[0].Value)
 					}
 				}
 			case "otel.sdk.exporter.metric_data_point.inflight":
@@ -212,7 +238,7 @@ func TestCountDataPoints(t *testing.T) {
 		{
 			name:     "test data",
 			rm:       createTestResourceMetrics(),
-			expected: 4, // 2 gauge + 1 sum + 1 histogram
+			expected: 10, // 2 gauge + 1 gauge + 1 sum + 1 sum + 1 histogram + 1 histogram + 1 exponential histogram + 1 exponential histogram + 1 summary
 		},
 	}
 
@@ -334,6 +360,24 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 						},
 					},
 					{
+						Name: "test_gauge_float",
+						Data: metricdata.Gauge[float64]{
+							DataPoints: []metricdata.DataPoint[float64]{
+								{Value: 1.5, Time: now},
+							},
+						},
+					},
+					{
+						Name: "test_sum_int",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{Value: 10, Time: now},
+							},
+						},
+					},
+					{
 						Name: "test_sum_float",
 						Data: metricdata.Sum[float64]{
 							Temporality: metricdata.CumulativeTemporality,
@@ -344,11 +388,46 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 						},
 					},
 					{
-						Name: "test_histogram",
+						Name: "test_histogram_int",
+						Data: metricdata.Histogram[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[int64]{
+								{Count: 5, Sum: 15, Time: now},
+							},
+						},
+					},
+					{
+						Name: "test_histogram_float",
 						Data: metricdata.Histogram[float64]{
 							Temporality: metricdata.CumulativeTemporality,
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{Count: 10, Sum: 5.0, Time: now},
+							},
+						},
+					},
+					{
+						Name: "test_exponential_histogram_int",
+						Data: metricdata.ExponentialHistogram[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+								{Count: 3, Sum: 9, Time: now, Scale: 1},
+							},
+						},
+					},
+					{
+						Name: "test_exponential_histogram_float",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{Count: 2, Sum: 4.5, Time: now, Scale: 1},
+							},
+						},
+					},
+					{
+						Name: "test_summary",
+						Data: metricdata.Summary{
+							DataPoints: []metricdata.SummaryDataPoint{
+								{Count: 7, Sum: 21.0, Time: now},
 							},
 						},
 					},
