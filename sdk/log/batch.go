@@ -6,12 +6,19 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 const (
@@ -25,6 +32,11 @@ const (
 	envarExpInterval     = "OTEL_BLRP_SCHEDULE_DELAY"
 	envarExpTimeout      = "OTEL_BLRP_EXPORT_TIMEOUT"
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
+)
+
+var (
+	noError   = otelconv.ErrorTypeAttr("")
+	queueFull = otelconv.ErrorTypeAttr("queue_full")
 )
 
 // Compile-time check BatchProcessor implements Processor.
@@ -98,6 +110,11 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
+	selfObservabilityEnabled bool
+	logProcessedCounter      otelconv.SDKProcessorLogProcessed
+	callbackRegistration     metric.Registration
+	componentNameAttr        attribute.KeyValue
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -129,6 +146,52 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	}
 	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
+}
+
+var processorIDCounter atomic.Int64
+
+// nextProcessorID returns an identifier for this batch span processor,
+// starting with 0 and incrementing by 1 each time it is called.
+func nextProcessorID() int64 {
+	return processorIDCounter.Add(1) - 1
+}
+
+func (b *BatchProcessor) configureSelfObservability() {
+	// TODO: add self observability feature flag reading logic here (dependant on PR #7121)
+	b.selfObservabilityEnabled = true
+	b.componentNameAttr = semconv.OTelComponentName(
+		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingLogProcessor, nextProcessorID()))
+	meter := otel.GetMeterProvider().Meter(
+		selfObsScopeName,
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	queueCapacityUpDownCounter, err := otelconv.NewSDKProcessorLogQueueCapacity(meter)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	queueSizeUpDownCounter, err := otelconv.NewSDKProcessorLogQueueSize(meter)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	b.logProcessedCounter, err = otelconv.NewSDKProcessorLogProcessed(meter)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	callbackAttributesOpt := metric.WithAttributes(b.componentNameAttr,
+		semconv.OTelComponentTypeBatchingLogProcessor)
+	b.callbackRegistration, err = meter.RegisterCallback(func(ctx context.Context, observer metric.Observer) error {
+		observer.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(b.q.cap), callbackAttributesOpt)
+		observer.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(b.q.Len()), callbackAttributesOpt)
+		return nil
+	})
+	if err != nil {
+		otel.Handle(err)
+	}
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
@@ -220,6 +283,10 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 
 	// Flush remaining queued before exporter shutdown.
 	err := b.exporter.Export(ctx, b.q.Flush())
+	// TODO: what's the impact of return from case <-ctx.Done() block above
+	if b.selfObservabilityEnabled {
+		err = errors.Join(err, b.callbackRegistration.Unregister())
+	}
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
 
