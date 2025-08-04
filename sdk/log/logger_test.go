@@ -398,7 +398,7 @@ func TestLoggerSelfObservability(t *testing.T) {
 
 			gotMetrics := new(metricdata.ResourceMetrics)
 			assert.NoError(t, r.Collect(context.Background(), gotMetrics))
-			if !tc.selfObservabilityEnabled {
+			if tc.wantLogRecordCount == 0 {
 				assert.Empty(t, gotMetrics.ScopeMetrics)
 				return
 			}
