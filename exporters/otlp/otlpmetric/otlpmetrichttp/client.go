@@ -18,14 +18,14 @@ import (
 	"sync"
 	"time"
 
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/retry"
-	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 type client struct {

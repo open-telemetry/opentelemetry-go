@@ -457,7 +457,7 @@ func TestStringSpanID(t *testing.T) {
 	}
 }
 
-func assertSpanContextEqual(got SpanContext, want SpanContext) bool {
+func assertSpanContextEqual(got, want SpanContext) bool {
 	return got.spanID == want.spanID &&
 		got.traceID == want.traceID &&
 		got.traceFlags == want.traceFlags &&

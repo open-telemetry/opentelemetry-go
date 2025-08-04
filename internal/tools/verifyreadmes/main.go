@@ -31,7 +31,6 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 
 	if !info.Mode().IsRegular() || info.Name() != "go.mod" {
 		return nil
-
 	}
 
 	for _, dir := range excludedDirs {
@@ -39,7 +38,6 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 			return nil
 		}
 	}
-
 
 	// Check that a README.md exists in the same directory as the go.mod file.
 	readme := filepath.Join(filepath.Dir(path), readmeFilename)
