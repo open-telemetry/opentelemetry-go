@@ -653,7 +653,7 @@ template stored in `go.opentelemetry.io/otel/internal/shared` and use [gotmpl]
 to render the templates in the desired locations. See [#4404] for an example of
 this.
 
-[^3]: <https://github.com/open-telemetry/opentelemetry-go/issues/3548>
+[^3]: https://github.com/open-telemetry/opentelemetry-go/issues/3548
 
 ### Ignoring context cancellation
 
