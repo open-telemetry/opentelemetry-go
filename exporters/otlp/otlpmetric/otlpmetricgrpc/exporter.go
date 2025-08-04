@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
@@ -104,6 +105,9 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	} else {
 		finalErr = err
 	}
+
+	// Small delay to ensure duration is measurable in Windows environment
+	time.Sleep(1 * time.Millisecond)
 
 	finishTracking(finalErr)
 	return finalErr
