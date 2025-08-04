@@ -17,7 +17,7 @@ type testMeterProvider struct{ embedded.MeterProvider }
 
 var _ metric.MeterProvider = &testMeterProvider{}
 
-func (*testMeterProvider) Meter(_ string, _ ...metric.MeterOption) metric.Meter {
+func (*testMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
 	return noop.NewMeterProvider().Meter("")
 }
 
