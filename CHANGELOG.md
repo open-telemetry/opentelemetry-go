@@ -56,7 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Set `config.gRPCCredentials.Value` properly when using TLS/mTLS certificates `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#6661)
+- Fix handling of TLS certificates when `OTEL_EXPORTER_OTLP_CERTIFICATE` or `OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE` is set in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#7087).
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
