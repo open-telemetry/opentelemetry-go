@@ -144,7 +144,7 @@ type EventNameProcessor struct{}
 // The original attribute is not removed.
 func (p *EventNameProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv logapi.KeyValue) bool {
-		if strings.Contains(strings.ToLower(kv.Key), "event.name") && kv.Value.Kind() == logapi.KindString {
+		if kv.Key == "event.name" && kv.Value.Kind() == logapi.KindString {
 			record.SetEventName(kv.Value.AsString())
 		}
 		return true
