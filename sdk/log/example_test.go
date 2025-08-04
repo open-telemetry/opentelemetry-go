@@ -125,7 +125,7 @@ func ExampleProcessor_eventName() {
 	// The created processor can then be registered with
 	// the OpenTelemetry Logs SDK using the WithProcessor option.
 	_ = log.NewLoggerProvider(
-		// Order is important here. Redact before handing to the processor.
+		// Order is important here. Set EventName before handing to the processor.
 		log.WithProcessor(eventNameProcessor),
 		log.WithProcessor(processor),
 	)
