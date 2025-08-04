@@ -76,7 +76,7 @@ func (nilCarrier) Get(key string) string {
 	return ""
 }
 
-func (nilCarrier) Set(key string, value string) {}
+func (nilCarrier) Set(key, value string) {}
 
 func TestMultiplePropagators(t *testing.T) {
 	ootaProp := outOfThinAirPropagator{t: t}

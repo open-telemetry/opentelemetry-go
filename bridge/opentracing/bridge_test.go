@@ -30,7 +30,7 @@ func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
 }
 
-func (t *testOnlyTextMapReader) ForeachKey(handler func(key string, val string) error) error {
+func (t *testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	_ = handler("key1", "val1")
 	_ = handler("key2", "val2")
 
@@ -198,7 +198,7 @@ func (t *textMapCarrier) Get(key string) string {
 	return t.m[key]
 }
 
-func (t *textMapCarrier) Set(key string, value string) {
+func (t *textMapCarrier) Set(key, value string) {
 	t.m[key] = value
 }
 
@@ -221,7 +221,7 @@ func newTestTextMapReader(m *map[string]string) *testTextMapReader {
 	return &testTextMapReader{m: m}
 }
 
-func (t *testTextMapReader) ForeachKey(handler func(key string, val string) error) error {
+func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	for key, val := range *t.m {
 		if err := handler(key, val); err != nil {
 			return err
