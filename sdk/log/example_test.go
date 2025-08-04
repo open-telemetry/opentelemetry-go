@@ -112,8 +112,57 @@ func ignoreLogs(ctx context.Context) bool {
 	return ok
 }
 
+// Use a processor which sets EventName on log records having "event.name" string attribute.
+// This is useful for users of logging libraries that do not support
+// setting the event name on log records, but do support attributes.
+func ExampleProcessor_eventName() {
+	// Existing processor that emits telemetry.
+	var processor log.Processor = log.NewBatchProcessor(nil)
+
+	// Add a processor so that it sets EventName on log records.
+	eventNameProcessor := &EventNameProcessor{}
+
+	// The created processor can then be registered with
+	// the OpenTelemetry Logs SDK using the WithProcessor option.
+	_ = log.NewLoggerProvider(
+		// Order is important here. Redact before handing to the processor.
+		log.WithProcessor(eventNameProcessor),
+		log.WithProcessor(processor),
+	)
+}
+
+// EventNameProcessor is a [log.Processor] that sets the EventName
+// on log records that have an attribute with a key containing "event.name"
+// and a value of type string.
+// It is useful for logging libraries that do not support
+// setting the event name on log records,
+// but do support attributes.
+type EventNameProcessor struct{}
+
+// OnEmit sets the EventName on log records that have an attribute
+// with a key containing "event.name" and a value of type string.
+func (p *EventNameProcessor) OnEmit(ctx context.Context, record *log.Record) error {
+	record.WalkAttributes(func(kv logapi.KeyValue) bool {
+		if strings.Contains(strings.ToLower(kv.Key), "event.name") && kv.Value.Kind() == logapi.KindString {
+			record.SetEventName(kv.Value.AsString())
+		}
+		return true
+	})
+	return nil
+}
+
+// Shutdown returns nil.
+func (p *EventNameProcessor) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+// ForceFlush returns nil.
+func (p *EventNameProcessor) ForceFlush(ctx context.Context) error {
+	return nil
+}
+
 // Use a processor which redacts sensitive data from some attributes.
-func ExampleProcessor() {
+func ExampleProcessor_redact() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
