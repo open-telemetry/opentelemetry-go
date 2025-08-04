@@ -1148,7 +1148,7 @@ func TestChildSpanCount(t *testing.T) {
 	}
 }
 
-func TestNilSpanEnd(t *testing.T) {
+func TestNilSpanEnd(*testing.T) {
 	var span *recordingSpan
 	span.End()
 }
@@ -1824,7 +1824,7 @@ func TestSamplerTraceState(t *testing.T) {
 	clearer := func(prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return trace.TraceState{} },
+			f:      func(trace.TraceState) trace.TraceState { return trace.TraceState{} },
 		}
 	}
 
@@ -1943,7 +1943,7 @@ func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.Sp
 	return traceID, spanID
 }
 
-func (gen *testIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
+func (gen *testIDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 	spanIDHex := fmt.Sprintf("%016x", gen.spanID)
 	spanID, _ := trace.SpanIDFromHex(spanIDHex)
 	gen.spanID++

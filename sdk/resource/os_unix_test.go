@@ -27,7 +27,7 @@ func fakeUnameProvider(buf *unix.Utsname) error {
 	return nil
 }
 
-func fakeUnameProviderWithError(buf *unix.Utsname) error {
+func fakeUnameProviderWithError(*unix.Utsname) error {
 	return fmt.Errorf("error invoking uname(2)")
 }
 
