@@ -38,15 +38,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/log"
-<<<<<<< HEAD
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
-	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
-=======
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
->>>>>>> upstream/main
 )
 
 var (
@@ -975,5 +967,40 @@ func normalizeMetrics(scopeMetrics *metricdata.ScopeMetrics) {
 			}
 			m.Data = data
 		}
+	}
+}
+
+func TestServerAddrAttrs(t *testing.T) {
+	testcases := []struct {
+		name   string
+		target string
+		want   []attribute.KeyValue
+	}{
+		{
+			name:   "UnixSocket",
+			target: "unix:///tmp/grpc.sock",
+			want:   []attribute.KeyValue{semconv.ServerAddress("/tmp/grpc.sock")},
+		},
+		{
+			name:   "DNSWithPort",
+			target: "dns:///localhost:8080",
+			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(8080)},
+		},
+		{
+			name:   "SimpleHostPort",
+			target: "localhost:10001",
+			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(10001)},
+		},
+		{
+			name:   "HostWithoutPort",
+			target: "example.com",
+			want:   []attribute.KeyValue{semconv.ServerAddress("example.com")},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			attrs := serverAddrAttrs(tc.target)
+			assert.Equal(t, tc.want, attrs)
+		})
 	}
 }

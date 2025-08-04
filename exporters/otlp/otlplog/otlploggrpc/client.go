@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -102,7 +103,7 @@ func (c *client) initSelfObservability() {
 	id := grpcExporterIDCounter.Add(1) - 1
 
 	c.selfObservabilityEnabled = true
-	c.presetAttrs = c.serverAddrAttrs()
+	c.presetAttrs = serverAddrAttrs(c.conn.Target())
 	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 
 	mp := otel.GetMeterProvider()
@@ -247,7 +248,8 @@ func (c *client) recordLogInflightMetric(ctx context.Context, extraAttrs ...attr
 	attrs = append(
 		attrs,
 		c.logInflightMetric.AttrComponentName(c.componentName),
-		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter))
+		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
+	)
 	attrs = append(attrs, extraAttrs...)
 	attrs = append(attrs, c.presetAttrs...)
 	c.logInflightMetric.Add(ctx, 1, attrs...)
@@ -294,10 +296,19 @@ func (c *client) recordLogExportedDurationMetric(
 	c.logExportedDurationMetric.Record(ctx, duration, attrs...)
 }
 
-func (c *client) serverAddrAttrs() []attribute.KeyValue {
-	host, pStr, err := net.SplitHostPort(c.conn.Target())
+func serverAddrAttrs(target string) []attribute.KeyValue {
+	if strings.HasPrefix(target, "unix://") {
+		path := strings.TrimPrefix(target, "unix://")
+		return []attribute.KeyValue{semconv.ServerAddress(path)}
+	}
+
+	if idx := strings.Index(target, "://"); idx != -1 {
+		target = target[idx+4:]
+	}
+
+	host, pStr, err := net.SplitHostPort(target)
 	if err != nil {
-		return []attribute.KeyValue{semconv.ServerAddress(c.conn.Target())}
+		return []attribute.KeyValue{semconv.ServerAddress(target)}
 	}
 
 	port, err := strconv.Atoi(pStr)
