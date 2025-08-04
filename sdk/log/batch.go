@@ -144,6 +144,7 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		pollTrigger: make(chan struct{}, 1),
 		pollKill:    make(chan struct{}),
 	}
+	b.configureSelfObservability()
 	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
 }
@@ -177,6 +178,8 @@ func (b *BatchProcessor) configureSelfObservability() {
 		otel.Handle(err)
 	}
 
+	// todo: what is the definition of processed? is it enqueuing to batch processor queue or is it sending to exporter?
+	// also flush methods (if processed means pushing to exporter)
 	b.logProcessedCounter, err = otelconv.NewSDKProcessorLogProcessed(meter)
 	if err != nil {
 		otel.Handle(err)
@@ -217,6 +220,14 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 			if d := b.q.Dropped(); d > 0 {
 				global.Warn("dropped log records", "dropped", d)
+				if b.selfObservabilityEnabled {
+					attrs := []attribute.KeyValue{
+						b.componentNameAttr,
+						b.logProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingLogProcessor),
+						b.logProcessedCounter.AttrErrorType(queueFull),
+					}
+					b.logProcessedCounter.Add(context.Background(), int64(d), attrs...)
+				}
 			}
 
 			var qLen int
@@ -225,6 +236,14 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
 					ok := b.exporter.EnqueueExport(r)
 					if ok {
+						if b.selfObservabilityEnabled {
+							attrs := []attribute.KeyValue{
+								b.componentNameAttr,
+								b.logProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingLogProcessor),
+								b.logProcessedCounter.AttrErrorType(noError),
+							}
+							b.logProcessedCounter.Add(context.Background(), int64(len(r)), attrs...)
+						}
 						buf = slices.Clone(buf)
 					}
 					return ok
