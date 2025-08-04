@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability"
@@ -103,6 +104,9 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	} else {
 		finalErr = err
 	}
+
+	// Small delay to ensure duration is measurable in Windows environment
+	time.Sleep(1 * time.Millisecond)
 
 	finishTracking(finalErr)
 	return finalErr
