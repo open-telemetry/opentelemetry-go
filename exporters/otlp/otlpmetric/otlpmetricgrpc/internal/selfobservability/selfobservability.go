@@ -91,14 +91,11 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 	dataPointCount := countDataPoints(rm)
 	startTime := time.Now()
 
-	// Increment inflight counter
 	em.inflight.Add(ctx, dataPointCount, em.attrs...)
 
 	return func(err error) {
-		// Decrement inflight counter
 		em.inflight.Add(ctx, -dataPointCount, em.attrs...)
 
-		// Record operation duration
 		duration := time.Since(startTime).Seconds()
 		attrs := em.attrs
 		if err != nil {
@@ -106,7 +103,6 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 		}
 		em.duration.Inst().Record(ctx, duration, metric.WithAttributes(attrs...))
 
-		// Record exported count (only on success)
 		if err == nil {
 			em.exported.Add(ctx, dataPointCount, em.attrs...)
 		}
