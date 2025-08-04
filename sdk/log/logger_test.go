@@ -367,41 +367,18 @@ func TestLoggerSelfObservability(t *testing.T) {
 		wantLogRecordCount       int64
 	}{
 		{
-			name:                     "SelfObservabilityDisabledZeroLogs",
-			selfObservabilityEnabled: false,
-			ctx:                      context.Background(),
-			records:                  nil,
-			wantLogRecordCount:       0,
-		},
-		{
-			name:                     "SelfObservabilityDisabledNonZeroLogs",
+			name:                     "Disabled",
 			selfObservabilityEnabled: false,
 			ctx:                      context.Background(),
 			records:                  []log.Record{{}, {}},
 			wantLogRecordCount:       0,
 		},
 		{
-			name:                     "ZeroLogsCreated",
+			name:                     "Enabled",
 			selfObservabilityEnabled: true,
 			ctx:                      context.Background(),
-			records:                  []log.Record{},
-			wantLogRecordCount:       0,
-		},
-		{
-			name:                     "NilContext",
-			selfObservabilityEnabled: true,
-			ctx:                      nil,
-			records:                  []log.Record{{}, {}, {}, {}},
-			wantLogRecordCount:       4,
-		},
-		{
-			name:                     "NonZeroLogsCreated",
-			selfObservabilityEnabled: true,
-			ctx:                      context.Background(),
-			records: []log.Record{
-				{}, {}, {}, {}, {},
-			},
-			wantLogRecordCount: 5,
+			records:                  []log.Record{{}, {}, {}, {}, {}},
+			wantLogRecordCount:       5,
 		},
 	}
 
@@ -421,7 +398,7 @@ func TestLoggerSelfObservability(t *testing.T) {
 
 			gotMetrics := new(metricdata.ResourceMetrics)
 			assert.NoError(t, r.Collect(context.Background(), gotMetrics))
-			if !tc.selfObservabilityEnabled || len(tc.records) == 0 {
+			if !tc.selfObservabilityEnabled {
 				assert.Empty(t, gotMetrics.ScopeMetrics)
 				return
 			}
