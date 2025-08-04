@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -30,8 +32,6 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 var grpcExporterIDCounter atomic.Int64
