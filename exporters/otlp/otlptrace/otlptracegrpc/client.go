@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -20,8 +22,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type client struct {
