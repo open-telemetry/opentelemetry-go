@@ -70,7 +70,6 @@ func (e *Exporter) initSelfObservability() {
 	}
 
 	e.selfObservabilityEnabled = true
-
 	e.selfObservabilityAttrs = []attribute.KeyValue{
 		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
 		semconv.OTelComponentTypeKey.String(otelComponentType),
@@ -97,7 +96,9 @@ func (e *Exporter) initSelfObservability() {
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
 	if e.selfObservabilityEnabled {
-		e.spanInflightMetric.Add(context.Background(), 1, e.selfObservabilityAttrs...)
+		spansCount := int64(len(spans))
+
+		e.spanInflightMetric.Add(context.Background(), spansCount, e.selfObservabilityAttrs...)
 
 		defer func(starting time.Time) {
 			// additional attributes for self-observability,
@@ -108,8 +109,8 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 				addAttrs = append(addAttrs, semconv.ErrorType(err))
 			}
 
-			e.spanInflightMetric.Add(context.Background(), -1, e.selfObservabilityAttrs...)
-			e.spanExportedMetric.Add(context.Background(), 1, addAttrs...)
+			e.spanInflightMetric.Add(context.Background(), -spansCount, e.selfObservabilityAttrs...)
+			e.spanExportedMetric.Add(context.Background(), spansCount, addAttrs...)
 			e.operationDurationMetric.Record(context.Background(), time.Since(starting).Seconds(), addAttrs...)
 		}(time.Now())
 	}

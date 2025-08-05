@@ -7,18 +7,24 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -225,5 +231,66 @@ func TestExporterShutdownNoError(t *testing.T) {
 
 	if err := e.Shutdown(context.Background()); err != nil {
 		t.Errorf("shutdown errored: expected nil, got %v", err)
+	}
+}
+
+func TestSelfObservability(t *testing.T) {
+	tests := []struct {
+		name          string
+		enable        bool
+		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:   "not set env",
+			enable: false,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 0)
+			},
+		},
+		{
+			name:   "set env",
+			enable: true,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				scopeMetric := rm.ScopeMetrics[0]
+				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdouttrace", scopeMetric.Scope.Name)
+				assert.Equal(t, sdk.Version(), scopeMetric.Scope.Version)
+				assert.Equal(t, semconv.SchemaURL, scopeMetric.Scope.SchemaURL)
+				assert.Len(t, scopeMetric.Metrics, 3)
+				spew.Dump(scopeMetric)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.enable {
+				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+			}
+
+			prev := otel.GetMeterProvider()
+			defer func() {
+				otel.SetMeterProvider(prev)
+			}()
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			exporter, err := stdouttrace.New(
+				stdouttrace.WithWriter(io.Discard))
+			require.NoError(t, err)
+
+			require.NoError(t, exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
+				{Name: "/foo"},
+				{Name: "/bar"},
+			}.Snapshots()))
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(context.Background(), &rm))
+
+			tt.assertMetrics(t, rm)
+		})
 	}
 }
