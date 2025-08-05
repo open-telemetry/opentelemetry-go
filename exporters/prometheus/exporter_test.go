@@ -886,7 +886,7 @@ func TestDuplicateMetrics(t *testing.T) {
 		},
 		{
 			name: "conflict_type_counter_and_updowncounter",
-			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
 				counter, err := meterA.Int64Counter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
@@ -907,7 +907,7 @@ func TestDuplicateMetrics(t *testing.T) {
 		},
 		{
 			name: "conflict_type_histogram_and_updowncounter",
-			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
 				fooA, err := meterA.Int64UpDownCounter("foo",
 					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter gauge foo"))

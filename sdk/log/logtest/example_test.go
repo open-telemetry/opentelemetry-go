@@ -40,7 +40,7 @@ var _ log.Exporter = exporter{}
 
 type exporter struct{ io.Writer }
 
-func (e exporter) Export(ctx context.Context, records []log.Record) error {
+func (e exporter) Export(_ context.Context, records []log.Record) error {
 	for i, r := range records {
 		if i != 0 {
 			if _, err := e.Write([]byte("\n")); err != nil {

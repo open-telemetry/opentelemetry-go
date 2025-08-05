@@ -88,7 +88,7 @@ func TestLogLevel(t *testing.T) {
 }
 
 func newBuffLogger(buf *bytes.Buffer, verbosity int) logr.Logger {
-	return funcr.New(func(prefix, args string) {
+	return funcr.New(func(_, args string) {
 		_, _ = buf.WriteString(args)
 	}, funcr.Options{
 		Verbosity: verbosity,

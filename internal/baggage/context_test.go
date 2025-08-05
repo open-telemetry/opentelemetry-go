@@ -44,7 +44,7 @@ func TestListFromContext(t *testing.T) {
 
 func TestContextWithSetHook(t *testing.T) {
 	var called bool
-	f := func(ctx context.Context, list List) context.Context {
+	f := func(ctx context.Context, _ List) context.Context {
 		called = true
 		return ctx
 	}
@@ -65,7 +65,7 @@ func TestContextWithSetHook(t *testing.T) {
 
 func TestContextWithGetHook(t *testing.T) {
 	var called bool
-	f := func(ctx context.Context, list List) List {
+	f := func(_ context.Context, list List) List {
 		called = true
 		return list
 	}

@@ -149,7 +149,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
-func TestRecorderConcurrentSafe(t *testing.T) {
+func TestRecorderConcurrentSafe(*testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup
