@@ -12,7 +12,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ### Self-Observability
 
-The SDK provides a self-observability feature that allows you to monitor the SDK itself.
+The `stdoutmetric` exporter provides a self-observability feature that allows you to monitor the exporter itself.
 
 To opt-in, set the environment variable `OTEL_GO_X_SELF_OBSERVABILITY` to `true`.
 
