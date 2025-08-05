@@ -58,7 +58,7 @@ func NewExporterMetrics(name, componentName, componentType, target string) *Expo
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context) func(err error, code int) {
 	if !em.selfObservabilityEnabled {
-		return func(err error, code int) {}
+		return func(_ error, _ int) {}
 	}
 
 	begin := time.Now()
