@@ -143,7 +143,7 @@ func New(opts ...Option) (*Exporter, error) {
 }
 
 // Describe implements prometheus.Collector.
-func (c *collector) Describe(ch chan<- *prometheus.Desc) {
+func (c *collector) Describe(chan<- *prometheus.Desc) {
 	// The Opentelemetry SDK doesn't have information on which will exist when the collector
 	// is registered. By returning nothing we are an "unchecked" collector in Prometheus,
 	// and assume responsibility for consistency of the metrics produced.
