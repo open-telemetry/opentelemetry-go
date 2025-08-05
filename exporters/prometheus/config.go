@@ -149,7 +149,7 @@ func WithoutScopeInfo() Option {
 // WithNamespace configures the Exporter to prefix metric with the given
 // namespace. Metadata metrics such as target_info are not prefixed since these
 // have special behavior based on their name. Namespaces will be prepended even
-// if NoTranslation is set as a translation strategy. An empty string namepace
+// if NoTranslation is set as a translation strategy. An empty string namespace
 // disables prepending.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
