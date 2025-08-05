@@ -74,7 +74,7 @@ func (e *exporter) initSelfObservability() {
 	}
 
 	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/sdk/trace",
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
