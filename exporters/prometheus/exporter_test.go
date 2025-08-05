@@ -1113,6 +1113,18 @@ func TestExemplars(t *testing.T) {
 			escapingScheme:        model.NoEscaping,
 			validationScheme:      model.UTF8Validation,
 		},
+		{
+			name: "exponential histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("exponential_histogram")
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			escapingScheme:        model.NoEscaping,
+			validationScheme:      model.UTF8Validation,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			originalEscapingScheme := model.NameEscapingScheme
@@ -1144,13 +1156,24 @@ func TestExemplars(t *testing.T) {
 				metric.WithReader(exporter),
 				metric.WithResource(res),
 				metric.WithView(metric.NewView(
-					metric.Instrument{Name: "*"},
+					metric.Instrument{Name: "foo"},
 					metric.Stream{
 						// filter out all attributes so they are added as filtered
 						// attributes to the exemplar
 						AttributeFilter: attribute.NewAllowKeysFilter(),
 					},
-				)),
+				),
+				),
+				metric.WithView(metric.NewView(
+					metric.Instrument{Name: "exponential_histogram"},
+					metric.Stream{
+						Aggregation: metric.AggregationBase2ExponentialHistogram{
+							MaxSize: 20,
+						},
+						AttributeFilter: attribute.NewAllowKeysFilter(),
+					},
+				),
+				),
 			)
 			meter := provider.Meter("meter", otelmetric.WithInstrumentationVersion("v0.1.0"))
 
@@ -1179,16 +1202,23 @@ func TestExemplars(t *testing.T) {
 			case dto.MetricType_COUNTER:
 				exemplar = metric.GetCounter().GetExemplar()
 			case dto.MetricType_HISTOGRAM:
-				for _, b := range metric.GetHistogram().GetBucket() {
+				h := metric.GetHistogram()
+				for _, b := range h.GetBucket() {
 					if b.GetExemplar() != nil {
 						exemplar = b.GetExemplar()
 						continue
 					}
 				}
+				if h.GetZeroThreshold() != 0 || h.GetZeroCount() != 0 ||
+					len(h.PositiveSpan) != 0 || len(h.NegativeSpan) != 0 {
+					require.NotNil(t, h.Exemplars)
+					exemplar = h.Exemplars[0]
+				}
 			}
 			require.NotNil(t, exemplar)
 			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
 			require.Len(t, exemplar.GetLabel(), len(tc.expectedLabels))
+
 			for _, label := range exemplar.GetLabel() {
 				val, ok := tc.expectedLabels[label.GetName()]
 				require.True(t, ok)
