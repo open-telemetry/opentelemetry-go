@@ -35,7 +35,7 @@ func TestFloat64ObservableConfiguration(t *testing.T) {
 		}
 	}
 
-	cback := func(ctx context.Context, obsrv Float64Observer) error {
+	cback := func(_ context.Context, obsrv Float64Observer) error {
 		obsrv.Observe(token)
 		return nil
 	}

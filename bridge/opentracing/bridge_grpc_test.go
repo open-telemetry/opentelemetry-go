@@ -22,7 +22,7 @@ import (
 
 type testGRPCServer struct{}
 
-func (*testGRPCServer) UnaryCall(ctx context.Context, r *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
+func (*testGRPCServer) UnaryCall(_ context.Context, r *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
 	return &testpb.SimpleResponse{Payload: r.Payload * 2}, nil
 }
 

@@ -367,7 +367,7 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 	b.Cleanup(func(l logr.Logger) func() {
 		return func() { global.SetLogger(l) }
 	}(global.GetLogger()))
-	global.SetLogger(funcr.New(func(prefix, args string) {}, funcr.Options{Verbosity: 5}))
+	global.SetLogger(funcr.New(func(string, string) {}, funcr.Options{Verbosity: 5}))
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(
 			tracetest.NewNoopExporter(),

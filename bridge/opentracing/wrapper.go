@@ -24,7 +24,7 @@ type WrapperTracerProvider struct {
 var _ trace.TracerProvider = (*WrapperTracerProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperTracerProvider.
-func (p *WrapperTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+func (p *WrapperTracerProvider) Tracer(string, ...trace.TracerOption) trace.Tracer {
 	return p.wTracer
 }
 

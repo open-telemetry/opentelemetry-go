@@ -57,7 +57,7 @@ func (t *shutdownSpanProcessor) ForceFlush(context.Context) error {
 func TestShutdownCallsTracerMethod(t *testing.T) {
 	stp := NewTracerProvider()
 	sp := &shutdownSpanProcessor{
-		shutdown: func(ctx context.Context) error {
+		shutdown: func(context.Context) error {
 			_ = stp.Tracer("abc") // must not deadlock
 			return nil
 		},

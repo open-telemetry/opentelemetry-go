@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-func TestMeterConcurrentSafe(t *testing.T) {
+func TestMeterConcurrentSafe(*testing.T) {
 	const name = "TestMeterConcurrentSafe meter"
 	mp := NewMeterProvider()
 
@@ -35,7 +35,7 @@ func TestMeterConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestForceFlushConcurrentSafe(t *testing.T) {
+func TestForceFlushConcurrentSafe(*testing.T) {
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
@@ -48,7 +48,7 @@ func TestForceFlushConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestShutdownConcurrentSafe(t *testing.T) {
+func TestShutdownConcurrentSafe(*testing.T) {
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
@@ -61,7 +61,7 @@ func TestShutdownConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
+func TestMeterAndShutdownConcurrentSafe(*testing.T) {
 	const name = "TestMeterAndShutdownConcurrentSafe meter"
 	mp := NewMeterProvider()
 

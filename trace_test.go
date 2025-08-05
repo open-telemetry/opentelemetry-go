@@ -17,7 +17,7 @@ type testTracerProvider struct{ embedded.TracerProvider }
 
 var _ trace.TracerProvider = &testTracerProvider{}
 
-func (*testTracerProvider) Tracer(_ string, _ ...trace.TracerOption) trace.Tracer {
+func (*testTracerProvider) Tracer(string, ...trace.TracerOption) trace.Tracer {
 	return noop.NewTracerProvider().Tracer("")
 }
 

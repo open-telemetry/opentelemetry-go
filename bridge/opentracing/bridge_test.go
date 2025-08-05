@@ -134,7 +134,7 @@ var (
 
 type testTextMapPropagator struct{}
 
-func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (t testTextMapPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, traceID.String()+":"+spanID.String())
 
 	// Test for panic
@@ -370,7 +370,7 @@ type nonDeferWrapperTracer struct {
 }
 
 func (t *nonDeferWrapperTracer) Start(
-	ctx context.Context,
+	_ context.Context,
 	name string,
 	opts ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
@@ -393,7 +393,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with wrapper tracer set",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := NewWrapperTracer(bridge, otel.Tracer("test"))
 				bridge.SetOpenTelemetryTracer(wTracer)
 			},
@@ -401,7 +401,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with a non-deferred wrapper tracer",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := &nonDeferWrapperTracer{
 					NewWrapperTracer(bridge, otel.Tracer("test")),
 				}

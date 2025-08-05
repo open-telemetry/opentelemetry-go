@@ -52,7 +52,7 @@ func (t *testSpanProcessor) OnEnd(s ReadOnlySpan) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
-func (t *testSpanProcessor) Shutdown(_ context.Context) error {
+func (t *testSpanProcessor) Shutdown(context.Context) error {
 	if t == nil {
 		return nil
 	}

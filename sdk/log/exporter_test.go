@@ -112,7 +112,7 @@ func (e *testExporter) Stop() {
 	<-e.done
 }
 
-func (e *testExporter) Shutdown(ctx context.Context) error {
+func (e *testExporter) Shutdown(context.Context) error {
 	atomic.AddInt32(e.shutdownN, 1)
 	return e.Err
 }
@@ -121,7 +121,7 @@ func (e *testExporter) ShutdownN() int {
 	return int(atomic.LoadInt32(e.shutdownN))
 }
 
-func (e *testExporter) ForceFlush(ctx context.Context) error {
+func (e *testExporter) ForceFlush(context.Context) error {
 	atomic.AddInt32(e.forceFlushN, 1)
 	return e.Err
 }
@@ -382,7 +382,7 @@ func TestBufferExporter(t *testing.T) {
 			defer func(orig otel.ErrorHandler) {
 				otel.SetErrorHandler(orig)
 			}(otel.GetErrorHandler())
-			handler := otel.ErrorHandlerFunc(func(err error) {})
+			handler := otel.ErrorHandlerFunc(func(error) {})
 			otel.SetErrorHandler(handler)
 
 			exp := newTestExporter(assert.AnError)

@@ -66,7 +66,7 @@ func newMockTracer() *mockTracer {
 // Start returns a new trace span with the given name and options.
 func (t *mockTracer) Start(
 	ctx context.Context,
-	name string,
+	_ string,
 	opts ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
 	config := trace.NewSpanStartConfig(opts...)
@@ -172,7 +172,7 @@ func (t *mockTracer) getRandTraceID() trace.TraceID {
 }
 
 // DeferredContextSetupHook implements the DeferredContextSetupTracerExtension interface.
-func (t *mockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
+func (t *mockTracer) DeferredContextSetupHook(ctx context.Context, _ trace.Span) context.Context {
 	return t.addSpareContextValue(ctx)
 }
 

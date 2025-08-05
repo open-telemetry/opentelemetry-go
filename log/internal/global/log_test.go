@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 )
 
-func TestLoggerProviderConcurrentSafe(t *testing.T) {
+func TestLoggerProviderConcurrentSafe(*testing.T) {
 	p := &loggerProvider{}
 
 	done := make(chan struct{})
@@ -41,7 +41,7 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestLoggerConcurrentSafe(t *testing.T) {
+func TestLoggerConcurrentSafe(*testing.T) {
 	l := &logger{}
 
 	done := make(chan struct{})

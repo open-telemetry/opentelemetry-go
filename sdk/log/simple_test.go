@@ -104,7 +104,7 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 	})
 }
 
-func TestSimpleProcessorConcurrentSafe(t *testing.T) {
+func TestSimpleProcessorConcurrentSafe(*testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup

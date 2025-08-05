@@ -13,11 +13,11 @@ import (
 var (
 	expectedHostID = "f2c668b579780554f70f72a063dc0864"
 
-	readFileNoError = func(filename string) (string, error) {
+	readFileNoError = func(string) (string, error) {
 		return expectedHostID + "\n", nil
 	}
 
-	readFileError = func(filename string) (string, error) {
+	readFileError = func(string) (string, error) {
 		return "", errors.New("not found")
 	}
 

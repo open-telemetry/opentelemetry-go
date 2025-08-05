@@ -117,7 +117,7 @@ func TestExporterForceFlush(t *testing.T) {
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
 }
 
-func TestExporterConcurrentSafe(t *testing.T) {
+func TestExporterConcurrentSafe(*testing.T) {
 	e := newExporter(&mockClient{})
 
 	const goroutines = 10

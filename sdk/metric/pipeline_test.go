@@ -76,7 +76,7 @@ func TestPipelineUsesResource(t *testing.T) {
 	assert.Equal(t, res, output.Resource)
 }
 
-func TestPipelineConcurrentSafe(t *testing.T) {
+func TestPipelineConcurrentSafe(*testing.T) {
 	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
@@ -511,7 +511,7 @@ func TestExemplars(t *testing.T) {
 
 	t.Run("Custom reservoir", func(t *testing.T) {
 		r := NewManualReader()
-		reservoirProviderSelector := func(agg Aggregation) exemplar.ReservoirProvider {
+		reservoirProviderSelector := func(Aggregation) exemplar.ReservoirProvider {
 			return exemplar.FixedSizeReservoirProvider(2)
 		}
 		v1 := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
@@ -663,7 +663,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 			return nil
 		},
 		// Callback 2: populates int64 observable data
-		func(ctx context.Context) error {
+		func(context.Context) error {
 			callbackCounts[1]++
 			if shouldCancelContext {
 				cancelCtx()
@@ -671,7 +671,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 			return nil
 		},
 		// Callback 3: return an error
-		func(ctx context.Context) error {
+		func(context.Context) error {
 			callbackCounts[2]++
 			if shouldReturnError {
 				return fmt.Errorf("test callback error")

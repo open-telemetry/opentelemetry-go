@@ -83,7 +83,7 @@ func (ts *readerTestSuite) TestShutdownTwice() {
 func (ts *readerTestSuite) TestMultipleRegister() {
 	ts.Reader = ts.Factory()
 	p0 := testSDKProducer{
-		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
 			// Differentiate this producer from the second by returning an
 			// error.
 			*rm = testResourceMetricsA
@@ -103,12 +103,12 @@ func (ts *readerTestSuite) TestMultipleRegister() {
 func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 	ts.Reader = ts.Factory(
 		WithProducer(testExternalProducer{
-			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
 				return []metricdata.ScopeMetrics{}, assert.AnError
 			},
 		}),
 		WithProducer(testExternalProducer{
-			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
 				return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
 			},
 		}),
@@ -124,7 +124,7 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
 	ts.Reader = ts.Factory(WithProducer(testExternalProducer{}))
 	ts.Reader.register(testSDKProducer{
-		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
 			*rm = metricdata.ResourceMetrics{}
 			return assert.AnError
 		},

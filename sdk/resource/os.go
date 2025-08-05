@@ -32,7 +32,7 @@ type (
 
 // Detect returns a *Resource that describes the operating system type the
 // service is running on.
-func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
+func (osTypeDetector) Detect(context.Context) (*Resource, error) {
 	osType := runtimeOS()
 
 	osTypeAttribute := mapRuntimeOSToSemconvOSType(osType)
@@ -45,7 +45,7 @@ func (osTypeDetector) Detect(ctx context.Context) (*Resource, error) {
 
 // Detect returns a *Resource that describes the operating system the
 // service is running on.
-func (osDescriptionDetector) Detect(ctx context.Context) (*Resource, error) {
+func (osDescriptionDetector) Detect(context.Context) (*Resource, error) {
 	description, err := osDescription()
 	if err != nil {
 		return nil, err

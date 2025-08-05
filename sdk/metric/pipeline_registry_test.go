@@ -184,7 +184,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Default/Drop",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDrop{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
 			),
 			inst: instruments[InstrumentKindCounter],
 			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
@@ -326,7 +326,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/Sum/Monotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
@@ -334,7 +334,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/Sum/NonMonotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindUpDownCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 4}),
@@ -342,7 +342,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/ExplicitBucketHistogram",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindHistogram],
 			validate: assertHist[N](metricdata.CumulativeTemporality),
@@ -350,7 +350,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/Gauge",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindGauge],
 			validate: assertLastValue[N],
@@ -358,7 +358,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/PrecomputedSum/Monotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindObservableCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 3}),
@@ -366,7 +366,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/PrecomputedSum/NonMonotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 3}),
@@ -374,7 +374,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Gauge",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindObservableGauge],
 			validate: assertLastValue[N],
@@ -453,7 +453,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	renameView := NewView(Instrument{Name: "foo"}, Stream{Name: "bar"})
 	testRdr := NewManualReader()
 	testRdrHistogram := NewManualReader(
-		WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationExplicitBucketHistogram{} }),
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationExplicitBucketHistogram{} }),
 	)
 
 	testCases := []struct {
@@ -566,7 +566,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(
-		WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationSum{} }),
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationSum{} }),
 	)
 
 	readers := []Reader{testRdrHistogram}
