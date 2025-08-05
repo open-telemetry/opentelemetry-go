@@ -228,8 +228,8 @@ func redactDataPointTimestamps[T int64 | float64](sdp []metricdata.DataPoint[T])
 
 var exporterIDCounter atomic.Int64
 
-// newExporterID returns a new unique ID for an exporter.
+// nextExporterID returns a new unique ID for an exporter.
 // the starting value is 0, and it increments by 1 for each call.
-func newExporterID() int64 {
+func nextExporterID() int64 {
 	return exporterIDCounter.Add(1) - 1
 }
