@@ -11,6 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,12 +34,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 
 	"go.opentelemetry.io/otel"
@@ -620,6 +622,12 @@ func TestSelfObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				ctx := context.Background()
 				client, coll := clientFactory(t, nil)
+				componentName := fmt.Sprintf(
+					"%s/%d",
+					otelconv.ComponentTypeOtlpGRPCLogExporter,
+					grpcExporterIDCounter.Load()-1,
+				)
+				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -636,14 +644,14 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogInflight{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
-										Value: 1,
+										Value: 0,
 									},
 								},
 							},
@@ -658,12 +666,12 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
 										Value: 1,
 									},
@@ -679,12 +687,17 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+												otelconv.RPCGRPCStatusCodeAttr(
+													codes.OK,
+												),
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
 										Count: 1,
 									},
@@ -693,6 +706,7 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
+
 				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 				require.NoError(t, client.Shutdown(ctx))
 				got := coll.Collect().Dump()
@@ -722,7 +736,13 @@ func TestSelfObservability(t *testing.T) {
 				ctx := context.Background()
 				client, _ := clientFactory(t, rCh)
 
+				componentName := fmt.Sprintf(
+					"%s/%d",
+					otelconv.ComponentTypeOtlpGRPCLogExporter,
+					grpcExporterIDCounter.Load()-1,
+				)
 				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
+				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -739,15 +759,15 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogInflight{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											semconv.ErrorType(wantErr),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
-										Value: 1,
+
+										Value: 0,
 									},
 								},
 							},
@@ -762,13 +782,13 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											semconv.ErrorType(wantErr),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
 										Value: 1,
 									},
@@ -784,7 +804,7 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
@@ -794,8 +814,8 @@ func TestSelfObservability(t *testing.T) {
 												),
 											),
 											semconv.ErrorType(wantErr),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
 										Count: 1,
 									},
@@ -839,6 +859,12 @@ func TestSelfObservability(t *testing.T) {
 				err := client.UploadLogs(ctx, resourceLogs)
 				assert.ErrorContains(t, err, "request contains invalid arguments")
 
+				componentName := fmt.Sprintf(
+					"%s/%d",
+					otelconv.ComponentTypeOtlpGRPCLogExporter,
+					grpcExporterIDCounter.Load()-1,
+				)
+				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -855,15 +881,14 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogInflight{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
 											otelconv.SDKExporterLogInflight{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
-											wantErrTypeAttr,
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 										),
-										Value: 1,
+										Value: 0,
 									},
 								},
 							},
@@ -878,12 +903,12 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
 											wantErrTypeAttr,
 										),
 										Value: 1,
@@ -900,18 +925,16 @@ func TestSelfObservability(t *testing.T) {
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
 										Attributes: attribute.NewSet(
-											otelconv.SDKExporterLogExported{}.AttrComponentName(client.componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												wantGRPCStatusCodeAttr,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrErrorType(
-												otelconv.ErrorTypeAttr(wantErr.Error()),
-											),
-											client.presetAttrs[0],
-											client.presetAttrs[1],
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											wantErrTypeAttr,
 										),
 										Count: 1,
 									},
@@ -967,40 +990,5 @@ func normalizeMetrics(scopeMetrics *metricdata.ScopeMetrics) {
 			}
 			m.Data = data
 		}
-	}
-}
-
-func TestServerAddrAttrs(t *testing.T) {
-	testcases := []struct {
-		name   string
-		target string
-		want   []attribute.KeyValue
-	}{
-		{
-			name:   "UnixSocket",
-			target: "unix:///tmp/grpc.sock",
-			want:   []attribute.KeyValue{semconv.ServerAddress("/tmp/grpc.sock")},
-		},
-		{
-			name:   "DNSWithPort",
-			target: "dns:///localhost:8080",
-			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(8080)},
-		},
-		{
-			name:   "SimpleHostPort",
-			target: "localhost:10001",
-			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(10001)},
-		},
-		{
-			name:   "HostWithoutPort",
-			target: "example.com",
-			want:   []attribute.KeyValue{semconv.ServerAddress("example.com")},
-		},
-	}
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			attrs := serverAddrAttrs(tc.target)
-			assert.Equal(t, tc.want, attrs)
-		})
 	}
 }

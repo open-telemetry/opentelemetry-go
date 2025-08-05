@@ -7,11 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
@@ -26,12 +25,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
@@ -51,13 +46,8 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
-	duration                  time.Duration
-	presetAttrs               []attribute.KeyValue
-	componentName             string
-	selfObservabilityEnabled  bool
-	logInflightMetric         otelconv.SDKExporterLogInflight
-	logExportedMetric         otelconv.SDKExporterLogExported
-	logExportedDurationMetric otelconv.SDKExporterOperationDuration
+	selfObservabilityEnabled bool
+	exporterMetric           *selfobservability.ExporterMetrics
 }
 
 // Used for testing.
@@ -100,27 +90,13 @@ func (c *client) initSelfObservability() {
 		return
 	}
 
-	id := grpcExporterIDCounter.Add(1) - 1
-
 	c.selfObservabilityEnabled = true
-	c.presetAttrs = serverAddrAttrs(c.conn.Target())
-	c.componentName = fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
-
-	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL))
-
-	var err error
-	if c.logInflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
-		otel.Handle(err)
-	}
-	if c.logExportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
-		otel.Handle(err)
-	}
-	if c.logExportedDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
-	}
+	id := grpcExporterIDCounter.Add(1) - 1
+	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
+	c.exporterMetric = selfobservability.NewExporterMetrics(
+		"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+		componentName,
+		string(otelconv.ComponentTypeOtlpGRPCLogExporter), c.conn.Target())
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -173,7 +149,6 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
-		c.recordLogInflightMetric(context.Background(), semconv.ErrorType(ctx.Err()))
 		return ctx.Err()
 	default:
 	}
@@ -182,23 +157,18 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	defer cancel()
 
 	return c.requestFunc(ctx, func(ctx context.Context) error {
-		resp, err := c.export(ctx, rl)
+		trackExportFunc := c.trackExport(context.Background())
+
+		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
+			ResourceLogs: rl,
+		})
 
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				c.recordLogInflightMetric(context.Background(), semconv.ErrorType(err))
-				c.recordLogExportedMetric(context.Background(), semconv.ErrorType(err))
-				c.recordLogExportedDurationMetric(
-					context.Background(),
-					c.duration.Seconds(),
-					c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
-						otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
-					),
-					semconv.ErrorType(err),
-				)
+				trackExportFunc(err, int(status.Code(err)))
 				otel.Handle(err)
 				return nil
 			}
@@ -206,119 +176,19 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
-			c.recordLogInflightMetric(context.Background())
-			c.recordLogExportedMetric(context.Background())
-			c.recordLogExportedDurationMetric(context.Background(), c.duration.Seconds())
+			trackExportFunc(nil, int(codes.OK))
 			return nil
 		}
-		c.recordLogInflightMetric(context.Background(), semconv.ErrorType(err))
-		c.recordLogExportedMetric(context.Background(), semconv.ErrorType(err))
-		c.recordLogExportedDurationMetric(
-			context.Background(),
-			c.duration.Seconds(),
-			c.logExportedDurationMetric.AttrRPCGRPCStatusCode(
-				otelconv.RPCGRPCStatusCodeAttr(status.Code(err)),
-			),
-			c.logExportedDurationMetric.AttrErrorType(otelconv.ErrorTypeAttr(err.Error())),
-		)
+		trackExportFunc(err, int(status.Code(err)))
 		return err
 	})
 }
 
-func (c *client) export(ctx context.Context, rl []*logpb.ResourceLogs) (*collogpb.ExportLogsServiceResponse, error) {
-	if c.selfObservabilityEnabled {
-		begin := time.Now()
-		defer func() {
-			c.duration = time.Since(begin)
-		}()
-	}
-	return c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
-		ResourceLogs: rl,
-	})
-}
-
-func (c *client) recordLogInflightMetric(ctx context.Context, extraAttrs ...attribute.KeyValue) {
+func (c *client) trackExport(ctx context.Context) func(err error, code int) {
 	if !c.selfObservabilityEnabled {
-		return
+		return func(_ error, _ int) {}
 	}
-
-	totalCap := len(extraAttrs) + len(c.presetAttrs) + 2
-	attrs := make([]attribute.KeyValue, 0, totalCap)
-
-	attrs = append(
-		attrs,
-		c.logInflightMetric.AttrComponentName(c.componentName),
-		c.logInflightMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-	)
-	attrs = append(attrs, extraAttrs...)
-	attrs = append(attrs, c.presetAttrs...)
-	c.logInflightMetric.Add(ctx, 1, attrs...)
-}
-
-func (c *client) recordLogExportedMetric(ctx context.Context, extraAttrs ...attribute.KeyValue) {
-	if !c.selfObservabilityEnabled {
-		return
-	}
-
-	totalCap := len(extraAttrs) + len(c.presetAttrs) + 2
-	attrs := make([]attribute.KeyValue, 0, totalCap)
-
-	attrs = append(
-		attrs,
-		c.logExportedMetric.AttrComponentName(c.componentName),
-		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-	)
-	attrs = append(attrs, extraAttrs...)
-	attrs = append(attrs, c.presetAttrs...)
-	c.logExportedMetric.Add(ctx, 1, attrs...)
-}
-
-func (c *client) recordLogExportedDurationMetric(
-	ctx context.Context,
-	duration float64,
-	extraAttrs ...attribute.KeyValue,
-) {
-	if !c.selfObservabilityEnabled {
-		return
-	}
-
-	totalCap := len(extraAttrs) + len(c.presetAttrs) + 2
-	attrs := make([]attribute.KeyValue, 0, totalCap)
-	attrs = append(
-		attrs,
-		c.logExportedMetric.AttrComponentName(c.componentName),
-		c.logExportedMetric.AttrComponentType(otelconv.ComponentTypeOtlpGRPCLogExporter),
-	)
-
-	attrs = append(attrs, extraAttrs...)
-	attrs = append(attrs, c.presetAttrs...)
-
-	c.logExportedDurationMetric.Record(ctx, duration, attrs...)
-}
-
-func serverAddrAttrs(target string) []attribute.KeyValue {
-	if strings.HasPrefix(target, "unix://") {
-		path := strings.TrimPrefix(target, "unix://")
-		return []attribute.KeyValue{semconv.ServerAddress(path)}
-	}
-
-	if idx := strings.Index(target, "://"); idx != -1 {
-		target = target[idx+4:]
-	}
-
-	host, pStr, err := net.SplitHostPort(target)
-	if err != nil {
-		return []attribute.KeyValue{semconv.ServerAddress(target)}
-	}
-
-	port, err := strconv.Atoi(pStr)
-	if err != nil {
-		return []attribute.KeyValue{semconv.ServerAddress(host)}
-	}
-	return []attribute.KeyValue{
-		semconv.ServerAddress(host),
-		semconv.ServerPort(port),
-	}
+	return c.exporterMetric.TrackExport(ctx)
 }
 
 // Shutdown shuts down the client, freeing all resources.
