@@ -42,7 +42,7 @@ func testSumAggregateOutput(dest *metricdata.Aggregation) int {
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -68,7 +68,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(context.Background(), &output)
@@ -76,8 +76,8 @@ func TestPipelineUsesResource(t *testing.T) {
 	assert.Equal(t, res, output.Resource)
 }
 
-func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
+func TestPipelineConcurrentSafe(*testing.T) {
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
 	ctx := context.Background()
 	var output metricdata.ResourceMetrics
 
@@ -142,13 +142,13 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter),
+				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter, 0),
 			},
 			{
 				name: "NoMatchingView",
 				pipe: newPipeline(nil, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
-				}, exemplar.AlwaysOffFilter),
+				}, exemplar.AlwaysOffFilter, 0),
 			},
 		}
 
@@ -233,7 +233,7 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
+		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
@@ -275,7 +275,7 @@ func TestLogConflictSuggestView(t *testing.T) {
 	var vc cache[string, instID]
 	name := strings.ToLower(orig.Name)
 	_ = vc.Lookup(name, func() instID { return orig })
-	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
+	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
 
 	viewSuggestion := func(inst instID, stream string) string {
 		return `"NewView(Instrument{` +
@@ -380,7 +380,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	}
 
 	var vc cache[string, instID]
-	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0)
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
@@ -511,7 +511,7 @@ func TestExemplars(t *testing.T) {
 
 	t.Run("Custom reservoir", func(t *testing.T) {
 		r := NewManualReader()
-		reservoirProviderSelector := func(agg Aggregation) exemplar.ReservoirProvider {
+		reservoirProviderSelector := func(Aggregation) exemplar.ReservoirProvider {
 			return exemplar.FixedSizeReservoirProvider(2)
 		}
 		v1 := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
@@ -621,7 +621,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 func TestPipelineProduceErrors(t *testing.T) {
 	// Create a test pipeline with aggregations
 	pipeReader := NewManualReader()
-	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter, 0)
 
 	// Set up an observable with callbacks
 	var testObsID observableID[int64]
@@ -663,7 +663,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 			return nil
 		},
 		// Callback 2: populates int64 observable data
-		func(ctx context.Context) error {
+		func(context.Context) error {
 			callbackCounts[1]++
 			if shouldCancelContext {
 				cancelCtx()
@@ -671,7 +671,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 			return nil
 		},
 		// Callback 3: return an error
-		func(ctx context.Context) error {
+		func(context.Context) error {
 			callbackCounts[2]++
 			if shouldReturnError {
 				return fmt.Errorf("test callback error")

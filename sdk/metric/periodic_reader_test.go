@@ -489,7 +489,7 @@ func TestPeriodicReaderCollect(t *testing.T) {
 			// Ensure the pipeline has a callback setup
 			testM, err := meter.Int64ObservableCounter("test")
 			assert.NoError(t, err)
-			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+			_, err = meter.RegisterCallback(func(context.Context, metric.Observer) error {
 				return nil
 			}, testM)
 			assert.NoError(t, err)
