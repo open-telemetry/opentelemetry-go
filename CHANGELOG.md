@@ -49,7 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
 - Add experimental self-observability `stdouttrace` exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
-  Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#xx)
+  Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
 
 ### Changed
 
