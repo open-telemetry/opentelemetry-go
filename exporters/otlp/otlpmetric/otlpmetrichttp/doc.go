@@ -75,19 +75,6 @@ default aggregation to use for histogram instruments. Supported values:
 
 The configuration can be overridden by [WithAggregationSelector] option.
 
-# Self-Observability
-
-This exporter supports self-observability metrics to monitor its own performance.
-To enable this experimental feature, set the environment variable:
-
-	OTEL_GO_X_SELF_OBSERVABILITY=true
-
-When enabled, the exporter will emit the following metrics using the global MeterProvider:
-
-  - otel.sdk.exporter.metric_data_point.exported: Counter tracking successfully exported data points
-  - otel.sdk.exporter.metric_data_point.inflight: UpDownCounter tracking data points currently being exported
-  - otel.sdk.exporter.operation.duration: Histogram tracking export operation duration in seconds
-
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
 [Explicit Bucket Histogram Aggregation]: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.26.0/specification/metrics/sdk.md#explicit-bucket-histogram-aggregation
 [Base2 Exponential Bucket Histogram Aggregation]: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.26.0/specification/metrics/sdk.md#base2-exponential-bucket-histogram-aggregation
