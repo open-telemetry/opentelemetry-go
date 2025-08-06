@@ -31,5 +31,5 @@ package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/o
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/metricdata.go.tmpl "--data={}" --out=transform/metricdata.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/metricdata_test.go.tmpl "--data={}" --out=transform/metricdata_test.go
 
-//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/selfobservability/selfobservability.go.tmpl "--data={}" --out=selfobservability/selfobservability.go
-//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/selfobservability/selfobservability_test.go.tmpl "--data={}" --out=selfobservability/selfobservability_test.go
+//go:generate gotmpl --body=selfobservability/template/selfobservability.go.tmpl "--data={}" --out=selfobservability/selfobservability.go
+//go:generate gotmpl --body=selfobservability/template/selfobservability_test.go.tmpl "--data={}" --out=selfobservability/selfobservability_test.go
