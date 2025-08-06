@@ -92,7 +92,7 @@ When enabled, the exporter will emit the following metrics using the global Mete
 
 All metrics include attributes identifying the exporter component and destination server.
 
-See [go.opentelemetry.io/otel/sdk/internal/x] for information about
+See [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability] for information about
 the experimental features.
 
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
