@@ -796,7 +796,7 @@ func TestResourceConcurrentSafe(t *testing.T) {
 
 type fakeDetector struct{}
 
-func (f fakeDetector) Detect(_ context.Context) (*resource.Resource, error) {
+func (f fakeDetector) Detect(context.Context) (*resource.Resource, error) {
 	// A bit pedantic, but resource.NewWithAttributes returns an empty Resource when
 	// no attributes specified. We want to make sure that this is concurrent-safe.
 	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.21.0"), nil

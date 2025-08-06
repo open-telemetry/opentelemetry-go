@@ -30,7 +30,7 @@ func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
 }
 
-func (t *testOnlyTextMapReader) ForeachKey(handler func(key string, val string) error) error {
+func (t *testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	_ = handler("key1", "val1")
 	_ = handler("key2", "val2")
 
@@ -134,7 +134,7 @@ var (
 
 type testTextMapPropagator struct{}
 
-func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (t testTextMapPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, traceID.String()+":"+spanID.String())
 
 	// Test for panic
@@ -198,7 +198,7 @@ func (t *textMapCarrier) Get(key string) string {
 	return t.m[key]
 }
 
-func (t *textMapCarrier) Set(key string, value string) {
+func (t *textMapCarrier) Set(key, value string) {
 	t.m[key] = value
 }
 
@@ -221,7 +221,7 @@ func newTestTextMapReader(m *map[string]string) *testTextMapReader {
 	return &testTextMapReader{m: m}
 }
 
-func (t *testTextMapReader) ForeachKey(handler func(key string, val string) error) error {
+func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	for key, val := range *t.m {
 		if err := handler(key, val); err != nil {
 			return err
@@ -370,7 +370,7 @@ type nonDeferWrapperTracer struct {
 }
 
 func (t *nonDeferWrapperTracer) Start(
-	ctx context.Context,
+	_ context.Context,
 	name string,
 	opts ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
@@ -393,7 +393,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with wrapper tracer set",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := NewWrapperTracer(bridge, otel.Tracer("test"))
 				bridge.SetOpenTelemetryTracer(wTracer)
 			},
@@ -401,7 +401,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with a non-deferred wrapper tracer",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := &nonDeferWrapperTracer{
 					NewWrapperTracer(bridge, otel.Tracer("test")),
 				}

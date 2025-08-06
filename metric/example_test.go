@@ -110,7 +110,7 @@ func ExampleMeter_counter() {
 	if err != nil {
 		panic(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
 		apiCounter.Add(r.Context(), 1)
 
 		// do some work in an API call
@@ -195,7 +195,7 @@ func ExampleMeter_histogram() {
 	if err != nil {
 		panic(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		// do some work in an API call
@@ -231,7 +231,7 @@ func ExampleMeter_observableCounter() {
 func ExampleMeter_observableUpDownCounter() {
 	// The function registers asynchronous metrics for the provided db.
 	// Make sure to unregister metric.Registration before closing the provided db.
-	_ = func(db *sql.DB, meter metric.Meter, poolName string) (metric.Registration, error) {
+	_ = func(db *sql.DB, meter metric.Meter, _ string) (metric.Registration, error) {
 		m, err := meter.Int64ObservableUpDownCounter(
 			"db.client.connections.max",
 			metric.WithDescription("The maximum number of open connections allowed."),
@@ -301,7 +301,7 @@ func ExampleMeter_attributes() {
 	if err != nil {
 		panic(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
 		// do some work in an API call and set the response HTTP status code
 		statusCode := http.StatusOK
 
