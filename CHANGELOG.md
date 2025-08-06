@@ -48,6 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
 - Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
+- Add native histogram exemplar support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6772)
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
   Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
 
