@@ -322,7 +322,7 @@ func BenchmarkEquivalentMapAccess(b *testing.B) {
 func benchmarkEquivalentMapAccess(b *testing.B, set *attribute.Set) {
 	values := map[attribute.Distinct]int{}
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		values[set.Equivalent()] += 1
 	}
 }
