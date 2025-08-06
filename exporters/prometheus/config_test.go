@@ -152,6 +152,6 @@ func TestNewConfig(t *testing.T) {
 
 type noopProducer struct{}
 
-func (*noopProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+func (*noopProducer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	return nil, nil
 }
