@@ -33,10 +33,7 @@ const (
 	DefaultMaxExportBatchSize = 512
 )
 
-var (
-	noError   = otelconv.ErrorTypeAttr("")
-	queueFull = otelconv.ErrorTypeAttr("queue_full")
-)
+var queueFull = otelconv.ErrorTypeAttr("queue_full")
 
 // BatchSpanProcessorOption configures a BatchSpanProcessor.
 type BatchSpanProcessorOption func(o *BatchSpanProcessorOptions)
@@ -346,8 +343,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		if bsp.selfObservabilityEnabled {
 			bsp.spansProcessedCounter.Add(ctx, int64(l),
 				bsp.componentNameAttr,
-				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor),
-				bsp.spansProcessedCounter.AttrErrorType(noError))
+				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor))
 		}
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
 

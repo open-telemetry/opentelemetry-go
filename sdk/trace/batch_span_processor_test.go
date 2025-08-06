@@ -779,7 +779,6 @@ func assertScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, read
 			Attributes: attribute.NewSet(
 				semconv.OTelComponentTypeBatchingSpanProcessor,
 				componentNameAttr,
-				semconv.ErrorTypeKey.String(string(noError)),
 			),
 		})
 	}
