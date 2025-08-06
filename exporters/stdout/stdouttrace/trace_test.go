@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -255,7 +256,7 @@ func TestSelfObservability(t *testing.T) {
 			enabled:         false,
 			callExportSpans: defaultCallExportSpans,
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				assert.Len(t, rm.ScopeMetrics, 0)
+				assert.Empty(t, rm.ScopeMetrics)
 			},
 		},
 		{
