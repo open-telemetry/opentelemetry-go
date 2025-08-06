@@ -77,21 +77,6 @@ default aggregation to use for histogram instruments. Supported values:
 
 The configuration can be overridden by [WithAggregationSelector] option.
 
-# Self-Observability
-
-This exporter supports self-observability metrics to monitor its own performance.
-To enable this experimental feature, set the environment variable:
-
-	OTEL_GO_X_SELF_OBSERVABILITY=true
-
-When enabled, the exporter will emit the following metrics using the global MeterProvider:
-
-  - otel.sdk.exporter.metric_data_point.exported: Counter tracking successfully exported data points
-  - otel.sdk.exporter.metric_data_point.inflight: UpDownCounter tracking data points currently being exported
-  - otel.sdk.exporter.operation.duration: Histogram tracking export operation duration in seconds
-
-All metrics include attributes identifying the exporter component and destination server.
-
 See [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability] for information about
 the experimental features.
 
