@@ -96,10 +96,9 @@ func (e *Exporter) initSelfObservability() {
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
 	if e.selfObservabilityEnabled {
-		spansCount := int64(len(spans))
+		count := int64(len(spans))
 
-		e.spanInflightMetric.Add(context.Background(), spansCount, e.selfObservabilityAttrs...)
-
+		e.spanInflightMetric.Add(context.Background(), count, e.selfObservabilityAttrs...)
 		defer func(starting time.Time) {
 			// additional attributes for self-observability,
 			// only spanExportedMetric and operationDurationMetric are supported
@@ -109,8 +108,8 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 				addAttrs = append(addAttrs, semconv.ErrorType(err))
 			}
 
-			e.spanInflightMetric.Add(context.Background(), -spansCount, e.selfObservabilityAttrs...)
-			e.spanExportedMetric.Add(context.Background(), spansCount, addAttrs...)
+			e.spanInflightMetric.Add(context.Background(), -count, e.selfObservabilityAttrs...)
+			e.spanExportedMetric.Add(context.Background(), count, addAttrs...)
 			e.operationDurationMetric.Record(context.Background(), time.Since(starting).Seconds(), addAttrs...)
 		}(time.Now())
 	}

@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
@@ -19,12 +18,15 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -235,44 +237,193 @@ func TestExporterShutdownNoError(t *testing.T) {
 }
 
 func TestSelfObservability(t *testing.T) {
+	defaultCallExportSpans := func(t *testing.T, exporter *stdouttrace.Exporter) {
+		require.NoError(t, exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
+			{Name: "/foo"},
+			{Name: "/bar"},
+		}.Snapshots()))
+	}
+
 	tests := []struct {
-		name          string
-		enable        bool
-		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
+		name            string
+		enabled         bool
+		callExportSpans func(t *testing.T, exporter *stdouttrace.Exporter)
+		assertMetrics   func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
-			name:   "not set env",
-			enable: false,
+			name:            "Disabled",
+			enabled:         false,
+			callExportSpans: defaultCallExportSpans,
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Len(t, rm.ScopeMetrics, 0)
 			},
 		},
 		{
-			name:   "set env",
-			enable: true,
+			name:            "Enabled",
+			enabled:         true,
+			callExportSpans: defaultCallExportSpans,
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
 				require.Len(t, rm.ScopeMetrics, 1)
 
-				scopeMetric := rm.ScopeMetrics[0]
-				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdouttrace", scopeMetric.Scope.Name)
-				assert.Equal(t, sdk.Version(), scopeMetric.Scope.Version)
-				assert.Equal(t, semconv.SchemaURL, scopeMetric.Scope.SchemaURL)
-				assert.Len(t, scopeMetric.Metrics, 3)
-				spew.Dump(scopeMetric)
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/0"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/0"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 2,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/0"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:    "Enabled, but ExportSpans returns error",
+			enabled: true,
+			callExportSpans: func(t *testing.T, exporter *stdouttrace.Exporter) {
+				t.Helper()
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+
+				err := exporter.ExportSpans(ctx, tracetest.SpanStubs{
+					{Name: "/foo"},
+					{Name: "/bar"},
+				}.Snapshots())
+				require.Error(t, err)
+			},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+									semconv.ErrorType(context.Canceled),
+								),
+								Value: 2,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+									semconv.ErrorType(context.Canceled),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.enable {
+			if tt.enabled {
 				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 			}
 
-			prev := otel.GetMeterProvider()
-			defer func() {
-				otel.SetMeterProvider(prev)
-			}()
+			original := otel.GetMeterProvider()
+			defer otel.SetMeterProvider(original)
 
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
@@ -282,10 +433,7 @@ func TestSelfObservability(t *testing.T) {
 				stdouttrace.WithWriter(io.Discard))
 			require.NoError(t, err)
 
-			require.NoError(t, exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
-				{Name: "/foo"},
-				{Name: "/bar"},
-			}.Snapshots()))
+			tt.callExportSpans(t, exporter)
 
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, r.Collect(context.Background(), &rm))
