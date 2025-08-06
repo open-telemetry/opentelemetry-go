@@ -97,7 +97,7 @@ func WithoutTargetInfo() Option {
 // label names should be handled during translation to Prometheus format. The
 // recommended approach is to use either UnderscoreEscapingWithSuffixes for full
 // Prometheus-style compatibility (the default), or NoTranslation for Otel-style
-// names.
+// names. For convenience, this option overrides the WithCounterSuffixes option.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.allowUTF8 = !strategy.ShouldEscape()
@@ -123,13 +123,15 @@ func WithoutUnits() Option {
 	})
 }
 
-// WithoutCounterSuffixes disables exporter's addition _total suffixes on counters.
+// WithoutCounterSuffixes disables exporter's addition _total suffixes on
+// counters.
 //
 // By default, metric names include a _total suffix to follow Prometheus naming
 // conventions. For example, the counter metric happy.people would become
 // happy_people_total. With this option set, the name would instead be
-// happy_people.
-// Deprecated: Use WithTranslationStrategy instead.
+// happy_people. Note that WithTranslationStrategy will override this option.
+// However this option can be set after WithTranslationStrategy to tweak the
+// configuration, if desired.
 func WithoutCounterSuffixes() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutCounterSuffixes = true
