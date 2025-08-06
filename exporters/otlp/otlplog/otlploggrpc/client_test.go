@@ -278,7 +278,7 @@ func TestNewClient(t *testing.T) {
 	// The gRPC connection created by newClient.
 	conn, err := grpc.NewClient("test", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-	newGRPCClientFn = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	newGRPCClientFn = func(string, ...grpc.DialOption) (*grpc.ClientConn, error) {
 		return conn, nil
 	}
 

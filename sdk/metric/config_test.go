@@ -66,11 +66,11 @@ func TestConfigReaderSignalsEmpty(t *testing.T) {
 func TestConfigReaderSignalsForwarded(t *testing.T) {
 	var flush, sdown int
 	r := &reader{
-		forceFlushFunc: func(ctx context.Context) error {
+		forceFlushFunc: func(context.Context) error {
 			flush++
 			return nil
 		},
-		shutdownFunc: func(ctx context.Context) error {
+		shutdownFunc: func(context.Context) error {
 			sdown++
 			return nil
 		},
@@ -93,8 +93,8 @@ func TestConfigReaderSignalsForwarded(t *testing.T) {
 
 func TestConfigReaderSignalsForwardedErrors(t *testing.T) {
 	r := &reader{
-		forceFlushFunc: func(ctx context.Context) error { return assert.AnError },
-		shutdownFunc:   func(ctx context.Context) error { return assert.AnError },
+		forceFlushFunc: func(context.Context) error { return assert.AnError },
+		shutdownFunc:   func(context.Context) error { return assert.AnError },
 	}
 	c := newConfig([]Option{WithReader(r)})
 	f, s := c.readerSignals()
@@ -115,9 +115,9 @@ func TestUnifyMultiError(t *testing.T) {
 		e2 = errors.New("2")
 	)
 	err := unify([]func(context.Context) error{
-		func(ctx context.Context) error { return e0 },
-		func(ctx context.Context) error { return e1 },
-		func(ctx context.Context) error { return e2 },
+		func(context.Context) error { return e0 },
+		func(context.Context) error { return e1 },
+		func(context.Context) error { return e2 },
 	})(context.Background())
 	assert.ErrorIs(t, err, e0)
 	assert.ErrorIs(t, err, e1)

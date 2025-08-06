@@ -141,14 +141,14 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			osStat = func(name string) (os.FileInfo, error) {
+			osStat = func(string) (os.FileInfo, error) {
 				if tc.cgroupFileNotExist {
 					return nil, os.ErrNotExist
 				}
 				return nil, nil
 			}
 
-			osOpen = func(name string) (io.ReadCloser, error) {
+			osOpen = func(string) (io.ReadCloser, error) {
 				if tc.openFileError != nil {
 					return nil, tc.openFileError
 				}
