@@ -10,8 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
-
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -26,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
@@ -93,10 +92,13 @@ func (c *client) initSelfObservability() {
 	c.selfObservabilityEnabled = true
 	id := grpcExporterIDCounter.Add(1) - 1
 	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
+
 	c.exporterMetric = selfobservability.NewExporterMetrics(
 		"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 		componentName,
-		string(otelconv.ComponentTypeOtlpGRPCLogExporter), c.conn.Target())
+		otelconv.ComponentTypeOtlpGRPCLogExporter,
+		c.conn.Target(),
+	)
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -157,7 +159,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	defer cancel()
 
 	return c.requestFunc(ctx, func(ctx context.Context) error {
-		trackExportFunc := c.trackExport(context.Background())
+		trackExportFunc := c.trackExport(context.Background(), int64(len(rl)))
 
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
@@ -184,11 +186,11 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	})
 }
 
-func (c *client) trackExport(ctx context.Context) func(err error, code int) {
+func (c *client) trackExport(ctx context.Context, count int64) func(err error, code int) {
 	if !c.selfObservabilityEnabled {
-		return func(_ error, _ int) {}
+		return func(error, int) {}
 	}
-	return c.exporterMetric.TrackExport(ctx)
+	return c.exporterMetric.TrackExport(ctx, count)
 }
 
 // Shutdown shuts down the client, freeing all resources.

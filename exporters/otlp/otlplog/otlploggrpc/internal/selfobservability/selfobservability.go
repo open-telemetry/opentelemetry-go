@@ -28,7 +28,11 @@ type ExporterMetrics struct {
 	presetAttrs               []attribute.KeyValue
 }
 
-func NewExporterMetrics(name, componentName, componentType, target string) *ExporterMetrics {
+func NewExporterMetrics(
+	name, componentName string,
+	componentType otelconv.ComponentTypeAttr,
+	target string,
+) *ExporterMetrics {
 	em := &ExporterMetrics{}
 	em.selfObservabilityEnabled = true
 	mp := otel.GetMeterProvider()
@@ -50,26 +54,26 @@ func NewExporterMetrics(name, componentName, componentType, target string) *Expo
 
 	em.presetAttrs = []attribute.KeyValue{
 		semconv.OTelComponentName(componentName),
-		semconv.OTelComponentTypeKey.String(componentType),
+		semconv.OTelComponentTypeKey.String(string(componentType)),
 	}
 	em.presetAttrs = append(em.presetAttrs, ServerAddrAttrs(target)...)
 	return em
 }
 
-func (em *ExporterMetrics) TrackExport(ctx context.Context) func(err error, code int) {
+func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error, code int) {
 	if !em.selfObservabilityEnabled {
-		return func(_ error, _ int) {}
+		return func(error, int) {}
 	}
 
 	begin := time.Now()
-	em.logInflightMetric.Add(ctx, 1, em.presetAttrs...)
+	em.logInflightMetric.Add(ctx, count, em.presetAttrs...)
 	return func(err error, code int) {
 		duration := time.Since(begin).Seconds()
-		em.logInflightMetric.Add(ctx, -1, em.presetAttrs...)
+		em.logInflightMetric.Add(ctx, -count, em.presetAttrs...)
 		if err != nil {
 			em.presetAttrs = append(em.presetAttrs, semconv.ErrorType(err))
 		}
-		em.logExportedMetric.Add(ctx, 1, em.presetAttrs...)
+		em.logExportedMetric.Add(ctx, count, em.presetAttrs...)
 		em.presetAttrs = append(
 			em.presetAttrs,
 			em.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
