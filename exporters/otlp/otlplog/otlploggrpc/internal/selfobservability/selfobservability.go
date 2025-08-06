@@ -21,7 +21,6 @@ import (
 )
 
 type ExporterMetrics struct {
-	selfObservabilityEnabled  bool
 	logInflightMetric         otelconv.SDKExporterLogInflight
 	logExportedMetric         otelconv.SDKExporterLogExported
 	logExportedDurationMetric otelconv.SDKExporterOperationDuration
@@ -34,7 +33,6 @@ func NewExporterMetrics(
 	target string,
 ) *ExporterMetrics {
 	em := &ExporterMetrics{}
-	em.selfObservabilityEnabled = true
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
 		name,
@@ -61,10 +59,6 @@ func NewExporterMetrics(
 }
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error, code int) {
-	if !em.selfObservabilityEnabled {
-		return func(error, int) {}
-	}
-
 	begin := time.Now()
 	em.logInflightMetric.Add(ctx, count, em.presetAttrs...)
 	return func(err error, code int) {
