@@ -192,6 +192,35 @@ should have `go test -bench` output in their description.
 should have [`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat)
 output in their description.
 
+## Dependencies
+
+This project uses [Go Modules] for dependency management. All modules will use
+`go.mod` to explicitly list all direct and indirect dependencies, ensuring a
+clear dependency graph. The `go.sum` file for each module will be committed to
+the repository and used to verify the integrity of downloaded modules,
+preventing malicious tampering.
+
+This project uses automated dependency update tools (i.e. dependabot,
+renovatebot) to manage updates to dependencies. This ensures that dependencies
+are kept up-to-date with the latest security patches and features and are
+reviewed before being merged. If you would like to propose a change to a
+dependency it should be done through a pull request that updates the `go.mod`
+file and includes a description of the change.
+
+See the [versioning and compatibility](./VERSIONING.md) policy for more details
+about dependency compatibility.
+
+[Go Modules]: https://pkg.go.dev/cmd/go#hdr-Modules__module_versions__and_more
+
+### Environment Dependencies
+
+This project does not partition dependencies based on the environment (i.e.
+`development`, `staging`, `production`).
+
+Only the dependencies explicitly included in the released modules have be
+tested and verified to work with the released code. No other guarantee is made
+about the compatibility of other dependencies.
+
 ## Documentation
 
 Each (non-internal, non-test) package must be documented using
