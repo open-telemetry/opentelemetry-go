@@ -274,7 +274,8 @@ func BenchmarkStringSlice(b *testing.B) {
 
 // BenchmarkEquivalentMapAccess measures how expensive it is to use
 // Equivalent() as a map key. This is on the hot path for making synchronous
-// measurements on the metrics API/SDK.
+// measurements on the metrics API/SDK. It will likely be on the hot path for
+// the trace and logs API/SDK in the future.
 func BenchmarkEquivalentMapAccess(b *testing.B) {
 	b.Run("Empty", func(b *testing.B) {
 		benchmarkEquivalentMapAccess(b, attribute.EmptySet())
