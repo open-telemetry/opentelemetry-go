@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sync"
 
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
@@ -16,7 +18,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 // Exporter is a OpenTelemetry metric Exporter using gRPC.

@@ -14,12 +14,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 var records []sdklog.Record
@@ -117,7 +117,7 @@ func TestExporterForceFlush(t *testing.T) {
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
 }
 
-func TestExporterConcurrentSafe(t *testing.T) {
+func TestExporterConcurrentSafe(*testing.T) {
 	e := newExporter(&mockClient{})
 
 	const goroutines = 10

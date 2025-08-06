@@ -94,7 +94,6 @@ linters:
         - dupArg
         - hugeParam
         - importShadow
-        - paramTypeCombine
         - ptrToRefParam
         - preferDecodeRune
         - rangeValCopy
@@ -182,6 +181,7 @@ linters:
             - fmt.Print
             - fmt.Printf
             - fmt.Println
+        - name: unused-parameter
         - name: unnecessary-stmt
         - name: use-any
         - name: useless-break
@@ -249,9 +249,11 @@ formatters:
     - goimports
     - golines
   settings:
+    gofumpt:
+      extra-rules: true
     goimports:
       local-prefixes:
-        - go.opentelemetry.io
+        - go.opentelemetry.io/otel
     golines:
       max-len: 120
   exclusions:
