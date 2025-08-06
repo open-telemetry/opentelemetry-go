@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
@@ -18,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 // Exporter is a OpenTelemetry metric Exporter using gRPC.
@@ -61,7 +61,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		aggregationSelector: as,
 
 		metrics: selfobservability.NewExporterMetrics(
-			"otlp_grpc_metric_exporter",
+			string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
 			serverAddress,
 			serverPort,
 		),
@@ -105,9 +105,6 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	} else {
 		finalErr = err
 	}
-
-	// Small delay to ensure duration is measurable in Windows environment
-	time.Sleep(1 * time.Millisecond)
 
 	finishTracking(finalErr)
 	return finalErr

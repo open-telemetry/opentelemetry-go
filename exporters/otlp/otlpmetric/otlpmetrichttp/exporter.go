@@ -8,12 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -33,9 +31,6 @@ type Exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	shutdownOnce sync.Once
-
-	// Self-observability metrics
-	metrics *selfobservability.ExporterMetrics
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
@@ -51,20 +46,11 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		as = metric.DefaultAggregationSelector
 	}
 
-	// Extract server address and port from endpoint for self-observability
-	serverAddress, serverPort := selfobservability.ParseEndpoint(cfg.Metrics.Endpoint, 4318)
-
 	return &Exporter{
 		client: c,
 
 		temporalitySelector: ts,
 		aggregationSelector: as,
-
-		metrics: selfobservability.NewExporterMetrics(
-			"otlp_http_metric_exporter",
-			serverAddress,
-			serverPort,
-		),
 	}, nil
 }
 
@@ -85,32 +71,19 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	defer global.Debug("OTLP/HTTP exporter export", "Data", rm)
 
-	// Track export operation for self-observability
-	finishTracking := e.metrics.TrackExport(ctx, rm)
-
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
 
-	// Complete tracking with the final result
-	var finalErr error
 	if upErr != nil {
 		if err == nil {
-			finalErr = fmt.Errorf("failed to upload metrics: %w", upErr)
-		} else {
-			finalErr = fmt.Errorf("failed to upload incomplete metrics (%w): %w", err, upErr)
+			return fmt.Errorf("failed to upload metrics: %w", upErr)
 		}
-	} else {
-		finalErr = err
+		return fmt.Errorf("failed to upload incomplete metrics (%w): %w", err, upErr)
 	}
-
-	// Small delay to ensure duration is measurable in Windows environment
-	time.Sleep(1 * time.Millisecond)
-
-	finishTracking(finalErr)
-	return finalErr
+	return err
 }
 
 // ForceFlush flushes any metric data held by an exporter.
