@@ -174,7 +174,7 @@ func (bsp *batchSpanProcessor) configureSelfObservability() {
 	callabckAttributesOpt := metric.WithAttributes(bsp.componentNameAttr,
 		semconv.OTelComponentTypeBatchingSpanProcessor)
 	bsp.callbackRegistration, err = meter.RegisterCallback(
-		func(ctx context.Context, o metric.Observer) error {
+		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(len(bsp.queue)), callabckAttributesOpt)
 			o.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(bsp.o.MaxQueueSize), callabckAttributesOpt)
 			return nil
