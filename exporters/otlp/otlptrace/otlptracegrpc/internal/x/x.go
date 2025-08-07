@@ -16,7 +16,7 @@ import (
 // to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
 // will also enable this).
 var SelfObservability = newFeature("SELF_OBSERVABILITY", func(v string) (string, bool) {
-	if strings.ToLower(v) == "true" {
+	if strings.EqualFold(v, "true") {
 		return v, true
 	}
 	return "", false
