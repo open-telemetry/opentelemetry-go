@@ -130,6 +130,10 @@ func TraceIDFromHex(h string) (TraceID, error) {
 		return [16]byte{}, errInvalidTraceIDLength
 	}
 	var b [16]byte
+	return b, hexToBin(h, b[:], errNilTraceID)
+}
+
+func hexToBin(h string, b []byte, nilError error) error {
 	invalidMark := byte(0)
 	for i := 0; i < len(h); i += 4 {
 		b[i/2] = (hexRev[h[i]] << 4) | hexRev[h[i+1]]
@@ -139,13 +143,13 @@ func TraceIDFromHex(h string) (TraceID, error) {
 	// If the upper 4 bits of any byte are not zero, there was an invalid hex
 	// character since invalid hex characters are 0xff in hexLU.
 	if invalidMark&0xf0 != 0 {
-		return [16]byte{}, errInvalidHexID
+		return errInvalidHexID
 	}
 	// If we didn't set any bits, then h was all zeros.
 	if invalidMark == 0 {
-		return [16]byte{}, errNilTraceID
+		return nilError
 	}
-	return b, nil
+	return nil
 }
 
 // SpanIDFromHex returns a SpanID from a hex string if it is compliant
@@ -156,22 +160,7 @@ func SpanIDFromHex(h string) (SpanID, error) {
 		return [8]byte{}, errInvalidSpanIDLength
 	}
 	var b [8]byte
-	invalidMark := byte(0)
-	for i := 0; i < len(h); i += 4 {
-		b[i/2] = (hexRev[h[i]] << 4) | hexRev[h[i+1]]
-		b[i/2+1] = (hexRev[h[i+2]] << 4) | hexRev[h[i+3]]
-		invalidMark |= hexRev[h[i]] | hexRev[h[i+1]] | hexRev[h[i+2]] | hexRev[h[i+3]]
-	}
-	// If the upper 4 bits of any byte are not zero, there was an invalid hex
-	// character since invalid hex characters are 0xff in hexLU.
-	if invalidMark&0xf0 != 0 {
-		return [8]byte{}, errInvalidHexID
-	}
-	// If we didn't set any bits, then h was all zeros.
-	if invalidMark == 0 {
-		return [8]byte{}, errNilSpanID
-	}
-	return b, nil
+	return b, hexToBin(h, b[:], errNilSpanID)
 }
 
 // TraceFlags contains flags that can be set on a SpanContext.
