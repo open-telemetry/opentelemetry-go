@@ -5,6 +5,7 @@ package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/otlptranslator"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -13,13 +14,8 @@ import (
 
 // config contains options for the exporter.
 type config struct {
-	registerer        prometheus.Registerer
-	disableTargetInfo bool
-
-	// By default because withoutUnits, withoutCounterSuffixes, and allowUTF8 are
-	// false, the default translation mode is equivalent to applying the option
-	// WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes).
-
+	registerer               prometheus.Registerer
+	disableTargetInfo        bool
 	withoutUnits             bool
 	withoutCounterSuffixes   bool
 	allowUTF8                bool
@@ -32,6 +28,18 @@ type config struct {
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
 	cfg := config{}
+
+	// Pre-pend the translation strategy with the correct default for the current
+	// global validation scheme. The individual values may then be overwritten by
+	// subsequent options.
+	//nolint:staticcheck
+	if model.NameValidationScheme == model.UTF8Validation {
+		opts = append([]Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)}, opts...)
+		// log.Warningf("The default Prometheus naming translation strategy is changing from NoUTF8EscapingWithSuffixes to UnderscoreEscapingWithSuffixes in the next release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the new default behavior.")
+	} else {
+		opts = append([]Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)}, opts...)
+	}
+
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
 	}
@@ -94,13 +102,20 @@ func WithoutTargetInfo() Option {
 }
 
 // WithTranslationStrategy provides a standardized way to define how metric and
-// label names should be handled during translation to Prometheus format. The
-// recommended approach is to use either UnderscoreEscapingWithSuffixes for full
-// Prometheus-style compatibility (the default), or NoTranslation for Otel-style
-// names. This option will affect the existence of counter and unit suffixes, so
-// users should set their desired overall Translation Strategy first and then
-// apply subsequent options like WithoutUnits or WithoutCounterSuffixes if
-// needed.
+// label names should be handled during translation to Prometheus format. See:
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk_exporters/prometheus.md#configuration.
+// The recommended approach is to use either UnderscoreEscapingWithSuffixes for
+// full Prometheus-style compatibility (the default), or NoTranslation for
+// Otel-style names. This option will affect the values of `allowUTF8`,
+// `withoutCounterSuffixes`, and `withoutUnits`, so users should set their
+// desired overall Translation Strategy first and then apply subsequent options
+// like WithoutUnits or WithoutCounterSuffixes if needed.
+// By default, if model.NameValidationScheme is "legacy", the default strategy
+// is UnderscoreEscapingWithSuffixes. If the validation scheme is "utf8", then
+// currently the default Strategy will be NoUTF8EscapingWithSuffixes. A future
+// version of this SDK will change the default to always be
+// UnderscoreEscapingWithSuffixes. Users wanting a different translation
+// strategy should specify it explicitly.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.allowUTF8 = !strategy.ShouldEscape()
