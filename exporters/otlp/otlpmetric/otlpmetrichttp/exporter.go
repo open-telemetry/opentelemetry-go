@@ -76,7 +76,6 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
-
 	if upErr != nil {
 		if err == nil {
 			return fmt.Errorf("failed to upload metrics: %w", upErr)
