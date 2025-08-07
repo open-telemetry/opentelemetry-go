@@ -645,11 +645,22 @@ func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
+// Drop metrics not being tested in this test.
+var dropSpanMetricsView = sdkmetric.NewView(
+	sdkmetric.Instrument{
+		Name: "otel.sdk.span.*",
+	},
+	sdkmetric.Stream{Aggregation: sdkmetric.AggregationDrop{}},
+)
+
 func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
-	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
 	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
@@ -683,7 +694,10 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
-	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
 	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
@@ -701,11 +715,11 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	// Generate 2 spans, which export and block during the export call.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
 	me.waitForSpans(2)
-	assertScopeMetrics(t, internalBsp.componentNameAttr, reader,
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
 	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
 	generateSpan(t, tr, testOption{genNumSpans: 3})
-	assertScopeMetrics(t, internalBsp.componentNameAttr, reader,
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 2, queueFullProcessed: 1, successProcessed: 2})
 }
 
@@ -713,7 +727,10 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
-	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
 	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
@@ -733,7 +750,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	// Generate 2 spans that are exported to the exporter, which blocks.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
 	me.waitForSpans(2)
-	assertScopeMetrics(t, internalBsp.componentNameAttr, reader,
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
 	// Generate 2 spans to fill the queue.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
@@ -741,14 +758,14 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 		// Generate a span which blocks because the queue is full.
 		generateSpan(t, tr, testOption{genNumSpans: 1})
 	}()
-	assertScopeMetrics(t, internalBsp.componentNameAttr, reader,
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 2, successProcessed: 2})
 
 	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	assert.Error(t, tp.ForceFlush(ctx))
-	assertScopeMetrics(t, internalBsp.componentNameAttr, reader,
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 2, queueFullProcessed: 1, successProcessed: 2})
 }
 
@@ -763,15 +780,36 @@ func assertSelfObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValu
 	expectation expectMetrics,
 ) {
 	t.Helper()
-	gotMetrics := new(metricdata.ResourceMetrics)
-	assert.NoError(t, reader.Collect(context.Background(), gotMetrics))
-	require.Len(t, gotMetrics.ScopeMetrics, 1)
-	sm := gotMetrics.ScopeMetrics[0]
-	assert.Equal(t, instrumentation.Scope{
-		Name:      selfObsScopeName,
-		Version:   sdk.Version(),
-		SchemaURL: semconv.SchemaURL,
-	}, sm.Scope)
+	gotResourceMetrics := new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(context.Background(), gotResourceMetrics))
+
+	baseAttrs := attribute.NewSet(
+		semconv.OTelComponentTypeBatchingSpanProcessor,
+		componentNameAttr,
+	)
+	wantMetrics := []metricdata.Metrics{
+		{
+			Name:        otelconv.SDKProcessorSpanQueueCapacity{}.Name(),
+			Description: otelconv.SDKProcessorSpanQueueCapacity{}.Description(),
+			Unit:        otelconv.SDKProcessorSpanQueueCapacity{}.Unit(),
+			Data: metricdata.Sum[int64]{
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueCapacity}},
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: false,
+			},
+		},
+		{
+			Name:        otelconv.SDKProcessorSpanQueueSize{}.Name(),
+			Description: otelconv.SDKProcessorSpanQueueSize{}.Description(),
+			Unit:        otelconv.SDKProcessorSpanQueueSize{}.Unit(),
+			Data: metricdata.Sum[int64]{
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueSize}},
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: false,
+			},
+		},
+	}
+
 	wantProcessedDataPoints := []metricdata.DataPoint[int64]{}
 	if expectation.successProcessed > 0 {
 		wantProcessedDataPoints = append(wantProcessedDataPoints, metricdata.DataPoint[int64]{
@@ -793,55 +831,30 @@ func assertSelfObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValu
 		})
 	}
 
-	// sm.Metrics also includes otel.sdk.span.live and otel.sdk.span.started
 	if len(wantProcessedDataPoints) > 0 {
-		require.Len(t, sm.Metrics, 5)
-	} else {
-		require.Len(t, sm.Metrics, 4)
-	}
-
-	baseAttrs := attribute.NewSet(
-		semconv.OTelComponentTypeBatchingSpanProcessor,
-		componentNameAttr,
-	)
-
-	want := metricdata.Metrics{
-		Name:        otelconv.SDKProcessorSpanQueueCapacity{}.Name(),
-		Description: otelconv.SDKProcessorSpanQueueCapacity{}.Description(),
-		Unit:        otelconv.SDKProcessorSpanQueueCapacity{}.Unit(),
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueCapacity}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: false,
-		},
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
-
-	want = metricdata.Metrics{
-		Name:        otelconv.SDKProcessorSpanQueueSize{}.Name(),
-		Description: otelconv.SDKProcessorSpanQueueSize{}.Description(),
-		Unit:        otelconv.SDKProcessorSpanQueueSize{}.Unit(),
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueSize}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: false,
-		},
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
-
-	if len(wantProcessedDataPoints) > 0 {
-		want = metricdata.Metrics{
-			Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
-			Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
-			Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
-			Data: metricdata.Sum[int64]{
-				DataPoints:  wantProcessedDataPoints,
-				Temporality: metricdata.CumulativeTemporality,
-				IsMonotonic: true,
+		wantMetrics = append(wantMetrics,
+			metricdata.Metrics{
+				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
+				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
+				Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints:  wantProcessedDataPoints,
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
 			},
-		}
-		metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp())
+		)
 	}
+
+	wantScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      selfObsScopeName,
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: wantMetrics,
+	}
+	metricdatatest.AssertEqual(t, wantScopeMetric, gotResourceMetrics.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 }
 
 // blockingExporter blocks until the exported span is removed from the channel.
