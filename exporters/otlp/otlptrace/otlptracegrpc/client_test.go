@@ -592,7 +592,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
-									semconv.OTelComponentTypeKey.String("otlp_grpc_span_exporter"),
+									otelconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.ErrorType(status.Error(codes.Canceled, "")),
 								),
 								Value: 2,
