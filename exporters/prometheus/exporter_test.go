@@ -705,7 +705,10 @@ func TestPrometheusExporter(t *testing.T) {
 func TestMultiScopes(t *testing.T) {
 	ctx := context.Background()
 	registry := prometheus.NewRegistry()
-	exporter, err := New(WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes), WithRegisterer(registry))
+	exporter, err := New(
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+		WithRegisterer(registry),
+	)
 	require.NoError(t, err)
 
 	res, err := resource.New(ctx,

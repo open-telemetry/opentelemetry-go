@@ -38,7 +38,7 @@ var logTemporaryDefault = sync.OnceFunc(func() {
 func newConfig(opts ...Option) config {
 	cfg := config{}
 
-	// Pre-pend the translation strategy with the correct default for the current
+	// Prepend the translation strategy with the correct default for the current
 	// global validation scheme. The individual values may then be overwritten by
 	// subsequent options.
 	//nolint:staticcheck
