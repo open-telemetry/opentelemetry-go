@@ -705,7 +705,7 @@ func TestPrometheusExporter(t *testing.T) {
 func TestMultiScopes(t *testing.T) {
 	ctx := context.Background()
 	registry := prometheus.NewRegistry()
-	exporter, err := New(WithRegisterer(registry))
+	exporter, err := New(WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes), WithRegisterer(registry))
 	require.NoError(t, err)
 
 	res, err := resource.New(ctx,
@@ -976,7 +976,8 @@ func TestDuplicateMetrics(t *testing.T) {
 			registry := prometheus.NewRegistry()
 			// This test does not set the Translation Strategy, so it defaults to
 			// UnderscoreEscapingWithSuffixes.
-			exporter, err := New(append(tc.options, WithRegisterer(registry))...)
+			opts := append([]Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)}, tc.options...)
+			exporter, err := New(append(opts, WithRegisterer(registry))...)
 			require.NoError(t, err)
 
 			// initialize resource
@@ -1786,24 +1787,13 @@ func TestEscapingErrorHandling(t *testing.T) {
 		{
 			// label names are not translated and therefore not checked until
 			// collection time, and there is no place to catch and return this error.
-			// Instead we rename the bad label and pass it along.
+			// Instead we drop the metric.
 			name:        "bad translated label name",
 			counterName: "foo",
 			labelName:   "$%^&",
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
-				foundInvalid := false
-				for _, mf := range mfs {
-					for _, l := range mf.GetMetric()[0].GetLabel() {
-						// require.Contains(tb, mf.GetMetric()[0].GetLabel(), thingy)
-						if l.GetName() == "invalid_label_name" {
-							foundInvalid = true
-							break
-						}
-					}
-				}
-				if !foundInvalid {
-					t.Error("did not find 'invalid_label_name")
-				}
+				require.Len(t, mfs, 1)
+				require.Equal(t, "target_info", mfs[0].GetName())
 			},
 		},
 	}
