@@ -128,7 +128,7 @@ func BenchmarkProcessor(b *testing.B) {
 
 type timestampProcessor struct{}
 
-func (p timestampProcessor) OnEmit(ctx context.Context, r *Record) error {
+func (p timestampProcessor) OnEmit(_ context.Context, r *Record) error {
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
 	return nil
 }
@@ -137,17 +137,17 @@ func (p timestampProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 
-func (p timestampProcessor) Shutdown(ctx context.Context) error {
+func (p timestampProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-func (p timestampProcessor) ForceFlush(ctx context.Context) error {
+func (p timestampProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
 type attrAddProcessor struct{}
 
-func (p attrAddProcessor) OnEmit(ctx context.Context, r *Record) error {
+func (p attrAddProcessor) OnEmit(_ context.Context, r *Record) error {
 	r.AddAttributes(log.String("add", "me"))
 	return nil
 }
@@ -156,17 +156,17 @@ func (p attrAddProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 
-func (p attrAddProcessor) Shutdown(ctx context.Context) error {
+func (p attrAddProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-func (p attrAddProcessor) ForceFlush(ctx context.Context) error {
+func (p attrAddProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
 type attrSetDecorator struct{}
 
-func (p attrSetDecorator) OnEmit(ctx context.Context, r *Record) error {
+func (p attrSetDecorator) OnEmit(_ context.Context, r *Record) error {
 	r.SetAttributes(log.String("replace", "me"))
 	return nil
 }
@@ -175,10 +175,10 @@ func (p attrSetDecorator) Enabled(context.Context, Record) bool {
 	return true
 }
 
-func (p attrSetDecorator) Shutdown(ctx context.Context) error {
+func (p attrSetDecorator) Shutdown(context.Context) error {
 	return nil
 }
 
-func (p attrSetDecorator) ForceFlush(ctx context.Context) error {
+func (p attrSetDecorator) ForceFlush(context.Context) error {
 	return nil
 }
