@@ -233,6 +233,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 			name, err := c.getName(m)
 			if err != nil {
+				// TODO(#7066) Handle this error better.
+				otel.Handle(err)
 				continue
 			}
 
@@ -503,7 +505,8 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			kv := itr.Attribute()
 			key, err := labelNamer.Build(string(kv.Key))
 			if err != nil {
-				key = "invalid_label_name"
+				// TODO(#7066) Handle this error better.
+				// key = "invalid_label_name"
 			}
 			if _, ok := keysMap[key]; !ok {
 				keysMap[key] = []string{kv.Value.Emit()}
@@ -673,6 +676,7 @@ func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.La
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
+			// TODO(#7066) Handle this error better.
 			continue
 		}
 		labels[name] = attr.Value.Emit()

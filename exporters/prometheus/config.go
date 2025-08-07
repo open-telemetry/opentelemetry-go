@@ -97,7 +97,10 @@ func WithoutTargetInfo() Option {
 // label names should be handled during translation to Prometheus format. The
 // recommended approach is to use either UnderscoreEscapingWithSuffixes for full
 // Prometheus-style compatibility (the default), or NoTranslation for Otel-style
-// names. For convenience, this option overrides the WithCounterSuffixes option.
+// names. This option will affect the existence of counter and unit suffixes, so
+// users should set their desired overall Translation Strategy first and then
+// apply subsequent options like WithoutUnits or WithoutCounterSuffixes if
+// needed.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.allowUTF8 = !strategy.ShouldEscape()
@@ -151,8 +154,8 @@ func WithoutScopeInfo() Option {
 // WithNamespace configures the Exporter to prefix metric with the given
 // namespace. Metadata metrics such as target_info are not prefixed since these
 // have special behavior based on their name. Namespaces will be prepended even
-// if NoTranslation is set as a translation strategy. An empty string namespace
-// disables prepending.
+// if NoTranslation is set as a translation strategy. If the provided namespace
+// is empty, nothing will be prepended to metric names.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.namespace = ns
