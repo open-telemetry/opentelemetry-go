@@ -190,13 +190,26 @@ var errShutdown = errors.New("the client is shutdown")
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
-func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (err error) {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
 	// write lock acquire (i.e. Stop), meaning if the client is shutting down
 	// this will come after the shut down.
 	c.tscMu.RLock()
 	defer c.tscMu.RUnlock()
+
+	var start time.Time
+	var spanCount int
+	if c.selfObservabilityEnabled {
+		start = time.Now()
+		spanCount = 0
+		for _, ps := range protoSpans {
+			for _, ss := range ps.ScopeSpans {
+				spanCount += len(ss.Spans)
+			}
+		}
+		c.spanInFlightMetric.Add(context.Background(), int64(spanCount), c.selfObservabilityAttrs...)
+	}
 
 	if c.tsc == nil {
 		return errShutdown
@@ -205,39 +218,39 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	return c.requestFunc(ctx, func(iCtx context.Context) (err error) {
+	defer func() {
 		if c.selfObservabilityEnabled {
-			count := 0
-			for _, ps := range protoSpans {
-				for _, ss := range ps.ScopeSpans {
-					count += len(ss.Spans)
-				}
-			}
-			c.spanInFlightMetric.Add(context.Background(), int64(count), c.selfObservabilityAttrs...)
-
-			defer func(start time.Time) {
+			defer func() {
 				duration := time.Since(start)
-				durationAttrs := append([]attribute.KeyValue{
-					c.operationDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(status.Code(err))),
-				},
-					c.selfObservabilityAttrs...,
-				)
-				exportedAttrs := append([]attribute.KeyValue{}, c.selfObservabilityAttrs...)
+				durationAttrs := make([]attribute.KeyValue, 0, len(c.selfObservabilityAttrs)+2)
+				durationAttrs = append(durationAttrs, c.selfObservabilityAttrs...)
+				durationAttrs = append(durationAttrs,
+					c.operationDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(status.Code(err))))
+
+				exportedAttrs := make([]attribute.KeyValue, 0, len(c.selfObservabilityAttrs)+1)
+				exportedAttrs = append(exportedAttrs, c.selfObservabilityAttrs...)
 
 				if err != nil {
-					durationAttrs = append(durationAttrs, semconv.ErrorType(err))
-					exportedAttrs = append(exportedAttrs, semconv.ErrorType(err))
+					// Try to extract the underlying gRPC status error, if there is one
+					rootErr := err
+					if s, ok := status.FromError(err); ok {
+						rootErr = s.Err()
+					}
+					durationAttrs = append(durationAttrs, semconv.ErrorType(rootErr))
+					exportedAttrs = append(exportedAttrs, semconv.ErrorType(rootErr))
 				}
 
 				c.operationDurationMetric.Record(context.Background(), duration.Seconds(),
 					durationAttrs...,
 				)
 
-				c.spanExportedMetric.Add(context.Background(), int64(count), exportedAttrs...)
-				c.spanInFlightMetric.Add(context.Background(), int64(-count), c.selfObservabilityAttrs...)
-			}(time.Now())
+				c.spanExportedMetric.Add(context.Background(), int64(spanCount), exportedAttrs...)
+				c.spanInFlightMetric.Add(context.Background(), int64(-spanCount), c.selfObservabilityAttrs...)
+			}()
 		}
+	}()
 
+	return c.requestFunc(ctx, func(iCtx context.Context) error {
 		resp, err := c.tsc.Export(iCtx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
 		})

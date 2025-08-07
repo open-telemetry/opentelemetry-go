@@ -490,7 +490,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
-									semconv.OTelComponentTypeKey.String("otlp_grpc_span_exporter"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 								),
 								Value: 0,
 							},
@@ -509,7 +509,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
-									semconv.OTelComponentTypeKey.String("otlp_grpc_span_exporter"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 								),
 								Value: 2,
 							},
@@ -527,7 +527,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
-									semconv.OTelComponentTypeKey.String("otlp_grpc_span_exporter"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.RPCGRPCStatusCodeOk,
 								),
 							},
@@ -573,7 +573,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
-									semconv.OTelComponentTypeKey.String("otlp_grpc_span_exporter"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 								),
 								Value: 0,
 							},
@@ -592,7 +592,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
-									otelconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.ErrorType(status.Error(codes.Canceled, "")),
 								),
 								Value: 2,
@@ -611,7 +611,7 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
-									semconv.OTelComponentTypeKey.String("otlp_grpc_span_exporter"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.ErrorType(status.Error(codes.Canceled, "")),
 									semconv.RPCGRPCStatusCodeCancelled,
 								),
@@ -640,11 +640,6 @@ func TestSelfObservability(t *testing.T) {
 			t.Cleanup(func() { require.NoError(t, mc.stop()) })
 			exp := newGRPCExporter(t, context.Background(), mc.endpoint)
 			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })
-
-			// exporter, err := stdouttrace.New(
-			// 	stdouttrace.WithWriter(io.Discard))
-
-			// require.NoError(t, err)
 
 			tt.callExportSpans(t, exp)
 
