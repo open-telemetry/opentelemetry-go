@@ -77,7 +77,7 @@ default aggregation to use for histogram instruments. Supported values:
 
 The configuration can be overridden by [WithAggregationSelector] option.
 
-See [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability] for information about
+See [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x] for information about
 the experimental features.
 
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
