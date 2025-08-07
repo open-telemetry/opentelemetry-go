@@ -225,11 +225,8 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				exportedAttrs := append([]attribute.KeyValue{}, c.selfObservabilityAttrs...)
 
 				if err != nil {
-					durationAttrs = append(
-						durationAttrs,
-						c.operationDurationMetric.AttrErrorType(otelconv.ErrorTypeOther),
-					)
-					exportedAttrs = append(exportedAttrs, c.spanExportedMetric.AttrErrorType(otelconv.ErrorTypeOther))
+					durationAttrs = append(durationAttrs, semconv.ErrorType(err))
+					exportedAttrs = append(exportedAttrs, semconv.ErrorType(err))
 				}
 
 				c.operationDurationMetric.Record(context.Background(), duration.Seconds(),
