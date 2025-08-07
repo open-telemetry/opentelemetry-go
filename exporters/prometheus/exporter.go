@@ -205,7 +205,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		if err != nil {
 			otel.Handle(err)
 		}
-		// XXX not sure what to do now
+		// XXX not sure what to do now -- return?
 	}
 
 	for _, scopeMetrics := range metrics.ScopeMetrics {
@@ -241,7 +241,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 			name, err := c.getName(m)
 			if err != nil {
-				// TODO(#7066) Handle this error better.
+				// TODO(#7066): Handle this error better.
 				otel.Handle(err)
 				continue
 			}
@@ -403,14 +403,8 @@ func addExponentialHistogramMetric[N int64 | float64](
 			otel.Handle(err)
 			continue
 		}
-		m, err = addExemplars(m, dp.Exemplars, labelNamer)
-		if err != nil {
-			// If there are errors creating the metric with exemplars, just warn
-			// and return the metric without exemplars.
-			otel.Handle(err)
-		} else {
-			ch <- m
-		}
+		m = addExemplars(m, dp.Exemplars, labelNamer)
+		ch <- m
 	}
 }
 
@@ -444,14 +438,8 @@ func addHistogramMetric[N int64 | float64](
 			otel.Handle(err)
 			continue
 		}
-		m, err = addExemplars(m, dp.Exemplars, labelNamer)
-		if err != nil {
-			// If there are errors creating the metric with exemplars, just warn
-			// and return the metric without exemplars.
-			otel.Handle(err)
-		} else {
-			ch <- m
-		}
+		m = addExemplars(m, dp.Exemplars, labelNamer)
+		ch <- m
 	}
 }
 
@@ -486,13 +474,7 @@ func addSumMetric[N int64 | float64](
 		// GaugeValues don't support Exemplars at this time
 		// https://github.com/prometheus/client_golang/blob/aef8aedb4b6e1fb8ac1c90790645169125594096/prometheus/metric.go#L199
 		if valueType != prometheus.GaugeValue {
-			m, err = addExemplars(m, dp.Exemplars, labelNamer)
-			if err != nil {
-				// If there are errors creating the metric with exemplars, just warn
-				// and return the metric without exemplars.
-				otel.Handle(err)
-				continue
-			}
+			m = addExemplars(m, dp.Exemplars, labelNamer)
 		}
 		ch <- m
 	}
@@ -695,15 +677,16 @@ func addExemplars[N int64 | float64](
 	m prometheus.Metric,
 	exemplars []metricdata.Exemplar[N],
 	labelNamer otlptranslator.LabelNamer,
-) (prometheus.Metric, error) {
+) prometheus.Metric {
 	if len(exemplars) == 0 {
-		return m, nil
+		return m
 	}
 	promExemplars := make([]prometheus.Exemplar, len(exemplars))
 	for i, exemplar := range exemplars {
 		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer)
 		if err != nil {
-			return nil, err
+			otel.Handle(err)
+			return m
 		}
 		// Overwrite any existing trace ID or span ID attributes
 		labels[otlptranslator.ExemplarTraceIDKey] = hex.EncodeToString(exemplar.TraceID)
@@ -716,9 +699,12 @@ func addExemplars[N int64 | float64](
 	}
 	metricWithExemplar, err := prometheus.NewMetricWithExemplars(m, promExemplars...)
 	if err != nil {
-		return m, err
+		// If there are errors creating the metric with exemplars, just warn
+		// and return the metric without exemplars.
+		otel.Handle(err)
+		return m
 	}
-	return metricWithExemplar, nil
+	return metricWithExemplar
 }
 
 func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
