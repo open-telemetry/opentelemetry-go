@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutlog
+package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 
 import (
 	"context"
@@ -37,9 +37,7 @@ func newSelfObservability() *selfObservability {
 }
 
 func (e *Exporter) initSelfObservability(ctx context.Context, records *[]log.Record) {
-	if records == nil {
-		return
-	} else if e.selfObservability == nil {
+	if records == nil || e.selfObservability == nil {
 		return
 	}
 
