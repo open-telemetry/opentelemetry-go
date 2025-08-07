@@ -676,7 +676,9 @@ func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 	tr := tp.Tracer("TestBatchSpanProcessorMetricsDisabled")
 	// Generate 2 spans, which export and block during the export call.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	me.waitForSpans(2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
 
 	// Validate that there are no metrics produced.
 	gotMetrics := new(metricdata.ResourceMetrics)
@@ -714,7 +716,9 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	tr := tp.Tracer("TestBatchSpanProcessorMetrics")
 	// Generate 2 spans, which export and block during the export call.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	me.waitForSpans(2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
 	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
 	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
@@ -749,7 +753,9 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	tr := tp.Tracer("TestBatchSpanProcessorBlockingMetrics")
 	// Generate 2 spans that are exported to the exporter, which blocks.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	me.waitForSpans(2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
 	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
 		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
 	// Generate 2 spans to fill the queue.
@@ -762,7 +768,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 		expectMetrics{queueCapacity: 2, queueSize: 2, successProcessed: 2})
 
 	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	assert.Error(t, tp.ForceFlush(ctx))
 	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
@@ -883,9 +889,16 @@ func (e *blockingExporter) ExportSpans(ctx context.Context, s []ReadOnlySpan) er
 	return ctx.Err()
 }
 
-func (e *blockingExporter) waitForSpans(n int32) {
+func (e *blockingExporter) waitForSpans(ctx context.Context, n int32) error {
 	// Wait for all n spans to reach the export call
 	for e.total.Load() < n {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for %d spans to be exported", n)
+		default:
+			// So the select will not block
+		}
 		runtime.Gosched()
 	}
+	return nil
 }
