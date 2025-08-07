@@ -4,11 +4,14 @@
 package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/otlptranslator"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -25,6 +28,12 @@ type config struct {
 	resourceAttributesFilter attribute.Filter
 }
 
+var logTemporaryDefault = sync.OnceFunc(func() {
+	global.Warn(
+		"The default Prometheus naming translation strategy is changing from NoUTF8EscapingWithSuffixes to UnderscoreEscapingWithSuffixes in the next release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the new default behavior.",
+	)
+})
+
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
 	cfg := config{}
@@ -35,7 +44,7 @@ func newConfig(opts ...Option) config {
 	//nolint:staticcheck
 	if model.NameValidationScheme == model.UTF8Validation {
 		opts = append([]Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)}, opts...)
-		// log.Warningf("The default Prometheus naming translation strategy is changing from NoUTF8EscapingWithSuffixes to UnderscoreEscapingWithSuffixes in the next release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the new default behavior.")
+		logTemporaryDefault()
 	} else {
 		opts = append([]Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)}, opts...)
 	}
