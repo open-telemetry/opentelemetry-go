@@ -10,10 +10,25 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/selfobservability"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
+
+var (
+	stdoutMetricExporterComponentType = otelconv.ComponentTypeAttr("stdout_metric_exporter")
+	exporterIDCounter                 atomic.Int64
+)
+
+// nextExporterID returns an identifier for this stdoutmetric exporter,
+// starting with 0 and incrementing by 1 each time it is called.
+func nextExporterID() int64 {
+	return exporterIDCounter.Add(1) - 1
+}
 
 // exporter is an OpenTelemetry metric exporter.
 type exporter struct {
@@ -25,6 +40,9 @@ type exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	redactTimestamps bool
+
+	selfObservabilityEnabled bool
+	exporterMetric           *selfobservability.ExporterMetrics
 }
 
 // New returns a configured metric exporter.
@@ -38,8 +56,23 @@ func New(options ...Option) (metric.Exporter, error) {
 		aggregationSelector: cfg.aggregationSelector,
 		redactTimestamps:    cfg.redactTimestamps,
 	}
+	exp.initSelfObservability()
 	exp.encVal.Store(*cfg.encoder)
 	return exp, nil
+}
+
+func (e *exporter) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	e.selfObservabilityEnabled = true
+	componentName := fmt.Sprintf("%s/%d", stdoutMetricExporterComponentType, nextExporterID())
+	e.exporterMetric = selfobservability.NewExporterMetrics(
+		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
+		semconv.OTelComponentName(componentName),
+		semconv.OTelComponentTypeKey.String(string(stdoutMetricExporterComponentType)),
+	)
 }
 
 func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
@@ -51,7 +84,9 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 }
 
 func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
+	trackExportFunc := e.trackExport(context.Background(), countDataPoints(data))
 	if err := ctx.Err(); err != nil {
+		trackExportFunc(err)
 		return err
 	}
 	if e.redactTimestamps {
@@ -60,7 +95,20 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 
 	global.Debug("STDOUT exporter export", "Data", data)
 
-	return e.encVal.Load().(encoderHolder).Encode(data)
+	err := e.encVal.Load().(encoderHolder).Encode(data)
+	if err != nil {
+		trackExportFunc(err)
+		return err
+	}
+	trackExportFunc(nil)
+	return nil
+}
+
+func (e *exporter) trackExport(ctx context.Context, count int64) func(err error) {
+	if !e.selfObservabilityEnabled {
+		return func(error) {}
+	}
+	return e.exporterMetric.TrackExport(ctx, count)
 }
 
 func (e *exporter) ForceFlush(context.Context) error {
@@ -158,4 +206,38 @@ func redactDataPointTimestamps[T int64 | float64](sdp []metricdata.DataPoint[T])
 		}
 	}
 	return out
+}
+
+// countDataPoints counts the total number of data points in a ResourceMetrics.
+func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
+	if rm == nil {
+		return 0
+	}
+
+	var total int64
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Gauge[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Gauge[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Summary:
+				total += int64(len(data.DataPoints))
+			}
+		}
+	}
+	return total
 }
