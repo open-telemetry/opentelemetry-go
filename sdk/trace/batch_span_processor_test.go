@@ -759,7 +759,7 @@ type expectMetrics struct {
 	queueFullProcessed int64
 }
 
-func assertScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, reader sdkmetric.Reader,
+func assertSelfObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, reader sdkmetric.Reader,
 	expectation expectMetrics,
 ) {
 	t.Helper()
