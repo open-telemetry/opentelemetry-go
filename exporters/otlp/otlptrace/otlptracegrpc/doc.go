@@ -60,7 +60,7 @@ the filepath to the client's private key to use in mTLS communication in PEM for
 OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY takes precedence over OTEL_EXPORTER_OTLP_CLIENT_KEY.
 The configuration can be overridden by [WithTLSCredentials], [WithGRPCConn] option.
 
-See [go.opentelemetry.io/otel/sdk/log/internal/x] for information about
+See [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x] for information about
 the experimental features.
 
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
