@@ -46,37 +46,17 @@ func (t TraceID) IsValid() bool {
 // as a hex string.
 func (t TraceID) MarshalJSON() ([]byte, error) {
 	b := [32 + 2]byte{0: '"', 33: '"'}
-	h := t.hexBytes()
-	copy(b[1:], h[:])
+	binTohex8(t[0:8], b[1:17])
+	binTohex8(t[8:16], b[17:33])
 	return b[:], nil
 }
 
 // String returns the hex string representation form of a TraceID.
 func (t TraceID) String() string {
-	h := t.hexBytes()
-	return string(h[:])
-}
-
-// hexBytes returns the hex string representation form of a TraceID.
-func (t TraceID) hexBytes() [32]byte {
-	return [32]byte{
-		hexLU[t[0x0]>>4], hexLU[t[0x0]&0xf],
-		hexLU[t[0x1]>>4], hexLU[t[0x1]&0xf],
-		hexLU[t[0x2]>>4], hexLU[t[0x2]&0xf],
-		hexLU[t[0x3]>>4], hexLU[t[0x3]&0xf],
-		hexLU[t[0x4]>>4], hexLU[t[0x4]&0xf],
-		hexLU[t[0x5]>>4], hexLU[t[0x5]&0xf],
-		hexLU[t[0x6]>>4], hexLU[t[0x6]&0xf],
-		hexLU[t[0x7]>>4], hexLU[t[0x7]&0xf],
-		hexLU[t[0x8]>>4], hexLU[t[0x8]&0xf],
-		hexLU[t[0x9]>>4], hexLU[t[0x9]&0xf],
-		hexLU[t[0xa]>>4], hexLU[t[0xa]&0xf],
-		hexLU[t[0xb]>>4], hexLU[t[0xb]&0xf],
-		hexLU[t[0xc]>>4], hexLU[t[0xc]&0xf],
-		hexLU[t[0xd]>>4], hexLU[t[0xd]&0xf],
-		hexLU[t[0xe]>>4], hexLU[t[0xe]&0xf],
-		hexLU[t[0xf]>>4], hexLU[t[0xf]&0xf],
-	}
+	var b [32]byte
+	binTohex8(t[0:8], b[0:16])
+	binTohex8(t[8:16], b[16:32])
+	return string(b[:])
 }
 
 // SpanID is a unique identity of a span in a trace.
@@ -97,28 +77,26 @@ func (s SpanID) IsValid() bool {
 // as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	b := [16 + 2]byte{0: '"', 17: '"'}
-	h := s.hexBytes()
-	copy(b[1:], h[:])
+	binTohex8(s[:], b[1:16])
 	return b[:], nil
 }
 
 // String returns the hex string representation form of a SpanID.
 func (s SpanID) String() string {
-	b := s.hexBytes()
+	var b [16]byte
+	binTohex8(s[:], b[:])
 	return string(b[:])
 }
 
-func (s SpanID) hexBytes() [16]byte {
-	return [16]byte{
-		hexLU[s[0]>>4], hexLU[s[0]&0xf],
-		hexLU[s[1]>>4], hexLU[s[1]&0xf],
-		hexLU[s[2]>>4], hexLU[s[2]&0xf],
-		hexLU[s[3]>>4], hexLU[s[3]&0xf],
-		hexLU[s[4]>>4], hexLU[s[4]&0xf],
-		hexLU[s[5]>>4], hexLU[s[5]&0xf],
-		hexLU[s[6]>>4], hexLU[s[6]&0xf],
-		hexLU[s[7]>>4], hexLU[s[7]&0xf],
-	}
+func binTohex8(s []byte, d []byte) {
+	d[0], d[1] = hexLU[s[0]>>4], hexLU[s[0]&0xf]
+	d[2], d[3] = hexLU[s[1]>>4], hexLU[s[1]&0xf]
+	d[4], d[5] = hexLU[s[2]>>4], hexLU[s[2]&0xf]
+	d[6], d[7] = hexLU[s[3]>>4], hexLU[s[3]&0xf]
+	d[8], d[9] = hexLU[s[4]>>4], hexLU[s[4]&0xf]
+	d[10], d[11] = hexLU[s[5]>>4], hexLU[s[5]&0xf]
+	d[12], d[13] = hexLU[s[6]>>4], hexLU[s[6]&0xf]
+	d[14], d[15] = hexLU[s[7]>>4], hexLU[s[7]&0xf]
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant with
