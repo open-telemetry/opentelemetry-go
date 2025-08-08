@@ -214,15 +214,15 @@ func (t *textMapCarrier) Keys() []string {
 
 // testTextMapReader only implemented opentracing.TextMapReader interface.
 type testTextMapReader struct {
-	m *map[string]string
+	m map[string]string
 }
 
-func newTestTextMapReader(m *map[string]string) *testTextMapReader {
+func newTestTextMapReader(m map[string]string) *testTextMapReader {
 	return &testTextMapReader{m: m}
 }
 
 func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) error {
-	for key, val := range *t.m {
+	for key, val := range t.m {
 		if err := handler(key, val); err != nil {
 			return err
 		}
@@ -233,15 +233,15 @@ func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) erro
 
 // testTextMapWriter only implemented opentracing.TextMapWriter interface.
 type testTextMapWriter struct {
-	m *map[string]string
+	m map[string]string
 }
 
-func newTestTextMapWriter(m *map[string]string) *testTextMapWriter {
+func newTestTextMapWriter(m map[string]string) *testTextMapWriter {
 	return &testTextMapWriter{m: m}
 }
 
 func (t *testTextMapWriter) Set(key, val string) {
-	(*t.m)[key] = val
+	t.m[key] = val
 }
 
 type samplable interface {
@@ -290,9 +290,9 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 		{
 			name:               "support for opentracing.TextMapReader and opentracing.TextMapWriter,non-same instance",
 			injectCarrierType:  ot.TextMap,
-			injectCarrier:      newTestTextMapWriter(&shareMap),
+			injectCarrier:      newTestTextMapWriter(shareMap),
 			extractCarrierType: ot.TextMap,
-			extractCarrier:     newTestTextMapReader(&shareMap),
+			extractCarrier:     newTestTextMapReader(shareMap),
 		},
 		{
 			name:              "inject: format type is HTTPHeaders, but carrier is not HTTPHeadersCarrier",
