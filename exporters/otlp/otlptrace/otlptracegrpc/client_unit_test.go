@@ -14,6 +14,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestThrottleDelay(t *testing.T) {
@@ -283,6 +286,109 @@ func TestWithEndpointWithEnv(t *testing.T) {
 			client := newClient(tc.options...)
 
 			assert.Equal(t, tc.want, client.endpoint)
+		})
+	}
+}
+
+func Test_getServerAttrs(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []attribute.KeyValue
+	}{
+		{
+			name:  "Host and port",
+			input: "example.com:80",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("example.com"),
+				semconv.ServerPort(80),
+			},
+		},
+		{
+			name:  "Host only",
+			input: "example.com",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("example.com"),
+			},
+		},
+		{
+			name:  "With DNS Scheme",
+			input: "dns://example.com:80",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("example.com"),
+				semconv.ServerPort(80),
+			},
+		},
+		{
+			name:  "IP and Port",
+			input: "192.168.1.1:80",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("192.168.1.1"),
+				semconv.ServerPort(80),
+			},
+		},
+		{
+			name:  "Unix domain socket",
+			input: "unix:///path/to/socket",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("/path/to/socket"),
+			},
+		},
+		{
+			name:  "Empty Authority",
+			input: "dns:///example.com:42",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("example.com"),
+				semconv.ServerPort(42),
+			},
+		},
+		{
+			name:  "With Authority",
+			input: "dns://8.8.8.8/example.com:42",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("example.com"),
+				semconv.ServerPort(42),
+			},
+		},
+		{
+			name:  "Malformed",
+			input: "aaabbb",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("aaabbb"),
+			},
+		},
+		{
+			name:  "Malformed With Scheme",
+			input: "dns:///aaabbb",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("aaabbb"),
+			},
+		},
+		{
+			name:     "Missing",
+			input:    "",
+			expected: []attribute.KeyValue{},
+		},
+		{
+			name:  "Malformed Port",
+			input: "example.com:iamnotaport",
+			expected: []attribute.KeyValue{
+				semconv.ServerAddress("example.com"),
+			},
+		},
+		{
+			name:     "Malformed Unix domain socket",
+			input:    "unix://",
+			expected: []attribute.KeyValue{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			output := getServerAttrs(tt.input)
+			assert.ElementsMatch(t, tt.expected, output)
 		})
 	}
 }
