@@ -114,17 +114,16 @@ func WithoutTargetInfo() Option {
 // label names should be handled during translation to Prometheus format. See:
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk_exporters/prometheus.md#configuration.
 // The recommended approach is to use either UnderscoreEscapingWithSuffixes for
-// full Prometheus-style compatibility (the default), or NoTranslation for
-// Otel-style names. This option will affect the values of `allowUTF8`,
-// `withoutCounterSuffixes`, and `withoutUnits`, so users should set their
-// desired overall Translation Strategy first and then apply subsequent options
-// like WithoutUnits or WithoutCounterSuffixes if needed.
-// By default, if model.NameValidationScheme is "legacy", the default strategy
-// is UnderscoreEscapingWithSuffixes. If the validation scheme is "utf8", then
-// currently the default Strategy will be NoUTF8EscapingWithSuffixes. A future
-// version of this SDK will change the default to always be
-// UnderscoreEscapingWithSuffixes. Users wanting a different translation
-// strategy should specify it explicitly.
+// full Prometheus-style compatibility or NoTranslation for Otel-style names.
+// WithTranslationStrategy will affect the values of options set
+// WithoutCounterSuffixes, and WithoutUnits, so users should set their desired
+// overall Translation Strategy first and then apply subsequent options if
+// needed. By default, if prometheus/common:model.NameValidationScheme is
+// "legacy", the default strategy is UnderscoreEscapingWithSuffixes. If the
+// validation scheme is "utf8", then currently the default Strategy will be
+// NoUTF8EscapingWithSuffixes. The next release of this SDK will change the
+// default to always be UnderscoreEscapingWithSuffixes in all circumstances.
+// Users wanting a different translation strategy should specify it explicitly.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.allowUTF8 = !strategy.ShouldEscape()
