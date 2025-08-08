@@ -4,8 +4,6 @@
 package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
 )
 
@@ -41,18 +39,24 @@ var (
 // IsValid reports whether the trace TraceID is valid. A valid trace ID does
 // not consist of zeros only.
 func (t TraceID) IsValid() bool {
-	return !bytes.Equal(t[:], nilTraceID[:])
+	return t != nilTraceID
 }
 
 // MarshalJSON implements a custom marshal function to encode TraceID
 // as a hex string.
 func (t TraceID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.String())
+	b := [32 + 2]byte{0: '"', 33: '"'}
+	binTohex8(t[0:8], b[1:17])
+	binTohex8(t[8:16], b[17:33])
+	return b[:], nil
 }
 
 // String returns the hex string representation form of a TraceID.
 func (t TraceID) String() string {
-	return hex.EncodeToString(t[:])
+	var b [32]byte
+	binTohex8(t[0:8], b[0:16])
+	binTohex8(t[8:16], b[16:32])
+	return string(b[:])
 }
 
 // SpanID is a unique identity of a span in a trace.
@@ -66,18 +70,33 @@ var (
 // IsValid reports whether the SpanID is valid. A valid SpanID does not consist
 // of zeros only.
 func (s SpanID) IsValid() bool {
-	return !bytes.Equal(s[:], nilSpanID[:])
+	return s != nilSpanID
 }
 
 // MarshalJSON implements a custom marshal function to encode SpanID
 // as a hex string.
 func (s SpanID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
+	b := [16 + 2]byte{0: '"', 17: '"'}
+	binTohex8(s[:], b[1:16])
+	return b[:], nil
 }
 
 // String returns the hex string representation form of a SpanID.
 func (s SpanID) String() string {
-	return hex.EncodeToString(s[:])
+	var b [16]byte
+	binTohex8(s[:], b[:])
+	return string(b[:])
+}
+
+func binTohex8(s []byte, d []byte) {
+	d[0], d[1] = hexLU[s[0]>>4], hexLU[s[0]&0xf]
+	d[2], d[3] = hexLU[s[1]>>4], hexLU[s[1]&0xf]
+	d[4], d[5] = hexLU[s[2]>>4], hexLU[s[2]&0xf]
+	d[6], d[7] = hexLU[s[3]>>4], hexLU[s[3]&0xf]
+	d[8], d[9] = hexLU[s[4]>>4], hexLU[s[4]&0xf]
+	d[10], d[11] = hexLU[s[5]>>4], hexLU[s[5]&0xf]
+	d[12], d[13] = hexLU[s[6]>>4], hexLU[s[6]&0xf]
+	d[14], d[15] = hexLU[s[7]>>4], hexLU[s[7]&0xf]
 }
 
 // TraceIDFromHex returns a TraceID from a hex string if it is compliant with
@@ -85,59 +104,41 @@ func (s SpanID) String() string {
 // https://www.w3.org/TR/trace-context/#trace-id
 // nolint:revive // revive complains about stutter of `trace.TraceIDFromHex`.
 func TraceIDFromHex(h string) (TraceID, error) {
-	t := TraceID{}
 	if len(h) != 32 {
-		return t, errInvalidTraceIDLength
+		return [16]byte{}, errInvalidTraceIDLength
 	}
+	var b [16]byte
+	return b, hexToBin(h, b[:], errNilTraceID)
+}
 
-	if err := decodeHex(h, t[:]); err != nil {
-		return t, err
+func hexToBin(h string, b []byte, nilError error) error {
+	invalidMark := byte(0)
+	for i := 0; i < len(h); i += 4 {
+		b[i/2] = (hexRev[h[i]] << 4) | hexRev[h[i+1]]
+		b[i/2+1] = (hexRev[h[i+2]] << 4) | hexRev[h[i+3]]
+		invalidMark |= hexRev[h[i]] | hexRev[h[i+1]] | hexRev[h[i+2]] | hexRev[h[i+3]]
 	}
-
-	if !t.IsValid() {
-		return t, errNilTraceID
+	// If the upper 4 bits of any byte are not zero, there was an invalid hex
+	// character since invalid hex characters are 0xff in hexLU.
+	if invalidMark&0xf0 != 0 {
+		return errInvalidHexID
 	}
-	return t, nil
+	// If we didn't set any bits, then h was all zeros.
+	if invalidMark == 0 {
+		return nilError
+	}
+	return nil
 }
 
 // SpanIDFromHex returns a SpanID from a hex string if it is compliant
 // with the w3c trace-context specification.
 // See more at https://www.w3.org/TR/trace-context/#parent-id
 func SpanIDFromHex(h string) (SpanID, error) {
-	s := SpanID{}
 	if len(h) != 16 {
-		return s, errInvalidSpanIDLength
+		return [8]byte{}, errInvalidSpanIDLength
 	}
-
-	if err := decodeHex(h, s[:]); err != nil {
-		return s, err
-	}
-
-	if !s.IsValid() {
-		return s, errNilSpanID
-	}
-	return s, nil
-}
-
-func decodeHex(h string, b []byte) error {
-	for _, r := range h {
-		switch {
-		case 'a' <= r && r <= 'f':
-			continue
-		case '0' <= r && r <= '9':
-			continue
-		default:
-			return errInvalidHexID
-		}
-	}
-
-	decoded, err := hex.DecodeString(h)
-	if err != nil {
-		return err
-	}
-
-	copy(b, decoded)
-	return nil
+	var b [8]byte
+	return b, hexToBin(h, b[:], errNilSpanID)
 }
 
 // TraceFlags contains flags that can be set on a SpanContext.
@@ -160,12 +161,20 @@ func (tf TraceFlags) WithSampled(sampled bool) TraceFlags { // nolint:revive  //
 // MarshalJSON implements a custom marshal function to encode TraceFlags
 // as a hex string.
 func (tf TraceFlags) MarshalJSON() ([]byte, error) {
-	return json.Marshal(tf.String())
+	b := [2 + 2]byte{0: '"', 3: '"'}
+	h := tf.hexBytes()
+	copy(b[1:], h[:])
+	return b[:], nil
 }
 
 // String returns the hex string representation form of TraceFlags.
 func (tf TraceFlags) String() string {
-	return hex.EncodeToString([]byte{byte(tf)})
+	h := tf.hexBytes()
+	return string(h[:])
+}
+
+func (tf TraceFlags) hexBytes() [2]byte {
+	return [2]byte{hexLU[tf>>4], hexLU[tf&0xf]}
 }
 
 // SpanContextConfig contains mutable fields usable for constructing
