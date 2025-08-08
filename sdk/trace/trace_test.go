@@ -1981,6 +1981,82 @@ func TestWithIDGenerator(t *testing.T) {
 	}
 }
 
+func TestIDsRoundTrip(t *testing.T) {
+	gen := defaultIDGenerator()
+	n := 1000
+
+	for i := 0; i < n; i++ {
+		traceID, spanID := gen.NewIDs(context.Background())
+		gotTraceID, err := trace.TraceIDFromHex(traceID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, traceID, gotTraceID)
+		gotSpanID, err := trace.SpanIDFromHex(spanID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, spanID, gotSpanID)
+	}
+}
+
+func TestIDConversionErrors(t *testing.T) {
+	for _, tt := range []struct {
+		spanIDStr    string
+		traceIDStr   string
+		spanIDError  string
+		traceIDError string
+	}{
+		{
+			spanIDStr:    sid.String(),
+			traceIDStr:   tid.String(),
+			spanIDError:  "",
+			traceIDError: "",
+		},
+		{
+			spanIDStr:    sid.String() + "0",
+			spanIDError:  "hex encoded span-id must have length equals to 16",
+			traceIDStr:   tid.String() + "0",
+			traceIDError: "hex encoded trace-id must have length equals to 32",
+		},
+		{
+			spanIDStr:    "",
+			spanIDError:  "hex encoded span-id must have length equals to 16",
+			traceIDStr:   "",
+			traceIDError: "hex encoded trace-id must have length equals to 32",
+		},
+		{
+			spanIDStr:    "unacceptablechar",
+			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+			traceIDStr:   "completely unacceptablecharacter",
+			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+		},
+		{
+			spanIDStr:    "DEADBEEFBAD0CAFE",
+			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+			traceIDStr:   "DEADBEEFBAD0CAFEDEADBEEFBAD0CAFE",
+			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+		},
+		{
+			spanIDStr:    "0000000000000000",
+			spanIDError:  "span-id can't be all zero",
+			traceIDStr:   "00000000000000000000000000000000",
+			traceIDError: "trace-id can't be all zero",
+		},
+	} {
+		t.Run("span "+tt.spanIDStr, func(t *testing.T) {
+			_, err := trace.SpanIDFromHex(tt.spanIDStr)
+			if tt.spanIDError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.spanIDError)
+			}
+			_, err = trace.TraceIDFromHex(tt.traceIDStr)
+			if tt.traceIDError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.traceIDError)
+			}
+		})
+	}
+}
+
 func TestEmptyRecordingSpanAttributes(t *testing.T) {
 	assert.Nil(t, (&recordingSpan{}).Attributes())
 }
