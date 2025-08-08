@@ -1998,49 +1998,56 @@ func TestIDsRoundTrip(t *testing.T) {
 
 func TestIDConversionErrors(t *testing.T) {
 	for _, tt := range []struct {
+		name         string
 		spanIDStr    string
 		traceIDStr   string
 		spanIDError  string
 		traceIDError string
 	}{
 		{
+			name:         "valid ids",
 			spanIDStr:    sid.String(),
 			traceIDStr:   tid.String(),
 			spanIDError:  "",
 			traceIDError: "",
 		},
 		{
+			name:         "slightly too long",
 			spanIDStr:    sid.String() + "0",
 			spanIDError:  "hex encoded span-id must have length equals to 16",
 			traceIDStr:   tid.String() + "0",
 			traceIDError: "hex encoded trace-id must have length equals to 32",
 		},
 		{
+			name:         "blank input",
 			spanIDStr:    "",
 			spanIDError:  "hex encoded span-id must have length equals to 16",
 			traceIDStr:   "",
 			traceIDError: "hex encoded trace-id must have length equals to 32",
 		},
 		{
+			name:         "not hex",
 			spanIDStr:    "unacceptablechar",
 			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
 			traceIDStr:   "completely unacceptablecharacter",
 			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
 		},
 		{
+			name:         "upper-case hex",
 			spanIDStr:    "DEADBEEFBAD0CAFE",
 			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
 			traceIDStr:   "DEADBEEFBAD0CAFEDEADBEEFBAD0CAFE",
 			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
 		},
 		{
+			name:         "all zero",
 			spanIDStr:    "0000000000000000",
 			spanIDError:  "span-id can't be all zero",
 			traceIDStr:   "00000000000000000000000000000000",
 			traceIDError: "trace-id can't be all zero",
 		},
 	} {
-		t.Run("span "+tt.spanIDStr, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			_, err := trace.SpanIDFromHex(tt.spanIDStr)
 			if tt.spanIDError == "" {
 				assert.NoError(t, err)
