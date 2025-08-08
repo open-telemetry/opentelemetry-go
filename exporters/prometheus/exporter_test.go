@@ -16,7 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/otlptranslator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -979,7 +978,10 @@ func TestDuplicateMetrics(t *testing.T) {
 			registry := prometheus.NewRegistry()
 			// This test does not set the Translation Strategy, so it defaults to
 			// UnderscoreEscapingWithSuffixes.
-			opts := append([]Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)}, tc.options...)
+			opts := append([]Option{
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)},
+				tc.options...,
+			)
 			exporter, err := New(append(opts, WithRegisterer(registry))...)
 			require.NoError(t, err)
 
@@ -1110,8 +1112,7 @@ func TestExemplars(t *testing.T) {
 		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
 		expectedExemplarValue float64
 		expectedLabels        map[string]string
-		escapingScheme        model.EscapingScheme
-		validationScheme      model.ValidationScheme
+		strategy              otlptranslator.TranslationStrategyOption
 	}{
 		{
 			name: "escaped counter",
@@ -1122,8 +1123,7 @@ func TestExemplars(t *testing.T) {
 			},
 			expectedExemplarValue: 9,
 			expectedLabels:        expectedEscapedLabels,
-			escapingScheme:        model.UnderscoreEscaping,
-			validationScheme:      model.LegacyValidation,
+			strategy:              otlptranslator.UnderscoreEscapingWithSuffixes,
 		},
 		{
 			name: "escaped histogram",
@@ -1134,8 +1134,7 @@ func TestExemplars(t *testing.T) {
 			},
 			expectedExemplarValue: 9,
 			expectedLabels:        expectedEscapedLabels,
-			escapingScheme:        model.UnderscoreEscaping,
-			validationScheme:      model.LegacyValidation,
+			strategy:              otlptranslator.UnderscoreEscapingWithSuffixes,
 		},
 		{
 			name: "non-escaped counter",
@@ -1146,8 +1145,7 @@ func TestExemplars(t *testing.T) {
 			},
 			expectedExemplarValue: 9,
 			expectedLabels:        expectedNonEscapedLabels,
-			escapingScheme:        model.NoEscaping,
-			validationScheme:      model.UTF8Validation,
+			strategy:              otlptranslator.NoTranslation,
 		},
 		{
 			name: "non-escaped histogram",
@@ -1158,8 +1156,7 @@ func TestExemplars(t *testing.T) {
 			},
 			expectedExemplarValue: 9,
 			expectedLabels:        expectedNonEscapedLabels,
-			escapingScheme:        model.NoEscaping,
-			validationScheme:      model.UTF8Validation,
+			strategy:              otlptranslator.NoTranslation,
 		},
 		{
 			name: "exponential histogram",
@@ -1170,8 +1167,7 @@ func TestExemplars(t *testing.T) {
 			},
 			expectedExemplarValue: 9,
 			expectedLabels:        expectedNonEscapedLabels,
-			escapingScheme:        model.NoEscaping,
-			validationScheme:      model.UTF8Validation,
+			strategy:              otlptranslator.NoTranslation,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1182,7 +1178,7 @@ func TestExemplars(t *testing.T) {
 				WithRegisterer(registry),
 				WithoutTargetInfo(),
 				WithoutScopeInfo(),
-				withAllowUTF8(tc.validationScheme == model.UTF8Validation),
+				WithTranslationStrategy(tc.strategy),
 			)
 			require.NoError(t, err)
 
@@ -1756,6 +1752,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 		name                string
 		namespace           string
 		counterName         string
+		customResourceAttrs []attribute.KeyValue
 		labelName           string
 		expectNewErr        string
 		expectMetricErr     string
@@ -1780,6 +1777,16 @@ func TestEscapingErrorHandling(t *testing.T) {
 					require.Contains(t, mf.GetName(), "my_strange_namespace")
 					require.NotContains(t, mf.GetName(), "my-strange-namespace")
 				}
+			},
+		},
+		{
+			name:        "bad resource attribute",
+			counterName: "foo",
+			customResourceAttrs: []attribute.KeyValue{
+				attribute.Key("$%^&").String("B"),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.Len(t, mfs, 0)
 			},
 		},
 		{
@@ -1809,6 +1816,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 				WithRegisterer(registry),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 				WithNamespace(tc.namespace),
+				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
 			)
 			if tc.expectNewErr != "" {
 				require.ErrorContains(t, err, tc.expectNewErr)
@@ -1816,9 +1824,15 @@ func TestEscapingErrorHandling(t *testing.T) {
 			}
 			require.NoError(t, err)
 
+			res, err := resource.New(ctx,
+				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+				resource.WithAttributes(tc.customResourceAttrs...),
+			)
+			require.NoError(t, err)
 			provider := metric.NewMeterProvider(
 				metric.WithReader(exporter),
-				metric.WithResource(resource.Default()),
+				metric.WithResource(res),
 			)
 
 			fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
@@ -1835,7 +1849,9 @@ func TestEscapingErrorHandling(t *testing.T) {
 			fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
 			got, err := registry.Gather()
 			require.NoError(t, err)
-			tc.checkMetricFamilies(t, got)
+			if tc.checkMetricFamilies != nil {
+				tc.checkMetricFamilies(t, got)
+			}
 		})
 	}
 }

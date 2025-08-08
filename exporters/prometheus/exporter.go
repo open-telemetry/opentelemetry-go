@@ -204,8 +204,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		err := c.createResourceAttributes(metrics.Resource)
 		if err != nil {
 			otel.Handle(err)
+			return
 		}
-		// XXX not sure what to do now -- return?
 	}
 
 	for _, scopeMetrics := range metrics.ScopeMetrics {
