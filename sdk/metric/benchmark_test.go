@@ -113,19 +113,19 @@ func benchMeasAttrs(meas measF) func(*testing.B) {
 	return func(b *testing.B) {
 		b.Run("Attributes/0", func(b *testing.B) {
 			f := meas(*attribute.EmptySet())
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				f()
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					f()
+				}
+			})
 		})
 		b.Run("Attributes/1", func(b *testing.B) {
 			f := meas(attribute.NewSet(attribute.Bool("K", true)))
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				f()
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					f()
+				}
+			})
 		})
 		b.Run("Attributes/10", func(b *testing.B) {
 			n := 10
@@ -135,11 +135,11 @@ func benchMeasAttrs(meas measF) func(*testing.B) {
 				attrs = append(attrs, attribute.Int(strconv.Itoa(i), i))
 			}
 			f := meas(attribute.NewSet(attrs...))
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				f()
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					f()
+				}
+			})
 		})
 	}
 }

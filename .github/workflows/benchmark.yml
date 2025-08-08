@@ -26,7 +26,7 @@ jobs:
       - name: Run benchmarks
         run: make benchmark | tee output.txt
       - name: Download previous benchmark data
-        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ./benchmarks
           # `github.event.before` means the commit before the push (i.e. the previous commit).
@@ -46,7 +46,7 @@ jobs:
           # Add benchmark summary to GitHub workflow run report
           summary-always: true
       - name: Save benchmark data
-        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         # The cache will be saved even if a step fails.
         if: always()
         with:

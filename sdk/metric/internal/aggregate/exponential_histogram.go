@@ -350,7 +350,9 @@ func (e *expoHistogram[N]) measure(
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
-func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
+func (e *expoHistogram[N]) delta(
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+) int {
 	t := now()
 
 	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
@@ -411,7 +413,9 @@ func (e *expoHistogram[N]) delta(dest *metricdata.Aggregation) int {
 	return n
 }
 
-func (e *expoHistogram[N]) cumulative(dest *metricdata.Aggregation) int {
+func (e *expoHistogram[N]) cumulative(
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+) int {
 	t := now()
 
 	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
