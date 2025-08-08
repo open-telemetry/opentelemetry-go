@@ -1754,12 +1754,26 @@ func TestEscapingErrorHandling(t *testing.T) {
 		name                string
 		namespace           string
 		counterName         string
+		customScopeAttrs    []attribute.KeyValue
 		customResourceAttrs []attribute.KeyValue
 		labelName           string
 		expectNewErr        string
 		expectMetricErr     string
 		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
+		{
+			name:        "simple happy path",
+			counterName: "foo",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.Equal(t, 2, len(mfs))
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						continue
+					}
+					require.Equal(t, "foo_seconds_total", mf.GetName())
+				}
+			},
+		},
 		{
 			name:         "bad namespace",
 			namespace:    "$%^&",
@@ -1792,6 +1806,17 @@ func TestEscapingErrorHandling(t *testing.T) {
 			},
 		},
 		{
+			name:        "bad scope metric attribute",
+			counterName: "foo",
+			customScopeAttrs: []attribute.KeyValue{
+				attribute.Key("$%^&").String("B"),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.Len(t, mfs, 1)
+				require.Equal(t, "target_info", mfs[0].GetName())
+			},
+		},
+		{
 			name:            "bad translated metric name",
 			counterName:     "$%^&",
 			expectMetricErr: `invalid instrument name: $%^&: must start with a letter`,
@@ -1814,6 +1839,14 @@ func TestEscapingErrorHandling(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
+
+			sc := trace.NewSpanContext(trace.SpanContextConfig{
+				SpanID:     trace.SpanID{0o1},
+				TraceID:    trace.TraceID{0o1},
+				TraceFlags: trace.FlagsSampled,
+			})
+			ctx = trace.ContextWithSpanContext(ctx, sc)
+
 			exporter, err := New(
 				WithRegisterer(registry),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
@@ -1837,7 +1870,11 @@ func TestEscapingErrorHandling(t *testing.T) {
 				metric.WithResource(res),
 			)
 
-			fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
+			fooCounter, err := provider.Meter(
+				"meterfoo",
+				otelmetric.WithInstrumentationVersion("v0.1.0"),
+				otelmetric.WithInstrumentationAttributes(tc.customScopeAttrs...),
+			).
 				Int64Counter(
 					tc.counterName,
 					otelmetric.WithUnit("s"),
@@ -1847,8 +1884,11 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-
-			fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
+			var opts []otelmetric.AddOption
+			if tc.labelName != "" {
+				opts = append(opts, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
+			}
+			fooCounter.Add(ctx, 100, opts...)
 			got, err := registry.Gather()
 			require.NoError(t, err)
 			if tc.checkMetricFamilies != nil {

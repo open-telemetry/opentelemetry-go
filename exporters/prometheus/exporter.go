@@ -241,7 +241,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 			name, err := c.getName(m)
 			if err != nil {
-				// TODO(#7066): Handle this error better.
+				// TODO(#7066): Handle this error better. It's not clear this can be
+				// reached, bad metric names should / will be caught at creation time.
 				otel.Handle(err)
 				continue
 			}
