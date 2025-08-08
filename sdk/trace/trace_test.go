@@ -1930,8 +1930,8 @@ func TestSamplerTraceState(t *testing.T) {
 }
 
 type testIDGenerator struct {
-	traceID int
-	spanID  int
+	traceID uint64
+	spanID  uint64
 }
 
 func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
@@ -1972,11 +1972,11 @@ func TestWithIDGenerator(t *testing.T) {
 
 			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startSpanID+i), gotSpanID)
+			assert.Equal(t, uint64(startSpanID)+uint64(i), gotSpanID)
 
 			gotTraceID, err := strconv.ParseUint(span.SpanContext().TraceID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startTraceID+i), gotTraceID)
+			assert.Equal(t, uint64(startTraceID)+uint64(i), gotTraceID)
 		}()
 	}
 }
