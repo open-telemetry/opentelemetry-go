@@ -491,6 +491,8 @@ func TestSelfObservability(t *testing.T) {
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
 									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
 								),
 								Value: 0,
 							},
@@ -510,6 +512,8 @@ func TestSelfObservability(t *testing.T) {
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
 									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
 								),
 								Value: 2,
 							},
@@ -529,6 +533,8 @@ func TestSelfObservability(t *testing.T) {
 									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
 									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.RPCGRPCStatusCodeOk,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
 								),
 							},
 						},
@@ -574,6 +580,8 @@ func TestSelfObservability(t *testing.T) {
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
 									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
 								),
 								Value: 0,
 							},
@@ -594,6 +602,8 @@ func TestSelfObservability(t *testing.T) {
 									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
 									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.ErrorType(status.Error(codes.Canceled, "")),
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
 								),
 								Value: 2,
 							},
@@ -614,6 +624,8 @@ func TestSelfObservability(t *testing.T) {
 									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
 									semconv.ErrorType(status.Error(codes.Canceled, "")),
 									semconv.RPCGRPCStatusCodeCancelled,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
 								),
 							},
 						},
@@ -636,7 +648,7 @@ func TestSelfObservability(t *testing.T) {
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
 
-			mc := runMockCollector(t)
+			mc := runMockCollectorAtEndpoint(t, "localhost:51844")
 			t.Cleanup(func() { require.NoError(t, mc.stop()) })
 			exp := newGRPCExporter(t, context.Background(), mc.endpoint)
 			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })

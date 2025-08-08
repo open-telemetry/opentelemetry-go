@@ -7,6 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -113,6 +117,10 @@ func (c *client) Start(context.Context) error {
 	c.tscMu.Lock()
 	c.tsc = coltracepb.NewTraceServiceClient(c.conn)
 	c.tscMu.Unlock()
+
+	if c.selfObservabilityEnabled {
+		c.selfObservabilityAttrs = append(c.selfObservabilityAttrs, getServerAttrs(c.conn.CanonicalTarget())...)
+	}
 
 	return nil
 }
@@ -388,6 +396,52 @@ func (c *client) initSelfObservability() {
 	}
 	if c.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
 		otel.Handle(err)
+	}
+}
+
+func getServerAttrs(target string) []attribute.KeyValue {
+	if strings.HasPrefix(target, "unix://") {
+		path := strings.TrimPrefix(target, "unix://")
+		if path == "" {
+			return nil
+		}
+		return []attribute.KeyValue{semconv.ServerAddress(path)}
+	}
+
+	if strings.Contains(target, "://") {
+		u, err := url.Parse(target)
+		if err != nil || u.Scheme == "" {
+			return nil
+		}
+
+		// For gRPC targets like dns:///example.com:42 or dns://8.8.8.8/example.com:42,
+		// use u.Path trimmed of leading slash as host:port
+		target = strings.TrimPrefix(u.Path, "/")
+
+		// Fallback if path empty but host present
+		if target == "" && u.Host != "" {
+			target = u.Host
+		}
+	}
+
+	if target == "" {
+		return nil
+	}
+
+	// Target should now be of form host:port
+	host, pStr, err := net.SplitHostPort(target)
+	if err != nil {
+		return []attribute.KeyValue{semconv.ServerAddress(target)}
+	}
+
+	port, err := strconv.Atoi(pStr)
+	if err != nil {
+		return []attribute.KeyValue{semconv.ServerAddress(host)}
+	}
+
+	return []attribute.KeyValue{
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 	}
 }
 
