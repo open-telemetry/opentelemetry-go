@@ -129,10 +129,10 @@ func TestSettingSpanLimits(t *testing.T) {
 
 type recorder []ReadOnlySpan
 
-func (r *recorder) OnStart(context.Context, ReadWriteSpan) {}
-func (r *recorder) OnEnd(s ReadOnlySpan)                   { *r = append(*r, s) }
-func (r *recorder) ForceFlush(context.Context) error       { return nil }
-func (r *recorder) Shutdown(context.Context) error         { return nil }
+func (*recorder) OnStart(context.Context, ReadWriteSpan) {}
+func (r *recorder) OnEnd(s ReadOnlySpan)                 { *r = append(*r, s) }
+func (*recorder) ForceFlush(context.Context) error       { return nil }
+func (*recorder) Shutdown(context.Context) error         { return nil }
 
 func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	rec := new(recorder)
