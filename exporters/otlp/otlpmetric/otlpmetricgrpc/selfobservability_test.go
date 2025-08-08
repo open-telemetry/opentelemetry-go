@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
@@ -23,23 +26,17 @@ func TestSelfObservability_Disabled(t *testing.T) {
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
 
 	coll, err := otest.NewGRPCCollector("", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	defer coll.Shutdown()
 
 	exp, err := New(context.Background(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	rm := createTestResourceMetrics()
 	err = exp.Export(context.Background(), rm)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Note: Cannot directly test exp.metrics.enabled as it's private
 	// The test passes if no panics occur and export works
@@ -54,32 +51,24 @@ func TestSelfObservability_Enabled(t *testing.T) {
 	otel.SetMeterProvider(provider)
 
 	coll, err := otest.NewGRPCCollector("", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	defer coll.Shutdown()
 
 	exp, err := New(context.Background(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Note: Cannot directly test exp.metrics.enabled as it's private
 	// verify through metrics collection instead
 
 	rm := createTestResourceMetrics()
 	err = exp.Export(context.Background(), rm)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	selfObsMetrics := &metricdata.ResourceMetrics{}
 	err = reader.Collect(context.Background(), selfObsMetrics)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify the three expected metrics exist
 	foundMetrics := make(map[string]bool)
@@ -91,24 +80,18 @@ func TestSelfObservability_Enabled(t *testing.T) {
 				switch m.Name {
 				case "otel.sdk.exporter.metric_data_point.exported":
 					if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-						if sum.DataPoints[0].Value != 4 {
-							t.Errorf("expected 4 data points exported, got %d", sum.DataPoints[0].Value)
-						}
+						assert.Equal(t, int64(4), sum.DataPoints[0].Value, "expected 4 data points exported")
 						verifyAttributes(t, sum.DataPoints[0].Attributes, coll.Addr().String())
 					}
 
 				case "otel.sdk.exporter.metric_data_point.inflight":
 					if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-						if sum.DataPoints[0].Value != 0 {
-							t.Errorf("expected 0 inflight data points, got %d", sum.DataPoints[0].Value)
-						}
+						assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected 0 inflight data points")
 					}
 
 				case "otel.sdk.exporter.operation.duration":
 					if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-						if hist.DataPoints[0].Count == 0 {
-							t.Error("expected duration to be recorded")
-						}
+						assert.NotEqual(t, uint64(0), hist.DataPoints[0].Count, "expected duration to be recorded")
 						// Note: We don't check if duration is positive as very fast operations
 						// may result in zero or near-zero durations on some platforms
 						verifyAttributes(t, hist.DataPoints[0].Attributes, coll.Addr().String())
@@ -124,9 +107,7 @@ func TestSelfObservability_Enabled(t *testing.T) {
 		"otel.sdk.exporter.operation.duration",
 	}
 	for _, metricName := range expectedMetrics {
-		if !foundMetrics[metricName] {
-			t.Errorf("missing expected metric: %s", metricName)
-		}
+		assert.True(t, foundMetrics[metricName], "missing expected metric: %s", metricName)
 	}
 }
 
@@ -142,23 +123,17 @@ func TestSelfObservability_ExportError(t *testing.T) {
 	exp, err := New(context.Background(),
 		WithEndpoint("invalid:999999"),
 		WithInsecure())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Export data (should fail)
 	rm := createTestResourceMetrics()
 	err = exp.Export(context.Background(), rm)
-	if err == nil {
-		t.Fatal("expected error but got none")
-	}
+	assert.Error(t, err, "expected error but got none")
 
 	// Collect metrics
 	selfObsMetrics := &metricdata.ResourceMetrics{}
 	err = reader.Collect(context.Background(), selfObsMetrics)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify error handling in metrics
 	for _, sm := range selfObsMetrics.ScopeMetrics {
@@ -168,9 +143,7 @@ func TestSelfObservability_ExportError(t *testing.T) {
 				case "otel.sdk.exporter.metric_data_point.exported":
 					// Should not increment on error
 					if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-						if sum.DataPoints[0].Value != 0 {
-							t.Errorf("expected no exported count on error, got %d", sum.DataPoints[0].Value)
-						}
+						assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected no exported count on error")
 					}
 
 				case "otel.sdk.exporter.operation.duration":
@@ -184,9 +157,7 @@ func TestSelfObservability_ExportError(t *testing.T) {
 								break
 							}
 						}
-						if !hasErrorAttr {
-							t.Error("expected error.type attribute on failed export")
-						}
+						assert.True(t, hasErrorAttr, "expected error.type attribute on failed export")
 					}
 				}
 			}
@@ -205,32 +176,24 @@ func TestSelfObservability_EndpointParsing(t *testing.T) {
 
 	// Set up collector for successful export
 	coll, err := otest.NewGRPCCollector("", nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	defer coll.Shutdown()
 
 	// Create exporter
 	exp, err := New(context.Background(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Export some data to trigger metrics
 	rm := createTestResourceMetrics()
 	err = exp.Export(context.Background(), rm)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Collect metrics to verify they were created with proper attributes
 	selfObsMetrics := &metricdata.ResourceMetrics{}
 	err = reader.Collect(context.Background(), selfObsMetrics)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify metrics exist and have proper component type
 	found := false
@@ -252,9 +215,7 @@ func TestSelfObservability_EndpointParsing(t *testing.T) {
 			}
 		}
 	}
-	if !found {
-		t.Error("expected self-observability metrics with correct component type")
-	}
+	assert.True(t, found, "expected self-observability metrics with correct component type")
 }
 
 // verifyAttributes checks that the expected attributes are present.
@@ -275,15 +236,9 @@ func verifyAttributes(t *testing.T, attrs attribute.Set, _ string) {
 		}
 	}
 
-	if componentType != "otlp_grpc_metric_exporter" {
-		t.Errorf("expected component type 'otlp_grpc_metric_exporter', got '%s'", componentType)
-	}
-	if serverAddr == "" {
-		t.Error("expected non-empty server address")
-	}
-	if serverPort <= 0 {
-		t.Errorf("expected positive server port, got %d", serverPort)
-	}
+	assert.Equal(t, "otlp_grpc_metric_exporter", componentType)
+	assert.NotEmpty(t, serverAddr, "expected non-empty server address")
+	assert.Positive(t, serverPort, "expected positive server port")
 }
 
 // createTestResourceMetrics creates sample metric data for testing.
