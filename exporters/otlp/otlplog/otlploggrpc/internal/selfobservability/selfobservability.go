@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -58,10 +60,10 @@ func NewExporterMetrics(
 	return em
 }
 
-func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error, code int) {
+func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error, code codes.Code) {
 	begin := time.Now()
 	em.logInflightMetric.Add(ctx, count, em.presetAttrs...)
-	return func(err error, code int) {
+	return func(err error, code codes.Code) {
 		duration := time.Since(begin).Seconds()
 		em.logInflightMetric.Add(ctx, -count, em.presetAttrs...)
 		if err != nil {

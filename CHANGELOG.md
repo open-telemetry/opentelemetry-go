@@ -49,6 +49,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
 - Add native histogram exemplar support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6772)
+- Add experimental self-observability log metrics in `go.opentelemetry.io/otel/sdk/log`.
+  Check the `go.opentelemetry.io/otel/sdk/log/internal/x` package documentation for more information. (#7121)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
   Check the `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x` package documentation for more information. (#7084)
 

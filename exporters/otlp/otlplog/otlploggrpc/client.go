@@ -97,7 +97,7 @@ func (c *client) initSelfObservability() {
 		"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 		componentName,
 		otelconv.ComponentTypeOtlpGRPCLogExporter,
-		c.conn.Target(),
+		c.conn.CanonicalTarget(),
 	)
 }
 
@@ -170,7 +170,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				trackExportFunc(err, int(status.Code(err)))
+				trackExportFunc(err, status.Code(err))
 				otel.Handle(err)
 				return nil
 			}
@@ -178,17 +178,17 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
-			trackExportFunc(nil, int(codes.OK))
+			trackExportFunc(nil, codes.OK)
 			return nil
 		}
-		trackExportFunc(err, int(status.Code(err)))
+		trackExportFunc(err, status.Code(err))
 		return err
 	})
 }
 
-func (c *client) trackExport(ctx context.Context, count int64) func(err error, code int) {
+func (c *client) trackExport(ctx context.Context, count int64) func(err error, code codes.Code) {
 	if !c.selfObservabilityEnabled {
-		return func(error, int) {}
+		return func(error, codes.Code) {}
 	}
 	return c.exporterMetric.TrackExport(ctx, count)
 }

@@ -20,22 +20,22 @@ func TestServerAddrAttrs(t *testing.T) {
 		want   []attribute.KeyValue
 	}{
 		{
-			name:   "UnixSocket",
+			name:   "Unix socket",
 			target: "unix:///tmp/grpc.sock",
 			want:   []attribute.KeyValue{semconv.ServerAddress("/tmp/grpc.sock")},
 		},
 		{
-			name:   "DNSWithPort",
+			name:   "DNS with port",
 			target: "dns:///localhost:8080",
 			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(8080)},
 		},
 		{
-			name:   "SimpleHostPort",
+			name:   "Simple host port",
 			target: "localhost:10001",
 			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(10001)},
 		},
 		{
-			name:   "HostWithoutPort",
+			name:   "Host without port",
 			target: "example.com",
 			want:   []attribute.KeyValue{semconv.ServerAddress("example.com")},
 		},

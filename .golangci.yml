@@ -94,7 +94,6 @@ linters:
         - dupArg
         - hugeParam
         - importShadow
-        - ptrToRefParam
         - preferDecodeRune
         - rangeValCopy
         - unnamedResult
