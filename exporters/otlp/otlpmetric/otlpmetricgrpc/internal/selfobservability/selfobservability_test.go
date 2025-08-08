@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -24,14 +27,27 @@ func TestNewExporterMetrics_Disabled(t *testing.T) {
 
 	em := NewExporterMetrics("test_component", "localhost", 4317)
 
-	if em.enabled {
-		t.Error("metrics should be disabled when feature flag is false")
-	}
+	assert.False(t, em.enabled, "metrics should be disabled when feature flag is false")
 
 	// Tracking should be no-op when disabled
-	finish := em.TrackExport(context.Background(), nil)
+	reader := metric.NewManualReader()
+	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(provider)
+
+	finish := em.TrackExport(context.Background(), createTestResourceMetrics())
 	finish(nil)
 	finish(errors.New("test error"))
+
+	// Verify no metrics were recorded when disabled
+	rm := &metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), rm)
+	require.NoError(t, err, "failed to collect metrics")
+
+	totalMetrics := 0
+	for _, sm := range rm.ScopeMetrics {
+		totalMetrics += len(sm.Metrics)
+	}
+	assert.Zero(t, totalMetrics, "expected no metrics when disabled")
 }
 
 func TestNewExporterMetrics_Enabled(t *testing.T) {
@@ -45,9 +61,7 @@ func TestNewExporterMetrics_Enabled(t *testing.T) {
 
 	em := NewExporterMetrics("test_component", "example.com", 4317)
 
-	if !em.enabled {
-		t.Error("metrics should be enabled when feature flag is true")
-	}
+	assert.True(t, em.enabled, "metrics should be enabled when feature flag is true")
 
 	// Verify attributes are set correctly
 	expectedAttrs := []attribute.KeyValue{
@@ -57,15 +71,8 @@ func TestNewExporterMetrics_Enabled(t *testing.T) {
 		semconv.ServerPort(4317),
 	}
 
-	if len(em.attrs) != len(expectedAttrs) {
-		t.Errorf("expected %d attributes, got %d", len(expectedAttrs), len(em.attrs))
-	}
-
-	for i, expected := range expectedAttrs {
-		if i < len(em.attrs) && em.attrs[i] != expected {
-			t.Errorf("attribute %d: expected %v, got %v", i, expected, em.attrs[i])
-		}
-	}
+	assert.Len(t, em.attrs, len(expectedAttrs), "attributes length mismatch")
+	assert.Equal(t, expectedAttrs, em.attrs, "attributes should match expected values")
 }
 
 func TestNewExporterMetrics_MeterFailure(t *testing.T) {
@@ -83,14 +90,25 @@ func TestNewExporterMetrics_MeterFailure(t *testing.T) {
 	em := NewExporterMetrics("test_component", "example.com", 4317)
 
 	// Should be enabled with valid meter provider
-	if !em.enabled {
-		t.Error("metrics should be enabled when meter provider is valid")
-	}
+	assert.True(t, em.enabled, "metrics should be enabled when meter provider is valid")
 
 	// Test that tracking works properly
-	finish := em.TrackExport(context.Background(), nil)
+	finish := em.TrackExport(context.Background(), createTestResourceMetrics())
 	finish(nil)
 	finish(errors.New("test error"))
+
+	rm := &metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), rm)
+	require.NoError(t, err, "failed to collect metrics")
+
+	// Verify metrics were recorded
+	totalMetrics := 0
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
+			totalMetrics += len(sm.Metrics)
+		}
+	}
+	assert.Positive(t, totalMetrics, "expected self-observability metrics to be recorded when enabled")
 }
 
 func TestTrackExport_Success(t *testing.T) {
@@ -111,9 +129,7 @@ func TestTrackExport_Success(t *testing.T) {
 	// Read metrics to verify
 	metrics := &metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), metrics)
-	if err != nil {
-		t.Fatalf("failed to collect metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to collect metrics")
 
 	// Verify exported counter was incremented
 	exportedFound := false
@@ -126,39 +142,32 @@ func TestTrackExport_Success(t *testing.T) {
 			case "otel.sdk.exporter.metric_data_point.exported":
 				exportedFound = true
 				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					if sum.DataPoints[0].Value != 10 { // Expected data points from test data
-						t.Errorf("expected exported count 10, got %d", sum.DataPoints[0].Value)
-					}
+					assert.Equal(
+						t,
+						int64(10),
+						sum.DataPoints[0].Value,
+						"expected exported count 10",
+					) // Expected data points from test data
 				}
 			case "otel.sdk.exporter.metric_data_point.inflight":
 				inflightFound = true
 				// Inflight should be 0 after completion
 				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					if sum.DataPoints[0].Value != 0 {
-						t.Errorf("expected inflight count 0, got %d", sum.DataPoints[0].Value)
-					}
+					assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected inflight count 0")
 				}
 			case "otel.sdk.exporter.operation.duration":
 				durationFound = true
 				// Duration should be recorded
 				if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-					if hist.DataPoints[0].Count == 0 {
-						t.Error("expected duration to be recorded")
-					}
+					assert.Positive(t, hist.DataPoints[0].Count, "expected duration to be recorded")
 				}
 			}
 		}
 	}
 
-	if !exportedFound {
-		t.Error("exported metric not found")
-	}
-	if !inflightFound {
-		t.Error("inflight metric not found")
-	}
-	if !durationFound {
-		t.Error("duration metric not found")
-	}
+	assert.True(t, exportedFound, "exported metric not found")
+	assert.True(t, inflightFound, "inflight metric not found")
+	assert.True(t, durationFound, "duration metric not found")
 }
 
 func TestTrackExport_Error(t *testing.T) {
@@ -178,18 +187,14 @@ func TestTrackExport_Error(t *testing.T) {
 	// Read metrics
 	metrics := &metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), metrics)
-	if err != nil {
-		t.Fatalf("failed to collect metrics: %v", err)
-	}
+	require.NoError(t, err, "failed to collect metrics")
 
 	// Verify no exported count (due to error) but duration is recorded with error attribute
 	for _, sm := range metrics.ScopeMetrics {
 		for _, m := range sm.Metrics {
 			if m.Name == "otel.sdk.exporter.metric_data_point.exported" {
 				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					if sum.DataPoints[0].Value != 0 {
-						t.Errorf("expected no exported count on error, got %d", sum.DataPoints[0].Value)
-					}
+					assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected no exported count on error")
 				}
 			}
 			if m.Name == "otel.sdk.exporter.operation.duration" {
@@ -202,9 +207,7 @@ func TestTrackExport_Error(t *testing.T) {
 							break
 						}
 					}
-					if !hasErrorAttr {
-						t.Error("expected error.type attribute on duration metric")
-					}
+					assert.True(t, hasErrorAttr, "expected error.type attribute on duration metric")
 				}
 			}
 		}
@@ -237,9 +240,7 @@ func TestCountDataPoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			count := countDataPoints(tt.rm)
-			if count != tt.expected {
-				t.Errorf("expected %d data points, got %d", tt.expected, count)
-			}
+			assert.Equal(t, tt.expected, count, "data points count mismatch")
 		})
 	}
 }
@@ -292,12 +293,8 @@ func TestParseEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			address, port := ParseEndpoint(tt.endpoint, tt.defaultPort)
-			if address != tt.wantAddress {
-				t.Errorf("address: want %s, got %s", tt.wantAddress, address)
-			}
-			if port != tt.wantPort {
-				t.Errorf("port: want %d, got %d", tt.wantPort, port)
-			}
+			assert.Equal(t, tt.wantAddress, address, "address mismatch")
+			assert.Equal(t, tt.wantPort, port, "port mismatch")
 		})
 	}
 }
@@ -323,9 +320,7 @@ func TestIsSelfObservabilityEnabled(t *testing.T) {
 			}
 
 			got := isSelfObservabilityEnabled()
-			if got != tt.want {
-				t.Errorf("want %v, got %v", tt.want, got)
-			}
+			assert.Equal(t, tt.want, got, "self-observability enabled state mismatch")
 		})
 	}
 }

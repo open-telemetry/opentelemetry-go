@@ -87,9 +87,7 @@ func TestExporterDoesNotBlockTemporalityAndAggregation(t *testing.T) {
 	wg.Go(func() {
 		rm := new(metricdata.ResourceMetrics)
 		t.Log("starting export")
-		if err := exp.Export(ctx, rm); err != nil {
-			t.Errorf("export failed: %v", err)
-		}
+		require.NoError(t, exp.Export(ctx, rm))
 		t.Log("export complete")
 	})
 
