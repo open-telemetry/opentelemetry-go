@@ -105,7 +105,9 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 		em.inflight.Add(ctx, -dataPointCount, em.attrs...)
 
 		duration := time.Since(startTime).Seconds()
-		attrs := em.attrs
+
+		attrs := make([]attribute.KeyValue, len(em.attrs), len(em.attrs)+1)
+		copy(attrs, em.attrs)
 		if err != nil {
 			attrs = append(attrs, semconv.ErrorTypeOther)
 		}
