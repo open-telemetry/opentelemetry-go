@@ -1765,7 +1765,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 			name:        "simple happy path",
 			counterName: "foo",
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
-				require.Equal(t, 2, len(mfs))
+				require.Len(t, len(mfs), 2)
 				for _, mf := range mfs {
 					if mf.GetName() == "target_info" {
 						continue
