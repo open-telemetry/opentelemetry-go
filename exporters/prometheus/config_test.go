@@ -29,6 +29,7 @@ func TestNewConfig(t *testing.T) {
 			name:    "Default",
 			options: nil,
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 			},
 		},
@@ -38,6 +39,7 @@ func TestNewConfig(t *testing.T) {
 				WithRegisterer(registry),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: registry,
 			},
 		},
@@ -47,6 +49,7 @@ func TestNewConfig(t *testing.T) {
 				WithAggregationSelector(aggregationSelector),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 				readerOpts: []metric.ManualReaderOption{metric.WithAggregationSelector(aggregationSelector)},
 			},
@@ -57,6 +60,7 @@ func TestNewConfig(t *testing.T) {
 				WithProducer(producer),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 				readerOpts: []metric.ManualReaderOption{metric.WithProducer(producer)},
 			},
@@ -70,6 +74,7 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: registry,
 				readerOpts: []metric.ManualReaderOption{
 					metric.WithAggregationSelector(aggregationSelector),
@@ -83,6 +88,7 @@ func TestNewConfig(t *testing.T) {
 				WithRegisterer(nil),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 			},
 		},
@@ -92,6 +98,7 @@ func TestNewConfig(t *testing.T) {
 				WithoutTargetInfo(),
 			},
 			wantConfig: config{
+				allowUTF8:         true,
 				registerer:        prometheus.DefaultRegisterer,
 				disableTargetInfo: true,
 			},
@@ -102,6 +109,7 @@ func TestNewConfig(t *testing.T) {
 				WithoutUnits(),
 			},
 			wantConfig: config{
+				allowUTF8:    true,
 				registerer:   prometheus.DefaultRegisterer,
 				withoutUnits: true,
 			},
@@ -112,6 +120,7 @@ func TestNewConfig(t *testing.T) {
 				WithNamespace("test"),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 				namespace:  "test",
 			},
@@ -122,6 +131,7 @@ func TestNewConfig(t *testing.T) {
 				WithNamespace("test"),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 				namespace:  "test",
 			},
@@ -132,6 +142,7 @@ func TestNewConfig(t *testing.T) {
 				WithNamespace("test/"),
 			},
 			wantConfig: config{
+				allowUTF8:  true,
 				registerer: prometheus.DefaultRegisterer,
 				namespace:  "test/",
 			},
