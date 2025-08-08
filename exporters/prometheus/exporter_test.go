@@ -978,8 +978,10 @@ func TestDuplicateMetrics(t *testing.T) {
 			registry := prometheus.NewRegistry()
 			// This test does not set the Translation Strategy, so it defaults to
 			// UnderscoreEscapingWithSuffixes.
-			opts := append([]Option{
-				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)},
+			opts := append(
+				[]Option{
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				},
 				tc.options...,
 			)
 			exporter, err := New(append(opts, WithRegisterer(registry))...)
@@ -1786,7 +1788,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 				attribute.Key("$%^&").String("B"),
 			},
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
-				require.Len(t, mfs, 0)
+				require.Empty(t, mfs)
 			},
 		},
 		{
