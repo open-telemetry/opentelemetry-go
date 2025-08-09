@@ -39,7 +39,7 @@ func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 }
 
 // OnStart does nothing.
-func (ssp *simpleSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (*simpleSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 
 // OnEnd immediately exports a ReadOnlySpan.
 func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
@@ -104,7 +104,7 @@ func (ssp *simpleSpanProcessor) Shutdown(ctx context.Context) error {
 }
 
 // ForceFlush does nothing as there is no data to flush.
-func (ssp *simpleSpanProcessor) ForceFlush(context.Context) error {
+func (*simpleSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
