@@ -34,7 +34,7 @@ func testEncoderOption() stdoutmetric.Option {
 // failingEncoder always returns an error when Encode is called.
 type failingEncoder struct{}
 
-func (f failingEncoder) Encode(any) error {
+func (failingEncoder) Encode(any) error {
 	return errors.New("encoding failed")
 }
 
