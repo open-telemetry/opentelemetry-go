@@ -20,6 +20,7 @@ When enabled, the SDK will create the following metrics using the global `MeterP
 
 - `otel.sdk.span.live`
 - `otel.sdk.span.started`
+- `otel.sdk.processor.span.processed` (only for simple span processor)
 
 Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
 

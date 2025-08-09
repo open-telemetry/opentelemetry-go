@@ -5,10 +5,18 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/trace/internal/x"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 // simpleSpanProcessor is a SpanProcessor that synchronously sends all
@@ -17,6 +25,10 @@ type simpleSpanProcessor struct {
 	exporterMu sync.Mutex
 	exporter   SpanExporter
 	stopOnce   sync.Once
+
+	selfObservabilityEnabled bool
+	componentNameAttr        attribute.KeyValue
+	spansProcessedCounter    otelconv.SDKProcessorSpanProcessed
 }
 
 var _ SpanProcessor = (*simpleSpanProcessor)(nil)
@@ -33,9 +45,40 @@ func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 	ssp := &simpleSpanProcessor{
 		exporter: exporter,
 	}
+	ssp.configureSelfObservability()
+
 	global.Warn("SimpleSpanProcessor is not recommended for production use, consider using BatchSpanProcessor instead.")
 
 	return ssp
+}
+
+var processorIDCounter atomic.Int64
+
+// nextProcessorID returns an identifier for this simple span processor,
+// starting with 0 and incrementing by 1 each time it is called.
+func nextProcessorID() int64 {
+	return processorIDCounter.Add(1) - 1
+}
+
+// configureSelfObservability configures metrics for the simple span processor.
+func (ssp *simpleSpanProcessor) configureSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+	ssp.selfObservabilityEnabled = true
+	ssp.componentNameAttr = semconv.OTelComponentName(
+		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingSpanProcessor, nextProcessorID()))
+	meter := otel.GetMeterProvider().Meter(
+		selfObsScopeName,
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err error
+	ssp.spansProcessedCounter, err = otelconv.NewSDKProcessorSpanProcessed(meter)
+	if err != nil {
+		otel.Handle(err)
+	}
 }
 
 // OnStart does nothing.
@@ -47,8 +90,17 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	defer ssp.exporterMu.Unlock()
 
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
-		if err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s}); err != nil {
+		attrs := []attribute.KeyValue{
+			ssp.componentNameAttr,
+			ssp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeSimpleSpanProcessor),
+		}
+		err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s})
+		if err != nil {
 			otel.Handle(err)
+			attrs = append(attrs, semconv.ErrorType(err))
+		}
+		if ssp.selfObservabilityEnabled {
+			ssp.spansProcessedCounter.Add(context.Background(), 1, attrs...)
 		}
 	}
 }
