@@ -67,7 +67,7 @@ func (ssp *simpleSpanProcessor) configureSelfObservability() {
 	}
 	ssp.selfObservabilityEnabled = true
 	ssp.componentNameAttr = semconv.OTelComponentName(
-		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingSpanProcessor, nextProcessorID()))
+		fmt.Sprintf("%s/%d", otelconv.ComponentTypeSimpleSpanProcessor, nextProcessorID()))
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
