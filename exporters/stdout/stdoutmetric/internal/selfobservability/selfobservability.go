@@ -55,11 +55,14 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(er
 	em.inflight.Add(ctx, count, em.attrs...)
 	return func(err error) {
 		duration := time.Since(begin).Seconds()
-		em.inflight.Add(ctx, -count, em.attrs...)
+		attrs := em.attrs
+		em.inflight.Add(ctx, -count, attrs...)
 		if err != nil {
-			em.attrs = append(em.attrs, semconv.ErrorType(err))
+			attrs = make([]attribute.KeyValue, len(em.attrs)+1)
+			copy(attrs, em.attrs)
+			attrs = append(attrs, semconv.ErrorType(err))
 		}
-		em.exported.Add(ctx, count, em.attrs...)
-		em.duration.Record(ctx, duration, em.attrs...)
+		em.exported.Add(ctx, count, attrs...)
+		em.duration.Record(ctx, duration, attrs...)
 	}
 }
