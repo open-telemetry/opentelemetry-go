@@ -610,6 +610,43 @@ func TestConfig(t *testing.T) {
 	})
 }
 
+func TestInitSelfObservability(t *testing.T) {
+	conn, err := grpc.NewClient("test", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	t.Cleanup(func() { _ = conn.Close() })
+
+	require.NoError(t, err)
+
+	testcases := []struct {
+		name   string
+		before func()
+		want   *selfobservability.ExporterMetrics
+	}{
+		{
+			name:   "disable self observability",
+			before: func() { t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "False") },
+		},
+		{
+			name:   "enable self observability",
+			before: func() { t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True") },
+			want: selfobservability.NewExporterMetrics(
+				"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+				fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, 0),
+				otelconv.ComponentTypeOtlpGRPCLogExporter,
+				conn.CanonicalTarget()),
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.before()
+
+			c := &client{conn: conn}
+			c.initSelfObservability()
+			assert.Equal(t, tc.want, c.exporterMetric)
+		})
+	}
+}
+
 func TestSelfObservability(t *testing.T) {
 	testCases := []struct {
 		name string

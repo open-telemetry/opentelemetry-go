@@ -61,20 +61,22 @@ func NewExporterMetrics(
 }
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error, code codes.Code) {
+	attrs := append([]attribute.KeyValue{}, em.presetAttrs...)
+
 	begin := time.Now()
-	em.logInflightMetric.Add(ctx, count, em.presetAttrs...)
+	em.logInflightMetric.Add(ctx, count, attrs...)
 	return func(err error, code codes.Code) {
 		duration := time.Since(begin).Seconds()
-		em.logInflightMetric.Add(ctx, -count, em.presetAttrs...)
+		em.logInflightMetric.Add(ctx, -count, attrs...)
 		if err != nil {
-			em.presetAttrs = append(em.presetAttrs, semconv.ErrorType(err))
+			attrs = append(attrs, semconv.ErrorType(err))
 		}
-		em.logExportedMetric.Add(ctx, count, em.presetAttrs...)
-		em.presetAttrs = append(
-			em.presetAttrs,
+		em.logExportedMetric.Add(ctx, count, attrs...)
+		attrs = append(
+			attrs,
 			em.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
 		)
-		em.logExportedDurationMetric.Record(ctx, duration, em.presetAttrs...)
+		em.logExportedDurationMetric.Record(ctx, duration, attrs...)
 	}
 }
 
