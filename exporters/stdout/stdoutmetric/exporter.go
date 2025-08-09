@@ -111,7 +111,7 @@ func (e *exporter) trackExport(ctx context.Context, count int64) func(err error)
 	return e.exporterMetric.TrackExport(ctx, count)
 }
 
-func (e *exporter) ForceFlush(context.Context) error {
+func (*exporter) ForceFlush(context.Context) error {
 	// exporter holds no state, nothing to flush.
 	return nil
 }
@@ -125,7 +125,7 @@ func (e *exporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (e *exporter) MarshalLog() any {
+func (*exporter) MarshalLog() any {
 	return struct{ Type string }{Type: "STDOUT"}
 }
 
