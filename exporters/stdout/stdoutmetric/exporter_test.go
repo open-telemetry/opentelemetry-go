@@ -7,22 +7,35 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 func testEncoderOption() stdoutmetric.Option {
 	// Discard export output for testing.
 	enc := json.NewEncoder(io.Discard)
 	return stdoutmetric.WithEncoder(enc)
+}
+
+// failingEncoder always returns an error when Encode is called.
+type failingEncoder struct{}
+
+func (f failingEncoder) Encode(any) error {
+	return errors.New("encoding failed")
 }
 
 func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
@@ -177,4 +190,201 @@ func TestAggregationSelector(t *testing.T) {
 
 	var unknownKind metric.InstrumentKind
 	assert.Equal(t, metric.AggregationDrop{}, exp.Aggregation(unknownKind))
+}
+
+func TestExporter_Export_SelfObservability(t *testing.T) {
+	tests := []struct {
+		name                     string
+		selfObservabilityEnabled bool
+		expectedExportedCount    int64
+	}{
+		{
+			name:                     "Enabled",
+			selfObservabilityEnabled: true,
+			expectedExportedCount:    19,
+		},
+		{
+			name:                     "Disabled",
+			selfObservabilityEnabled: false,
+			expectedExportedCount:    0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tt.selfObservabilityEnabled))
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			origMp := otel.GetMeterProvider()
+			otel.SetMeterProvider(mp)
+			defer otel.SetMeterProvider(origMp)
+
+			exp, err := stdoutmetric.New(testEncoderOption())
+			require.NoError(t, err)
+
+			rm := &metricdata.ResourceMetrics{
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Name: "gauge_int64",
+								Data: metricdata.Gauge[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{{Value: 1}, {Value: 2}},
+								},
+							},
+							{
+								Name: "gauge_float64",
+								Data: metricdata.Gauge[float64]{
+									DataPoints: []metricdata.DataPoint[float64]{
+										{Value: 1.0},
+										{Value: 2.0},
+										{Value: 3.0},
+									},
+								},
+							},
+							{
+								Name: "sum_int64",
+								Data: metricdata.Sum[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{{Value: 10}},
+								},
+							},
+							{
+								Name: "sum_float64",
+								Data: metricdata.Sum[float64]{
+									DataPoints: []metricdata.DataPoint[float64]{{Value: 10.5}, {Value: 20.5}},
+								},
+							},
+							{
+								Name: "histogram_int64",
+								Data: metricdata.Histogram[int64]{
+									DataPoints: []metricdata.HistogramDataPoint[int64]{
+										{Count: 1},
+										{Count: 2},
+										{Count: 3},
+									},
+								},
+							},
+							{
+								Name: "histogram_float64",
+								Data: metricdata.Histogram[float64]{
+									DataPoints: []metricdata.HistogramDataPoint[float64]{{Count: 1}},
+								},
+							},
+							{
+								Name: "exponential_histogram_int64",
+								Data: metricdata.ExponentialHistogram[int64]{
+									DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+										{Count: 1},
+										{Count: 2},
+									},
+								},
+							},
+							{
+								Name: "exponential_histogram_float64",
+								Data: metricdata.ExponentialHistogram[float64]{
+									DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+										{Count: 1},
+										{Count: 2},
+										{Count: 3},
+										{Count: 4},
+									},
+								},
+							},
+							{
+								Name: "summary",
+								Data: metricdata.Summary{
+									DataPoints: []metricdata.SummaryDataPoint{{Count: 1}},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			ctx := context.Background()
+			err = exp.Export(ctx, rm)
+			require.NoError(t, err)
+
+			var metrics metricdata.ResourceMetrics
+			err = reader.Collect(ctx, &metrics)
+			require.NoError(t, err)
+
+			var foundExported, foundDuration, foundInflight bool
+			var exportedCount int64
+
+			for _, sm := range metrics.ScopeMetrics {
+				for _, m := range sm.Metrics {
+					switch m.Name {
+					case otelconv.SDKExporterMetricDataPointExported{}.Name():
+						foundExported = true
+						if sum, ok := m.Data.(metricdata.Sum[int64]); ok {
+							for _, dp := range sum.DataPoints {
+								exportedCount += dp.Value
+							}
+						}
+					case otelconv.SDKExporterOperationDuration{}.Name():
+						foundDuration = true
+					case otelconv.SDKExporterMetricDataPointInflight{}.Name():
+						foundInflight = true
+					}
+				}
+			}
+
+			assert.Equal(t, tt.selfObservabilityEnabled, foundExported)
+			assert.Equal(t, tt.selfObservabilityEnabled, foundDuration)
+			assert.Equal(t, tt.selfObservabilityEnabled, foundInflight)
+			assert.Equal(t, tt.expectedExportedCount, exportedCount)
+		})
+	}
+}
+
+func TestExporter_Export_EncodingErrorTracking(t *testing.T) {
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	origMp := otel.GetMeterProvider()
+	otel.SetMeterProvider(mp)
+	defer otel.SetMeterProvider(origMp)
+
+	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(failingEncoder{}))
+	assert.NoError(t, err)
+
+	rm := &metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "test_gauge",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{{Value: 1}, {Value: 2}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	err = exp.Export(ctx, rm)
+	assert.EqualError(t, err, "encoding failed")
+
+	var metrics metricdata.ResourceMetrics
+	err = reader.Collect(ctx, &metrics)
+	require.NoError(t, err)
+
+	var foundErrorType bool
+	for _, sm := range metrics.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			x := otelconv.SDKExporterMetricDataPointExported{}.Name()
+			if m.Name == x {
+				if sum, ok := m.Data.(metricdata.Sum[int64]); ok {
+					for _, dp := range sum.DataPoints {
+						var attr attribute.Value
+						attr, foundErrorType = dp.Attributes.Value(semconv.ErrorTypeKey)
+						assert.Equal(t, "*errors.errorString", attr.AsString())
+					}
+				}
+			}
+		}
+	}
+	assert.True(t, foundErrorType)
 }

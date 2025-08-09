@@ -6,15 +6,16 @@ package selfobservability
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 type testSetup struct {
