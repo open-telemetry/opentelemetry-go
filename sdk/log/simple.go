@@ -20,8 +20,8 @@ import (
 // Compile-time check SimpleProcessor implements Processor.
 var _ Processor = (*SimpleProcessor)(nil)
 
-// simpleProcessorInstanceCounter is used to generate unique component names.
-var simpleProcessorInstanceCounter atomic.Uint64
+// simpleProcessorIDCounter is used to generate unique component names.
+var simpleProcessorIDCounter atomic.Uint64
 
 // SimpleProcessor is an processor that synchronously exports log records.
 //
