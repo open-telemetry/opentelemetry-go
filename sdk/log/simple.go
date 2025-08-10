@@ -97,14 +97,14 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	err := s.exporter.Export(ctx, *records)
 
 	if s.selfObservabilityEnabled && err != nil {
-		s.processedMetric.Add(context.Background(), 1,
+		s.processedMetric.Add(context.Background(), int64(len(*records)),
 			s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
 			s.processedMetric.AttrComponentName(s.componentName),
 			s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
 	}
 
 	if s.selfObservabilityEnabled && err == nil {
-		s.processedMetric.Add(context.Background(), 1,
+		s.processedMetric.Add(context.Background(), int64(len(*records)),
 			s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
 			s.processedMetric.AttrComponentName(s.componentName))
 	}
