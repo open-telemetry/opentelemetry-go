@@ -136,11 +136,11 @@ func (e *errorExporter) Export(_ context.Context, _ []log.Record) error {
 	return e.err
 }
 
-func (e *errorExporter) Shutdown(context.Context) error {
+func (*errorExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (e *errorExporter) ForceFlush(context.Context) error {
+func (*errorExporter) ForceFlush(context.Context) error {
 	return nil
 }
 
@@ -148,7 +148,7 @@ type failingMeterProvider struct {
 	noop.MeterProvider
 }
 
-func (mp *failingMeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
+func (*failingMeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
 	return &failingMeter{Meter: noop.NewMeterProvider().Meter(name, opts...)}
 }
 
@@ -156,7 +156,7 @@ type failingMeter struct {
 	metric.Meter
 }
 
-func (m *failingMeter) Int64Counter(_ string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+func (*failingMeter) Int64Counter(_ string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	return nil, errors.New("failed to create counter")
 }
 
@@ -217,7 +217,7 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 
 		require.NotNil(t, processedMetric)
 
-		totalCount, _, hasComponentType, hasComponentName := extractProcessedLogMetrics(processedMetric, false)
+		totalCount, hasComponentType, hasComponentName := extractProcessedLogMetricsSuccess(processedMetric)
 
 		assert.Equal(t, int64(3), totalCount)
 		assert.True(t, hasComponentType)
@@ -255,8 +255,8 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 
 		require.NotNil(t, processedMetric)
 
-		totalCount, hasErrorType, hasComponentType, hasComponentName := extractProcessedLogMetrics(
-			processedMetric, true,
+		totalCount, hasErrorType, hasComponentType, hasComponentName := extractProcessedLogMetricsError(
+			processedMetric,
 		)
 
 		assert.Equal(t, int64(2), totalCount)
@@ -303,9 +303,40 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	})
 }
 
-func extractProcessedLogMetrics(
+func extractProcessedLogMetricsSuccess(
 	processedMetric *metricdata.ScopeMetrics,
-	checkError bool,
+) (totalCount int64, hasComponentType, hasComponentName bool) {
+	for _, m := range processedMetric.Metrics {
+		if m.Name != "otel.sdk.processor.log.processed" {
+			continue
+		}
+
+		data, ok := m.Data.(metricdata.Sum[int64])
+		if !ok {
+			continue
+		}
+
+		for _, dataPoint := range data.DataPoints {
+			totalCount += dataPoint.Value
+			for _, attr := range dataPoint.Attributes.ToSlice() {
+				switch attr.Key {
+				case "otel.component.type":
+					if attr.Value.AsString() == string(otelconv.ComponentTypeSimpleLogProcessor) {
+						hasComponentType = true
+					}
+				case "otel.component.name":
+					if strings.HasPrefix(attr.Value.AsString(), "simple_log_processor/") {
+						hasComponentName = true
+					}
+				}
+			}
+		}
+	}
+	return totalCount, hasComponentType, hasComponentName
+}
+
+func extractProcessedLogMetricsError(
+	processedMetric *metricdata.ScopeMetrics,
 ) (totalCount int64, hasErrorType, hasComponentType, hasComponentName bool) {
 	for _, m := range processedMetric.Metrics {
 		if m.Name != "otel.sdk.processor.log.processed" {
@@ -322,7 +353,7 @@ func extractProcessedLogMetrics(
 			for _, attr := range dataPoint.Attributes.ToSlice() {
 				switch attr.Key {
 				case "error.type":
-					if checkError && attr.Value.AsString() == string(otelconv.ErrorTypeOther) {
+					if attr.Value.AsString() == string(otelconv.ErrorTypeOther) {
 						hasErrorType = true
 					}
 				case "otel.component.type":
@@ -330,11 +361,7 @@ func extractProcessedLogMetrics(
 						hasComponentType = true
 					}
 				case "otel.component.name":
-					if strings.HasPrefix(attr.Value.AsString(), "simple_log_processor/") {
-						hasComponentName = true
-					} else if checkError {
-						hasComponentName = true
-					}
+					hasComponentName = true
 				}
 			}
 		}
