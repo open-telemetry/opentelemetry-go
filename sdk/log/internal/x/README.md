@@ -21,7 +21,6 @@ When enabled, the SDK will create the following metrics using the global `MeterP
 - `otel.sdk.log.created`
 - `otel.sdk.processor.log.processed`
 
-
 Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
 
 [Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.36.0/docs/otel/sdk-metrics.md
