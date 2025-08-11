@@ -46,7 +46,7 @@ var metricsPool = sync.Pool{
 	},
 }
 
-// Global instance counter for generating unique component names
+// Global instance counter for generating unique component names.
 var instanceCounter int64
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
@@ -165,7 +165,7 @@ func (c *collector) initSelfObservability() {
 	}
 }
 
-// Per-instance tracking methods
+// Per-instance tracking methods.
 func (c *collector) trackDataPointStart() {
 	if c.selfObs != nil {
 		c.selfObs.AddInflight(context.Background(), 1)

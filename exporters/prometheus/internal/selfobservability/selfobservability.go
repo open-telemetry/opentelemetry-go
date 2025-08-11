@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package selfobservability
+package selfobservability // import "go.opentelemetry.io/otel/exporters/prometheus/internal/selfobservability"
 
 import (
 	"context"
@@ -55,7 +55,7 @@ func NewExporterMetrics(componentName string) *ExporterMetrics {
 	return em
 }
 
-// AddInflight adds the specified count to the inflight metric
+// AddInflight adds the specified count to the inflight metric.
 func (em *ExporterMetrics) AddInflight(ctx context.Context, count int64) {
 	if !em.selfObservabilityEnabled {
 		return
@@ -63,7 +63,7 @@ func (em *ExporterMetrics) AddInflight(ctx context.Context, count int64) {
 	em.inflightMetric.Add(ctx, count, em.attrs...)
 }
 
-// AddExported adds the specified count to the exported metric
+// AddExported adds the specified count to the exported metric.
 func (em *ExporterMetrics) AddExported(ctx context.Context, count int64) {
 	if !em.selfObservabilityEnabled {
 		return
