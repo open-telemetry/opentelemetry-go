@@ -11,16 +11,22 @@ import (
 	"sync"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	metricSDK "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
@@ -163,7 +169,10 @@ func (*failingMeter) Int64Counter(_ string, _ ...metric.Int64CounterOption) (met
 func TestSimpleProcessorSelfObservability(t *testing.T) {
 	originalMP := otel.GetMeterProvider()
 	setupCleanMeterProvider := func(t *testing.T) {
-		t.Cleanup(func() { otel.SetMeterProvider(originalMP) })
+		t.Cleanup(func() {
+			otel.SetMeterProvider(originalMP)
+			log.ResetSimpleProcessorIDCounterForTesting()
+		})
 	}
 
 	t.Run("self observability disabled", func(t *testing.T) {
@@ -187,13 +196,12 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 		err := reader.Collect(context.Background(), &rm)
 		require.NoError(t, err)
 
-		for _, scopeMetrics := range rm.ScopeMetrics {
-			for _, m := range scopeMetrics.Metrics {
-				if m.Name == "otel.sdk.processor.log.processed" {
-					t.Errorf("expected no self-observability metrics when disabled, but found metric: %s", m.Name)
-				}
-			}
+		expected := metricdata.ResourceMetrics{
+			Resource:     rm.Resource,
+			ScopeMetrics: []metricdata.ScopeMetrics{},
 		}
+
+		metricdatatest.AssertEqual(t, expected, rm, metricdatatest.IgnoreTimestamp())
 	})
 
 	t.Run("self observability enabled without error", func(t *testing.T) {
@@ -221,27 +229,48 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 		err = s.OnEmit(context.Background(), r)
 		require.NoError(t, err)
 
+		expected := metricdata.ResourceMetrics{
+			ScopeMetrics: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/log",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "otel.sdk.processor.log.processed",
+							Description: "The number of log records for which the processing has finished, either successful or failed",
+							Unit:        "{log_record}",
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 3,
+										Attributes: attribute.NewSet(
+											attribute.String(
+												"otel.component.type",
+												string(otelconv.ComponentTypeSimpleLogProcessor),
+											),
+											attribute.String("otel.component.name", "simple_log_processor/0"),
+										),
+										Exemplars: []metricdata.Exemplar[int64]{},
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				},
+			},
+		}
+
 		rm := metricdata.ResourceMetrics{}
 		err = reader.Collect(context.Background(), &rm)
 		require.NoError(t, err)
 
-		var processedMetric *metricdata.ScopeMetrics
-		for _, scopeMetrics := range rm.ScopeMetrics {
-			for _, m := range scopeMetrics.Metrics {
-				if m.Name == "otel.sdk.processor.log.processed" {
-					processedMetric = &scopeMetrics
-					break
-				}
-			}
-		}
-
-		require.NotNil(t, processedMetric)
-
-		totalCount, hasComponentType, hasComponentName := extractProcessedLogMetricsSuccess(processedMetric)
-
-		assert.Equal(t, int64(3), totalCount)
-		assert.True(t, hasComponentType)
-		assert.True(t, hasComponentName)
+		require.Len(t, rm.ScopeMetrics, 1)
+		metricdatatest.AssertEqual(t, expected.ScopeMetrics[0], rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 	})
 
 	t.Run("self observability enabled with error", func(t *testing.T) {
@@ -268,30 +297,49 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "export failed", err.Error())
 
+		expected := metricdata.ResourceMetrics{
+			ScopeMetrics: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/log",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "otel.sdk.processor.log.processed",
+							Description: "The number of log records for which the processing has finished, either successful or failed",
+							Unit:        "{log_record}",
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 2,
+										Attributes: attribute.NewSet(
+											attribute.String(
+												"otel.component.type",
+												string(otelconv.ComponentTypeSimpleLogProcessor),
+											),
+											attribute.String("otel.component.name", "simple_log_processor/0"),
+											attribute.String("error.type", string(otelconv.ErrorTypeOther)),
+										),
+										Exemplars: []metricdata.Exemplar[int64]{},
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				},
+			},
+		}
+
 		rm := metricdata.ResourceMetrics{}
 		collectErr := reader.Collect(context.Background(), &rm)
 		require.NoError(t, collectErr)
 
-		var processedMetric *metricdata.ScopeMetrics
-		for _, scopeMetrics := range rm.ScopeMetrics {
-			for _, m := range scopeMetrics.Metrics {
-				if m.Name == "otel.sdk.processor.log.processed" {
-					processedMetric = &scopeMetrics
-					break
-				}
-			}
-		}
-
-		require.NotNil(t, processedMetric)
-
-		totalCount, hasErrorType, hasComponentType, hasComponentName := extractProcessedLogMetricsError(
-			processedMetric,
-		)
-
-		assert.Equal(t, int64(2), totalCount)
-		assert.True(t, hasErrorType)
-		assert.True(t, hasComponentType)
-		assert.True(t, hasComponentName)
+		require.Len(t, rm.ScopeMetrics, 1)
+		metricdatatest.AssertEqual(t, expected.ScopeMetrics[0], rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 	})
 
 	t.Run("self observability enabled", func(t *testing.T) {
@@ -334,72 +382,6 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 			assert.Equal(t, []log.Record{*r}, e.records)
 		})
 	})
-}
-
-func extractProcessedLogMetricsSuccess(
-	processedMetric *metricdata.ScopeMetrics,
-) (totalCount int64, hasComponentType, hasComponentName bool) {
-	for _, m := range processedMetric.Metrics {
-		if m.Name != "otel.sdk.processor.log.processed" {
-			continue
-		}
-
-		data, ok := m.Data.(metricdata.Sum[int64])
-		if !ok {
-			continue
-		}
-
-		for _, dataPoint := range data.DataPoints {
-			totalCount += dataPoint.Value
-			for _, attr := range dataPoint.Attributes.ToSlice() {
-				switch attr.Key {
-				case "otel.component.type":
-					if attr.Value.AsString() == string(otelconv.ComponentTypeSimpleLogProcessor) {
-						hasComponentType = true
-					}
-				case "otel.component.name":
-					if strings.HasPrefix(attr.Value.AsString(), "simple_log_processor/") {
-						hasComponentName = true
-					}
-				}
-			}
-		}
-	}
-	return totalCount, hasComponentType, hasComponentName
-}
-
-func extractProcessedLogMetricsError(
-	processedMetric *metricdata.ScopeMetrics,
-) (totalCount int64, hasErrorType, hasComponentType, hasComponentName bool) {
-	for _, m := range processedMetric.Metrics {
-		if m.Name != "otel.sdk.processor.log.processed" {
-			continue
-		}
-
-		data, ok := m.Data.(metricdata.Sum[int64])
-		if !ok {
-			continue
-		}
-
-		for _, dataPoint := range data.DataPoints {
-			totalCount += dataPoint.Value
-			for _, attr := range dataPoint.Attributes.ToSlice() {
-				switch attr.Key {
-				case "error.type":
-					if attr.Value.AsString() == string(otelconv.ErrorTypeOther) {
-						hasErrorType = true
-					}
-				case "otel.component.type":
-					if attr.Value.AsString() == string(otelconv.ComponentTypeSimpleLogProcessor) {
-						hasComponentType = true
-					}
-				case "otel.component.name":
-					hasComponentName = true
-				}
-			}
-		}
-	}
-	return totalCount, hasErrorType, hasComponentType, hasComponentName
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
