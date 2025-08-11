@@ -84,11 +84,7 @@ var simpleProcRecordsPool = sync.Pool{
 }
 
 // OnEmit batches provided log record.
-func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
-	if s.exporter == nil {
-		return nil
-	}
-
+func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -98,19 +94,23 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 		simpleProcRecordsPool.Put(records)
 	}()
 
-	err := s.exporter.Export(ctx, *records)
-
-	if s.selfObservabilityEnabled {
-		attrs := make([]attribute.KeyValue, 2, 3)
-		attrs[0] = s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor)
-		attrs[1] = s.processedMetric.AttrComponentName(s.componentName)
-		if err != nil {
-			attrs = append(attrs, s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
+	defer func() {
+		if s.selfObservabilityEnabled {
+			attrs := make([]attribute.KeyValue, 2, 3)
+			attrs[0] = s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor)
+			attrs[1] = s.processedMetric.AttrComponentName(s.componentName)
+			if err != nil {
+				attrs = append(attrs, s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
+			}
+			s.processedMetric.Add(context.Background(), int64(len(*records)), attrs...)
 		}
-		s.processedMetric.Add(context.Background(), int64(len(*records)), attrs...)
+	}()
+
+	if s.exporter == nil {
+		return nil
 	}
 
-	return err
+	return s.exporter.Export(ctx, *records)
 }
 
 // Shutdown shuts down the exporter.
