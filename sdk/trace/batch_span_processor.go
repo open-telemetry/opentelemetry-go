@@ -121,7 +121,7 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 }
 
 // OnStart method does nothing.
-func (bsp *batchSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (*batchSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 
 // OnEnd method enqueues a ReadOnlySpan for later processing.
 func (bsp *batchSpanProcessor) OnEnd(s ReadOnlySpan) {
@@ -169,7 +169,7 @@ type forceFlushSpan struct {
 	flushed chan struct{}
 }
 
-func (f forceFlushSpan) SpanContext() trace.SpanContext {
+func (forceFlushSpan) SpanContext() trace.SpanContext {
 	return trace.NewSpanContext(trace.SpanContextConfig{TraceFlags: trace.FlagsSampled})
 }
 
