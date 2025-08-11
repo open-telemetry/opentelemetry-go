@@ -236,12 +236,19 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 
 		r := new(log.Record)
 		r.SetSeverityText("test")
-		_ = s.OnEmit(context.Background(), r)
-		_ = s.OnEmit(context.Background(), r)
+
+		var err error
+		err = s.OnEmit(context.Background(), r)
+		require.Error(t, err)
+		assert.Equal(t, "export failed", err.Error())
+
+		err = s.OnEmit(context.Background(), r)
+		require.Error(t, err)
+		assert.Equal(t, "export failed", err.Error())
 
 		rm := metricdata.ResourceMetrics{}
-		err := reader.Collect(context.Background(), &rm)
-		require.NoError(t, err)
+		collectErr := reader.Collect(context.Background(), &rm)
+		require.NoError(t, collectErr)
 
 		var processedMetric *metricdata.ScopeMetrics
 		for _, scopeMetrics := range rm.ScopeMetrics {
