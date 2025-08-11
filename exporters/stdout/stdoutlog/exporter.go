@@ -6,12 +6,22 @@ package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/log"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
+
+// otelComponentType is a name identifying the type of the OpenTelemetry component.
+const otelComponentType = "stdout_log_exporter"
 
 var _ log.Exporter = &Exporter{}
 
@@ -24,19 +34,16 @@ type Exporter struct {
 }
 
 type selfObservability struct {
-	inflight otelconv.SDKExporterLogInflight
-	exported otelconv.SDKExporterLogExported
-	duration otelconv.SDKExporterOperationDuration
+	enabled                 bool
+	attrs                   []attribute.KeyValue
+	inflightMetric          otelconv.SDKExporterLogInflight
+	exportedMetric          otelconv.SDKExporterLogExported
+	operationDurationMetric otelconv.SDKExporterOperationDuration
 }
 
 // New creates an [Exporter].
 func New(options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
-
-	var selfObs *selfObservability
-	if cfg.SelfObservability {
-		selfObs = newSelfObservability()
-	}
 
 	enc := json.NewEncoder(cfg.Writer)
 	if cfg.PrettyPrint {
@@ -44,12 +51,44 @@ func New(options ...Option) (*Exporter, error) {
 	}
 
 	e := Exporter{
-		timestamps:        cfg.Timestamps,
-		selfObservability: selfObs,
+		timestamps: cfg.Timestamps,
 	}
 	e.encoder.Store(enc)
+	e.initSelfObservability()
 
 	return &e, nil
+}
+
+// initSelfObservability initializes self-observability for the exporter if enabled.
+func (e *Exporter) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	e.selfObservability = &selfObservability{
+		enabled: true,
+		attrs: []attribute.KeyValue{
+			semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
+			semconv.OTelComponentTypeKey.String(otelComponentType),
+		},
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/stdout/stdoutlog",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err error
+	if e.selfObservability.inflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if e.selfObservability.exportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if e.selfObservability.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
 }
 
 // Export exports log records to writer.
@@ -58,17 +97,51 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if enc == nil {
 		return nil
 	}
-	e.recordSelfObservabilityMetrics(ctx, &records)
 
+	var err error
+	if e.selfObservability != nil && e.selfObservability.enabled {
+		err = e.exportWithSelfObservability(ctx, records)
+	} else {
+		err = e.exportWithoutSelfObservability(ctx, records)
+	}
+	return err
+}
+
+// exportWithSelfObservability exports logs with self-observability metrics.
+func (e *Exporter) exportWithSelfObservability(ctx context.Context, records []log.Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	count := int64(len(records))
+	start := time.Now()
+
+	e.selfObservability.inflightMetric.Add(context.Background(), count, e.selfObservability.attrs...)
+	defer func() {
+		addAttrs := make([]attribute.KeyValue, len(e.selfObservability.attrs), len(e.selfObservability.attrs)+1)
+		copy(addAttrs, e.selfObservability.attrs)
+		if err := ctx.Err(); err != nil {
+			addAttrs = append(addAttrs, semconv.ErrorType(err))
+		}
+
+		e.selfObservability.inflightMetric.Add(context.Background(), -count, e.selfObservability.attrs...)
+		e.selfObservability.exportedMetric.Add(context.Background(), count, addAttrs...)
+		e.selfObservability.operationDurationMetric.Record(context.Background(), time.Since(start).Seconds(), addAttrs...)
+	}()
+
+	return e.exportWithoutSelfObservability(ctx, records)
+}
+
+// exportWithoutSelfObservability exports logs without self-observability metrics.
+func (e *Exporter) exportWithoutSelfObservability(ctx context.Context, records []log.Record) error {
 	for _, record := range records {
 		// Honor context cancellation.
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		// Encode record, one by one.
 		recordJSON := e.newRecordJSON(record)
-		if err := enc.Encode(recordJSON); err != nil {
+		if err := e.encoder.Load().Encode(recordJSON); err != nil {
 			return err
 		}
 	}
@@ -87,26 +160,10 @@ func (*Exporter) ForceFlush(context.Context) error {
 	return nil
 }
 
-// recordSelfObservabilityMetrics records self-observability metrics if the feature is enabled.
-func (e *Exporter) recordSelfObservabilityMetrics(ctx context.Context, records *[]log.Record) {
-	start := time.Now()
-	if e.selfObservability == nil {
-		return
-	}
+var exporterIDCounter atomic.Int64
 
-	if len(*records) == 0 {
-		return
-	}
-
-	componentName := e.selfObservability.inflight.AttrComponentName("stdoutlog/0")
-	componentType := e.selfObservability.inflight.AttrComponentType("go.opentelemetry.io/otel/exporters/stdout/stdoutlog.Exporter")
-
-	e.selfObservability.inflight.Add(ctx, int64(len(*records)), componentName, componentType)
-
-	defer func() {
-		dur := float64(time.Since(start).Seconds())
-		e.selfObservability.duration.Record(ctx, dur, componentName, componentType)
-	}()
-
-	e.selfObservability.exported.Add(ctx, int64(len(*records)), componentName, componentType)
+// nextExporterID returns a new unique ID for an exporter.
+// the starting value is 0, and it increments by 1 for each call.
+func nextExporterID() int64 {
+	return exporterIDCounter.Add(1) - 1
 }
