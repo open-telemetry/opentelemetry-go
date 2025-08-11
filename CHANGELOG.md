@@ -41,7 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `RPCGRPCResponseMetadata`
 - Add `ErrorType` attribute helper function to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6962)
 - Add `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` which can be used to disable deduplication for log records. (#6968)
-- Add `WithCardinalityLimit` option to configure the cardinality limit in `go.opentelemetry.io/otel/sdk/metric`. (#6996, #7065, #7081)
+- Add `WithCardinalityLimit` option to configure the cardinality limit in `go.opentelemetry.io/otel/sdk/metric`. (#6996, #7065, #7081, #7164)
 - Add `Clone` method to `Record` in `go.opentelemetry.io/otel/log` that returns a copy of the record with no shared state. (#7001)
 - The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
   The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
@@ -2022,6 +2022,7 @@ with major version 0.
 
 - Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)
   - The following status codes are defined as transient errors:
+
       | gRPC Status Code | Description |
       | ---------------- | ----------- |
       | 1  | Cancelled |
@@ -2031,6 +2032,7 @@ with major version 0.
       | 10 | Out of Range |
       | 14 | Unavailable |
       | 15 | Data Loss |
+
 - Added `Status` type to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 - Added `SpanStub` type and its associated functions to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
@@ -2318,6 +2320,7 @@ with major version 0.
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
 - Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 - Compatibility testing suite in the CI system for the following systems. (#1567)
+
    | OS      | Go Version | Architecture |
    | ------- | ---------- | ------------ |
    | Ubuntu  | 1.15       | amd64        |
