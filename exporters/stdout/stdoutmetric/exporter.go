@@ -19,10 +19,9 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
-var (
-	stdoutMetricExporterComponentType = otelconv.ComponentTypeAttr("stdout_metric_exporter")
-	exporterIDCounter                 atomic.Int64
-)
+const stdoutMetricExporterComponentType = otelconv.ComponentTypeAttr("stdout_metric_exporter")
+
+var exporterIDCounter atomic.Int64
 
 // nextExporterID returns an identifier for this stdoutmetric exporter,
 // starting with 0 and incrementing by 1 each time it is called.
