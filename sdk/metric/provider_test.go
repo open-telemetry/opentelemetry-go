@@ -176,36 +176,82 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 }
 
 func TestMeterProviderCardinalityLimit(t *testing.T) {
-	reader := NewManualReader()
-
-	mp := NewMeterProvider(
-		WithReader(reader),
-		WithCardinalityLimit(5),
-	)
-
-	meter := mp.Meter("test-meter")
-
-	counter, err := meter.Int64Counter("metric")
-	if err != nil {
-		t.Fatalf("failed to create counter: %v", err)
+	tests := []struct {
+		name        string
+		limit       int
+		expectedMax int // 0 => no limit
+	}{
+		{
+			name:        "no limit (default)",
+			limit:       -1, // special case: constructor without limit
+			expectedMax: 0,
+		},
+		{
+			name:        "no limit (limit=0)",
+			limit:       0,
+			expectedMax: 0,
+		},
+		{
+			name:        "no limit (negative)",
+			limit:       -5,
+			expectedMax: 0,
+		},
+		{
+			name:        "limit=5",
+			limit:       5,
+			expectedMax: 5,
+		},
 	}
-	for i := range 10 {
-		counter.Add(context.Background(), 1, api.WithAttributes(attribute.Int("key", i)))
-	}
 
-	var rm metricdata.ResourceMetrics
-	err = reader.Collect(context.Background(), &rm)
-	if err != nil {
-		t.Fatalf("failed to collect metrics: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := NewManualReader()
 
-	data, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-	if !ok {
-		t.Fatalf("unexpected aggregation type %T", data)
-	}
-	totalDatapoints := len(data.DataPoints)
+			var mp *MeterProvider
+			if tt.limit == -1 {
+				// default (no limit param)
+				mp = NewMeterProvider(WithReader(reader))
+			} else {
+				mp = NewMeterProvider(
+					WithReader(reader),
+					WithCardinalityLimit(tt.limit),
+				)
+			}
 
-	if totalDatapoints > 5 {
-		t.Errorf("expected at most 5 unique data points due to cardinality limit, but got %d", totalDatapoints)
+			meter := mp.Meter("test-meter")
+
+			counter, err := meter.Int64Counter("metric")
+			if err != nil {
+				t.Fatalf("failed to create counter: %v", err)
+			}
+
+			for i := 0; i < 10; i++ {
+				counter.Add(context.Background(), 1,
+					api.WithAttributes(attribute.Int("key", i)))
+			}
+
+			var rm metricdata.ResourceMetrics
+			if err := reader.Collect(context.Background(), &rm); err != nil {
+				t.Fatalf("failed to collect metrics: %v", err)
+			}
+
+			data, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+			if !ok {
+				t.Fatalf("unexpected aggregation type %T", data)
+			}
+
+			totalDatapoints := len(data.DataPoints)
+
+			if tt.expectedMax > 0 {
+				if totalDatapoints > tt.expectedMax {
+					t.Errorf("expected at most %d unique data points due to limit, but got %d",
+						tt.expectedMax, totalDatapoints)
+				}
+			} else {
+				if totalDatapoints != 10 {
+					t.Errorf("expected 10 data points without limit, got %d", totalDatapoints)
+				}
+			}
+		})
 	}
 }
