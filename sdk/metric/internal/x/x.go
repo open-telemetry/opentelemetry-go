@@ -19,6 +19,7 @@ type Feature[T any] struct {
 	parse func(v string) (T, bool)
 }
 
+//nolint:unused
 func newFeature[T any](suffix string, parse func(string) (T, bool)) Feature[T] {
 	const envKeyRoot = "OTEL_GO_X_"
 	return Feature[T]{

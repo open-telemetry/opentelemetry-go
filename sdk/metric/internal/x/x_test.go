@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//nolint:unused
 func run(steps ...func(*testing.T)) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
@@ -18,10 +19,12 @@ func run(steps ...func(*testing.T)) func(*testing.T) {
 	}
 }
 
+//nolint:unused
 func setenv(k, v string) func(t *testing.T) {
 	return func(t *testing.T) { t.Setenv(k, v) }
 }
 
+//nolint:unused
 func assertEnabled[T any](f Feature[T], want T) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
@@ -33,6 +36,7 @@ func assertEnabled[T any](f Feature[T], want T) func(*testing.T) {
 	}
 }
 
+//nolint:unused
 func assertDisabled[T any](f Feature[T]) func(*testing.T) {
 	var zero T
 	return func(t *testing.T) {
