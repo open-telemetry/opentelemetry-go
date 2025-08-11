@@ -83,9 +83,10 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 }
 
 func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
+	var err error
 	trackExportFunc := e.trackExport(context.Background(), countDataPoints(data))
-	if err := ctx.Err(); err != nil {
-		trackExportFunc(err)
+	defer func() { trackExportFunc(err) }()
+	if err = ctx.Err(); err != nil {
 		return err
 	}
 	if e.redactTimestamps {
@@ -94,12 +95,9 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 
 	global.Debug("STDOUT exporter export", "Data", data)
 
-	err := e.encVal.Load().(encoderHolder).Encode(data)
-	if err != nil {
-		trackExportFunc(err)
+	if err = e.encVal.Load().(encoderHolder).Encode(data); err != nil {
 		return err
 	}
-	trackExportFunc(nil)
 	return nil
 }
 
