@@ -61,6 +61,7 @@ The next release will require at least [Go 1.24].
 - The `go.opentelemetry.io/otel/semconv/v1.37.0` package.
   The package contains semantic conventions from the `v1.37.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.37.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.36.0.`(#7254)
+- Greatly reduce the cost of recording metrics in `go.opentelemetry.io/otel/sdk/metric` using hashing for map keys. (#7175)
 
 ### Changed
 
@@ -80,6 +81,7 @@ The next release will require at least [Go 1.24].
 - `SetBody` method of `Record` in `go.opentelemetry.io/otel/sdk/log` now deduplicates key-value collections (`log.Value` of `log.KindMap` from `go.opentelemetry.io/otel/log`). (#7002)
 - Fix the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability component type and name. (#7195)
 - Fix partial export count metric in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7199)
+- Clarify the documentation about equivalence guarantees for the `Set` and `Distinct` types in `go.opentelemetry.io/otel/attribute`. (#7175)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
