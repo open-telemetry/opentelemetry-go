@@ -21,11 +21,11 @@ type client struct {
 
 var _ otlptrace.Client = &client{}
 
-func (c *client) Start(context.Context) error {
+func (*client) Start(context.Context) error {
 	return nil
 }
 
-func (c *client) Stop(context.Context) error {
+func (*client) Stop(context.Context) error {
 	return nil
 }
 

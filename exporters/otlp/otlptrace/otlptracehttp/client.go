@@ -104,7 +104,7 @@ func NewClient(opts ...Option) otlptrace.Client {
 }
 
 // Start does nothing in a HTTP client.
-func (d *client) Start(ctx context.Context) error {
+func (*client) Start(ctx context.Context) error {
 	// nothing to do
 	select {
 	case <-ctx.Done():

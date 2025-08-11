@@ -39,7 +39,7 @@ func (tr *tracer) initSelfObservability() {
 
 	tr.selfObservabilityEnabled = true
 	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/sdk/trace",
+	m := mp.Meter(selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL))
 
