@@ -854,7 +854,7 @@ func assertSelfObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValu
 
 	wantScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
-			Name:      selfObsScopeName,
+			Name:      "go.opentelemetry.io/otel/sdk/trace",
 			Version:   sdk.Version(),
 			SchemaURL: semconv.SchemaURL,
 		},
