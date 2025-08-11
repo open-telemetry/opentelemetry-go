@@ -165,8 +165,6 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	defer otel.SetMeterProvider(originalMP)
 
 	t.Run("self observability disabled", func(t *testing.T) {
-		t.Setenv(x.SelfObservability.Key(), "")
-
 		e := new(exporter)
 		s := log.NewSimpleProcessor(e)
 
