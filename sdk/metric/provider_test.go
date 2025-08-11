@@ -235,8 +235,12 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 			require.IsType(t, metricdata.Sum[int64]{}, data, "expected metricdata.Sum[int64]")
 
 			sumData := data.(metricdata.Sum[int64])
-			assert.Len(t, sumData.DataPoints, tt.wantDataPoints,
-				"unexpected number of data points")
+			assert.Len(
+				t,
+				sumData.DataPoints,
+				tt.wantDataPoints,
+				"unexpected number of data points",
+			)
 		})
 	}
 }
