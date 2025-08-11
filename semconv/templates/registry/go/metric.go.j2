@@ -26,7 +26,7 @@ var (
 type {{ name }}Attr {{ h.member_type(attr.type.members[0]) }}
 
 var (
-{%- for m in attr.type.members if not m.deprecated %}
+{%- for m in attr.type.members %}
 	{%- set m_name = name ~ h.to_go_name(m.id, ctx.root_namespace) -%}
 
 	{% if attr.type.members[0].value is string -%}
@@ -46,7 +46,7 @@ var (
 )
 {%- endfor %}
 
-{%- for metric in ctx.metrics if not metric.deprecated %}
+{%- for metric in ctx.metrics %}
 {%- set metric_name = h.to_go_name(metric.metric_name, ctx.root_namespace) %}
 {%- set metric_inst = metric.metric_name | map_text("instrument", i.instrument_default(metric)) %}
 
