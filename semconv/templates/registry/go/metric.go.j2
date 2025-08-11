@@ -27,13 +27,21 @@ type {{ name }}Attr {{ h.member_type(attr.type.members[0]) }}
 
 var (
 {%- for m in attr.type.members if not m.deprecated %}
-	{%- set m_name = name ~ h.to_go_name(m.id, ctx.root_namespace) %}
-{{ h.prefix_brief(m.brief, m_name ~ " is ") | comment(format="go_1tab") }}
-	{{ m_name }} {{ name }}Attr = {% if attr.type.members[0].value is string -%}
-		"{{ m.value }}"
+	{%- set m_name = name ~ h.to_go_name(m.id, ctx.root_namespace) -%}
+
+	{% if attr.type.members[0].value is string -%}
+	{%- set m_value = '"' + m.value + '"' -%}
 	{%- else -%}
-		{{ m.value }}
+	{%- set m_value = m.value -%}
 	{%- endif -%}
+
+	{%- if m.brief is defined %}
+	{%- set m_brief = m.brief -%}
+	{%- else %}
+	{%- set m_brief = "standardized value " + m_value + ' of ' + name + 'Attr.' -%}
+	{%- endif %}
+{{ h.prefix_brief(m_brief, m_name ~ " is ") | comment(format="go_1tab") }}
+	{{ m_name }} {{ name }}Attr = {{ m_value }}
 {%- endfor %}
 )
 {%- endfor %}
