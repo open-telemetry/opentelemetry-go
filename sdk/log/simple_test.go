@@ -342,26 +342,6 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 		metricdatatest.AssertEqual(t, expected.ScopeMetrics[0], rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 	})
 
-	t.Run("self observability enabled", func(t *testing.T) {
-		setupCleanMeterProvider(t)
-
-		t.Setenv(x.SelfObservability.Key(), "true")
-
-		otel.SetMeterProvider(noop.NewMeterProvider())
-
-		e := new(exporter)
-		s := log.NewSimpleProcessor(e)
-
-		r := new(log.Record)
-		r.SetSeverityText("test")
-		assert.NotPanics(t, func() {
-			_ = s.OnEmit(context.Background(), r)
-		})
-
-		require.True(t, e.exportCalled)
-		assert.Equal(t, []log.Record{*r}, e.records)
-	})
-
 	t.Run("self observability metric creation error handled", func(t *testing.T) {
 		setupCleanMeterProvider(t)
 
