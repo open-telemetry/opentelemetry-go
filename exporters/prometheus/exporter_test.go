@@ -912,7 +912,7 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 	}
 }
 
-// Test self-observability when disabled and error scenarios
+// Test self-observability when disabled and error scenarios.
 func TestSelfObservability_DisabledAndErrorScenarios(t *testing.T) {
 	testCases := []struct {
 		name string
