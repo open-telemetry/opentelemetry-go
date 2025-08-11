@@ -14,12 +14,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -453,6 +458,334 @@ func TestValueMarshalJSON(t *testing.T) {
 			got, err := json.Marshal(value{Value: tc.value})
 			require.NoError(t, err)
 			assert.JSONEq(t, tc.want, string(got))
+		})
+	}
+}
+
+func TestSelfObservability(t *testing.T) {
+	testCases := []struct {
+		name   string
+		enable bool
+		test   func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
+	}{
+		{
+			name:   "inflight",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				rf := logtest.RecordFactory{
+					Timestamp: time.Now(),
+					Body:      log.StringValue("test log 1"),
+				}
+				record1 := rf.NewRecord()
+
+				rf.Body = log.StringValue("test log 2")
+				record2 := rf.NewRecord()
+
+				records := []sdklog.Record{record1, record2}
+
+				err = exporter.Export(context.Background(), records)
+				require.NoError(t, err)
+
+				got := scopeMetrics()
+				assert.NotEmpty(t, got.Metrics)
+
+				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
+				assert.NotEmpty(t, got.Scope.Version)
+
+				var inflightMetric metricdata.Metrics
+				inflightInstrument := otelconv.SDKExporterLogInflight{}
+				for _, m := range got.Metrics {
+					if m.Name == inflightInstrument.Name() {
+						inflightMetric = m
+						break
+					}
+				}
+				require.NotEmpty(t, inflightMetric, "inflight metric not found")
+
+				expected := metricdata.Metrics{
+					Name:        inflightInstrument.Name(),
+					Description: inflightInstrument.Description(),
+					Unit:        inflightInstrument.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: false,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 0,
+								Attributes: attribute.NewSet(
+									attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/0")},
+									attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+								),
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, expected, inflightMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "exported",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				rf := logtest.RecordFactory{
+					Timestamp: time.Now(),
+					Body:      log.StringValue("test log 1"),
+				}
+				record1 := rf.NewRecord()
+
+				rf.Body = log.StringValue("test log 2")
+				record2 := rf.NewRecord()
+
+				rf.Body = log.StringValue("test log 3")
+				record3 := rf.NewRecord()
+
+				records := []sdklog.Record{record1, record2, record3}
+
+				err = exporter.Export(context.Background(), records)
+				require.NoError(t, err)
+
+				got := scopeMetrics()
+				assert.NotEmpty(t, got.Metrics)
+
+				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
+				assert.NotEmpty(t, got.Scope.Version)
+
+				var exportedMetric metricdata.Metrics
+				exportedInstrument := otelconv.SDKExporterLogExported{}
+				for _, m := range got.Metrics {
+					if m.Name == exportedInstrument.Name() {
+						exportedMetric = m
+						break
+					}
+				}
+				require.NotEmpty(t, exportedMetric, "exported metric not found")
+
+				expected := metricdata.Metrics{
+					Name:        exportedInstrument.Name(),
+					Description: exportedInstrument.Description(),
+					Unit:        exportedInstrument.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 3,
+								Attributes: attribute.NewSet(
+									attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/1")},
+									attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+								),
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, expected, exportedMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "duration",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				rf := logtest.RecordFactory{
+					Timestamp: time.Now(),
+					Body:      log.StringValue("test log"),
+				}
+				record := rf.NewRecord()
+				records := []sdklog.Record{record}
+
+				err = exporter.Export(context.Background(), records)
+				require.NoError(t, err)
+
+				got := scopeMetrics()
+				assert.NotEmpty(t, got.Metrics)
+
+				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
+				assert.NotEmpty(t, got.Scope.Version)
+
+				var durationMetric metricdata.Metrics
+				durationInstrument := otelconv.SDKExporterOperationDuration{}
+				for _, m := range got.Metrics {
+					if m.Name == durationInstrument.Name() {
+						durationMetric = m
+						break
+					}
+				}
+				require.NotEmpty(t, durationMetric, "duration metric not found")
+
+				expected := metricdata.Metrics{
+					Name:        durationInstrument.Name(),
+					Description: durationInstrument.Description(),
+					Unit:        durationInstrument.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Count: 1,
+								Attributes: attribute.NewSet(
+									attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/2")},
+									attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+								),
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, expected, durationMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "multiple_exports",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				for i := 0; i < 3; i++ {
+					rf := logtest.RecordFactory{
+						Timestamp: time.Now(),
+						Body:      log.StringValue("test log"),
+					}
+					record := rf.NewRecord()
+					records := []sdklog.Record{record}
+					err = exporter.Export(context.Background(), records)
+					require.NoError(t, err)
+				}
+
+				got := scopeMetrics()
+				assert.NotEmpty(t, got.Metrics)
+
+				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
+				assert.NotEmpty(t, got.Scope.Version)
+
+				expectedAttrs := attribute.NewSet(
+					attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/3")},
+					attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+				)
+
+				expected := metricdata.ScopeMetrics{
+					Scope: got.Scope,
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterLogInflight{}.Name(),
+							Description: otelconv.SDKExporterLogInflight{}.Description(),
+							Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: false,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value:      0,
+										Attributes: expectedAttrs,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterLogExported{}.Name(),
+							Description: otelconv.SDKExporterLogExported{}.Description(),
+							Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value:      3,
+										Attributes: expectedAttrs,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Count:      3,
+										Attributes: expectedAttrs,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, expected, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "empty_records",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				err = exporter.Export(context.Background(), []sdklog.Record{})
+				require.NoError(t, err)
+
+				got := scopeMetrics()
+				if len(got.Metrics) > 0 {
+					assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
+					assert.NotEmpty(t, got.Scope.Version)
+				}
+				assert.Empty(t, got.Metrics, "no metrics should be recorded for empty records")
+			},
+		},
+		{
+			name:   "self_observability_disabled",
+			enable: false,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				rf := logtest.RecordFactory{
+					Timestamp: time.Now(),
+					Body:      log.StringValue("test log"),
+				}
+				record := rf.NewRecord()
+				records := []sdklog.Record{record}
+
+				err = exporter.Export(context.Background(), records)
+				require.NoError(t, err)
+
+				got := scopeMetrics()
+				assert.Empty(t, got.Metrics, "no metrics should be recorded when self-observability is disabled")
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.enable {
+				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+			}
+			prev := otel.GetMeterProvider()
+			otel.SetMeterProvider(prev)
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			scopeMetrics := func() metricdata.ScopeMetrics {
+				var got metricdata.ResourceMetrics
+				err := r.Collect(context.Background(), &got)
+				require.NoError(t, err)
+				if len(got.ScopeMetrics) == 0 {
+					return metricdata.ScopeMetrics{}
+				}
+				return got.ScopeMetrics[0]
+			}
+			tc.test(t, scopeMetrics)
 		})
 	}
 }
