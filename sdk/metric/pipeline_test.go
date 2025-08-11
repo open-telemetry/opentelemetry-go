@@ -32,7 +32,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func testSumAggregateOutput(dest *metricdata.Aggregation) int {
+func testSumAggregateOutput(
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+) int {
 	*dest = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,

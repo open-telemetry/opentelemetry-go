@@ -536,7 +536,7 @@ func newIndefiniteExporter(t *testing.T) indefiniteExporter {
 	return e
 }
 
-func (e indefiniteExporter) Shutdown(context.Context) error {
+func (indefiniteExporter) Shutdown(context.Context) error {
 	return nil
 }
 
