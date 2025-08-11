@@ -101,10 +101,9 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	err := s.exporter.Export(ctx, *records)
 
 	if s.selfObservabilityEnabled {
-		attrs := []attribute.KeyValue{
-			s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
-			s.processedMetric.AttrComponentName(s.componentName),
-		}
+		attrs := make([]attribute.KeyValue, 2, 3)
+		attrs[0] = s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor)
+		attrs[1] = s.processedMetric.AttrComponentName(s.componentName)
 		if err != nil {
 			attrs = append(attrs, s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
 		}
