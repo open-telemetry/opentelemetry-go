@@ -89,6 +89,6 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 }
 
 // ForceFlush does nothing. The Exporter holds no state.
-func (e *Exporter) ForceFlush(context.Context) error {
+func (*Exporter) ForceFlush(context.Context) error {
 	return nil
 }
