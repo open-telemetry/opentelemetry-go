@@ -9,9 +9,9 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.3.1
 	github.com/jcchavezs/porto v0.7.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.26.0
-	go.opentelemetry.io/build-tools/gotmpl v0.26.0
-	go.opentelemetry.io/build-tools/multimod v0.26.0
+	go.opentelemetry.io/build-tools/crosslink v0.26.1
+	go.opentelemetry.io/build-tools/gotmpl v0.26.1
+	go.opentelemetry.io/build-tools/multimod v0.26.1
 	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a
 	golang.org/x/tools v0.36.0
 	golang.org/x/vuln v1.1.4
