@@ -86,7 +86,7 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	var err error
 	trackExportFunc := e.trackExport(context.Background(), countDataPoints(data))
 	defer func() { trackExportFunc(err) }()
-	if err = ctx.Err(); err != nil {
+	if err = ctx.Err(); err != nil { // nolint: gocritic // err is used in defer statement
 		return err
 	}
 	if e.redactTimestamps {
@@ -95,7 +95,7 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 
 	global.Debug("STDOUT exporter export", "Data", data)
 
-	if err = e.encVal.Load().(encoderHolder).Encode(data); err != nil {
+	if err = e.encVal.Load().(encoderHolder).Encode(data); err != nil { // nolint: gocritic // err is used in defer statement
 		return err
 	}
 	return nil
