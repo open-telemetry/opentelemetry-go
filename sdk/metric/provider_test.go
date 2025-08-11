@@ -174,3 +174,38 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 		"Metrics produced for instrument collected by different MeterProvider",
 	)
 }
+
+func TestMeterProviderCardinalityLimit(t *testing.T) {
+	reader := NewManualReader()
+
+	mp := NewMeterProvider(
+		WithReader(reader),
+		WithCardinalityLimit(5),
+	)
+
+	meter := mp.Meter("test-meter")
+
+	counter, err := meter.Int64Counter("metric")
+	if err != nil {
+		t.Fatalf("failed to create counter: %v", err)
+	}
+	for i := range 10 {
+		counter.Add(context.Background(), 1, api.WithAttributes(attribute.Int("key", i)))
+	}
+
+	var rm metricdata.ResourceMetrics
+	err = reader.Collect(context.Background(), &rm)
+	if err != nil {
+		t.Fatalf("failed to collect metrics: %v", err)
+	}
+
+	data, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	if !ok {
+		t.Fatalf("unexpected aggregation type %T", data)
+	}
+	totalDatapoints := len(data.DataPoints)
+
+	if totalDatapoints > 5 {
+		t.Errorf("expected at most 5 unique data points due to cardinality limit, but got %d", totalDatapoints)
+	}
+}
