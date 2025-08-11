@@ -46,10 +46,9 @@ type SimpleProcessor struct {
 // [NewBatchProcessor] instead. However, there may be exceptions where certain
 // [Exporter] implementations perform better with this Processor.
 func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimpleProcessor {
-	instanceID := simpleProcessorInstanceCounter.Add(1) - 1
 	s := &SimpleProcessor{
 		exporter:      exporter,
-		componentName: fmt.Sprintf("%s/%d", string(otelconv.ComponentTypeSimpleLogProcessor), instanceID),
+		componentName: fmt.Sprintf("%s/%d", string(otelconv.ComponentTypeSimpleLogProcessor), simpleProcessorIDCounter.Add(1)-1),
 	}
 	s.initSelfObservability()
 	return s
