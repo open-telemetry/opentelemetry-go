@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -442,31 +444,38 @@ func TestCustomUserAgent(t *testing.T) {
 }
 
 func TestSelfObservability(t *testing.T) {
-	defaultCallExportSpans := func(t *testing.T, exporter *otlptrace.Exporter) {
-		require.NoError(t, exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
-			{Name: "/foo"},
-			{Name: "/bar"},
-		}.Snapshots()))
+	defaultCallExportSpans := func(t *testing.T, client otlptrace.Client) {
+		require.NoError(t, client.UploadTraces(context.Background(),
+			[]*tracepb.ResourceSpans{{
+				ScopeSpans: []*tracepb.ScopeSpans{
+					{
+						Spans: []*tracepb.Span{
+							{Name: "/foo"},
+							{Name: "/bar"},
+						},
+					},
+				},
+			}}))
 	}
 
 	tests := []struct {
-		name            string
-		enabled         bool
-		callExportSpans func(t *testing.T, exporter *otlptrace.Exporter)
-		assertMetrics   func(t *testing.T, rm metricdata.ResourceMetrics)
+		name             string
+		enabled          bool
+		callUploadTraces func(t *testing.T, client otlptrace.Client)
+		assertMetrics    func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
-			name:            "Disabled",
-			enabled:         false,
-			callExportSpans: defaultCallExportSpans,
+			name:             "Disabled",
+			enabled:          false,
+			callUploadTraces: defaultCallExportSpans,
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
 			},
 		},
 		{
-			name:            "Enabled",
-			enabled:         true,
-			callExportSpans: defaultCallExportSpans,
+			name:             "Enabled",
+			enabled:          true,
+			callUploadTraces: defaultCallExportSpans,
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				t.Helper()
 				require.Len(t, rm.ScopeMetrics, 1)
@@ -545,15 +554,21 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name:    "Enabled, but ExportSpans returns error",
 			enabled: true,
-			callExportSpans: func(t *testing.T, exporter *otlptrace.Exporter) {
+			callUploadTraces: func(t *testing.T, client otlptrace.Client) {
 				t.Helper()
 				ctx, cancel := context.WithCancel(context.Background())
 				cancel()
 
-				err := exporter.ExportSpans(ctx, tracetest.SpanStubs{
-					{Name: "/foo"},
-					{Name: "/bar"},
-				}.Snapshots())
+				err := client.UploadTraces(ctx, []*tracepb.ResourceSpans{{
+					ScopeSpans: []*tracepb.ScopeSpans{
+						{
+							Spans: []*tracepb.Span{
+								{Name: "/foo"},
+								{Name: "/bar"},
+							},
+						},
+					},
+				}})
 				require.Error(t, err)
 			},
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
@@ -650,10 +665,18 @@ func TestSelfObservability(t *testing.T) {
 
 			mc := runMockCollectorAtEndpoint(t, "localhost:51844")
 			t.Cleanup(func() { require.NoError(t, mc.stop()) })
-			exp := newGRPCExporter(t, context.Background(), mc.endpoint)
-			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })
 
-			tt.callExportSpans(t, exp)
+			opts := []otlptracegrpc.Option{
+				otlptracegrpc.WithInsecure(),
+				otlptracegrpc.WithEndpoint(mc.endpoint),
+				otlptracegrpc.WithReconnectionPeriod(50 * time.Millisecond),
+			}
+
+			client := otlptracegrpc.NewClient(opts...)
+			t.Cleanup(func() { require.NoError(t, client.Stop(context.Background())) })
+			require.NoError(t, client.Start(context.Background()))
+
+			tt.callUploadTraces(t, client)
 
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, r.Collect(context.Background(), &rm))
