@@ -162,9 +162,13 @@ func (*failingMeter) Int64Counter(_ string, _ ...metric.Int64CounterOption) (met
 
 func TestSimpleProcessorSelfObservability(t *testing.T) {
 	originalMP := otel.GetMeterProvider()
-	defer otel.SetMeterProvider(originalMP)
+	setupCleanMeterProvider := func(t *testing.T) {
+		t.Cleanup(func() { otel.SetMeterProvider(originalMP) })
+	}
 
 	t.Run("self observability disabled", func(t *testing.T) {
+		setupCleanMeterProvider(t)
+
 		reader := metricSDK.NewManualReader()
 		mp := metricSDK.NewMeterProvider(metricSDK.WithReader(reader))
 		otel.SetMeterProvider(mp)
@@ -193,6 +197,8 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	})
 
 	t.Run("self observability enabled without error", func(t *testing.T) {
+		setupCleanMeterProvider(t)
+
 		t.Setenv(x.SelfObservability.Key(), "true")
 
 		reader := metricSDK.NewManualReader()
@@ -239,6 +245,8 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	})
 
 	t.Run("self observability enabled with error", func(t *testing.T) {
+		setupCleanMeterProvider(t)
+
 		t.Setenv(x.SelfObservability.Key(), "true")
 
 		reader := metricSDK.NewManualReader()
@@ -287,6 +295,8 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	})
 
 	t.Run("self observability enabled", func(t *testing.T) {
+		setupCleanMeterProvider(t)
+
 		t.Setenv(x.SelfObservability.Key(), "true")
 
 		otel.SetMeterProvider(noop.NewMeterProvider())
@@ -305,6 +315,8 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	})
 
 	t.Run("self observability metric creation error handled", func(t *testing.T) {
+		setupCleanMeterProvider(t)
+
 		t.Setenv(x.SelfObservability.Key(), "true")
 
 		failingMP := &failingMeterProvider{}
