@@ -183,7 +183,7 @@ type RedactTokensProcessor struct{}
 
 // OnEmit redacts values from attributes containing "token" in the key
 // by replacing them with a REDACTED value.
-func (p *RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) error {
+func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv logapi.KeyValue) bool {
 		if strings.Contains(strings.ToLower(kv.Key), "token") {
 			record.AddAttributes(logapi.String(kv.Key, "REDACTED"))
@@ -194,11 +194,11 @@ func (p *RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) er
 }
 
 // Shutdown returns nil.
-func (p *RedactTokensProcessor) Shutdown(context.Context) error {
+func (*RedactTokensProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
 // ForceFlush returns nil.
-func (p *RedactTokensProcessor) ForceFlush(context.Context) error {
+func (*RedactTokensProcessor) ForceFlush(context.Context) error {
 	return nil
 }

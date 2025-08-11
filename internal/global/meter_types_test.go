@@ -182,14 +182,14 @@ type observationRecorder struct {
 	ctx context.Context
 }
 
-func (o observationRecorder) ObserveFloat64(i metric.Float64Observable, _ float64, _ ...metric.ObserveOption) {
+func (observationRecorder) ObserveFloat64(i metric.Float64Observable, _ float64, _ ...metric.ObserveOption) {
 	iImpl, ok := i.(*testCountingFloatInstrument)
 	if ok {
 		iImpl.observe()
 	}
 }
 
-func (o observationRecorder) ObserveInt64(i metric.Int64Observable, _ int64, _ ...metric.ObserveOption) {
+func (observationRecorder) ObserveInt64(i metric.Int64Observable, _ int64, _ ...metric.ObserveOption) {
 	iImpl, ok := i.(*testCountingIntInstrument)
 	if ok {
 		iImpl.observe()

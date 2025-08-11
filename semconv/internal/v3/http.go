@@ -298,7 +298,7 @@ func (c *HTTPConv) ResponseHeader(h http.Header) []attribute.KeyValue {
 	return c.header("http.response.header", h)
 }
 
-func (c *HTTPConv) header(prefix string, h http.Header) []attribute.KeyValue {
+func (*HTTPConv) header(prefix string, h http.Header) []attribute.KeyValue {
 	key := func(k string) attribute.Key {
 		k = strings.ToLower(k)
 		k = strings.ReplaceAll(k, "-", "_")
@@ -315,7 +315,7 @@ func (c *HTTPConv) header(prefix string, h http.Header) []attribute.KeyValue {
 
 // ClientStatus returns a span status code and message for an HTTP status code
 // value received by a client.
-func (c *HTTPConv) ClientStatus(code int) (codes.Code, string) {
+func (*HTTPConv) ClientStatus(code int) (codes.Code, string) {
 	stat, valid := validateHTTPStatusCode(code)
 	if !valid {
 		return stat, fmt.Sprintf("Invalid HTTP status code %d", code)
@@ -326,7 +326,7 @@ func (c *HTTPConv) ClientStatus(code int) (codes.Code, string) {
 // ServerStatus returns a span status code and message for an HTTP status code
 // value returned by a server. Status codes in the 400-499 range are not
 // returned as errors.
-func (c *HTTPConv) ServerStatus(code int) (codes.Code, string) {
+func (*HTTPConv) ServerStatus(code int) (codes.Code, string) {
 	stat, valid := validateHTTPStatusCode(code)
 	if !valid {
 		return stat, fmt.Sprintf("Invalid HTTP status code %d", code)
