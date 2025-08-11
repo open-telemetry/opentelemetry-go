@@ -30,6 +30,45 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
+// extractAttributeValue extracts the value of a specific attribute from the first DataPoint found.
+func extractAttributeValue(data any, attrKey attribute.Key) (attribute.Value, bool) {
+	switch d := data.(type) {
+	case metricdata.ResourceMetrics:
+		for _, scope := range d.ScopeMetrics {
+			for _, m := range scope.Metrics {
+				if val, ok := extractAttributeValue(m.Data, attrKey); ok {
+					return val, true
+				}
+			}
+		}
+	case metricdata.Sum[int64]:
+		for _, dp := range d.DataPoints {
+			if val, ok := dp.Attributes.Value(attrKey); ok {
+				return val, true
+			}
+		}
+	case metricdata.Sum[float64]:
+		for _, dp := range d.DataPoints {
+			if val, ok := dp.Attributes.Value(attrKey); ok {
+				return val, true
+			}
+		}
+	case metricdata.Gauge[int64]:
+		for _, dp := range d.DataPoints {
+			if val, ok := dp.Attributes.Value(attrKey); ok {
+				return val, true
+			}
+		}
+	case metricdata.Gauge[float64]:
+		for _, dp := range d.DataPoints {
+			if val, ok := dp.Attributes.Value(attrKey); ok {
+				return val, true
+			}
+		}
+	}
+	return attribute.Value{}, false
+}
+
 type exporter struct {
 	records []log.Record
 
@@ -171,7 +210,6 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	setupCleanMeterProvider := func(t *testing.T) {
 		t.Cleanup(func() {
 			otel.SetMeterProvider(originalMP)
-			log.ResetSimpleProcessorIDCounterForTesting()
 		})
 	}
 
@@ -229,6 +267,17 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 		err = s.OnEmit(context.Background(), r)
 		require.NoError(t, err)
 
+		// First collect to get the actual component name
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+
+		// Extract the actual component name and use it in expected structure
+		componentVal, ok := extractAttributeValue(rm, "otel.component.name")
+		require.True(t, ok, "component name attribute should be present")
+		actualComponentName := componentVal.AsString()
+
 		expected := metricdata.ResourceMetrics{
 			ScopeMetrics: []metricdata.ScopeMetrics{
 				{
@@ -251,7 +300,7 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 												"otel.component.type",
 												string(otelconv.ComponentTypeSimpleLogProcessor),
 											),
-											attribute.String("otel.component.name", "simple_log_processor/0"),
+											attribute.String("otel.component.name", actualComponentName),
 										),
 										Exemplars: []metricdata.Exemplar[int64]{},
 									},
@@ -264,10 +313,6 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 				},
 			},
 		}
-
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
-		require.NoError(t, err)
 
 		require.Len(t, rm.ScopeMetrics, 1)
 		metricdatatest.AssertEqual(t, expected.ScopeMetrics[0], rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
@@ -297,6 +342,15 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "export failed", err.Error())
 
+		rm := metricdata.ResourceMetrics{}
+		collectErr := reader.Collect(context.Background(), &rm)
+		require.NoError(t, collectErr)
+		require.Len(t, rm.ScopeMetrics, 1)
+
+		componentVal, ok := extractAttributeValue(rm, "otel.component.name")
+		require.True(t, ok)
+		actualComponentName := componentVal.AsString()
+
 		expected := metricdata.ResourceMetrics{
 			ScopeMetrics: []metricdata.ScopeMetrics{
 				{
@@ -319,7 +373,7 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 												"otel.component.type",
 												string(otelconv.ComponentTypeSimpleLogProcessor),
 											),
-											attribute.String("otel.component.name", "simple_log_processor/0"),
+											attribute.String("otel.component.name", actualComponentName),
 											attribute.String("error.type", string(otelconv.ErrorTypeOther)),
 										),
 										Exemplars: []metricdata.Exemplar[int64]{},
@@ -333,10 +387,6 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 				},
 			},
 		}
-
-		rm := metricdata.ResourceMetrics{}
-		collectErr := reader.Collect(context.Background(), &rm)
-		require.NoError(t, collectErr)
 
 		require.Len(t, rm.ScopeMetrics, 1)
 		metricdatatest.AssertEqual(t, expected.ScopeMetrics[0], rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())

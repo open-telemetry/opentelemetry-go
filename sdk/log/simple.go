@@ -135,8 +135,3 @@ func (s *SimpleProcessor) ForceFlush(ctx context.Context) error {
 type SimpleProcessorOption interface {
 	apply()
 }
-
-// ResetSimpleProcessorIDCounterForTesting resets the global ID counter for testing purposes.
-func ResetSimpleProcessorIDCounterForTesting() {
-	simpleProcessorIDCounter.Store(0)
-}
