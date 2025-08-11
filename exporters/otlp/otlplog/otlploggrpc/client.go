@@ -158,9 +158,8 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
+	trackExportFunc := c.trackExport(context.Background(), int64(len(rl)))
 	return c.requestFunc(ctx, func(ctx context.Context) error {
-		trackExportFunc := c.trackExport(context.Background(), int64(len(rl)))
-
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
