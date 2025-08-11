@@ -165,6 +165,10 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 	defer otel.SetMeterProvider(originalMP)
 
 	t.Run("self observability disabled", func(t *testing.T) {
+		reader := metricSDK.NewManualReader()
+		mp := metricSDK.NewMeterProvider(metricSDK.WithReader(reader))
+		otel.SetMeterProvider(mp)
+
 		e := new(exporter)
 		s := log.NewSimpleProcessor(e)
 
@@ -174,6 +178,18 @@ func TestSimpleProcessorSelfObservability(t *testing.T) {
 
 		require.True(t, e.exportCalled)
 		assert.Equal(t, []log.Record{*r}, e.records)
+
+		rm := metricdata.ResourceMetrics{}
+		err := reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+
+		for _, scopeMetrics := range rm.ScopeMetrics {
+			for _, m := range scopeMetrics.Metrics {
+				if m.Name == "otel.sdk.processor.log.processed" {
+					t.Errorf("expected no self-observability metrics when disabled, but found metric: %s", m.Name)
+				}
+			}
+		}
 	})
 
 	t.Run("self observability enabled without error", func(t *testing.T) {
