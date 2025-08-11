@@ -60,7 +60,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate support for `OTEL_GO_X_CARDINALITY_LIMIT` environment variable. Use `WithCardinalityLimit` instead. (#7166)
+- Deprecate support for `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`. Use `WithCardinalityLimit` option instead. (#7166)
 
 ### Fixed
 
