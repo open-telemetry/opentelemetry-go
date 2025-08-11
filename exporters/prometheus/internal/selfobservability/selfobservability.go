@@ -55,6 +55,11 @@ func NewExporterMetrics(componentName string) *ExporterMetrics {
 	return em
 }
 
+// DisableSelfObservability disables self-observability for testing purposes.
+func (em *ExporterMetrics) DisableSelfObservability() {
+	em.selfObservabilityEnabled = false
+}
+
 // AddInflight adds the specified count to the inflight metric.
 func (em *ExporterMetrics) AddInflight(ctx context.Context, count int64) {
 	if !em.selfObservabilityEnabled {
