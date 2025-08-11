@@ -176,6 +176,8 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 }
 
 func TestMeterProviderCardinalityLimit(t *testing.T) {
+	const uniqueAttributesCount = 10
+
 	tests := []struct {
 		name           string
 		options        []Option
@@ -184,17 +186,17 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 		{
 			name:           "no limit (default)",
 			options:        nil,
-			wantDataPoints: 10,
+			wantDataPoints: uniqueAttributesCount,
 		},
 		{
 			name:           "no limit (limit=0)",
 			options:        []Option{WithCardinalityLimit(0)},
-			wantDataPoints: 10,
+			wantDataPoints: uniqueAttributesCount,
 		},
 		{
 			name:           "no limit (negative)",
 			options:        []Option{WithCardinalityLimit(-5)},
-			wantDataPoints: 10,
+			wantDataPoints: uniqueAttributesCount,
 		},
 		{
 			name:           "limit=5",
@@ -214,7 +216,7 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 			counter, err := meter.Int64Counter("metric")
 			require.NoError(t, err, "failed to create counter")
 
-			for i := 0; i < 10; i++ {
+			for i := range uniqueAttributesCount {
 				counter.Add(context.Background(), 1,
 					api.WithAttributes(attribute.Int("key", i)))
 			}
@@ -230,7 +232,7 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 			require.IsType(t, metricdata.Sum[int64]{}, data, "expected metricdata.Sum[int64]")
 
 			sumData := data.(metricdata.Sum[int64])
-			require.Len(t, sumData.DataPoints, tt.wantDataPoints,
+			assert.Len(t, sumData.DataPoints, tt.wantDataPoints,
 				"unexpected number of data points")
 		})
 	}
