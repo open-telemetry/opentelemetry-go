@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/log/internal/x"
@@ -47,8 +48,12 @@ type SimpleProcessor struct {
 // [Exporter] implementations perform better with this Processor.
 func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimpleProcessor {
 	s := &SimpleProcessor{
-		exporter:      exporter,
-		componentName: fmt.Sprintf("%s/%d", string(otelconv.ComponentTypeSimpleLogProcessor), simpleProcessorIDCounter.Add(1)-1),
+		exporter: exporter,
+		componentName: fmt.Sprintf(
+			"%s/%d",
+			string(otelconv.ComponentTypeSimpleLogProcessor),
+			simpleProcessorIDCounter.Add(1)-1,
+		),
 	}
 	s.initSelfObservability()
 	return s
@@ -96,16 +101,14 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	err := s.exporter.Export(ctx, *records)
 
 	if s.selfObservabilityEnabled {
-		if err != nil {
-			s.processedMetric.Add(context.Background(), int64(len(*records)),
-				s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
-				s.processedMetric.AttrComponentName(s.componentName),
-				s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
-		} else {
-			s.processedMetric.Add(context.Background(), int64(len(*records)),
-				s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
-				s.processedMetric.AttrComponentName(s.componentName))
+		attrs := []attribute.KeyValue{
+			s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
+			s.processedMetric.AttrComponentName(s.componentName),
 		}
+		if err != nil {
+			attrs = append(attrs, s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
+		}
+		s.processedMetric.Add(context.Background(), int64(len(*records)), attrs...)
 	}
 
 	return err
