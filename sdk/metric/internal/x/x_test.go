@@ -7,18 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestCardinalityLimit(t *testing.T) {
-	const key = "OTEL_GO_X_CARDINALITY_LIMIT"
-	require.Equal(t, key, CardinalityLimit.Key())
-
-	t.Run("100", run(setenv(key, "100"), assertEnabled(CardinalityLimit, 100)))
-	t.Run("-1", run(setenv(key, "-1"), assertEnabled(CardinalityLimit, -1)))
-	t.Run("false", run(setenv(key, "false"), assertDisabled(CardinalityLimit)))
-	t.Run("empty", run(assertDisabled(CardinalityLimit)))
-}
 
 func run(steps ...func(*testing.T)) func(*testing.T) {
 	return func(t *testing.T) {
