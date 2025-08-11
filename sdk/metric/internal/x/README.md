@@ -22,24 +22,22 @@ All other values are ignored.
 
 If the value set is less than or equal to `0`, no limit will be applied.
 
-#### Examples
+`OTEL_GO_X_CARDINALITY_LIMIT` variable is deprecated use [WithCardinalityLimit](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimit) option instead.
 
-Set the cardinality limit to 2000.
+#### Migration Example
+
+##### Old (deprecated)
 
 ```console
 export OTEL_GO_X_CARDINALITY_LIMIT=2000
 ```
 
-Set an infinite cardinality limit (functionally equivalent to disabling the feature).
+##### New (stable SDK)
 
-```console
-export OTEL_GO_X_CARDINALITY_LIMIT=-1
-```
-
-Disable the cardinality limit.
-
-```console
-unset OTEL_GO_X_CARDINALITY_LIMIT
+```go
+sdk := sdkmetric.NewMeterProvider(
+    sdkmetric.WithCardinalityLimit(2000),
+)
 ```
 
 ### Exemplars
