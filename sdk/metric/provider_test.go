@@ -217,8 +217,11 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 			require.NoError(t, err, "failed to create counter")
 
 			for i := range uniqueAttributesCount {
-				counter.Add(context.Background(), 1,
-					api.WithAttributes(attribute.Int("key", i)))
+				counter.Add(
+					context.Background(),
+					1,
+					api.WithAttributes(attribute.Int("key", i)),
+				)
 			}
 
 			var rm metricdata.ResourceMetrics
