@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"sync/atomic"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
@@ -53,14 +54,11 @@ func New(options ...Option) (*Exporter, error) {
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	if len(records) == 0 {
-		return nil
-	}
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
 	}
-	e.initSelfObservability(ctx, &records)
+	e.recordSelfObservabilityMetrics(ctx, &records)
 
 	for _, record := range records {
 		// Honor context cancellation.
@@ -87,4 +85,28 @@ func (e *Exporter) Shutdown(context.Context) error {
 // ForceFlush performs no action.
 func (*Exporter) ForceFlush(context.Context) error {
 	return nil
+}
+
+// recordSelfObservabilityMetrics records self-observability metrics if the feature is enabled.
+func (e *Exporter) recordSelfObservabilityMetrics(ctx context.Context, records *[]log.Record) {
+	start := time.Now()
+	if e.selfObservability == nil {
+		return
+	}
+
+	if len(*records) == 0 {
+		return
+	}
+
+	componentName := e.selfObservability.inflight.AttrComponentName("stdoutlog/0")
+	componentType := e.selfObservability.inflight.AttrComponentType("go.opentelemetry.io/otel/exporters/stdout/stdoutlog.Exporter")
+
+	e.selfObservability.inflight.Add(ctx, int64(len(*records)), componentName, componentType)
+
+	defer func() {
+		dur := float64(time.Since(start).Seconds())
+		e.selfObservability.duration.Record(ctx, dur, componentName, componentType)
+	}()
+
+	e.selfObservability.exported.Add(ctx, int64(len(*records)), componentName, componentType)
 }

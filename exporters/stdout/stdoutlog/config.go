@@ -6,14 +6,14 @@ package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog
 import (
 	"io"
 	"os"
-	"strings"
+
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x"
 )
 
 var (
-	defaultWriter                   io.Writer = os.Stdout
-	defaultPrettyPrint                        = false
-	defaultTimestamps                         = true
-	defaultSelfObservabilityEnabled           = false
+	defaultWriter      io.Writer = os.Stdout
+	defaultPrettyPrint           = false
+	defaultTimestamps            = true
 )
 
 // config contains options for the STDOUT exporter.
@@ -29,26 +29,24 @@ type config struct {
 	// true.
 	Timestamps bool
 
-	// Enable self-observability for the exporter. [Experimental] Default is
-	// false.
+	// SelfObservability enables exporter self-observability metrics.
+	// This is an experimental feature controlled by OTEL_GO_X_SELF_OBSERVABILITY.
+	// Default is false.
 	SelfObservability bool
 }
 
 // newConfig creates a validated Config configured with options.
 func newConfig(options []Option) config {
 	cfg := config{
-		Writer:            defaultWriter,
-		PrettyPrint:       defaultPrettyPrint,
-		Timestamps:        defaultTimestamps,
-		SelfObservability: defaultSelfObservabilityEnabled,
+		Writer:      defaultWriter,
+		PrettyPrint: defaultPrettyPrint,
+		Timestamps:  defaultTimestamps,
 	}
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
 	}
 
-	if v := os.Getenv("OTEL_GO_X_SELF_OBSERVABILITY"); v != "" {
-		cfg.SelfObservability = strings.EqualFold(v, "true")
-	}
+	cfg.SelfObservability = x.SelfObservability.Enabled()
 
 	return cfg
 }
