@@ -5,6 +5,8 @@ package otlpmetricgrpc
 
 import (
 	"context"
+	"net"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,16 +16,23 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 func TestSelfObservability_Disabled(t *testing.T) {
 	// Ensure self-observability is disabled
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+
+	reader := metric.NewManualReader()
+	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(provider)
 
 	coll, err := otest.NewGRPCCollector("", nil)
 	require.NoError(t, err)
@@ -38,8 +47,19 @@ func TestSelfObservability_Disabled(t *testing.T) {
 	err = exp.Export(context.Background(), rm)
 	require.NoError(t, err)
 
-	// Note: Cannot directly test exp.metrics.enabled as it's private
-	// The test passes if no panics occur and export works
+	// Verify that no self-observability metrics are reported
+	selfObsMetrics := &metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), selfObsMetrics)
+	require.NoError(t, err)
+
+	// Check that no self-observability metrics exist
+	selfObsMetricCount := 0
+	for _, sm := range selfObsMetrics.ScopeMetrics {
+		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
+			selfObsMetricCount += len(sm.Metrics)
+		}
+	}
+	assert.Equal(t, 0, selfObsMetricCount, "expected no self-observability metrics when disabled")
 }
 
 func TestSelfObservability_Enabled(t *testing.T) {
@@ -59,56 +79,89 @@ func TestSelfObservability_Enabled(t *testing.T) {
 		WithInsecure())
 	require.NoError(t, err)
 
-	// Note: Cannot directly test exp.metrics.enabled as it's private
-	// verify through metrics collection instead
-
 	rm := createTestResourceMetrics()
 	err = exp.Export(context.Background(), rm)
 	require.NoError(t, err)
 
-	selfObsMetrics := &metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), selfObsMetrics)
+	var got metricdata.ResourceMetrics
+	err = reader.Collect(context.Background(), &got)
 	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
 
-	// Verify the three expected metrics exist
-	foundMetrics := make(map[string]bool)
-	for _, sm := range selfObsMetrics.ScopeMetrics {
-		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
-			for _, m := range sm.Metrics {
-				foundMetrics[m.Name] = true
+	serverAddr, serverPort := parseEndpoint(coll.Addr().String())
 
-				switch m.Name {
-				case "otel.sdk.exporter.metric_data_point.exported":
-					if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-						assert.Equal(t, int64(4), sum.DataPoints[0].Value, "expected 4 data points exported")
-						verifyAttributes(t, sum.DataPoints[0].Attributes, coll.Addr().String())
-					}
-
-				case "otel.sdk.exporter.metric_data_point.inflight":
-					if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-						assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected 0 inflight data points")
-					}
-
-				case "otel.sdk.exporter.operation.duration":
-					if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-						assert.NotEqual(t, uint64(0), hist.DataPoints[0].Count, "expected duration to be recorded")
-						// Note: We don't check if duration is positive as very fast operations
-						// may result in zero or near-zero durations on some platforms
-						verifyAttributes(t, hist.DataPoints[0].Attributes, coll.Addr().String())
-					}
-				}
-			}
-		}
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName("otlp_grpc_metric_exporter/0"),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddressKey.String(serverAddr),
+								semconv.ServerPortKey.Int(serverPort),
+							),
+							Value: 4,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName("otlp_grpc_metric_exporter/0"),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddressKey.String(serverAddr),
+								semconv.ServerPortKey.Int(serverPort),
+							),
+							Value: 0,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName("otlp_grpc_metric_exporter/0"),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddressKey.String(serverAddr),
+								semconv.ServerPortKey.Int(serverPort),
+							),
+							Count: 1,
+						},
+					},
+				},
+			},
+		},
 	}
 
-	expectedMetrics := []string{
-		"otel.sdk.exporter.metric_data_point.exported",
-		"otel.sdk.exporter.metric_data_point.inflight",
-		"otel.sdk.exporter.operation.duration",
-	}
-	for _, metricName := range expectedMetrics {
-		assert.True(t, foundMetrics[metricName], "missing expected metric: %s", metricName)
-	}
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue())
 }
 
 func TestSelfObservability_ExportError(t *testing.T) {
@@ -130,115 +183,218 @@ func TestSelfObservability_ExportError(t *testing.T) {
 	err = exp.Export(context.Background(), rm)
 	assert.Error(t, err, "expected error but got none")
 
-	// Collect metrics
-	selfObsMetrics := &metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), selfObsMetrics)
+	var got metricdata.ResourceMetrics
+	err = reader.Collect(context.Background(), &got)
 	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
 
-	// Verify error handling in metrics
-	for _, sm := range selfObsMetrics.ScopeMetrics {
-		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
-			for _, m := range sm.Metrics {
-				switch m.Name {
-				case "otel.sdk.exporter.metric_data_point.exported":
-					// Should not increment on error
-					if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-						assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected no exported count on error")
-					}
+	actualComponentName := extractComponentName(got.ScopeMetrics[0])
 
-				case "otel.sdk.exporter.operation.duration":
-					// Should record duration with error attribute
-					if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-						attrs := hist.DataPoints[0].Attributes.ToSlice()
-						hasErrorAttr := false
-						for _, attr := range attrs {
-							if attr.Key == semconv.ErrorTypeKey && attr.Value.AsString() == "_OTHER" {
-								hasErrorAttr = true
-								break
-							}
-						}
-						assert.True(t, hasErrorAttr, "expected error.type attribute on failed export")
-					}
-				}
-			}
-		}
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddress("invalid"),
+								semconv.ServerPort(999999),
+							),
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.ErrorTypeOther,
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddress("invalid"),
+								semconv.ServerPort(999999),
+							),
+						},
+					},
+				},
+			},
+		},
 	}
+
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue())
 }
 
 func TestSelfObservability_EndpointParsing(t *testing.T) {
 	// Enable self-observability
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
-	// Set up meter provider for metric collection
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	// Set up collector for successful export
 	coll, err := otest.NewGRPCCollector("", nil)
 	require.NoError(t, err)
 	defer coll.Shutdown()
 
-	// Create exporter
 	exp, err := New(context.Background(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
 	require.NoError(t, err)
 
-	// Export some data to trigger metrics
 	rm := createTestResourceMetrics()
 	err = exp.Export(context.Background(), rm)
 	require.NoError(t, err)
 
-	// Collect metrics to verify they were created with proper attributes
-	selfObsMetrics := &metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), selfObsMetrics)
+	var got metricdata.ResourceMetrics
+	err = reader.Collect(context.Background(), &got)
 	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
 
-	// Verify metrics exist and have proper component type
-	found := false
-	for _, sm := range selfObsMetrics.ScopeMetrics {
-		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
-			for _, m := range sm.Metrics {
-				if m.Name == "otel.sdk.exporter.operation.duration" {
-					if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-						attrs := hist.DataPoints[0].Attributes.ToSlice()
-						for _, attr := range attrs {
-							if attr.Key == semconv.OTelComponentTypeKey &&
-								attr.Value.AsString() == "otlp_grpc_metric_exporter" {
-								found = true
-								break
-							}
-						}
+	serverAddr, serverPort := parseEndpoint(coll.Addr().String())
+
+	var actualComponentName string
+	if len(got.ScopeMetrics[0].Metrics) > 0 {
+		if data, ok := got.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]); ok && len(data.DataPoints) > 0 {
+			attrs := data.DataPoints[0].Attributes.ToSlice()
+			for _, attr := range attrs {
+				if attr.Key == semconv.OTelComponentNameKey {
+					actualComponentName = attr.Value.AsString()
+					break
+				}
+			}
+		}
+	}
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddressKey.String(serverAddr),
+								semconv.ServerPortKey.Int(serverPort),
+							),
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddressKey.String(serverAddr),
+								semconv.ServerPortKey.Int(serverPort),
+							),
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+								semconv.ServerAddressKey.String(serverAddr),
+								semconv.ServerPortKey.Int(serverPort),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue())
+}
+
+// parseEndpoint extracts server address and port from endpoint string.
+func parseEndpoint(endpoint string) (string, int) {
+	host, portStr, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return "localhost", 4317
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		port = 4317
+	}
+
+	return host, port
+}
+
+// extractComponentName extracts the component name from metrics data to handle dynamic counter.
+func extractComponentName(scopeMetrics metricdata.ScopeMetrics) string {
+	for _, m := range scopeMetrics.Metrics {
+		switch data := m.Data.(type) {
+		case metricdata.Sum[int64]:
+			if len(data.DataPoints) > 0 {
+				attrs := data.DataPoints[0].Attributes.ToSlice()
+				for _, attr := range attrs {
+					if attr.Key == semconv.OTelComponentNameKey {
+						return attr.Value.AsString()
+					}
+				}
+			}
+		case metricdata.Histogram[float64]:
+			if len(data.DataPoints) > 0 {
+				attrs := data.DataPoints[0].Attributes.ToSlice()
+				for _, attr := range attrs {
+					if attr.Key == semconv.OTelComponentNameKey {
+						return attr.Value.AsString()
 					}
 				}
 			}
 		}
 	}
-	assert.True(t, found, "expected self-observability metrics with correct component type")
-}
-
-// verifyAttributes checks that the expected attributes are present.
-func verifyAttributes(t *testing.T, attrs attribute.Set, _ string) {
-	attrSlice := attrs.ToSlice()
-
-	var componentType, serverAddr string
-	var serverPort int
-
-	for _, attr := range attrSlice {
-		switch attr.Key {
-		case semconv.OTelComponentTypeKey:
-			componentType = attr.Value.AsString()
-		case semconv.ServerAddressKey:
-			serverAddr = attr.Value.AsString()
-		case semconv.ServerPortKey:
-			serverPort = int(attr.Value.AsInt64())
-		}
-	}
-
-	assert.Equal(t, "otlp_grpc_metric_exporter", componentType)
-	assert.NotEmpty(t, serverAddr, "expected non-empty server address")
-	assert.Positive(t, serverPort, "expected positive server port")
+	return ""
 }
 
 // createTestResourceMetrics creates sample metric data for testing.
