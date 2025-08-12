@@ -133,7 +133,7 @@ func (m {{ name }}) Add(
 {%- macro add_method(metric, inst, pkg="") -%}
 
 // Add adds incr to the existing count.
-{%- if metric.attributes | length > 0 %}
+{%- if metric.attributes is not none and metric.attributes | length > 0 %}
 {{ params_docs(metric.attributes, pkg=pkg) }}
 {%- if metric.note is defined %}
 //
@@ -189,7 +189,7 @@ func (m {{ name }}) Record(
 {%- macro record_method(metric, inst, pkg="") -%}
 
 // Record records val to the current distribution.
-{%- if metric.attributes | length > 0 %}
+{%- if metric.attributes is not none and metric.attributes | length > 0 %}
 {{ params_docs(metric.attributes, pkg=pkg) }}
 {%- if metric.note is defined %}
 //
