@@ -112,8 +112,56 @@ func ignoreLogs(ctx context.Context) bool {
 	return ok
 }
 
+// Use a processor which sets EventName on log records having "event.name" string attribute.
+// This is useful for users of logging libraries that do not support
+// setting the event name on log records, but do support attributes.
+func ExampleProcessor_eventName() {
+	// Existing processor that emits telemetry.
+	var processor log.Processor = log.NewBatchProcessor(nil)
+
+	// Add a processor so that it sets EventName on log records.
+	eventNameProcessor := &EventNameProcessor{}
+
+	// The created processor can then be registered with
+	// the OpenTelemetry Logs SDK using the WithProcessor option.
+	_ = log.NewLoggerProvider(
+		// Order is important here. Set EventName before handing to the processor.
+		log.WithProcessor(eventNameProcessor),
+		log.WithProcessor(processor),
+	)
+}
+
+// EventNameProcessor is a [log.Processor] that sets the EventName
+// on log records having "event.name" string attribute.
+// It is useful for logging libraries that do not support
+// setting the event name on log records,
+// but do support attributes.
+type EventNameProcessor struct{}
+
+// OnEmit sets the EventName on log records having an "event.name" string attribute.
+// The original attribute is not removed.
+func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
+	record.WalkAttributes(func(kv logapi.KeyValue) bool {
+		if kv.Key == "event.name" && kv.Value.Kind() == logapi.KindString {
+			record.SetEventName(kv.Value.AsString())
+		}
+		return true
+	})
+	return nil
+}
+
+// Shutdown returns nil.
+func (*EventNameProcessor) Shutdown(context.Context) error {
+	return nil
+}
+
+// ForceFlush returns nil.
+func (*EventNameProcessor) ForceFlush(context.Context) error {
+	return nil
+}
+
 // Use a processor which redacts sensitive data from some attributes.
-func ExampleProcessor() {
+func ExampleProcessor_redact() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
