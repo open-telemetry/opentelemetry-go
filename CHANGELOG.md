@@ -53,6 +53,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Check the `go.opentelemetry.io/otel/sdk/log/internal/x` package documentation for more information. (#7121)
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
   Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
+- Greatly reduce the cost of recording metrics in `go.opentelemetry.io/otel/sdk/metric` using hashing for map keys. (#TODO)
 
 ### Changed
 
@@ -67,6 +68,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` to deduplicate suffixes if already present in metric name when UTF8 is enabled. (#7088)
+- Clarify the documentation about equivalence guarantees for the `Set` and `Distinct` types in `go.opentelemetry.io/otel/attribute`. (#TODO)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
