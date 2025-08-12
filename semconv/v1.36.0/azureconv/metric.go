@@ -26,15 +26,20 @@ var (
 type CosmosDBConsistencyLevelAttr string
 
 var (
-	// CosmosDBConsistencyLevelStrong is the none.
+	// CosmosDBConsistencyLevelStrong is the standardized value "Strong" of
+	// CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelStrong CosmosDBConsistencyLevelAttr = "Strong"
-	// CosmosDBConsistencyLevelBoundedStaleness is the none.
+	// CosmosDBConsistencyLevelBoundedStaleness is the standardized value
+	// "BoundedStaleness" of CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelBoundedStaleness CosmosDBConsistencyLevelAttr = "BoundedStaleness"
-	// CosmosDBConsistencyLevelSession is the none.
+	// CosmosDBConsistencyLevelSession is the standardized value "Session" of
+	// CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelSession CosmosDBConsistencyLevelAttr = "Session"
-	// CosmosDBConsistencyLevelEventual is the none.
+	// CosmosDBConsistencyLevelEventual is the standardized value "Eventual" of
+	// CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelEventual CosmosDBConsistencyLevelAttr = "Eventual"
-	// CosmosDBConsistencyLevelConsistentPrefix is the none.
+	// CosmosDBConsistencyLevelConsistentPrefix is the standardized value
+	// "ConsistentPrefix" of CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelConsistentPrefix CosmosDBConsistencyLevelAttr = "ConsistentPrefix"
 )
 

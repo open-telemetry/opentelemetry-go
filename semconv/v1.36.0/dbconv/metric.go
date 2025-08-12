@@ -24,9 +24,11 @@ var (
 type ClientConnectionStateAttr string
 
 var (
-	// ClientConnectionStateIdle is the none.
+	// ClientConnectionStateIdle is the standardized value "idle" of
+	// ClientConnectionStateAttr.
 	ClientConnectionStateIdle ClientConnectionStateAttr = "idle"
-	// ClientConnectionStateUsed is the none.
+	// ClientConnectionStateUsed is the standardized value "used" of
+	// ClientConnectionStateAttr.
 	ClientConnectionStateUsed ClientConnectionStateAttr = "used"
 )
 
