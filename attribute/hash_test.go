@@ -108,11 +108,11 @@ type msg struct {
 func (m msg) String() string {
 	return fmt.Sprintf(
 		"(%d: %d)%s %s (%d: %d)%s",
-		m.i, m.hI, m.slice(m.kvI), m.cmp, m.j, m.hJ, m.slice(m.kvJ),
+		m.i, m.hI, slice(m.kvI), m.cmp, m.j, m.hJ, slice(m.kvJ),
 	)
 }
 
-func (m msg) slice(kvs []KeyValue) string {
+func slice(kvs []KeyValue) string {
 	if len(kvs) == 0 {
 		return "[]"
 	}
