@@ -45,7 +45,7 @@ func TestUint64HashCorrectness(t *testing.T) {
 
 		refH.Reset()
 		binary.BigEndian.PutUint64(buf, in)
-		n, err := refH.Write(buf[:])
+		n, err := refH.Write(buf)
 		require.NoError(t, err)
 		require.Equalf(t, 8, n, "wrote only %d out of 8 bytes", n)
 		want := refH.Sum64()
