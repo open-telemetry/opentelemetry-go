@@ -93,7 +93,7 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 	defer func() {
 		simpleProcRecordsPool.Put(records)
 	}()
-	
+
 	if s.selfObservabilityEnabled {
 		defer func() {
 			attrs := make([]attribute.KeyValue, 2, 3)
