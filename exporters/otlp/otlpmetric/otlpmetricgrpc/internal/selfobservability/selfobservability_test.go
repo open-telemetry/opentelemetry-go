@@ -14,11 +14,16 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
 
 func TestNewExporterMetrics_Disabled(t *testing.T) {
@@ -126,48 +131,85 @@ func TestTrackExport_Success(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Small delay to measure duration
 	finish(nil)                       // Success
 
-	// Read metrics to verify
-	metrics := &metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), metrics)
-	require.NoError(t, err, "failed to collect metrics")
+	var got metricdata.ResourceMetrics
+	err := reader.Collect(context.Background(), &got)
+	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
 
-	// Verify exported counter was incremented
-	exportedFound := false
-	inflightFound := false
-	durationFound := false
+	actualComponentName := extractComponentName(got.ScopeMetrics[0])
 
-	for _, sm := range metrics.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			switch m.Name {
-			case "otel.sdk.exporter.metric_data_point.exported":
-				exportedFound = true
-				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					assert.Equal(
-						t,
-						int64(10),
-						sum.DataPoints[0].Value,
-						"expected exported count 10",
-					) // Expected data points from test data
-				}
-			case "otel.sdk.exporter.metric_data_point.inflight":
-				inflightFound = true
-				// Inflight should be 0 after completion
-				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected inflight count 0")
-				}
-			case "otel.sdk.exporter.operation.duration":
-				durationFound = true
-				// Duration should be recorded
-				if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-					assert.Positive(t, hist.DataPoints[0].Count, "expected duration to be recorded")
-				}
-			}
-		}
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("test_component"),
+								semconv.ServerAddress("localhost"),
+								semconv.ServerPort(4317),
+							),
+							Value: 10,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("test_component"),
+								semconv.ServerAddress("localhost"),
+								semconv.ServerPort(4317),
+							),
+							Value: 0,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("test_component"),
+								semconv.ServerAddress("localhost"),
+								semconv.ServerPort(4317),
+							),
+							Count: 1,
+						},
+					},
+				},
+			},
+		},
 	}
 
-	assert.True(t, exportedFound, "exported metric not found")
-	assert.True(t, inflightFound, "inflight metric not found")
-	assert.True(t, durationFound, "duration metric not found")
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue())
 }
 
 func TestTrackExport_Error(t *testing.T) {
@@ -184,34 +226,66 @@ func TestTrackExport_Error(t *testing.T) {
 	finish := em.TrackExport(context.Background(), rm)
 	finish(errors.New("export failed"))
 
-	// Read metrics
-	metrics := &metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), metrics)
-	require.NoError(t, err, "failed to collect metrics")
+	var got metricdata.ResourceMetrics
+	err := reader.Collect(context.Background(), &got)
+	require.NoError(t, err)
+	require.Len(t, got.ScopeMetrics, 1)
 
-	// Verify no exported count (due to error) but duration is recorded with error attribute
-	for _, sm := range metrics.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name == "otel.sdk.exporter.metric_data_point.exported" {
-				if sum, ok := m.Data.(metricdata.Sum[int64]); ok && len(sum.DataPoints) > 0 {
-					assert.Equal(t, int64(0), sum.DataPoints[0].Value, "expected no exported count on error")
-				}
-			}
-			if m.Name == "otel.sdk.exporter.operation.duration" {
-				if hist, ok := m.Data.(metricdata.Histogram[float64]); ok && len(hist.DataPoints) > 0 {
-					// Check for error attribute
-					hasErrorAttr := false
-					for _, attr := range hist.DataPoints[0].Attributes.ToSlice() {
-						if attr.Key == semconv.ErrorTypeKey && attr.Value.AsString() == "_OTHER" {
-							hasErrorAttr = true
-							break
-						}
-					}
-					assert.True(t, hasErrorAttr, "expected error.type attribute on duration metric")
-				}
-			}
-		}
+	actualComponentName := extractComponentName(got.ScopeMetrics[0])
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("test_component"),
+								semconv.ServerAddress("localhost"),
+								semconv.ServerPort(4317),
+							),
+							Value: 0,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.ErrorTypeOther,
+								semconv.OTelComponentName(actualComponentName),
+								semconv.OTelComponentTypeKey.String("test_component"),
+								semconv.ServerAddress("localhost"),
+								semconv.ServerPort(4317),
+							),
+							Count: 1,
+						},
+					},
+				},
+			},
+		},
 	}
+
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue())
 }
 
 func TestCountDataPoints(t *testing.T) {
@@ -249,42 +323,36 @@ func TestParseEndpoint(t *testing.T) {
 	tests := []struct {
 		name        string
 		endpoint    string
-		defaultPort int
 		wantAddress string
 		wantPort    int
 	}{
 		{
 			name:        "empty endpoint",
 			endpoint:    "",
-			defaultPort: 4317,
 			wantAddress: "localhost",
 			wantPort:    4317,
 		},
 		{
 			name:        "host only",
 			endpoint:    "example.com",
-			defaultPort: 4317,
 			wantAddress: "example.com",
 			wantPort:    4317,
 		},
 		{
 			name:        "host with port",
 			endpoint:    "example.com:9090",
-			defaultPort: 4317,
 			wantAddress: "example.com",
 			wantPort:    9090,
 		},
 		{
 			name:        "full URL",
 			endpoint:    "https://example.com:9090/v1/metrics",
-			defaultPort: 4317,
 			wantAddress: "example.com",
 			wantPort:    9090,
 		},
 		{
 			name:        "invalid URL",
 			endpoint:    "://invalid",
-			defaultPort: 4317,
 			wantAddress: "localhost",
 			wantPort:    4317,
 		},
@@ -292,7 +360,7 @@ func TestParseEndpoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			address, port := ParseEndpoint(tt.endpoint, tt.defaultPort)
+			address, port := ParseEndpoint(tt.endpoint)
 			assert.Equal(t, tt.wantAddress, address, "address mismatch")
 			assert.Equal(t, tt.wantPort, port, "port mismatch")
 		})
@@ -319,10 +387,37 @@ func TestIsSelfObservabilityEnabled(t *testing.T) {
 				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", tt.envValue)
 			}
 
-			got := isSelfObservabilityEnabled()
+			got := x.SelfObservability.Enabled()
 			assert.Equal(t, tt.want, got, "self-observability enabled state mismatch")
 		})
 	}
+}
+
+// extractComponentName extracts the component name from metrics data to handle dynamic counter.
+func extractComponentName(scopeMetrics metricdata.ScopeMetrics) string {
+	for _, m := range scopeMetrics.Metrics {
+		switch data := m.Data.(type) {
+		case metricdata.Sum[int64]:
+			if len(data.DataPoints) > 0 {
+				attrs := data.DataPoints[0].Attributes.ToSlice()
+				for _, attr := range attrs {
+					if attr.Key == semconv.OTelComponentNameKey {
+						return attr.Value.AsString()
+					}
+				}
+			}
+		case metricdata.Histogram[float64]:
+			if len(data.DataPoints) > 0 {
+				attrs := data.DataPoints[0].Attributes.ToSlice()
+				for _, attr := range attrs {
+					if attr.Key == semconv.OTelComponentNameKey {
+						return attr.Value.AsString()
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // createTestResourceMetrics creates sample data for testing.

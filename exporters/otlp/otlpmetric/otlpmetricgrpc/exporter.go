@@ -52,7 +52,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 	}
 
 	// Extract server address and port from endpoint for self-observability
-	serverAddress, serverPort := selfobservability.ParseEndpoint(cfg.Metrics.Endpoint, 4317)
+	serverAddress, serverPort := selfobservability.ParseEndpoint(cfg.Metrics.Endpoint)
 
 	return &Exporter{
 		client: c,
@@ -82,11 +82,12 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 //
 // This method returns an error if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
-func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (finalErr error) {
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
 
 	// Track export operation for self-observability
 	finishTracking := e.metrics.TrackExport(ctx, rm)
+	defer func() { finishTracking(finalErr) }()
 
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
@@ -94,20 +95,14 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
 
-	// Complete tracking with the final result
-	var finalErr error
+	// Return the appropriate error
 	if upErr != nil {
 		if err == nil {
-			finalErr = fmt.Errorf("failed to upload metrics: %w", upErr)
-		} else {
-			finalErr = fmt.Errorf("failed to upload incomplete metrics (%w): %w", err, upErr)
+			return fmt.Errorf("failed to upload metrics: %w", upErr)
 		}
-	} else {
-		finalErr = err
+		return fmt.Errorf("failed to upload incomplete metrics (%w): %w", err, upErr)
 	}
-
-	finishTracking(finalErr)
-	return finalErr
+	return err
 }
 
 // ForceFlush flushes any metric data held by an exporter.
