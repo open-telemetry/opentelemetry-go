@@ -15,12 +15,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 )
 
 const (

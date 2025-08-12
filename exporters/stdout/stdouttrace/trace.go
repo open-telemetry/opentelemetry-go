@@ -6,12 +6,24 @@ package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdoutt
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
+
+// otelComponentType is a name identifying the type of the OpenTelemetry component.
+const otelComponentType = "stdout_trace_exporter"
 
 var zeroTime time.Time
 
@@ -26,10 +38,13 @@ func New(options ...Option) (*Exporter, error) {
 		enc.SetIndent("", "\t")
 	}
 
-	return &Exporter{
+	exporter := &Exporter{
 		encoder:    enc,
 		timestamps: cfg.Timestamps,
-	}, nil
+	}
+	exporter.initSelfObservability()
+
+	return exporter, nil
 }
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
@@ -40,10 +55,65 @@ type Exporter struct {
 
 	stoppedMu sync.RWMutex
 	stopped   bool
+
+	selfObservabilityEnabled bool
+	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
+	spanInflightMetric       otelconv.SDKExporterSpanInflight
+	spanExportedMetric       otelconv.SDKExporterSpanExported
+	operationDurationMetric  otelconv.SDKExporterOperationDuration
+}
+
+// initSelfObservability initializes self-observability for the exporter if enabled.
+func (e *Exporter) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	e.selfObservabilityEnabled = true
+	e.selfObservabilityAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
+		semconv.OTelComponentTypeKey.String(otelComponentType),
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err error
+	if e.spanInflightMetric, err = otelconv.NewSDKExporterSpanInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if e.spanExportedMetric, err = otelconv.NewSDKExporterSpanExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if e.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
 }
 
 // ExportSpans writes spans in json format to stdout.
-func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
+	if e.selfObservabilityEnabled {
+		count := int64(len(spans))
+
+		e.spanInflightMetric.Add(context.Background(), count, e.selfObservabilityAttrs...)
+		defer func(starting time.Time) {
+			// additional attributes for self-observability,
+			// only spanExportedMetric and operationDurationMetric are supported
+			addAttrs := make([]attribute.KeyValue, len(e.selfObservabilityAttrs), len(e.selfObservabilityAttrs)+1)
+			copy(addAttrs, e.selfObservabilityAttrs)
+			if err != nil {
+				addAttrs = append(addAttrs, semconv.ErrorType(err))
+			}
+
+			e.spanInflightMetric.Add(context.Background(), -count, e.selfObservabilityAttrs...)
+			e.spanExportedMetric.Add(context.Background(), count, addAttrs...)
+			e.operationDurationMetric.Record(context.Background(), time.Since(starting).Seconds(), addAttrs...)
+		}(time.Now())
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -83,7 +153,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 }
 
 // Shutdown is called to stop the exporter, it performs no action.
-func (e *Exporter) Shutdown(ctx context.Context) error {
+func (e *Exporter) Shutdown(context.Context) error {
 	e.stoppedMu.Lock()
 	e.stopped = true
 	e.stoppedMu.Unlock()
@@ -100,4 +170,12 @@ func (e *Exporter) MarshalLog() any {
 		Type:           "stdout",
 		WithTimestamps: e.timestamps,
 	}
+}
+
+var exporterIDCounter atomic.Int64
+
+// nextExporterID returns a new unique ID for an exporter.
+// the starting value is 0, and it increments by 1 for each call.
+func nextExporterID() int64 {
+	return exporterIDCounter.Add(1) - 1
 }

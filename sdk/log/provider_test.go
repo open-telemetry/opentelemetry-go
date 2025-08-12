@@ -40,7 +40,7 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name}
 }
 
-func (p *processor) OnEmit(ctx context.Context, r *Record) error {
+func (p *processor) OnEmit(_ context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
 	}
@@ -248,7 +248,7 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
-func TestLoggerProviderConcurrentSafe(t *testing.T) {
+func TestLoggerProviderConcurrentSafe(*testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup
@@ -278,7 +278,7 @@ type logSink struct {
 	keysAndValues []any
 }
 
-func (l *logSink) Enabled(int) bool { return true }
+func (*logSink) Enabled(int) bool { return true }
 
 func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues

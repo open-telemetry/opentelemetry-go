@@ -33,8 +33,8 @@ func (t *basicSpanProcessor) Shutdown(context.Context) error {
 	return t.injectShutdownError
 }
 
-func (t *basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
-func (t *basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
+func (*basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (*basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (t *basicSpanProcessor) ForceFlush(context.Context) error {
 	t.flushed = true
 	return nil
@@ -48,16 +48,16 @@ func (t *shutdownSpanProcessor) Shutdown(ctx context.Context) error {
 	return t.shutdown(ctx)
 }
 
-func (t *shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
-func (t *shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
-func (t *shutdownSpanProcessor) ForceFlush(context.Context) error {
+func (*shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (*shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
+func (*shutdownSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
 func TestShutdownCallsTracerMethod(t *testing.T) {
 	stp := NewTracerProvider()
 	sp := &shutdownSpanProcessor{
-		shutdown: func(ctx context.Context) error {
+		shutdown: func(context.Context) error {
 			_ = stp.Tracer("abc") // must not deadlock
 			return nil
 		},

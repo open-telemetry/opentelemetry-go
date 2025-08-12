@@ -20,6 +20,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver"
+
 	"go.opentelemetry.io/otel/internal/tools/semconvkit/decls"
 )
 

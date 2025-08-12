@@ -48,7 +48,7 @@ type outOfThinAirPropagator struct {
 
 var _ propagation.TextMapPropagator = outOfThinAirPropagator{}
 
-func (p outOfThinAirPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (p outOfThinAirPropagator) Extract(ctx context.Context, _ propagation.TextMapCarrier) context.Context {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    traceID,
 		SpanID:     spanID,
@@ -72,11 +72,11 @@ func (nilCarrier) Keys() []string {
 	return nil
 }
 
-func (nilCarrier) Get(key string) string {
+func (nilCarrier) Get(string) string {
 	return ""
 }
 
-func (nilCarrier) Set(key string, value string) {}
+func (nilCarrier) Set(string, string) {}
 
 func TestMultiplePropagators(t *testing.T) {
 	ootaProp := outOfThinAirPropagator{t: t}

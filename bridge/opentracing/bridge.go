@@ -321,10 +321,10 @@ var (
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			warningHandler: func(msg string) {},
+			warningHandler: func(string) {},
 			otelTracer:     noopTracer,
 		},
-		warningHandler: func(msg string) {},
+		warningHandler: func(string) {},
 		propagator:     nil,
 	}
 }
@@ -647,7 +647,7 @@ func (s fakeSpan) SpanContext() trace.SpanContext {
 // interface.
 //
 // Currently only the HTTPHeaders and TextMap formats are supported.
-func (t *BridgeTracer) Inject(sm ot.SpanContext, format any, carrier any) error {
+func (t *BridgeTracer) Inject(sm ot.SpanContext, format, carrier any) error {
 	bridgeSC, ok := sm.(*bridgeSpanContext)
 	if !ok {
 		return ot.ErrInvalidSpanContext
@@ -696,7 +696,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format any, carrier any) error 
 // interface.
 //
 // Currently only the HTTPHeaders and TextMap formats are supported.
-func (t *BridgeTracer) Extract(format any, carrier any) (ot.SpanContext, error) {
+func (t *BridgeTracer) Extract(format, carrier any) (ot.SpanContext, error) {
 	builtinFormat, ok := format.(ot.BuiltinFormat)
 	if !ok {
 		return nil, ot.ErrUnsupportedFormat
@@ -763,7 +763,7 @@ func (t *textMapWrapper) Get(key string) string {
 	return t.readerMap[key]
 }
 
-func (t *textMapWrapper) Set(key string, value string) {
+func (t *textMapWrapper) Set(key, value string) {
 	t.TextMapWriter.Set(key, value)
 }
 
@@ -832,12 +832,12 @@ func newTextMapWrapperForInject(carrier any) (*textMapWrapper, error) {
 
 type textMapWriter struct{}
 
-func (t *textMapWriter) Set(key string, value string) {
+func (*textMapWriter) Set(string, string) {
 	// maybe print a warning log.
 }
 
 type textMapReader struct{}
 
-func (t *textMapReader) ForeachKey(handler func(key, val string) error) error {
+func (*textMapReader) ForeachKey(func(string, string) error) error {
 	return nil // maybe print a warning log.
 }

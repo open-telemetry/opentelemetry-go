@@ -8,14 +8,25 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -525,7 +536,7 @@ func newIndefiniteExporter(t *testing.T) indefiniteExporter {
 	return e
 }
 
-func (e indefiniteExporter) Shutdown(context.Context) error {
+func (indefiniteExporter) Shutdown(context.Context) error {
 	return nil
 }
 
@@ -632,4 +643,262 @@ func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+// Drop metrics not being tested in this test.
+var dropSpanMetricsView = sdkmetric.NewView(
+	sdkmetric.Instrument{
+		Name: "otel.sdk.span.*",
+	},
+	sdkmetric.Stream{Aggregation: sdkmetric.AggregationDrop{}},
+)
+
+func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+	tp := basicTracerProvider(t)
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
+	otel.SetMeterProvider(meterProvider)
+	me := newBlockingExporter()
+	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	bsp := NewBatchSpanProcessor(
+		me,
+		// Make sure timeout doesn't trigger during the test.
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(2),
+		WithMaxExportBatchSize(2),
+	)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("TestBatchSpanProcessorMetricsDisabled")
+	// Generate 2 spans, which export and block during the export call.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
+
+	// Validate that there are no metrics produced.
+	gotMetrics := new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(context.Background(), gotMetrics))
+	require.Empty(t, gotMetrics.ScopeMetrics)
+	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
+	generateSpan(t, tr, testOption{genNumSpans: 3})
+	// Validate that there are no metrics produced.
+	gotMetrics = new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(context.Background(), gotMetrics))
+	require.Empty(t, gotMetrics.ScopeMetrics)
+}
+
+func TestBatchSpanProcessorMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	tp := basicTracerProvider(t)
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
+	otel.SetMeterProvider(meterProvider)
+	me := newBlockingExporter()
+	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	bsp := NewBatchSpanProcessor(
+		me,
+		// Make sure timeout doesn't trigger during the test.
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(2),
+		WithMaxExportBatchSize(2),
+	)
+	internalBsp := bsp.(*batchSpanProcessor)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("TestBatchSpanProcessorMetrics")
+	// Generate 2 spans, which export and block during the export call.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
+		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
+	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
+	generateSpan(t, tr, testOption{genNumSpans: 3})
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
+		expectMetrics{queueCapacity: 2, queueSize: 2, queueFullProcessed: 1, successProcessed: 2})
+}
+
+func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	tp := basicTracerProvider(t)
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
+	otel.SetMeterProvider(meterProvider)
+	me := newBlockingExporter()
+	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	bsp := NewBatchSpanProcessor(
+		me,
+		// Use WithBlocking so we can trigger a queueFull using ForceFlush.
+		WithBlocking(),
+		// Make sure timeout doesn't trigger during the test.
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(2),
+		WithMaxExportBatchSize(2),
+	)
+	internalBsp := bsp.(*batchSpanProcessor)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("TestBatchSpanProcessorBlockingMetrics")
+	// Generate 2 spans that are exported to the exporter, which blocks.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
+		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
+	// Generate 2 spans to fill the queue.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	go func() {
+		// Generate a span which blocks because the queue is full.
+		generateSpan(t, tr, testOption{genNumSpans: 1})
+	}()
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
+		expectMetrics{queueCapacity: 2, queueSize: 2, successProcessed: 2})
+
+	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	assert.Error(t, tp.ForceFlush(ctx))
+	assertSelfObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
+		expectMetrics{queueCapacity: 2, queueSize: 2, queueFullProcessed: 1, successProcessed: 2})
+}
+
+type expectMetrics struct {
+	queueCapacity      int64
+	queueSize          int64
+	successProcessed   int64
+	queueFullProcessed int64
+}
+
+func assertSelfObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, reader sdkmetric.Reader,
+	expectation expectMetrics,
+) {
+	t.Helper()
+	gotResourceMetrics := new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(context.Background(), gotResourceMetrics))
+
+	baseAttrs := attribute.NewSet(
+		semconv.OTelComponentTypeBatchingSpanProcessor,
+		componentNameAttr,
+	)
+	wantMetrics := []metricdata.Metrics{
+		{
+			Name:        otelconv.SDKProcessorSpanQueueCapacity{}.Name(),
+			Description: otelconv.SDKProcessorSpanQueueCapacity{}.Description(),
+			Unit:        otelconv.SDKProcessorSpanQueueCapacity{}.Unit(),
+			Data: metricdata.Sum[int64]{
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueCapacity}},
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: false,
+			},
+		},
+		{
+			Name:        otelconv.SDKProcessorSpanQueueSize{}.Name(),
+			Description: otelconv.SDKProcessorSpanQueueSize{}.Description(),
+			Unit:        otelconv.SDKProcessorSpanQueueSize{}.Unit(),
+			Data: metricdata.Sum[int64]{
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueSize}},
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: false,
+			},
+		},
+	}
+
+	wantProcessedDataPoints := []metricdata.DataPoint[int64]{}
+	if expectation.successProcessed > 0 {
+		wantProcessedDataPoints = append(wantProcessedDataPoints, metricdata.DataPoint[int64]{
+			Value: expectation.successProcessed,
+			Attributes: attribute.NewSet(
+				semconv.OTelComponentTypeBatchingSpanProcessor,
+				componentNameAttr,
+			),
+		})
+	}
+	if expectation.queueFullProcessed > 0 {
+		wantProcessedDataPoints = append(wantProcessedDataPoints, metricdata.DataPoint[int64]{
+			Value: expectation.queueFullProcessed,
+			Attributes: attribute.NewSet(
+				semconv.OTelComponentTypeBatchingSpanProcessor,
+				componentNameAttr,
+				semconv.ErrorTypeKey.String(string(queueFull)),
+			),
+		})
+	}
+
+	if len(wantProcessedDataPoints) > 0 {
+		wantMetrics = append(wantMetrics,
+			metricdata.Metrics{
+				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
+				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
+				Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints:  wantProcessedDataPoints,
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		)
+	}
+
+	wantScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/sdk/trace",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: wantMetrics,
+	}
+	metricdatatest.AssertEqual(t, wantScopeMetric, gotResourceMetrics.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+}
+
+// blockingExporter blocks until the exported span is removed from the channel.
+type blockingExporter struct {
+	shutdown chan struct{}
+	total    atomic.Int32
+}
+
+func newBlockingExporter() *blockingExporter {
+	e := &blockingExporter{shutdown: make(chan struct{})}
+	return e
+}
+
+func (e *blockingExporter) Shutdown(ctx context.Context) error {
+	select {
+	case <-e.shutdown:
+	default:
+		close(e.shutdown)
+	}
+	return ctx.Err()
+}
+
+func (e *blockingExporter) ExportSpans(ctx context.Context, s []ReadOnlySpan) error {
+	e.total.Add(int32(len(s)))
+	<-e.shutdown
+	return ctx.Err()
+}
+
+func (e *blockingExporter) waitForSpans(ctx context.Context, n int32) error {
+	// Wait for all n spans to reach the export call
+	for e.total.Load() < n {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for %d spans to be exported", n)
+		default:
+			// So the select will not block
+		}
+		runtime.Gosched()
+	}
+	return nil
 }

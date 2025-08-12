@@ -23,7 +23,7 @@ type MetricProducer struct {
 
 // NewMetricProducer returns a metric.Producer that fetches metrics from
 // OpenCensus.
-func NewMetricProducer(opts ...MetricOption) *MetricProducer {
+func NewMetricProducer(...MetricOption) *MetricProducer {
 	return &MetricProducer{
 		manager: metricproducer.GlobalManager(),
 	}

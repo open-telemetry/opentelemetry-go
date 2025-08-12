@@ -128,7 +128,7 @@ func newSimpleTest() *simpleTest {
 	}
 }
 
-func (st *simpleTest) setup(t *testing.T, tracer *mockTracer) {
+func (st *simpleTest) setup(_ *testing.T, tracer *mockTracer) {
 	tracer.SpareTraceIDs = append(tracer.SpareTraceIDs, st.traceID)
 	tracer.SpareSpanIDs = append(tracer.SpareSpanIDs, st.spanIDs...)
 }
@@ -145,7 +145,7 @@ func (st *simpleTest) runOTOtelOT(t *testing.T, ctx context.Context) {
 	runOTOtelOT(t, ctx, "simple", st.noop)
 }
 
-func (st *simpleTest) noop(t *testing.T, ctx context.Context) context.Context {
+func (*simpleTest) noop(_ *testing.T, ctx context.Context) context.Context {
 	return ctx
 }
 
@@ -166,7 +166,7 @@ func newCurrentActiveSpanTest() *currentActiveSpanTest {
 	}
 }
 
-func (cast *currentActiveSpanTest) setup(t *testing.T, tracer *mockTracer) {
+func (cast *currentActiveSpanTest) setup(_ *testing.T, tracer *mockTracer) {
 	tracer.SpareTraceIDs = append(tracer.SpareTraceIDs, cast.traceID)
 	tracer.SpareSpanIDs = append(tracer.SpareSpanIDs, cast.spanIDs...)
 
@@ -221,7 +221,7 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 	runOTOtelOT(t, ctx, "cast", cast.recordSpans)
 }
 
-func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
+func (cast *currentActiveSpanTest) recordSpans(_ *testing.T, ctx context.Context) context.Context {
 	spanID := trace.SpanContextFromContext(ctx).SpanID()
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
@@ -273,14 +273,14 @@ func newContextIntactTest() *contextIntactTest {
 	}
 }
 
-func (coin *contextIntactTest) setup(t *testing.T, tracer *mockTracer) {
+func (coin *contextIntactTest) setup(_ *testing.T, tracer *mockTracer) {
 	tracer.SpareContextKeyValues = append(tracer.SpareContextKeyValues, coin.contextKeyValues...)
 
 	coin.recordedContextValues = nil
 	coin.recordIdx = 0
 }
 
-func (coin *contextIntactTest) check(t *testing.T, tracer *mockTracer) {
+func (coin *contextIntactTest) check(t *testing.T, _ *mockTracer) {
 	if len(coin.recordedContextValues) != len(coin.contextKeyValues) {
 		t.Errorf(
 			"Expected to have %d recorded context values, got %d",
@@ -352,12 +352,12 @@ func newBaggageItemsPreservationTest() *baggageItemsPreservationTest {
 	}
 }
 
-func (bip *baggageItemsPreservationTest) setup(t *testing.T, tracer *mockTracer) {
+func (bip *baggageItemsPreservationTest) setup(*testing.T, *mockTracer) {
 	bip.step = 0
 	bip.recordedBaggage = nil
 }
 
-func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *mockTracer) {
+func (bip *baggageItemsPreservationTest) check(t *testing.T, _ *mockTracer) {
 	if len(bip.recordedBaggage) != len(bip.baggageItems) {
 		t.Errorf("Expected %d recordings, got %d", len(bip.baggageItems), len(bip.recordedBaggage))
 	}
@@ -450,13 +450,13 @@ func newBaggageInteroperationTest() *baggageInteroperationTest {
 	}
 }
 
-func (bio *baggageInteroperationTest) setup(t *testing.T, tracer *mockTracer) {
+func (bio *baggageInteroperationTest) setup(*testing.T, *mockTracer) {
 	bio.step = 0
 	bio.recordedOTBaggage = nil
 	bio.recordedOtelBaggage = nil
 }
 
-func (bio *baggageInteroperationTest) check(t *testing.T, tracer *mockTracer) {
+func (bio *baggageInteroperationTest) check(t *testing.T, _ *mockTracer) {
 	checkBIORecording(t, "OT", bio.baggageItems, bio.recordedOTBaggage)
 	checkBIORecording(t, "Otel", bio.baggageItems, bio.recordedOtelBaggage)
 }
