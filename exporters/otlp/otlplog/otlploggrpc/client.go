@@ -159,7 +159,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	defer cancel()
 
 	trackExportFunc := c.trackExport(context.Background(), int64(len(rl)))
-	return c.requestFunc(ctx, func(ctx context.Context) error {
+	err := c.requestFunc(ctx, func(ctx context.Context) error {
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
@@ -169,20 +169,22 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				trackExportFunc(err, status.Code(err))
 				otel.Handle(err)
-				return nil
 			}
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
-			trackExportFunc(nil, codes.OK)
 			return nil
 		}
-		trackExportFunc(err, status.Code(err))
 		return err
 	})
+	if err != nil {
+		trackExportFunc(err, status.Code(err))
+	} else {
+		trackExportFunc(nil, codes.OK)
+	}
+	return err
 }
 
 func (c *client) trackExport(ctx context.Context, count int64) func(err error, code codes.Code) {
