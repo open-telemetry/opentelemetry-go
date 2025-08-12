@@ -32,7 +32,7 @@ const (
 // Hash is an FNV-1a hash with appropriate hashing functions for methods.
 type Hash uint64
 
-// New64 returns a new initialized 64-bit FNV-1a Hash. Its value is laid out in
+// New returns a new initialized 64-bit FNV-1a Hash. Its value is laid out in
 // big-endian byte order.
 func New() Hash {
 	return offset64
@@ -63,7 +63,7 @@ func (h Hash) Float64(val float64) Hash {
 }
 
 func (h Hash) Int64(val int64) Hash {
-	return h.Uint64(uint64(val))
+	return h.Uint64(uint64(val)) // nolint:gosec // overflow doesn't matter since we are hashing.
 }
 
 func (h Hash) String(val string) Hash {
