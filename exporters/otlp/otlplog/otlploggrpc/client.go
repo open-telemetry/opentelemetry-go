@@ -169,11 +169,14 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
+				trackExportFunc(err, codes.OK)
 				otel.Handle(err)
+				return nil
 			}
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
+			trackExportFunc(nil, codes.OK)
 			// Success.
 			return nil
 		}
@@ -181,8 +184,6 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	})
 	if err != nil {
 		trackExportFunc(err, status.Code(err))
-	} else {
-		trackExportFunc(nil, codes.OK)
 	}
 	return err
 }

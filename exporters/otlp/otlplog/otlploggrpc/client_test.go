@@ -845,7 +845,7 @@ func TestSelfObservability(t *testing.T) {
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												otelconv.RPCGRPCStatusCodeAttr(
-													status.Code(wantErr),
+													codes.OK,
 												),
 											),
 											semconv.ErrorType(wantErr),
