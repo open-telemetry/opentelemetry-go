@@ -47,7 +47,7 @@ var metricsPool = sync.Pool{
 }
 
 // Global instance counter for generating unique component names.
-var instanceCounter int64
+var exporterIDCounter atomic.Int64
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
