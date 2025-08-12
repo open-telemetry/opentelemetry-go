@@ -39,6 +39,30 @@
 // Meter.RegisterCallback and Registration.Unregister to add and remove
 // callbacks without leaking memory.
 //
+// # Cardinality Limits
+//
+// Cardinality refers to the number of unique attribute combinations for a single
+// metric within one collection (export) interval. High cardinality can lead to
+// excessive memory usage, increased storage costs, and backend performance issues.
+//
+// The Go OpenTelemetry SDK does not enforce a cardinality limit by default.
+// A limit can be configured via the API using the `WithCardinalityLimit`
+// option.
+//
+// When the configured limit is reached, any new attribute combination is not
+// tracked separately. Instead, its measurements are aggregated together under
+// a special attribute set containing `{"otel.metric.overflow": true}`.
+// This ensures total metric values (e.g., Sum, Count) remain correct for the
+// collection interval, but information about the specific dropped combinations
+// is not preserved.
+//
+// Recommendations:
+//
+//   - Set the limit based on the theoretical maximum combinations or expected
+//     active combinations per export interval.
+//   - Too high - wastes memory due to preallocation.
+//   - Too low - causes loss of attribute detail as more data falls into overflow.
+//
 // See [go.opentelemetry.io/otel/metric] for more information about
 // the metric API.
 //
