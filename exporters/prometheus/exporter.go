@@ -46,8 +46,13 @@ var metricsPool = sync.Pool{
 	},
 }
 
-// Global instance counter for generating unique component names.
 var exporterIDCounter atomic.Int64
+
+// nextExporterID returns a new unique ID for an exporter.
+// the starting value is 0, and it increments by 1 for each call.
+func nextExporterID() int64 {
+	return exporterIDCounter.Add(1) - 1
+}
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
 // interface for easy instantiation with a MeterProvider.
@@ -102,8 +107,7 @@ type collector struct {
 	unitNamer         otlptranslator.UnitNamer
 
 	// self-observability
-	selfObs     *selfobservability.ExporterMetrics
-	instanceNum int64
+	selfObs *selfobservability.ExporterMetrics
 }
 
 // New returns a Prometheus Exporter.
@@ -156,11 +160,8 @@ func New(opts ...Option) (*Exporter, error) {
 }
 
 func (c *collector) initSelfObservability() {
-	// Assign unique instance number and create per-instance self-observability
-	c.instanceNum = atomic.AddInt64(&instanceCounter, 1) - 1
-
 	if x.SelfObservability.Enabled() {
-		componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypePrometheusHTTPTextMetricExporter, c.instanceNum)
+		componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypePrometheusHTTPTextMetricExporter, nextExporterID())
 		c.selfObs = selfobservability.NewExporterMetrics(componentName)
 	}
 }
