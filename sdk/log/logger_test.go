@@ -6,15 +6,24 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -345,6 +354,71 @@ func TestLoggerEnabled(t *testing.T) {
 			assert.Equal(t, tc.expectedP0Params, p0.params)
 			assert.Equal(t, tc.expectedP1Params, p1.params)
 			assert.Equal(t, tc.expectedP2Params, p2WithDisabled.params)
+		})
+	}
+}
+
+func TestLoggerSelfObservability(t *testing.T) {
+	testCases := []struct {
+		name                     string
+		selfObservabilityEnabled bool
+		records                  []log.Record
+		wantLogRecordCount       int64
+	}{
+		{
+			name:                     "Disabled",
+			selfObservabilityEnabled: false,
+			records:                  []log.Record{{}, {}},
+			wantLogRecordCount:       0,
+		},
+		{
+			name:                     "Enabled",
+			selfObservabilityEnabled: true,
+			records:                  []log.Record{{}, {}, {}, {}, {}},
+			wantLogRecordCount:       5,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tc.selfObservabilityEnabled))
+			prev := otel.GetMeterProvider()
+			defer otel.SetMeterProvider(prev)
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+
+			for _, record := range tc.records {
+				l.Emit(context.Background(), record)
+			}
+
+			gotMetrics := new(metricdata.ResourceMetrics)
+			assert.NoError(t, r.Collect(context.Background(), gotMetrics))
+			if tc.wantLogRecordCount == 0 {
+				assert.Empty(t, gotMetrics.ScopeMetrics)
+				return
+			}
+
+			require.Len(t, gotMetrics.ScopeMetrics, 1)
+			sm := gotMetrics.ScopeMetrics[0]
+			assert.Equal(t, instrumentation.Scope{
+				Name:      "go.opentelemetry.io/otel/sdk/log",
+				Version:   sdk.Version(),
+				SchemaURL: semconv.SchemaURL,
+			}, sm.Scope)
+
+			wantMetric := metricdata.Metrics{
+				Name:        otelconv.SDKLogCreated{}.Name(),
+				Description: otelconv.SDKLogCreated{}.Description(),
+				Unit:        otelconv.SDKLogCreated{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: tc.wantLogRecordCount}},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			}
+			metricdatatest.AssertEqual(t, wantMetric, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 		})
 	}
 }
