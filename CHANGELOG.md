@@ -60,6 +60,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change `SDKProcessorLogQueueCapacity`, `SDKProcessorLogQueueSize`, `SDKProcessorSpanQueueSize`, and `SDKProcessorSpanQueueCapacity` in `go.opentelemetry.io/otel/semconv/v1.36.0/otelconv` to use a `Int64ObservableUpDownCounter`. (#7041)
 - Change `DefaultExemplarReservoirProviderSelector` in `go.opentelemetry.io/otel/sdk/metric` to use `runtime.GOMAXPROCS(0)` instead of `runtime.NumCPU()` for the `FixedSizeReservoirProvider` default size. (#7094)
 
+### Deprecated
+
+- Deprecate support for `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`. Use `WithCardinalityLimit` option instead. (#7166)
+
 ### Fixed
 
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` to deduplicate suffixes if already present in metric name when UTF8 is enabled. (#7088)
