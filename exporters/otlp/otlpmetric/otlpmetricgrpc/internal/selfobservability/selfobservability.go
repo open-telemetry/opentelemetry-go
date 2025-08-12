@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -22,6 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
 
 // exporterIDCounter is used to generate unique component names for exporters.
@@ -45,7 +46,7 @@ type ExporterMetrics struct {
 // If self-observability is disabled, returns a no-op instance.
 func NewExporterMetrics(componentType, serverAddress string, serverPort int) *ExporterMetrics {
 	em := &ExporterMetrics{
-		enabled: isSelfObservabilityEnabled(),
+		enabled: x.SelfObservability.Enabled(),
 	}
 
 	if !em.enabled {
@@ -154,10 +155,10 @@ func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
 }
 
 // ParseEndpoint extracts server address and port from an endpoint URL.
-// Returns defaults if parsing fails.
-func ParseEndpoint(endpoint string, defaultPort int) (address string, port int) {
+// Returns defaults if parsing fails or endpoint is empty.
+func ParseEndpoint(endpoint string) (address string, port int) {
 	address = "localhost"
-	port = defaultPort
+	port = 4317
 
 	if endpoint == "" {
 		return
@@ -184,12 +185,4 @@ func ParseEndpoint(endpoint string, defaultPort int) (address string, port int) 
 	}
 
 	return
-}
-
-// isSelfObservabilityEnabled checks if self-observability is enabled via environment variable.
-// It follows OpenTelemetry specification for boolean environment variable parsing.
-func isSelfObservabilityEnabled() bool {
-	value := os.Getenv("OTEL_GO_X_SELF_OBSERVABILITY")
-	// Only "true" (case-insensitive) is considered true, all other values are false
-	return strings.EqualFold(value, "true")
 }
