@@ -93,9 +93,9 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 	defer func() {
 		simpleProcRecordsPool.Put(records)
 	}()
-
-	defer func() {
-		if s.selfObservabilityEnabled {
+	
+	if s.selfObservabilityEnabled {
+		defer func() {
 			attrs := make([]attribute.KeyValue, 2, 3)
 			attrs[0] = s.processedMetric.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor)
 			attrs[1] = s.processedMetric.AttrComponentName(s.componentName)
@@ -103,8 +103,8 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 				attrs = append(attrs, s.processedMetric.AttrErrorType(otelconv.ErrorTypeOther))
 			}
 			s.processedMetric.Add(context.Background(), int64(len(*records)), attrs...)
-		}
-	}()
+		}()
+	}
 
 	if s.exporter == nil {
 		return nil
