@@ -41,11 +41,15 @@ Examples: {{ attr.examples | trim("[]") }}
 {%- endmacro -%}
 
 {%- macro lower_first(line) -%}
+{%- if line is string and line | length > 1 -%}
 {%- if line[0] is upper and line[1] is upper -%}
 {#- Assume an acronym -#}
 {{ line }}
 {%- else -%}
 {{ line[0]|lower }}{{ line[1:] }}
+{%- endif -%}
+{%- elif line is not none -%}
+{{ line }}
 {%- endif -%}
 {%- endmacro -%}
 
