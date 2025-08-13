@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -29,8 +31,15 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -432,4 +441,247 @@ func TestCustomUserAgent(t *testing.T) {
 
 	headers := mc.getHeaders()
 	require.Contains(t, headers.Get("user-agent")[0], customUserAgent)
+}
+
+func TestSelfObservability(t *testing.T) {
+	defaultCallExportSpans := func(t *testing.T, client otlptrace.Client) {
+		require.NoError(t, client.UploadTraces(context.Background(),
+			[]*tracepb.ResourceSpans{{
+				ScopeSpans: []*tracepb.ScopeSpans{
+					{
+						Spans: []*tracepb.Span{
+							{Name: "/foo"},
+							{Name: "/bar"},
+						},
+					},
+				},
+			}}))
+	}
+
+	tests := []struct {
+		name             string
+		enabled          bool
+		callUploadTraces func(t *testing.T, client otlptrace.Client)
+		assertMetrics    func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:             "Disabled",
+			enabled:          false,
+			callUploadTraces: defaultCallExportSpans,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:             "Enabled",
+			enabled:          true,
+			callUploadTraces: defaultCallExportSpans,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
+								),
+								Value: 2,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("otlp_grpc_span_exporter/0"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.RPCGRPCStatusCodeOk,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:    "Enabled, but ExportSpans returns error",
+			enabled: true,
+			callUploadTraces: func(t *testing.T, client otlptrace.Client) {
+				t.Helper()
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+
+				err := client.UploadTraces(ctx, []*tracepb.ResourceSpans{{
+					ScopeSpans: []*tracepb.ScopeSpans{
+						{
+							Spans: []*tracepb.Span{
+								{Name: "/foo"},
+								{Name: "/bar"},
+							},
+						},
+					},
+				}})
+				require.Error(t, err)
+			},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ErrorType(status.Error(codes.Canceled, "")),
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
+								),
+								Value: 2,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("otlp_grpc_span_exporter/1"),
+									semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+									semconv.ErrorType(status.Error(codes.Canceled, "")),
+									semconv.RPCGRPCStatusCodeCancelled,
+									semconv.ServerAddress("127.0.0.1"),
+									semconv.ServerPort(51844),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.enabled {
+				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+			}
+
+			original := otel.GetMeterProvider()
+			defer otel.SetMeterProvider(original)
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			mc := runMockCollectorAtEndpoint(t, "localhost:51844")
+			t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+			opts := []otlptracegrpc.Option{
+				otlptracegrpc.WithInsecure(),
+				otlptracegrpc.WithEndpoint(mc.endpoint),
+				otlptracegrpc.WithReconnectionPeriod(50 * time.Millisecond),
+			}
+
+			client := otlptracegrpc.NewClient(opts...)
+			t.Cleanup(func() { require.NoError(t, client.Stop(context.Background())) })
+			require.NoError(t, client.Start(context.Background()))
+
+			tt.callUploadTraces(t, client)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(context.Background(), &rm))
+
+			tt.assertMetrics(t, rm)
+		})
+	}
 }

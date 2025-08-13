@@ -6,7 +6,13 @@ package otlptracegrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlptra
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -18,10 +24,16 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 type client struct {
@@ -45,6 +57,12 @@ type client struct {
 	conn    *grpc.ClientConn
 	tscMu   sync.RWMutex
 	tsc     coltracepb.TraceServiceClient
+
+	selfObservabilityEnabled bool
+	spanInFlightMetric       otelconv.SDKExporterSpanInflight
+	spanExportedMetric       otelconv.SDKExporterSpanExported
+	operationDurationMetric  otelconv.SDKExporterOperationDuration
+	selfObservabilityAttrs   []attribute.KeyValue
 }
 
 // Compile time check *client implements otlptrace.Client.
@@ -74,6 +92,8 @@ func newClient(opts ...Option) *client {
 		c.metadata = metadata.New(cfg.Traces.Headers)
 	}
 
+	c.initSelfObservability()
+
 	return c
 }
 
@@ -97,6 +117,10 @@ func (c *client) Start(context.Context) error {
 	c.tscMu.Lock()
 	c.tsc = coltracepb.NewTraceServiceClient(c.conn)
 	c.tscMu.Unlock()
+
+	if c.selfObservabilityEnabled {
+		c.selfObservabilityAttrs = append(c.selfObservabilityAttrs, getServerAttrs(c.conn.CanonicalTarget())...)
+	}
 
 	return nil
 }
@@ -174,13 +198,54 @@ var errShutdown = errors.New("the client is shutdown")
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
-func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (err error) {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
 	// write lock acquire (i.e. Stop), meaning if the client is shutting down
 	// this will come after the shut down.
 	c.tscMu.RLock()
 	defer c.tscMu.RUnlock()
+
+	var start time.Time
+	var spanCount int
+	if c.selfObservabilityEnabled {
+		start = time.Now()
+		spanCount = 0
+		for _, ps := range protoSpans {
+			for _, ss := range ps.ScopeSpans {
+				spanCount += len(ss.Spans)
+			}
+		}
+		c.spanInFlightMetric.Add(context.Background(), int64(spanCount), c.selfObservabilityAttrs...)
+
+		defer func() {
+			duration := time.Since(start)
+			durationAttrs := make([]attribute.KeyValue, 0, len(c.selfObservabilityAttrs)+2)
+			durationAttrs = append(durationAttrs, c.selfObservabilityAttrs...)
+			durationAttrs = append(durationAttrs,
+				c.operationDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(status.Code(err))))
+
+			exportedAttrs := make([]attribute.KeyValue, 0, len(c.selfObservabilityAttrs)+1)
+			exportedAttrs = append(exportedAttrs, c.selfObservabilityAttrs...)
+
+			if err != nil {
+				// Try to extract the underlying gRPC status error, if there is one
+				rootErr := err
+				if s, ok := status.FromError(err); ok {
+					rootErr = s.Err()
+				}
+				durationAttrs = append(durationAttrs, semconv.ErrorType(rootErr))
+				exportedAttrs = append(exportedAttrs, semconv.ErrorType(rootErr))
+			}
+
+			c.operationDurationMetric.Record(context.Background(), duration.Seconds(),
+				durationAttrs...,
+			)
+
+			c.spanExportedMetric.Add(context.Background(), int64(spanCount), exportedAttrs...)
+			c.spanInFlightMetric.Add(context.Background(), int64(-spanCount), c.selfObservabilityAttrs...)
+		}()
+	}
 
 	if c.tsc == nil {
 		return errShutdown
@@ -201,6 +266,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				otel.Handle(err)
 			}
 		}
+
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
@@ -297,4 +363,87 @@ func (c *client) MarshalLog() any {
 		Type:     "otlptracegrpc",
 		Endpoint: c.endpoint,
 	}
+}
+
+func (c *client) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	c.selfObservabilityEnabled = true
+
+	c.selfObservabilityAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCSpanExporter, nextExporterID())),
+		semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if c.spanInFlightMetric, err = otelconv.NewSDKExporterSpanInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.spanExportedMetric, err = otelconv.NewSDKExporterSpanExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
+}
+
+func getServerAttrs(target string) []attribute.KeyValue {
+	if strings.HasPrefix(target, "unix://") {
+		path := strings.TrimPrefix(target, "unix://")
+		if path == "" {
+			return nil
+		}
+		return []attribute.KeyValue{semconv.ServerAddress(path)}
+	}
+
+	if strings.Contains(target, "://") {
+		u, err := url.Parse(target)
+		if err != nil || u.Scheme == "" {
+			return nil
+		}
+
+		// For gRPC targets like dns:///example.com:42 or dns://8.8.8.8/example.com:42,
+		// use u.Path trimmed of leading slash as host:port
+		target = strings.TrimPrefix(u.Path, "/")
+
+		// Fallback if path empty but host present
+		if target == "" && u.Host != "" {
+			target = u.Host
+		}
+	}
+
+	if target == "" {
+		return nil
+	}
+
+	// Target should now be of form host:port
+	host, pStr, err := net.SplitHostPort(target)
+	if err != nil {
+		return []attribute.KeyValue{semconv.ServerAddress(target)}
+	}
+
+	port, err := strconv.Atoi(pStr)
+	if err != nil {
+		return []attribute.KeyValue{semconv.ServerAddress(host)}
+	}
+
+	return []attribute.KeyValue{
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
+	}
+}
+
+var exporterIDCounter atomic.Int64
+
+// nextExporterID returns a new unique ID for an exporter.
+// the starting value is 0, and it increments by 1 for each call.
+func nextExporterID() int64 {
+	return exporterIDCounter.Add(1) - 1
 }
