@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 )
 
 func TestThrottleDelay(t *testing.T) {
