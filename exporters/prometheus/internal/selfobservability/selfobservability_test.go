@@ -154,6 +154,136 @@ func TestExporterMetricsWithErrors(t *testing.T) {
 	}
 }
 
+func TestExporterMetricsAddExportedWithError(t *testing.T) {
+	// Set up test meter provider
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	prev := otel.GetMeterProvider()
+	otel.SetMeterProvider(mp)
+	t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
+	em := NewExporterMetrics("test-component")
+	ctx := context.Background()
+
+	// Test AddExportedWithError with an error
+	testErr := errors.New("test validation error")
+	em.AddExportedWithError(ctx, 3, testErr)
+
+	// Also add a regular exported metric for comparison
+	em.AddExported(ctx, 2)
+
+	// Collect metrics
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+
+	// Helper to find metrics
+	findMetric := func(name string) *metricdata.Metrics {
+		for _, sm := range rm.ScopeMetrics {
+			for i := range sm.Metrics {
+				if sm.Metrics[i].Name == name {
+					return &sm.Metrics[i]
+				}
+			}
+		}
+		return nil
+	}
+
+	// Verify exported metric exists
+	exported := findMetric("otel.sdk.exporter.metric_data_point.exported")
+	require.NotNil(t, exported, "Expected exported metric to exist")
+
+	switch data := exported.Data.(type) {
+	case metricdata.Sum[int64]:
+		// Check that we have data points
+		require.NotEmpty(t, data.DataPoints, "Expected at least one data point")
+
+		// Look for data points with and without error attributes
+		var regularCount, errorCount int64
+		var foundErrorType bool
+
+		for _, dp := range data.DataPoints {
+			hasError := false
+			for _, attr := range dp.Attributes.ToSlice() {
+				if attr.Key == "error.type" {
+					hasError = true
+					foundErrorType = true
+					// The error.type attribute should contain the Go error type, not the message
+					assert.Equal(t, "*errors.errorString", attr.Value.AsString())
+					errorCount += dp.Value
+				}
+			}
+			if !hasError {
+				regularCount += dp.Value
+			}
+		}
+
+		// We should have found an error type attribute
+		assert.True(t, foundErrorType, "Expected to find error.type attribute")
+
+		// Verify counts
+		assert.Equal(t, int64(2), regularCount, "Expected 2 regular exported metrics")
+		assert.Equal(t, int64(3), errorCount, "Expected 3 exported metrics with error")
+
+	case metricdata.Sum[float64]:
+		// Similar verification for float64 case
+		require.NotEmpty(t, data.DataPoints, "Expected at least one data point")
+
+		var regularCount, errorCount float64
+		var foundErrorType bool
+
+		for _, dp := range data.DataPoints {
+			hasError := false
+			for _, attr := range dp.Attributes.ToSlice() {
+				if attr.Key == "error.type" {
+					hasError = true
+					foundErrorType = true
+					// The error.type attribute should contain the Go error type, not the message
+					assert.Equal(t, "*errors.errorString", attr.Value.AsString())
+					errorCount += dp.Value
+				}
+			}
+			if !hasError {
+				regularCount += dp.Value
+			}
+		}
+
+		assert.True(t, foundErrorType, "Expected to find error.type attribute")
+		assert.InDelta(t, 2.0, regularCount, 0.001)
+		assert.InDelta(t, 3.0, errorCount, 0.001)
+
+	default:
+		t.Fatalf("Unexpected data type: %T", data)
+	}
+}
+
+func TestExporterMetricsAddExportedWithErrorDisabled(t *testing.T) {
+	// Set up test meter provider
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	prev := otel.GetMeterProvider()
+	otel.SetMeterProvider(mp)
+	t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
+	em := NewExporterMetrics("test-component")
+	em.DisableSelfObservability()
+	ctx := context.Background()
+
+	// Test AddExportedWithError when self-observability is disabled
+	testErr := errors.New("test error")
+	em.AddExportedWithError(ctx, 5, testErr)
+
+	// Collect metrics - should be empty since self-observability is disabled
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+
+	// Verify no metrics are recorded when disabled
+	totalMetrics := 0
+	for _, sm := range rm.ScopeMetrics {
+		totalMetrics += len(sm.Metrics)
+	}
+	assert.Equal(t, 0, totalMetrics)
+}
+
 func TestExporterMetricsDisabledSelfObservability(t *testing.T) {
 	// Set up test meter provider
 	reader := metric.NewManualReader()

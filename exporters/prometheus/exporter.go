@@ -166,7 +166,7 @@ func (c *collector) initSelfObservability() {
 	}
 }
 
-// Per-instance tracking methods.
+// Self-Observability tracking methods.
 func (c *collector) trackDataPointStart() {
 	if c.selfObs != nil {
 		c.selfObs.AddInflight(context.Background(), 1)
@@ -180,9 +180,10 @@ func (c *collector) trackDataPointSuccess() {
 	}
 }
 
-func (c *collector) trackDataPointFailure() {
+func (c *collector) trackDataPointFailure(err error) {
 	if c.selfObs != nil {
 		c.selfObs.AddInflight(context.Background(), -1)
+		c.selfObs.AddExportedWithError(context.Background(), 1, err)
 	}
 }
 
@@ -396,10 +397,11 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
-			otel.Handle(fmt.Errorf(
+			err := fmt.Errorf(
 				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-				scale))
-			c.trackDataPointFailure()
+				scale)
+			otel.Handle(err)
+			c.trackDataPointFailure(err)
 			continue
 		}
 
@@ -417,8 +419,9 @@ func addExponentialHistogramMetric[N int64 | float64](
 		positiveBuckets := make(map[int]int64)
 		for i, count := range positiveBucket.Counts {
 			if count > math.MaxInt64 {
-				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", count))
-				c.trackDataPointFailure()
+				err := fmt.Errorf("positive count %d is too large to be represented as int64", count)
+				otel.Handle(err)
+				c.trackDataPointFailure(err)
 				continue
 			}
 			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(count) // nolint: gosec  // Size check above.
@@ -427,8 +430,9 @@ func addExponentialHistogramMetric[N int64 | float64](
 		negativeBuckets := make(map[int]int64)
 		for i, count := range negativeBucket.Counts {
 			if count > math.MaxInt64 {
-				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", count))
-				c.trackDataPointFailure()
+				err := fmt.Errorf("negative count %d is too large to be represented as int64", count)
+				otel.Handle(err)
+				c.trackDataPointFailure(err)
 				continue
 			}
 			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(count) // nolint: gosec  // Size check above.
@@ -447,7 +451,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure()
+			c.trackDataPointFailure(err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
@@ -482,7 +486,7 @@ func addHistogramMetric[N int64 | float64](
 		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure()
+			c.trackDataPointFailure(err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
@@ -515,7 +519,7 @@ func addSumMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure()
+			c.trackDataPointFailure(err)
 			continue
 		}
 		// GaugeValues don't support Exemplars at this time
@@ -547,7 +551,7 @@ func addGaugeMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure()
+			c.trackDataPointFailure(err)
 			continue
 		}
 		ch <- m

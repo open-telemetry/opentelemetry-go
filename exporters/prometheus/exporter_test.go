@@ -6,6 +6,7 @@ package prometheus
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"sync"
@@ -2174,4 +2175,307 @@ func TestDownscaleExponentialBucketEdgeCases(t *testing.T) {
 
 		assert.Equal(t, expected, result)
 	})
+}
+
+func TestCollectorTrackDataPointFailure(t *testing.T) {
+	// Test the modified trackDataPointFailure function with self-observability
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
+	selfObsReader := metric.NewManualReader()
+	selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
+
+	// Override global MeterProvider
+	prevMP := otel.GetMeterProvider()
+	otel.SetMeterProvider(selfObsProvider)
+	t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
+
+	// Create collector with self-observability enabled
+	collector := &collector{}
+	collector.initSelfObservability()
+	require.NotNil(t, collector.selfObs)
+
+	ctx := context.Background()
+
+	// Test trackDataPointFailure with different error types
+	testError1 := errors.New("validation error")
+	testError2 := fmt.Errorf("connection error: %s", "timeout")
+
+	// First add some inflight metrics
+	collector.trackDataPointStart()
+	collector.trackDataPointStart()
+	collector.trackDataPointStart()
+
+	// Now track failures
+	collector.trackDataPointFailure(testError1)
+	collector.trackDataPointFailure(testError2)
+
+	// Add one successful completion
+	collector.trackDataPointSuccess()
+
+	// Collect self-observability metrics
+	var rm metricdata.ResourceMetrics
+	err := selfObsReader.Collect(ctx, &rm)
+	require.NoError(t, err)
+
+	// Helper to find metrics
+	findMetric := func(name string) *metricdata.Metrics {
+		for _, sm := range rm.ScopeMetrics {
+			for i := range sm.Metrics {
+				if sm.Metrics[i].Name == name {
+					return &sm.Metrics[i]
+				}
+			}
+		}
+		return nil
+	}
+
+	// Verify inflight metric (started 3, failed 2, succeeded 1 = 0 remaining)
+	inflight := findMetric("otel.sdk.exporter.metric_data_point.inflight")
+	require.NotNil(t, inflight, "inflight metric should exist")
+	switch data := inflight.Data.(type) {
+	case metricdata.Sum[int64]:
+		totalInflight := int64(0)
+		for _, dp := range data.DataPoints {
+			totalInflight += dp.Value
+		}
+		assert.Equal(t, int64(0), totalInflight, "Expected 0 inflight metrics (3 started - 2 failed - 1 succeeded)")
+	case metricdata.Sum[float64]:
+		totalInflight := float64(0)
+		for _, dp := range data.DataPoints {
+			totalInflight += dp.Value
+		}
+		assert.InDelta(t, 0.0, totalInflight, 0.001, "Expected 0 inflight metrics")
+	}
+
+	// Verify exported metric contains both successful and failed exports
+	exported := findMetric("otel.sdk.exporter.metric_data_point.exported")
+	require.NotNil(t, exported, "exported metric should exist")
+
+	switch data := exported.Data.(type) {
+	case metricdata.Sum[int64]:
+		totalExported := int64(0)
+		errorCount := int64(0)
+		successCount := int64(0)
+
+		for _, dp := range data.DataPoints {
+			totalExported += dp.Value
+			hasError := false
+			for _, attr := range dp.Attributes.ToSlice() {
+				if attr.Key == "error.type" {
+					hasError = true
+					// Should be Go error type
+					assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+					errorCount += dp.Value
+				}
+			}
+			if !hasError {
+				successCount += dp.Value
+			}
+		}
+
+		assert.Equal(t, int64(3), totalExported, "Expected 3 total exported (2 failed + 1 succeeded)")
+		assert.Equal(t, int64(2), errorCount, "Expected 2 failed exports")
+		assert.Equal(t, int64(1), successCount, "Expected 1 successful export")
+
+	case metricdata.Sum[float64]:
+		totalExported := float64(0)
+		errorCount := float64(0)
+		successCount := float64(0)
+
+		for _, dp := range data.DataPoints {
+			totalExported += dp.Value
+			hasError := false
+			for _, attr := range dp.Attributes.ToSlice() {
+				if attr.Key == "error.type" {
+					hasError = true
+					assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+					errorCount += dp.Value
+				}
+			}
+			if !hasError {
+				successCount += dp.Value
+			}
+		}
+
+		assert.InDelta(t, 3.0, totalExported, 0.001)
+		assert.InDelta(t, 2.0, errorCount, 0.001)
+		assert.InDelta(t, 1.0, successCount, 0.001)
+	}
+}
+
+func TestCollectorTrackDataPointFailureDisabled(t *testing.T) {
+	// Test trackDataPointFailure when self-observability is disabled
+	collector := &collector{}
+	// Don't initialize self-observability (selfObs will be nil)
+
+	testError := errors.New("test error")
+
+	// Should not panic when selfObs is nil
+	require.NotPanics(t, func() {
+		collector.trackDataPointFailure(testError)
+	})
+}
+
+func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
+	// Test various error scenarios that trigger trackDataPointFailure
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	// Set up self-observability metrics capture
+	selfObsReader := metric.NewManualReader()
+	selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
+	prevMP := otel.GetMeterProvider()
+	otel.SetMeterProvider(selfObsProvider)
+	t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
+
+	tests := []struct {
+		name        string
+		setupData   func() metricdata.Metrics
+		expectedErr string
+	}{
+		{
+			name: "invalid_exponential_histogram_scale",
+			setupData: func() metricdata.Metrics {
+				now := time.Now()
+				return metricdata.Metrics{
+					Name:        "test_exp_histogram",
+					Description: "test exponential histogram with invalid scale",
+					Data: metricdata.ExponentialHistogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+							{
+								Attributes:    attribute.NewSet(),
+								StartTime:     now,
+								Time:          now,
+								Count:         1,
+								Sum:           10.0,
+								Scale:         -5, // Invalid scale below -4
+								ZeroCount:     0,
+								ZeroThreshold: 0.0,
+								PositiveBucket: metricdata.ExponentialBucket{
+									Offset: 1,
+									Counts: []uint64{1},
+								},
+							},
+						},
+					},
+				}
+			},
+			expectedErr: "scale -5 is below minimum",
+		},
+		{
+			name: "exponential_histogram_count_overflow",
+			setupData: func() metricdata.Metrics {
+				now := time.Now()
+				return metricdata.Metrics{
+					Name:        "test_exp_histogram_overflow",
+					Description: "test exponential histogram with count overflow",
+					Data: metricdata.ExponentialHistogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+							{
+								Attributes:    attribute.NewSet(),
+								StartTime:     now,
+								Time:          now,
+								Count:         1,
+								Sum:           10.0,
+								Scale:         0,
+								ZeroCount:     0,
+								ZeroThreshold: 0.0,
+								PositiveBucket: metricdata.ExponentialBucket{
+									Offset: 1,
+									Counts: []uint64{math.MaxUint64}, // Count too large for int64
+								},
+							},
+						},
+					},
+				}
+			},
+			expectedErr: "too large to be represented as int64",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var capturedErrors []error
+			originalHandler := otel.GetErrorHandler()
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				capturedErrors = append(capturedErrors, err)
+			}))
+			defer otel.SetErrorHandler(originalHandler)
+
+			// Create collector with self-observability
+			collector := &collector{}
+			collector.initSelfObservability()
+
+			// Create metrics channel
+			ch := make(chan prometheus.Metric, 10)
+			defer close(ch)
+
+			// Process the test data
+			m := tt.setupData()
+			if data, ok := m.Data.(metricdata.ExponentialHistogram[float64]); ok {
+				addExponentialHistogramMetric(
+					ch,
+					data,
+					m,
+					m.Name,
+					keyVals{},
+					otlptranslator.LabelNamer{},
+					collector,
+				)
+			}
+
+			// Verify error was captured
+			require.NotEmpty(t, capturedErrors, "Expected error to be captured")
+			assert.Contains(t, capturedErrors[0].Error(), tt.expectedErr)
+
+			// Collect self-observability metrics
+			var rm metricdata.ResourceMetrics
+			err := selfObsReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			// Find exported metric with error attributes
+			var exportedWithErrors *metricdata.Metrics
+			for _, sm := range rm.ScopeMetrics {
+				for i := range sm.Metrics {
+					if sm.Metrics[i].Name == "otel.sdk.exporter.metric_data_point.exported" {
+						exportedWithErrors = &sm.Metrics[i]
+						break
+					}
+				}
+			}
+
+			require.NotNil(t, exportedWithErrors, "Expected exported metric to exist")
+
+			// Verify that failed exports are recorded with error attributes
+			switch data := exportedWithErrors.Data.(type) {
+			case metricdata.Sum[int64]:
+				foundError := false
+				for _, dp := range data.DataPoints {
+					for _, attr := range dp.Attributes.ToSlice() {
+						if attr.Key == "error.type" {
+							foundError = true
+							assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+							assert.Positive(t, dp.Value)
+						}
+					}
+				}
+				assert.True(t, foundError, "Expected to find exported metric with error.type attribute")
+
+			case metricdata.Sum[float64]:
+				foundError := false
+				for _, dp := range data.DataPoints {
+					for _, attr := range dp.Attributes.ToSlice() {
+						if attr.Key == "error.type" {
+							foundError = true
+							assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+							assert.Greater(t, dp.Value, float64(0))
+						}
+					}
+				}
+				assert.True(t, foundError, "Expected to find exported metric with error.type attribute")
+			}
+		})
+	}
 }

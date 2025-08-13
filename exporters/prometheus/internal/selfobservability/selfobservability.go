@@ -76,6 +76,16 @@ func (em *ExporterMetrics) AddExported(ctx context.Context, count int64) {
 	em.exportedMetric.Add(ctx, count, em.attrs...)
 }
 
+// AddExportedWithError adds the specified count to the exported metric with error attributes.
+// This method is specifically for tracking failed exports, so an error must be provided.
+func (em *ExporterMetrics) AddExportedWithError(ctx context.Context, count int64, err error) {
+	if !em.selfObservabilityEnabled {
+		return
+	}
+	attrs := append(em.attrs, semconv.ErrorType(err))
+	em.exportedMetric.Add(ctx, count, attrs...)
+}
+
 // TrackCollectionDuration records the duration of a reader collection operation.
 func (em *ExporterMetrics) TrackCollectionDuration(ctx context.Context) func(error) {
 	if !em.selfObservabilityEnabled {
