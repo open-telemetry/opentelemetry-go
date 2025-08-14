@@ -122,7 +122,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			legacyValidation: true,
 			wantConfig: config{
-				translationStrategy: otlptranslator.UnderscoreEscapingWithoutSuffixes,
+				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
 				registerer:          prometheus.DefaultRegisterer,
 				withoutUnits:        true,
 			},
@@ -145,7 +145,7 @@ func TestNewConfig(t *testing.T) {
 				WithoutUnits(),
 			},
 			wantConfig: config{
-				translationStrategy: otlptranslator.NoTranslation,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
 				registerer:          prometheus.DefaultRegisterer,
 				withoutUnits:        true,
 			},
@@ -163,7 +163,7 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "explicit translation strategy overrides withoutUnits setting",
+			name: "translation strategy does not override unit suffixes disabled",
 			options: []Option{
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 				WithoutUnits(),
@@ -171,6 +171,7 @@ func TestNewConfig(t *testing.T) {
 			wantConfig: config{
 				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
 				registerer:          prometheus.DefaultRegisterer,
+				withoutUnits:        true,
 			},
 		},
 		{

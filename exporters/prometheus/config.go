@@ -43,32 +43,22 @@ func newConfig(opts ...Option) config {
 
 	if cfg.translationStrategy == "" {
 		// If no translation strategy was specified, deduce one based on the global
-		// NameValidationScheme and the existence of the withoutUnits option first.
-		// NOTE: this logic will change in the future, removing the
-		// NameValidationScheme check.
+		// NameValidationScheme. NOTE: this logic will change in the future, always
+		// defaulting to UnderscoreEscapingWithSuffixes
 
 		//nolint:staticcheck
 		if model.NameValidationScheme == model.UTF8Validation {
-			if cfg.withoutUnits {
-				cfg.translationStrategy = otlptranslator.NoTranslation
-			} else {
-				cfg.translationStrategy = otlptranslator.NoUTF8EscapingWithSuffixes
-			}
+			cfg.translationStrategy = otlptranslator.NoUTF8EscapingWithSuffixes
 		} else {
-			if cfg.withoutUnits {
-				cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithoutSuffixes
-			} else {
-				cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithSuffixes
-			}
+			cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithSuffixes
 		}
 	} else {
-		// overwrite withoutUnits config to align with translation strategy choice.
-		cfg.withoutUnits = !cfg.translationStrategy.ShouldAddSuffixes()
 		// Note, if the translation strategy does implies that suffixes should be
-		// added, withoutCounterSuffixes can *still* be set by the user to be true.
-		// Do not override their preference in this case.
+		// added, withoutUnits and withoutCounterSuffixes can *still* be set by the
+		// user to be true. Do not override their preference in this case.
 		if !cfg.translationStrategy.ShouldAddSuffixes() {
 			cfg.withoutCounterSuffixes = true
+			cfg.withoutUnits = true
 		}
 	}
 
@@ -136,8 +126,11 @@ func WithoutTargetInfo() Option {
 // [otlptranslator.UnderscoreEscapingWithSuffixes] for full Prometheus-style
 // compatibility or NoTranslation for Otel-style names.
 //
-// If WithTranslationStrategy is set, it will take precedence over the
-// [WithoutUnits] option. By default, if the NameValidationScheme variable in
+// The [WithoutUnits] and [WithoutCounterSuffixes] options will affect the
+// selected Translation Stragegy, so it is possible to request a strategy with
+// suffixes and then optionally disable one or both of them.
+//
+// By default, if the NameValidationScheme variable in
 // [github.com/prometheus/common/model] is "legacy", the default strategy is
 // [otlptranslator.UnderscoreEscapingWithSuffixes]. If the validation scheme is
 // "utf8", then currently the default Strategy will be
@@ -162,6 +155,9 @@ func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) 
 // conventions. For example, the counter metric request.duration, with unit
 // milliseconds would become request_duration_milliseconds_total.
 // With this option set, the name would instead be request_duration_total.
+//
+// Can be used in conjunction with WithTranslationStrategy to disable unit
+// suffixes in strategies that would otherwise add suffixes.
 //
 // Deprecated: Use [WithTranslationStrategy] instead.
 func WithoutUnits() Option {

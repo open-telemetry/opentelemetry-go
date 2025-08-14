@@ -51,7 +51,7 @@ The next release will require at least [Go 1.24].
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
 - Add experimental self-observability span and batch span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027, #6393)
-- Add support for configuring Prometheus name translation using WithTranslationStrategy option, deprecating WithoutUnits. The current default translation strategy is NoUTF8EscapingWithSuffixes, but a a future release will change the default strategy to UnderscoreEscapingWithSuffixes for compliance with the specification. (#7111)
+- Add support for configuring Prometheus name translation using WithTranslationStrategy option, deprecating WithoutUnits. The current default translation strategy is NoUTF8EscapingWithSuffixes, but a future release will change the default strategy to UnderscoreEscapingWithSuffixes for compliance with the specification. (#7111)
 - Add native histogram exemplar support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6772)
 - Add experimental self-observability log metrics in `go.opentelemetry.io/otel/sdk/log`.
   Check the `go.opentelemetry.io/otel/sdk/log/internal/x` package documentation for more information. (#7121)
