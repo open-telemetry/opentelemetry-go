@@ -46,7 +46,7 @@
 // excessive memory usage, increased storage costs, and backend performance issues.
 //
 // The OpenTelemetry Go Metric SDK does not enforce a cardinality limit by default.
-// A limit can be configured via the API using the `WithCardinalityLimit`
+// A limit can be configured using the [WithCardinalityLimit]
 // option.
 //
 // When the configured limit is reached, any new attribute combination is not
