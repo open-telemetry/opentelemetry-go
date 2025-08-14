@@ -285,8 +285,12 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0"),
-									semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"),
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 								),
 								Value: 0,
 							},
@@ -304,8 +308,12 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0"),
-									semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"),
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 								),
 								Value: 2,
 							},
@@ -322,8 +330,12 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.HistogramDataPoint[float64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0"),
-									semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"),
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 								),
 							},
 						},
@@ -367,8 +379,12 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/1"),
-									semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"),
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/1",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 								),
 								Value: 0,
 							},
@@ -386,8 +402,12 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/1"),
-									semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"),
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/1",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 									semconv.ErrorType(context.Canceled),
 								),
 								Value: 2,
@@ -405,8 +425,12 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.HistogramDataPoint[float64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/1"),
-									semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"),
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/1",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 									semconv.ErrorType(context.Canceled),
 								),
 							},
