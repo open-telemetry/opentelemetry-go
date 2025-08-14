@@ -1,6 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package counter provides a simple counter for generating unique IDs.
+//
+// This package is used to generate unique IDs while allowing testing packages
+// to reset the counter.
 package counter
 
 import "sync/atomic"
