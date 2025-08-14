@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -367,7 +368,7 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentName("stdout_trace_exporter/0"),
 									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
 								),
 								Value: 0,
@@ -386,7 +387,7 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentName("stdout_trace_exporter/0"),
 									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
 									semconv.ErrorType(context.Canceled),
 								),
@@ -405,7 +406,7 @@ func TestSelfObservability(t *testing.T) {
 						DataPoints: []metricdata.HistogramDataPoint[float64]{
 							{
 								Attributes: attribute.NewSet(
-									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentName("stdout_trace_exporter/0"),
 									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
 									semconv.ErrorType(context.Canceled),
 								),
@@ -421,6 +422,8 @@ func TestSelfObservability(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.enabled {
 				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+				_ = counter.SetExporterID(0)
 			}
 
 			original := otel.GetMeterProvider()

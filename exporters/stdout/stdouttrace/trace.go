@@ -13,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
@@ -71,7 +72,7 @@ func (e *Exporter) initSelfObservability() {
 
 	e.selfObservabilityEnabled = true
 	e.selfObservabilityAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
 		semconv.OTelComponentTypeKey.String(otelComponentType),
 	}
 

@@ -1,0 +1,24 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package counter
+
+import "sync/atomic"
+
+// exporterN is a global 0-based count of the number of exporters created.
+var exporterN atomic.Int64
+
+// NextExporterID returns the next unique ID for an exporter.
+func NextExporterID() int64 {
+	const inc = 1
+	return exporterN.Add(inc) - inc
+}
+
+// SetExporterID sets the exporter ID counter to v and returns the previous
+// value.
+//
+// This function is useful for testing purposes, allowing you to reset the
+// counter. It should not be used in production code.
+func SetExporterID(v int64) int64 {
+	return exporterN.Swap(v)
+}
