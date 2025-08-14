@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -171,12 +170,4 @@ func (e *Exporter) MarshalLog() any {
 		Type:           "stdout",
 		WithTimestamps: e.timestamps,
 	}
-}
-
-var exporterIDCounter atomic.Int64
-
-// nextExporterID returns a new unique ID for an exporter.
-// the starting value is 0, and it increments by 1 for each call.
-func nextExporterID() int64 {
-	return exporterIDCounter.Add(1) - 1
 }
