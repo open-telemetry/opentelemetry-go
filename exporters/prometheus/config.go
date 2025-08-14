@@ -112,7 +112,7 @@ func WithoutTargetInfo() Option {
 
 // WithTranslationStrategy provides a standardized way to define how metric and
 // label names should be handled during translation to Prometheus format. See:
-// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk_exporters/prometheus.md#configuration.
+// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.48.0/specification/metrics/sdk_exporters/prometheus.md#configuration.
 // The recommended approach is to use either UnderscoreEscapingWithSuffixes for
 // full Prometheus-style compatibility or NoTranslation for Otel-style names.
 // WithTranslationStrategy will affect the values of options set
