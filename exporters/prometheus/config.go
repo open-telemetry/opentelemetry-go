@@ -64,7 +64,7 @@ func newConfig(opts ...Option) config {
 	} else {
 		// overwrite withoutUnits config to align with translation strategy choice.
 		cfg.withoutUnits = !cfg.translationStrategy.ShouldAddSuffixes()
-		// Note, if the translation strategy does not imply that suffixes should be
+		// Note, if the translation strategy does implies that suffixes should be
 		// added, withoutCounterSuffixes can *still* be set by the user to be true.
 		// Do not override their preference in this case.
 		if !cfg.translationStrategy.ShouldAddSuffixes() {
