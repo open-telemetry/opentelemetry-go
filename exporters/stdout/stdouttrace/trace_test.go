@@ -388,6 +388,13 @@ func TestSelfObservability(t *testing.T) {
 								Attributes: attribute.NewSet(
 									semconv.OTelComponentName("stdout_trace_exporter/1"),
 									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 0,
+							},
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/1"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
 									semconv.ErrorType(context.Canceled),
 								),
 								Value: 2,
