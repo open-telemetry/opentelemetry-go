@@ -53,9 +53,11 @@ func newConfig(opts ...Option) config {
 			cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithSuffixes
 		}
 	} else {
-		// Note, if the translation strategy does implies that suffixes should be
-		// added, withoutUnits and withoutCounterSuffixes can *still* be set by the
-		// user to be true. Do not override their preference in this case.
+		// Note, if the translation strategy implies that suffixes should be added,
+		// the user can still use withoutUnits and withoutCounterSuffixes to
+		// explicitly disable specific suffixes. We do not override their preference
+		// in this case. However if the chosen strategy disables suffixes, we should
+		// forcibly disable all of them.
 		if !cfg.translationStrategy.ShouldAddSuffixes() {
 			cfg.withoutCounterSuffixes = true
 			cfg.withoutUnits = true
@@ -126,14 +128,17 @@ func WithoutTargetInfo() Option {
 // [otlptranslator.UnderscoreEscapingWithSuffixes] for full Prometheus-style
 // compatibility or NoTranslation for Otel-style names.
 //
-// The [WithoutUnits] and [WithoutCounterSuffixes] options will affect the
-// selected Translation Stragegy, so it is possible to request a strategy with
-// suffixes and then optionally disable one or both of them.
+// If the selected strategy asks for suffixes, the [WithoutUnits] and
+// [WithoutCounterSuffixes] options can still be used to optionally disable one
+// or both of them. Strategies that do not have suffixes
+// ([otlptranslator.NoTranslation] and
+// [otlptranslator.UnderscoreEscapingWithoutSuffixes]) will never have suffixes
+// appended.
 //
 // By default, if the NameValidationScheme variable in
 // [github.com/prometheus/common/model] is "legacy", the default strategy is
 // [otlptranslator.UnderscoreEscapingWithSuffixes]. If the validation scheme is
-// "utf8", then currently the default Strategy will be
+// "utf8", then currently the default Strategy is
 // [otlptranslator.NoUTF8EscapingWithSuffixes].
 //
 // Notice: It is planned that a future release of this SDK will change the
@@ -157,7 +162,8 @@ func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) 
 // With this option set, the name would instead be request_duration_total.
 //
 // Can be used in conjunction with WithTranslationStrategy to disable unit
-// suffixes in strategies that would otherwise add suffixes.
+// suffixes in strategies that would otherwise add suffixes, but this behavior
+// is not recommended and may be removed in a future release.
 //
 // Deprecated: Use [WithTranslationStrategy] instead.
 func WithoutUnits() Option {
@@ -176,7 +182,8 @@ func WithoutUnits() Option {
 // happy_people.
 //
 // Can be used in conjunction with WithTranslationStrategy to disable counter
-// suffixes in strategies that would otherwise add suffixes.
+// suffixes in strategies that would otherwise add suffixes, but this behavior
+// is not recommended and may be removed in a future release.
 //
 // Deprecated: Use [WithTranslationStrategy] instead.
 func WithoutCounterSuffixes() Option {
