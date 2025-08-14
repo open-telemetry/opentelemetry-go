@@ -121,8 +121,10 @@ func WithoutTargetInfo() Option {
 // needed. By default, if prometheus/common:model.NameValidationScheme is
 // "legacy", the default strategy is UnderscoreEscapingWithSuffixes. If the
 // validation scheme is "utf8", then currently the default Strategy will be
-// NoUTF8EscapingWithSuffixes. The next release of this SDK will change the
-// default to always be UnderscoreEscapingWithSuffixes in all circumstances.
+// [otlptranslator.NoUTF8EscapingWithSuffixes].
+//
+// Notice: It is planned that a future release of this SDK will change the
+// default to always be [otlptranslator.UnderscoreEscapingWithSuffixes] in all circumstances.
 // Users wanting a different translation strategy should specify it explicitly.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
