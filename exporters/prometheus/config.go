@@ -30,7 +30,7 @@ type config struct {
 
 var logTemporaryDefault = sync.OnceFunc(func() {
 	global.Warn(
-		"The default Prometheus naming translation strategy is changing from NoUTF8EscapingWithSuffixes to UnderscoreEscapingWithSuffixes in the next release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the new default behavior.",
+		"The default Prometheus naming translation strategy is planned to be changed from NoUTF8EscapingWithSuffixes to UnderscoreEscapingWithSuffixes in a future release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the future default behavior.",
 	)
 })
 
