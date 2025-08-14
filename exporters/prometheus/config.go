@@ -119,7 +119,7 @@ func WithoutTargetInfo() Option {
 // WithTranslationStrategy will affect the values of options set
 // WithoutCounterSuffixes, and WithoutUnits, so users should set their desired
 // overall Translation Strategy first and then apply subsequent options if
-// needed. By default, if prometheus/common:model.NameValidationScheme is
+// needed. By default, if NameValidationScheme variable in [github.com/prometheus/common/model] is
 // "legacy", the default strategy is UnderscoreEscapingWithSuffixes. If the
 // validation scheme is "utf8", then currently the default Strategy will be
 // [otlptranslator.NoUTF8EscapingWithSuffixes].
