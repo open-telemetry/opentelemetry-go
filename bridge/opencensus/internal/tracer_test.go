@@ -139,7 +139,7 @@ type differentSpan struct {
 	octrace.SpanInterface
 }
 
-func (s *differentSpan) String() string { return "testing span" }
+func (*differentSpan) String() string { return "testing span" }
 
 func TestTracerNewContextErrors(t *testing.T) {
 	h, restore := withHandler()

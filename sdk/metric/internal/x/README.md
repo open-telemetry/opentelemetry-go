@@ -8,39 +8,8 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ## Features
 
-- [Cardinality Limit](#cardinality-limit)
 - [Exemplars](#exemplars)
 - [Instrument Enabled](#instrument-enabled)
-
-### Cardinality Limit
-
-The cardinality limit is the hard limit on the number of metric streams that can be collected for a single instrument.
-
-This experimental feature can be enabled by setting the `OTEL_GO_X_CARDINALITY_LIMIT` environment value.
-The value must be an integer value.
-All other values are ignored.
-
-If the value set is less than or equal to `0`, no limit will be applied.
-
-#### Examples
-
-Set the cardinality limit to 2000.
-
-```console
-export OTEL_GO_X_CARDINALITY_LIMIT=2000
-```
-
-Set an infinite cardinality limit (functionally equivalent to disabling the feature).
-
-```console
-export OTEL_GO_X_CARDINALITY_LIMIT=-1
-```
-
-Disable the cardinality limit.
-
-```console
-unset OTEL_GO_X_CARDINALITY_LIMIT
-```
 
 ### Exemplars
 

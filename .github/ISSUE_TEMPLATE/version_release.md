@@ -20,3 +20,5 @@ assignees: ''
 - [ ] [Release contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/RELEASING.md#release-process)
 - [ ] [Sync website docs](https://github.com/open-telemetry/opentelemetry-go/blob/main/RELEASING.md#website-documentation)
 - [ ] [Close the milestone](https://github.com/open-telemetry/opentelemetry-go/blob/main/RELEASING.md#close-the-milestone)
+
+<sub>**Tip**: [React](https://github.blog/news-insights/product-news/add-reactions-to-pull-requests-issues-and-comments/) with 👍 to help prioritize this issue. Please use comments to provide useful context, avoiding `+1` or `me too`, to help us triage it. Learn more [here](https://opentelemetry.io/community/end-user/issue-participation/).</sub>

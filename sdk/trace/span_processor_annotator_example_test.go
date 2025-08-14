@@ -34,9 +34,9 @@ type Annotator struct {
 }
 
 func (a Annotator) OnStart(_ context.Context, s ReadWriteSpan) { s.SetAttributes(a.AttrsFunc()...) }
-func (a Annotator) Shutdown(context.Context) error             { return nil }
-func (a Annotator) ForceFlush(context.Context) error           { return nil }
-func (a Annotator) OnEnd(s ReadOnlySpan) {
+func (Annotator) Shutdown(context.Context) error               { return nil }
+func (Annotator) ForceFlush(context.Context) error             { return nil }
+func (Annotator) OnEnd(s ReadOnlySpan) {
 	attr := s.Attributes()[0]
 	fmt.Printf("%s: %s\n", attr.Key, attr.Value.AsString())
 }

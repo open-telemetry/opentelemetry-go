@@ -353,7 +353,7 @@ func (c *httpCollector) record(r *http.Request) exportResult {
 	return exportResult{Err: err}
 }
 
-func (c *httpCollector) readBody(r *http.Request) (body []byte, err error) {
+func (*httpCollector) readBody(r *http.Request) (body []byte, err error) {
 	var reader io.ReadCloser
 	switch r.Header.Get("Content-Encoding") {
 	case "gzip":

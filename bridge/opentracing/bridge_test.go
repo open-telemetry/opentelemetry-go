@@ -30,7 +30,7 @@ func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
 }
 
-func (t *testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
+func (*testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	_ = handler("key1", "val1")
 	_ = handler("key2", "val2")
 
@@ -134,7 +134,7 @@ var (
 
 type testTextMapPropagator struct{}
 
-func (t testTextMapPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
+func (testTextMapPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, traceID.String()+":"+spanID.String())
 
 	// Test for panic
@@ -142,7 +142,7 @@ func (t testTextMapPropagator) Inject(_ context.Context, carrier propagation.Tex
 	_ = carrier.Keys()
 }
 
-func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	traces := carrier.Get(testHeader)
 
 	str := strings.Split(traces, ":")
@@ -179,7 +179,7 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (t testTextMapPropagator) Fields() []string {
+func (testTextMapPropagator) Fields() []string {
 	return []string{"test"}
 }
 

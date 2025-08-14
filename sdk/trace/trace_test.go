@@ -161,7 +161,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 }
 
-func (ts testSampler) Description() string {
+func (testSampler) Description() string {
 	return "testSampler"
 }
 
@@ -1799,7 +1799,7 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: decision, Tracestate: ts}
 }
 
-func (s stateSampler) Description() string {
+func (stateSampler) Description() string {
 	return "stateSampler"
 }
 
@@ -2641,7 +2641,7 @@ func RecordingOnly() Sampler {
 type recordOnlySampler struct{}
 
 // ShouldSample implements Sampler interface. It always returns Record but not Sample.
-func (s recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	return SamplingResult{
 		Decision:   RecordOnly,

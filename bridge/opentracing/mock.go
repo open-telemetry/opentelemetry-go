@@ -132,7 +132,7 @@ func (t *mockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConf
 	return trace.SpanID{}
 }
 
-func (t *mockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
+func (*mockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
 	if !config.NewRoot() {
 		return trace.SpanContextFromContext(ctx)
 	}
@@ -309,4 +309,4 @@ func (s *mockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *mockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }
+func (*mockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }

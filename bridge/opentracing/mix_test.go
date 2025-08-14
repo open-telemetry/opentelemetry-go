@@ -145,7 +145,7 @@ func (st *simpleTest) runOTOtelOT(t *testing.T, ctx context.Context) {
 	runOTOtelOT(t, ctx, "simple", st.noop)
 }
 
-func (st *simpleTest) noop(_ *testing.T, ctx context.Context) context.Context {
+func (*simpleTest) noop(_ *testing.T, ctx context.Context) context.Context {
 	return ctx
 }
 

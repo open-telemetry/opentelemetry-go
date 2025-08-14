@@ -278,7 +278,7 @@ type logSink struct {
 	keysAndValues []any
 }
 
-func (l *logSink) Enabled(int) bool { return true }
+func (*logSink) Enabled(int) bool { return true }
 
 func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues

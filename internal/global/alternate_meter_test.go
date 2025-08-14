@@ -106,22 +106,22 @@ func (*altRegistration) Unregister() error {
 	return nil
 }
 
-func (am *altMeter) Int64Counter(name string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+func (*altMeter) Int64Counter(name string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64Counter(name)
 }
 
-func (am *altMeter) Int64UpDownCounter(
+func (*altMeter) Int64UpDownCounter(
 	name string,
 	_ ...metric.Int64UpDownCounterOption,
 ) (metric.Int64UpDownCounter, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64UpDownCounter(name)
 }
 
-func (am *altMeter) Int64Histogram(name string, _ ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
+func (*altMeter) Int64Histogram(name string, _ ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64Histogram(name)
 }
 
-func (am *altMeter) Int64Gauge(name string, _ ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+func (*altMeter) Int64Gauge(name string, _ ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64Gauge(name)
 }
 
@@ -152,25 +152,25 @@ func (am *altMeter) Int64ObservableGauge(
 	}, nil
 }
 
-func (am *altMeter) Float64Counter(name string, _ ...metric.Float64CounterOption) (metric.Float64Counter, error) {
+func (*altMeter) Float64Counter(name string, _ ...metric.Float64CounterOption) (metric.Float64Counter, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64Counter(name)
 }
 
-func (am *altMeter) Float64UpDownCounter(
+func (*altMeter) Float64UpDownCounter(
 	name string,
 	_ ...metric.Float64UpDownCounterOption,
 ) (metric.Float64UpDownCounter, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64UpDownCounter(name)
 }
 
-func (am *altMeter) Float64Histogram(
+func (*altMeter) Float64Histogram(
 	name string,
 	_ ...metric.Float64HistogramOption,
 ) (metric.Float64Histogram, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64Histogram(name)
 }
 
-func (am *altMeter) Float64Gauge(name string, _ ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+func (*altMeter) Float64Gauge(name string, _ ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64Gauge(name)
 }
 

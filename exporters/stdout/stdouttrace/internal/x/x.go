@@ -1,16 +1,26 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains support for OTel metric SDK experimental features.
-//
-// This package should only be used for features defined in the specification.
-// It should not be used for experiments or new project ideas.
-package x // import "go.opentelemetry.io/otel/sdk/metric/internal/x"
+// Package x documents experimental features for [go.opentelemetry.io/otel/exporters/stdout/stdouttrace].
+package x // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 
 import (
-	"context"
 	"os"
+	"strings"
 )
+
+// SelfObservability is an experimental feature flag that determines if SDK
+// self-observability metrics are enabled.
+//
+// To enable this feature set the OTEL_GO_X_SELF_OBSERVABILITY environment variable
+// to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
+// will also enable this).
+var SelfObservability = newFeature("SELF_OBSERVABILITY", func(v string) (string, bool) {
+	if strings.EqualFold(v, "true") {
+		return v, true
+	}
+	return "", false
+})
 
 // Feature is an experimental feature control flag. It provides a uniform way
 // to interact with these feature flags and parse their values.
@@ -19,7 +29,6 @@ type Feature[T any] struct {
 	parse func(v string) (T, bool)
 }
 
-//nolint:unused
 func newFeature[T any](suffix string, parse func(string) (T, bool)) Feature[T] {
 	const envKeyRoot = "OTEL_GO_X_"
 	return Feature[T]{
@@ -51,15 +60,4 @@ func (f Feature[T]) Lookup() (v T, ok bool) {
 func (f Feature[T]) Enabled() bool {
 	_, ok := f.Lookup()
 	return ok
-}
-
-// EnabledInstrument informs whether the instrument is enabled.
-//
-// EnabledInstrument interface is implemented by synchronous instruments.
-type EnabledInstrument interface {
-	// Enabled reports whether the instrument will process measurements for the given context.
-	//
-	// This function can be used in places where measuring an instrument
-	// would result in computationally expensive operations.
-	Enabled(context.Context) bool
 }

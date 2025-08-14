@@ -92,11 +92,14 @@ var (
 type NodeConditionStatusAttr string
 
 var (
-	// NodeConditionStatusConditionTrue is the none.
+	// NodeConditionStatusConditionTrue is the standardized value "true" of
+	// NodeConditionStatusAttr.
 	NodeConditionStatusConditionTrue NodeConditionStatusAttr = "true"
-	// NodeConditionStatusConditionFalse is the none.
+	// NodeConditionStatusConditionFalse is the standardized value "false" of
+	// NodeConditionStatusAttr.
 	NodeConditionStatusConditionFalse NodeConditionStatusAttr = "false"
-	// NodeConditionStatusConditionUnknown is the none.
+	// NodeConditionStatusConditionUnknown is the standardized value "unknown" of
+	// NodeConditionStatusAttr.
 	NodeConditionStatusConditionUnknown NodeConditionStatusAttr = "unknown"
 )
 
@@ -127,9 +130,11 @@ var (
 type NetworkIODirectionAttr string
 
 var (
-	// NetworkIODirectionTransmit is the none.
+	// NetworkIODirectionTransmit is the standardized value "transmit" of
+	// NetworkIODirectionAttr.
 	NetworkIODirectionTransmit NetworkIODirectionAttr = "transmit"
-	// NetworkIODirectionReceive is the none.
+	// NetworkIODirectionReceive is the standardized value "receive" of
+	// NetworkIODirectionAttr.
 	NetworkIODirectionReceive NetworkIODirectionAttr = "receive"
 )
 

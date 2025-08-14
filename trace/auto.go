@@ -39,7 +39,7 @@ type autoTracerProvider struct{ embedded.TracerProvider }
 
 var _ TracerProvider = autoTracerProvider{}
 
-func (p autoTracerProvider) Tracer(name string, opts ...TracerOption) Tracer {
+func (autoTracerProvider) Tracer(name string, opts ...TracerOption) Tracer {
 	cfg := NewTracerConfig(opts...)
 	return autoTracer{
 		name:      name,
@@ -81,7 +81,7 @@ func (t autoTracer) Start(ctx context.Context, name string, opts ...SpanStartOpt
 // Expected to be implemented in eBPF.
 //
 //go:noinline
-func (t *autoTracer) start(
+func (*autoTracer) start(
 	ctx context.Context,
 	spanPtr *autoSpan,
 	psc *SpanContext,

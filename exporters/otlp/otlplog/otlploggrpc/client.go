@@ -217,9 +217,9 @@ func newNoopClient() *noopClient {
 	return &noopClient{}
 }
 
-func (c *noopClient) UploadLogs(context.Context, []*logpb.ResourceLogs) error { return nil }
+func (*noopClient) UploadLogs(context.Context, []*logpb.ResourceLogs) error { return nil }
 
-func (c *noopClient) Shutdown(context.Context) error { return nil }
+func (*noopClient) Shutdown(context.Context) error { return nil }
 
 // retryable returns if err identifies a request that can be retried and a
 // duration to wait for if an explicit throttle time is included in err.
