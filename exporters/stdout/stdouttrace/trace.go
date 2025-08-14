@@ -6,6 +6,7 @@ package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdoutt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -157,12 +158,12 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		}
 
 		// Encode span stubs, one by one
-		if err := e.encoder.Encode(stub); err != nil {
-			return err
+		if e := e.encoder.Encode(stub); e != nil {
+			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, e))
 		}
 		success++
 	}
-	return nil
+	return err
 }
 
 // Shutdown is called to stop the exporter, it performs no action.
