@@ -44,9 +44,9 @@ func newConfig(opts ...Option) config {
 	if cfg.translationStrategy == "" {
 		// If no translation strategy was specified, deduce one based on the global
 		// NameValidationScheme and the existence of the withoutUnits option first.
-		// NOTE:
-		// this logic will change in the future, removing the NameValidationScheme
-		// check.
+		// NOTE: this logic will change in the future, removing the
+		// NameValidationScheme check.
+
 		//nolint:staticcheck
 		if model.NameValidationScheme == model.UTF8Validation {
 			if cfg.withoutUnits {
