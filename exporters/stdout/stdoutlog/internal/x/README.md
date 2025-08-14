@@ -1,16 +1,26 @@
 # Experimental Features
 
-This package documents the experimental features available for [go.opentelemetry.io/otel/exporters/stdout/stdoutlog].
+The stdout log exporter contains features that have not yet stabilized in the OpenTelemetry specification.
+These features are added prior to stabilization so that users can start experimenting with them and provide feedback.
 
-## Self-Observability
+These features may change in backwards incompatible ways as feedback is applied.
+See the [Compatibility and Stability](#compatibility-and-stability) section for more information.
 
-The self-observability feature allows the stdout log exporter to emit metrics. When enabled, the exporter will record metrics for:
+## Features
+
+- [Self-Observability](#self-observability)
+
+### Self-Observability
+
+The exporter provides a self-observability feature that allows you to monitor the exporter itself.
+
+To opt-in, set the environment variable `OTEL_GO_X_SELF_OBSERVABILITY` to `true`.
+
+When enabled, the exporter will record metrics for:
 
 - Number of log records currently being processed (inflight)
 - Total number of log records exported
 - Duration of export operations
-
-To enable this feature, set the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable to `true`.
 
 ## Compatibility and Stability
 
