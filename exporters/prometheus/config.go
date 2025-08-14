@@ -117,16 +117,18 @@ func WithoutTargetInfo() Option {
 // full Prometheus-style compatibility or NoTranslation for Otel-style names.
 //
 // WithTranslationStrategy will affect the values of options set
-// WithoutCounterSuffixes, and WithoutUnits, so users should set their desired
-// overall Translation Strategy first and then apply subsequent options if
-// needed. By default, if NameValidationScheme variable in [github.com/prometheus/common/model] is
-// "legacy", the default strategy is UnderscoreEscapingWithSuffixes. If the
-// validation scheme is "utf8", then currently the default Strategy will be
+// [WithoutCounterSuffixes], and [WithoutUnits], so users should set their
+// desired overall Translation Strategy first and then apply subsequent options
+// if needed. By default, if NameValidationScheme variable in
+// [github.com/prometheus/common/model] is "legacy", the default strategy is
+// UnderscoreEscapingWithSuffixes. If the validation scheme is "utf8", then
+// currently the default Strategy will be
 // [otlptranslator.NoUTF8EscapingWithSuffixes].
 //
 // Notice: It is planned that a future release of this SDK will change the
-// default to always be [otlptranslator.UnderscoreEscapingWithSuffixes] in all circumstances.
-// Users wanting a different translation strategy should specify it explicitly.
+// default to always be [otlptranslator.UnderscoreEscapingWithSuffixes] in all
+// circumstances. Users wanting a different translation strategy should specify
+// it explicitly.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.allowUTF8 = !strategy.ShouldEscape()

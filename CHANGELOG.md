@@ -48,7 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
 - Add experimental self-observability span metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027)
-- Add support for configuring Prometheus name translation using WithTranslationStrategy option, deprecating WithoutUnits and WithoutCounterSuffixes. (#7111)
+- Add support for configuring Prometheus name translation using WithTranslationStrategy option, deprecating WithoutUnits. The current default translation strategy is NoUTF8EscapingWithSuffixes, but a a future release will change the default strategy to UnderscoreEscapingWithSuffixes for compliance with the specification. (#7111)
 - Add native histogram exemplar support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6772)
 - Add experimental self-observability log metrics in `go.opentelemetry.io/otel/sdk/log`.
   Check the `go.opentelemetry.io/otel/sdk/log/internal/x` package documentation for more information. (#7121)
@@ -2026,15 +2026,15 @@ with major version 0.
 
 - Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)
   - The following status codes are defined as transient errors:
-      | gRPC Status Code | Description |
-      | ---------------- | ----------- |
-      | 1  | Cancelled |
-      | 4  | Deadline Exceeded |
-      | 8  | Resource Exhausted |
-      | 10 | Aborted |
-      | 10 | Out of Range |
-      | 14 | Unavailable |
-      | 15 | Data Loss |
+      | gRPC Status Code | Description        |
+      | ---------------- | ------------------ |
+      | 1                | Cancelled          |
+      | 4                | Deadline Exceeded  |
+      | 8                | Resource Exhausted |
+      | 10               | Aborted            |
+      | 10               | Out of Range       |
+      | 14               | Unavailable        |
+      | 15               | Data Loss          |
 - Added `Status` type to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 - Added `SpanStub` type and its associated functions to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
