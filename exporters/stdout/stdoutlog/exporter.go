@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 )
 
 // otelComponentType is a name identifying the type of the OpenTelemetry component.
-const otelComponentType = "stdout_log_exporter"
+const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 
 var _ log.Exporter = &Exporter{}
 
@@ -93,6 +94,10 @@ func (e *Exporter) initSelfObservability() {
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
@@ -107,33 +112,55 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	return err
 }
 
-// exportWithSelfObservability exports logs with self-observability metrics.
-func (e *Exporter) exportWithSelfObservability(ctx context.Context, records []log.Record) error {
-	if len(records) == 0 {
-		return nil
-	}
+const bufferSize = 1024
 
+var selfObservabilityBuffer = sync.Pool{
+	New: func() any {
+		buf := make([]attribute.KeyValue, 0, bufferSize)
+		return &buf
+	},
+}
+
+// exportWithSelfObservability exports logs with self-observability metrics.
+func (e *Exporter) exportWithSelfObservability(ctx context.Context, records []log.Record) (err error) {
 	count := int64(len(records))
 	start := time.Now()
 
-	e.selfObservability.inflightMetric.Add(context.Background(), count, e.selfObservability.attrs...)
+	e.selfObservability.inflightMetric.Add(ctx, count, e.selfObservability.attrs...)
+
 	defer func() {
-		addAttrs := make([]attribute.KeyValue, len(e.selfObservability.attrs), len(e.selfObservability.attrs)+1)
-		copy(addAttrs, e.selfObservability.attrs)
-		if err := ctx.Err(); err != nil {
-			addAttrs = append(addAttrs, semconv.ErrorType(err))
+		bufPtrAny := selfObservabilityBuffer.Get()
+		bufPtr, ok := bufPtrAny.(*[]attribute.KeyValue)
+		if !ok || bufPtr == nil {
+			bufPtr = &[]attribute.KeyValue{}
 		}
 
-		e.selfObservability.inflightMetric.Add(context.Background(), -count, e.selfObservability.attrs...)
-		e.selfObservability.exportedMetric.Add(context.Background(), count, addAttrs...)
-		e.selfObservability.operationDurationMetric.Record(context.Background(), time.Since(start).Seconds(), addAttrs...)
+		addAttrs := (*bufPtr)[:0]
+		addAttrs = append(addAttrs, e.selfObservability.attrs...)
+
+		if err != nil {
+			addAttrs = append(addAttrs, semconv.ErrorType(err))
+		} else {
+			e.selfObservability.exportedMetric.Add(ctx, count, addAttrs...)
+		}
+
+		e.selfObservability.inflightMetric.Add(ctx, -count, e.selfObservability.attrs...)
+		e.selfObservability.operationDurationMetric.Record(ctx, time.Since(start).Seconds(), addAttrs...)
+
+		*bufPtr = addAttrs[:0]
+		selfObservabilityBuffer.Put(bufPtr)
 	}()
 
-	return e.exportWithoutSelfObservability(ctx, records)
+	err = e.exportWithoutSelfObservability(ctx, records)
+	return
 }
 
 // exportWithoutSelfObservability exports logs without self-observability metrics.
 func (e *Exporter) exportWithoutSelfObservability(ctx context.Context, records []log.Record) error {
+	enc := e.encoder.Load()
+	if enc == nil {
+		return nil
+	}
 	for _, record := range records {
 		// Honor context cancellation.
 		if err := ctx.Err(); err != nil {
@@ -141,7 +168,7 @@ func (e *Exporter) exportWithoutSelfObservability(ctx context.Context, records [
 		}
 
 		recordJSON := e.newRecordJSON(record)
-		if err := e.encoder.Load().Encode(recordJSON); err != nil {
+		if err := enc.Encode(recordJSON); err != nil {
 			return err
 		}
 	}

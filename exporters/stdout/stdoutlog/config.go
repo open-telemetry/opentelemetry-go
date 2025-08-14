@@ -6,8 +6,6 @@ package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog
 import (
 	"io"
 	"os"
-
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x"
 )
 
 var (
@@ -28,11 +26,6 @@ type config struct {
 	// Timestamps specifies if timestamps should be printed. Default is
 	// true.
 	Timestamps bool
-
-	// SelfObservability enables exporter self-observability metrics.
-	// This is an experimental feature controlled by OTEL_GO_X_SELF_OBSERVABILITY.
-	// Default is false.
-	SelfObservability bool
 }
 
 // newConfig creates a validated Config configured with options.
@@ -45,8 +38,6 @@ func newConfig(options []Option) config {
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
 	}
-
-	cfg.SelfObservability = x.SelfObservability.Enabled()
 
 	return cfg
 }
