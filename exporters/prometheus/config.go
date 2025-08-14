@@ -158,8 +158,10 @@ func WithoutUnits() Option {
 // By default, metric names include a _total suffix to follow Prometheus naming
 // conventions. For example, the counter metric happy.people would become
 // happy_people_total. With this option set, the name would instead be
-// happy_people. Note that WithTranslationStrategy will override this option.
-// However this option can be set after WithTranslationStrategy to tweak the
+// happy_people.
+//
+// Note that [WithTranslationStrategy] will override this option.
+// However, this option can be set after [WithTranslationStrategy] to tweak the
 // configuration, if desired.
 func WithoutCounterSuffixes() Option {
 	return optionFunc(func(cfg config) config {
