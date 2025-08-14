@@ -115,6 +115,7 @@ func WithoutTargetInfo() Option {
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.48.0/specification/metrics/sdk_exporters/prometheus.md#configuration.
 // The recommended approach is to use either UnderscoreEscapingWithSuffixes for
 // full Prometheus-style compatibility or NoTranslation for Otel-style names.
+//
 // WithTranslationStrategy will affect the values of options set
 // WithoutCounterSuffixes, and WithoutUnits, so users should set their desired
 // overall Translation Strategy first and then apply subsequent options if
