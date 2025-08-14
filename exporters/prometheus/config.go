@@ -144,7 +144,7 @@ func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) 
 // milliseconds would become request_duration_milliseconds_total.
 // With this option set, the name would instead be request_duration_total.
 //
-// Deprecated: Use WithTranslationStrategy instead.
+// Deprecated: Use [WithTranslationStrategy] instead.
 func WithoutUnits() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutUnits = true
