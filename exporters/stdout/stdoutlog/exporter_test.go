@@ -516,15 +516,27 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Value: 0,
 								Attributes: attribute.NewSet(
-									attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/0")},
-									attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+									attribute.KeyValue{
+										Key:   "otel.component.name",
+										Value: attribute.StringValue(otelComponentType + "/0"),
+									},
+									attribute.KeyValue{
+										Key:   "otel.component.type",
+										Value: attribute.StringValue(otelComponentType),
+									},
 								),
 							},
 						},
 					},
 				}
 
-				metricdatatest.AssertEqual(t, expected, inflightMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(
+					t,
+					expected,
+					inflightMetric,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 		{
@@ -578,15 +590,27 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Value: 3,
 								Attributes: attribute.NewSet(
-									attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/1")},
-									attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+									attribute.KeyValue{
+										Key:   "otel.component.name",
+										Value: attribute.StringValue(otelComponentType + "/0"),
+									},
+									attribute.KeyValue{
+										Key:   "otel.component.type",
+										Value: attribute.StringValue(otelComponentType),
+									},
 								),
 							},
 						},
 					},
 				}
 
-				metricdatatest.AssertEqual(t, expected, exportedMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(
+					t,
+					expected,
+					exportedMetric,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 		{
@@ -632,15 +656,27 @@ func TestSelfObservability(t *testing.T) {
 							{
 								Count: 1,
 								Attributes: attribute.NewSet(
-									attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/2")},
-									attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+									attribute.KeyValue{
+										Key:   "otel.component.name",
+										Value: attribute.StringValue(otelComponentType + "/0"),
+									},
+									attribute.KeyValue{
+										Key:   "otel.component.type",
+										Value: attribute.StringValue(otelComponentType),
+									},
 								),
 							},
 						},
 					},
 				}
 
-				metricdatatest.AssertEqual(t, expected, durationMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(
+					t,
+					expected,
+					durationMetric,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 		{
@@ -668,8 +704,11 @@ func TestSelfObservability(t *testing.T) {
 				assert.NotEmpty(t, got.Scope.Version)
 
 				expectedAttrs := attribute.NewSet(
-					attribute.KeyValue{Key: "otel.component.name", Value: attribute.StringValue("stdout_log_exporter/3")},
-					attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue("stdout_log_exporter")},
+					attribute.KeyValue{
+						Key:   "otel.component.name",
+						Value: attribute.StringValue(otelComponentType + "/0"),
+					},
+					attribute.KeyValue{Key: "otel.component.type", Value: attribute.StringValue(otelComponentType)},
 				)
 
 				expected := metricdata.ScopeMetrics{
@@ -722,7 +761,13 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, expected, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(
+					t,
+					expected,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 		{
@@ -765,13 +810,20 @@ func TestSelfObservability(t *testing.T) {
 			},
 		},
 	}
+	ranOnce := false
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.enable {
 				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 			}
+
+			if ranOnce {
+				// Reset the global exporter ID counter for deterministic tests
+				exporterIDCounter.Store(0) // First call to nextExporterID() will return 0
+			}
+
 			prev := otel.GetMeterProvider()
-			otel.SetMeterProvider(prev)
+			t.Cleanup(func() { otel.SetMeterProvider(prev) })
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
@@ -787,5 +839,6 @@ func TestSelfObservability(t *testing.T) {
 			}
 			tc.test(t, scopeMetrics)
 		})
+		ranOnce = true
 	}
 }
