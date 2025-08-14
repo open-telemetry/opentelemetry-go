@@ -103,7 +103,7 @@ func New(opts ...Option) (*Exporter, error) {
 	// TODO (#3244): Enable some way to configure the reader, but not change temporality.
 	reader := metric.NewManualReader(cfg.readerOpts...)
 
-	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: cfg.allowUTF8}
+	labelNamer := otlptranslator.LabelNamer{UTF8Allowed: !cfg.translationStrategy.ShouldEscape()}
 	escapedNamespace := cfg.namespace
 	if escapedNamespace != "" {
 		var err error
@@ -115,10 +115,6 @@ func New(opts ...Option) (*Exporter, error) {
 		}
 	}
 
-	// XXXXXXXXXXX if there is a strategy set, use that.  if not, use the old bools.
-
-	// XXXX metricnamer members should be unexported.
-
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
@@ -128,16 +124,9 @@ func New(opts ...Option) (*Exporter, error) {
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                escapedNamespace,
 		resourceAttributesFilter: cfg.resourceAttributesFilter,
-		metricNamer: otlptranslator.MetricNamer{
-			Namespace: escapedNamespace,
-			// We decide whether to pass type and unit to the netricNamer based
-			// on whether units or counter suffixes are enabled, and keep this
-			// always enabled.
-			WithMetricSuffixes: true,
-			UTF8Allowed:        cfg.allowUTF8,
-		},
-		unitNamer:  otlptranslator.UnitNamer{UTF8Allowed: cfg.allowUTF8},
-		labelNamer: labelNamer,
+		metricNamer:              otlptranslator.NewMetricNamer(escapedNamespace, cfg.translationStrategy),
+		unitNamer:                otlptranslator.UnitNamer{UTF8Allowed: !cfg.translationStrategy.ShouldEscape()},
+		labelNamer:               labelNamer,
 	}
 
 	if err := cfg.registerer.Register(collector); err != nil {

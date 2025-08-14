@@ -38,14 +38,14 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
-		// disableUTF8 is default off, which means most of these tests enable UTF-8.
-		disableUTF8         bool
+		// enableEscaping is default off, which means most of these tests enable UTF-8.
+		enableEscaping      bool
 		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
 		{
-			name:         "counter",
-			expectedFile: "testdata/counter.txt",
-			disableUTF8:  true,
+			name:           "counter",
+			expectedFile:   "testdata/counter.txt",
+			enableEscaping: true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -77,9 +77,9 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "counter that already has the unit suffix",
-			expectedFile: "testdata/counter_noutf8_with_unit_suffix.txt",
-			disableUTF8:  true,
+			name:           "counter that already has the unit suffix",
+			expectedFile:   "testdata/counter_noutf8_with_unit_suffix.txt",
+			enableEscaping: true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -165,9 +165,9 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "counter that already has a total suffix",
-			expectedFile: "testdata/counter.txt",
-			disableUTF8:  true,
+			name:           "counter that already has a total suffix",
+			expectedFile:   "testdata/counter.txt",
+			enableEscaping: true,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -310,10 +310,10 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "sanitized attributes to labels",
-			expectedFile: "testdata/sanitized_labels.txt",
-			disableUTF8:  true,
-			options:      []Option{WithoutUnits()},
+			name:           "sanitized attributes to labels",
+			expectedFile:   "testdata/sanitized_labels.txt",
+			enableEscaping: true,
+			options:        []Option{WithoutUnits()},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					// exact match, value should be overwritten
@@ -635,8 +635,11 @@ func TestPrometheusExporter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
 			registry := prometheus.NewRegistry()
-			opts := append(tc.options, WithRegisterer(registry))
-			opts = append(opts, withAllowUTF8(!tc.disableUTF8))
+			strategy := otlptranslator.NoUTF8EscapingWithSuffixes
+			if tc.enableEscaping {
+				strategy = otlptranslator.UnderscoreEscapingWithSuffixes
+			}
+			opts := append(tc.options, WithRegisterer(registry), WithTranslationStrategy(strategy))
 			exporter, err := New(opts...)
 			require.NoError(t, err)
 
@@ -1898,11 +1901,11 @@ func TestEscapingErrorHandling(t *testing.T) {
 	}
 }
 
-// withAllowUTF8 allows setting whether UTF-8 names should be allowed through
-// unedited, or escaped to underscores.
-func withAllowUTF8(allow bool) Option {
-	return optionFunc(func(cfg config) config {
-		cfg.allowUTF8 = allow
-		return cfg
-	})
-}
+// // withAllowUTF8 allows setting whether UTF-8 names should be allowed through
+// // unedited, or escaped to underscores.
+// func withAllowUTF8(allow bool) Option {
+// 	return optionFunc(func(cfg config) config {
+// 		cfg.allowUTF8 = allow
+// 		return cfg
+// 	})
+// }

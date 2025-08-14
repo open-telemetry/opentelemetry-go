@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/otlptranslator"
 
+	"github.com/prometheus/common/model"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -19,41 +19,57 @@ import (
 type config struct {
 	registerer               prometheus.Registerer
 	disableTargetInfo        bool
+	translationStrategy      otlptranslator.TranslationStrategyOption
 	withoutUnits             bool
 	withoutCounterSuffixes   bool
-	allowUTF8                bool
 	readerOpts               []metric.ManualReaderOption
 	disableScopeInfo         bool
 	namespace                string
 	resourceAttributesFilter attribute.Filter
-
-	// XXXXXXXXXX instead, store a translationstrategy,  then handle the conflicts
-	// in the New exporter function.
 }
 
 var logTemporaryDefault = sync.OnceFunc(func() {
 	global.Warn(
-		"The default Prometheus naming translation strategy is planned to be changed from NoUTF8EscapingWithSuffixes to UnderscoreEscapingWithSuffixes in a future release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the future default behavior.",
+		"The default Prometheus naming translation strategy is planned to be changed from [otlptranslator.NoUTF8EscapingWithSuffixes] to [otlptranslator.UnderscoreEscapingWithSuffixes] in a future release. Add prometheus.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes) to preserve the existing behavior, or prometheus.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes) to opt into the future default behavior.",
 	)
 })
 
 // newConfig creates a validated config configured with options.
 func newConfig(opts ...Option) config {
 	cfg := config{}
-
-	// Prepend the translation strategy with the correct default for the current
-	// global validation scheme. The individual values may then be overwritten by
-	// subsequent options.
-	//nolint:staticcheck
-	if model.NameValidationScheme == model.UTF8Validation {
-		opts = append([]Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)}, opts...)
-		logTemporaryDefault()
-	} else {
-		opts = append([]Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)}, opts...)
-	}
-
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
+	}
+
+	if cfg.translationStrategy == "" {
+		// If no translation strategy was specified, deduce one based on the global
+		// NameValidationScheme and the existence of the withoutUnits option first.
+		// NOTE:
+		// this logic will change in the future, removing the NameValidationScheme
+		// check.
+		//nolint:staticcheck
+		if model.NameValidationScheme == model.UTF8Validation {
+			if cfg.withoutUnits {
+				cfg.translationStrategy = otlptranslator.NoTranslation
+			} else {
+				cfg.translationStrategy = otlptranslator.NoUTF8EscapingWithSuffixes
+			}
+		} else {
+			if cfg.withoutUnits {
+				cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithoutSuffixes
+			} else {
+				cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithSuffixes
+			}
+		}
+	} else {
+		// overwrite withoutUnits config to align with translation strategy choice.
+		cfg.withoutUnits = !cfg.translationStrategy.ShouldAddSuffixes()
+		// Note, if the translation strategy does not imply that suffixes should be
+		// added, withoutCounterSuffixes can *still* be set by the user to be true.
+		// Do not override their preference in this case.
+		if !cfg.translationStrategy.ShouldAddSuffixes() {
+			cfg.withoutCounterSuffixes = true
+		}
 	}
 
 	if cfg.registerer == nil {
@@ -116,16 +132,15 @@ func WithoutTargetInfo() Option {
 // WithTranslationStrategy provides a standardized way to define how metric and
 // label names should be handled during translation to Prometheus format. See:
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.48.0/specification/metrics/sdk_exporters/prometheus.md#configuration.
-// The recommended approach is to use either UnderscoreEscapingWithSuffixes for
-// full Prometheus-style compatibility or NoTranslation for Otel-style names.
+// The recommended approach is to use either
+// [otlptranslator.UnderscoreEscapingWithSuffixes] for full Prometheus-style
+// compatibility or NoTranslation for Otel-style names.
 //
-// WithTranslationStrategy will affect the values of options set
-// [WithoutCounterSuffixes], and [WithoutUnits], so users should set their
-// desired overall Translation Strategy first and then apply subsequent options
-// if needed. By default, if NameValidationScheme variable in
+// If WithTranslationStrategy is set, it will take precedence over the
+// [WithoutUnits] option. By default, if NameValidationScheme variable in
 // [github.com/prometheus/common/model] is "legacy", the default strategy is
-// UnderscoreEscapingWithSuffixes. If the validation scheme is "utf8", then
-// currently the default Strategy will be
+// [otlptranslator.UnderscoreEscapingWithSuffixes]. If the validation scheme is
+// "utf8", then currently the default Strategy will be
 // [otlptranslator.NoUTF8EscapingWithSuffixes].
 //
 // Notice: It is planned that a future release of this SDK will change the
@@ -134,9 +149,7 @@ func WithoutTargetInfo() Option {
 // it explicitly.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.allowUTF8 = !strategy.ShouldEscape()
-		cfg.withoutCounterSuffixes = !strategy.ShouldAddSuffixes()
-		cfg.withoutUnits = !strategy.ShouldAddSuffixes()
+		cfg.translationStrategy = strategy
 		return cfg
 	})
 }
@@ -166,9 +179,10 @@ func WithoutUnits() Option {
 // happy_people_total. With this option set, the name would instead be
 // happy_people.
 //
-// Note that [WithTranslationStrategy] will override this option.
-// However, this option can be set after [WithTranslationStrategy] to tweak the
-// configuration, if desired.
+// Can be used in conjunction with WithTranslationStrategy to disable counter
+// suffixes in the *WithSuffixes modes.
+//
+// Deprecated: Use [WithTranslationStrategy] instead.
 func WithoutCounterSuffixes() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.withoutCounterSuffixes = true
