@@ -137,7 +137,7 @@ func WithoutTargetInfo() Option {
 // compatibility or NoTranslation for Otel-style names.
 //
 // If WithTranslationStrategy is set, it will take precedence over the
-// [WithoutUnits] option. By default, if NameValidationScheme variable in
+// [WithoutUnits] option. By default, if the NameValidationScheme variable in
 // [github.com/prometheus/common/model] is "legacy", the default strategy is
 // [otlptranslator.UnderscoreEscapingWithSuffixes]. If the validation scheme is
 // "utf8", then currently the default Strategy will be
@@ -180,7 +180,7 @@ func WithoutUnits() Option {
 // happy_people.
 //
 // Can be used in conjunction with WithTranslationStrategy to disable counter
-// suffixes in the *WithSuffixes modes.
+// suffixes in strategies that would otherwise add suffixes.
 //
 // Deprecated: Use [WithTranslationStrategy] instead.
 func WithoutCounterSuffixes() Option {
