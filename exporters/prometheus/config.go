@@ -26,6 +26,9 @@ type config struct {
 	disableScopeInfo         bool
 	namespace                string
 	resourceAttributesFilter attribute.Filter
+
+	// XXXXXXXXXX instead, store a translationstrategy,  then handle the conflicts
+	// in the New exporter function.
 }
 
 var logTemporaryDefault = sync.OnceFunc(func() {

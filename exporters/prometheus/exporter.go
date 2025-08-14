@@ -114,6 +114,11 @@ func New(opts ...Option) (*Exporter, error) {
 			return nil, err
 		}
 	}
+
+	// XXXXXXXXXXX if there is a strategy set, use that.  if not, use the old bools.
+
+	// XXXX metricnamer members should be unexported.
+
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
