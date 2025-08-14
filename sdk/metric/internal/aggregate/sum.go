@@ -5,7 +5,9 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -13,42 +15,70 @@ import (
 )
 
 type sumValue[N int64 | float64] struct {
-	n     N
-	res   FilteredExemplarReservoir[N]
-	attrs attribute.Set
+	nFloatBits uint64
+	nInt       uint64
+	res        FilteredExemplarReservoir[N]
+	attrs      attribute.Set
+}
+
+func (s *sumValue[N]) val() N {
+	fval := math.Float64frombits(atomic.LoadUint64(&s.nFloatBits))
+	ival := atomic.LoadUint64(&s.nInt)
+	return N(fval + float64(ival))
 }
 
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
-	sync.Mutex
+	sync.RWMutex
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	limit  limiter[sumValue[N]]
-	values map[attribute.Distinct]sumValue[N]
+	values map[attribute.Distinct]*sumValue[N]
 }
 
 func newValueMap[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *valueMap[N] {
 	return &valueMap[N]{
 		newRes: r,
 		limit:  newLimiter[sumValue[N]](limit),
-		values: make(map[attribute.Distinct]sumValue[N]),
+		values: make(map[attribute.Distinct]*sumValue[N]),
 	}
 }
 
-func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	s.Lock()
-	defer s.Unlock()
-
+func (s *valueMap[N]) getOrCreateSumValue(fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) *sumValue[N] {
+	s.RLock()
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	v, ok := s.values[attr.Equivalent()]
+	s.RUnlock()
 	if !ok {
-		v.res = s.newRes(attr)
+		v = &sumValue[N]{
+			res:   s.newRes(attr),
+			attrs: attr,
+		}
+		s.Lock()
+		s.values[attr.Equivalent()] = v
+		s.Unlock()
 	}
+	return v
+}
 
-	v.attrs = attr
-	v.n += value
+func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+	v := s.getOrCreateSumValue(fltrAttr, droppedAttr)
 	v.res.Offer(ctx, value, droppedAttr)
 
-	s.values[attr.Equivalent()] = v
+	ival := uint64(value)
+	// This case is where the value is an int, or if it is a whole-numbered float.
+	if float64(ival) == float64(value) {
+		atomic.AddUint64(&v.nInt, ival)
+		return
+	}
+
+	// Value must be a float below.
+	for {
+		oldBits := atomic.LoadUint64(&v.nFloatBits)
+		newBits := math.Float64bits(math.Float64frombits(oldBits) + float64(value))
+		if atomic.CompareAndSwapUint64(&v.nFloatBits, oldBits, newBits) {
+			return
+		}
+	}
 }
 
 // newSum returns an aggregator that summarizes a set of measurements as their
@@ -92,7 +122,7 @@ func (s *sum[N]) delta(
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
+		dPts[i].Value = val.val()
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		i++
 	}
@@ -129,7 +159,7 @@ func (s *sum[N]) cumulative(
 		dPts[i].Attributes = value.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = value.n
+		dPts[i].Value = value.val()
 		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
@@ -189,7 +219,7 @@ func (s *precomputedSum[N]) delta(
 
 	var i int
 	for key, value := range s.values {
-		delta := value.n - s.reported[key]
+		delta := value.val() - s.reported[key]
 
 		dPts[i].Attributes = value.attrs
 		dPts[i].StartTime = s.start
@@ -197,7 +227,7 @@ func (s *precomputedSum[N]) delta(
 		dPts[i].Value = delta
 		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 
-		newReported[key] = value.n
+		newReported[key] = value.val()
 		i++
 	}
 	// Unused attribute sets do not report.
@@ -234,7 +264,7 @@ func (s *precomputedSum[N]) cumulative(
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
+		dPts[i].Value = val.val()
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 
 		i++
