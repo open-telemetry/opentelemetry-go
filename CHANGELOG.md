@@ -71,6 +71,7 @@ The next release will require at least [Go 1.24].
 ### Fixed
 
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` to deduplicate suffixes if already present in metric name when UTF8 is enabled. (#7088)
+- `SetBody` method of `Record` in `go.opentelemetry.io/otel/sdk/log` now deduplicates key-value collections (`log.Value` of `log.KindMap` from `go.opentelemetry.io/otel/log`). (#7002)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

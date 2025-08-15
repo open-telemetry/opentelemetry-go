@@ -56,10 +56,82 @@ func TestRecordSeverityText(t *testing.T) {
 }
 
 func TestRecordBody(t *testing.T) {
-	v := log.BoolValue(true)
-	r := new(Record)
-	r.SetBody(v)
-	assert.True(t, v.Equal(r.Body()))
+	testcases := []struct {
+		name            string
+		allowDuplicates bool
+		body            log.Value
+		want            log.Value
+	}{
+		{
+			name: "Bool",
+			body: log.BoolValue(true),
+			want: log.BoolValue(true),
+		},
+		{
+			name: "slice",
+			body: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
+			want: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
+		},
+		{
+			name: "map",
+			body: log.MapValue(
+				log.Bool("0", true),
+				log.Int64("1", 2), // This should be removed
+				log.Float64("2", 3.0),
+				log.String("3", "forth"),
+				log.Slice("4", log.Int64Value(1)),
+				log.Map("5", log.Int("key", 2)),
+				log.Bytes("6", []byte("six")),
+				log.Int64("1", 3),
+			),
+			want: log.MapValue(
+				log.Bool("0", true),
+				log.Float64("2", 3.0),
+				log.String("3", "forth"),
+				log.Slice("4", log.Int64Value(1)),
+				log.Map("5", log.Int("key", 2)),
+				log.Bytes("6", []byte("six")),
+				log.Int64("1", 3),
+			),
+		},
+		{
+			name: "nestedMap",
+			body: log.MapValue(
+				log.Map("key",
+					log.Int64("key", 1),
+					log.Int64("key", 2),
+				),
+			),
+			want: log.MapValue(
+				log.Map("key",
+					log.Int64("key", 2),
+				),
+			),
+		},
+		{
+			name:            "map - allow duplicates",
+			allowDuplicates: true,
+			body: log.MapValue(
+				log.Int64("1", 2),
+				log.Int64("1", 3),
+			),
+			want: log.MapValue(
+				log.Int64("1", 2),
+				log.Int64("1", 3),
+			),
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := new(Record)
+			r.allowDupKeys = tc.allowDuplicates
+			r.SetBody(tc.body)
+			got := r.Body()
+			if !got.Equal(tc.want) {
+				t.Errorf("r.Body() = %v, want %v", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestRecordAttributes(t *testing.T) {
@@ -948,6 +1020,26 @@ func BenchmarkSetAddAttributes(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			records[i].AddAttributes(kv)
+		}
+	})
+}
+
+func BenchmarkSetBody(b *testing.B) {
+	b.Run("SetBody", func(b *testing.B) {
+		records := make([]Record, b.N)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			records[i].SetBody(log.MapValue(
+				log.Bool("0", true),
+				log.Float64("2", 3.0),
+				log.String("3", "forth"),
+				log.Slice("4", log.Int64Value(1)),
+				log.Map("5", log.Int("key", 2)),
+				log.Bytes("6", []byte("six")),
+				log.Int64("1", 3),
+			))
 		}
 	})
 }
