@@ -160,6 +160,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		// Encode span stubs, one by one
 		if e := e.encoder.Encode(stub); e != nil {
 			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, e))
+			continue
 		}
 		success++
 	}
