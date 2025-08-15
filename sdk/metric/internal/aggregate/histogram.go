@@ -48,9 +48,9 @@ type histValues[N int64 | float64] struct {
 	bounds []float64
 
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*buckets[N]]
+	limit    limiter[buckets[N]]
 	values   map[attribute.Distinct]*buckets[N]
-	valuesMu sync.Mutex
+	valuesMu sync.RWMutex
 }
 
 func newHistValues[N int64 | float64](
@@ -69,7 +69,7 @@ func newHistValues[N int64 | float64](
 		noSum:  noSum,
 		bounds: b,
 		newRes: r,
-		limit:  newLimiter[*buckets[N]](limit),
+		limit:  newLimiter[buckets[N]](limit),
 		values: make(map[attribute.Distinct]*buckets[N]),
 	}
 }
@@ -89,11 +89,11 @@ func (s *histValues[N]) measure(
 	// (s.bounds[len(s.bounds)-1], +∞).
 	idx := sort.SearchFloat64s(s.bounds, float64(value))
 
-	s.valuesMu.Lock()
-	defer s.valuesMu.Unlock()
+	s.valuesMu.RLock()
 
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	b, ok := s.values[attr.Equivalent()]
+	s.valuesMu.RUnlock()
 	if !ok {
 		// N+1 buckets. For example:
 		//
@@ -107,12 +107,16 @@ func (s *histValues[N]) measure(
 
 		// Ensure min and max are recorded values (not zero), for new buckets.
 		b.min, b.max = value, value
+		s.valuesMu.Lock()
 		s.values[attr.Equivalent()] = b
+		s.valuesMu.Unlock()
 	}
+	s.valuesMu.Lock()
 	b.bin(idx, value)
 	if !s.noSum {
 		b.sum(value)
 	}
+	s.valuesMu.Unlock()
 	b.res.Offer(ctx, value, droppedAttr)
 }
 
