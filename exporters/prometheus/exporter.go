@@ -181,9 +181,11 @@ func (c *collector) initSelfObservability() {
 	}
 
 	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/exporters/prometheus",
+	m := mp.Meter(
+        "go.opentelemetry.io/otel/exporters/prometheus",
 		otelmetric.WithInstrumentationVersion(sdk.Version()),
-		otelmetric.WithSchemaURL(semconv.SchemaURL))
+		otelmetric.WithSchemaURL(semconv.SchemaURL),
+    )
 
 	var err error
 	if c.inflightMetric, err = otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
