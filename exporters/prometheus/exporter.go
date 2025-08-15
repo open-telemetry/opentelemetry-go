@@ -221,7 +221,7 @@ func (c *collector) trackDataPointSuccess() {
 }
 
 func (c *collector) trackDataPointFailure(err error) {
-	if !x.SelfObservability.Enabled() {
+	if !c.selfObservabilityEnabled {
 		return
 	}
 
