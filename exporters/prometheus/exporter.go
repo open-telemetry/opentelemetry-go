@@ -212,7 +212,7 @@ func (c *collector) trackDataPointStart() {
 }
 
 func (c *collector) trackDataPointSuccess() {
-	if !x.SelfObservability.Enabled() {
+	if !c.selfObservabilityEnabled {
 		return
 	}
 
