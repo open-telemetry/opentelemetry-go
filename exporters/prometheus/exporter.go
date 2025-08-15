@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -21,10 +23,15 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/prometheus/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 const (
@@ -36,10 +43,21 @@ const (
 	scopeSchemaLabel  = scopeLabelPrefix + "schema_url"
 )
 
+// otelComponentType is a name identifying the type of the OpenTelemetry component.
+var otelComponentType = string(otelconv.ComponentTypePrometheusHTTPTextMetricExporter)
+
 var metricsPool = sync.Pool{
 	New: func() any {
 		return &metricdata.ResourceMetrics{}
 	},
+}
+
+var exporterIDCounter atomic.Int64
+
+// nextExporterID returns a new unique ID for an exporter.
+// the starting value is 0, and it increments by 1 for each call.
+func nextExporterID() int64 {
+	return exporterIDCounter.Add(1) - 1
 }
 
 // Exporter is a Prometheus Exporter that embeds the OTel metric.Reader
@@ -93,6 +111,13 @@ type collector struct {
 	metricNamer       otlptranslator.MetricNamer
 	labelNamer        otlptranslator.LabelNamer
 	unitNamer         otlptranslator.UnitNamer
+
+	selfObservabilityEnabled bool
+	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
+	inflightMetric           otelconv.SDKExporterMetricDataPointInflight
+	exportedMetric           otelconv.SDKExporterMetricDataPointExported
+	operationDuration        otelconv.SDKExporterOperationDuration
+	collectionDuration       otelconv.SDKMetricReaderCollectionDuration
 }
 
 // New returns a Prometheus Exporter.
@@ -139,7 +164,70 @@ func New(opts ...Option) (*Exporter, error) {
 		Reader: reader,
 	}
 
+	collector.initSelfObservability()
+
 	return e, nil
+}
+
+func (c *collector) initSelfObservability() {
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	c.selfObservabilityEnabled = true
+	c.selfObservabilityAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
+		semconv.OTelComponentTypeKey.String(otelComponentType),
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter(
+		"go.opentelemetry.io/otel/exporters/prometheus",
+		otelmetric.WithInstrumentationVersion(sdk.Version()),
+		otelmetric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err error
+	if c.inflightMetric, err = otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.exportedMetric, err = otelconv.NewSDKExporterMetricDataPointExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.operationDuration, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.collectionDuration, err = otelconv.NewSDKMetricReaderCollectionDuration(m); err != nil {
+		otel.Handle(err)
+	}
+}
+
+// Self-Observability tracking methods.
+func (c *collector) trackDataPointStart() {
+	if !c.selfObservabilityEnabled {
+		return
+	}
+
+	c.inflightMetric.Add(context.Background(), 1, c.selfObservabilityAttrs...)
+}
+
+func (c *collector) trackDataPointSuccess() {
+	if !c.selfObservabilityEnabled {
+		return
+	}
+
+	c.inflightMetric.Add(context.Background(), -1, c.selfObservabilityAttrs...)
+	c.exportedMetric.Add(context.Background(), 1, c.selfObservabilityAttrs...)
+}
+
+func (c *collector) trackDataPointFailure(err error) {
+	if !c.selfObservabilityEnabled {
+		return
+	}
+
+	attrs := append(c.selfObservabilityAttrs, semconv.ErrorType(err))
+	c.inflightMetric.Add(context.Background(), -1, c.selfObservabilityAttrs...)
+	c.exportedMetric.Add(context.Background(), 1, attrs...)
 }
 
 // Describe implements prometheus.Collector.
@@ -155,9 +243,37 @@ func (*collector) Describe(chan<- *prometheus.Desc) {
 //
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
+	var err error
+
+	if c.selfObservabilityEnabled {
+		defer func(starting time.Time) {
+			addAttrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
+			copy(addAttrs, c.selfObservabilityAttrs)
+			if err != nil {
+				addAttrs = append(addAttrs, semconv.ErrorType(err))
+			}
+			c.operationDuration.Record(context.Background(), time.Since(starting).Seconds(), addAttrs...)
+		}(time.Now())
+	}
+
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
 	defer metricsPool.Put(metrics)
-	err := c.reader.Collect(context.TODO(), metrics)
+
+	if c.selfObservabilityEnabled {
+		readerStart := time.Now()
+		err = c.reader.Collect(context.TODO(), metrics)
+		endTime := time.Since(readerStart).Seconds()
+
+		attrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
+		copy(attrs, c.selfObservabilityAttrs)
+		if err != nil {
+			attrs = append(attrs, semconv.ErrorType(err))
+		}
+		c.collectionDuration.Record(context.Background(), endTime, attrs...)
+	} else {
+		err = c.reader.Collect(context.TODO(), metrics)
+	}
+
 	if err != nil {
 		if errors.Is(err, metric.ErrReaderShutdown) {
 			return
@@ -240,21 +356,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c)
 			}
 		}
 	}
@@ -320,8 +436,10 @@ func addExponentialHistogramMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	c *collector,
 ) {
 	for _, dp := range histogram.DataPoints {
+		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -332,9 +450,11 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
-			otel.Handle(fmt.Errorf(
+			err := fmt.Errorf(
 				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-				scale))
+				scale)
+			otel.Handle(err)
+			c.trackDataPointFailure(err)
 			continue
 		}
 
@@ -350,21 +470,25 @@ func addExponentialHistogramMetric[N int64 | float64](
 
 		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
 		positiveBuckets := make(map[int]int64)
-		for i, c := range positiveBucket.Counts {
-			if c > math.MaxInt64 {
-				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", c))
+		for i, count := range positiveBucket.Counts {
+			if count > math.MaxInt64 {
+				err := fmt.Errorf("positive count %d is too large to be represented as int64", count)
+				otel.Handle(err)
+				c.trackDataPointFailure(err)
 				continue
 			}
-			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
+			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(count) // nolint: gosec  // Size check above.
 		}
 
 		negativeBuckets := make(map[int]int64)
-		for i, c := range negativeBucket.Counts {
-			if c > math.MaxInt64 {
-				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", c))
+		for i, count := range negativeBucket.Counts {
+			if count > math.MaxInt64 {
+				err := fmt.Errorf("negative count %d is too large to be represented as int64", count)
+				otel.Handle(err)
+				c.trackDataPointFailure(err)
 				continue
 			}
-			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
+			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(count) // nolint: gosec  // Size check above.
 		}
 
 		m, err := prometheus.NewConstNativeHistogram(
@@ -380,10 +504,12 @@ func addExponentialHistogramMetric[N int64 | float64](
 			values...)
 		if err != nil {
 			otel.Handle(err)
+			c.trackDataPointFailure(err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
+		c.trackDataPointSuccess()
 	}
 }
 
@@ -394,8 +520,10 @@ func addHistogramMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	c *collector,
 ) {
 	for _, dp := range histogram.DataPoints {
+		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -411,10 +539,12 @@ func addHistogramMetric[N int64 | float64](
 		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
 			otel.Handle(err)
+			c.trackDataPointFailure(err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
+		c.trackDataPointSuccess()
 	}
 }
 
@@ -425,6 +555,7 @@ func addSumMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	c *collector,
 ) {
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
@@ -432,6 +563,7 @@ func addSumMetric[N int64 | float64](
 	}
 
 	for _, dp := range sum.DataPoints {
+		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -440,6 +572,7 @@ func addSumMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
+			c.trackDataPointFailure(err)
 			continue
 		}
 		// GaugeValues don't support Exemplars at this time
@@ -448,6 +581,7 @@ func addSumMetric[N int64 | float64](
 			m = addExemplars(m, dp.Exemplars, labelNamer)
 		}
 		ch <- m
+		c.trackDataPointSuccess()
 	}
 }
 
@@ -458,8 +592,10 @@ func addGaugeMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	c *collector,
 ) {
 	for _, dp := range gauge.DataPoints {
+		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -468,9 +604,11 @@ func addGaugeMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
+			c.trackDataPointFailure(err)
 			continue
 		}
 		ch <- m
+		c.trackDataPointSuccess()
 	}
 }
 
