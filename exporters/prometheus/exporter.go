@@ -182,10 +182,10 @@ func (c *collector) initSelfObservability() {
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
-        "go.opentelemetry.io/otel/exporters/prometheus",
+		"go.opentelemetry.io/otel/exporters/prometheus",
 		otelmetric.WithInstrumentationVersion(sdk.Version()),
 		otelmetric.WithSchemaURL(semconv.SchemaURL),
-    )
+	)
 
 	var err error
 	if c.inflightMetric, err = otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
@@ -262,14 +262,14 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	if c.selfObservabilityEnabled {
 		readerStart := time.Now()
 		err = c.reader.Collect(context.TODO(), metrics)
-        endTime := time.Since(readerStart).Seconds()
+		endTime := time.Since(readerStart).Seconds()
 
 		attrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
 		copy(attrs, c.selfObservabilityAttrs)
 		if err != nil {
 			attrs = append(attrs, semconv.ErrorType(err))
 		}
-		c.collectionDuration.Record(context.Background(), end, attrs...)
+		c.collectionDuration.Record(context.Background(), endTime, attrs...)
 	} else {
 		err = c.reader.Collect(context.TODO(), metrics)
 	}
