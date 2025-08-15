@@ -1,0 +1,7 @@
+# HELP "my.dotted.namespace_foo.things" a simple counter
+# TYPE "my.dotted.namespace_foo.things" counter
+{"my.dotted.namespace_foo.things","A.G"="B","C.H"="D","E.I"="true","F.J"="42",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 24.3
+{"my.dotted.namespace_foo.things","A.G"="D","C.H"="B","E.I"="true","F.J"="42",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 5
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{"service.name"="prometheus_test","telemetry.sdk.language"="go","telemetry.sdk.name"="opentelemetry","telemetry.sdk.version"="latest"} 1

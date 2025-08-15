@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/otlptranslator"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -21,15 +23,17 @@ func TestNewConfig(t *testing.T) {
 	producer := &noopProducer{}
 
 	testCases := []struct {
-		name       string
-		options    []Option
-		wantConfig config
+		name             string
+		options          []Option
+		wantConfig       config
+		legacyValidation bool
 	}{
 		{
 			name:    "Default",
 			options: nil,
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
 			},
 		},
 		{
@@ -38,7 +42,8 @@ func TestNewConfig(t *testing.T) {
 				WithRegisterer(registry),
 			},
 			wantConfig: config{
-				registerer: registry,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          registry,
 			},
 		},
 		{
@@ -47,8 +52,9 @@ func TestNewConfig(t *testing.T) {
 				WithAggregationSelector(aggregationSelector),
 			},
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
-				readerOpts: []metric.ManualReaderOption{metric.WithAggregationSelector(aggregationSelector)},
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				readerOpts:          []metric.ManualReaderOption{metric.WithAggregationSelector(aggregationSelector)},
 			},
 		},
 		{
@@ -57,8 +63,9 @@ func TestNewConfig(t *testing.T) {
 				WithProducer(producer),
 			},
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
-				readerOpts: []metric.ManualReaderOption{metric.WithProducer(producer)},
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				readerOpts:          []metric.ManualReaderOption{metric.WithProducer(producer)},
 			},
 		},
 		{
@@ -70,7 +77,8 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
-				registerer: registry,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          registry,
 				readerOpts: []metric.ManualReaderOption{
 					metric.WithAggregationSelector(aggregationSelector),
 					metric.WithProducer(producer),
@@ -83,7 +91,8 @@ func TestNewConfig(t *testing.T) {
 				WithRegisterer(nil),
 			},
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
 			},
 		},
 		{
@@ -92,8 +101,42 @@ func TestNewConfig(t *testing.T) {
 				WithoutTargetInfo(),
 			},
 			wantConfig: config{
-				registerer:        prometheus.DefaultRegisterer,
-				disableTargetInfo: true,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				disableTargetInfo:   true,
+			},
+		},
+		{
+			name:             "legacy validation mode default",
+			options:          []Option{},
+			legacyValidation: true,
+			wantConfig: config{
+				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+			},
+		},
+		{
+			name: "legacy validation mode, unit suffixes disabled",
+			options: []Option{
+				WithoutUnits(),
+			},
+			legacyValidation: true,
+			wantConfig: config{
+				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				withoutUnits:        true,
+			},
+		},
+		{
+			name: "legacy validation mode, counter suffixes disabled",
+			options: []Option{
+				WithoutCounterSuffixes(),
+			},
+			legacyValidation: true,
+			wantConfig: config{
+				translationStrategy:    otlptranslator.UnderscoreEscapingWithSuffixes,
+				registerer:             prometheus.DefaultRegisterer,
+				withoutCounterSuffixes: true,
 			},
 		},
 		{
@@ -102,8 +145,45 @@ func TestNewConfig(t *testing.T) {
 				WithoutUnits(),
 			},
 			wantConfig: config{
-				registerer:   prometheus.DefaultRegisterer,
-				withoutUnits: true,
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				withoutUnits:        true,
+			},
+		},
+		{
+			name: "NoTranslation implies no suffixes",
+			options: []Option{
+				WithTranslationStrategy(otlptranslator.NoTranslation),
+			},
+			wantConfig: config{
+				translationStrategy:    otlptranslator.NoTranslation,
+				withoutUnits:           true,
+				withoutCounterSuffixes: true,
+				registerer:             prometheus.DefaultRegisterer,
+			},
+		},
+		{
+			name: "translation strategy does not override unit suffixes disabled",
+			options: []Option{
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				WithoutUnits(),
+			},
+			wantConfig: config{
+				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				withoutUnits:        true,
+			},
+		},
+		{
+			name: "translation strategy does not override counter suffixes disabled",
+			options: []Option{
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				WithoutCounterSuffixes(),
+			},
+			wantConfig: config{
+				translationStrategy:    otlptranslator.UnderscoreEscapingWithSuffixes,
+				registerer:             prometheus.DefaultRegisterer,
+				withoutCounterSuffixes: true,
 			},
 		},
 		{
@@ -112,8 +192,9 @@ func TestNewConfig(t *testing.T) {
 				WithNamespace("test"),
 			},
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test",
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				namespace:           "test",
 			},
 		},
 		{
@@ -122,8 +203,9 @@ func TestNewConfig(t *testing.T) {
 				WithNamespace("test"),
 			},
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test",
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				namespace:           "test",
 			},
 		},
 		{
@@ -132,13 +214,21 @@ func TestNewConfig(t *testing.T) {
 				WithNamespace("test/"),
 			},
 			wantConfig: config{
-				registerer: prometheus.DefaultRegisterer,
-				namespace:  "test/",
+				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				registerer:          prometheus.DefaultRegisterer,
+				namespace:           "test/",
 			},
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.legacyValidation {
+				//nolint:staticcheck
+				model.NameValidationScheme = model.LegacyValidation
+			} else {
+				//nolint:staticcheck
+				model.NameValidationScheme = model.UTF8Validation
+			}
 			cfg := newConfig(tt.options...)
 			// only check the length of readerOpts, since they are not comparable
 			assert.Len(t, cfg.readerOpts, len(tt.wantConfig.readerOpts))
