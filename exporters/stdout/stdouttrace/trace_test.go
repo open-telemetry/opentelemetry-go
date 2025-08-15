@@ -213,7 +213,7 @@ func expectedJSON(now time.Time) string {
 
 func TestExporterShutdownIgnoresContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+	t.Cleanup(cancel)
 
 	e, err := stdouttrace.New()
 	if err != nil {
