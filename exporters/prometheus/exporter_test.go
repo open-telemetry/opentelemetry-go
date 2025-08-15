@@ -2193,7 +2193,6 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 	// Create collector with self-observability enabled
 	collector := &collector{}
 	collector.initSelfObservability()
-	require.NotNil(t, collector.selfObs)
 
 	ctx := context.Background()
 

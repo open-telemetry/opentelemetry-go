@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -22,12 +23,14 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/prometheus/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/prometheus/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
@@ -39,6 +42,9 @@ const (
 	scopeVersionLabel = scopeLabelPrefix + "version"
 	scopeSchemaLabel  = scopeLabelPrefix + "schema_url"
 )
+
+// otelComponentType is a name identifying the type of the OpenTelemetry component.
+var otelComponentType = string(otelconv.ComponentTypePrometheusHTTPTextMetricExporter)
 
 var metricsPool = sync.Pool{
 	New: func() any {
@@ -106,8 +112,12 @@ type collector struct {
 	labelNamer        otlptranslator.LabelNamer
 	unitNamer         otlptranslator.UnitNamer
 
-	// self-observability
-	selfObs *selfobservability.ExporterMetrics
+	selfObservabilityEnabled bool
+	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
+	inflightMetric           otelconv.SDKExporterMetricDataPointInflight
+	exportedMetric           otelconv.SDKExporterMetricDataPointExported
+	operationDuration        otelconv.SDKExporterOperationDuration
+	collectionDuration       otelconv.SDKMetricReaderCollectionDuration
 }
 
 // New returns a Prometheus Exporter.
@@ -160,31 +170,62 @@ func New(opts ...Option) (*Exporter, error) {
 }
 
 func (c *collector) initSelfObservability() {
-	if x.SelfObservability.Enabled() {
-		componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypePrometheusHTTPTextMetricExporter, nextExporterID())
-		c.selfObs = selfobservability.NewExporterMetrics(componentName)
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	c.selfObservabilityEnabled = true
+	c.selfObservabilityAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
+		semconv.OTelComponentTypeKey.String(otelComponentType),
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/exporters/prometheus",
+		otelmetric.WithInstrumentationVersion(sdk.Version()),
+		otelmetric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if c.inflightMetric, err = otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.exportedMetric, err = otelconv.NewSDKExporterMetricDataPointExported(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.operationDuration, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		otel.Handle(err)
+	}
+	if c.collectionDuration, err = otelconv.NewSDKMetricReaderCollectionDuration(m); err != nil {
+		otel.Handle(err)
 	}
 }
 
 // Self-Observability tracking methods.
 func (c *collector) trackDataPointStart() {
-	if c.selfObs != nil {
-		c.selfObs.AddInflight(context.Background(), 1)
+	if !x.SelfObservability.Enabled() {
+		return
 	}
+
+	c.inflightMetric.Add(context.Background(), 1, c.selfObservabilityAttrs...)
 }
 
 func (c *collector) trackDataPointSuccess() {
-	if c.selfObs != nil {
-		c.selfObs.AddInflight(context.Background(), -1)
-		c.selfObs.AddExported(context.Background(), 1)
+	if !x.SelfObservability.Enabled() {
+		return
 	}
+
+	c.inflightMetric.Add(context.Background(), -1, c.selfObservabilityAttrs...)
+	c.exportedMetric.Add(context.Background(), 1, c.selfObservabilityAttrs...)
 }
 
 func (c *collector) trackDataPointFailure(err error) {
-	if c.selfObs != nil {
-		c.selfObs.AddInflight(context.Background(), -1)
-		c.selfObs.AddExportedWithError(context.Background(), 1, err)
+	if !x.SelfObservability.Enabled() {
+		return
 	}
+
+	attrs := append(c.selfObservabilityAttrs, semconv.ErrorType(err))
+	c.inflightMetric.Add(context.Background(), -1, c.selfObservabilityAttrs...)
+	c.exportedMetric.Add(context.Background(), 1, attrs...)
 }
 
 // Describe implements prometheus.Collector.
@@ -200,32 +241,42 @@ func (*collector) Describe(chan<- *prometheus.Desc) {
 //
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
-	// Start exporter operation duration timer (covers full Collect path)
-	var endOp func(error)
-	if c.selfObs != nil {
-		endOp = c.selfObs.TrackOperationDuration(context.Background())
-	} else {
-		endOp = func(error) {}
+	var err error
+
+	if c.selfObservabilityEnabled {
+		defer func(starting time.Time) {
+			addAttrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
+			copy(addAttrs, c.selfObservabilityAttrs)
+			if err != nil {
+				addAttrs = append(addAttrs, semconv.ErrorType(err))
+			}
+			c.operationDuration.Record(context.Background(), time.Since(starting).Seconds(), addAttrs...)
+		}(time.Now())
 	}
+
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
 	defer metricsPool.Put(metrics)
-	// Track reader collection duration
-	var endCollect func(error)
-	if c.selfObs != nil {
-		endCollect = c.selfObs.TrackCollectionDuration(context.Background())
+
+	if c.selfObservabilityEnabled {
+		readerStart := time.Now()
+		err = c.reader.Collect(context.TODO(), metrics)
+
+		attrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
+		copy(attrs, c.selfObservabilityAttrs)
+		if err != nil {
+			attrs = append(attrs, semconv.ErrorType(err))
+		}
+		c.collectionDuration.Record(context.Background(), time.Since(readerStart).Seconds(), attrs...)
 	} else {
-		endCollect = func(error) {}
+		err = c.reader.Collect(context.TODO(), metrics)
 	}
-	err := c.reader.Collect(context.Background(), metrics)
-	endCollect(err)
+
 	if err != nil {
 		if errors.Is(err, metric.ErrReaderShutdown) {
-			endOp(err)
 			return
 		}
 		otel.Handle(err)
 		if errors.Is(err, metric.ErrReaderNotRegistered) {
-			endOp(err)
 			return
 		}
 	}
@@ -320,7 +371,6 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			}
 		}
 	}
-	endOp(nil)
 }
 
 // downscaleExponentialBucket re-aggregates bucket counts when downscaling to a coarser resolution.
