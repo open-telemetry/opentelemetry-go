@@ -204,7 +204,7 @@ func (c *collector) initSelfObservability() {
 
 // Self-Observability tracking methods.
 func (c *collector) trackDataPointStart() {
-	if !x.SelfObservability.Enabled() {
+	if !c.selfObservabilityEnabled {
 		return
 	}
 
