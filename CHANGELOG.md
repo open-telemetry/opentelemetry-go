@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.23].
+The next release will require at least [Go 1.24].
+
 ### Added
 
 - Add template attribute functions to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6939)
@@ -53,9 +56,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Check the `go.opentelemetry.io/otel/sdk/log/internal/x` package documentation for more information. (#7121)
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
   Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
+- Support testing of [Go 1.25]. (#7187)
 - Add experimental self-observability prometheus exporter metrics in `go.opentelemetry.io/otel/exporters/prometheus`.
   Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7174)
-
+  
 ### Changed
 
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
@@ -3514,6 +3518,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
 [Go 1.22]: https://go.dev/doc/go1.22
