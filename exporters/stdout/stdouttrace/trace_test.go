@@ -424,7 +424,7 @@ func TestSelfObservability(t *testing.T) {
 			}
 
 			original := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(original)
+			t.Cleanup(func() { otel.SetMeterProvider(original) })
 
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
