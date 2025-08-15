@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"math"
 	"testing"
 	"time"
 
@@ -422,6 +423,113 @@ func TestSelfObservability(t *testing.T) {
 				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
+		{
+			name:    "PartialExport",
+			enabled: true,
+			callExportSpans: func(t *testing.T, exporter *stdouttrace.Exporter) {
+				t.Helper()
+
+				err := exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
+					{Name: "/foo"},
+					{
+						Name:       "JSON encoder cannot marshal math.Inf(1)",
+						Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
+					},
+					{Name: "/bar"},
+				}.Snapshots())
+				require.Error(t, err)
+			},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/2"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				require.IsType(t, metricdata.Sum[int64]{}, sm.Metrics[1].Data)
+				sum := sm.Metrics[1].Data.(metricdata.Sum[int64])
+				require.Len(t, sum.DataPoints, 2)
+				sum.DataPoints[1].Attributes = stripAttr(
+					t, sum.DataPoints[1].Attributes, semconv.ErrorTypeKey,
+				)
+				sm.Metrics[1].Data = sum
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/2"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 1,
+							},
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/2"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+								Value: 2,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				require.IsType(t, metricdata.Histogram[float64]{}, sm.Metrics[2].Data)
+				hist := sm.Metrics[2].Data.(metricdata.Histogram[float64])
+				require.Len(t, hist.DataPoints, 1)
+				hist.DataPoints[0].Attributes = stripAttr(
+					t, hist.DataPoints[0].Attributes, semconv.ErrorTypeKey,
+				)
+				sm.Metrics[2].Data = hist
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName("stdout_trace_exporter/2"),
+									semconv.OTelComponentTypeKey.String("stdout_trace_exporter"),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -449,4 +557,17 @@ func TestSelfObservability(t *testing.T) {
 			tt.assertMetrics(t, rm)
 		})
 	}
+}
+
+func stripAttr(t *testing.T, set attribute.Set, key attribute.Key) attribute.Set {
+	t.Helper()
+
+	if !set.HasValue(key) {
+		t.Errorf("expected attribute set to contain key: %s", key)
+	}
+
+	set, _ = set.Filter(func(kv attribute.KeyValue) bool {
+		return kv.Key != key
+	})
+	return set
 }
