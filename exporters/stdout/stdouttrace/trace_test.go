@@ -213,7 +213,7 @@ func expectedJSON(now time.Time) string {
 
 func TestExporterShutdownIgnoresContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+	t.Cleanup(cancel)
 
 	e, err := stdouttrace.New()
 	if err != nil {
@@ -424,7 +424,7 @@ func TestSelfObservability(t *testing.T) {
 			}
 
 			original := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(original)
+			t.Cleanup(func() { otel.SetMeterProvider(original) })
 
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
