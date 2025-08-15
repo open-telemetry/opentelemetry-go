@@ -12,10 +12,12 @@ import (
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 // Exporter is a OpenTelemetry metric Exporter using gRPC.
@@ -31,6 +33,9 @@ type Exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	shutdownOnce sync.Once
+
+	// Self-observability metrics
+	metrics *selfobservability.ExporterMetrics
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
@@ -46,11 +51,20 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		as = metric.DefaultAggregationSelector
 	}
 
+	// Extract server address and port from endpoint for self-observability
+	serverAddress, serverPort := selfobservability.ParseEndpoint(cfg.Metrics.Endpoint)
+
 	return &Exporter{
 		client: c,
 
 		temporalitySelector: ts,
 		aggregationSelector: as,
+
+		metrics: selfobservability.NewExporterMetrics(
+			string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
+			serverAddress,
+			serverPort,
+		),
 	}, nil
 }
 
@@ -68,19 +82,24 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 //
 // This method returns an error if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
-func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (finalErr error) {
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
+
+	// Track export operation for self-observability
+	finishTracking := e.metrics.TrackExport(ctx, rm)
+	defer func() { finishTracking(finalErr) }()
 
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
+
+	// Return the appropriate error
 	if upErr != nil {
 		if err == nil {
 			return fmt.Errorf("failed to upload metrics: %w", upErr)
 		}
-		// Merge the two errors.
 		return fmt.Errorf("failed to upload incomplete metrics (%w): %w", err, upErr)
 	}
 	return err
