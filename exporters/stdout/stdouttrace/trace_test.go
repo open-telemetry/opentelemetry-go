@@ -443,3 +443,19 @@ func TestSelfObservability(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	ss := tracetest.SpanStubs{{Name: "/foo"}, {Name: "/bar"}}.Snapshots()
+	ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard))
+	if err != nil {
+		b.Fatalf("failed to create exporter: %v", err)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := ex.ExportSpans(context.Background(), ss); err != nil {
+			b.Errorf("exporter.ExportSpans() error = %v", err)
+		}
+	}
+}
