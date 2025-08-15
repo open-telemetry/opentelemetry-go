@@ -2179,14 +2179,21 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
+type ctxKeyT string
+
+var ctxKey = ctxKeyT("testKey")
+
 func TestSelfObservability(t *testing.T) {
+	const value = "testValue"
+	ctx := context.WithValue(context.Background(), ctxKey, value)
+
 	testCases := []struct {
 		name string
-		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
+		test func(*testing.T, *producer, func(context.Context) metricdata.ScopeMetrics)
 	}{
 		{
 			name: "SampledSpan",
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, p *producer, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
 				_, span := tp.Tracer("").Start(context.Background(), "StartSpan")
 
@@ -2239,8 +2246,17 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
-				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+
+				p.Reset()
+				got := scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 
 				span.End()
 
@@ -2293,13 +2309,21 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
-				got = scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				p.Reset()
+				got = scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
 			name: "NonRecordingSpan",
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, p *producer, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(NeverSample()))
 				tp.Tracer("").Start(context.Background(), "NonRecordingSpan")
@@ -2336,13 +2360,21 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				p.Reset()
+				got := scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
 			name: "OnlyRecordingSpan",
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, p *producer, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(RecordingOnly()))
 				tp.Tracer("").Start(context.Background(), "OnlyRecordingSpan")
@@ -2397,13 +2429,21 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				p.Reset()
+				got := scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
 			name: "RemoteParentSpan",
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, p *producer, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
 				// Create a remote parent context
 				tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 				sid, _ := trace.SpanIDFromHex("0102040810203040")
@@ -2467,15 +2507,23 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
-				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				p.Reset()
+				got := scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
 			name: "LocalParentSpan",
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, p *producer, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
-				ctx, parentSpan := tp.Tracer("").Start(context.Background(), "ParentSpan")
+				ctx, parentSpan := tp.Tracer("").Start(ctx, "ParentSpan")
 				_, childSpan := tp.Tracer("").Start(ctx, "ChildSpan")
 
 				want := metricdata.ScopeMetrics{
@@ -2539,8 +2587,16 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				p.Reset()
+				got := scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 
 				childSpan.End()
 				parentSpan.End()
@@ -2606,8 +2662,16 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got = scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				p.Reset()
+				got = scopeMetrics(ctx)
+				assert.Equal(t, value, p.ctx.Value(ctxKey), "Context value should be propagated")
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 	}
@@ -2616,21 +2680,33 @@ func TestSelfObservability(t *testing.T) {
 			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
 			defer otel.SetMeterProvider(prev)
-			r := metric.NewManualReader()
+			p := &producer{}
+			r := metric.NewManualReader(metric.WithProducer(p))
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
 
-			scopeMetrics := func() metricdata.ScopeMetrics {
+			scopeMetrics := func(ctx context.Context) metricdata.ScopeMetrics {
 				var got metricdata.ResourceMetrics
-				err := r.Collect(context.Background(), &got)
+				err := r.Collect(ctx, &got)
 				require.NoError(t, err)
 				require.Len(t, got.ScopeMetrics, 1)
 				return got.ScopeMetrics[0]
 			}
-			tc.test(t, scopeMetrics)
+			tc.test(t, p, scopeMetrics)
 		})
 	}
 }
+
+type producer struct {
+	ctx context.Context
+}
+
+func (p *producer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	p.ctx = ctx
+	return nil, nil
+}
+
+func (p *producer) Reset() { p.ctx = nil }
 
 // RecordingOnly creates a Sampler that samples no traces, but enables recording.
 // The created sampler maintains any tracestate from the parent span context.
