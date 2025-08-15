@@ -472,10 +472,19 @@ func TestSelfObservability(t *testing.T) {
 
 				require.IsType(t, metricdata.Sum[int64]{}, sm.Metrics[1].Data)
 				sum := sm.Metrics[1].Data.(metricdata.Sum[int64])
-				require.Len(t, sum.DataPoints, 2)
-				sum.DataPoints[1].Attributes = stripAttr(
-					t, sum.DataPoints[1].Attributes, semconv.ErrorTypeKey,
-				)
+				var found bool
+				for i := range sum.DataPoints {
+					sum.DataPoints[i].Attributes, _ = sum.DataPoints[i].Attributes.Filter(
+						func(kv attribute.KeyValue) bool {
+							if kv.Key == semconv.ErrorTypeKey {
+								found = true
+								return false
+							}
+							return true
+						},
+					)
+				}
+				assert.True(t, found, "missing error type attribute in span export metric")
 				sm.Metrics[1].Data = sum
 
 				metricdatatest.AssertEqual(t, metricdata.Metrics{
@@ -507,9 +516,17 @@ func TestSelfObservability(t *testing.T) {
 				require.IsType(t, metricdata.Histogram[float64]{}, sm.Metrics[2].Data)
 				hist := sm.Metrics[2].Data.(metricdata.Histogram[float64])
 				require.Len(t, hist.DataPoints, 1)
-				hist.DataPoints[0].Attributes = stripAttr(
-					t, hist.DataPoints[0].Attributes, semconv.ErrorTypeKey,
+				found = false
+				hist.DataPoints[0].Attributes, _ = hist.DataPoints[0].Attributes.Filter(
+					func(kv attribute.KeyValue) bool {
+						if kv.Key == semconv.ErrorTypeKey {
+							found = true
+							return false
+						}
+						return true
+					},
 				)
+				assert.True(t, found, "missing error type attribute in operation duration metric")
 				sm.Metrics[2].Data = hist
 
 				metricdatatest.AssertEqual(t, metricdata.Metrics{
@@ -557,17 +574,4 @@ func TestSelfObservability(t *testing.T) {
 			tt.assertMetrics(t, rm)
 		})
 	}
-}
-
-func stripAttr(t *testing.T, set attribute.Set, key attribute.Key) attribute.Set {
-	t.Helper()
-
-	if !set.HasValue(key) {
-		t.Errorf("expected attribute set to contain key: %s", key)
-	}
-
-	set, _ = set.Filter(func(kv attribute.KeyValue) bool {
-		return kv.Key != key
-	})
-	return set
 }
