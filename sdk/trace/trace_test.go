@@ -1974,7 +1974,7 @@ func TestWithIDGenerator(t *testing.T) {
 
 			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startSpanID+i), gotSpanID)
+			assert.Equal(t, startSpanID+uint64(i), gotSpanID)
 
 			traceIdStr := span.SpanContext().TraceID().String()
 			highBitsStr := traceIdStr[:16]
@@ -1986,7 +1986,7 @@ func TestWithIDGenerator(t *testing.T) {
 				assert.Equal(t, expected, gotTraceID)
 			}
 			traceIdValidator(t, highBitsStr, startHigh)
-			traceIdValidator(t, lowBitsStr, uint64(startLow)+uint64(i))
+			traceIdValidator(t, lowBitsStr, startLow+uint64(i))
 		}()
 	}
 }
