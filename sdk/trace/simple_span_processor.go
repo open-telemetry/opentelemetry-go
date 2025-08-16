@@ -52,12 +52,12 @@ func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 	return ssp
 }
 
-var processorIDCounter atomic.Int64
+var simpleProcessorIDCounter atomic.Int64
 
-// nextProcessorID returns an identifier for this simple span processor,
+// nextSimpleProcessorID returns an identifier for this simple span processor,
 // starting with 0 and incrementing by 1 each time it is called.
-func nextProcessorID() int64 {
-	return processorIDCounter.Add(1) - 1
+func nextSimpleProcessorID() int64 {
+	return simpleProcessorIDCounter.Add(1) - 1
 }
 
 // configureSelfObservability configures metrics for the simple span processor.
@@ -67,7 +67,7 @@ func (ssp *simpleSpanProcessor) configureSelfObservability() {
 	}
 	ssp.selfObservabilityEnabled = true
 	ssp.componentNameAttr = semconv.OTelComponentName(
-		fmt.Sprintf("%s/%d", otelconv.ComponentTypeSimpleSpanProcessor, nextProcessorID()))
+		fmt.Sprintf("%s/%d", otelconv.ComponentTypeSimpleSpanProcessor, nextSimpleProcessorID()))
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
