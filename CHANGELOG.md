@@ -57,6 +57,8 @@ The next release will require at least [Go 1.24].
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
   Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
 - Support testing of [Go 1.25]. (#7187)
+- Add experimental self-observability stdoutmetric exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`.
+  Check the `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x` package documentation for more information. (#7150)
 
 ### Changed
 
