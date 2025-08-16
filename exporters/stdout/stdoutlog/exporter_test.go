@@ -462,7 +462,7 @@ func TestValueMarshalJSON(t *testing.T) {
 	}
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestNewSelfObservability(t *testing.T) {
 	testCases := []struct {
 		name   string
 		enable bool
@@ -776,16 +776,22 @@ func TestSelfObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				exporter, err := New()
 				require.NoError(t, err)
-
 				err = exporter.Export(context.Background(), []sdklog.Record{})
 				require.NoError(t, err)
 
 				got := scopeMetrics()
-				if len(got.Metrics) > 0 {
-					assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
-					assert.NotEmpty(t, got.Scope.Version)
+				assert.Equal(t, "go.opentelemetry.io/otel/exporters/stdout/stdoutlog", got.Scope.Name)
+				assert.NotEmpty(t, got.Scope.Version)
+				assert.NotEmpty(t, got.Metrics, "metrics should be recorded even for empty records")
+
+				assert.Len(t, got.Metrics, 3, "should have 3 metrics for self-observability")
+				metricNames := make(map[string]bool)
+				for _, metric := range got.Metrics {
+					metricNames[metric.Name] = true
 				}
-				assert.Empty(t, got.Metrics, "no metrics should be recorded for empty records")
+				assert.True(t, metricNames["otel.sdk.exporter.log.exported"], "exported metric should be present")
+				assert.True(t, metricNames["otel.sdk.exporter.operation.duration"], "duration metric should be present")
+				assert.True(t, metricNames["otel.sdk.exporter.log.inflight"], "inflight metric should be present")
 			},
 		},
 		{
