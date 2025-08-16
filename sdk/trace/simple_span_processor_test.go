@@ -243,7 +243,7 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 			},
 		},
 		{
@@ -285,7 +285,7 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 			},
 		},
 	}

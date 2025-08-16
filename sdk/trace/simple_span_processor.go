@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/internal/x"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var measureAttrsPool = sync.Pool{
@@ -118,7 +119,10 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 			*attrs = append(*attrs, semconv.ErrorType(err))
 		}
 		if ssp.selfObservabilityEnabled {
-			ssp.spansProcessedCounter.Add(context.Background(), 1, *attrs...)
+			// Add the span to the context to ensure the metric is recorded
+			// with the correct span context.
+			ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
+			ssp.spansProcessedCounter.Add(ctx, 1, *attrs...)
 		}
 	}
 }
