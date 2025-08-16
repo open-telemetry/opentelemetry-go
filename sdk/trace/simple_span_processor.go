@@ -19,6 +19,17 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
+var measureAttrsPool = sync.Pool{
+	New: func() any {
+		// "component.name" + "component.type" + "error.type"
+		const n = 1 + 1 + 1
+		s := make([]attribute.KeyValue, 0, n)
+		// Return a pointer to a slice instead of a slice itself
+		// to avoid allocations on every call.
+		return &s
+	},
+}
+
 // simpleSpanProcessor is a SpanProcessor that synchronously sends all
 // completed Spans to a trace.Exporter immediately.
 type simpleSpanProcessor struct {
@@ -92,17 +103,22 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	defer ssp.exporterMu.Unlock()
 
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
-		attrs := []attribute.KeyValue{
+		attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
+		defer func() {
+			*attrs = (*attrs)[:0] // reset the slice for reuse
+			measureAttrsPool.Put(attrs)
+		}()
+		*attrs = append(*attrs,
 			ssp.componentNameAttr,
-			ssp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeSimpleSpanProcessor),
-		}
+			ssp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeSimpleSpanProcessor))
+
 		err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s})
 		if err != nil {
 			otel.Handle(err)
-			attrs = append(attrs, semconv.ErrorType(err))
+			*attrs = append(*attrs, semconv.ErrorType(err))
 		}
 		if ssp.selfObservabilityEnabled {
-			ssp.spansProcessedCounter.Add(context.Background(), 1, attrs...)
+			ssp.spansProcessedCounter.Add(context.Background(), 1, *attrs...)
 		}
 	}
 }
