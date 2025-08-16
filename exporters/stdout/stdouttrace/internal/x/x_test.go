@@ -7,9 +7,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-//nolint:unused
+func TestSelfObservability(t *testing.T) {
+	const key = "OTEL_GO_X_SELF_OBSERVABILITY"
+	require.Equal(t, key, SelfObservability.Key())
+
+	t.Run("100", run(setenv(key, "100"), assertDisabled(SelfObservability)))
+	t.Run("true", run(setenv(key, "true"), assertEnabled(SelfObservability, "true")))
+	t.Run("True", run(setenv(key, "True"), assertEnabled(SelfObservability, "True")))
+	t.Run("false", run(setenv(key, "false"), assertDisabled(SelfObservability)))
+	t.Run("empty", run(assertDisabled(SelfObservability)))
+}
+
 func run(steps ...func(*testing.T)) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
@@ -19,12 +30,10 @@ func run(steps ...func(*testing.T)) func(*testing.T) {
 	}
 }
 
-//nolint:unused
-func setenv(k, v string) func(t *testing.T) {
+func setenv(k, v string) func(t *testing.T) { //nolint:unparam // This is a reusable test utility function.
 	return func(t *testing.T) { t.Setenv(k, v) }
 }
 
-//nolint:unused
 func assertEnabled[T any](f Feature[T], want T) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
@@ -36,7 +45,6 @@ func assertEnabled[T any](f Feature[T], want T) func(*testing.T) {
 	}
 }
 
-//nolint:unused
 func assertDisabled[T any](f Feature[T]) func(*testing.T) {
 	var zero T
 	return func(t *testing.T) {

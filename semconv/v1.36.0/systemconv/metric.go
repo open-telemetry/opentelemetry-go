@@ -23,21 +23,21 @@ var (
 type CPUModeAttr string
 
 var (
-	// CPUModeUser is the none.
+	// CPUModeUser is the standardized value "user" of CPUModeAttr.
 	CPUModeUser CPUModeAttr = "user"
-	// CPUMode is the none.
+	// CPUMode is the standardized value "system" of CPUModeAttr.
 	CPUMode CPUModeAttr = "system"
-	// CPUModeNice is the none.
+	// CPUModeNice is the standardized value "nice" of CPUModeAttr.
 	CPUModeNice CPUModeAttr = "nice"
-	// CPUModeIdle is the none.
+	// CPUModeIdle is the standardized value "idle" of CPUModeAttr.
 	CPUModeIdle CPUModeAttr = "idle"
-	// CPUModeIOWait is the none.
+	// CPUModeIOWait is the standardized value "iowait" of CPUModeAttr.
 	CPUModeIOWait CPUModeAttr = "iowait"
-	// CPUModeInterrupt is the none.
+	// CPUModeInterrupt is the standardized value "interrupt" of CPUModeAttr.
 	CPUModeInterrupt CPUModeAttr = "interrupt"
-	// CPUModeSteal is the none.
+	// CPUModeSteal is the standardized value "steal" of CPUModeAttr.
 	CPUModeSteal CPUModeAttr = "steal"
-	// CPUModeKernel is the none.
+	// CPUModeKernel is the standardized value "kernel" of CPUModeAttr.
 	CPUModeKernel CPUModeAttr = "kernel"
 )
 
@@ -46,9 +46,10 @@ var (
 type DiskIODirectionAttr string
 
 var (
-	// DiskIODirectionRead is the none.
+	// DiskIODirectionRead is the standardized value "read" of DiskIODirectionAttr.
 	DiskIODirectionRead DiskIODirectionAttr = "read"
-	// DiskIODirectionWrite is the none.
+	// DiskIODirectionWrite is the standardized value "write" of
+	// DiskIODirectionAttr.
 	DiskIODirectionWrite DiskIODirectionAttr = "write"
 )
 
@@ -58,9 +59,11 @@ var (
 type LinuxMemorySlabStateAttr string
 
 var (
-	// LinuxMemorySlabStateReclaimable is the none.
+	// LinuxMemorySlabStateReclaimable is the standardized value "reclaimable" of
+	// LinuxMemorySlabStateAttr.
 	LinuxMemorySlabStateReclaimable LinuxMemorySlabStateAttr = "reclaimable"
-	// LinuxMemorySlabStateUnreclaimable is the none.
+	// LinuxMemorySlabStateUnreclaimable is the standardized value "unreclaimable"
+	// of LinuxMemorySlabStateAttr.
 	LinuxMemorySlabStateUnreclaimable LinuxMemorySlabStateAttr = "unreclaimable"
 )
 
@@ -70,27 +73,38 @@ var (
 type NetworkConnectionStateAttr string
 
 var (
-	// NetworkConnectionStateClosed is the none.
+	// NetworkConnectionStateClosed is the standardized value "closed" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateClosed NetworkConnectionStateAttr = "closed"
-	// NetworkConnectionStateCloseWait is the none.
+	// NetworkConnectionStateCloseWait is the standardized value "close_wait" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateCloseWait NetworkConnectionStateAttr = "close_wait"
-	// NetworkConnectionStateClosing is the none.
+	// NetworkConnectionStateClosing is the standardized value "closing" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateClosing NetworkConnectionStateAttr = "closing"
-	// NetworkConnectionStateEstablished is the none.
+	// NetworkConnectionStateEstablished is the standardized value "established" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateEstablished NetworkConnectionStateAttr = "established"
-	// NetworkConnectionStateFinWait1 is the none.
+	// NetworkConnectionStateFinWait1 is the standardized value "fin_wait_1" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateFinWait1 NetworkConnectionStateAttr = "fin_wait_1"
-	// NetworkConnectionStateFinWait2 is the none.
+	// NetworkConnectionStateFinWait2 is the standardized value "fin_wait_2" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateFinWait2 NetworkConnectionStateAttr = "fin_wait_2"
-	// NetworkConnectionStateLastAck is the none.
+	// NetworkConnectionStateLastAck is the standardized value "last_ack" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateLastAck NetworkConnectionStateAttr = "last_ack"
-	// NetworkConnectionStateListen is the none.
+	// NetworkConnectionStateListen is the standardized value "listen" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateListen NetworkConnectionStateAttr = "listen"
-	// NetworkConnectionStateSynReceived is the none.
+	// NetworkConnectionStateSynReceived is the standardized value "syn_received" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateSynReceived NetworkConnectionStateAttr = "syn_received"
-	// NetworkConnectionStateSynSent is the none.
+	// NetworkConnectionStateSynSent is the standardized value "syn_sent" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateSynSent NetworkConnectionStateAttr = "syn_sent"
-	// NetworkConnectionStateTimeWait is the none.
+	// NetworkConnectionStateTimeWait is the standardized value "time_wait" of
+	// NetworkConnectionStateAttr.
 	NetworkConnectionStateTimeWait NetworkConnectionStateAttr = "time_wait"
 )
 
@@ -99,9 +113,11 @@ var (
 type NetworkIODirectionAttr string
 
 var (
-	// NetworkIODirectionTransmit is the none.
+	// NetworkIODirectionTransmit is the standardized value "transmit" of
+	// NetworkIODirectionAttr.
 	NetworkIODirectionTransmit NetworkIODirectionAttr = "transmit"
-	// NetworkIODirectionReceive is the none.
+	// NetworkIODirectionReceive is the standardized value "receive" of
+	// NetworkIODirectionAttr.
 	NetworkIODirectionReceive NetworkIODirectionAttr = "receive"
 )
 
@@ -131,11 +147,12 @@ var (
 type FilesystemStateAttr string
 
 var (
-	// FilesystemStateUsed is the none.
+	// FilesystemStateUsed is the standardized value "used" of FilesystemStateAttr.
 	FilesystemStateUsed FilesystemStateAttr = "used"
-	// FilesystemStateFree is the none.
+	// FilesystemStateFree is the standardized value "free" of FilesystemStateAttr.
 	FilesystemStateFree FilesystemStateAttr = "free"
-	// FilesystemStateReserved is the none.
+	// FilesystemStateReserved is the standardized value "reserved" of
+	// FilesystemStateAttr.
 	FilesystemStateReserved FilesystemStateAttr = "reserved"
 )
 
@@ -144,17 +161,18 @@ var (
 type FilesystemTypeAttr string
 
 var (
-	// FilesystemTypeFat32 is the none.
+	// FilesystemTypeFat32 is the standardized value "fat32" of FilesystemTypeAttr.
 	FilesystemTypeFat32 FilesystemTypeAttr = "fat32"
-	// FilesystemTypeExfat is the none.
+	// FilesystemTypeExfat is the standardized value "exfat" of FilesystemTypeAttr.
 	FilesystemTypeExfat FilesystemTypeAttr = "exfat"
-	// FilesystemTypeNtfs is the none.
+	// FilesystemTypeNtfs is the standardized value "ntfs" of FilesystemTypeAttr.
 	FilesystemTypeNtfs FilesystemTypeAttr = "ntfs"
-	// FilesystemTypeRefs is the none.
+	// FilesystemTypeRefs is the standardized value "refs" of FilesystemTypeAttr.
 	FilesystemTypeRefs FilesystemTypeAttr = "refs"
-	// FilesystemTypeHfsplus is the none.
+	// FilesystemTypeHfsplus is the standardized value "hfsplus" of
+	// FilesystemTypeAttr.
 	FilesystemTypeHfsplus FilesystemTypeAttr = "hfsplus"
-	// FilesystemTypeExt4 is the none.
+	// FilesystemTypeExt4 is the standardized value "ext4" of FilesystemTypeAttr.
 	FilesystemTypeExt4 FilesystemTypeAttr = "ext4"
 )
 
@@ -163,13 +181,13 @@ var (
 type MemoryStateAttr string
 
 var (
-	// MemoryStateUsed is the none.
+	// MemoryStateUsed is the standardized value "used" of MemoryStateAttr.
 	MemoryStateUsed MemoryStateAttr = "used"
-	// MemoryStateFree is the none.
+	// MemoryStateFree is the standardized value "free" of MemoryStateAttr.
 	MemoryStateFree MemoryStateAttr = "free"
-	// MemoryStateBuffers is the none.
+	// MemoryStateBuffers is the standardized value "buffers" of MemoryStateAttr.
 	MemoryStateBuffers MemoryStateAttr = "buffers"
-	// MemoryStateCached is the none.
+	// MemoryStateCached is the standardized value "cached" of MemoryStateAttr.
 	MemoryStateCached MemoryStateAttr = "cached"
 )
 
@@ -178,9 +196,9 @@ var (
 type PagingDirectionAttr string
 
 var (
-	// PagingDirectionIn is the none.
+	// PagingDirectionIn is the standardized value "in" of PagingDirectionAttr.
 	PagingDirectionIn PagingDirectionAttr = "in"
-	// PagingDirectionOut is the none.
+	// PagingDirectionOut is the standardized value "out" of PagingDirectionAttr.
 	PagingDirectionOut PagingDirectionAttr = "out"
 )
 
@@ -189,9 +207,9 @@ var (
 type PagingStateAttr string
 
 var (
-	// PagingStateUsed is the none.
+	// PagingStateUsed is the standardized value "used" of PagingStateAttr.
 	PagingStateUsed PagingStateAttr = "used"
-	// PagingStateFree is the none.
+	// PagingStateFree is the standardized value "free" of PagingStateAttr.
 	PagingStateFree PagingStateAttr = "free"
 )
 
@@ -200,9 +218,9 @@ var (
 type PagingTypeAttr string
 
 var (
-	// PagingTypeMajor is the none.
+	// PagingTypeMajor is the standardized value "major" of PagingTypeAttr.
 	PagingTypeMajor PagingTypeAttr = "major"
-	// PagingTypeMinor is the none.
+	// PagingTypeMinor is the standardized value "minor" of PagingTypeAttr.
 	PagingTypeMinor PagingTypeAttr = "minor"
 )
 
@@ -214,13 +232,17 @@ var (
 type ProcessStatusAttr string
 
 var (
-	// ProcessStatusRunning is the none.
+	// ProcessStatusRunning is the standardized value "running" of
+	// ProcessStatusAttr.
 	ProcessStatusRunning ProcessStatusAttr = "running"
-	// ProcessStatusSleeping is the none.
+	// ProcessStatusSleeping is the standardized value "sleeping" of
+	// ProcessStatusAttr.
 	ProcessStatusSleeping ProcessStatusAttr = "sleeping"
-	// ProcessStatusStopped is the none.
+	// ProcessStatusStopped is the standardized value "stopped" of
+	// ProcessStatusAttr.
 	ProcessStatusStopped ProcessStatusAttr = "stopped"
-	// ProcessStatusDefunct is the none.
+	// ProcessStatusDefunct is the standardized value "defunct" of
+	// ProcessStatusAttr.
 	ProcessStatusDefunct ProcessStatusAttr = "defunct"
 )
 
