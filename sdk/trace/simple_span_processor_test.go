@@ -313,6 +313,5 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 			require.NoError(t, r.Collect(context.Background(), &rm))
 			test.assertMetrics(t, rm)
 		})
-
 	}
 }
