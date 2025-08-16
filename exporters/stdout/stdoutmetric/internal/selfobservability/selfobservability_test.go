@@ -35,7 +35,12 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 
 	componentName := semconv.OTelComponentName("test")
 	componentType := semconv.OTelComponentTypeKey.String("exporter")
-	em := NewExporterMetrics("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric", componentName, componentType)
+	em, err := NewExporterMetrics(
+		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
+		componentName,
+		componentType,
+	)
+	assert.NoError(t, err)
 
 	return &testSetup{
 		reader: reader,
@@ -161,7 +166,8 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 	componentName := semconv.OTelComponentName("test-component")
 	componentType := semconv.OTelComponentTypeKey.String("test-exporter")
-	em := NewExporterMetrics("test", componentName, componentType)
+	em, err := NewExporterMetrics("test", componentName, componentType)
+	assert.NoError(t, err)
 
 	assert.Len(t, em.attrs, 2)
 	assert.Contains(t, em.attrs, componentName)

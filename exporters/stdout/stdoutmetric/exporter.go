@@ -53,27 +53,22 @@ type exporter struct {
 func New(options ...Option) (metric.Exporter, error) {
 	cfg := newConfig(options...)
 	exp := &exporter{
-		temporalitySelector: cfg.temporalitySelector,
-		aggregationSelector: cfg.aggregationSelector,
-		redactTimestamps:    cfg.redactTimestamps,
+		temporalitySelector:      cfg.temporalitySelector,
+		aggregationSelector:      cfg.aggregationSelector,
+		redactTimestamps:         cfg.redactTimestamps,
+		selfObservabilityEnabled: x.SelfObservability.Enabled(),
 	}
-	exp.initSelfObservability()
 	exp.encVal.Store(*cfg.encoder)
-	return exp, nil
-}
-
-func (e *exporter) initSelfObservability() {
-	if !x.SelfObservability.Enabled() {
-		return
+	var err error
+	if exp.selfObservabilityEnabled {
+		componentName := fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())
+		exp.exporterMetric, err = selfobservability.NewExporterMetrics(
+			"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
+			semconv.OTelComponentName(componentName),
+			semconv.OTelComponentTypeKey.String(otelComponentType),
+		)
 	}
-
-	e.selfObservabilityEnabled = true
-	componentName := fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())
-	e.exporterMetric = selfobservability.NewExporterMetrics(
-		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
-		semconv.OTelComponentName(componentName),
-		semconv.OTelComponentTypeKey.String(otelComponentType),
-	)
+	return exp, err
 }
 
 func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {

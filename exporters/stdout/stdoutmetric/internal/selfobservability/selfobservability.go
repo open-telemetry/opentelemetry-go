@@ -7,6 +7,8 @@ package selfobservability // import "go.opentelemetry.io/otel/exporters/stdout/s
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -27,27 +29,30 @@ type ExporterMetrics struct {
 func NewExporterMetrics(
 	name string,
 	componentName, componentType attribute.KeyValue,
-) *ExporterMetrics {
-	em := &ExporterMetrics{}
+) (*ExporterMetrics, error) {
+	em := &ExporterMetrics{
+		attrs: []attribute.KeyValue{componentName, componentType},
+	}
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
 		name,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL))
 
-	var err error
-	if em.inflight, err = otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
-		otel.Handle(err)
+	var err, e error
+	if em.inflight, e = otelconv.NewSDKExporterMetricDataPointInflight(m); e != nil {
+		e = fmt.Errorf("failed to create metric_data_point inflight metric: %w", e)
+		err = errors.Join(err, e)
 	}
-	if em.exported, err = otelconv.NewSDKExporterMetricDataPointExported(m); err != nil {
-		otel.Handle(err)
+	if em.exported, e = otelconv.NewSDKExporterMetricDataPointExported(m); e != nil {
+		e = fmt.Errorf("failed to create metric_data_point exported metric: %w", e)
+		err = errors.Join(err, e)
 	}
-	if em.duration, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
+	if em.duration, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+		e = fmt.Errorf("failed to create operation duration metric: %w", e)
+		err = errors.Join(err, e)
 	}
-
-	em.attrs = []attribute.KeyValue{componentName, componentType}
-	return em
+	return em, err
 }
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error) {
