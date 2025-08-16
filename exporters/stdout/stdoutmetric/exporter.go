@@ -16,10 +16,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
-const stdoutMetricExporterComponentType = otelconv.ComponentTypeAttr("stdout_metric_exporter")
+// otelComponentType is a name identifying the type of the OpenTelemetry
+// component. It is not a standardized OTel component type, so it uses the
+// Go package prefixed type name to ensure uniqueness and identity.
+const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
 
 var exporterIDCounter atomic.Int64
 
@@ -66,11 +68,11 @@ func (e *exporter) initSelfObservability() {
 	}
 
 	e.selfObservabilityEnabled = true
-	componentName := fmt.Sprintf("%s/%d", stdoutMetricExporterComponentType, nextExporterID())
+	componentName := fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())
 	e.exporterMetric = selfobservability.NewExporterMetrics(
 		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
 		semconv.OTelComponentName(componentName),
-		semconv.OTelComponentTypeKey.String(string(stdoutMetricExporterComponentType)),
+		semconv.OTelComponentTypeKey.String(otelComponentType),
 	)
 }
 
