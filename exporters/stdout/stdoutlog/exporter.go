@@ -55,18 +55,17 @@ func New(options ...Option) (*Exporter, error) {
 		timestamps: cfg.Timestamps,
 	}
 	e.encoder.Store(enc)
-	e.initSelfObservability()
+	e.selfObservability = newSelfObservability()
 
 	return &e, nil
 }
 
-// initSelfObservability initializes self-observability for the exporter if enabled.
-func (e *Exporter) initSelfObservability() {
+func newSelfObservability() *selfObservability {
 	if !x.SelfObservability.Enabled() {
-		return
+		return nil
 	}
 
-	e.selfObservability = &selfObservability{
+	selfObservability := &selfObservability{
 		enabled: true,
 		attrs: []attribute.KeyValue{
 			semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
@@ -81,23 +80,21 @@ func (e *Exporter) initSelfObservability() {
 	)
 
 	var err error
-	if e.selfObservability.inflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
+	if selfObservability.inflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
 		otel.Handle(err)
 	}
-	if e.selfObservability.exportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
+	if selfObservability.exportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
 		otel.Handle(err)
 	}
-	if e.selfObservability.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
+	if selfObservability.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
 		otel.Handle(err)
 	}
+
+	return selfObservability
 }
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	if len(records) == 0 {
-		return nil
-	}
-
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
