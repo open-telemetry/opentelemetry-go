@@ -43,9 +43,22 @@ var _ SpanProcessor = (*simpleSpanProcessor)(nil)
 // use instead.
 func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 	ssp := &simpleSpanProcessor{
-		exporter: exporter,
+		exporter:                 exporter,
+		selfObservabilityEnabled: x.SelfObservability.Enabled(),
 	}
-	ssp.configureSelfObservability()
+
+	if ssp.selfObservabilityEnabled {
+		ssp.componentNameAttr = semconv.OTelComponentName(
+			fmt.Sprintf("%s/%d", otelconv.ComponentTypeSimpleSpanProcessor, nextSimpleProcessorID()))
+
+		var err error
+		ssp.spansProcessedCounter, err = newInst()
+		if err != nil {
+			msg := "failed to create self-observability metrics for simple span processor: %w"
+			err := fmt.Errorf(msg, err)
+			otel.Handle(err)
+		}
+	}
 
 	global.Warn("SimpleSpanProcessor is not recommended for production use, consider using BatchSpanProcessor instead.")
 
@@ -60,25 +73,14 @@ func nextSimpleProcessorID() int64 {
 	return simpleProcessorIDCounter.Add(1) - 1
 }
 
-// configureSelfObservability configures metrics for the simple span processor.
-func (ssp *simpleSpanProcessor) configureSelfObservability() {
-	if !x.SelfObservability.Enabled() {
-		return
-	}
-	ssp.selfObservabilityEnabled = true
-	ssp.componentNameAttr = semconv.OTelComponentName(
-		fmt.Sprintf("%s/%d", otelconv.ComponentTypeSimpleSpanProcessor, nextSimpleProcessorID()))
+func newInst() (otelconv.SDKProcessorSpanProcessed, error) {
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
-
-	var err error
-	ssp.spansProcessedCounter, err = otelconv.NewSDKProcessorSpanProcessed(meter)
-	if err != nil {
-		otel.Handle(err)
-	}
+	spansProcessedCounter, err := otelconv.NewSDKProcessorSpanProcessed(meter)
+	return spansProcessedCounter, err
 }
 
 // OnStart does nothing.

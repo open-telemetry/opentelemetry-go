@@ -272,7 +272,7 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 									{
 										Value: 1,
 										Attributes: attribute.NewSet(
-											semconv.OTelComponentName("simple_span_processor/1"),
+											semconv.OTelComponentName("simple_span_processor/0"),
 											semconv.OTelComponentTypeKey.String("simple_span_processor"),
 											semconv.ErrorTypeKey.String("*errors.errorString"),
 										),
@@ -312,6 +312,7 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, r.Collect(context.Background(), &rm))
 			test.assertMetrics(t, rm)
+			simpleProcessorIDCounter.Store(0) // reset simpleProcessorIDCounter
 		})
 	}
 }
