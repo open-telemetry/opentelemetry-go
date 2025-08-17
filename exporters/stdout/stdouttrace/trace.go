@@ -9,11 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
@@ -52,7 +52,7 @@ func New(options ...Option) (*Exporter, error) {
 
 	exporter.selfObservabilityEnabled = true
 	exporter.selfObservabilityAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
 		semconv.OTelComponentTypeKey.String(otelComponentType),
 	}
 
@@ -173,12 +173,4 @@ func (e *Exporter) MarshalLog() any {
 		Type:           "stdout",
 		WithTimestamps: e.timestamps,
 	}
-}
-
-var exporterIDCounter atomic.Int64
-
-// nextExporterID returns a new unique ID for an exporter.
-// the starting value is 0, and it increments by 1 for each call.
-func nextExporterID() int64 {
-	return exporterIDCounter.Add(1) - 1
 }
