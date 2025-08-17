@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
@@ -139,13 +140,25 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	b := &BatchProcessor{
 		exporter: newBufferExporter(exporter, cfg.expBufferSize.Value),
 
-		q:           newQueue(cfg.maxQSize.Value),
-		batchSize:   cfg.expMaxBatchSize.Value,
-		pollTrigger: make(chan struct{}, 1),
-		pollKill:    make(chan struct{}),
+		q:                        newQueue(cfg.maxQSize.Value),
+		batchSize:                cfg.expMaxBatchSize.Value,
+		pollTrigger:              make(chan struct{}, 1),
+		pollKill:                 make(chan struct{}),
+		selfObservabilityEnabled: x.SelfObservability.Enabled(),
 	}
-	b.configureSelfObservability()
 	b.pollDone = b.poll(cfg.expInterval.Value)
+
+	if b.selfObservabilityEnabled {
+		b.componentNameAttr = semconv.OTelComponentName(
+			fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingLogProcessor, nextProcessorID()))
+		var err error
+		b.logProcessedCounter, b.callbackRegistration, err = b.configureSelfObservability()
+		if err != nil {
+			err = fmt.Errorf("failed to configure self observability: %w", err)
+			otel.Handle(err)
+		}
+	}
+
 	return b
 }
 
@@ -157,44 +170,46 @@ func nextProcessorID() int64 {
 	return processorIDCounter.Add(1) - 1
 }
 
-func (b *BatchProcessor) configureSelfObservability() {
-	// TODO: add self observability feature flag reading logic here (dependant on PR #7121)
-	b.selfObservabilityEnabled = true
-	b.componentNameAttr = semconv.OTelComponentName(
-		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingLogProcessor, nextProcessorID()))
+func (b *BatchProcessor) configureSelfObservability() (otelconv.SDKProcessorLogProcessed, metric.Registration, error) {
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
-	queueCapacityUpDownCounter, err := otelconv.NewSDKProcessorLogQueueCapacity(meter)
-	if err != nil {
-		otel.Handle(err)
+	var err error
+	queueCapacityUpDownCounter, e := otelconv.NewSDKProcessorLogQueueCapacity(meter)
+	if e != nil {
+		e = fmt.Errorf("failed to create log queue capacity metric: %w", e)
+		err = errors.Join(err, e)
 	}
 
-	queueSizeUpDownCounter, err := otelconv.NewSDKProcessorLogQueueSize(meter)
-	if err != nil {
-		otel.Handle(err)
+	queueSizeUpDownCounter, e := otelconv.NewSDKProcessorLogQueueSize(meter)
+	if e != nil {
+		e = fmt.Errorf("failed to create log queue size metric: %w", e)
+		err = errors.Join(err, e)
 	}
 
 	// todo: what is the definition of processed? is it enqueuing to batch processor queue or is it sending to exporter?
 	// also flush methods (if processed means pushing to exporter)
-	b.logProcessedCounter, err = otelconv.NewSDKProcessorLogProcessed(meter)
-	if err != nil {
-		otel.Handle(err)
+	logProcessedCounter, e := otelconv.NewSDKProcessorLogProcessed(meter)
+	if e != nil {
+		e = fmt.Errorf("failed to create log processed metric: %w", e)
+		err = errors.Join(err, e)
 	}
 
 	callbackAttributesOpt := metric.WithAttributes(b.componentNameAttr,
 		semconv.OTelComponentTypeBatchingLogProcessor)
-	b.callbackRegistration, err = meter.RegisterCallback(func(ctx context.Context, observer metric.Observer) error {
+	callbackRegistration, e := meter.RegisterCallback(func(_ context.Context, observer metric.Observer) error {
 		observer.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(b.q.cap), callbackAttributesOpt)
 		observer.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(b.q.Len()), callbackAttributesOpt)
 		return nil
 	})
-	if err != nil {
-		otel.Handle(err)
+	if e != nil {
+		e = fmt.Errorf("failed to register measurement callback for log queue capacity and size: %w", e)
+		err = errors.Join(err, e)
 	}
+	return logProcessedCounter, callbackRegistration, err
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
