@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-func TestMeterConcurrentSafe(t *testing.T) {
+func TestMeterConcurrentSafe(*testing.T) {
 	const name = "TestMeterConcurrentSafe meter"
 	mp := NewMeterProvider()
 
@@ -35,7 +35,7 @@ func TestMeterConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestForceFlushConcurrentSafe(t *testing.T) {
+func TestForceFlushConcurrentSafe(*testing.T) {
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
@@ -48,7 +48,7 @@ func TestForceFlushConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestShutdownConcurrentSafe(t *testing.T) {
+func TestShutdownConcurrentSafe(*testing.T) {
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
@@ -61,7 +61,7 @@ func TestShutdownConcurrentSafe(t *testing.T) {
 	<-done
 }
 
-func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
+func TestMeterAndShutdownConcurrentSafe(*testing.T) {
 	const name = "TestMeterAndShutdownConcurrentSafe meter"
 	mp := NewMeterProvider()
 
@@ -173,4 +173,74 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 		t, data.ScopeMetrics,
 		"Metrics produced for instrument collected by different MeterProvider",
 	)
+}
+
+func TestMeterProviderCardinalityLimit(t *testing.T) {
+	const uniqueAttributesCount = 10
+
+	tests := []struct {
+		name           string
+		options        []Option
+		wantDataPoints int
+	}{
+		{
+			name:           "no limit (default)",
+			options:        nil,
+			wantDataPoints: uniqueAttributesCount,
+		},
+		{
+			name:           "no limit (limit=0)",
+			options:        []Option{WithCardinalityLimit(0)},
+			wantDataPoints: uniqueAttributesCount,
+		},
+		{
+			name:           "no limit (negative)",
+			options:        []Option{WithCardinalityLimit(-5)},
+			wantDataPoints: uniqueAttributesCount,
+		},
+		{
+			name:           "limit=5",
+			options:        []Option{WithCardinalityLimit(5)},
+			wantDataPoints: 5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := NewManualReader()
+
+			opts := append(tt.options, WithReader(reader))
+			mp := NewMeterProvider(opts...)
+
+			meter := mp.Meter("test-meter")
+			counter, err := meter.Int64Counter("metric")
+			require.NoError(t, err, "failed to create counter")
+
+			for i := range uniqueAttributesCount {
+				counter.Add(
+					context.Background(),
+					1,
+					api.WithAttributes(attribute.Int("key", i)),
+				)
+			}
+
+			var rm metricdata.ResourceMetrics
+			err = reader.Collect(context.Background(), &rm)
+			require.NoError(t, err, "failed to collect metrics")
+
+			require.Len(t, rm.ScopeMetrics, 1, "expected 1 ScopeMetrics")
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1, "expected 1 Metric")
+
+			data := rm.ScopeMetrics[0].Metrics[0].Data
+			require.IsType(t, metricdata.Sum[int64]{}, data, "expected metricdata.Sum[int64]")
+
+			sumData := data.(metricdata.Sum[int64])
+			assert.Len(
+				t,
+				sumData.DataPoints,
+				tt.wantDataPoints,
+				"unexpected number of data points",
+			)
+		})
+	}
 }

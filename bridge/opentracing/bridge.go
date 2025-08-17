@@ -321,10 +321,10 @@ var (
 func NewBridgeTracer() *BridgeTracer {
 	return &BridgeTracer{
 		setTracer: bridgeSetTracer{
-			warningHandler: func(msg string) {},
+			warningHandler: func(string) {},
 			otelTracer:     noopTracer,
 		},
-		warningHandler: func(msg string) {},
+		warningHandler: func(string) {},
 		propagator:     nil,
 	}
 }
@@ -832,12 +832,12 @@ func newTextMapWrapperForInject(carrier any) (*textMapWrapper, error) {
 
 type textMapWriter struct{}
 
-func (t *textMapWriter) Set(key, value string) {
+func (*textMapWriter) Set(string, string) {
 	// maybe print a warning log.
 }
 
 type textMapReader struct{}
 
-func (t *textMapReader) ForeachKey(handler func(key, val string) error) error {
+func (*textMapReader) ForeachKey(func(string, string) error) error {
 	return nil // maybe print a warning log.
 }

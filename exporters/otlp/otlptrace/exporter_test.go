@@ -21,15 +21,15 @@ type client struct {
 
 var _ otlptrace.Client = &client{}
 
-func (c *client) Start(ctx context.Context) error {
+func (*client) Start(context.Context) error {
 	return nil
 }
 
-func (c *client) Stop(ctx context.Context) error {
+func (*client) Stop(context.Context) error {
 	return nil
 }
 
-func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (c *client) UploadTraces(context.Context, []*tracepb.ResourceSpans) error {
 	return c.uploadErr
 }
 

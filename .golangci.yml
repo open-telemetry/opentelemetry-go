@@ -94,7 +94,6 @@ linters:
         - dupArg
         - hugeParam
         - importShadow
-        - ptrToRefParam
         - preferDecodeRune
         - rangeValCopy
         - unnamedResult
@@ -181,6 +180,8 @@ linters:
             - fmt.Print
             - fmt.Printf
             - fmt.Println
+        - name: unused-parameter
+        - name: unused-receiver
         - name: unnecessary-stmt
         - name: use-any
         - name: useless-break

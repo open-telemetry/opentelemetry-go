@@ -30,7 +30,7 @@ func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
 }
 
-func (t *testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
+func (*testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	_ = handler("key1", "val1")
 	_ = handler("key2", "val2")
 
@@ -134,7 +134,7 @@ var (
 
 type testTextMapPropagator struct{}
 
-func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (testTextMapPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(testHeader, traceID.String()+":"+spanID.String())
 
 	// Test for panic
@@ -142,7 +142,7 @@ func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.T
 	_ = carrier.Keys()
 }
 
-func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	traces := carrier.Get(testHeader)
 
 	str := strings.Split(traces, ":")
@@ -179,7 +179,7 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (t testTextMapPropagator) Fields() []string {
+func (testTextMapPropagator) Fields() []string {
 	return []string{"test"}
 }
 
@@ -214,15 +214,15 @@ func (t *textMapCarrier) Keys() []string {
 
 // testTextMapReader only implemented opentracing.TextMapReader interface.
 type testTextMapReader struct {
-	m *map[string]string
+	m map[string]string
 }
 
-func newTestTextMapReader(m *map[string]string) *testTextMapReader {
+func newTestTextMapReader(m map[string]string) *testTextMapReader {
 	return &testTextMapReader{m: m}
 }
 
 func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) error {
-	for key, val := range *t.m {
+	for key, val := range t.m {
 		if err := handler(key, val); err != nil {
 			return err
 		}
@@ -233,15 +233,15 @@ func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) erro
 
 // testTextMapWriter only implemented opentracing.TextMapWriter interface.
 type testTextMapWriter struct {
-	m *map[string]string
+	m map[string]string
 }
 
-func newTestTextMapWriter(m *map[string]string) *testTextMapWriter {
+func newTestTextMapWriter(m map[string]string) *testTextMapWriter {
 	return &testTextMapWriter{m: m}
 }
 
 func (t *testTextMapWriter) Set(key, val string) {
-	(*t.m)[key] = val
+	t.m[key] = val
 }
 
 type samplable interface {
@@ -290,9 +290,9 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 		{
 			name:               "support for opentracing.TextMapReader and opentracing.TextMapWriter,non-same instance",
 			injectCarrierType:  ot.TextMap,
-			injectCarrier:      newTestTextMapWriter(&shareMap),
+			injectCarrier:      newTestTextMapWriter(shareMap),
 			extractCarrierType: ot.TextMap,
-			extractCarrier:     newTestTextMapReader(&shareMap),
+			extractCarrier:     newTestTextMapReader(shareMap),
 		},
 		{
 			name:              "inject: format type is HTTPHeaders, but carrier is not HTTPHeadersCarrier",
@@ -370,7 +370,7 @@ type nonDeferWrapperTracer struct {
 }
 
 func (t *nonDeferWrapperTracer) Start(
-	ctx context.Context,
+	_ context.Context,
 	name string,
 	opts ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
@@ -393,7 +393,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with wrapper tracer set",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := NewWrapperTracer(bridge, otel.Tracer("test"))
 				bridge.SetOpenTelemetryTracer(wTracer)
 			},
@@ -401,7 +401,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with a non-deferred wrapper tracer",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := &nonDeferWrapperTracer{
 					NewWrapperTracer(bridge, otel.Tracer("test")),
 				}

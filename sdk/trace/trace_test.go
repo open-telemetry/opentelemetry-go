@@ -161,7 +161,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 }
 
-func (ts testSampler) Description() string {
+func (testSampler) Description() string {
 	return "testSampler"
 }
 
@@ -1148,7 +1148,7 @@ func TestChildSpanCount(t *testing.T) {
 	}
 }
 
-func TestNilSpanEnd(t *testing.T) {
+func TestNilSpanEnd(*testing.T) {
 	var span *recordingSpan
 	span.End()
 }
@@ -1799,7 +1799,7 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: decision, Tracestate: ts}
 }
 
-func (s stateSampler) Description() string {
+func (stateSampler) Description() string {
 	return "stateSampler"
 }
 
@@ -1824,7 +1824,7 @@ func TestSamplerTraceState(t *testing.T) {
 	clearer := func(prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return trace.TraceState{} },
+			f:      func(trace.TraceState) trace.TraceState { return trace.TraceState{} },
 		}
 	}
 
@@ -1943,7 +1943,7 @@ func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.Sp
 	return traceID, spanID
 }
 
-func (gen *testIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
+func (gen *testIDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 	spanIDHex := fmt.Sprintf("%016x", gen.spanID)
 	spanID, _ := trace.SpanIDFromHex(spanIDHex)
 	gen.spanID++
@@ -2641,7 +2641,7 @@ func RecordingOnly() Sampler {
 type recordOnlySampler struct{}
 
 // ShouldSample implements Sampler interface. It always returns Record but not Sample.
-func (s recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	return SamplingResult{
 		Decision:   RecordOnly,

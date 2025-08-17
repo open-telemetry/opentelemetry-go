@@ -18,7 +18,7 @@ type simpleTestExporter struct {
 	shutdown bool
 }
 
-func (t *simpleTestExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
+func (t *simpleTestExporter) ExportSpans(_ context.Context, spans []ReadOnlySpan) error {
 	t.spans = append(t.spans, spans...)
 	return nil
 }

@@ -77,11 +77,11 @@ func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
 	return nil
 }
 
-func (e *writerExporter) Shutdown(context.Context) error {
+func (*writerExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (e *writerExporter) ForceFlush(context.Context) error {
+func (*writerExporter) ForceFlush(context.Context) error {
 	return nil
 }
 
@@ -96,7 +96,7 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 	})
 }
 
-func TestSimpleProcessorConcurrentSafe(t *testing.T) {
+func TestSimpleProcessorConcurrentSafe(*testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup

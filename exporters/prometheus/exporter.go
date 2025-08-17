@@ -143,7 +143,7 @@ func New(opts ...Option) (*Exporter, error) {
 }
 
 // Describe implements prometheus.Collector.
-func (c *collector) Describe(ch chan<- *prometheus.Desc) {
+func (*collector) Describe(chan<- *prometheus.Desc) {
 	// The Opentelemetry SDK doesn't have information on which will exist when the collector
 	// is registered. By returning nothing we are an "unchecked" collector in Prometheus,
 	// and assume responsibility for consistency of the metrics produced.
@@ -382,8 +382,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			otel.Handle(err)
 			continue
 		}
-
-		// TODO(GiedriusS): add exemplars here after https://github.com/prometheus/client_golang/pull/1654#pullrequestreview-2434669425 is done.
+		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
 	}
 }
@@ -530,7 +529,7 @@ func (c *collector) getName(m metricdata.Metrics) string {
 	return c.metricNamer.Build(translatorMetric)
 }
 
-func (c *collector) metricType(m metricdata.Metrics) *dto.MetricType {
+func (*collector) metricType(m metricdata.Metrics) *dto.MetricType {
 	switch v := m.Data.(type) {
 	case metricdata.ExponentialHistogram[int64], metricdata.ExponentialHistogram[float64]:
 		return dto.MetricType_HISTOGRAM.Enum()
