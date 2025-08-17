@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
+	mapi "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -445,4 +446,47 @@ func TestSelfObservability(t *testing.T) {
 			tt.assertMetrics(t, rm)
 		})
 	}
+}
+
+type errMeterProvider struct {
+	mapi.MeterProvider
+
+	err error
+}
+
+func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return &errMeter{err: m.err}
+}
+
+type errMeter struct {
+	mapi.Meter
+
+	err error
+}
+
+func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	return nil, m.err
+}
+
+func TestSelfObservabilityInstrumentErrors(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	mp := &errMeterProvider{err: assert.AnError}
+	otel.SetMeterProvider(mp)
+
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	_, err := stdouttrace.New()
+	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
+
+	assert.ErrorContains(t, err, "inflight metric")
+	assert.ErrorContains(t, err, "span exported metric")
+	assert.ErrorContains(t, err, "operation duration metric")
 }

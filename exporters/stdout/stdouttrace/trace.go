@@ -6,6 +6,7 @@ package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdoutt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -42,9 +43,39 @@ func New(options ...Option) (*Exporter, error) {
 		encoder:    enc,
 		timestamps: cfg.Timestamps,
 	}
-	exporter.initSelfObservability()
 
-	return exporter, nil
+	if !x.SelfObservability.Enabled() {
+		return exporter, nil
+	}
+
+	exporter.selfObservabilityEnabled = true
+	exporter.selfObservabilityAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
+		semconv.OTelComponentTypeKey.String(otelComponentType),
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter(
+		"go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err, e error
+	if exporter.spanInflightMetric, e = otelconv.NewSDKExporterSpanInflight(m); e != nil {
+		e = fmt.Errorf("failed to create span inflight metric: %w", e)
+		err = errors.Join(err, e)
+	}
+	if exporter.spanExportedMetric, e = otelconv.NewSDKExporterSpanExported(m); e != nil {
+		e = fmt.Errorf("failed to create span exported metric: %w", e)
+		err = errors.Join(err, e)
+	}
+	if exporter.operationDurationMetric, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+		e = fmt.Errorf("failed to create operation duration metric: %w", e)
+		err = errors.Join(err, e)
+	}
+
+	return exporter, err
 }
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
@@ -61,36 +92,6 @@ type Exporter struct {
 	spanInflightMetric       otelconv.SDKExporterSpanInflight
 	spanExportedMetric       otelconv.SDKExporterSpanExported
 	operationDurationMetric  otelconv.SDKExporterOperationDuration
-}
-
-// initSelfObservability initializes self-observability for the exporter if enabled.
-func (e *Exporter) initSelfObservability() {
-	if !x.SelfObservability.Enabled() {
-		return
-	}
-
-	e.selfObservabilityEnabled = true
-	e.selfObservabilityAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
-		semconv.OTelComponentTypeKey.String(otelComponentType),
-	}
-
-	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL),
-	)
-
-	var err error
-	if e.spanInflightMetric, err = otelconv.NewSDKExporterSpanInflight(m); err != nil {
-		otel.Handle(err)
-	}
-	if e.spanExportedMetric, err = otelconv.NewSDKExporterSpanExported(m); err != nil {
-		otel.Handle(err)
-	}
-	if e.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
-	}
 }
 
 // ExportSpans writes spans in json format to stdout.
