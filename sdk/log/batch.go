@@ -35,10 +35,7 @@ const (
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
 
-var (
-	noError   = otelconv.ErrorTypeAttr("")
-	queueFull = otelconv.ErrorTypeAttr("queue_full")
-)
+var queueFull = otelconv.ErrorTypeAttr("queue_full")
 
 // Compile-time check BatchProcessor implements Processor.
 var _ Processor = (*BatchProcessor)(nil)
@@ -129,6 +126,21 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
+
+	b := &BatchProcessor{
+		q:                        newQueue(cfg.maxQSize.Value),
+		batchSize:                cfg.expMaxBatchSize.Value,
+		pollTrigger:              make(chan struct{}, 1),
+		pollKill:                 make(chan struct{}),
+		selfObservabilityEnabled: x.SelfObservability.Enabled(),
+	}
+
+	// When self observability is enabled, wrap the exporter in metricsExporter
+	// to record the log processing metrics before forwarding logs to exporter
+	if b.selfObservabilityEnabled {
+		exporter = newMetricsExporter(exporter, b)
+	}
+
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
 	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
@@ -137,15 +149,7 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	// appropriately on export.
 	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
-	b := &BatchProcessor{
-		exporter: newBufferExporter(exporter, cfg.expBufferSize.Value),
-
-		q:                        newQueue(cfg.maxQSize.Value),
-		batchSize:                cfg.expMaxBatchSize.Value,
-		pollTrigger:              make(chan struct{}, 1),
-		pollKill:                 make(chan struct{}),
-		selfObservabilityEnabled: x.SelfObservability.Enabled(),
-	}
+	b.exporter = newBufferExporter(exporter, cfg.expBufferSize.Value)
 	b.pollDone = b.poll(cfg.expInterval.Value)
 
 	if b.selfObservabilityEnabled {
