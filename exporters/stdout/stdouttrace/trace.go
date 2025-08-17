@@ -23,8 +23,10 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
-// otelComponentType is a name identifying the type of the OpenTelemetry component.
-const otelComponentType = "stdout_trace_exporter"
+// otelComponentType is a name identifying the type of the OpenTelemetry
+// component. It is not a standardized OTel component type, so it uses the
+// Go package prefixed type name to ensure uniqueness and identity.
+const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"
 
 var zeroTime time.Time
 
