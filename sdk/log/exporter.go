@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
 // Exporter handles the delivery of log records to external receivers.
@@ -323,4 +324,34 @@ func (e *bufferExporter) Shutdown(ctx context.Context) error {
 		return errors.Join(ctx.Err(), e.Exporter.Shutdown(ctx))
 	}
 	return e.Exporter.Shutdown(ctx)
+}
+
+// metricsExporter wraps an Exporter to record log processing metrics
+// when the associated BatchProcessor has self-observability enabled.
+type metricsExporter struct {
+	Exporter
+	processor *BatchProcessor
+}
+
+// newMetricsExporter creates a metricsExporter that wraps the given exporter.
+// Metrics are only recorded when the processor has self-observability enabled.
+func newMetricsExporter(exporter Exporter, processor *BatchProcessor) Exporter {
+	return &metricsExporter{
+		Exporter:  exporter,
+		processor: processor,
+	}
+}
+
+// Export records the number of log records as a metric then forwards
+// them to the wrapped Exporter. Metrics are recorded regardless of export success.
+func (e *metricsExporter) Export(ctx context.Context, records []Record) error {
+	if e.processor.selfObservabilityEnabled {
+		e.processor.logProcessedCounter.Add(
+			ctx,
+			int64(len(records)),
+			e.processor.componentNameAttr,
+			e.processor.logProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingLogProcessor),
+		)
+	}
+	return e.Exporter.Export(ctx, records)
 }
