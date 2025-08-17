@@ -35,7 +35,6 @@ type Exporter struct {
 }
 
 type selfObservability struct {
-	enabled                 bool
 	attrs                   []attribute.KeyValue
 	inflightMetric          otelconv.SDKExporterLogInflight
 	exportedMetric          otelconv.SDKExporterLogExported
@@ -55,18 +54,21 @@ func New(options ...Option) (*Exporter, error) {
 		timestamps: cfg.Timestamps,
 	}
 	e.encoder.Store(enc)
-	e.selfObservability = newSelfObservability()
+	selfObs, err := newSelfObservability()
+	if err != nil {
+		return nil, err
+	}
+	e.selfObservability = selfObs
 
 	return &e, nil
 }
 
-func newSelfObservability() *selfObservability {
+func newSelfObservability() (*selfObservability, error) {
 	if !x.SelfObservability.Enabled() {
-		return nil
+		return nil, nil
 	}
 
 	selfObservability := &selfObservability{
-		enabled: true,
 		attrs: []attribute.KeyValue{
 			semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
 			semconv.OTelComponentTypeKey.String(otelComponentType),
@@ -81,27 +83,22 @@ func newSelfObservability() *selfObservability {
 
 	var err error
 	if selfObservability.inflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
-		otel.Handle(err)
+		return nil, err
 	}
 	if selfObservability.exportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
-		otel.Handle(err)
+		return nil, err
 	}
 	if selfObservability.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
+		return nil, err
 	}
 
-	return selfObservability
+	return selfObservability, nil
 }
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	enc := e.encoder.Load()
-	if enc == nil {
-		return nil
-	}
-
 	var err error
-	if e.selfObservability != nil && e.selfObservability.enabled {
+	if e.selfObservability != nil && x.SelfObservability.Enabled() {
 		err = e.exportWithSelfObservability(ctx, records)
 	} else {
 		err = e.exportWithoutSelfObservability(ctx, records)
@@ -109,7 +106,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	return err
 }
 
-const bufferSize = 1024
+const bufferSize = 4
 
 var selfObservabilityBuffer = sync.Pool{
 	New: func() any {
@@ -137,10 +134,8 @@ func (e *Exporter) exportWithSelfObservability(ctx context.Context, records []lo
 
 		if err != nil {
 			addAttrs = append(addAttrs, semconv.ErrorType(err))
-		} else {
-			e.selfObservability.exportedMetric.Add(ctx, count, addAttrs...)
 		}
-
+		e.selfObservability.exportedMetric.Add(ctx, count, addAttrs...)
 		e.selfObservability.inflightMetric.Add(ctx, -count, e.selfObservability.attrs...)
 		e.selfObservability.operationDurationMetric.Record(ctx, time.Since(start).Seconds(), addAttrs...)
 

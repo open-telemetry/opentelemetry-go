@@ -795,6 +795,113 @@ func TestNewSelfObservability(t *testing.T) {
 			},
 		},
 		{
+			name:   "export_with_error",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+
+				rf := logtest.RecordFactory{
+					Timestamp: time.Now(),
+					Body:      log.StringValue("test log"),
+				}
+				record := rf.NewRecord()
+				records := []sdklog.Record{record, record}
+
+				err = exporter.Export(ctx, records)
+				require.Error(t, err)
+				require.Equal(t, context.Canceled, err)
+
+				got := scopeMetrics()
+				assert.NotEmpty(t, got.Metrics)
+
+				var exportedMetric metricdata.Metrics
+				exportedInstrument := otelconv.SDKExporterLogExported{}
+				for _, m := range got.Metrics {
+					if m.Name == exportedInstrument.Name() {
+						exportedMetric = m
+						break
+					}
+				}
+				require.NotEmpty(t, exportedMetric, "exported metric not found")
+
+				data := exportedMetric.Data.(metricdata.Sum[int64])
+				require.Len(t, data.DataPoints, 1)
+
+				dataPoint := data.DataPoints[0]
+				assert.Equal(t, int64(2), dataPoint.Value)
+
+				attrs := dataPoint.Attributes
+				errorTypeAttr, found := attrs.Value(attribute.Key("error.type"))
+				assert.True(t, found, "error.type attribute should be present")
+				assert.Equal(t, "*errors.errorString", errorTypeAttr.AsString())
+			},
+		},
+		{
+			name:   "multiple_exports_mixed_success_failure",
+			enable: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				exporter, err := New()
+				require.NoError(t, err)
+
+				rf := logtest.RecordFactory{
+					Timestamp: time.Now(),
+					Body:      log.StringValue("test log"),
+				}
+
+				record1 := rf.NewRecord()
+				record2 := rf.NewRecord()
+				err = exporter.Export(context.Background(), []sdklog.Record{record1, record2})
+				require.NoError(t, err)
+
+				record3 := rf.NewRecord()
+				err = exporter.Export(context.Background(), []sdklog.Record{record3})
+				require.NoError(t, err)
+
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				record4 := rf.NewRecord()
+				record5 := rf.NewRecord()
+				record6 := rf.NewRecord()
+				err = exporter.Export(ctx, []sdklog.Record{record4, record5, record6})
+				require.Error(t, err)
+
+				got := scopeMetrics()
+				assert.NotEmpty(t, got.Metrics)
+
+				var exportedMetric metricdata.Metrics
+				exportedInstrument := otelconv.SDKExporterLogExported{}
+				for _, m := range got.Metrics {
+					if m.Name == exportedInstrument.Name() {
+						exportedMetric = m
+						break
+					}
+				}
+				require.NotEmpty(t, exportedMetric, "exported metric not found")
+				data := exportedMetric.Data.(metricdata.Sum[int64])
+				require.Len(t, data.DataPoints, 2)
+
+				successPoint := data.DataPoints[0]
+				errorPoint := data.DataPoints[1]
+
+				if _, hasError := successPoint.Attributes.Value(attribute.Key("error.type")); hasError {
+					successPoint, errorPoint = errorPoint, successPoint
+				}
+
+				assert.Equal(t, int64(3), successPoint.Value)
+				_, hasError := successPoint.Attributes.Value(attribute.Key("error.type"))
+				assert.False(t, hasError, "success data point should not have error.type attribute")
+
+				assert.Equal(t, int64(3), errorPoint.Value)
+				errorTypeAttr, hasError := errorPoint.Attributes.Value(attribute.Key("error.type"))
+				assert.True(t, hasError, "error data point should have error.type attribute")
+				assert.Equal(t, "*errors.errorString", errorTypeAttr.AsString())
+			},
+		},
+		{
 			name:   "self_observability_disabled",
 			enable: false,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
