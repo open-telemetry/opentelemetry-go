@@ -52,7 +52,7 @@
 // these sets are aggregated into
 // a special attribute set containing `{"otel.metric.overflow": true}`.
 // This ensures total metric values (e.g., Sum, Count) remain correct for the
-// collection interval, but information about the specific dropped combinations
+// collection interval, but information about the specific dropped sets
 // is not preserved.
 //
 // Recommendations:
