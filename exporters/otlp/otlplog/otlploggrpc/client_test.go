@@ -610,60 +610,33 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-func TestInitSelfObservability(t *testing.T) {
-	conn, err := grpc.NewClient("test", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	t.Cleanup(func() { _ = conn.Close() })
-
-	require.NoError(t, err)
-
-	testcases := []struct {
-		name   string
-		before func()
-		want   *selfobservability.ExporterMetrics
-	}{
-		{
-			name:   "disable self observability",
-			before: func() { t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "False") },
-		},
-		{
-			name:   "enable self observability",
-			before: func() { t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True") },
-			want: selfobservability.NewExporterMetrics(
-				"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-				fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, 0),
-				otelconv.ComponentTypeOtlpGRPCLogExporter,
-				conn.CanonicalTarget()),
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.before()
-
-			c := &client{conn: conn}
-			c.initSelfObservability()
-			assert.Equal(t, tc.want, c.exporterMetric)
-		})
-	}
-}
-
 func TestSelfObservability(t *testing.T) {
 	testCases := []struct {
-		name string
-		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
+		name    string
+		enabled bool
+		test    func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
 	}{
 		{
-			name: "upload success",
+			name:    "disable",
+			enabled: false,
+			test: func(t *testing.T, _ func() metricdata.ScopeMetrics) {
+				client, _ := clientFactory(t, nil)
+				assert.Empty(t, client.exporterMetric)
+			},
+		},
+		{
+			name:    "upload success",
+			enabled: true,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				ctx := context.Background()
 				client, coll := clientFactory(t, nil)
 				componentName := fmt.Sprintf(
 					"%s/%d",
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					grpcExporterIDCounter.Load()-1,
+					0,
 				)
 				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
-				want := metricdata.ScopeMetrics{
+				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 						Version:   sdk.Version(),
@@ -751,12 +724,20 @@ func TestSelfObservability(t *testing.T) {
 					t.Fatalf("unexpected ResourceLogs:\n%s", diff)
 				}
 				g := scopeMetrics()
-				normalizeMetrics(&g)
-				metricdatatest.AssertEqual(t, want, g, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					wantMetrics.Metrics[2],
+					g.Metrics[2],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 		{
-			name: "partial success",
+			name:    "partial success",
+			enabled: true,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				const n, msg = 2, "bad data"
 				rCh := make(chan exportResult, 1)
@@ -774,9 +755,8 @@ func TestSelfObservability(t *testing.T) {
 				componentName := fmt.Sprintf(
 					"%s/%d",
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					grpcExporterIDCounter.Load()-1,
+					1,
 				)
-				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
 				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -821,11 +801,10 @@ func TestSelfObservability(t *testing.T) {
 											otelconv.SDKExporterLogExported{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											semconv.ErrorType(wantErr),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: int64(len(resourceLogs)),
+										Value: int64(len(resourceLogs)) - 2,
 									},
 								},
 							},
@@ -848,7 +827,6 @@ func TestSelfObservability(t *testing.T) {
 													codes.OK,
 												),
 											),
-											semconv.ErrorType(wantErr),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
@@ -875,12 +853,20 @@ func TestSelfObservability(t *testing.T) {
 				assert.ErrorContains(t, errs[0], want)
 
 				g := scopeMetrics()
-				normalizeMetrics(&g)
-				metricdatatest.AssertEqual(t, wantMetrics, g, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					wantMetrics.Metrics[2],
+					g.Metrics[2],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 		{
-			name: "upload failure",
+			name:    "upload failure",
+			enabled: true,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				wantErr := status.Error(codes.InvalidArgument, "request contains invalid arguments")
 				wantErrTypeAttr := semconv.ErrorType(wantErr)
@@ -897,7 +883,7 @@ func TestSelfObservability(t *testing.T) {
 				componentName := fmt.Sprintf(
 					"%s/%d",
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					grpcExporterIDCounter.Load()-1,
+					2,
 				)
 				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
@@ -946,7 +932,7 @@ func TestSelfObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											wantErrTypeAttr,
 										),
-										Value: int64(len(resourceLogs)),
+										Value: 0,
 									},
 								},
 							},
@@ -979,16 +965,27 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 				g := scopeMetrics()
-				normalizeMetrics(&g)
-				metricdatatest.AssertEqual(t, wantMetrics, g, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					wantMetrics.Metrics[2],
+					g.Metrics[2],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			if tc.enabled {
+				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			}
 			prev := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(prev)
+			t.Cleanup(func() {
+				otel.SetMeterProvider(prev)
+			})
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
@@ -1002,28 +999,5 @@ func TestSelfObservability(t *testing.T) {
 			}
 			tc.test(t, scopeMetrics)
 		})
-	}
-}
-
-func normalizeMetrics(scopeMetrics *metricdata.ScopeMetrics) {
-	for i := range scopeMetrics.Metrics {
-		m := &scopeMetrics.Metrics[i]
-		if data, ok := m.Data.(metricdata.Histogram[float64]); ok {
-			name := otelconv.SDKExporterOperationDuration{}.Name()
-			if m.Name != name {
-				break
-			}
-			for j := range data.DataPoints {
-				dp := &data.DataPoints[j]
-				dp.StartTime = time.Time{}
-				dp.Time = time.Time{}
-				dp.Min = metricdata.Extrema[float64]{}
-				dp.Max = metricdata.Extrema[float64]{}
-				dp.Bounds = nil
-				dp.BucketCounts = nil
-				dp.Sum = 0
-			}
-			m.Data = data
-		}
 	}
 }

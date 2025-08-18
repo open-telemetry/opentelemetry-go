@@ -30,6 +30,11 @@ func TestServerAddrAttrs(t *testing.T) {
 			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(8080)},
 		},
 		{
+			name:   "Dns with endpoint host:port",
+			target: "dns://8.8.8.8/example.com:4",
+			want:   []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(4)},
+		},
+		{
 			name:   "Simple host port",
 			target: "localhost:10001",
 			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(10001)},

@@ -29,8 +29,6 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
-var grpcExporterIDCounter atomic.Int64
-
 // The methods of this type are not expected to be called concurrently.
 type client struct {
 	metadata      metadata.MD
@@ -90,7 +88,7 @@ func (c *client) initSelfObservability() {
 	}
 
 	c.selfObservabilityEnabled = true
-	id := grpcExporterIDCounter.Add(1) - 1
+	id := nextExporterID()
 	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 
 	c.exporterMetric = selfobservability.NewExporterMetrics(
@@ -147,7 +145,7 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 // The otlplog.Exporter synchronizes access to client methods, and
 // ensures this is not called after the Exporter is shutdown. Only thing
 // to do here is send data.
-func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error {
+func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err error) {
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
@@ -158,8 +156,14 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	trackExportFunc := c.trackExport(context.Background(), int64(len(rl)))
-	err := c.requestFunc(ctx, func(ctx context.Context) error {
+	success := int64(len(rl))
+	if c.selfObservabilityEnabled {
+		count := len(rl)
+		trackExportFunc := c.exporterMetric.TrackExport(context.Background(), int64(count))
+		defer func() { trackExportFunc(err, success, status.Code(err)) }()
+	}
+
+	return c.requestFunc(ctx, func(ctx context.Context) error {
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
@@ -167,32 +171,19 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
+			success -= n
 			if n != 0 || msg != "" {
 				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				trackExportFunc(err, codes.OK)
 				otel.Handle(err)
-				return nil
 			}
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
-			trackExportFunc(nil, codes.OK)
 			// Success.
 			return nil
 		}
 		return err
 	})
-	if err != nil {
-		trackExportFunc(err, status.Code(err))
-	}
-	return err
-}
-
-func (c *client) trackExport(ctx context.Context, count int64) func(err error, code codes.Code) {
-	if !c.selfObservabilityEnabled {
-		return func(error, codes.Code) {}
-	}
-	return c.exporterMetric.TrackExport(ctx, count)
 }
 
 // Shutdown shuts down the client, freeing all resources.
@@ -301,4 +292,12 @@ func throttleDelay(s *status.Status) (bool, time.Duration) {
 		}
 	}
 	return false, 0
+}
+
+var grpcExporterIDCounter atomic.Int64
+
+// nextExporterID returns a new unique ID for an exporter.
+// the starting value is 0, and it increments by 1 for each call.
+func nextExporterID() int64 {
+	return grpcExporterIDCounter.Add(1) - 1
 }

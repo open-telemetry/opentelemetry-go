@@ -8,8 +8,10 @@ package selfobservability // import "go.opentelemetry.io/otel/exporters/otlp/otl
 import (
 	"context"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -21,6 +23,15 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
+
+var attrsPool = sync.Pool{
+	New: func() any {
+		// "component.name" + "component.type" + "error.type" + "target"
+		const n = 1 + 1 + 1 + 1
+		s := make([]attribute.KeyValue, 0, n)
+		return &s
+	},
+}
 
 type ExporterMetrics struct {
 	logInflightMetric         otelconv.SDKExporterLogInflight
@@ -60,41 +71,70 @@ func NewExporterMetrics(
 	return em
 }
 
-func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error, code codes.Code) {
-	attrs := append([]attribute.KeyValue{}, em.presetAttrs...)
+func (em *ExporterMetrics) TrackExport(
+	ctx context.Context,
+	count int64,
+) func(err error, successCount int64, code codes.Code) {
+	attrs := attrsPool.Get().(*[]attribute.KeyValue)
+	*attrs = append([]attribute.KeyValue{}, em.presetAttrs...)
 
 	begin := time.Now()
-	em.logInflightMetric.Add(ctx, count, attrs...)
-	return func(err error, code codes.Code) {
+	em.logInflightMetric.Add(ctx, count, *attrs...)
+	return func(err error, successCount int64, code codes.Code) {
+		defer func() {
+			*attrs = (*attrs)[:0]
+			attrsPool.Put(attrs)
+		}()
+
 		duration := time.Since(begin).Seconds()
-		em.logInflightMetric.Add(ctx, -count, attrs...)
+		em.logInflightMetric.Add(ctx, -count, *attrs...)
+
 		if err != nil {
-			attrs = append(attrs, semconv.ErrorType(err))
+			*attrs = append(*attrs, semconv.ErrorType(err))
+			em.logExportedMetric.Add(ctx, 0, *attrs...)
+		} else {
+			em.logExportedMetric.Add(ctx, successCount, *attrs...)
 		}
-		em.logExportedMetric.Add(ctx, count, attrs...)
-		attrs = append(
-			attrs,
+
+		*attrs = append(
+			*attrs,
 			em.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
 		)
-		em.logExportedDurationMetric.Record(ctx, duration, attrs...)
+		em.logExportedDurationMetric.Record(ctx, duration, *attrs...)
 	}
 }
 
 func ServerAddrAttrs(target string) []attribute.KeyValue {
-	if strings.HasPrefix(target, "unix://") {
-		path := strings.TrimPrefix(target, "unix://")
-		return []attribute.KeyValue{semconv.ServerAddress(path)}
+	if !strings.Contains(target, "://") {
+		return splitHostPortAttrs(target)
 	}
 
-	if idx := strings.Index(target, "://"); idx != -1 {
-		target = target[idx+4:]
+	u, err := url.Parse(target)
+	if err != nil || u.Scheme == "" {
+		return splitHostPortAttrs(target)
 	}
 
+	switch u.Scheme {
+	case "unix":
+		// unix:///path/to/socket
+		return []attribute.KeyValue{semconv.ServerAddress(u.Path)}
+	case "dns":
+		// dns:///example.com:42 or dns://8.8.8.8/example.com:42
+		addr := u.Opaque
+		if addr == "" {
+			addr = strings.TrimPrefix(u.Path, "/")
+		}
+		return splitHostPortAttrs(addr)
+	default:
+		return splitHostPortAttrs(u.Host)
+	}
+}
+
+func splitHostPortAttrs(target string) []attribute.KeyValue {
 	host, pStr, err := net.SplitHostPort(target)
 	if err != nil {
 		return []attribute.KeyValue{semconv.ServerAddress(target)}
 	}
-
 	port, err := strconv.Atoi(pStr)
 	if err != nil {
 		return []attribute.KeyValue{semconv.ServerAddress(host)}
