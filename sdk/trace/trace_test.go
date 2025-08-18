@@ -2695,10 +2695,10 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 	const want = "testValue"
 	n := make(chan int)
 	go func() {
-		// Valdate the span context is propagated to all mesurements by testing
-		// the context passed to the registered exemplar filter. This filter
-		// receives the measurement context in the standard metric SDK that we
-		// have registered.
+		// Validate the span context is propagated to all measurements by
+		// testing the context passed to the registered exemplar filter. This
+		// filter receives the measurement context in the standard metric SDK
+		// that we have registered.
 
 		// Count of how many contexts were received.
 		var count int
