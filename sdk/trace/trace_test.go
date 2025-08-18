@@ -2749,13 +2749,13 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 		wrap(ctx, "child", func(context.Context) {})
 	})
 
-	tp.Shutdown(context.Background())
+	require.NoError(t, tp.Shutdown(context.Background()))
 
 	// The TracerProvider shutdown return, no more measurements will be
 	// sent to the exemplar filter.
 	close(ctxCh)
 
-	assert.Greater(t, <-n, 0, "Expected at least 1 context propagations")
+	assert.Positive(t, <-n, "Expected at least 1 context propagations")
 }
 
 // filterFn returns a channel that receives contexts passed to the returned
