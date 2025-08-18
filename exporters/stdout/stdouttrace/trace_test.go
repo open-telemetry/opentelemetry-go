@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"math"
 	"testing"
 	"time"
 
@@ -410,6 +411,17 @@ func TestSelfObservability(t *testing.T) {
 									semconv.OTelComponentTypeKey.String(
 										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
 									),
+								),
+								Value: 0,
+							},
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 									semconv.ErrorType(context.Canceled),
 								),
 								Value: 2,
@@ -434,6 +446,146 @@ func TestSelfObservability(t *testing.T) {
 										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
 									),
 									semconv.ErrorType(context.Canceled),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:    "PartialExport",
+			enabled: true,
+			callExportSpans: func(t *testing.T, exporter *stdouttrace.Exporter) {
+				t.Helper()
+
+				err := exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
+					{Name: "/foo"},
+					{
+						Name:       "JSON encoder cannot marshal math.Inf(1)",
+						Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
+					},
+					{Name: "/bar"},
+				}.Snapshots())
+				require.Error(t, err)
+			},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				require.IsType(t, metricdata.Sum[int64]{}, sm.Metrics[1].Data)
+				sum := sm.Metrics[1].Data.(metricdata.Sum[int64])
+				var found bool
+				for i := range sum.DataPoints {
+					sum.DataPoints[i].Attributes, _ = sum.DataPoints[i].Attributes.Filter(
+						func(kv attribute.KeyValue) bool {
+							if kv.Key == semconv.ErrorTypeKey {
+								found = true
+								return false
+							}
+							return true
+						},
+					)
+				}
+				assert.True(t, found, "missing error type attribute in span export metric")
+				sm.Metrics[1].Data = sum
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
+								),
+								Value: 1,
+							},
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
+								),
+								Value: 2,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				require.IsType(t, metricdata.Histogram[float64]{}, sm.Metrics[2].Data)
+				hist := sm.Metrics[2].Data.(metricdata.Histogram[float64])
+				require.Len(t, hist.DataPoints, 1)
+				found = false
+				hist.DataPoints[0].Attributes, _ = hist.DataPoints[0].Attributes.Filter(
+					func(kv attribute.KeyValue) bool {
+						if kv.Key == semconv.ErrorTypeKey {
+							found = true
+							return false
+						}
+						return true
+					},
+				)
+				assert.True(t, found, "missing error type attribute in operation duration metric")
+				sm.Metrics[2].Data = hist
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter/0",
+									),
+									semconv.OTelComponentTypeKey.String(
+										"go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter",
+									),
 								),
 							},
 						},
@@ -514,4 +666,27 @@ func TestSelfObservabilityInstrumentErrors(t *testing.T) {
 	assert.ErrorContains(t, err, "inflight metric")
 	assert.ErrorContains(t, err, "span exported metric")
 	assert.ErrorContains(t, err, "operation duration metric")
+}
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	ss := tracetest.SpanStubs{
+		{Name: "/foo"},
+		{
+			Name:       "JSON encoder cannot marshal math.Inf(1)",
+			Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
+		},
+		{Name: "/bar"},
+	}.Snapshots()
+	ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard))
+	if err != nil {
+		b.Fatalf("failed to create exporter: %v", err)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = ex.ExportSpans(context.Background(), ss)
+	}
+	_ = err
 }
