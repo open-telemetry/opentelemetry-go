@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
@@ -23,6 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
@@ -88,7 +88,7 @@ func (c *client) initSelfObservability() {
 	}
 
 	c.selfObservabilityEnabled = true
-	id := nextExporterID()
+	id := counter.NextExporterID()
 	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 
 	c.exporterMetric = selfobservability.NewExporterMetrics(
@@ -292,12 +292,4 @@ func throttleDelay(s *status.Status) (bool, time.Duration) {
 		}
 	}
 	return false, 0
-}
-
-var grpcExporterIDCounter atomic.Int64
-
-// nextExporterID returns a new unique ID for an exporter.
-// the starting value is 0, and it increments by 1 for each call.
-func nextExporterID() int64 {
-	return grpcExporterIDCounter.Add(1) - 1
 }
