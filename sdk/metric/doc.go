@@ -59,7 +59,7 @@
 //
 //   - Set the limit based on the theoretical maximum combinations or expected
 //     active combinations. The OpenTelemetry Specification recommends a default of 2000.
-//   - A too-high limit increases worst-case memory overhead in the SDK and may cause downstream
+//   - A too high limit increases worst-case memory overhead in the SDK and may cause downstream
 //     issues for databases that cannot handle high cardinality.
 //   - Too low - causes loss of attribute detail as more data falls into overflow.
 //
