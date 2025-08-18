@@ -50,7 +50,7 @@
 //
 // New attribute sets are dropped when the cardinality limit is reached. The measurement of
 // these sets are aggregated into
-// a special attribute set containing `{"otel.metric.overflow": true}`.
+// a special attribute set containing "otel.metric.overflow" attribute with "true" value.
 // This ensures total metric values (e.g., Sum, Count) remain correct for the
 // collection interval, but information about the specific dropped sets
 // is not preserved.
