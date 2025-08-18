@@ -2179,18 +2179,14 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
-type ctxKeyT string
-
-var ctxKey = ctxKeyT("testKey")
-
 func TestSelfObservability(t *testing.T) {
 	testCases := []struct {
 		name string
-		test func(*testing.T, func(context.Context) metricdata.ScopeMetrics)
+		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
 	}{
 		{
 			name: "SampledSpan",
-			test: func(t *testing.T, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
 				_, span := tp.Tracer("").Start(context.Background(), "StartSpan")
 
@@ -2244,7 +2240,7 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics(context.Background())
+				got := scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2304,7 +2300,7 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
-				got = scopeMetrics(context.Background())
+				got = scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2316,7 +2312,7 @@ func TestSelfObservability(t *testing.T) {
 		},
 		{
 			name: "NonRecordingSpan",
-			test: func(t *testing.T, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(NeverSample()))
 				tp.Tracer("").Start(context.Background(), "NonRecordingSpan")
@@ -2353,7 +2349,7 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics(context.Background())
+				got := scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2365,7 +2361,7 @@ func TestSelfObservability(t *testing.T) {
 		},
 		{
 			name: "OnlyRecordingSpan",
-			test: func(t *testing.T, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(RecordingOnly()))
 				tp.Tracer("").Start(context.Background(), "OnlyRecordingSpan")
@@ -2420,7 +2416,7 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics(context.Background())
+				got := scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2432,7 +2428,7 @@ func TestSelfObservability(t *testing.T) {
 		},
 		{
 			name: "RemoteParentSpan",
-			test: func(t *testing.T, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a remote parent context
 				tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 				sid, _ := trace.SpanIDFromHex("0102040810203040")
@@ -2496,7 +2492,7 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
-				got := scopeMetrics(context.Background())
+				got := scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2508,7 +2504,7 @@ func TestSelfObservability(t *testing.T) {
 		},
 		{
 			name: "LocalParentSpan",
-			test: func(t *testing.T, scopeMetrics func(context.Context) metricdata.ScopeMetrics) {
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
 				ctx, parentSpan := tp.Tracer("").Start(context.Background(), "ParentSpan")
 				_, childSpan := tp.Tracer("").Start(ctx, "ChildSpan")
@@ -2574,7 +2570,7 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got := scopeMetrics(context.Background())
+				got := scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2647,7 +2643,7 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 
-				got = scopeMetrics(context.Background())
+				got = scopeMetrics()
 				metricdatatest.AssertEqual(
 					t,
 					want,
@@ -2668,9 +2664,9 @@ func TestSelfObservability(t *testing.T) {
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
 
-			scopeMetrics := func(ctx context.Context) metricdata.ScopeMetrics {
+			scopeMetrics := func() metricdata.ScopeMetrics {
 				var got metricdata.ResourceMetrics
-				err := r.Collect(ctx, &got)
+				err := r.Collect(context.Background(), &got)
 				require.NoError(t, err)
 				require.Len(t, got.ScopeMetrics, 1)
 				return got.ScopeMetrics[0]
@@ -2679,6 +2675,10 @@ func TestSelfObservability(t *testing.T) {
 		})
 	}
 }
+
+type ctxKeyT string
+
+var ctxKey = ctxKeyT("testKey")
 
 func TestSelfObservabilityContextPropagation(t *testing.T) {
 	const value = "testValue"
