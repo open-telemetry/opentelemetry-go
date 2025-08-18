@@ -2751,8 +2751,8 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 
 	require.NoError(t, tp.Shutdown(context.Background()))
 
-	// The TracerProvider shutdown return, no more measurements will be
-	// sent to the exemplar filter.
+	// The TracerProvider shutdown returned, no more measurements will be sent
+	// to the exemplar filter.
 	close(ctxCh)
 
 	assert.Positive(t, <-n, "Expected at least 1 context propagations")
