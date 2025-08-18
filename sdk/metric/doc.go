@@ -49,8 +49,8 @@
 // (note that this may change in a future release). Use [WithCardinalityLimit] to set the
 // cardinality limit as desired.
 //
-// When the configured limit is reached, any new attribute combination is not
-// tracked separately. Instead, its measurements are aggregated together under
+// New attribute sets are dropped when the cardinality limit is reached. The measurement of
+// these sets are aggregated into
 // a special attribute set containing `{"otel.metric.overflow": true}`.
 // This ensures total metric values (e.g., Sum, Count) remain correct for the
 // collection interval, but information about the specific dropped combinations
