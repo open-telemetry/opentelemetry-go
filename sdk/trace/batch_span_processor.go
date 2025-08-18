@@ -171,12 +171,12 @@ func (bsp *batchSpanProcessor) configureSelfObservability() {
 		otel.Handle(err)
 	}
 
-	callabckAttributesOpt := metric.WithAttributes(bsp.componentNameAttr,
+	callbackAttributesOpt := metric.WithAttributes(bsp.componentNameAttr,
 		semconv.OTelComponentTypeBatchingSpanProcessor)
 	bsp.callbackRegistration, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
-			o.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(len(bsp.queue)), callabckAttributesOpt)
-			o.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(bsp.o.MaxQueueSize), callabckAttributesOpt)
+			o.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(len(bsp.queue)), callbackAttributesOpt)
+			o.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(bsp.o.MaxQueueSize), callbackAttributesOpt)
 			return nil
 		},
 		queueSizeUpDownCounter.Inst(), queueCapacityUpDownCounter.Inst())

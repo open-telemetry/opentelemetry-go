@@ -7,13 +7,8 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/trace/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -31,26 +26,6 @@ type tracer struct {
 }
 
 var _ trace.Tracer = &tracer{}
-
-func (tr *tracer) initSelfObservability() {
-	if !x.SelfObservability.Enabled() {
-		return
-	}
-
-	tr.selfObservabilityEnabled = true
-	mp := otel.GetMeterProvider()
-	m := mp.Meter(selfObsScopeName,
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL))
-
-	var err error
-	if tr.spanLiveMetric, err = otelconv.NewSDKSpanLive(m); err != nil {
-		otel.Handle(err)
-	}
-	if tr.spanStartedMetric, err = otelconv.NewSDKSpanStarted(m); err != nil {
-		otel.Handle(err)
-	}
-}
 
 // Start starts a Span and returns it along with a context containing it.
 //
