@@ -6,13 +6,14 @@ package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdoutt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
@@ -22,8 +23,10 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
 
-// otelComponentType is a name identifying the type of the OpenTelemetry component.
-const otelComponentType = "stdout_trace_exporter"
+// otelComponentType is a name identifying the type of the OpenTelemetry
+// component. It is not a standardized OTel component type, so it uses the
+// Go package prefixed type name to ensure uniqueness and identity.
+const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"
 
 var zeroTime time.Time
 
@@ -42,9 +45,39 @@ func New(options ...Option) (*Exporter, error) {
 		encoder:    enc,
 		timestamps: cfg.Timestamps,
 	}
-	exporter.initSelfObservability()
 
-	return exporter, nil
+	if !x.SelfObservability.Enabled() {
+		return exporter, nil
+	}
+
+	exporter.selfObservabilityEnabled = true
+	exporter.selfObservabilityAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
+		semconv.OTelComponentTypeKey.String(otelComponentType),
+	}
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter(
+		"go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err, e error
+	if exporter.spanInflightMetric, e = otelconv.NewSDKExporterSpanInflight(m); e != nil {
+		e = fmt.Errorf("failed to create span inflight metric: %w", e)
+		err = errors.Join(err, e)
+	}
+	if exporter.spanExportedMetric, e = otelconv.NewSDKExporterSpanExported(m); e != nil {
+		e = fmt.Errorf("failed to create span exported metric: %w", e)
+		err = errors.Join(err, e)
+	}
+	if exporter.operationDurationMetric, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+		e = fmt.Errorf("failed to create operation duration metric: %w", e)
+		err = errors.Join(err, e)
+	}
+
+	return exporter, err
 }
 
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
@@ -63,36 +96,6 @@ type Exporter struct {
 	operationDurationMetric  otelconv.SDKExporterOperationDuration
 }
 
-// initSelfObservability initializes self-observability for the exporter if enabled.
-func (e *Exporter) initSelfObservability() {
-	if !x.SelfObservability.Enabled() {
-		return
-	}
-
-	e.selfObservabilityEnabled = true
-	e.selfObservabilityAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
-		semconv.OTelComponentTypeKey.String(otelComponentType),
-	}
-
-	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/exporters/stdout/stdouttrace",
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL),
-	)
-
-	var err error
-	if e.spanInflightMetric, err = otelconv.NewSDKExporterSpanInflight(m); err != nil {
-		otel.Handle(err)
-	}
-	if e.spanExportedMetric, err = otelconv.NewSDKExporterSpanExported(m); err != nil {
-		otel.Handle(err)
-	}
-	if e.operationDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
-	}
-}
-
 var measureAttrsPool = sync.Pool{
 	New: func() any {
 		// "component.name" + "component.type" + "error.type"
@@ -109,7 +112,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 	if e.selfObservabilityEnabled {
 		count := int64(len(spans))
 
-		e.spanInflightMetric.Add(context.Background(), count, e.selfObservabilityAttrs...)
+		e.spanInflightMetric.Add(ctx, count, e.selfObservabilityAttrs...)
 		defer func(starting time.Time) {
 			// additional attributes for self-observability,
 			// only spanExportedMetric and operationDurationMetric are supported
@@ -124,9 +127,9 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 				*attrs = append(*attrs, semconv.ErrorType(err))
 			}
 
-			e.spanInflightMetric.Add(context.Background(), -count, e.selfObservabilityAttrs...)
-			e.spanExportedMetric.Add(context.Background(), count, *attrs...)
-			e.operationDurationMetric.Record(context.Background(), time.Since(starting).Seconds(), *attrs...)
+			e.spanInflightMetric.Add(ctx, -count, e.selfObservabilityAttrs...)
+			e.spanExportedMetric.Add(ctx, count, *attrs...)
+			e.operationDurationMetric.Record(ctx, time.Since(starting).Seconds(), *attrs...)
 		}(time.Now())
 	}
 
@@ -186,12 +189,4 @@ func (e *Exporter) MarshalLog() any {
 		Type:           "stdout",
 		WithTimestamps: e.timestamps,
 	}
-}
-
-var exporterIDCounter atomic.Int64
-
-// nextExporterID returns a new unique ID for an exporter.
-// the starting value is 0, and it increments by 1 for each call.
-func nextExporterID() int64 {
-	return exporterIDCounter.Add(1) - 1
 }
