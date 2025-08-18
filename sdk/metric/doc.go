@@ -45,9 +45,9 @@
 // metric within one collection (export) interval. High cardinality can lead to
 // excessive memory usage, increased storage costs, and backend performance issues.
 //
-// The OpenTelemetry Go Metric SDK does not enforce a cardinality limit by default.
-// A limit can be configured using the [WithCardinalityLimit]
-// option.
+// Currently, the OpenTelemetry Go Metric SDK does not enforce a cardinality limit by default
+// (note that this may change in a future release). Use [WithCardinalityLimit] to set the
+// cardinality limit as desired.
 //
 // When the configured limit is reached, any new attribute combination is not
 // tracked separately. Instead, its measurements are aggregated together under
