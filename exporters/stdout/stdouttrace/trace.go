@@ -98,22 +98,34 @@ type Exporter struct {
 
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
+	var success int64
 	if e.selfObservabilityEnabled {
 		count := int64(len(spans))
 
 		e.spanInflightMetric.Add(ctx, count, e.selfObservabilityAttrs...)
 		defer func(starting time.Time) {
-			// additional attributes for self-observability,
-			// only spanExportedMetric and operationDurationMetric are supported
-			addAttrs := make([]attribute.KeyValue, len(e.selfObservabilityAttrs), len(e.selfObservabilityAttrs)+1)
-			copy(addAttrs, e.selfObservabilityAttrs)
+			e.spanInflightMetric.Add(ctx, -count, e.selfObservabilityAttrs...)
+
+			// Record the success and duration of the operation.
+			//
+			// Do not exclude 0 values, as they are valid and indicate no spans
+			// were exported which is meaningful for certain aggregations.
+			e.spanExportedMetric.Add(ctx, success, e.selfObservabilityAttrs...)
+
+			attr := e.selfObservabilityAttrs
 			if err != nil {
-				addAttrs = append(addAttrs, semconv.ErrorType(err))
+				// additional attributes for self-observability,
+				// only spanExportedMetric and operationDurationMetric are supported.
+				//
+				// TODO: use a pool to amortize allocations.
+				attr = make([]attribute.KeyValue, len(e.selfObservabilityAttrs), len(e.selfObservabilityAttrs)+1)
+				copy(attr, e.selfObservabilityAttrs)
+				attr = append(attr, semconv.ErrorType(err))
+
+				e.spanExportedMetric.Add(ctx, count-success, attr...)
 			}
 
-			e.spanInflightMetric.Add(ctx, -count, e.selfObservabilityAttrs...)
-			e.spanExportedMetric.Add(ctx, count, addAttrs...)
-			e.operationDurationMetric.Record(ctx, time.Since(starting).Seconds(), addAttrs...)
+			e.operationDurationMetric.Record(ctx, time.Since(starting).Seconds(), attr...)
 		}(time.Now())
 	}
 
@@ -148,11 +160,13 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		}
 
 		// Encode span stubs, one by one
-		if err := e.encoder.Encode(stub); err != nil {
-			return err
+		if e := e.encoder.Encode(stub); e != nil {
+			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, e))
+			continue
 		}
+		success++
 	}
-	return nil
+	return err
 }
 
 // Shutdown is called to stop the exporter, it performs no action.
