@@ -41,8 +41,7 @@
 //
 // # Cardinality Limits
 //
-// Cardinality refers to the number of unique attribute combinations for a single
-// metric within one collection (export) interval. High cardinality can lead to
+// Cardinality refers to the number of unique attributes collected. High cardinality can lead to
 // excessive memory usage, increased storage costs, and backend performance issues.
 //
 // Currently, the OpenTelemetry Go Metric SDK does not enforce a cardinality limit by default
