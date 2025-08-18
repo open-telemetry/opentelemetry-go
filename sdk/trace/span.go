@@ -497,8 +497,8 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	defer func() {
-		if s.tracer.selfObservabilityEnabled {
+	if s.tracer.selfObservabilityEnabled {
+		defer func() {
 			// Determine the sampling result and create the corresponding attribute.
 			var attrSamplingResult attribute.KeyValue
 			if s.spanContext.IsSampled() {
@@ -510,8 +510,8 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 			}
 
 			s.tracer.spanLiveMetric.Add(context.Background(), -1, attrSamplingResult)
-		}
-	}()
+		}()
+	}
 
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
