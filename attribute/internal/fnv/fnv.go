@@ -68,8 +68,8 @@ func (h Hash) Int64(val int64) Hash {
 
 func (h Hash) String(val string) Hash {
 	v := uint64(h)
-	for _, c := range val {
-		v ^= uint64(c)
+	for i := 0; i < len(val); i++ {
+		v ^= uint64(val[i])
 		v *= prime64
 	}
 	return Hash(v)
