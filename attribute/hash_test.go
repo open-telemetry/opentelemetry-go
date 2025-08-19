@@ -132,19 +132,17 @@ func slice(kvs []KeyValue) string {
 	return b.String()
 }
 
+var h fnv.Hash
+
 func BenchmarkHashKVs(b *testing.B) {
 	attrs := make([]KeyValue, len(keyVals))
 	for i := range keyVals {
 		attrs[i] = keyVals[i]("k")
 	}
 
-	var h fnv.Hash
-
 	b.ResetTimer()
 	b.ReportAllocs()
 	for range b.N {
 		h = hashKVs(attrs)
 	}
-
-	_ = h
 }
