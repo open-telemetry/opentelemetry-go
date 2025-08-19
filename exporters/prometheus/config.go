@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/otlptranslator"
 
-	"github.com/prometheus/common/model"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -48,6 +48,7 @@ func newConfig(opts ...Option) config {
 
 		//nolint:staticcheck
 		if model.NameValidationScheme == model.UTF8Validation {
+			logTemporaryDefault()
 			cfg.translationStrategy = otlptranslator.NoUTF8EscapingWithSuffixes
 		} else {
 			cfg.translationStrategy = otlptranslator.UnderscoreEscapingWithSuffixes
