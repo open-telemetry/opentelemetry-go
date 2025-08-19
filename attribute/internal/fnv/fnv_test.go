@@ -80,7 +80,7 @@ func BenchmarkStringKB(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		result = h.String(s)
 	}
 }
@@ -92,7 +92,7 @@ func BenchmarkUint64KB(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		result = h.Uint64(i)
 	}
 }
