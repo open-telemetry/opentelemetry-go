@@ -17,7 +17,7 @@ import (
 )
 
 func TestStringHashCorrectness(t *testing.T) {
-	input := []string{"", "a", "ab", "abc"}
+	input := []string{"", "a", "ab", "abc", "世界"}
 
 	refH := fnv.New64a()
 	for _, in := range input {
