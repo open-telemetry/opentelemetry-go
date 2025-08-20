@@ -68,7 +68,7 @@ func (ClientDuration) Description() string {
 	return "Measures the duration of outbound RPC."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // While streaming RPCs may record this metric as start-of-batch
 // to end-of-batch, it's hard to interpret in practice.
@@ -87,6 +87,27 @@ func (m ClientDuration) Record(ctx context.Context, val float64, attrs ...attrib
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// While streaming RPCs may record this metric as start-of-batch
+// to end-of-batch, it's hard to interpret in practice.
+//
+// **Streaming**: N/A.
+func (m ClientDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -140,7 +161,7 @@ func (ClientRequestSize) Description() string {
 	return "Measures the size of RPC request messages (uncompressed)."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // **Streaming**: Recorded per message in a streaming batch
 func (m ClientRequestSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
@@ -156,6 +177,24 @@ func (m ClientRequestSize) Record(ctx context.Context, val int64, attrs ...attri
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// **Streaming**: Recorded per message in a streaming batch
+func (m ClientRequestSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -209,7 +248,7 @@ func (ClientRequestsPerRPC) Description() string {
 	return "Measures the number of messages received per RPC."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Should be 1 for all non-streaming RPCs.
 //
@@ -227,6 +266,26 @@ func (m ClientRequestsPerRPC) Record(ctx context.Context, val int64, attrs ...at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Should be 1 for all non-streaming RPCs.
+//
+// **Streaming**: This metric is required for server and client streaming RPCs
+func (m ClientRequestsPerRPC) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -280,7 +339,7 @@ func (ClientResponseSize) Description() string {
 	return "Measures the size of RPC response messages (uncompressed)."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // **Streaming**: Recorded per response in a streaming batch
 func (m ClientResponseSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
@@ -296,6 +355,24 @@ func (m ClientResponseSize) Record(ctx context.Context, val int64, attrs ...attr
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// **Streaming**: Recorded per response in a streaming batch
+func (m ClientResponseSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -349,7 +426,7 @@ func (ClientResponsesPerRPC) Description() string {
 	return "Measures the number of messages sent per RPC."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Should be 1 for all non-streaming RPCs.
 //
@@ -367,6 +444,26 @@ func (m ClientResponsesPerRPC) Record(ctx context.Context, val int64, attrs ...a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Should be 1 for all non-streaming RPCs.
+//
+// **Streaming**: This metric is required for server and client streaming RPCs
+func (m ClientResponsesPerRPC) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -420,7 +517,7 @@ func (ServerDuration) Description() string {
 	return "Measures the duration of inbound RPC."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // While streaming RPCs may record this metric as start-of-batch
 // to end-of-batch, it's hard to interpret in practice.
@@ -439,6 +536,27 @@ func (m ServerDuration) Record(ctx context.Context, val float64, attrs ...attrib
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// While streaming RPCs may record this metric as start-of-batch
+// to end-of-batch, it's hard to interpret in practice.
+//
+// **Streaming**: N/A.
+func (m ServerDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -492,7 +610,7 @@ func (ServerRequestSize) Description() string {
 	return "Measures the size of RPC request messages (uncompressed)."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // **Streaming**: Recorded per message in a streaming batch
 func (m ServerRequestSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
@@ -508,6 +626,24 @@ func (m ServerRequestSize) Record(ctx context.Context, val int64, attrs ...attri
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// **Streaming**: Recorded per message in a streaming batch
+func (m ServerRequestSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -561,7 +697,7 @@ func (ServerRequestsPerRPC) Description() string {
 	return "Measures the number of messages received per RPC."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Should be 1 for all non-streaming RPCs.
 //
@@ -579,6 +715,26 @@ func (m ServerRequestsPerRPC) Record(ctx context.Context, val int64, attrs ...at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Should be 1 for all non-streaming RPCs.
+//
+// **Streaming** : This metric is required for server and client streaming RPCs
+func (m ServerRequestsPerRPC) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -632,7 +788,7 @@ func (ServerResponseSize) Description() string {
 	return "Measures the size of RPC response messages (uncompressed)."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // **Streaming**: Recorded per response in a streaming batch
 func (m ServerResponseSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
@@ -648,6 +804,24 @@ func (m ServerResponseSize) Record(ctx context.Context, val int64, attrs ...attr
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// **Streaming**: Recorded per response in a streaming batch
+func (m ServerResponseSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -701,7 +875,7 @@ func (ServerResponsesPerRPC) Description() string {
 	return "Measures the number of messages sent per RPC."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Should be 1 for all non-streaming RPCs.
 //
@@ -719,5 +893,25 @@ func (m ServerResponsesPerRPC) Record(ctx context.Context, val int64, attrs ...a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Should be 1 for all non-streaming RPCs.
+//
+// **Streaming**: This metric is required for server and client streaming RPCs
+func (m ServerResponsesPerRPC) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
