@@ -1,3 +1,5 @@
+github.com/MrAlias/bind v0.1.1 h1:y7FRVkD4HK3ut0eJ768ZQsqBUUgD7+/oEwVYjrULgO8=
+github.com/MrAlias/bind v0.1.1/go.mod h1:5B4HdQ8kUm9kZ4pVdE7a/HJAPzPz6CWKh7Hd40CYWZw=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
