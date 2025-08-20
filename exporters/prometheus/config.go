@@ -129,13 +129,6 @@ func WithoutTargetInfo() Option {
 // [otlptranslator.UnderscoreEscapingWithSuffixes] for full Prometheus-style
 // compatibility or NoTranslation for Otel-style names.
 //
-// If the selected strategy asks for suffixes, the [WithoutUnits] and
-// [WithoutCounterSuffixes] options can still be used to optionally disable one
-// or both of them. Strategies that do not have suffixes
-// ([otlptranslator.NoTranslation] and
-// [otlptranslator.UnderscoreEscapingWithoutSuffixes]) will never have suffixes
-// appended.
-//
 // By default, if the NameValidationScheme variable in
 // [github.com/prometheus/common/model] is "legacy", the default strategy is
 // [otlptranslator.UnderscoreEscapingWithSuffixes]. If the validation scheme is
