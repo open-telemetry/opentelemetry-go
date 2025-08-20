@@ -6,12 +6,86 @@ package selfobservability // import "go.opentelemetry.io/otel/exporters/otlp/otl
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	mapi "go.opentelemetry.io/otel/metric"
+
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/stretchr/testify/assert"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 )
+
+type errMeterProvider struct {
+	mapi.MeterProvider
+
+	err error
+}
+
+func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return &errMeter{err: m.err}
+}
+
+type errMeter struct {
+	mapi.Meter
+
+	err error
+}
+
+func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	return nil, m.err
+}
+
+func TestNewExporterMetrics(t *testing.T) {
+	t.Run("No Error", func(t *testing.T) {
+		em, err := NewExporterMetrics(
+			"newExportMetricsTest",
+			"newExportMetricsTest/1",
+			"newExportMetricsTest",
+			"localhost:8080",
+		)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []attribute.KeyValue{
+			semconv.OTelComponentName("newExportMetricsTest/1"),
+			semconv.OTelComponentTypeKey.String("newExportMetricsTest"),
+			semconv.ServerAddress("localhost"),
+			semconv.ServerPort(8080),
+		}, em.presetAttrs)
+
+		assert.NotNil(t, em.logInflightMetric, "logInflightMetric should be created")
+		assert.NotNil(t, em.logExportedMetric, "logExportedMetric should be created")
+		assert.NotNil(t, em.logExportedDurationMetric, "logExportedDurationMetric should be created")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		orig := otel.GetMeterProvider()
+		t.Cleanup(func() { otel.SetMeterProvider(orig) })
+		mp := &errMeterProvider{err: assert.AnError}
+		otel.SetMeterProvider(mp)
+
+		_, err := NewExporterMetrics(
+			"newExportMetrics",
+			"newExportMetrics/1",
+			"newExportMetrics",
+			"localhost:8080",
+		)
+		require.ErrorIs(t, err, assert.AnError, "new instrument errors")
+
+		assert.ErrorContains(t, err, "inflight metric")
+		assert.ErrorContains(t, err, "span exported metric")
+		assert.ErrorContains(t, err, "operation duration metric")
+	})
+}
 
 func TestServerAddrAttrs(t *testing.T) {
 	testcases := []struct {

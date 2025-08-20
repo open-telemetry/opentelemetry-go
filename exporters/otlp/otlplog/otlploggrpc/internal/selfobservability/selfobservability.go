@@ -74,7 +74,7 @@ func NewExporterMetrics(
 	}
 	if em.logExportedDurationMetric, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
-		otel.Handle(err)
+		otel.Handle(e)
 		err = errors.Join(err, e)
 	}
 	return em, err
