@@ -147,7 +147,7 @@ func (ContextSwitches) Description() string {
 	return "Number of times the process has been context switched."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m ContextSwitches) Add(
@@ -168,6 +168,23 @@ func (m ContextSwitches) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ContextSwitches) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -287,7 +304,7 @@ func (CPUUtilization) Description() string {
 	return "Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUUtilization) Record(
@@ -308,6 +325,22 @@ func (m CPUUtilization) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -368,7 +401,7 @@ func (DiskIO) Description() string {
 	return "Disk bytes transferred."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m DiskIO) Add(
@@ -389,6 +422,23 @@ func (m DiskIO) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -448,7 +498,7 @@ func (MemoryUsage) Description() string {
 	return "The amount of physical memory in use."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -462,6 +512,23 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m MemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -515,7 +582,7 @@ func (MemoryVirtual) Description() string {
 	return "The amount of committed virtual memory."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -529,6 +596,23 @@ func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m MemoryVirtual) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -582,7 +666,7 @@ func (NetworkIO) Description() string {
 	return "Network bytes transferred."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetworkIO) Add(
@@ -603,6 +687,23 @@ func (m NetworkIO) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -663,7 +764,7 @@ func (OpenFileDescriptorCount) Description() string {
 	return "Number of file descriptors in use by the process."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m OpenFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -677,6 +778,23 @@ func (m OpenFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m OpenFileDescriptorCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -730,7 +848,7 @@ func (PagingFaults) Description() string {
 	return "Number of page faults the process has made."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m PagingFaults) Add(
@@ -751,6 +869,23 @@ func (m PagingFaults) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -812,7 +947,7 @@ func (ThreadCount) Description() string {
 	return "Process threads count."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -826,6 +961,23 @@ func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ThreadCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -879,7 +1031,7 @@ func (Uptime) Description() string {
 	return "The time the process has been running."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Instrumentations SHOULD use a gauge with type `double` and measure uptime in
 // seconds as a floating point number with the highest precision available.
@@ -896,5 +1048,25 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Instrumentations SHOULD use a gauge with type `double` and measure uptime in
+// seconds as a floating point number with the highest precision available.
+// The actual accuracy would depend on the instrumentation and operating system.
+func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }

@@ -188,7 +188,7 @@ func (ContainerCPULimit) Description() string {
 	return "Maximum CPU resource limit set for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -206,6 +206,27 @@ func (m ContainerCPULimit) Add(ctx context.Context, incr int64, attrs ...attribu
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerCPULimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -259,7 +280,7 @@ func (ContainerCPURequest) Description() string {
 	return "CPU resource requested for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -277,6 +298,27 @@ func (m ContainerCPURequest) Add(ctx context.Context, incr int64, attrs ...attri
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerCPURequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -332,7 +374,7 @@ func (ContainerEphemeralStorageLimit) Description() string {
 	return "Maximum ephemeral storage resource limit set for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -350,6 +392,27 @@ func (m ContainerEphemeralStorageLimit) Add(ctx context.Context, incr int64, att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerEphemeralStorageLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -405,7 +468,7 @@ func (ContainerEphemeralStorageRequest) Description() string {
 	return "Ephemeral storage resource requested for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -423,6 +486,27 @@ func (m ContainerEphemeralStorageRequest) Add(ctx context.Context, incr int64, a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerEphemeralStorageRequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -476,7 +560,7 @@ func (ContainerMemoryLimit) Description() string {
 	return "Maximum memory resource limit set for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -494,6 +578,27 @@ func (m ContainerMemoryLimit) Add(ctx context.Context, incr int64, attrs ...attr
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerMemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -547,7 +652,7 @@ func (ContainerMemoryRequest) Description() string {
 	return "Memory resource requested for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -565,6 +670,27 @@ func (m ContainerMemoryRequest) Add(ctx context.Context, incr int64, attrs ...at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerMemoryRequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -619,7 +745,7 @@ func (ContainerReady) Description() string {
 	return "Indicates whether the container is currently marked as ready to accept traffic, based on its readiness probe (1 = ready, 0 = not ready)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric SHOULD reflect the value of the `ready` field in the
 // [K8s ContainerStatus].
@@ -638,6 +764,28 @@ func (m ContainerReady) Add(ctx context.Context, incr int64, attrs ...attribute.
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric SHOULD reflect the value of the `ready` field in the
+// [K8s ContainerStatus].
+//
+// [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatus-v1-core
+func (m ContainerReady) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -692,7 +840,7 @@ func (ContainerRestartCount) Description() string {
 	return "Describes how many times the container has restarted (since the last counter reset)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This value is pulled directly from the K8s API and the value can go
 // indefinitely high and be reset to 0
@@ -716,6 +864,33 @@ func (m ContainerRestartCount) Add(ctx context.Context, incr int64, attrs ...att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This value is pulled directly from the K8s API and the value can go
+// indefinitely high and be reset to 0
+// at any time depending on how your kubelet is configured to prune dead
+// containers.
+// It is best to not depend too much on the exact value but rather look at it as
+// either == 0, in which case you can conclude there were no restarts in the
+// recent past, or > 0, in which case
+// you can conclude there were restarts in the recent past, and not try and
+// analyze the value beyond that.
+func (m ContainerRestartCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -770,7 +945,7 @@ func (ContainerStatusReason) Description() string {
 	return "Describes the number of K8s containers that are currently in a state for a given reason"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The containerStatusReason is the the reason for the container state.
 // Corresponds to the `reason` field of the: [K8s ContainerStateWaiting] or
@@ -804,6 +979,27 @@ func (m ContainerStatusReason) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// All possible container state reasons will be reported at each time interval to
+// avoid missing metrics.
+// Only the value corresponding to the current state reason will be non-zero.
+func (m ContainerStatusReason) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -857,7 +1053,7 @@ func (ContainerStatusState) Description() string {
 	return "Describes the number of K8s containers that are currently in a given state"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The containerStatusState is the the state of the container.
 // [K8s ContainerState]
@@ -889,6 +1085,27 @@ func (m ContainerStatusState) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// All possible container states will be reported at each time interval to avoid
+// missing metrics.
+// Only the value corresponding to the current state will be non-zero.
+func (m ContainerStatusState) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -942,7 +1159,7 @@ func (ContainerStorageLimit) Description() string {
 	return "Maximum storage resource limit set for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -960,6 +1177,27 @@ func (m ContainerStorageLimit) Add(ctx context.Context, incr int64, attrs ...att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerStorageLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1013,7 +1251,7 @@ func (ContainerStorageRequest) Description() string {
 	return "Storage resource requested for the container"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // See
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
@@ -1031,6 +1269,27 @@ func (m ContainerStorageRequest) Add(ctx context.Context, incr int64, attrs ...a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// See
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
+// for details.
+func (m ContainerStorageRequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1084,7 +1343,7 @@ func (CronJobActiveJobs) Description() string {
 	return "The number of actively running jobs for a cronjob"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `active` field of the
 // [K8s CronJobStatus].
@@ -1103,6 +1362,28 @@ func (m CronJobActiveJobs) Add(ctx context.Context, incr int64, attrs ...attribu
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `active` field of the
+// [K8s CronJobStatus].
+//
+// [K8s CronJobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#cronjobstatus-v1-batch
+func (m CronJobActiveJobs) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1158,7 +1439,7 @@ func (DaemonSetCurrentScheduledNodes) Description() string {
 	return "Number of nodes that are running at least 1 daemon pod and are supposed to run the daemon pod"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `currentNumberScheduled` field of the
 // [K8s DaemonSetStatus].
@@ -1177,6 +1458,28 @@ func (m DaemonSetCurrentScheduledNodes) Add(ctx context.Context, incr int64, att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `currentNumberScheduled` field of the
+// [K8s DaemonSetStatus].
+//
+// [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
+func (m DaemonSetCurrentScheduledNodes) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1232,7 +1535,7 @@ func (DaemonSetDesiredScheduledNodes) Description() string {
 	return "Number of nodes that should be running the daemon pod (including nodes currently running the daemon pod)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `desiredNumberScheduled` field of the
 // [K8s DaemonSetStatus].
@@ -1251,6 +1554,28 @@ func (m DaemonSetDesiredScheduledNodes) Add(ctx context.Context, incr int64, att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `desiredNumberScheduled` field of the
+// [K8s DaemonSetStatus].
+//
+// [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
+func (m DaemonSetDesiredScheduledNodes) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1306,7 +1631,7 @@ func (DaemonSetMisscheduledNodes) Description() string {
 	return "Number of nodes that are running the daemon pod, but are not supposed to run the daemon pod"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `numberMisscheduled` field of the
 // [K8s DaemonSetStatus].
@@ -1325,6 +1650,28 @@ func (m DaemonSetMisscheduledNodes) Add(ctx context.Context, incr int64, attrs .
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `numberMisscheduled` field of the
+// [K8s DaemonSetStatus].
+//
+// [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
+func (m DaemonSetMisscheduledNodes) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1379,7 +1726,7 @@ func (DaemonSetReadyNodes) Description() string {
 	return "Number of nodes that should be running the daemon pod and have one or more of the daemon pod running and ready"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `numberReady` field of the
 // [K8s DaemonSetStatus].
@@ -1398,6 +1745,28 @@ func (m DaemonSetReadyNodes) Add(ctx context.Context, incr int64, attrs ...attri
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `numberReady` field of the
+// [K8s DaemonSetStatus].
+//
+// [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
+func (m DaemonSetReadyNodes) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1452,7 +1821,7 @@ func (DeploymentAvailablePods) Description() string {
 	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this deployment"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `availableReplicas` field of the
 // [K8s DeploymentStatus].
@@ -1471,6 +1840,28 @@ func (m DeploymentAvailablePods) Add(ctx context.Context, incr int64, attrs ...a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `availableReplicas` field of the
+// [K8s DeploymentStatus].
+//
+// [K8s DeploymentStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#deploymentstatus-v1-apps
+func (m DeploymentAvailablePods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1524,7 +1915,7 @@ func (DeploymentDesiredPods) Description() string {
 	return "Number of desired replica pods in this deployment"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `replicas` field of the
 // [K8s DeploymentSpec].
@@ -1543,6 +1934,28 @@ func (m DeploymentDesiredPods) Add(ctx context.Context, incr int64, attrs ...att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `replicas` field of the
+// [K8s DeploymentSpec].
+//
+// [K8s DeploymentSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#deploymentspec-v1-apps
+func (m DeploymentDesiredPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1597,7 +2010,7 @@ func (HPACurrentPods) Description() string {
 	return "Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `currentReplicas` field of the
 // [K8s HorizontalPodAutoscalerStatus]
@@ -1616,6 +2029,28 @@ func (m HPACurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `currentReplicas` field of the
+// [K8s HorizontalPodAutoscalerStatus]
+//
+// [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
+func (m HPACurrentPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1670,7 +2105,7 @@ func (HPADesiredPods) Description() string {
 	return "Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `desiredReplicas` field of the
 // [K8s HorizontalPodAutoscalerStatus]
@@ -1689,6 +2124,28 @@ func (m HPADesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `desiredReplicas` field of the
+// [K8s HorizontalPodAutoscalerStatus]
+//
+// [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
+func (m HPADesiredPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1742,7 +2199,7 @@ func (HPAMaxPods) Description() string {
 	return "The upper limit for the number of replica pods to which the autoscaler can scale up"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `maxReplicas` field of the
 // [K8s HorizontalPodAutoscalerSpec]
@@ -1761,6 +2218,28 @@ func (m HPAMaxPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyV
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `maxReplicas` field of the
+// [K8s HorizontalPodAutoscalerSpec]
+//
+// [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
+func (m HPAMaxPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1816,7 +2295,7 @@ func (HPAMetricTargetCPUAverageUtilization) Description() string {
 	return "Target average utilization, in percentage, for CPU resource in HPA config."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -1846,6 +2325,31 @@ func (m HPAMetricTargetCPUAverageUtilization) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric aligns with the `averageUtilization` field of the
+// [K8s HPA MetricTarget].
+// If the type of the metric is [`ContainerResource`],
+// the `k8s.container.name` attribute MUST be set to identify the specific
+// container within the pod to which the metric applies.
+//
+// [K8s HPA MetricTarget]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#metrictarget-v2-autoscaling
+// [`ContainerResource`]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis
+func (m HPAMetricTargetCPUAverageUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1916,7 +2420,7 @@ func (HPAMetricTargetCPUAverageValue) Description() string {
 	return "Target average value for CPU resource in HPA config."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -1946,6 +2450,31 @@ func (m HPAMetricTargetCPUAverageValue) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric aligns with the `averageValue` field of the
+// [K8s HPA MetricTarget].
+// If the type of the metric is [`ContainerResource`],
+// the `k8s.container.name` attribute MUST be set to identify the specific
+// container within the pod to which the metric applies.
+//
+// [K8s HPA MetricTarget]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#metrictarget-v2-autoscaling
+// [`ContainerResource`]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis
+func (m HPAMetricTargetCPUAverageValue) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -2014,7 +2543,7 @@ func (HPAMetricTargetCPUValue) Description() string {
 	return "Target value for CPU resource in HPA config."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -2044,6 +2573,31 @@ func (m HPAMetricTargetCPUValue) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric aligns with the `value` field of the
+// [K8s HPA MetricTarget].
+// If the type of the metric is [`ContainerResource`],
+// the `k8s.container.name` attribute MUST be set to identify the specific
+// container within the pod to which the metric applies.
+//
+// [K8s HPA MetricTarget]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#metrictarget-v2-autoscaling
+// [`ContainerResource`]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis
+func (m HPAMetricTargetCPUValue) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -2112,7 +2666,7 @@ func (HPAMinPods) Description() string {
 	return "The lower limit for the number of replica pods to which the autoscaler can scale down"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `minReplicas` field of the
 // [K8s HorizontalPodAutoscalerSpec]
@@ -2131,6 +2685,28 @@ func (m HPAMinPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyV
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `minReplicas` field of the
+// [K8s HorizontalPodAutoscalerSpec]
+//
+// [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
+func (m HPAMinPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2184,7 +2760,7 @@ func (JobActivePods) Description() string {
 	return "The number of pending and actively running pods for a job"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `active` field of the
 // [K8s JobStatus].
@@ -2203,6 +2779,28 @@ func (m JobActivePods) Add(ctx context.Context, incr int64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `active` field of the
+// [K8s JobStatus].
+//
+// [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
+func (m JobActivePods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2257,7 +2855,7 @@ func (JobDesiredSuccessfulPods) Description() string {
 	return "The desired number of successfully finished pods the job should be run with"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `completions` field of the
 // [K8s JobSpec]..
@@ -2276,6 +2874,28 @@ func (m JobDesiredSuccessfulPods) Add(ctx context.Context, incr int64, attrs ...
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `completions` field of the
+// [K8s JobSpec]..
+//
+// [K8s JobSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobspec-v1-batch
+func (m JobDesiredSuccessfulPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2329,7 +2949,7 @@ func (JobFailedPods) Description() string {
 	return "The number of pods which reached phase Failed for a job"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `failed` field of the
 // [K8s JobStatus].
@@ -2348,6 +2968,28 @@ func (m JobFailedPods) Add(ctx context.Context, incr int64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `failed` field of the
+// [K8s JobStatus].
+//
+// [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
+func (m JobFailedPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2401,7 +3043,7 @@ func (JobMaxParallelPods) Description() string {
 	return "The max desired number of pods the job should run at any given time"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `parallelism` field of the
 // [K8s JobSpec].
@@ -2420,6 +3062,28 @@ func (m JobMaxParallelPods) Add(ctx context.Context, incr int64, attrs ...attrib
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `parallelism` field of the
+// [K8s JobSpec].
+//
+// [K8s JobSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobspec-v1-batch
+func (m JobMaxParallelPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2473,7 +3137,7 @@ func (JobSuccessfulPods) Description() string {
 	return "The number of pods which reached phase Succeeded for a job"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `succeeded` field of the
 // [K8s JobStatus].
@@ -2492,6 +3156,28 @@ func (m JobSuccessfulPods) Add(ctx context.Context, incr int64, attrs ...attribu
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `succeeded` field of the
+// [K8s JobStatus].
+//
+// [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
+func (m JobSuccessfulPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2545,7 +3231,7 @@ func (NamespacePhase) Description() string {
 	return "Describes number of K8s namespaces that are currently in a given phase."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The namespacePhase is the the phase of the K8s namespace.
 func (m NamespacePhase) Add(
@@ -2570,6 +3256,23 @@ func (m NamespacePhase) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NamespacePhase) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2623,7 +3326,7 @@ func (NodeAllocatableCPU) Description() string {
 	return "Amount of cpu allocatable on the node"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m NodeAllocatableCPU) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -2637,6 +3340,23 @@ func (m NodeAllocatableCPU) Add(ctx context.Context, incr int64, attrs ...attrib
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NodeAllocatableCPU) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2692,7 +3412,7 @@ func (NodeAllocatableEphemeralStorage) Description() string {
 	return "Amount of ephemeral-storage allocatable on the node"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m NodeAllocatableEphemeralStorage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -2706,6 +3426,23 @@ func (m NodeAllocatableEphemeralStorage) Add(ctx context.Context, incr int64, at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NodeAllocatableEphemeralStorage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2759,7 +3496,7 @@ func (NodeAllocatableMemory) Description() string {
 	return "Amount of memory allocatable on the node"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m NodeAllocatableMemory) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -2773,6 +3510,23 @@ func (m NodeAllocatableMemory) Add(ctx context.Context, incr int64, attrs ...att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NodeAllocatableMemory) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2826,7 +3580,7 @@ func (NodeAllocatablePods) Description() string {
 	return "Amount of pods allocatable on the node"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m NodeAllocatablePods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
@@ -2840,6 +3594,23 @@ func (m NodeAllocatablePods) Add(ctx context.Context, incr int64, attrs ...attri
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NodeAllocatablePods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2893,7 +3664,7 @@ func (NodeConditionStatus) Description() string {
 	return "Describes the condition of a particular Node."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The nodeConditionStatus is the the status of the condition, one of True,
 // False, Unknown.
@@ -2927,6 +3698,27 @@ func (m NodeConditionStatus) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// All possible node condition pairs (type and status) will be reported at each
+// time interval to avoid missing metrics. Condition pairs corresponding to the
+// current conditions' statuses will be non-zero.
+func (m NodeConditionStatus) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2980,7 +3772,7 @@ func (NodeCPUTime) Description() string {
 	return "Total CPU time consumed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // Total CPU time consumed by the specific Node on all available CPU cores
 func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
@@ -2996,6 +3788,25 @@ func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Total CPU time consumed by the specific Node on all available CPU cores
+func (m NodeCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3049,7 +3860,7 @@ func (NodeCPUUsage) Description() string {
 	return "Node's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // CPU usage of the specific Node on all available CPU cores, averaged over the
 // sample window
@@ -3065,6 +3876,25 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// CPU usage of the specific Node on all available CPU cores, averaged over the
+// sample window
+func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3118,7 +3948,7 @@ func (NodeMemoryUsage) Description() string {
 	return "Memory usage of the Node"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Total memory usage of the Node
 func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
@@ -3133,6 +3963,24 @@ func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribu
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Total memory usage of the Node
+func (m NodeMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3186,7 +4034,7 @@ func (NodeNetworkErrors) Description() string {
 	return "Node network errors"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m NodeNetworkErrors) Add(
@@ -3207,6 +4055,23 @@ func (m NodeNetworkErrors) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NodeNetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3274,7 +4139,7 @@ func (NodeNetworkIO) Description() string {
 	return "Network bytes for the Node"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m NodeNetworkIO) Add(
@@ -3295,6 +4160,23 @@ func (m NodeNetworkIO) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m NodeNetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3362,7 +4244,7 @@ func (NodeUptime) Description() string {
 	return "The time the Node has been running"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Instrumentations SHOULD use a gauge with type `double` and measure uptime in
 // seconds as a floating point number with the highest precision available.
@@ -3379,6 +4261,26 @@ func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Instrumentations SHOULD use a gauge with type `double` and measure uptime in
+// seconds as a floating point number with the highest precision available.
+// The actual accuracy would depend on the instrumentation and operating system.
+func (m NodeUptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3432,7 +4334,7 @@ func (PodCPUTime) Description() string {
 	return "Total CPU time consumed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // Total CPU time consumed by the specific Pod on all available CPU cores
 func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
@@ -3448,6 +4350,25 @@ func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.Ke
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Total CPU time consumed by the specific Pod on all available CPU cores
+func (m PodCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3501,7 +4422,7 @@ func (PodCPUUsage) Description() string {
 	return "Pod's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // CPU usage of the specific Pod on all available CPU cores, averaged over the
 // sample window
@@ -3517,6 +4438,25 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// CPU usage of the specific Pod on all available CPU cores, averaged over the
+// sample window
+func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3570,7 +4510,7 @@ func (PodMemoryUsage) Description() string {
 	return "Memory usage of the Pod"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Total memory usage of the Pod
 func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
@@ -3585,6 +4525,24 @@ func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribut
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Total memory usage of the Pod
+func (m PodMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3638,7 +4596,7 @@ func (PodNetworkErrors) Description() string {
 	return "Pod network errors"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m PodNetworkErrors) Add(
@@ -3659,6 +4617,23 @@ func (m PodNetworkErrors) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m PodNetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3726,7 +4701,7 @@ func (PodNetworkIO) Description() string {
 	return "Network bytes for the Pod"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m PodNetworkIO) Add(
@@ -3747,6 +4722,23 @@ func (m PodNetworkIO) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m PodNetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3814,7 +4806,7 @@ func (PodUptime) Description() string {
 	return "The time the Pod has been running"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Instrumentations SHOULD use a gauge with type `double` and measure uptime in
 // seconds as a floating point number with the highest precision available.
@@ -3831,6 +4823,26 @@ func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Instrumentations SHOULD use a gauge with type `double` and measure uptime in
+// seconds as a floating point number with the highest precision available.
+// The actual accuracy would depend on the instrumentation and operating system.
+func (m PodUptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3885,7 +4897,7 @@ func (ReplicaSetAvailablePods) Description() string {
 	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this replicaset"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `availableReplicas` field of the
 // [K8s ReplicaSetStatus].
@@ -3904,6 +4916,28 @@ func (m ReplicaSetAvailablePods) Add(ctx context.Context, incr int64, attrs ...a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `availableReplicas` field of the
+// [K8s ReplicaSetStatus].
+//
+// [K8s ReplicaSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicasetstatus-v1-apps
+func (m ReplicaSetAvailablePods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -3957,7 +4991,7 @@ func (ReplicaSetDesiredPods) Description() string {
 	return "Number of desired replica pods in this replicaset"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `replicas` field of the
 // [K8s ReplicaSetSpec].
@@ -3976,6 +5010,28 @@ func (m ReplicaSetDesiredPods) Add(ctx context.Context, incr int64, attrs ...att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `replicas` field of the
+// [K8s ReplicaSetSpec].
+//
+// [K8s ReplicaSetSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicasetspec-v1-apps
+func (m ReplicaSetDesiredPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4031,7 +5087,7 @@ func (ReplicationControllerAvailablePods) Description() string {
 	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this replication controller"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `availableReplicas` field of the
 // [K8s ReplicationControllerStatus]
@@ -4050,6 +5106,28 @@ func (m ReplicationControllerAvailablePods) Add(ctx context.Context, incr int64,
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `availableReplicas` field of the
+// [K8s ReplicationControllerStatus]
+//
+// [K8s ReplicationControllerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicationcontrollerstatus-v1-core
+func (m ReplicationControllerAvailablePods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4105,7 +5183,7 @@ func (ReplicationControllerDesiredPods) Description() string {
 	return "Number of desired replica pods in this replication controller"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `replicas` field of the
 // [K8s ReplicationControllerSpec]
@@ -4124,6 +5202,28 @@ func (m ReplicationControllerDesiredPods) Add(ctx context.Context, incr int64, a
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `replicas` field of the
+// [K8s ReplicationControllerSpec]
+//
+// [K8s ReplicationControllerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicationcontrollerspec-v1-core
+func (m ReplicationControllerDesiredPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4180,7 +5280,7 @@ func (ResourceQuotaCPULimitHard) Description() string {
 	return "The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `hard` field of the
 // [K8s ResourceQuotaStatus].
@@ -4199,6 +5299,28 @@ func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ..
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4255,7 +5377,7 @@ func (ResourceQuotaCPULimitUsed) Description() string {
 	return "The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `used` field of the
 // [K8s ResourceQuotaStatus].
@@ -4274,6 +5396,28 @@ func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ..
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4330,7 +5474,7 @@ func (ResourceQuotaCPURequestHard) Description() string {
 	return "The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `hard` field of the
 // [K8s ResourceQuotaStatus].
@@ -4349,6 +5493,28 @@ func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs 
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4405,7 +5571,7 @@ func (ResourceQuotaCPURequestUsed) Description() string {
 	return "The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `used` field of the
 // [K8s ResourceQuotaStatus].
@@ -4424,6 +5590,28 @@ func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs 
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4481,7 +5669,7 @@ func (ResourceQuotaEphemeralStorageLimitHard) Description() string {
 	return "The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `hard` field of the
 // [K8s ResourceQuotaStatus].
@@ -4500,6 +5688,28 @@ func (m ResourceQuotaEphemeralStorageLimitHard) Add(ctx context.Context, incr in
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaEphemeralStorageLimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4557,7 +5767,7 @@ func (ResourceQuotaEphemeralStorageLimitUsed) Description() string {
 	return "The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `used` field of the
 // [K8s ResourceQuotaStatus].
@@ -4576,6 +5786,28 @@ func (m ResourceQuotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr in
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaEphemeralStorageLimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4633,7 +5865,7 @@ func (ResourceQuotaEphemeralStorageRequestHard) Description() string {
 	return "The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `hard` field of the
 // [K8s ResourceQuotaStatus].
@@ -4652,6 +5884,28 @@ func (m ResourceQuotaEphemeralStorageRequestHard) Add(ctx context.Context, incr 
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaEphemeralStorageRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4709,7 +5963,7 @@ func (ResourceQuotaEphemeralStorageRequestUsed) Description() string {
 	return "The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `used` field of the
 // [K8s ResourceQuotaStatus].
@@ -4728,6 +5982,28 @@ func (m ResourceQuotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr 
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaEphemeralStorageRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4785,7 +6061,7 @@ func (ResourceQuotaHugepageCountRequestHard) Description() string {
 	return "The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The hugepageSize is the the size (identifier) of the K8s huge page.
 //
@@ -4815,6 +6091,28 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaHugepageCountRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4872,7 +6170,7 @@ func (ResourceQuotaHugepageCountRequestUsed) Description() string {
 	return "The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The hugepageSize is the the size (identifier) of the K8s huge page.
 //
@@ -4902,6 +6200,28 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaHugepageCountRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4958,7 +6278,7 @@ func (ResourceQuotaMemoryLimitHard) Description() string {
 	return "The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `hard` field of the
 // [K8s ResourceQuotaStatus].
@@ -4977,6 +6297,28 @@ func (m ResourceQuotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaMemoryLimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5033,7 +6375,7 @@ func (ResourceQuotaMemoryLimitUsed) Description() string {
 	return "The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `used` field of the
 // [K8s ResourceQuotaStatus].
@@ -5052,6 +6394,28 @@ func (m ResourceQuotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaMemoryLimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5108,7 +6472,7 @@ func (ResourceQuotaMemoryRequestHard) Description() string {
 	return "The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `hard` field of the
 // [K8s ResourceQuotaStatus].
@@ -5127,6 +6491,28 @@ func (m ResourceQuotaMemoryRequestHard) Add(ctx context.Context, incr int64, att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaMemoryRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5183,7 +6569,7 @@ func (ResourceQuotaMemoryRequestUsed) Description() string {
 	return "The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric is retrieved from the `used` field of the
 // [K8s ResourceQuotaStatus].
@@ -5202,6 +6588,28 @@ func (m ResourceQuotaMemoryRequestUsed) Add(ctx context.Context, incr int64, att
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaMemoryRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5258,7 +6666,7 @@ func (ResourceQuotaObjectCountHard) Description() string {
 	return "The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The resourcequotaResourceName is the the name of the K8s resource a resource
 // quota defines.
@@ -5289,6 +6697,28 @@ func (m ResourceQuotaObjectCountHard) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaObjectCountHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5345,7 +6775,7 @@ func (ResourceQuotaObjectCountUsed) Description() string {
 	return "The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The resourcequotaResourceName is the the name of the K8s resource a resource
 // quota defines.
@@ -5376,6 +6806,28 @@ func (m ResourceQuotaObjectCountUsed) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaObjectCountUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5434,7 +6886,7 @@ func (ResourceQuotaPersistentvolumeclaimCountHard) Description() string {
 	return "The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -5464,6 +6916,32 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// The `k8s.storageclass.name` should be required when a resource quota is
+// defined for a specific
+// storage class.
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5531,7 +7009,7 @@ func (ResourceQuotaPersistentvolumeclaimCountUsed) Description() string {
 	return "The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -5561,6 +7039,32 @@ func (m ResourceQuotaPersistentvolumeclaimCountUsed) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// The `k8s.storageclass.name` should be required when a resource quota is
+// defined for a specific
+// storage class.
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaPersistentvolumeclaimCountUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5626,7 +7130,7 @@ func (ResourceQuotaStorageRequestHard) Description() string {
 	return "The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -5656,6 +7160,32 @@ func (m ResourceQuotaStorageRequestHard) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `hard` field of the
+// [K8s ResourceQuotaStatus].
+//
+// The `k8s.storageclass.name` should be required when a resource quota is
+// defined for a specific
+// storage class.
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaStorageRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5721,7 +7251,7 @@ func (ResourceQuotaStorageRequestUsed) Description() string {
 	return "The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -5751,6 +7281,32 @@ func (m ResourceQuotaStorageRequestUsed) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric is retrieved from the `used` field of the
+// [K8s ResourceQuotaStatus].
+//
+// The `k8s.storageclass.name` should be required when a resource quota is
+// defined for a specific
+// storage class.
+//
+// [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
+func (m ResourceQuotaStorageRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5814,7 +7370,7 @@ func (StatefulSetCurrentPods) Description() string {
 	return "The number of replica pods created by the statefulset controller from the statefulset version indicated by currentRevision"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `currentReplicas` field of the
 // [K8s StatefulSetStatus].
@@ -5833,6 +7389,28 @@ func (m StatefulSetCurrentPods) Add(ctx context.Context, incr int64, attrs ...at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `currentReplicas` field of the
+// [K8s StatefulSetStatus].
+//
+// [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
+func (m StatefulSetCurrentPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5886,7 +7464,7 @@ func (StatefulSetDesiredPods) Description() string {
 	return "Number of desired replica pods in this statefulset"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `replicas` field of the
 // [K8s StatefulSetSpec].
@@ -5905,6 +7483,28 @@ func (m StatefulSetDesiredPods) Add(ctx context.Context, incr int64, attrs ...at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `replicas` field of the
+// [K8s StatefulSetSpec].
+//
+// [K8s StatefulSetSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetspec-v1-apps
+func (m StatefulSetDesiredPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5958,7 +7558,7 @@ func (StatefulSetReadyPods) Description() string {
 	return "The number of replica pods created for this statefulset with a Ready Condition"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `readyReplicas` field of the
 // [K8s StatefulSetStatus].
@@ -5977,6 +7577,28 @@ func (m StatefulSetReadyPods) Add(ctx context.Context, incr int64, attrs ...attr
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `readyReplicas` field of the
+// [K8s StatefulSetStatus].
+//
+// [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
+func (m StatefulSetReadyPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -6031,7 +7653,7 @@ func (StatefulSetUpdatedPods) Description() string {
 	return "Number of replica pods created by the statefulset controller from the statefulset version indicated by updateRevision"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // This metric aligns with the `updatedReplicas` field of the
 // [K8s StatefulSetStatus].
@@ -6050,5 +7672,27 @@ func (m StatefulSetUpdatedPods) Add(ctx context.Context, incr int64, attrs ...at
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric aligns with the `updatedReplicas` field of the
+// [K8s StatefulSetStatus].
+//
+// [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
+func (m StatefulSetUpdatedPods) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }

@@ -131,7 +131,7 @@ func (ClientActiveRequests) Description() string {
 	return "Number of active HTTP requests."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The serverAddress is the server domain name if available without reverse DNS
 // lookup; otherwise, IP address or Unix domain socket name.
@@ -166,6 +166,23 @@ func (m ClientActiveRequests) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientActiveRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -244,7 +261,7 @@ func (ClientConnectionDuration) Description() string {
 	return "The duration of the successfully established outbound HTTP connections."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The serverAddress is the server domain name if available without reverse DNS
 // lookup; otherwise, IP address or Unix domain socket name.
@@ -279,6 +296,22 @@ func (m ClientConnectionDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientConnectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -356,7 +389,7 @@ func (ClientOpenConnections) Description() string {
 	return "Number of outbound HTTP connections that are currently active or idle on the client."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The connectionState is the state of the HTTP connection in the HTTP connection
 // pool.
@@ -396,6 +429,23 @@ func (m ClientOpenConnections) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientOpenConnections) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -472,7 +522,7 @@ func (ClientRequestBodySize) Description() string {
 	return "Size of HTTP client request bodies."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -519,6 +569,29 @@ func (m ClientRequestBodySize) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// The size of the request payload body in bytes. This is the number of bytes
+// transferred excluding headers and is often, but not always, present as the
+// [Content-Length] header. For requests using transport encoding, this should be
+// the compressed size.
+//
+// [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
+func (m ClientRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -622,7 +695,7 @@ func (ClientRequestDuration) Description() string {
 	return "Duration of HTTP client requests."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -662,6 +735,22 @@ func (m ClientRequestDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -765,7 +854,7 @@ func (ClientResponseBodySize) Description() string {
 	return "Size of HTTP client response bodies."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -812,6 +901,29 @@ func (m ClientResponseBodySize) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// The size of the response payload body in bytes. This is the number of bytes
+// transferred excluding headers and is often, but not always, present as the
+// [Content-Length] header. For requests using transport encoding, this should be
+// the compressed size.
+//
+// [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
+func (m ClientResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -915,7 +1027,7 @@ func (ServerActiveRequests) Description() string {
 	return "Number of active HTTP server requests."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -948,6 +1060,23 @@ func (m ServerActiveRequests) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ServerActiveRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1015,7 +1144,7 @@ func (ServerRequestBodySize) Description() string {
 	return "Size of HTTP server request bodies."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -1055,6 +1184,29 @@ func (m ServerRequestBodySize) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// The size of the request payload body in bytes. This is the number of bytes
+// transferred excluding headers and is often, but not always, present as the
+// [Content-Length] header. For requests using transport encoding, this should be
+// the compressed size.
+//
+// [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
+func (m ServerRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1168,7 +1320,7 @@ func (ServerRequestDuration) Description() string {
 	return "Duration of HTTP server requests."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -1201,6 +1353,22 @@ func (m ServerRequestDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1314,7 +1482,7 @@ func (ServerResponseBodySize) Description() string {
 	return "Size of HTTP server response bodies."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The requestMethod is the HTTP request method.
 //
@@ -1354,6 +1522,29 @@ func (m ServerResponseBodySize) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// The size of the response payload body in bytes. This is the number of bytes
+// transferred excluding headers and is often, but not always, present as the
+// [Content-Length] header. For requests using transport encoding, this should be
+// the compressed size.
+//
+// [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
+func (m ServerResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
