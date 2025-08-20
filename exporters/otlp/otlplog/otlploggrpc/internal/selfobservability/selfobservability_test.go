@@ -6,15 +6,12 @@ package selfobservability // import "go.opentelemetry.io/otel/exporters/otlp/otl
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	mapi "go.opentelemetry.io/otel/metric"
-
 	"go.opentelemetry.io/otel/attribute"
-
-	"github.com/stretchr/testify/assert"
-
+	mapi "go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 )
 
