@@ -48,11 +48,6 @@ func NewExporterMetrics(
 	target string,
 ) (*ExporterMetrics, error) {
 	em := &ExporterMetrics{}
-	em.presetAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(componentName),
-		semconv.OTelComponentTypeKey.String(string(componentType)),
-	}
-	em.presetAttrs = append(em.presetAttrs, ServerAddrAttrs(target)...)
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -77,7 +72,17 @@ func NewExporterMetrics(
 		otel.Handle(e)
 		err = errors.Join(err, e)
 	}
-	return em, err
+
+	if err != nil {
+		return nil, err
+	}
+
+	em.presetAttrs = []attribute.KeyValue{
+		semconv.OTelComponentName(componentName),
+		semconv.OTelComponentTypeKey.String(string(componentType)),
+	}
+	em.presetAttrs = append(em.presetAttrs, ServerAddrAttrs(target)...)
+	return em, nil
 }
 
 func (em *ExporterMetrics) TrackExport(
