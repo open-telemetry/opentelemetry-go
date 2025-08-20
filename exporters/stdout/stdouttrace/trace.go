@@ -96,6 +96,17 @@ type Exporter struct {
 	operationDurationMetric  otelconv.SDKExporterOperationDuration
 }
 
+var measureAttrsPool = sync.Pool{
+	New: func() any {
+		// "component.name" + "component.type" + "error.type"
+		const n = 1 + 1 + 1
+		s := make([]attribute.KeyValue, 0, n)
+		// Return a pointer to a slice instead of a slice itself
+		// to avoid allocations on every call.
+		return &s
+	},
+}
+
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
 	var success int64
@@ -116,11 +127,14 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 			if err != nil {
 				// additional attributes for self-observability,
 				// only spanExportedMetric and operationDurationMetric are supported.
-				//
-				// TODO: use a pool to amortize allocations.
-				attr = make([]attribute.KeyValue, len(e.selfObservabilityAttrs), len(e.selfObservabilityAttrs)+1)
-				copy(attr, e.selfObservabilityAttrs)
-				attr = append(attr, semconv.ErrorType(err))
+				attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
+				defer func() {
+					*attrs = (*attrs)[:0] // reset the slice for reuse
+					measureAttrsPool.Put(attrs)
+				}()
+				*attrs = append(*attrs, e.selfObservabilityAttrs...)
+				*attrs = append(*attrs, semconv.ErrorType(err))
+				attr = *attrs
 
 				e.spanExportedMetric.Add(ctx, count-success, attr...)
 			}
