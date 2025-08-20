@@ -43,8 +43,7 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
-	selfObservabilityEnabled bool
-	exporterMetric           *selfobservability.ExporterMetrics
+	exporterMetric *selfobservability.ExporterMetrics
 }
 
 // Used for testing.
@@ -78,25 +77,21 @@ func newClient(cfg config) (*client, error) {
 	}
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
-	c.initSelfObservability()
-	return c, nil
-}
 
-func (c *client) initSelfObservability() {
 	if !x.SelfObservability.Enabled() {
-		return
+		return c, nil
 	}
 
-	c.selfObservabilityEnabled = true
 	id := counter.NextExporterID()
 	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
-
-	c.exporterMetric = selfobservability.NewExporterMetrics(
+	var err error
+	c.exporterMetric, err = selfobservability.NewExporterMetrics(
 		"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 		componentName,
 		otelconv.ComponentTypeOtlpGRPCLogExporter,
 		c.conn.CanonicalTarget(),
 	)
+	return c, err
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -157,10 +152,18 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 	defer cancel()
 
 	success := int64(len(rl))
-	if c.selfObservabilityEnabled {
+	// partialSuccessErr records an error when the export is partially successful.
+	var partialSuccessErr error
+	if c.exporterMetric != nil {
 		count := len(rl)
-		trackExportFunc := c.exporterMetric.TrackExport(context.Background(), int64(count))
-		defer func() { trackExportFunc(err, success, status.Code(err)) }()
+		trackExportFunc := c.exporterMetric.TrackExport(ctx, int64(count))
+		defer func() {
+			if partialSuccessErr != nil {
+				trackExportFunc(partialSuccessErr, success, status.Code(partialSuccessErr))
+				return
+			}
+			trackExportFunc(err, success, status.Code(err))
+		}()
 	}
 
 	return c.requestFunc(ctx, func(ctx context.Context) error {
@@ -173,8 +176,8 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			success -= n
 			if n != 0 || msg != "" {
-				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				otel.Handle(err)
+				partialSuccessErr = fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
+				otel.Handle(partialSuccessErr)
 			}
 		}
 		// nil is converted to OK.
@@ -182,6 +185,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 			// Success.
 			return nil
 		}
+		success = 0
 		return err
 	})
 }

@@ -758,6 +758,7 @@ func TestSelfObservability(t *testing.T) {
 					1,
 				)
 				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
+				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -806,6 +807,18 @@ func TestSelfObservability(t *testing.T) {
 										),
 										Value: int64(len(resourceLogs)) - 2,
 									},
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											semconv.ErrorType(wantErr),
+										),
+										Value: 2,
+									},
 								},
 							},
 						},
@@ -824,11 +837,12 @@ func TestSelfObservability(t *testing.T) {
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
 												otelconv.RPCGRPCStatusCodeAttr(
-													codes.OK,
+													status.Code(wantErr),
 												),
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
+											semconv.ErrorType(wantErr),
 										),
 										Count: 1,
 									},
@@ -849,8 +863,7 @@ func TestSelfObservability(t *testing.T) {
 				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
 
 				require.Len(t, errs, 1)
-				want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-				assert.ErrorContains(t, errs[0], want)
+				assert.ErrorContains(t, errs[0], wantErr.Error())
 
 				g := scopeMetrics()
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
@@ -930,9 +943,20 @@ func TestSelfObservability(t *testing.T) {
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
-											wantErrTypeAttr,
 										),
 										Value: 0,
+									},
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											wantErrTypeAttr,
+										),
+										Value: 1,
 									},
 								},
 							},

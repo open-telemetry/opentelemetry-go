@@ -7,6 +7,8 @@ package selfobservability // import "go.opentelemetry.io/otel/exporters/otlp/otl
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -26,8 +28,8 @@ import (
 
 var attrsPool = sync.Pool{
 	New: func() any {
-		// "component.name" + "component.type" + "error.type" + "target"
-		const n = 1 + 1 + 1 + 1
+		// "component.name" + "component.type" + "error.type" + "server.address" + "server.port" + "rpc.grpc.status_code"
+		const n = 1 + 1 + 1 + 1 + 1 + 1
 		s := make([]attribute.KeyValue, 0, n)
 		return &s
 	},
@@ -44,31 +46,38 @@ func NewExporterMetrics(
 	name, componentName string,
 	componentType otelconv.ComponentTypeAttr,
 	target string,
-) *ExporterMetrics {
+) (*ExporterMetrics, error) {
 	em := &ExporterMetrics{}
-	mp := otel.GetMeterProvider()
-	m := mp.Meter(
-		name,
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL))
-
-	var err error
-	if em.logInflightMetric, err = otelconv.NewSDKExporterLogInflight(m); err != nil {
-		otel.Handle(err)
-	}
-	if em.logExportedMetric, err = otelconv.NewSDKExporterLogExported(m); err != nil {
-		otel.Handle(err)
-	}
-	if em.logExportedDurationMetric, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
-	}
-
 	em.presetAttrs = []attribute.KeyValue{
 		semconv.OTelComponentName(componentName),
 		semconv.OTelComponentTypeKey.String(string(componentType)),
 	}
 	em.presetAttrs = append(em.presetAttrs, ServerAddrAttrs(target)...)
-	return em
+
+	mp := otel.GetMeterProvider()
+	m := mp.Meter(
+		name,
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err, e error
+	if em.logInflightMetric, e = otelconv.NewSDKExporterLogInflight(m); e != nil {
+		e = fmt.Errorf("failed to create span inflight metric: %w", e)
+		otel.Handle(e)
+		err = errors.Join(err, e)
+	}
+	if em.logExportedMetric, e = otelconv.NewSDKExporterLogExported(m); e != nil {
+		e = fmt.Errorf("failed to create span exported metric: %w", e)
+		otel.Handle(e)
+		err = errors.Join(err, e)
+	}
+	if em.logExportedDurationMetric, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+		e = fmt.Errorf("failed to create operation duration metric: %w", e)
+		otel.Handle(err)
+		err = errors.Join(err, e)
+	}
+	return em, err
 }
 
 func (em *ExporterMetrics) TrackExport(
@@ -88,14 +97,11 @@ func (em *ExporterMetrics) TrackExport(
 
 		duration := time.Since(begin).Seconds()
 		em.logInflightMetric.Add(ctx, -count, *attrs...)
-
+		em.logExportedMetric.Add(ctx, successCount, *attrs...)
 		if err != nil {
 			*attrs = append(*attrs, semconv.ErrorType(err))
-			em.logExportedMetric.Add(ctx, 0, *attrs...)
-		} else {
-			em.logExportedMetric.Add(ctx, successCount, *attrs...)
+			em.logExportedMetric.Add(ctx, count-successCount, *attrs...)
 		}
-
 		*attrs = append(
 			*attrs,
 			em.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
