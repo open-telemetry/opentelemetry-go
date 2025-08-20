@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MrAlias/bind"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
@@ -51,12 +53,6 @@ func New(options ...Option) (*Exporter, error) {
 	}
 
 	exporter.selfObservabilityEnabled = true
-	exporter.selfObservabilityAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
-		semconv.OTelComponentTypeKey.String(otelComponentType),
-	}
-	s := attribute.NewSet(exporter.selfObservabilityAttrs...)
-	exporter.selfObservabilitySetOpt = metric.WithAttributeSet(s)
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -64,6 +60,12 @@ func New(options ...Option) (*Exporter, error) {
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
+
+	name := fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())
+	cmpnt := semconv.OTelComponentName(name)
+	cmpntT := semconv.OTelComponentTypeKey.String(otelComponentType)
+	// Ensure all instruments are bound to these attributes.
+	m = bind.Meter(m, cmpnt, cmpntT)
 
 	var err, e error
 	if exporter.spanInflightMetric, e = otelconv.NewSDKExporterSpanInflight(m); e != nil {
@@ -92,41 +94,21 @@ type Exporter struct {
 	stopped   bool
 
 	selfObservabilityEnabled bool
-	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
-	selfObservabilitySetOpt  metric.MeasurementOption
 	spanInflightMetric       otelconv.SDKExporterSpanInflight
 	spanExportedMetric       otelconv.SDKExporterSpanExported
 	operationDurationMetric  otelconv.SDKExporterOperationDuration
 }
 
-var (
-	measureAttrsPool = sync.Pool{
-		New: func() any {
-			// "component.name" + "component.type" + "error.type"
-			const n = 1 + 1 + 1
-			s := make([]attribute.KeyValue, 0, n)
-			// Return a pointer to a slice instead of a slice itself
-			// to avoid allocations on every call.
-			return &s
-		},
-	}
-
-	addOptPool = &sync.Pool{
-		New: func() any {
-			const n = 1 // WithAttributeSet
-			o := make([]metric.AddOption, 0, n)
-			return &o
-		},
-	}
-
-	recordOptPool = &sync.Pool{
-		New: func() any {
-			const n = 1 // WithAttributeSet
-			o := make([]metric.RecordOption, 0, n)
-			return &o
-		},
-	}
-)
+var measureAttrsPool = sync.Pool{
+	New: func() any {
+		// "error.type"
+		const n = 1
+		s := make([]attribute.KeyValue, 0, n)
+		// Return a pointer to a slice instead of a slice itself
+		// to avoid allocations on every call.
+		return &s
+	},
+}
 
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
@@ -134,25 +116,17 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 	if e.selfObservabilityEnabled {
 		count := int64(len(spans))
 
-		addOpt := addOptPool.Get().(*[]metric.AddOption)
-		defer func() {
-			*addOpt = (*addOpt)[:0]
-			addOptPool.Put(addOpt)
-		}()
-
-		*addOpt = append(*addOpt, e.selfObservabilitySetOpt)
-
-		e.spanInflightMetric.Inst().Add(ctx, count, *addOpt...)
+		e.spanInflightMetric.Add(ctx, count)
 		defer func(starting time.Time) {
-			e.spanInflightMetric.Inst().Add(ctx, -count, *addOpt...)
+			e.spanInflightMetric.Add(ctx, -count)
 
 			// Record the success and duration of the operation.
 			//
 			// Do not exclude 0 values, as they are valid and indicate no spans
 			// were exported which is meaningful for certain aggregations.
-			e.spanExportedMetric.Inst().Add(ctx, success, *addOpt...)
+			e.spanExportedMetric.Add(ctx, success)
 
-			mOpt := e.selfObservabilitySetOpt
+			set := *attribute.EmptySet()
 			if err != nil {
 				// additional attributes for self-observability,
 				// only spanExportedMetric and operationDurationMetric are supported.
@@ -161,36 +135,13 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 					*attrs = (*attrs)[:0] // reset the slice for reuse
 					measureAttrsPool.Put(attrs)
 				}()
-				*attrs = append(*attrs, e.selfObservabilityAttrs...)
 				*attrs = append(*attrs, semconv.ErrorType(err))
+				set = attribute.NewSet(*attrs...)
 
-				// Do not inefficiently make a copy of attrs by using
-				// WithAttributes instead of WithAttributeSet.
-				set := attribute.NewSet(*attrs...)
-				mOpt = metric.WithAttributeSet(set)
-
-				// Reset addOpt with new attribute set.
-				*addOpt = append((*addOpt)[:0], mOpt)
-
-				e.spanExportedMetric.Inst().Add(
-					ctx,
-					count-success,
-					*addOpt...,
-				)
+				e.spanExportedMetric.AddSet(ctx, count-success, set)
 			}
 
-			recordOpt := recordOptPool.Get().(*[]metric.RecordOption)
-			defer func() {
-				*recordOpt = (*recordOpt)[:0]
-				recordOptPool.Put(recordOpt)
-			}()
-
-			*recordOpt = append(*recordOpt, mOpt)
-			e.operationDurationMetric.Inst().Record(
-				ctx,
-				time.Since(starting).Seconds(),
-				*recordOpt...,
-			)
+			e.operationDurationMetric.RecordSet(ctx, time.Since(starting).Seconds(), set)
 		}(time.Now())
 	}
 
