@@ -8,7 +8,7 @@
 //
 // This package is used to generate unique IDs while allowing testing packages
 // to reset the counter.
-package counter // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
+package counter // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
 
 import (
 	"sync/atomic"
