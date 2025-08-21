@@ -1,7 +1,7 @@
 # Experimental Features
 
-The Trace SDK contains features that have not yet stabilized in the OpenTelemetry specification.
-These features are added to the OpenTelemetry Go Trace SDK prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
+The `stdouttrace` exporter contains features that have not yet stabilized in the OpenTelemetry specification.
+These features are added to the `stdouttrace` exporter prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
 
 These features may change in backwards incompatible ways as feedback is applied.
 See the [Compatibility and Stability](#compatibility-and-stability) section for more information.
@@ -12,14 +12,15 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ### Self-Observability
 
-The SDK provides a self-observability feature that allows you to monitor the SDK itself.
+The `stdouttrace` exporter provides a self-observability feature that allows you to monitor the SDK itself.
 
 To opt-in, set the environment variable `OTEL_GO_X_SELF_OBSERVABILITY` to `true`.
 
 When enabled, the SDK will create the following metrics using the global `MeterProvider`:
 
-- `otel.sdk.span.live`
-- `otel.sdk.span.started`
+- `otel.sdk.exporter.span.inflight`
+- `otel.sdk.exporter.span.exported`
+- `otel.sdk.exporter.operation.duration`
 
 Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
 
@@ -27,7 +28,7 @@ Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentatio
 
 ## Compatibility and Stability
 
-Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../VERSIONING.md).
+Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../../VERSIONING.md).
 These features may be removed or modified in successive version releases, including patch versions.
 
 When an experimental feature is promoted to a stable feature, a migration path will be included in the changelog entry of the release.

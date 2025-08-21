@@ -161,7 +161,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 }
 
-func (ts testSampler) Description() string {
+func (testSampler) Description() string {
 	return "testSampler"
 }
 
@@ -1799,7 +1799,7 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: decision, Tracestate: ts}
 }
 
-func (s stateSampler) Description() string {
+func (stateSampler) Description() string {
 	return "stateSampler"
 }
 
@@ -2682,7 +2682,8 @@ func TestSelfObservability(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(prev)
+			t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
@@ -2708,7 +2709,7 @@ func RecordingOnly() Sampler {
 type recordOnlySampler struct{}
 
 // ShouldSample implements Sampler interface. It always returns Record but not Sample.
-func (s recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	return SamplingResult{
 		Decision:   RecordOnly,

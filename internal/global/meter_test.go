@@ -442,7 +442,7 @@ type failingRegisterCallbackMeter struct {
 	noop.Meter
 }
 
-func (m *failingRegisterCallbackMeter) RegisterCallback(
+func (*failingRegisterCallbackMeter) RegisterCallback(
 	metric.Callback,
 	...metric.Observable,
 ) (metric.Registration, error) {

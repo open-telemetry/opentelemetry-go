@@ -25,21 +25,21 @@ var (
 type CPUModeAttr string
 
 var (
-	// CPUModeUser is the none.
+	// CPUModeUser is the standardized value "user" of CPUModeAttr.
 	CPUModeUser CPUModeAttr = "user"
-	// CPUModeSystem is the none.
+	// CPUModeSystem is the standardized value "system" of CPUModeAttr.
 	CPUModeSystem CPUModeAttr = "system"
-	// CPUModeNice is the none.
+	// CPUModeNice is the standardized value "nice" of CPUModeAttr.
 	CPUModeNice CPUModeAttr = "nice"
-	// CPUModeIdle is the none.
+	// CPUModeIdle is the standardized value "idle" of CPUModeAttr.
 	CPUModeIdle CPUModeAttr = "idle"
-	// CPUModeIOWait is the none.
+	// CPUModeIOWait is the standardized value "iowait" of CPUModeAttr.
 	CPUModeIOWait CPUModeAttr = "iowait"
-	// CPUModeInterrupt is the none.
+	// CPUModeInterrupt is the standardized value "interrupt" of CPUModeAttr.
 	CPUModeInterrupt CPUModeAttr = "interrupt"
-	// CPUModeSteal is the none.
+	// CPUModeSteal is the standardized value "steal" of CPUModeAttr.
 	CPUModeSteal CPUModeAttr = "steal"
-	// CPUModeKernel is the none.
+	// CPUModeKernel is the standardized value "kernel" of CPUModeAttr.
 	CPUModeKernel CPUModeAttr = "kernel"
 )
 
@@ -48,9 +48,10 @@ var (
 type DiskIODirectionAttr string
 
 var (
-	// DiskIODirectionRead is the none.
+	// DiskIODirectionRead is the standardized value "read" of DiskIODirectionAttr.
 	DiskIODirectionRead DiskIODirectionAttr = "read"
-	// DiskIODirectionWrite is the none.
+	// DiskIODirectionWrite is the standardized value "write" of
+	// DiskIODirectionAttr.
 	DiskIODirectionWrite DiskIODirectionAttr = "write"
 )
 
@@ -59,9 +60,11 @@ var (
 type NetworkIODirectionAttr string
 
 var (
-	// NetworkIODirectionTransmit is the none.
+	// NetworkIODirectionTransmit is the standardized value "transmit" of
+	// NetworkIODirectionAttr.
 	NetworkIODirectionTransmit NetworkIODirectionAttr = "transmit"
-	// NetworkIODirectionReceive is the none.
+	// NetworkIODirectionReceive is the standardized value "receive" of
+	// NetworkIODirectionAttr.
 	NetworkIODirectionReceive NetworkIODirectionAttr = "receive"
 )
 
