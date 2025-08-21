@@ -137,7 +137,7 @@ func TraceIDFromHex(h string) (TraceID, error) {
 		invalidMark |= hexRev[h[i]] | hexRev[h[i+1]] | hexRev[h[i+2]] | hexRev[h[i+3]]
 	}
 	// If the upper 4 bits of any byte are not zero, there was an invalid hex
-	// character since invalid hex characters are 0xff in hexLU.
+	// character since invalid hex characters are 0xff in hexRev.
 	if invalidMark&0xf0 != 0 {
 		return [16]byte{}, errInvalidHexID
 	}
@@ -163,7 +163,7 @@ func SpanIDFromHex(h string) (SpanID, error) {
 		invalidMark |= hexRev[h[i]] | hexRev[h[i+1]] | hexRev[h[i+2]] | hexRev[h[i+3]]
 	}
 	// If the upper 4 bits of any byte are not zero, there was an invalid hex
-	// character since invalid hex characters are 0xff in hexLU.
+	// character since invalid hex characters are 0xff in hexRev.
 	if invalidMark&0xf0 != 0 {
 		return [8]byte{}, errInvalidHexID
 	}
