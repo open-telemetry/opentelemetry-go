@@ -25,8 +25,8 @@ type CPUModeAttr string
 var (
 	// CPUModeUser is the standardized value "user" of CPUModeAttr.
 	CPUModeUser CPUModeAttr = "user"
-	// CPUMode is the standardized value "system" of CPUModeAttr.
-	CPUMode CPUModeAttr = "system"
+	// CPUModeSystem is the standardized value "system" of CPUModeAttr.
+	CPUModeSystem CPUModeAttr = "system"
 	// CPUModeNice is the standardized value "nice" of CPUModeAttr.
 	CPUModeNice CPUModeAttr = "nice"
 	// CPUModeIdle is the standardized value "idle" of CPUModeAttr.
