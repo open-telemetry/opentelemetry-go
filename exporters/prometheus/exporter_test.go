@@ -1895,12 +1895,3 @@ func TestEscapingErrorHandling(t *testing.T) {
 		})
 	}
 }
-
-// // withAllowUTF8 allows setting whether UTF-8 names should be allowed through
-// // unedited, or escaped to underscores.
-// func withAllowUTF8(allow bool) Option {
-// 	return optionFunc(func(cfg config) config {
-// 		cfg.allowUTF8 = allow
-// 		return cfg
-// 	})
-// }
