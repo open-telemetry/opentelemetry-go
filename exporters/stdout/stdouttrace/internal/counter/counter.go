@@ -10,9 +10,7 @@
 // to reset the counter.
 package counter // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
 
-import (
-	"sync/atomic"
-)
+import "sync/atomic"
 
 // exporterN is a global 0-based count of the number of exporters created.
 var exporterN atomic.Int64
