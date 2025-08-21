@@ -1983,9 +1983,8 @@ func TestWithIDGenerator(t *testing.T) {
 
 func TestIDsRoundTrip(t *testing.T) {
 	gen := defaultIDGenerator()
-	n := 1000
 
-	for i := 0; i < n; i++ {
+	for range 1000 {
 		traceID, spanID := gen.NewIDs(context.Background())
 		gotTraceID, err := trace.TraceIDFromHex(traceID.String())
 		assert.NoError(t, err)
@@ -2004,13 +2003,6 @@ func TestIDConversionErrors(t *testing.T) {
 		spanIDError  string
 		traceIDError string
 	}{
-		{
-			name:         "valid ids",
-			spanIDStr:    sid.String(),
-			traceIDStr:   tid.String(),
-			spanIDError:  "",
-			traceIDError: "",
-		},
 		{
 			name:         "slightly too long",
 			spanIDStr:    sid.String() + "0",
@@ -2049,17 +2041,9 @@ func TestIDConversionErrors(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := trace.SpanIDFromHex(tt.spanIDStr)
-			if tt.spanIDError == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.ErrorContains(t, err, tt.spanIDError)
-			}
+			assert.ErrorContains(t, err, tt.spanIDError)
 			_, err = trace.TraceIDFromHex(tt.traceIDStr)
-			if tt.traceIDError == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.ErrorContains(t, err, tt.traceIDError)
-			}
+			assert.ErrorContains(t, err, tt.traceIDError)
 		})
 	}
 }
