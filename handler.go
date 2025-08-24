@@ -7,9 +7,6 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 )
 
-// Compile-time check global.ErrDelegator implements ErrorHandler.
-var _ ErrorHandler = (*global.ErrDelegator)(nil)
-
 // GetErrorHandler returns the global ErrorHandler instance.
 //
 // The default ErrorHandler instance returned will log all errors to STDERR
