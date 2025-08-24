@@ -120,7 +120,8 @@ func SpanIDFromHex(h string) (SpanID, error) {
 }
 
 func decodeHex(h string, b []byte) error {
-	for _, r := range h {
+	for i := 0; i < len(h); i++ {
+		r := h[i]
 		switch {
 		case 'a' <= r && r <= 'f':
 			continue
