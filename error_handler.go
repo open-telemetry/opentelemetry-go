@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package otel // import "go.opentelemetry.io/otel"
+
 import "go.opentelemetry.io/otel/internal/global"
 
 // ErrorHandler handles irremediable events.
