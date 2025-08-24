@@ -115,6 +115,11 @@ func (m {{ name }}) Add(
 	incr {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+	if len(attrs) == 0 {
+		m.{{ inst }}.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -132,7 +137,7 @@ func (m {{ name }}) Add(
 
 {%- macro add_method(metric, inst, pkg="") -%}
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 {%- if metric.attributes is not none and metric.attributes | length > 0 %}
 {{ params_docs(metric.attributes, pkg=pkg) }}
 {%- if metric.note is defined %}
@@ -163,6 +168,30 @@ func (m {{ h.to_go_name(metric.metric_name, pkg) }}) Add(ctx context.Context, in
 {%- endif -%}
 {%- endmacro -%}
 
+{%- macro add_set_method(metric, inst, pkg="") -%}
+
+// AddSet adds incr to the existing count for set.
+{%- if metric.note is defined %}
+//
+{{ metric.note | comment }}
+{%- endif %}
+func (m {{ h.to_go_name(metric.metric_name, pkg) }}) AddSet(ctx context.Context, incr {{ value_type(metric) | lower }}, set attribute.Set) {
+	if set.Len() == 0 {
+		m.{{ inst }}.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
+	m.{{ inst }}.Add(ctx, incr, *o...)
+}
+{%- endmacro -%}
+
 {%- macro record_method_with_optional(metric, inst, pkg="") -%}
 {%- set name = h.to_go_name(metric.metric_name, pkg) -%}
 {%- set req_attr = metric.attributes | required | attribute_sort -%}
@@ -171,6 +200,11 @@ func (m {{ name }}) Record(
 	val {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+	if len(attrs) == 0 {
+		m.{{ inst }}.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -188,7 +222,7 @@ func (m {{ name }}) Record(
 
 {%- macro record_method(metric, inst, pkg="") -%}
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 {%- if metric.attributes is not none and metric.attributes | length > 0 %}
 {{ params_docs(metric.attributes, pkg=pkg) }}
 {%- if metric.note is defined %}
@@ -205,6 +239,7 @@ func (m {{ name }}) Record(
 func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.{{ inst }}.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -217,6 +252,30 @@ func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lowe
 	m.{{ inst }}.Record(ctx, val, *o...)
 }
 {%- endif -%}
+{%- endmacro -%}
+
+{%- macro record_set_method(metric, inst, pkg="") -%}
+{%- set name = h.to_go_name(metric.metric_name, pkg) -%}
+
+// RecordSet records val to the current distribution for set.
+{%- if metric.note is defined %}
+//
+{{ metric.note | comment }}
+{%- endif %}
+func (m {{ name }}) RecordSet(ctx context.Context, val {{ value_type(metric) | lower }}, set attribute.Set) {
+	if set.Len() == 0 {
+		m.{{ inst }}.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
+	m.{{ inst }}.Record(ctx, val, *o...)
+}
 {%- endmacro -%}
 
 {%- macro desc(metric) -%}

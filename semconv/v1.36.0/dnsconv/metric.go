@@ -78,7 +78,7 @@ func (LookupDuration) Description() string {
 	return "Measures the time taken to perform a DNS lookup."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The questionName is the the name being queried.
 //
@@ -89,6 +89,11 @@ func (m LookupDuration) Record(
 	questionName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -105,6 +110,22 @@ func (m LookupDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m LookupDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 

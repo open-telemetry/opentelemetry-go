@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MrAlias/bind"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
@@ -51,10 +53,10 @@ func New(options ...Option) (*Exporter, error) {
 	}
 
 	exporter.selfObservabilityEnabled = true
-	exporter.selfObservabilityAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
-		semconv.OTelComponentTypeKey.String(otelComponentType),
-	}
+
+	name := fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())
+	cmpnt := semconv.OTelComponentName(name)
+	cmpntT := semconv.OTelComponentTypeKey.String(otelComponentType)
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -63,18 +65,35 @@ func New(options ...Option) (*Exporter, error) {
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
-	var err, e error
-	if exporter.spanInflightMetric, e = otelconv.NewSDKExporterSpanInflight(m); e != nil {
+	var err error
+	if i, e := otelconv.NewSDKExporterSpanInflight(m); e != nil {
 		e = fmt.Errorf("failed to create span inflight metric: %w", e)
 		err = errors.Join(err, e)
+	} else {
+		bound := bind.Int64UpDownCounter(i.Inst(), cmpnt, cmpntT)
+		exporter.spanInflightMetric = otelconv.SDKExporterSpanInflight{
+			Int64UpDownCounter: bound,
+		}
 	}
-	if exporter.spanExportedMetric, e = otelconv.NewSDKExporterSpanExported(m); e != nil {
+
+	if i, e := otelconv.NewSDKExporterSpanExported(m); e != nil {
 		e = fmt.Errorf("failed to create span exported metric: %w", e)
 		err = errors.Join(err, e)
+	} else {
+		bound := bind.Int64Counter(i.Inst(), cmpnt, cmpntT)
+		exporter.spanExportedMetric = otelconv.SDKExporterSpanExported{
+			Int64Counter: bound,
+		}
 	}
-	if exporter.operationDurationMetric, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+
+	if i, e := otelconv.NewSDKExporterOperationDuration(m); e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
 		err = errors.Join(err, e)
+	} else {
+		bound := bind.Float64Histogram(i.Inst(), cmpnt, cmpntT)
+		exporter.operationDurationMetric = otelconv.SDKExporterOperationDuration{
+			Float64Histogram: bound,
+		}
 	}
 
 	return exporter, err
@@ -90,7 +109,6 @@ type Exporter struct {
 	stopped   bool
 
 	selfObservabilityEnabled bool
-	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
 	spanInflightMetric       otelconv.SDKExporterSpanInflight
 	spanExportedMetric       otelconv.SDKExporterSpanExported
 	operationDurationMetric  otelconv.SDKExporterOperationDuration
@@ -98,8 +116,8 @@ type Exporter struct {
 
 var measureAttrsPool = sync.Pool{
 	New: func() any {
-		// "component.name" + "component.type" + "error.type"
-		const n = 1 + 1 + 1
+		// "error.type"
+		const n = 1
 		s := make([]attribute.KeyValue, 0, n)
 		// Return a pointer to a slice instead of a slice itself
 		// to avoid allocations on every call.
@@ -113,17 +131,17 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 	if e.selfObservabilityEnabled {
 		count := int64(len(spans))
 
-		e.spanInflightMetric.Add(ctx, count, e.selfObservabilityAttrs...)
+		e.spanInflightMetric.Add(ctx, count)
 		defer func(starting time.Time) {
-			e.spanInflightMetric.Add(ctx, -count, e.selfObservabilityAttrs...)
+			e.spanInflightMetric.Add(ctx, -count)
 
 			// Record the success and duration of the operation.
 			//
 			// Do not exclude 0 values, as they are valid and indicate no spans
 			// were exported which is meaningful for certain aggregations.
-			e.spanExportedMetric.Add(ctx, success, e.selfObservabilityAttrs...)
+			e.spanExportedMetric.Add(ctx, success)
 
-			attr := e.selfObservabilityAttrs
+			set := *attribute.EmptySet()
 			if err != nil {
 				// additional attributes for self-observability,
 				// only spanExportedMetric and operationDurationMetric are supported.
@@ -132,14 +150,13 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 					*attrs = (*attrs)[:0] // reset the slice for reuse
 					measureAttrsPool.Put(attrs)
 				}()
-				*attrs = append(*attrs, e.selfObservabilityAttrs...)
 				*attrs = append(*attrs, semconv.ErrorType(err))
-				attr = *attrs
+				set = attribute.NewSet(*attrs...)
 
-				e.spanExportedMetric.Add(ctx, count-success, attr...)
+				e.spanExportedMetric.AddSet(ctx, count-success, set)
 			}
 
-			e.operationDurationMetric.Record(ctx, time.Since(starting).Seconds(), attr...)
+			e.operationDurationMetric.RecordSet(ctx, time.Since(starting).Seconds(), set)
 		}(time.Now())
 	}
 

@@ -669,7 +669,6 @@ func TestSelfObservabilityInstrumentErrors(t *testing.T) {
 }
 
 func BenchmarkExporterExportSpans(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 	ss := tracetest.SpanStubs{
 		{Name: "/foo"},
 		{
@@ -678,15 +677,25 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		},
 		{Name: "/bar"},
 	}.Snapshots()
-	ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard))
-	if err != nil {
-		b.Fatalf("failed to create exporter: %v", err)
+
+	run := func(b *testing.B) {
+		ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard))
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err = ex.ExportSpans(context.Background(), ss)
+		}
+		_ = err
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err = ex.ExportSpans(context.Background(), ss)
-	}
-	_ = err
+	b.Run("SelfObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
 }
