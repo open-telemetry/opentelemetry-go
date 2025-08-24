@@ -301,7 +301,7 @@ func newExponentialHistogram[N int64 | float64](
 		maxScale: maxScale,
 
 		newRes: r,
-		limit:  newLimiter[*expoHistogramDataPoint[N]](limit),
+		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
 		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
 
 		start: now(),
@@ -317,9 +317,9 @@ type expoHistogram[N int64 | float64] struct {
 	maxScale int32
 
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*expoHistogramDataPoint[N]]
+	limit    limiter[expoHistogramDataPoint[N]]
 	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
+	valuesMu sync.RWMutex
 
 	start time.Time
 }
@@ -335,18 +335,21 @@ func (e *expoHistogram[N]) measure(
 		return
 	}
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
+	e.valuesMu.RLock()
 	attr := e.limit.Attributes(fltrAttr, e.values)
 	v, ok := e.values[attr.Equivalent()]
+	e.valuesMu.RUnlock()
 	if !ok {
 		v = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 		v.res = e.newRes(attr)
 
+		e.valuesMu.Lock()
 		e.values[attr.Equivalent()] = v
+		e.valuesMu.Unlock()
 	}
+	e.valuesMu.Lock()
 	v.record(value)
+	e.valuesMu.Unlock()
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
