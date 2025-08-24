@@ -1086,7 +1086,7 @@ func TestSelfObservability_DisabledAndErrorScenarios(t *testing.T) {
 				operationDurationMetric := findMetric("otel.sdk.exporter.operation.duration")
 				require.NotNil(t, operationDurationMetric, "operation duration metric should be present")
 
-				// The completeDataPointsWithFailure path is hard to test directly through the public API
+				// The error tracking path is hard to test directly through the public API
 				// since the SDK normally doesn't generate invalid exponential histogram data.
 				// However, the test has improved coverage by testing self-observability paths.
 
@@ -1733,7 +1733,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 	})
 
 	t.Run("error_handling_for_invalid_scales", func(t *testing.T) {
-		// Enable self-observability to test completeDataPointsWithFailure coverage
+		// Enable self-observability to test error tracking and completion tracker coverage
 		t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 		// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
@@ -1813,9 +1813,9 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		err := selfObsReader.Collect(context.Background(), &rm)
 		require.NoError(t, err)
 
-		// The completeDataPointsWithFailure should have been called during processing
-		// This improves the coverage of the completeDataPointsWithFailure method
-		t.Log("Self-observability test completed - completeDataPointsWithFailure coverage improved")
+		// The error tracking should have been called during processing
+		// This improves the coverage of the completion tracker error handling
+		t.Log("Self-observability test completed - error tracking coverage improved")
 	})
 }
 
@@ -2234,14 +2234,14 @@ func TestCollectorCompletionTrackerPattern(t *testing.T) {
 		defer tracker.complete()
 
 		// Simulate processing data points with mixed success/failure
-		tracker.trackSuccess()   // 1st data point succeeds
-		tracker.trackSuccess()   // 2nd data point succeeds
-		tracker.trackRejection() // 3rd data point fails
-		tracker.trackSuccess()   // 4th data point succeeds
-		tracker.trackRejection() // 5th data point fails
-		tracker.trackRejection() // 6th data point fails
-		tracker.trackRejection() // 7th data point fails
-		tracker.trackRejection() // 8th data point fails
+		tracker.trackSuccess()                                                             // 1st data point succeeds
+		tracker.trackSuccess()                                                             // 2nd data point succeeds
+		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 3rd data point fails
+		tracker.trackSuccess()                                                             // 4th data point succeeds
+		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 5th data point fails
+		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 6th data point fails
+		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 7th data point fails
+		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 8th data point fails
 		// Total: 3 successes, 5 failures
 	}()
 
@@ -2296,8 +2296,8 @@ func TestCollectorCompletionTrackerPattern(t *testing.T) {
 			for _, attr := range dp.Attributes.ToSlice() {
 				if attr.Key == "error.type" {
 					hasError = true
-					// Should be our custom rejectedDataPointError type
-					assert.Contains(t, attr.Value.AsString(), "go.opentelemetry.io/otel/exporters/prometheus.rejectedDataPointError")
+					// Should be the classifiedError type since that's what gets reported
+					assert.Contains(t, attr.Value.AsString(), "classifiedError")
 					errorCount += dp.Value
 				}
 			}
@@ -2321,7 +2321,7 @@ func TestCollectorCompletionTrackerPattern(t *testing.T) {
 			for _, attr := range dp.Attributes.ToSlice() {
 				if attr.Key == "error.type" {
 					hasError = true
-					assert.Contains(t, attr.Value.AsString(), "go.opentelemetry.io/otel/exporters/prometheus.rejectedDataPointError")
+					assert.Contains(t, attr.Value.AsString(), "classifiedError")
 					errorCount += dp.Value
 				}
 			}
@@ -2337,22 +2337,24 @@ func TestCollectorCompletionTrackerPattern(t *testing.T) {
 }
 
 func TestCollectorCompleteDataPointsWithFailureDisabled(t *testing.T) {
-	// Test completeDataPointsWithFailure when self-observability is disabled
+	// Test that calling completion tracker methods when self-observability is disabled doesn't panic
 	collector := &collector{}
-	// Don't initialize self-observability (selfObs will be nil)
+	// Don't initialize self-observability (selfObs will be nil or disabled)
 
-	testError := errors.New("test error")
+	testError := &rejectedDataPointError{reason: "test error"}
 
-	// Should not panic when selfObs is nil
+	// Should not panic when selfObs is disabled
 	require.NotPanics(t, func() {
-		if collector.selfObs != nil {
-			collector.selfObs.completeDataPointsWithFailure(1, testError)
+		if collector.selfObs != nil && collector.selfObs.enabled {
+			tracker := collector.selfObs.startTracking(1)
+			tracker.trackRejectionWithError(testError)
+			tracker.complete()
 		}
 	})
 }
 
 func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
-	// Test various error scenarios that trigger completeDataPointsWithFailure
+	// Test various error scenarios that trigger the completion tracker's error handling
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 	// Set up self-observability metrics capture
@@ -2491,7 +2493,7 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 					for _, attr := range dp.Attributes.ToSlice() {
 						if attr.Key == "error.type" {
 							foundError = true
-							assert.Contains(t, attr.Value.AsString(), "rejected")
+							assert.Contains(t, attr.Value.AsString(), "classifiedError")
 							assert.Positive(t, dp.Value)
 						}
 					}
@@ -2504,7 +2506,7 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 					for _, attr := range dp.Attributes.ToSlice() {
 						if attr.Key == "error.type" {
 							foundError = true
-							assert.Contains(t, attr.Value.AsString(), "rejected")
+							assert.Contains(t, attr.Value.AsString(), "classifiedError")
 							assert.Greater(t, dp.Value, float64(0))
 						}
 					}

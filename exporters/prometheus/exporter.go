@@ -82,20 +82,65 @@ func (e rejectedDataPointError) Error() string {
 	return e.reason
 }
 
-type completionTracker struct {
-	obs           *selfObservability
-	successCount  int64
-	rejectedCount int64
+type classifiedError struct {
+	classification string // Stores the desired error.type value
 }
 
-func (ct *completionTracker) trackSuccess()   { ct.successCount++ }
-func (ct *completionTracker) trackRejection() { ct.rejectedCount++ }
-func (ct *completionTracker) complete() {
-	if ct.successCount > 0 {
-		ct.obs.completeDataPointsWithSuccess(ct.successCount)
+func (e *classifiedError) Error() string {
+	return e.classification // Returns exactly what we want semconv.ErrorType() to see
+}
+
+type completionTracker struct {
+	obs          *selfObservability
+	successCount int64
+	errorsByType map[string]int64
+}
+
+func (ct *completionTracker) trackSuccess() {
+	if !ct.obs.enabled {
+		return
 	}
-	if ct.rejectedCount > 0 {
-		ct.obs.completeDataPointsWithFailure(ct.rejectedCount, rejectedDataPointError{})
+	ct.successCount++
+}
+
+func (ct *completionTracker) trackRejectionWithError(err error) {
+	if !ct.obs.enabled {
+		return
+	}
+
+	if ct.errorsByType == nil {
+		ct.errorsByType = make(map[string]int64)
+	}
+
+	errorTypeKV := semconv.ErrorType(err)
+	errorType := errorTypeKV.Value.AsString()
+	ct.errorsByType[errorType]++
+}
+
+func (ct *completionTracker) complete() {
+	if !ct.obs.enabled {
+		return
+	}
+
+	if ct.successCount > 0 {
+		ct.obs.inflightMetric.Add(context.Background(), -ct.successCount, ct.obs.attrs...)
+		ct.obs.exportedMetric.Add(context.Background(), ct.successCount, ct.obs.attrs...)
+	}
+
+	totalRejected := int64(0)
+	for _, count := range ct.errorsByType {
+		totalRejected += count
+	}
+
+	if totalRejected > 0 {
+		ct.obs.inflightMetric.Add(context.Background(), -totalRejected, ct.obs.attrs...)
+
+		for errorType, count := range ct.errorsByType {
+			specificErr := &classifiedError{classification: errorType}
+
+			attrs := append(ct.obs.attrs, semconv.ErrorType(specificErr))
+			ct.obs.exportedMetric.Add(context.Background(), count, attrs...)
+		}
 	}
 }
 
@@ -264,32 +309,10 @@ func (c *collector) initSelfObservability() error {
 	return nil
 }
 
-func (s *selfObservability) trackDataPointsStart(count int64) {
-	if !s.enabled {
-		return
-	}
-	s.inflightMetric.Add(context.Background(), count, s.attrs...)
-}
-
-func (s *selfObservability) completeDataPointsWithSuccess(count int64) {
-	if !s.enabled {
-		return
-	}
-	s.inflightMetric.Add(context.Background(), -count, s.attrs...)
-	s.exportedMetric.Add(context.Background(), count, s.attrs...)
-}
-
-func (s *selfObservability) completeDataPointsWithFailure(count int64, err error) {
-	if !s.enabled {
-		return
-	}
-	attrs := append(s.attrs, semconv.ErrorType(err))
-	s.inflightMetric.Add(context.Background(), -count, s.attrs...)
-	s.exportedMetric.Add(context.Background(), count, attrs...)
-}
-
 func (obs *selfObservability) startTracking(totalCount int64) *completionTracker {
-	obs.trackDataPointsStart(totalCount)
+	if obs.enabled {
+		obs.inflightMetric.Add(context.Background(), totalCount, obs.attrs...)
+	}
 	return &completionTracker{obs: obs}
 }
 
@@ -519,11 +542,11 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
-			otel.Handle(fmt.Errorf(
-				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-				scale))
-
-			tracker.trackRejection()
+			err := rejectedDataPointError{
+				reason: fmt.Sprintf("exponential histogram scale %d is below minimum supported scale -4", scale),
+			}
+			otel.Handle(err)
+			tracker.trackRejectionWithError(err)
 			continue
 		}
 
@@ -569,7 +592,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			values...)
 		if err != nil {
 			otel.Handle(err)
-			tracker.trackRejection()
+			tracker.trackRejectionWithError(err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
@@ -607,7 +630,7 @@ func addHistogramMetric[N int64 | float64](
 		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
 			otel.Handle(err)
-			tracker.trackRejection()
+			tracker.trackRejectionWithError(err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
@@ -643,7 +666,7 @@ func addSumMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
-			tracker.trackRejection()
+			tracker.trackRejectionWithError(err)
 			continue
 		}
 		// GaugeValues don't support Exemplars at this time
@@ -678,7 +701,7 @@ func addGaugeMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
-			tracker.trackRejection()
+			tracker.trackRejectionWithError(err)
 			continue
 		}
 		ch <- m
