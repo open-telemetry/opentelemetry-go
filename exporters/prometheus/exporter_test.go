@@ -6,9 +6,9 @@ package prometheus
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -718,22 +718,51 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 				exportedMetric := findMetric("otel.sdk.exporter.metric_data_point.exported")
 				require.NotNil(t, exportedMetric, "missing metric otel.sdk.exporter.metric_data_point.exported")
 
+				// Also verify common self-observability attributes are attached
+				typeAttrFound := false
+				nameAttrFound := false
+				nameAttrHasPrefix := false
+
 				switch data := exportedMetric.Data.(type) {
 				case metricdata.Sum[int64]:
 					var total int64
 					for _, dp := range data.DataPoints {
 						total += dp.Value
+						for _, attr := range dp.Attributes.ToSlice() {
+							if attr.Key == semconv.OTelComponentTypeKey {
+								typeAttrFound = true
+								assert.Equal(t, otelComponentType, attr.Value.AsString())
+							}
+							if attr.Key == semconv.OTelComponentNameKey {
+								nameAttrFound = true
+								nameAttrHasPrefix = strings.HasPrefix(attr.Value.AsString(), otelComponentType+"/")
+							}
+						}
 					}
 					assert.Equal(t, int64(4), total)
 				case metricdata.Sum[float64]:
 					var total float64
 					for _, dp := range data.DataPoints {
 						total += dp.Value
+						for _, attr := range dp.Attributes.ToSlice() {
+							if attr.Key == semconv.OTelComponentTypeKey {
+								typeAttrFound = true
+								assert.Equal(t, otelComponentType, attr.Value.AsString())
+							}
+							if attr.Key == semconv.OTelComponentNameKey {
+								nameAttrFound = true
+								nameAttrHasPrefix = strings.HasPrefix(attr.Value.AsString(), otelComponentType+"/")
+							}
+						}
 					}
 					assert.InDelta(t, 4.0, total, 0.0001)
 				default:
 					t.Fatalf("unexpected data type for exported metric: %T", data)
 				}
+
+				assert.True(t, typeAttrFound, "expected otel.component.type attribute on self-observability metrics")
+				assert.True(t, nameAttrFound, "expected otel.component.name attribute on self-observability metrics")
+				assert.True(t, nameAttrHasPrefix, "expected otel.component.name to have '<type>/' prefix")
 
 				// Test inflight data points metric (should be 0 after scrape completion)
 				inflightMetric := findMetric("otel.sdk.exporter.metric_data_point.inflight")
@@ -1057,7 +1086,7 @@ func TestSelfObservability_DisabledAndErrorScenarios(t *testing.T) {
 				operationDurationMetric := findMetric("otel.sdk.exporter.operation.duration")
 				require.NotNil(t, operationDurationMetric, "operation duration metric should be present")
 
-				// The trackDataPointFailure path is hard to test directly through the public API
+				// The completeDataPointsWithFailure path is hard to test directly through the public API
 				// since the SDK normally doesn't generate invalid exponential histogram data.
 				// However, the test has improved coverage by testing self-observability paths.
 
@@ -1090,7 +1119,7 @@ func TestSelfObservability_DisabledAndErrorScenarios(t *testing.T) {
 				_, err = registry.Gather()
 				require.NoError(t, err)
 
-				// This tests the c.selfObs == nil code paths in trackDataPoint* methods
+				// This tests the c.selfObs == nil code paths in trackDataPoints* methods
 			},
 		},
 	}
@@ -1704,7 +1733,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 	})
 
 	t.Run("error_handling_for_invalid_scales", func(t *testing.T) {
-		// Enable self-observability to test trackDataPointFailure coverage
+		// Enable self-observability to test completeDataPointsWithFailure coverage
 		t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 		// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
@@ -1758,7 +1787,8 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 
 		// Create collector with self-observability enabled
 		collector := &collector{}
-		collector.initSelfObservability()
+		initErr := collector.initSelfObservability()
+		require.NoError(t, initErr)
 
 		addExponentialHistogramMetric(
 			ch,
@@ -1767,7 +1797,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			"test_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			collector, // Use collector with self-observability
+			collector.selfObs, // Use the selfObservability instance from collector
 		)
 		assert.Error(t, capturedError)
 		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
@@ -1783,9 +1813,9 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		err := selfObsReader.Collect(context.Background(), &rm)
 		require.NoError(t, err)
 
-		// The trackDataPointFailure should have been called during processing
-		// This improves the coverage of the trackDataPointFailure method
-		t.Log("Self-observability test completed - trackDataPointFailure coverage improved")
+		// The completeDataPointsWithFailure should have been called during processing
+		// This improves the coverage of the completeDataPointsWithFailure method
+		t.Log("Self-observability test completed - completeDataPointsWithFailure coverage improved")
 	})
 }
 
@@ -1941,7 +1971,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_high_scale_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&collector{}, // Add empty collector for unit test
+			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2004,7 +2034,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_very_high_scale_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&collector{}, // Add empty collector for unit test
+			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2067,7 +2097,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_histogram_with_negative_buckets",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&collector{}, // Add empty collector for unit test
+			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2124,7 +2154,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_int64_exponential_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&collector{}, // Add empty collector for unit test
+			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2177,8 +2207,8 @@ func TestDownscaleExponentialBucketEdgeCases(t *testing.T) {
 	})
 }
 
-func TestCollectorTrackDataPointFailure(t *testing.T) {
-	// Test the modified trackDataPointFailure function with self-observability
+func TestCollectorCompletionTrackerPattern(t *testing.T) {
+	// Test the new defer-based completion tracking pattern
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 	// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
@@ -2192,25 +2222,28 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 
 	// Create collector with self-observability enabled
 	collector := &collector{}
-	collector.initSelfObservability()
+	initErr := collector.initSelfObservability()
+	require.NoError(t, initErr)
 
 	ctx := context.Background()
 
-	// Test trackDataPointFailure with different error types
-	testError1 := errors.New("validation error")
-	testError2 := fmt.Errorf("connection error: %s", "timeout")
+	// Test the new defer pattern with completionTracker
+	func() {
+		// Simulate processing 8 data points using the new pattern
+		tracker := collector.selfObs.startTracking(8)
+		defer tracker.complete()
 
-	// First add some inflight metrics
-	collector.trackDataPointStart()
-	collector.trackDataPointStart()
-	collector.trackDataPointStart()
-
-	// Now track failures
-	collector.trackDataPointFailure(testError1)
-	collector.trackDataPointFailure(testError2)
-
-	// Add one successful completion
-	collector.trackDataPointSuccess()
+		// Simulate processing data points with mixed success/failure
+		tracker.trackSuccess()   // 1st data point succeeds
+		tracker.trackSuccess()   // 2nd data point succeeds
+		tracker.trackRejection() // 3rd data point fails
+		tracker.trackSuccess()   // 4th data point succeeds
+		tracker.trackRejection() // 5th data point fails
+		tracker.trackRejection() // 6th data point fails
+		tracker.trackRejection() // 7th data point fails
+		tracker.trackRejection() // 8th data point fails
+		// Total: 3 successes, 5 failures
+	}()
 
 	// Collect self-observability metrics
 	var rm metricdata.ResourceMetrics
@@ -2238,13 +2271,13 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 		for _, dp := range data.DataPoints {
 			totalInflight += dp.Value
 		}
-		assert.Equal(t, int64(0), totalInflight, "Expected 0 inflight metrics (3 started - 2 failed - 1 succeeded)")
+		assert.Equal(t, int64(0), totalInflight, "Expected 0 inflight metrics (8 started - 5 failed - 3 succeeded)")
 	case metricdata.Sum[float64]:
 		totalInflight := float64(0)
 		for _, dp := range data.DataPoints {
 			totalInflight += dp.Value
 		}
-		assert.InDelta(t, 0.0, totalInflight, 0.001, "Expected 0 inflight metrics")
+		assert.InDelta(t, 0.0, totalInflight, 0.001, "Expected 0 inflight metrics (8 started - 5 failed - 3 succeeded)")
 	}
 
 	// Verify exported metric contains both successful and failed exports
@@ -2263,8 +2296,8 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 			for _, attr := range dp.Attributes.ToSlice() {
 				if attr.Key == "error.type" {
 					hasError = true
-					// Should be Go error type
-					assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+					// Should be our custom rejectedDataPointError type
+					assert.Contains(t, attr.Value.AsString(), "go.opentelemetry.io/otel/exporters/prometheus.rejectedDataPointError")
 					errorCount += dp.Value
 				}
 			}
@@ -2273,9 +2306,9 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, int64(3), totalExported, "Expected 3 total exported (2 failed + 1 succeeded)")
-		assert.Equal(t, int64(2), errorCount, "Expected 2 failed exports")
-		assert.Equal(t, int64(1), successCount, "Expected 1 successful export")
+		assert.Equal(t, int64(8), totalExported, "Expected 8 total exported (5 failed + 3 succeeded)")
+		assert.Equal(t, int64(5), errorCount, "Expected 5 failed exports")
+		assert.Equal(t, int64(3), successCount, "Expected 3 successful exports")
 
 	case metricdata.Sum[float64]:
 		totalExported := float64(0)
@@ -2288,7 +2321,7 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 			for _, attr := range dp.Attributes.ToSlice() {
 				if attr.Key == "error.type" {
 					hasError = true
-					assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+					assert.Contains(t, attr.Value.AsString(), "go.opentelemetry.io/otel/exporters/prometheus.rejectedDataPointError")
 					errorCount += dp.Value
 				}
 			}
@@ -2297,14 +2330,14 @@ func TestCollectorTrackDataPointFailure(t *testing.T) {
 			}
 		}
 
-		assert.InDelta(t, 3.0, totalExported, 0.001)
-		assert.InDelta(t, 2.0, errorCount, 0.001)
-		assert.InDelta(t, 1.0, successCount, 0.001)
+		assert.InDelta(t, 8.0, totalExported, 0.001, "Expected 8 total exported (5 failed + 3 succeeded)")
+		assert.InDelta(t, 5.0, errorCount, 0.001, "Expected 5 failed exports")
+		assert.InDelta(t, 3.0, successCount, 0.001, "Expected 3 successful exports")
 	}
 }
 
-func TestCollectorTrackDataPointFailureDisabled(t *testing.T) {
-	// Test trackDataPointFailure when self-observability is disabled
+func TestCollectorCompleteDataPointsWithFailureDisabled(t *testing.T) {
+	// Test completeDataPointsWithFailure when self-observability is disabled
 	collector := &collector{}
 	// Don't initialize self-observability (selfObs will be nil)
 
@@ -2312,12 +2345,14 @@ func TestCollectorTrackDataPointFailureDisabled(t *testing.T) {
 
 	// Should not panic when selfObs is nil
 	require.NotPanics(t, func() {
-		collector.trackDataPointFailure(testError)
+		if collector.selfObs != nil {
+			collector.selfObs.completeDataPointsWithFailure(1, testError)
+		}
 	})
 }
 
 func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
-	// Test various error scenarios that trigger trackDataPointFailure
+	// Test various error scenarios that trigger completeDataPointsWithFailure
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 	// Set up self-observability metrics capture
@@ -2405,7 +2440,8 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 
 			// Create collector with self-observability
 			collector := &collector{}
-			collector.initSelfObservability()
+			initErr := collector.initSelfObservability()
+			require.NoError(t, initErr)
 
 			// Create metrics channel
 			ch := make(chan prometheus.Metric, 10)
@@ -2421,7 +2457,7 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 					m.Name,
 					keyVals{},
 					otlptranslator.LabelNamer{},
-					collector,
+					collector.selfObs,
 				)
 			}
 
@@ -2455,7 +2491,7 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 					for _, attr := range dp.Attributes.ToSlice() {
 						if attr.Key == "error.type" {
 							foundError = true
-							assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+							assert.Contains(t, attr.Value.AsString(), "rejected")
 							assert.Positive(t, dp.Value)
 						}
 					}
@@ -2468,7 +2504,7 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 					for _, attr := range dp.Attributes.ToSlice() {
 						if attr.Key == "error.type" {
 							foundError = true
-							assert.Contains(t, attr.Value.AsString(), "errors.errorString")
+							assert.Contains(t, attr.Value.AsString(), "rejected")
 							assert.Greater(t, dp.Value, float64(0))
 						}
 					}
@@ -2477,4 +2513,44 @@ func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetPooledAttrs(t *testing.T) {
+	base := []attribute.KeyValue{attribute.String("foo", "bar")}
+
+	// Without error: should include only base attrs
+	vals, release := getPooledAttrs(base, nil)
+	require.NotNil(t, release)
+	require.GreaterOrEqual(t, len(vals), 1)
+
+	// Verify base attribute is present and error.type is not
+	hasFoo := false
+	hasErrorType := false
+	for _, kv := range vals {
+		if string(kv.Key) == "foo" && kv.Value.AsString() == "bar" {
+			hasFoo = true
+		}
+		if string(kv.Key) == "error.type" {
+			hasErrorType = true
+		}
+	}
+	assert.True(t, hasFoo, "expected base attribute present")
+	assert.False(t, hasErrorType, "did not expect error.type without error")
+	release()
+
+	// With error: should include error.type attribute
+	testErr := errors.New("boom")
+	vals2, release2 := getPooledAttrs(nil, testErr)
+	require.NotNil(t, release2)
+
+	hasErrorType = false
+	for _, kv := range vals2 {
+		if string(kv.Key) == "error.type" {
+			hasErrorType = true
+			// Value should contain the Go error type name
+			assert.Contains(t, kv.Value.AsString(), "errors.errorString")
+		}
+	}
+	assert.True(t, hasErrorType, "expected error.type attribute when error provided")
+	release2()
 }

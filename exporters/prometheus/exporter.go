@@ -52,6 +52,53 @@ var metricsPool = sync.Pool{
 	},
 }
 
+type attrSlice struct {
+	vals []attribute.KeyValue
+}
+
+var addAttrsPool = sync.Pool{
+	New: func() any {
+		return &attrSlice{vals: make([]attribute.KeyValue, 0, 8)}
+	},
+}
+
+type selfObservability struct {
+	enabled            bool
+	attrs              []attribute.KeyValue
+	inflightMetric     otelconv.SDKExporterMetricDataPointInflight
+	exportedMetric     otelconv.SDKExporterMetricDataPointExported
+	operationDuration  otelconv.SDKExporterOperationDuration
+	collectionDuration otelconv.SDKMetricReaderCollectionDuration
+}
+
+type rejectedDataPointError struct {
+	reason string
+}
+
+func (e rejectedDataPointError) Error() string {
+	if e.reason == "" {
+		return "rejected"
+	}
+	return e.reason
+}
+
+type completionTracker struct {
+	obs           *selfObservability
+	successCount  int64
+	rejectedCount int64
+}
+
+func (ct *completionTracker) trackSuccess()   { ct.successCount++ }
+func (ct *completionTracker) trackRejection() { ct.rejectedCount++ }
+func (ct *completionTracker) complete() {
+	if ct.successCount > 0 {
+		ct.obs.completeDataPointsWithSuccess(ct.successCount)
+	}
+	if ct.rejectedCount > 0 {
+		ct.obs.completeDataPointsWithFailure(ct.rejectedCount, rejectedDataPointError{})
+	}
+}
+
 var exporterIDCounter atomic.Int64
 
 // nextExporterID returns a new unique ID for an exporter.
@@ -112,12 +159,7 @@ type collector struct {
 	labelNamer        otlptranslator.LabelNamer
 	unitNamer         otlptranslator.UnitNamer
 
-	selfObservabilityEnabled bool
-	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
-	inflightMetric           otelconv.SDKExporterMetricDataPointInflight
-	exportedMetric           otelconv.SDKExporterMetricDataPointExported
-	operationDuration        otelconv.SDKExporterOperationDuration
-	collectionDuration       otelconv.SDKMetricReaderCollectionDuration
+	selfObs *selfObservability
 }
 
 // New returns a Prometheus Exporter.
@@ -164,18 +206,22 @@ func New(opts ...Option) (*Exporter, error) {
 		Reader: reader,
 	}
 
-	collector.initSelfObservability()
+	if err := collector.initSelfObservability(); err != nil {
+		return nil, fmt.Errorf("self-observability setup failed: %w", err)
+	}
 
 	return e, nil
 }
 
-func (c *collector) initSelfObservability() {
+func (c *collector) initSelfObservability() error {
+	c.selfObs = &selfObservability{enabled: false}
+
 	if !x.SelfObservability.Enabled() {
-		return
+		return nil
 	}
 
-	c.selfObservabilityEnabled = true
-	c.selfObservabilityAttrs = []attribute.KeyValue{
+	c.selfObs.enabled = true
+	c.selfObs.attrs = []attribute.KeyValue{
 		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())),
 		semconv.OTelComponentTypeKey.String(otelComponentType),
 	}
@@ -187,47 +233,74 @@ func (c *collector) initSelfObservability() {
 		otelmetric.WithSchemaURL(semconv.SchemaURL),
 	)
 
-	var err error
-	if c.inflightMetric, err = otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
-		otel.Handle(err)
+	var errs []error
+	if inflight, err := otelconv.NewSDKExporterMetricDataPointInflight(m); err != nil {
+		errs = append(errs, fmt.Errorf("inflightMetric: %w", err))
+	} else {
+		c.selfObs.inflightMetric = inflight
 	}
-	if c.exportedMetric, err = otelconv.NewSDKExporterMetricDataPointExported(m); err != nil {
-		otel.Handle(err)
+
+	if exported, err := otelconv.NewSDKExporterMetricDataPointExported(m); err != nil {
+		errs = append(errs, fmt.Errorf("exportedMetric: %w", err))
+	} else {
+		c.selfObs.exportedMetric = exported
 	}
-	if c.operationDuration, err = otelconv.NewSDKExporterOperationDuration(m); err != nil {
-		otel.Handle(err)
+
+	if opDur, err := otelconv.NewSDKExporterOperationDuration(m); err != nil {
+		errs = append(errs, fmt.Errorf("operationDuration: %w", err))
+	} else {
+		c.selfObs.operationDuration = opDur
 	}
-	if c.collectionDuration, err = otelconv.NewSDKMetricReaderCollectionDuration(m); err != nil {
-		otel.Handle(err)
+
+	if collDur, err := otelconv.NewSDKMetricReaderCollectionDuration(m); err != nil {
+		errs = append(errs, fmt.Errorf("collectionDuration: %w", err))
+	} else {
+		c.selfObs.collectionDuration = collDur
 	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
 }
 
-// Self-Observability tracking methods.
-func (c *collector) trackDataPointStart() {
-	if !c.selfObservabilityEnabled {
+func (s *selfObservability) trackDataPointsStart(count int64) {
+	if !s.enabled {
 		return
 	}
-
-	c.inflightMetric.Add(context.Background(), 1, c.selfObservabilityAttrs...)
+	s.inflightMetric.Add(context.Background(), count, s.attrs...)
 }
 
-func (c *collector) trackDataPointSuccess() {
-	if !c.selfObservabilityEnabled {
+func (s *selfObservability) completeDataPointsWithSuccess(count int64) {
+	if !s.enabled {
 		return
 	}
-
-	c.inflightMetric.Add(context.Background(), -1, c.selfObservabilityAttrs...)
-	c.exportedMetric.Add(context.Background(), 1, c.selfObservabilityAttrs...)
+	s.inflightMetric.Add(context.Background(), -count, s.attrs...)
+	s.exportedMetric.Add(context.Background(), count, s.attrs...)
 }
 
-func (c *collector) trackDataPointFailure(err error) {
-	if !c.selfObservabilityEnabled {
+func (s *selfObservability) completeDataPointsWithFailure(count int64, err error) {
+	if !s.enabled {
 		return
 	}
+	attrs := append(s.attrs, semconv.ErrorType(err))
+	s.inflightMetric.Add(context.Background(), -count, s.attrs...)
+	s.exportedMetric.Add(context.Background(), count, attrs...)
+}
 
-	attrs := append(c.selfObservabilityAttrs, semconv.ErrorType(err))
-	c.inflightMetric.Add(context.Background(), -1, c.selfObservabilityAttrs...)
-	c.exportedMetric.Add(context.Background(), 1, attrs...)
+func (obs *selfObservability) startTracking(totalCount int64) *completionTracker {
+	obs.trackDataPointsStart(totalCount)
+	return &completionTracker{obs: obs}
+}
+
+func getPooledAttrs(baseAttrs []attribute.KeyValue, err error) (vals []attribute.KeyValue, release func()) {
+	attrs := addAttrsPool.Get().(*attrSlice)
+	attrs.vals = attrs.vals[:0]
+	attrs.vals = append(attrs.vals, baseAttrs...)
+	if err != nil {
+		attrs.vals = append(attrs.vals, semconv.ErrorType(err))
+	}
+	return attrs.vals, func() { addAttrsPool.Put(attrs) }
 }
 
 // Describe implements prometheus.Collector.
@@ -245,31 +318,25 @@ func (*collector) Describe(chan<- *prometheus.Desc) {
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	var err error
 
-	if c.selfObservabilityEnabled {
+	if c.selfObs.enabled {
 		defer func(starting time.Time) {
-			addAttrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
-			copy(addAttrs, c.selfObservabilityAttrs)
-			if err != nil {
-				addAttrs = append(addAttrs, semconv.ErrorType(err))
-			}
-			c.operationDuration.Record(context.Background(), time.Since(starting).Seconds(), addAttrs...)
+			vals, release := getPooledAttrs(c.selfObs.attrs, err)
+			c.selfObs.operationDuration.Record(context.Background(), time.Since(starting).Seconds(), vals...)
+			release()
 		}(time.Now())
 	}
 
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
 	defer metricsPool.Put(metrics)
 
-	if c.selfObservabilityEnabled {
+	if c.selfObs.enabled {
 		readerStart := time.Now()
 		err = c.reader.Collect(context.TODO(), metrics)
 		endTime := time.Since(readerStart).Seconds()
 
-		attrs := make([]attribute.KeyValue, len(c.selfObservabilityAttrs), len(c.selfObservabilityAttrs)+1)
-		copy(attrs, c.selfObservabilityAttrs)
-		if err != nil {
-			attrs = append(attrs, semconv.ErrorType(err))
-		}
-		c.collectionDuration.Record(context.Background(), endTime, attrs...)
+		vals, release := getPooledAttrs(c.selfObs.attrs, err)
+		c.selfObs.collectionDuration.Record(context.Background(), endTime, vals...)
+		release()
 	} else {
 		err = c.reader.Collect(context.TODO(), metrics)
 	}
@@ -356,21 +423,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.selfObs)
 			}
 		}
 	}
@@ -436,10 +503,12 @@ func addExponentialHistogramMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
-	c *collector,
+	obs *selfObservability,
 ) {
+	tracker := obs.startTracking(int64(len(histogram.DataPoints)))
+	defer tracker.complete()
+
 	for _, dp := range histogram.DataPoints {
-		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -450,11 +519,11 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
-			err := fmt.Errorf(
+			otel.Handle(fmt.Errorf(
 				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-				scale)
-			otel.Handle(err)
-			c.trackDataPointFailure(err)
+				scale))
+
+			tracker.trackRejection()
 			continue
 		}
 
@@ -470,25 +539,21 @@ func addExponentialHistogramMetric[N int64 | float64](
 
 		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
 		positiveBuckets := make(map[int]int64)
-		for i, count := range positiveBucket.Counts {
-			if count > math.MaxInt64 {
-				err := fmt.Errorf("positive count %d is too large to be represented as int64", count)
-				otel.Handle(err)
-				c.trackDataPointFailure(err)
+		for i, c := range positiveBucket.Counts {
+			if c > math.MaxInt64 {
+				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", c))
 				continue
 			}
-			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(count) // nolint: gosec  // Size check above.
+			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
 		negativeBuckets := make(map[int]int64)
-		for i, count := range negativeBucket.Counts {
-			if count > math.MaxInt64 {
-				err := fmt.Errorf("negative count %d is too large to be represented as int64", count)
-				otel.Handle(err)
-				c.trackDataPointFailure(err)
+		for i, c := range negativeBucket.Counts {
+			if c > math.MaxInt64 {
+				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", c))
 				continue
 			}
-			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(count) // nolint: gosec  // Size check above.
+			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
 		m, err := prometheus.NewConstNativeHistogram(
@@ -504,12 +569,13 @@ func addExponentialHistogramMetric[N int64 | float64](
 			values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure(err)
+			tracker.trackRejection()
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
-		c.trackDataPointSuccess()
+
+		tracker.trackSuccess()
 	}
 }
 
@@ -520,10 +586,12 @@ func addHistogramMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
-	c *collector,
+	obs *selfObservability,
 ) {
+	tracker := obs.startTracking(int64(len(histogram.DataPoints)))
+	defer tracker.complete()
+
 	for _, dp := range histogram.DataPoints {
-		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -539,12 +607,13 @@ func addHistogramMetric[N int64 | float64](
 		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure(err)
+			tracker.trackRejection()
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
-		c.trackDataPointSuccess()
+
+		tracker.trackSuccess()
 	}
 }
 
@@ -555,15 +624,17 @@ func addSumMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
-	c *collector,
+	obs *selfObservability,
 ) {
+	tracker := obs.startTracking(int64(len(sum.DataPoints)))
+	defer tracker.complete()
+
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
 
 	for _, dp := range sum.DataPoints {
-		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -572,7 +643,7 @@ func addSumMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure(err)
+			tracker.trackRejection()
 			continue
 		}
 		// GaugeValues don't support Exemplars at this time
@@ -581,7 +652,8 @@ func addSumMetric[N int64 | float64](
 			m = addExemplars(m, dp.Exemplars, labelNamer)
 		}
 		ch <- m
-		c.trackDataPointSuccess()
+
+		tracker.trackSuccess()
 	}
 }
 
@@ -592,10 +664,12 @@ func addGaugeMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
-	c *collector,
+	obs *selfObservability,
 ) {
+	tracker := obs.startTracking(int64(len(gauge.DataPoints)))
+	defer tracker.complete()
+
 	for _, dp := range gauge.DataPoints {
-		c.trackDataPointStart()
 		keys, values := getAttrs(dp.Attributes, labelNamer)
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
@@ -604,11 +678,12 @@ func addGaugeMetric[N int64 | float64](
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
 		if err != nil {
 			otel.Handle(err)
-			c.trackDataPointFailure(err)
+			tracker.trackRejection()
 			continue
 		}
 		ch <- m
-		c.trackDataPointSuccess()
+
+		tracker.trackSuccess()
 	}
 }
 
