@@ -16,9 +16,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -426,9 +427,11 @@ func TestLoggerSelfObservability(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tc.selfObservabilityEnabled))
 			prev := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(prev)
-			r := metric.NewManualReader()
-			mp := metric.NewMeterProvider(metric.WithReader(r))
+			t.Cleanup(func() {
+				otel.SetMeterProvider(prev)
+			})
+			r := sdkmetric.NewManualReader()
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(r))
 			otel.SetMeterProvider(mp)
 			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
@@ -464,4 +467,49 @@ func TestLoggerSelfObservability(t *testing.T) {
 			metricdatatest.AssertEqual(t, wantMetric, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 		})
 	}
+}
+
+func TestNewLoggerSelfObservabilityErrorHandled(t *testing.T) {
+	errHandler := otel.GetErrorHandler()
+	t.Cleanup(func() {
+		otel.SetErrorHandler(errHandler)
+	})
+
+	var errs []error
+	eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+	otel.SetErrorHandler(eh)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError})
+
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+	_ = l
+	require.Len(t, errs, 1)
+	assert.ErrorIs(t, errs[0], assert.AnError)
+}
+
+type errMeterProvider struct {
+	metric.MeterProvider
+
+	err error
+}
+
+func (mp *errMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	return &errMeter{err: mp.err}
+}
+
+type errMeter struct {
+	metric.Meter
+
+	err error
+}
+
+func (m *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
+	return nil, m.err
 }
