@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -199,13 +200,19 @@ func (m ContainerCPULimit) Add(ctx context.Context, incr int64, attrs ...attribu
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -270,13 +277,19 @@ func (m ContainerCPURequest) Add(ctx context.Context, incr int64, attrs ...attri
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -343,13 +356,19 @@ func (m ContainerEphemeralStorageLimit) Add(ctx context.Context, incr int64, att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -416,13 +435,19 @@ func (m ContainerEphemeralStorageRequest) Add(ctx context.Context, incr int64, a
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -487,13 +512,19 @@ func (m ContainerMemoryLimit) Add(ctx context.Context, incr int64, attrs ...attr
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -558,13 +589,19 @@ func (m ContainerMemoryRequest) Add(ctx context.Context, incr int64, attrs ...at
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -631,13 +668,19 @@ func (m ContainerReady) Add(ctx context.Context, incr int64, attrs ...attribute.
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -709,13 +752,19 @@ func (m ContainerRestartCount) Add(ctx context.Context, incr int64, attrs ...att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -793,22 +842,23 @@ func (m ContainerStatusReason) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.container.status.reason", string(containerStatusReason)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.container.status.reason", string(containerStatusReason)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -883,22 +933,23 @@ func (m ContainerStatusState) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.container.status.state", string(containerStatusState)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.container.status.state", string(containerStatusState)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -963,13 +1014,19 @@ func (m ContainerStorageLimit) Add(ctx context.Context, incr int64, attrs ...att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1034,13 +1091,19 @@ func (m ContainerStorageRequest) Add(ctx context.Context, incr int64, attrs ...a
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1106,13 +1169,19 @@ func (m CronJobActiveJobs) Add(ctx context.Context, incr int64, attrs ...attribu
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1180,13 +1249,19 @@ func (m DaemonSetCurrentScheduledNodes) Add(ctx context.Context, incr int64, att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1254,13 +1329,19 @@ func (m DaemonSetDesiredScheduledNodes) Add(ctx context.Context, incr int64, att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1328,13 +1409,19 @@ func (m DaemonSetMisscheduledNodes) Add(ctx context.Context, incr int64, attrs .
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1401,13 +1488,19 @@ func (m DaemonSetReadyNodes) Add(ctx context.Context, incr int64, attrs ...attri
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1474,13 +1567,19 @@ func (m DeploymentAvailablePods) Add(ctx context.Context, incr int64, attrs ...a
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1546,13 +1645,19 @@ func (m DeploymentDesiredPods) Add(ctx context.Context, incr int64, attrs ...att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1619,13 +1724,19 @@ func (m HPACurrentPods) Add(ctx context.Context, incr int64, attrs ...attribute.
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1692,13 +1803,19 @@ func (m HPADesiredPods) Add(ctx context.Context, incr int64, attrs ...attribute.
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1764,13 +1881,19 @@ func (m HPAMaxPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyV
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1848,19 +1971,20 @@ func (m HPAMetricTargetCPUAverageUtilization) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1953,19 +2077,20 @@ func (m HPAMetricTargetCPUAverageValue) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -2056,19 +2181,20 @@ func (m HPAMetricTargetCPUValue) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -2149,13 +2275,19 @@ func (m HPAMinPods) Add(ctx context.Context, incr int64, attrs ...attribute.KeyV
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2221,13 +2353,19 @@ func (m JobActivePods) Add(ctx context.Context, incr int64, attrs ...attribute.K
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2294,13 +2432,19 @@ func (m JobDesiredSuccessfulPods) Add(ctx context.Context, incr int64, attrs ...
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2366,13 +2510,19 @@ func (m JobFailedPods) Add(ctx context.Context, incr int64, attrs ...attribute.K
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2438,13 +2588,19 @@ func (m JobMaxParallelPods) Add(ctx context.Context, incr int64, attrs ...attrib
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2510,13 +2666,19 @@ func (m JobSuccessfulPods) Add(ctx context.Context, incr int64, attrs ...attribu
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2584,22 +2746,23 @@ func (m NamespacePhase) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.namespace.phase", string(namespacePhase)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.namespace.phase", string(namespacePhase)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2660,13 +2823,19 @@ func (m NodeAllocatableCPU) Add(ctx context.Context, incr int64, attrs ...attrib
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2729,13 +2898,19 @@ func (m NodeAllocatableEphemeralStorage) Add(ctx context.Context, incr int64, at
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2796,13 +2971,19 @@ func (m NodeAllocatableMemory) Add(ctx context.Context, incr int64, attrs ...att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2863,13 +3044,19 @@ func (m NodeAllocatablePods) Add(ctx context.Context, incr int64, attrs ...attri
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -2945,23 +3132,24 @@ func (m NodeConditionStatus) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.node.condition.status", string(nodeConditionStatus)),
+		attribute.String("k8s.node.condition.type", string(nodeConditionType)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.node.condition.status", string(nodeConditionStatus)),
-				attribute.String("k8s.node.condition.type", string(nodeConditionType)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -3024,13 +3212,19 @@ func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.K
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3094,13 +3288,19 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3163,13 +3363,19 @@ func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribu
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3236,19 +3442,20 @@ func (m NodeNetworkErrors) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3329,19 +3536,20 @@ func (m NodeNetworkIO) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3420,13 +3628,19 @@ func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3489,13 +3703,19 @@ func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.Ke
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3559,13 +3779,19 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3628,13 +3854,19 @@ func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribut
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3701,19 +3933,20 @@ func (m PodNetworkErrors) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3794,19 +4027,20 @@ func (m PodNetworkIO) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -3885,13 +4119,19 @@ func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.K
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -3958,13 +4198,19 @@ func (m ReplicaSetAvailablePods) Add(ctx context.Context, incr int64, attrs ...a
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4030,13 +4276,19 @@ func (m ReplicaSetDesiredPods) Add(ctx context.Context, incr int64, attrs ...att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4104,13 +4356,19 @@ func (m ReplicationControllerAvailablePods) Add(ctx context.Context, incr int64,
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4178,13 +4436,19 @@ func (m ReplicationControllerDesiredPods) Add(ctx context.Context, incr int64, a
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4253,13 +4517,19 @@ func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ..
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4328,13 +4598,19 @@ func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ..
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4403,13 +4679,19 @@ func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs 
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4478,13 +4760,19 @@ func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs 
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4554,13 +4842,19 @@ func (m ResourceQuotaEphemeralStorageLimitHard) Add(ctx context.Context, incr in
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4630,13 +4924,19 @@ func (m ResourceQuotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr in
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4706,13 +5006,19 @@ func (m ResourceQuotaEphemeralStorageRequestHard) Add(ctx context.Context, incr 
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4782,13 +5088,19 @@ func (m ResourceQuotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr 
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4865,22 +5177,23 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.hugepage.size", hugepageSize),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.hugepage.size", hugepageSize),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -4957,22 +5270,23 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.hugepage.size", hugepageSize),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.hugepage.size", hugepageSize),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5041,13 +5355,19 @@ func (m ResourceQuotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5116,13 +5436,19 @@ func (m ResourceQuotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5191,13 +5517,19 @@ func (m ResourceQuotaMemoryRequestHard) Add(ctx context.Context, incr int64, att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5266,13 +5598,19 @@ func (m ResourceQuotaMemoryRequestUsed) Add(ctx context.Context, incr int64, att
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5349,22 +5687,23 @@ func (m ResourceQuotaObjectCountHard) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5441,22 +5780,23 @@ func (m ResourceQuotaObjectCountUsed) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5537,19 +5877,20 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5639,19 +5980,20 @@ func (m ResourceQuotaPersistentvolumeclaimCountUsed) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5739,19 +6081,20 @@ func (m ResourceQuotaStorageRequestHard) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5839,19 +6182,20 @@ func (m ResourceQuotaStorageRequestUsed) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5927,13 +6271,19 @@ func (m StatefulSetCurrentPods) Add(ctx context.Context, incr int64, attrs ...at
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -5999,13 +6349,19 @@ func (m StatefulSetDesiredPods) Add(ctx context.Context, incr int64, attrs ...at
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -6071,13 +6427,19 @@ func (m StatefulSetReadyPods) Add(ctx context.Context, incr int64, attrs ...attr
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -6144,12 +6506,18 @@ func (m StatefulSetUpdatedPods) Add(ctx context.Context, incr int64, attrs ...at
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }

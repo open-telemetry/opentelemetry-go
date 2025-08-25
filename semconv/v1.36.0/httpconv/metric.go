@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -154,23 +155,24 @@ func (m ClientActiveRequests) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("server.address", serverAddress),
+		attribute.Int("server.port", serverPort),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("server.address", serverAddress),
-				attribute.Int("server.port", serverPort),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -272,23 +274,24 @@ func (m ClientConnectionDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("server.address", serverAddress),
+		attribute.Int("server.port", serverPort),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("server.address", serverAddress),
-				attribute.Int("server.port", serverPort),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -393,24 +396,25 @@ func (m ClientOpenConnections) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.connection.state", string(connectionState)),
+		attribute.String("server.address", serverAddress),
+		attribute.Int("server.port", serverPort),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.connection.state", string(connectionState)),
-				attribute.String("server.address", serverAddress),
-				attribute.Int("server.port", serverPort),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -521,24 +525,25 @@ func (m ClientRequestBodySize) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("server.address", serverAddress),
+		attribute.Int("server.port", serverPort),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("server.address", serverAddress),
-				attribute.Int("server.port", serverPort),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -669,24 +674,25 @@ func (m ClientRequestDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("server.address", serverAddress),
+		attribute.Int("server.port", serverPort),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("server.address", serverAddress),
-				attribute.Int("server.port", serverPort),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -824,24 +830,25 @@ func (m ClientResponseBodySize) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("server.address", serverAddress),
+		attribute.Int("server.port", serverPort),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("server.address", serverAddress),
-				attribute.Int("server.port", serverPort),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -966,23 +973,24 @@ func (m ServerActiveRequests) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("url.scheme", urlScheme),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("url.scheme", urlScheme),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1078,23 +1086,24 @@ func (m ServerRequestBodySize) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("url.scheme", urlScheme),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("url.scheme", urlScheme),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1229,23 +1238,24 @@ func (m ServerRequestDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("url.scheme", urlScheme),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("url.scheme", urlScheme),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1387,23 +1397,24 @@ func (m ServerResponseBodySize) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("http.request.method", string(requestMethod)),
+		attribute.String("url.scheme", urlScheme),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("http.request.method", string(requestMethod)),
-				attribute.String("url.scheme", urlScheme),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
