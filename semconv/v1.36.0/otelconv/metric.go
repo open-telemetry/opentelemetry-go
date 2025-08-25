@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "otel" namespace.
 package otelconv
