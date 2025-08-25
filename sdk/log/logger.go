@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -39,15 +40,9 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 		provider:             p,
 		instrumentationScope: scope,
 	}
-	l.initSelfObservability()
-	return l
-}
-
-func (l *logger) initSelfObservability() {
 	if !x.SelfObservability.Enabled() {
-		return
+		return l
 	}
-
 	l.selfObservabilityEnabled = true
 	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/sdk/log",
@@ -56,8 +51,10 @@ func (l *logger) initSelfObservability() {
 
 	var err error
 	if l.logCreatedMetric, err = otelconv.NewSDKLogCreated(m); err != nil {
+		err = fmt.Errorf("failed to create log created metric: %w", err)
 		otel.Handle(err)
 	}
+	return l
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
