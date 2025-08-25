@@ -57,6 +57,8 @@ The next release will require at least [Go 1.24].
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
   Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
 - Support testing of [Go 1.25]. (#7187)
+- Add experimental self-observability simple span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
+  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7162)
 
 ### Changed
 
