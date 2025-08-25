@@ -108,7 +108,6 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),
 		severityText:      r.SeverityText(),
-		body:              r.Body(),
 
 		traceID:    sc.TraceID(),
 		spanID:     sc.SpanID(),
@@ -123,6 +122,9 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	if l.selfObservabilityEnabled {
 		l.logCreatedMetric.Add(ctx, 1)
 	}
+
+	// This ensures we deduplicate key-value collections in the log body
+	newRecord.SetBody(r.Body())
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
 	if newRecord.observedTimestamp.IsZero() {
