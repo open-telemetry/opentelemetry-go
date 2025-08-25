@@ -579,47 +579,6 @@ func (CPUTime) Description() string {
 	return "Seconds each logical CPU spent on each mode"
 }
 
-// Add adds incr to the existing count for attrs.
-//
-// All additional attrs passed are included in the recorded value.
-func (m CPUTime) Add(
-	ctx context.Context,
-	incr float64,
-	attrs ...attribute.KeyValue,
-) {
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Float64Counter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m CPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Float64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Float64Counter.Add(ctx, incr, *o...)
-}
-
 // AttrCPULogicalNumber returns an optional attribute for the
 // "cpu.logical_number" semantic convention. It represents the logical CPU number
 // [0..n-1].
