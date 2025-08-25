@@ -89,6 +89,11 @@ func (m LookupDuration) Record(
 	questionName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]

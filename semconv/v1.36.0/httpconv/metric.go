@@ -149,6 +149,11 @@ func (m ClientActiveRequests) Add(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -279,6 +284,11 @@ func (m ClientConnectionDuration) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -411,6 +421,11 @@ func (m ClientOpenConnections) Add(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -551,6 +566,11 @@ func (m ClientRequestBodySize) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -717,6 +737,11 @@ func (m ClientRequestDuration) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -883,6 +908,11 @@ func (m ClientResponseBodySize) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1043,6 +1073,11 @@ func (m ServerActiveRequests) Add(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1167,6 +1202,11 @@ func (m ServerRequestBodySize) Record(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1336,6 +1376,11 @@ func (m ServerRequestDuration) Record(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1505,6 +1550,11 @@ func (m ServerResponseBodySize) Record(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]

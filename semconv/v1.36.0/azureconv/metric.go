@@ -113,6 +113,11 @@ func (m CosmosDBClientActiveInstanceCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -224,6 +229,11 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 	dbOperationName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]

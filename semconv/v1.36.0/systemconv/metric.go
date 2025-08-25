@@ -25,8 +25,8 @@ type CPUModeAttr string
 var (
 	// CPUModeUser is the standardized value "user" of CPUModeAttr.
 	CPUModeUser CPUModeAttr = "user"
-	// CPUMode is the standardized value "system" of CPUModeAttr.
-	CPUMode CPUModeAttr = "system"
+	// CPUModeSystem is the standardized value "system" of CPUModeAttr.
+	CPUModeSystem CPUModeAttr = "system"
 	// CPUModeNice is the standardized value "nice" of CPUModeAttr.
 	CPUModeNice CPUModeAttr = "nice"
 	// CPUModeIdle is the standardized value "idle" of CPUModeAttr.
@@ -304,6 +304,11 @@ func (m CPUFrequency) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -528,35 +533,35 @@ func (m CPUPhysicalCount) AddSet(ctx context.Context, incr int64, set attribute.
 // "system.cpu.time" semantic conventions. It represents the seconds each logical
 // CPU spent on each mode.
 type CPUTime struct {
-	metric.Float64Counter
+	metric.Float64ObservableCounter
 }
 
 // NewCPUTime returns a new CPUTime instrument.
 func NewCPUTime(
 	m metric.Meter,
-	opt ...metric.Float64CounterOption,
+	opt ...metric.Float64ObservableCounterOption,
 ) (CPUTime, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return CPUTime{noop.Float64Counter{}}, nil
+		return CPUTime{noop.Float64ObservableCounter{}}, nil
 	}
 
-	i, err := m.Float64Counter(
+	i, err := m.Float64ObservableCounter(
 		"system.cpu.time",
-		append([]metric.Float64CounterOption{
+		append([]metric.Float64ObservableCounterOption{
 			metric.WithDescription("Seconds each logical CPU spent on each mode"),
 			metric.WithUnit("s"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64Counter{}}, err
+	    return CPUTime{noop.Float64ObservableCounter{}}, err
 	}
 	return CPUTime{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m CPUTime) Inst() metric.Float64Counter {
-	return m.Float64Counter
+func (m CPUTime) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -687,6 +692,11 @@ func (m CPUUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -784,6 +794,11 @@ func (m DiskIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -899,6 +914,11 @@ func (m DiskIOTime) Add(
 	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1008,6 +1028,11 @@ func (m DiskLimit) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1099,6 +1124,11 @@ func (m DiskMerged) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1212,6 +1242,11 @@ func (m DiskOperationTime) Add(
 	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1319,6 +1354,11 @@ func (m DiskOperations) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1422,6 +1462,11 @@ func (m FilesystemLimit) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1546,6 +1591,11 @@ func (m FilesystemUsage) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1671,6 +1721,11 @@ func (m FilesystemUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1911,6 +1966,11 @@ func (m LinuxMemorySlabUsage) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -2302,6 +2362,11 @@ func (m NetworkConnectionCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -2428,6 +2493,11 @@ func (m NetworkDropped) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -2555,6 +2625,11 @@ func (m NetworkErrors) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -2723,6 +2798,11 @@ func (m NetworkPackets) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -2821,6 +2901,11 @@ func (m PagingFaults) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -2912,6 +2997,11 @@ func (m PagingOperations) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -3016,6 +3106,11 @@ func (m PagingUsage) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -3114,6 +3209,11 @@ func (m PagingUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -3217,6 +3317,11 @@ func (m ProcessCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -3401,6 +3506,7 @@ func (Uptime) Description() string {
 func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

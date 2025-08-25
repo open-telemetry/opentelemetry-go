@@ -155,6 +155,11 @@ func (m ContextSwitches) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -312,6 +317,11 @@ func (m CPUUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -409,6 +419,11 @@ func (m DiskIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -674,6 +689,11 @@ func (m NetworkIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -856,6 +876,11 @@ func (m PagingFaults) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1039,6 +1064,7 @@ func (Uptime) Description() string {
 func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

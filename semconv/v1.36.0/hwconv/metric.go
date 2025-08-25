@@ -141,6 +141,11 @@ func (m Energy) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -256,6 +261,11 @@ func (m Errors) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -374,6 +384,11 @@ func (m HostAmbientTemperature) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -489,6 +504,11 @@ func (m HostEnergy) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -606,6 +626,11 @@ func (m HostHeatingMargin) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -721,6 +746,11 @@ func (m HostPower) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -841,6 +871,11 @@ func (m Power) Record(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -968,6 +1003,11 @@ func (m Status) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
