@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/internal/env"
+	"go.opentelemetry.io/otel/sdk/trace/internal/counter"
 	"go.opentelemetry.io/otel/sdk/trace/internal/x"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
@@ -136,14 +137,6 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	return bsp
 }
 
-var processorIDCounter atomic.Int64
-
-// nextProcessorID returns an identifier for this batch span processor,
-// starting with 0 and incrementing by 1 each time it is called.
-func nextProcessorID() int64 {
-	return processorIDCounter.Add(1) - 1
-}
-
 // configureSelfObservability configures metrics for the batch span processor.
 func (bsp *batchSpanProcessor) configureSelfObservability() {
 	if !x.SelfObservability.Enabled() {
@@ -151,7 +144,7 @@ func (bsp *batchSpanProcessor) configureSelfObservability() {
 	}
 	bsp.selfObservabilityEnabled = true
 	bsp.componentNameAttr = semconv.OTelComponentName(
-		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingSpanProcessor, nextProcessorID()))
+		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingSpanProcessor, counter.NextExporterID()))
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
