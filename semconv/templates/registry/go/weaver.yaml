@@ -69,7 +69,7 @@ text_maps:
     boolean: bool
     boolean[]: "...bool"
   instrument:
-    cpu.time: Float64ObservableCounter
+    system.cpu.time: Float64ObservableCounter
     go.config.gogc: Int64ObservableUpDownCounter
     go.goroutine.count: Int64ObservableUpDownCounter
     go.memory.allocated: Int64ObservableCounter

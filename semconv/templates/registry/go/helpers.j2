@@ -14,7 +14,7 @@
 {%- endmacro -%}
 
 {%- macro to_go_name(fqn="", pkg="") -%}
-{%- if pkg != "" -%}
+{%- if pkg != "" and fqn != pkg -%}
 {%- set n = pkg | length -%}
 {%- if pkg == fqn[:n] -%}
 {%- set fqn = fqn[n:] -%}
