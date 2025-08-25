@@ -24,6 +24,8 @@ const (
 
 	envarAttrCntLim    = "OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT"
 	envarAttrValLenLim = "OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT"
+
+	selfObsScopeName = "go.opentelemetry.io/otel/sdk/log"
 )
 
 type providerConfig struct {
