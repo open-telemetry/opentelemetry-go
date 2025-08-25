@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -146,23 +147,24 @@ func (m Energy) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+		attribute.String("hw.type", string(hwType)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-				attribute.String("hw.type", string(hwType)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -249,23 +251,24 @@ func (m Errors) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+		attribute.String("hw.type", string(hwType)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-				attribute.String("hw.type", string(hwType)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -355,22 +358,23 @@ func (m HostAmbientTemperature) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -459,22 +463,23 @@ func (m HostEnergy) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -559,22 +564,23 @@ func (m HostHeatingMargin) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -663,22 +669,23 @@ func (m HostPower) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -767,23 +774,24 @@ func (m Power) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+		attribute.String("hw.type", string(hwType)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-				attribute.String("hw.type", string(hwType)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -881,24 +889,25 @@ func (m Status) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("hw.id", id),
+		attribute.String("hw.state", string(state)),
+		attribute.String("hw.type", string(hwType)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("hw.id", id),
-				attribute.String("hw.state", string(state)),
-				attribute.String("hw.type", string(hwType)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 

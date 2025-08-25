@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -233,19 +234,20 @@ func (m SDKExporterLogExported) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -350,19 +352,20 @@ func (m SDKExporterLogInflight) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -466,19 +469,20 @@ func (m SDKExporterMetricDataPointExported) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -585,19 +589,20 @@ func (m SDKExporterMetricDataPointInflight) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -702,19 +707,20 @@ func (m SDKExporterOperationDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -838,19 +844,20 @@ func (m SDKExporterSpanExported) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -955,19 +962,20 @@ func (m SDKExporterSpanInflight) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1055,13 +1063,19 @@ func (m SDKLogCreated) Add(ctx context.Context, incr int64, attrs ...attribute.K
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs))
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(*o, metric.WithAttributes(attrs...))
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -1136,19 +1150,20 @@ func (m SDKMetricReaderCollectionDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1243,19 +1258,20 @@ func (m SDKProcessorLogProcessed) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -1483,19 +1499,20 @@ func (m SDKProcessorSpanProcessed) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -1717,19 +1734,20 @@ func (m SDKSpanLive) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1806,19 +1824,20 @@ func (m SDKSpanStarted) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 

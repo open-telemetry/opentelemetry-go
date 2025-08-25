@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -217,23 +218,24 @@ func (m ChangeCount) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.change.state", string(changeState)),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.change.state", string(changeState)),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -337,24 +339,25 @@ func (m ChangeDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.change.state", string(changeState)),
+		attribute.String("vcs.ref.head.name", refHeadName),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.change.state", string(changeState)),
-				attribute.String("vcs.ref.head.name", refHeadName),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -455,23 +458,24 @@ func (m ChangeTimeToApproval) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.ref.head.name", refHeadName),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.ref.head.name", refHeadName),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -601,23 +605,24 @@ func (m ChangeTimeToMerge) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.ref.head.name", refHeadName),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.ref.head.name", refHeadName),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -741,22 +746,23 @@ func (m ContributorCount) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -855,23 +861,24 @@ func (m RefCount) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.ref.type", string(refType)),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.ref.type", string(refType)),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -996,27 +1003,28 @@ func (m RefLinesDelta) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 6)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.line_change.type", string(lineChangeType)),
+		attribute.String("vcs.ref.base.name", refBaseName),
+		attribute.String("vcs.ref.base.type", string(refBaseType)),
+		attribute.String("vcs.ref.head.name", refHeadName),
+		attribute.String("vcs.ref.head.type", string(refHeadType)),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.line_change.type", string(lineChangeType)),
-				attribute.String("vcs.ref.base.name", refBaseName),
-				attribute.String("vcs.ref.base.type", string(refBaseType)),
-				attribute.String("vcs.ref.head.name", refHeadName),
-				attribute.String("vcs.ref.head.type", string(refHeadType)),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1146,27 +1154,28 @@ func (m RefRevisionsDelta) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 6)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.ref.base.name", refBaseName),
+		attribute.String("vcs.ref.base.type", string(refBaseType)),
+		attribute.String("vcs.ref.head.name", refHeadName),
+		attribute.String("vcs.ref.head.type", string(refHeadType)),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		attribute.String("vcs.revision_delta.direction", string(revisionDeltaDirection)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.ref.base.name", refBaseName),
-				attribute.String("vcs.ref.base.type", string(refBaseType)),
-				attribute.String("vcs.ref.head.name", refHeadName),
-				attribute.String("vcs.ref.head.type", string(refHeadType)),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-				attribute.String("vcs.revision_delta.direction", string(revisionDeltaDirection)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1279,24 +1288,25 @@ func (m RefTime) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("vcs.ref.head.name", refHeadName),
+		attribute.String("vcs.ref.head.type", string(refHeadType)),
+		attribute.String("vcs.repository.url.full", repositoryUrlFull),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("vcs.ref.head.name", refHeadName),
-				attribute.String("vcs.ref.head.type", string(refHeadType)),
-				attribute.String("vcs.repository.url.full", repositoryUrlFull),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1384,19 +1394,20 @@ func (m RepositoryCount) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 

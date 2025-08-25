@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -101,19 +102,20 @@ func (m Coldstarts) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -187,19 +189,20 @@ func (m CPUUsage) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -273,19 +276,20 @@ func (m Errors) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -359,19 +363,20 @@ func (m InitDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -445,19 +450,20 @@ func (m Invocations) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -531,19 +537,20 @@ func (m InvokeDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -617,19 +624,20 @@ func (m MemUsage) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -703,19 +711,20 @@ func (m NetIO) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -789,19 +798,20 @@ func (m Timeouts) Add(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 0)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+
+	set := attribute.NewSet(*a...)
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 

@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -181,23 +182,24 @@ func (m ClientOperationDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("gen_ai.operation.name", string(operationName)),
+		attribute.String("gen_ai.system", string(system)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("gen_ai.operation.name", string(operationName)),
-				attribute.String("gen_ai.system", string(system)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -307,24 +309,25 @@ func (m ClientTokenUsage) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 3)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("gen_ai.operation.name", string(operationName)),
+		attribute.String("gen_ai.system", string(system)),
+		attribute.String("gen_ai.token.type", string(tokenType)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("gen_ai.operation.name", string(operationName)),
-				attribute.String("gen_ai.system", string(system)),
-				attribute.String("gen_ai.token.type", string(tokenType)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -425,23 +428,24 @@ func (m ServerRequestDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("gen_ai.operation.name", string(operationName)),
+		attribute.String("gen_ai.system", string(system)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("gen_ai.operation.name", string(operationName)),
-				attribute.String("gen_ai.system", string(system)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -549,23 +553,24 @@ func (m ServerTimePerOutputToken) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("gen_ai.operation.name", string(operationName)),
+		attribute.String("gen_ai.system", string(system)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("gen_ai.operation.name", string(operationName)),
-				attribute.String("gen_ai.system", string(system)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -665,23 +670,24 @@ func (m ServerTimeToFirstToken) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 2)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("gen_ai.operation.name", string(operationName)),
+		attribute.String("gen_ai.system", string(system)),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("gen_ai.operation.name", string(operationName)),
-				attribute.String("gen_ai.system", string(system)),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 

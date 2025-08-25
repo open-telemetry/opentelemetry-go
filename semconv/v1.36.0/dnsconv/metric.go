@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/pool"
 )
 
 var (
@@ -94,22 +95,23 @@ func (m LookupDuration) Record(
 		return
 	}
 
+	a := pool.GetAttrSlice(len(attrs) + 1)
+	defer pool.PutAttrSlice(a)
+	*a = append(*a, attrs...)
+	*a = append(
+		*a,
+		attribute.String("dns.question.name", questionName),
+	)
+	set := attribute.NewSet(*a...)
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			append(
-				attrs,
-				attribute.String("dns.question.name", questionName),
-			)...,
-		),
-	)
-
+	// Do not use WithAttributes (avoid copying all attributes again).
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
