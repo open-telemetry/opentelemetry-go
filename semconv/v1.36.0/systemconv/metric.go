@@ -25,8 +25,8 @@ type CPUModeAttr string
 var (
 	// CPUModeUser is the standardized value "user" of CPUModeAttr.
 	CPUModeUser CPUModeAttr = "user"
-	// CPUMode is the standardized value "system" of CPUModeAttr.
-	CPUMode CPUModeAttr = "system"
+	// CPUModeSystem is the standardized value "system" of CPUModeAttr.
+	CPUModeSystem CPUModeAttr = "system"
 	// CPUModeNice is the standardized value "nice" of CPUModeAttr.
 	CPUModeNice CPUModeAttr = "nice"
 	// CPUModeIdle is the standardized value "idle" of CPUModeAttr.
@@ -472,35 +472,35 @@ func (m CPUPhysicalCount) Add(ctx context.Context, incr int64, attrs ...attribut
 // "system.cpu.time" semantic conventions. It represents the seconds each logical
 // CPU spent on each mode.
 type CPUTime struct {
-	metric.Float64Counter
+	metric.Float64ObservableCounter
 }
 
 // NewCPUTime returns a new CPUTime instrument.
 func NewCPUTime(
 	m metric.Meter,
-	opt ...metric.Float64CounterOption,
+	opt ...metric.Float64ObservableCounterOption,
 ) (CPUTime, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return CPUTime{noop.Float64Counter{}}, nil
+		return CPUTime{noop.Float64ObservableCounter{}}, nil
 	}
 
-	i, err := m.Float64Counter(
+	i, err := m.Float64ObservableCounter(
 		"system.cpu.time",
-		append([]metric.Float64CounterOption{
+		append([]metric.Float64ObservableCounterOption{
 			metric.WithDescription("Seconds each logical CPU spent on each mode"),
 			metric.WithUnit("s"),
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64Counter{}}, err
+	    return CPUTime{noop.Float64ObservableCounter{}}, err
 	}
 	return CPUTime{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m CPUTime) Inst() metric.Float64Counter {
-	return m.Float64Counter
+func (m CPUTime) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -516,30 +516,6 @@ func (CPUTime) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (CPUTime) Description() string {
 	return "Seconds each logical CPU spent on each mode"
-}
-
-// Add adds incr to the existing count.
-//
-// All additional attrs passed are included in the recorded value.
-func (m CPUTime) Add(
-	ctx context.Context,
-	incr float64,
-	attrs ...attribute.KeyValue,
-) {
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
 // AttrCPULogicalNumber returns an optional attribute for the

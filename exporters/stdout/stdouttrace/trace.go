@@ -96,24 +96,50 @@ type Exporter struct {
 	operationDurationMetric  otelconv.SDKExporterOperationDuration
 }
 
+var measureAttrsPool = sync.Pool{
+	New: func() any {
+		// "component.name" + "component.type" + "error.type"
+		const n = 1 + 1 + 1
+		s := make([]attribute.KeyValue, 0, n)
+		// Return a pointer to a slice instead of a slice itself
+		// to avoid allocations on every call.
+		return &s
+	},
+}
+
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
+	var success int64
 	if e.selfObservabilityEnabled {
 		count := int64(len(spans))
 
 		e.spanInflightMetric.Add(ctx, count, e.selfObservabilityAttrs...)
 		defer func(starting time.Time) {
-			// additional attributes for self-observability,
-			// only spanExportedMetric and operationDurationMetric are supported
-			addAttrs := make([]attribute.KeyValue, len(e.selfObservabilityAttrs), len(e.selfObservabilityAttrs)+1)
-			copy(addAttrs, e.selfObservabilityAttrs)
+			e.spanInflightMetric.Add(ctx, -count, e.selfObservabilityAttrs...)
+
+			// Record the success and duration of the operation.
+			//
+			// Do not exclude 0 values, as they are valid and indicate no spans
+			// were exported which is meaningful for certain aggregations.
+			e.spanExportedMetric.Add(ctx, success, e.selfObservabilityAttrs...)
+
+			attr := e.selfObservabilityAttrs
 			if err != nil {
-				addAttrs = append(addAttrs, semconv.ErrorType(err))
+				// additional attributes for self-observability,
+				// only spanExportedMetric and operationDurationMetric are supported.
+				attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
+				defer func() {
+					*attrs = (*attrs)[:0] // reset the slice for reuse
+					measureAttrsPool.Put(attrs)
+				}()
+				*attrs = append(*attrs, e.selfObservabilityAttrs...)
+				*attrs = append(*attrs, semconv.ErrorType(err))
+				attr = *attrs
+
+				e.spanExportedMetric.Add(ctx, count-success, attr...)
 			}
 
-			e.spanInflightMetric.Add(ctx, -count, e.selfObservabilityAttrs...)
-			e.spanExportedMetric.Add(ctx, count, addAttrs...)
-			e.operationDurationMetric.Record(ctx, time.Since(starting).Seconds(), addAttrs...)
+			e.operationDurationMetric.Record(ctx, time.Since(starting).Seconds(), attr...)
 		}(time.Now())
 	}
 
@@ -148,11 +174,13 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		}
 
 		// Encode span stubs, one by one
-		if err := e.encoder.Encode(stub); err != nil {
-			return err
+		if e := e.encoder.Encode(stub); e != nil {
+			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, e))
+			continue
 		}
+		success++
 	}
-	return nil
+	return err
 }
 
 // Shutdown is called to stop the exporter, it performs no action.

@@ -1930,8 +1930,8 @@ func TestSamplerTraceState(t *testing.T) {
 }
 
 type testIDGenerator struct {
-	traceID int
-	spanID  int
+	traceID uint64
+	spanID  uint64
 }
 
 func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
@@ -1954,8 +1954,8 @@ var _ IDGenerator = (*testIDGenerator)(nil)
 
 func TestWithIDGenerator(t *testing.T) {
 	const (
-		startTraceID = 1
-		startSpanID  = 10
+		startTraceID = 0x1001_1001_1001_1001
+		startSpanID  = 0x2001_2001_2001_2001
 		numSpan      = 5
 	)
 
@@ -1972,12 +1972,79 @@ func TestWithIDGenerator(t *testing.T) {
 
 			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startSpanID+i), gotSpanID)
+			assert.Equal(t, uint64(startSpanID)+uint64(i), gotSpanID)
 
 			gotTraceID, err := strconv.ParseUint(span.SpanContext().TraceID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startTraceID+i), gotTraceID)
+			assert.Equal(t, uint64(startTraceID)+uint64(i), gotTraceID)
 		}()
+	}
+}
+
+func TestIDsRoundTrip(t *testing.T) {
+	gen := defaultIDGenerator()
+
+	for range 1000 {
+		traceID, spanID := gen.NewIDs(context.Background())
+		gotTraceID, err := trace.TraceIDFromHex(traceID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, traceID, gotTraceID)
+		gotSpanID, err := trace.SpanIDFromHex(spanID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, spanID, gotSpanID)
+	}
+}
+
+func TestIDConversionErrors(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		spanIDStr    string
+		traceIDStr   string
+		spanIDError  string
+		traceIDError string
+	}{
+		{
+			name:         "slightly too long",
+			spanIDStr:    sid.String() + "0",
+			spanIDError:  "hex encoded span-id must have length equals to 16",
+			traceIDStr:   tid.String() + "0",
+			traceIDError: "hex encoded trace-id must have length equals to 32",
+		},
+		{
+			name:         "blank input",
+			spanIDStr:    "",
+			spanIDError:  "hex encoded span-id must have length equals to 16",
+			traceIDStr:   "",
+			traceIDError: "hex encoded trace-id must have length equals to 32",
+		},
+		{
+			name:         "not hex",
+			spanIDStr:    "unacceptablechar",
+			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+			traceIDStr:   "completely unacceptablecharacter",
+			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+		},
+		{
+			name:         "upper-case hex",
+			spanIDStr:    "DEADBEEFBAD0CAFE",
+			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+			traceIDStr:   "DEADBEEFBAD0CAFEDEADBEEFBAD0CAFE",
+			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+		},
+		{
+			name:         "all zero",
+			spanIDStr:    "0000000000000000",
+			spanIDError:  "span-id can't be all zero",
+			traceIDStr:   "00000000000000000000000000000000",
+			traceIDError: "trace-id can't be all zero",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := trace.SpanIDFromHex(tt.spanIDStr)
+			assert.ErrorContains(t, err, tt.spanIDError)
+			_, err = trace.TraceIDFromHex(tt.traceIDStr)
+			assert.ErrorContains(t, err, tt.traceIDError)
+		})
 	}
 }
 
@@ -2615,7 +2682,8 @@ func TestSelfObservability(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(prev)
+			t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
