@@ -509,7 +509,10 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 			}
 
-			s.tracer.spanLiveMetric.Add(context.Background(), -1, attrSamplingResult)
+			// Add the span to the context to ensure the metric is recorded
+			// with the correct span context.
+			ctx := trace.ContextWithSpan(context.Background(), s)
+			s.tracer.spanLiveMetric.Add(ctx, -1, attrSamplingResult)
 		}()
 	}
 

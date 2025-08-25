@@ -2306,8 +2306,15 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
+
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 
 				span.End()
 
@@ -2361,7 +2368,13 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 				got = scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2404,7 +2417,13 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2465,7 +2484,13 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2535,7 +2560,13 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2607,7 +2638,13 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 
 				childSpan.End()
 				parentSpan.End()
@@ -2674,7 +2711,13 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got = scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 	}
@@ -2697,6 +2740,98 @@ func TestSelfObservability(t *testing.T) {
 			}
 			tc.test(t, scopeMetrics)
 		})
+	}
+}
+
+// ctxKeyT is a custom context value type used for testing context propagation.
+type ctxKeyT string
+
+// ctxKey is a context key used to store and retrieve values in the context.
+var ctxKey = ctxKeyT("testKey")
+
+func TestSelfObservabilityContextPropagation(t *testing.T) {
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+	prev := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
+	// Approximate number of expected measuresments. This is not a strict
+	// requirement, but it should be enough to ensure no backpressure.
+	const count = 3 * 2 // 3 measurements per span, 2 spans (parent and child).
+	ctxCh, fltr := filterFn(count)
+
+	const want = "testValue"
+	n := make(chan int)
+	go func() {
+		// Validate the span context is propagated to all measurements by
+		// testing the context passed to the registered exemplar filter. This
+		// filter receives the measurement context in the standard metric SDK
+		// that we have registered.
+
+		// Count of how many contexts were received.
+		var count int
+
+		for ctx := range ctxCh {
+			count++
+
+			s := trace.SpanFromContext(ctx)
+
+			// All spans should have a valid span context. This should be
+			// passed to the measurements in all cases.
+			isValid := s.SpanContext().IsValid()
+			assert.True(t, isValid, "Context should have a valid span")
+
+			if s.IsRecording() {
+				// Check if the context value is propagated correctly for Span
+				// starts. The Span end operation does not receive any user
+				// context so do not check this if the span is not recording
+				// (i.e. end operation).
+
+				got := ctx.Value(ctxKey)
+				assert.Equal(t, want, got, "Context value not propagated")
+			}
+		}
+		n <- count
+	}()
+
+	// At least one reader is required to not get a no-op MeterProvider and
+	// short-circuit any instrumentation measurements.
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(
+		metric.WithExemplarFilter(fltr),
+		metric.WithReader(r),
+	)
+	otel.SetMeterProvider(mp)
+
+	tp := NewTracerProvider()
+
+	wrap := func(parentCtx context.Context, name string, fn func(context.Context)) {
+		const tracer = "TestSelfObservabilityContextPropagation"
+		ctx, s := tp.Tracer(tracer).Start(parentCtx, name)
+		defer s.End()
+		fn(ctx)
+	}
+
+	ctx := context.WithValue(context.Background(), ctxKey, want)
+	wrap(ctx, "parent", func(ctx context.Context) {
+		wrap(ctx, "child", func(context.Context) {})
+	})
+
+	require.NoError(t, tp.Shutdown(context.Background()))
+
+	// The TracerProvider shutdown returned, no more measurements will be sent
+	// to the exemplar filter.
+	close(ctxCh)
+
+	assert.Positive(t, <-n, "Expected at least 1 context propagations")
+}
+
+// filterFn returns a channel that receives contexts passed to the returned
+// exemplar filter function.
+func filterFn(n int) (chan context.Context, func(ctx context.Context) bool) {
+	out := make(chan context.Context, n)
+	return out, func(ctx context.Context) bool {
+		out <- ctx
+		return true
 	}
 }
 
