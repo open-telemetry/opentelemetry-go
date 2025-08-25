@@ -170,7 +170,11 @@ func (r *Record) Body() log.Value {
 
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v log.Value) {
-	r.body = v
+	if !r.allowDupKeys {
+		r.body = r.dedupeBodyCollections(v)
+	} else {
+		r.body = v
+	}
 }
 
 // WalkAttributes walks all attributes the log record holds by calling f for
@@ -446,6 +450,24 @@ func (r *Record) applyValueLimits(val log.Value) log.Value {
 		}
 		for i := range kvs {
 			kvs[i] = r.applyAttrLimits(kvs[i])
+		}
+		val = log.MapValue(kvs...)
+	}
+	return val
+}
+
+func (r *Record) dedupeBodyCollections(val log.Value) log.Value {
+	switch val.Kind() {
+	case log.KindSlice:
+		sl := val.AsSlice()
+		for i := range sl {
+			sl[i] = r.dedupeBodyCollections(sl[i])
+		}
+		val = log.SliceValue(sl...)
+	case log.KindMap:
+		kvs, _ := dedup(val.AsMap())
+		for i := range kvs {
+			kvs[i].Value = r.dedupeBodyCollections(kvs[i].Value)
 		}
 		val = log.MapValue(kvs...)
 	}
