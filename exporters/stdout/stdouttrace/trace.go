@@ -164,8 +164,12 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 				*attrs = append(*attrs, e.selfObservabilityAttrs...)
 				*attrs = append(*attrs, semconv.ErrorType(err))
 
-				mOpt = metric.WithAttributes(*attrs...)
+				// Do not inefficiently make a copy of attrs by using
+				// WithAttributes instead of WithAttributeSet.
+				set := attribute.NewSet(*attrs...)
+				mOpt = metric.WithAttributeSet(set)
 
+				// Reset addOpt with new attribute set.
 				*addOpt = append((*addOpt)[:0], mOpt)
 
 				e.spanExportedMetric.Inst().Add(
