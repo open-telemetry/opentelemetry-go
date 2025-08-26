@@ -140,7 +140,7 @@ func (PipelineRunActive) Description() string {
 	return "The number of pipeline runs currently active in the system by state."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The pipelineName is the the human readable name of the pipeline within a CI/CD
 // system.
@@ -176,6 +176,23 @@ func (m PipelineRunActive) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m PipelineRunActive) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -229,7 +246,7 @@ func (PipelineRunDuration) Description() string {
 	return "Duration of a pipeline run grouped by pipeline, state and result."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The pipelineName is the the human readable name of the pipeline within a CI/CD
 // system.
@@ -267,6 +284,22 @@ func (m PipelineRunDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m PipelineRunDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -334,7 +367,7 @@ func (PipelineRunErrors) Description() string {
 	return "The number of errors encountered in pipeline runs (eg. compile, test failures)."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The pipelineName is the the human readable name of the pipeline within a CI/CD
 // system.
@@ -374,6 +407,28 @@ func (m PipelineRunErrors) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// There might be errors in a pipeline run that are non fatal (eg. they are
+// suppressed) or in a parallel stage multiple stages could have a fatal error.
+// This means that this error count might not be the same as the count of metric
+// `cicd.pipeline.run.duration` with run result `failure`.
+func (m PipelineRunErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -427,7 +482,7 @@ func (SystemErrors) Description() string {
 	return "The number of errors in a component of the CICD system (eg. controller, scheduler, agent)."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The systemComponent is the the name of a component of the CICD system.
 //
@@ -464,6 +519,26 @@ func (m SystemErrors) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Errors in pipeline run execution are explicitly excluded. Ie a test failure is
+// not counted in this metric.
+func (m SystemErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -517,7 +592,7 @@ func (WorkerCount) Description() string {
 	return "The number of workers on the CICD system by state."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The workerState is the the state of a CICD worker / agent.
 func (m WorkerCount) Add(
@@ -547,5 +622,22 @@ func (m WorkerCount) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m WorkerCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
