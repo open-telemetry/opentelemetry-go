@@ -52,6 +52,7 @@ func (tr *tracer) Start(
 	}
 
 	s := tr.newSpan(ctx, name, &config)
+	newCtx := trace.ContextWithSpan(ctx, s)
 	if tr.selfObservabilityEnabled {
 		// Check if the span has a parent span and set the origin attribute accordingly.
 		var attrParentOrigin attribute.KeyValue
@@ -78,20 +79,21 @@ func (tr *tracer) Start(
 			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
 		}
 
-		tr.spanStartedMetric.Add(context.Background(), 1, attrParentOrigin, attrSamplingResult)
+		tr.spanStartedMetric.Add(newCtx, 1, attrParentOrigin, attrSamplingResult)
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
 		sps := tr.provider.getSpanProcessors()
 		for _, sp := range sps {
+			// Use original context.
 			sp.sp.OnStart(ctx, rw)
 		}
 	}
 	if rtt, ok := s.(runtimeTracer); ok {
-		ctx = rtt.runtimeTrace(ctx)
+		newCtx = rtt.runtimeTrace(newCtx)
 	}
 
-	return trace.ContextWithSpan(ctx, s), s
+	return newCtx, s
 }
 
 type runtimeTracer interface {
@@ -147,11 +149,12 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 	if !isRecording(samplingResult) {
 		return tr.newNonRecordingSpan(sc)
 	}
-	return tr.newRecordingSpan(psc, sc, name, samplingResult, config)
+	return tr.newRecordingSpan(ctx, psc, sc, name, samplingResult, config)
 }
 
 // newRecordingSpan returns a new configured recordingSpan.
 func (tr *tracer) newRecordingSpan(
+	ctx context.Context,
 	psc, sc trace.SpanContext,
 	name string,
 	sr SamplingResult,
@@ -199,7 +202,10 @@ func (tr *tracer) newRecordingSpan(
 			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
 		}
 
-		tr.spanLiveMetric.Add(context.Background(), 1, attrSamplingResult)
+		// Propagate any existing values from the context with the new span to
+		// the measurement context.
+		ctx = trace.ContextWithSpan(ctx, s)
+		tr.spanLiveMetric.Add(ctx, 1, attrSamplingResult)
 	}
 
 	return s
