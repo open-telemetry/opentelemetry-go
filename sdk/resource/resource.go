@@ -223,6 +223,10 @@ func Merge(a, b *Resource) (*Resource, error) {
 	)
 }
 
+// empty is an empty Resource instance to avoid allocating multiple
+// instances of empty Resources.
+var empty = Empty()
+
 // Empty returns an instance of Resource with no attributes. It is
 // equivalent to a `nil` Resource.
 func Empty() *Resource {
@@ -278,7 +282,7 @@ func (r *Resource) Equivalent() attribute.Distinct {
 // Set returns the equivalent *attribute.Set of this resource's attributes.
 func (r *Resource) Set() *attribute.Set {
 	if r == nil {
-		r = Empty()
+		r = empty
 	}
 	return &r.attrs
 }
@@ -287,7 +291,7 @@ func (r *Resource) Set() *attribute.Set {
 // "...", "Value": ... } pairs in order sorted by key.
 func (r *Resource) MarshalJSON() ([]byte, error) {
 	if r == nil {
-		r = Empty()
+		r = empty
 	}
 	return r.attrs.MarshalJSON()
 }
