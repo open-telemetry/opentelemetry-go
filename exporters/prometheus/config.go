@@ -55,7 +55,7 @@ func newConfig(opts ...Option) config {
 		}
 	} else {
 		// Note, if the translation strategy implies that suffixes should be added,
-		// the user can still use withoutUnits and withoutCounterSuffixes to
+		// the user can still use WithoutUnits and WithoutCounterSuffixes to
 		// explicitly disable specific suffixes. We do not override their preference
 		// in this case. However if the chosen strategy disables suffixes, we should
 		// forcibly disable all of them.
@@ -127,7 +127,7 @@ func WithoutTargetInfo() Option {
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.48.0/specification/metrics/sdk_exporters/prometheus.md#configuration.
 // The recommended approach is to use either
 // [otlptranslator.UnderscoreEscapingWithSuffixes] for full Prometheus-style
-// compatibility or NoTranslation for Otel-style names.
+// compatibility or [otlptranslator.NoTranslation] for OpenTelemetry-style names.
 //
 // By default, if the NameValidationScheme variable in
 // [github.com/prometheus/common/model] is "legacy", the default strategy is
@@ -199,7 +199,7 @@ func WithoutScopeInfo() Option {
 // WithNamespace configures the Exporter to prefix metric with the given
 // namespace. Metadata metrics such as target_info are not prefixed since these
 // have special behavior based on their name. Namespaces will be prepended even
-// if NoTranslation is set as a translation strategy. If the provided namespace
+// if [otlptranslator.NoTranslation] is set as a translation strategy. If the provided namespace
 // is empty, nothing will be prepended to metric names.
 func WithNamespace(ns string) Option {
 	return optionFunc(func(cfg config) config {
