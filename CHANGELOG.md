@@ -57,7 +57,9 @@ The next release will require at least [Go 1.24].
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
   Check the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x` package documentation for more information. (#7133)
 - Support testing of [Go 1.25]. (#7187)
-
+- Add experimental self-observability prometheus exporter metrics in `go.opentelemetry.io/otel/exporters/prometheus`.
+  Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7174)
+  
 ### Changed
 
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
