@@ -79,6 +79,10 @@ The next release will require at least [Go 1.24].
 - Fix the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability component type and name. (#7195)
 - Fix partial export count metric in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7199)
 
+### Fixed
+
+- Fix handling of TLS certificates when `OTEL_EXPORTER_OTLP_CERTIFICATE` or `OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE` is set in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#7087)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
