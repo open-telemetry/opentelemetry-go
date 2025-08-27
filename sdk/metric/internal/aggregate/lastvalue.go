@@ -6,6 +6,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -15,7 +16,7 @@ import (
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
 	attrs attribute.Set
-	value N
+	value atomic.Value
 	res   FilteredExemplarReservoir[N]
 }
 
@@ -23,36 +24,42 @@ func newLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredEx
 	return &lastValue[N]{
 		newRes: r,
 		limit:  newLimiter[datapoint[N]](limit),
-		values: make(map[attribute.Distinct]datapoint[N]),
+		values: make(map[attribute.Distinct]*datapoint[N]),
 		start:  now(),
 	}
 }
 
 // lastValue summarizes a set of measurements as the last one made.
 type lastValue[N int64 | float64] struct {
-	sync.Mutex
+	sync.RWMutex
 
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	limit  limiter[datapoint[N]]
-	values map[attribute.Distinct]datapoint[N]
+	values map[attribute.Distinct]*datapoint[N]
 	start  time.Time
 }
 
-func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	s.Lock()
-	defer s.Unlock()
-
+func (s *lastValue[N]) getOrCreateDatapoint(fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) *datapoint[N] {
+	s.RLock()
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	d, ok := s.values[attr.Equivalent()]
+	s.RUnlock()
 	if !ok {
-		d.res = s.newRes(attr)
+		d = &datapoint[N]{
+			res:   s.newRes(attr),
+			attrs: attr,
+		}
+		s.Lock()
+		s.values[attr.Equivalent()] = d
+		s.Unlock()
 	}
+	return d
+}
 
-	d.attrs = attr
-	d.value = value
+func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+	d := s.getOrCreateDatapoint(fltrAttr, droppedAttr)
 	d.res.Offer(ctx, value, droppedAttr)
-
-	s.values[attr.Equivalent()] = d
+	d.value.Store(value)
 }
 
 func (s *lastValue[N]) delta(
@@ -109,7 +116,7 @@ func (s *lastValue[N]) copyDpts(dest *[]metricdata.DataPoint[N], t time.Time) in
 		(*dest)[i].Attributes = v.attrs
 		(*dest)[i].StartTime = s.start
 		(*dest)[i].Time = t
-		(*dest)[i].Value = v.value
+		(*dest)[i].Value = v.value.Load().(N)
 		collectExemplars(&(*dest)[i].Exemplars, v.res.Collect)
 		i++
 	}
