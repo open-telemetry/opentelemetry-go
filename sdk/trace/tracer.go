@@ -54,32 +54,9 @@ func (tr *tracer) Start(
 	s := tr.newSpan(ctx, name, &config)
 	newCtx := trace.ContextWithSpan(ctx, s)
 	if tr.selfObservabilityEnabled {
-		// Check if the span has a parent span and set the origin attribute accordingly.
-		var attrParentOrigin attribute.KeyValue
-		if psc := trace.SpanContextFromContext(ctx); psc.IsValid() {
-			if psc.IsRemote() {
-				attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote)
-			} else {
-				attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal)
-			}
-		} else {
-			attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginNone)
-		}
-
-		// Determine the sampling result and create the corresponding attribute.
-		var attrSamplingResult attribute.KeyValue
-		switch {
-		case s.SpanContext().IsSampled() && s.IsRecording():
-			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(
-				otelconv.SpanSamplingResultRecordAndSample,
-			)
-		case s.IsRecording():
-			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
-		default:
-			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
-		}
-
-		tr.spanStartedMetric.Add(newCtx, 1, attrParentOrigin, attrSamplingResult)
+		psc := trace.SpanContextFromContext(ctx)
+		set := spanStartedSet(psc, s)
+		tr.spanStartedMetric.AddSet(newCtx, 1, set)
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
@@ -192,20 +169,11 @@ func (tr *tracer) newRecordingSpan(
 	s.SetAttributes(config.Attributes()...)
 
 	if tr.selfObservabilityEnabled {
-		// Determine the sampling result and create the corresponding attribute.
-		var attrSamplingResult attribute.KeyValue
-		if s.spanContext.IsSampled() {
-			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(
-				otelconv.SpanSamplingResultRecordAndSample,
-			)
-		} else {
-			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
-		}
-
 		// Propagate any existing values from the context with the new span to
 		// the measurement context.
 		ctx = trace.ContextWithSpan(ctx, s)
-		tr.spanLiveMetric.Add(ctx, 1, attrSamplingResult)
+		set := spanLiveSet(s.spanContext.IsSampled())
+		tr.spanLiveMetric.AddSet(ctx, 1, set)
 	}
 
 	return s
@@ -214,4 +182,113 @@ func (tr *tracer) newRecordingSpan(
 // newNonRecordingSpan returns a new configured nonRecordingSpan.
 func (tr *tracer) newNonRecordingSpan(sc trace.SpanContext) nonRecordingSpan {
 	return nonRecordingSpan{tracer: tr, sc: sc}
+}
+
+type parentState int
+
+const (
+	parentStateNoParent parentState = iota
+	parentStateLocalParent
+	parentStateRemoteParent
+)
+
+type samplingState int
+
+const (
+	samplingStateDrop samplingState = iota
+	samplingStateRecordOnly
+	samplingStateRecordAndSample
+)
+
+type spanStartedSetKey struct {
+	parent   parentState
+	sampling samplingState
+}
+
+var spanStartedSetCache = map[spanStartedSetKey]attribute.Set{
+	{parentStateNoParent, samplingStateDrop}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
+	),
+	{parentStateLocalParent, samplingStateDrop}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
+	),
+	{parentStateRemoteParent, samplingStateDrop}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
+	),
+
+	{parentStateNoParent, samplingStateRecordOnly}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
+	),
+	{parentStateLocalParent, samplingStateRecordOnly}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
+	),
+	{parentStateRemoteParent, samplingStateRecordOnly}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
+	),
+
+	{parentStateNoParent, samplingStateRecordAndSample}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+	),
+	{parentStateLocalParent, samplingStateRecordAndSample}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+	),
+	{parentStateRemoteParent, samplingStateRecordAndSample}: attribute.NewSet(
+		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
+		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+	),
+}
+
+func spanStartedSet(psc trace.SpanContext, span trace.Span) attribute.Set {
+	key := spanStartedSetKey{
+		parent:   parentStateNoParent,
+		sampling: samplingStateDrop,
+	}
+
+	if psc.IsValid() {
+		if psc.IsRemote() {
+			key.parent = parentStateRemoteParent
+		} else {
+			key.parent = parentStateLocalParent
+		}
+	}
+
+	if span.IsRecording() {
+		if span.SpanContext().IsSampled() {
+			key.sampling = samplingStateRecordAndSample
+		} else {
+			key.sampling = samplingStateRecordOnly
+		}
+	}
+
+	return spanStartedSetCache[key]
+}
+
+type spanLiveSetKey struct {
+	sampled bool
+}
+
+var spanLiveSetCache = map[spanLiveSetKey]attribute.Set{
+	{true}: attribute.NewSet(
+		otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+			otelconv.SpanSamplingResultRecordAndSample,
+		),
+	),
+	{false}: attribute.NewSet(
+		otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+			otelconv.SpanSamplingResultRecordOnly,
+		),
+	),
+}
+
+func spanLiveSet(sampled bool) attribute.Set {
+	key := spanLiveSetKey{sampled: sampled}
+	return spanLiveSetCache[key]
 }

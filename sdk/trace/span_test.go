@@ -400,18 +400,42 @@ func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 }
 
 func BenchmarkSpanEnd(b *testing.B) {
-	tracer := NewTracerProvider().Tracer("")
-	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
-
-	spans := make([]trace.Span, b.N)
-	for i := 0; i < b.N; i++ {
-		_, span := tracer.Start(ctx, "")
-		spans[i] = span
+	cases := []struct {
+		name string
+		env  map[string]string
+	}{
+		{
+			name: "Default",
+		},
+		{
+			name: "SelfObservabilityEnabled",
+			env: map[string]string{
+				"OTEL_GO_X_SELF_OBSERVABILITY": "True",
+			},
+		},
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		spans[i].End()
+	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+
+	for _, c := range cases {
+		b.Run(c.name, func(b *testing.B) {
+			for k, v := range c.env {
+				b.Setenv(k, v)
+			}
+
+			tracer := NewTracerProvider().Tracer("")
+
+			spans := make([]trace.Span, b.N)
+			for i := 0; i < b.N; i++ {
+				_, span := tracer.Start(ctx, "")
+				spans[i] = span
+			}
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				spans[i].End()
+			}
+		})
 	}
 }
