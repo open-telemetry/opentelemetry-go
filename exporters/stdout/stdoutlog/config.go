@@ -38,6 +38,7 @@ func newConfig(options []Option) config {
 	for _, opt := range options {
 		cfg = opt.apply(cfg)
 	}
+
 	return cfg
 }
 
