@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "vcs" namespace.
 package vcsconv
@@ -193,7 +196,7 @@ func (ChangeCount) Description() string {
 	return "The number of changes (pull requests/merge requests/changelists) in a repository, categorized by their state (e.g. open or merged)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The changeState is the the state of the change (pull request/merge
 // request/changelist).
@@ -212,6 +215,11 @@ func (m ChangeCount) Add(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -229,6 +237,23 @@ func (m ChangeCount) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ChangeCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -303,7 +328,7 @@ func (ChangeDuration) Description() string {
 	return "The time duration a change (pull request/merge request/changelist) has been in a given state."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The changeState is the the state of the change (pull request/merge
 // request/changelist).
@@ -327,6 +352,11 @@ func (m ChangeDuration) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -345,6 +375,22 @@ func (m ChangeDuration) Record(
 		),
 	)
 
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ChangeDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -420,7 +466,7 @@ func (ChangeTimeToApproval) Description() string {
 	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -440,6 +486,11 @@ func (m ChangeTimeToApproval) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -457,6 +508,22 @@ func (m ChangeTimeToApproval) Record(
 		),
 	)
 
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ChangeTimeToApproval) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -561,7 +628,7 @@ func (ChangeTimeToMerge) Description() string {
 	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -581,6 +648,11 @@ func (m ChangeTimeToMerge) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -598,6 +670,22 @@ func (m ChangeTimeToMerge) Record(
 		),
 	)
 
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ChangeTimeToMerge) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -701,7 +789,7 @@ func (ContributorCount) Description() string {
 	return "The number of unique contributors to a repository"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The repositoryUrlFull is the the [canonical URL] of the repository providing
 // the complete HTTP(S) address in order to locate and identify the repository
@@ -716,6 +804,11 @@ func (m ContributorCount) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -732,6 +825,22 @@ func (m ContributorCount) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ContributorCount) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -806,7 +915,7 @@ func (RefCount) Description() string {
 	return "The number of refs of type branch or tag in a repository."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The refType is the the type of the [reference] in the repository.
 //
@@ -825,6 +934,11 @@ func (m RefCount) Add(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -842,6 +956,23 @@ func (m RefCount) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m RefCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -917,7 +1048,7 @@ func (RefLinesDelta) Description() string {
 	return "The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The lineChangeType is the the type of line change being measured on a branch
 // or change.
@@ -961,6 +1092,11 @@ func (m RefLinesDelta) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -982,6 +1118,29 @@ func (m RefLinesDelta) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric should be reported for each `vcs.line_change.type` value. For
+// example if a ref added 3 lines and removed 2 lines,
+// instrumentation SHOULD report two measurements: 3 and 2 (both positive
+// numbers).
+// If number of lines added/removed should be calculated from the start of time,
+// then `vcs.ref.base.name` SHOULD be set to an empty string.
+func (m RefLinesDelta) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1065,7 +1224,7 @@ func (RefRevisionsDelta) Description() string {
 	return "The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The refBaseName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -1106,6 +1265,11 @@ func (m RefRevisionsDelta) Record(
 	revisionDeltaDirection RevisionDeltaDirectionAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1127,6 +1291,27 @@ func (m RefRevisionsDelta) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric should be reported for each `vcs.revision_delta.direction` value.
+// For example if branch `a` is 3 commits behind and 2 commits ahead of `trunk`,
+// instrumentation SHOULD report two measurements: 3 and 2 (both positive
+// numbers) and `vcs.ref.base.name` is set to `trunk`.
+func (m RefRevisionsDelta) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1210,7 +1395,7 @@ func (RefTime) Description() string {
 	return "Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The refHeadName is the the name of the [reference] such as **branch** or
 // **tag** in the repository.
@@ -1234,6 +1419,11 @@ func (m RefTime) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1252,6 +1442,22 @@ func (m RefTime) Record(
 		),
 	)
 
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m RefTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
@@ -1326,7 +1532,7 @@ func (RepositoryCount) Description() string {
 	return "The number of repositories in an organization."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m RepositoryCount) Add(
@@ -1334,6 +1540,11 @@ func (m RepositoryCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1347,6 +1558,23 @@ func (m RepositoryCount) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m RepositoryCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 

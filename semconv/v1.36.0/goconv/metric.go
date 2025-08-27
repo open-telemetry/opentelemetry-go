@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "go" namespace.
 package goconv
@@ -488,13 +491,14 @@ func (ScheduleDuration) Description() string {
 	return "The time goroutines have spent in the scheduler in a runnable state before actually running."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Computed from `/sched/latencies:seconds`. Bucket boundaries are provided by
 // the runtime, and are subject to change.
 func (m ScheduleDuration) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -504,5 +508,24 @@ func (m ScheduleDuration) Record(ctx context.Context, val float64, attrs ...attr
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Computed from `/sched/latencies:seconds`. Bucket boundaries are provided by
+// the runtime, and are subject to change.
+func (m ScheduleDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
