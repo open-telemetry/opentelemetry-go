@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute/internal/fnv"
 )
 
@@ -145,4 +146,17 @@ func BenchmarkHashKVs(b *testing.B) {
 	for range b.N {
 		h = hashKVs(attrs)
 	}
+}
+
+func FuzzHashKVs(f *testing.F) {
+	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, f float64, b bool) {
+		kvs := []KeyValue{
+			String(k1, s),
+			Int(k2, i),
+			Int64(k3, i64),
+			Float64(k4, f),
+			Bool(k5, b),
+		}
+		require.Equal(t, hashKVs(kvs), hashKVs(kvs))
+	})
 }
