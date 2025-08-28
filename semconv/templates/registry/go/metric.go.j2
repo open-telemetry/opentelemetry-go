@@ -2,6 +2,9 @@
 {% import 'instrument.j2' as i -%}
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "{{ ctx.root_namespace }}" namespace.
 package {{ ctx.root_namespace | camel_case | lower }}conv
@@ -103,9 +106,13 @@ func ({{ metric_name }}) Description() string {
 {%- elif metric.instrument == "counter" or metric.instrument == "updowncounter" %}
 
 {{ i.add_method(metric, metric_inst, ctx.root_namespace) }}
+
+{{ i.add_set_method(metric, metric_inst, ctx.root_namespace) }}
 {%- elif metric.instrument == "histogram" or metric.instrument == "gauge" %}
 
 {{ i.record_method(metric, metric_inst, ctx.root_namespace) }}
+
+{{ i.record_set_method(metric, metric_inst, ctx.root_namespace) }}
 {%- endif %}
 {%- for attr in metric.attributes | not_required | attribute_sort %}
 {%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}

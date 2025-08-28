@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "gen_ai" namespace.
 package genaiconv
@@ -161,7 +164,7 @@ func (ClientOperationDuration) Description() string {
 	return "GenAI operation duration"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the name of the operation being performed.
 //
@@ -176,6 +179,11 @@ func (m ClientOperationDuration) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -193,6 +201,22 @@ func (m ClientOperationDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -279,7 +303,7 @@ func (ClientTokenUsage) Description() string {
 	return "Measures number of input and output tokens used"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the name of the operation being performed.
 //
@@ -297,6 +321,11 @@ func (m ClientTokenUsage) Record(
 	tokenType TokenTypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -315,6 +344,22 @@ func (m ClientTokenUsage) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientTokenUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -395,7 +440,7 @@ func (ServerRequestDuration) Description() string {
 	return "Generative AI server request duration such as time-to-last byte or last output token"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the name of the operation being performed.
 //
@@ -410,6 +455,11 @@ func (m ServerRequestDuration) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -427,6 +477,22 @@ func (m ServerRequestDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -514,7 +580,7 @@ func (ServerTimePerOutputToken) Description() string {
 	return "Time per output token generated after the first token for successful responses"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the name of the operation being performed.
 //
@@ -529,6 +595,11 @@ func (m ServerTimePerOutputToken) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -546,6 +617,22 @@ func (m ServerTimePerOutputToken) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ServerTimePerOutputToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -625,7 +712,7 @@ func (ServerTimeToFirstToken) Description() string {
 	return "Time to generate first token for successful responses"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the name of the operation being performed.
 //
@@ -640,6 +727,11 @@ func (m ServerTimeToFirstToken) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -657,6 +749,22 @@ func (m ServerTimeToFirstToken) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ServerTimeToFirstToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 

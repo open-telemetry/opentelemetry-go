@@ -16,14 +16,15 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -56,10 +57,20 @@ func TestLoggerEmit(t *testing.T) {
 	rWithNoObservedTimestamp := r
 	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
-	rWithoutDeduplicateAttributes := r
-	rWithoutDeduplicateAttributes.AddAttributes(
+	rWithAllowKeyDuplication := r
+	rWithAllowKeyDuplication.AddAttributes(
 		log.String("k1", "str1"),
 	)
+	rWithAllowKeyDuplication.SetBody(log.MapValue(
+		log.Int64("1", 2),
+		log.Int64("1", 3),
+	))
+
+	rWithDuplicatesInBody := r
+	rWithDuplicatesInBody.SetBody(log.MapValue(
+		log.Int64("1", 2),
+		log.Int64("1", 3),
+	))
 
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		context.Background(),
@@ -221,7 +232,7 @@ func TestLoggerEmit(t *testing.T) {
 			},
 		},
 		{
-			name: "WithoutAttributeDeduplication",
+			name: "WithAllowKeyDuplication",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
@@ -231,15 +242,15 @@ func TestLoggerEmit(t *testing.T) {
 				WithAllowKeyDuplication(),
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    context.Background(),
-			record: rWithoutDeduplicateAttributes,
+			record: rWithAllowKeyDuplication,
 			expectedRecords: []Record{
 				{
-					eventName:                 r.EventName(),
-					timestamp:                 r.Timestamp(),
-					body:                      r.Body(),
-					severity:                  r.Severity(),
-					severityText:              r.SeverityText(),
-					observedTimestamp:         r.ObservedTimestamp(),
+					eventName:                 rWithAllowKeyDuplication.EventName(),
+					timestamp:                 rWithAllowKeyDuplication.Timestamp(),
+					body:                      rWithAllowKeyDuplication.Body(),
+					severity:                  rWithAllowKeyDuplication.Severity(),
+					severityText:              rWithAllowKeyDuplication.SeverityText(),
+					observedTimestamp:         rWithAllowKeyDuplication.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 5,
 					attributeCountLimit:       5,
@@ -251,6 +262,39 @@ func TestLoggerEmit(t *testing.T) {
 					},
 					nFront:       3,
 					allowDupKeys: true,
+				},
+			},
+		},
+		{
+			name: "WithDuplicatesInBody",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+				WithAttributeValueLengthLimit(5),
+				WithAttributeCountLimit(5),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+			), instrumentation.Scope{Name: "scope"}),
+			ctx:    context.Background(),
+			record: rWithDuplicatesInBody,
+			expectedRecords: []Record{
+				{
+					eventName: rWithDuplicatesInBody.EventName(),
+					timestamp: rWithDuplicatesInBody.Timestamp(),
+					body: log.MapValue(
+						log.Int64("1", 3),
+					),
+					severity:                  rWithDuplicatesInBody.Severity(),
+					severityText:              rWithDuplicatesInBody.SeverityText(),
+					observedTimestamp:         rWithDuplicatesInBody.ObservedTimestamp(),
+					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
+					attributeValueLengthLimit: 5,
+					attributeCountLimit:       5,
+					scope:                     &instrumentation.Scope{Name: "scope"},
+					front: [attributesInlineCount]log.KeyValue{
+						log.String("k1", "str"),
+						log.Float64("k2", 1.0),
+					},
+					nFront: 2,
 				},
 			},
 		},
@@ -383,9 +427,11 @@ func TestLoggerSelfObservability(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tc.selfObservabilityEnabled))
 			prev := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(prev)
-			r := metric.NewManualReader()
-			mp := metric.NewMeterProvider(metric.WithReader(r))
+			t.Cleanup(func() {
+				otel.SetMeterProvider(prev)
+			})
+			r := sdkmetric.NewManualReader()
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(r))
 			otel.SetMeterProvider(mp)
 			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
@@ -421,4 +467,49 @@ func TestLoggerSelfObservability(t *testing.T) {
 			metricdatatest.AssertEqual(t, wantMetric, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 		})
 	}
+}
+
+func TestNewLoggerSelfObservabilityErrorHandled(t *testing.T) {
+	errHandler := otel.GetErrorHandler()
+	t.Cleanup(func() {
+		otel.SetErrorHandler(errHandler)
+	})
+
+	var errs []error
+	eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+	otel.SetErrorHandler(eh)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError})
+
+	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+	_ = l
+	require.Len(t, errs, 1)
+	assert.ErrorIs(t, errs[0], assert.AnError)
+}
+
+type errMeterProvider struct {
+	metric.MeterProvider
+
+	err error
+}
+
+func (mp *errMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	return &errMeter{err: mp.err}
+}
+
+type errMeter struct {
+	metric.Meter
+
+	err error
+}
+
+func (m *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
+	return nil, m.err
 }
