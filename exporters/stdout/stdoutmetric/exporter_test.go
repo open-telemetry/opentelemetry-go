@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/counter"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -196,20 +197,51 @@ func TestAggregationSelector(t *testing.T) {
 }
 
 func TestExporter_Export_SelfObservability(t *testing.T) {
+	componentNameAttr := semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0")
+	componentTypeAttr := semconv.OTelComponentTypeKey.String(
+		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter",
+	)
+	wantErr := errors.New("encoding failed")
+
 	tests := []struct {
 		name                     string
+		ctx                      context.Context
+		exporterOpts             []stdoutmetric.Option
 		selfObservabilityEnabled bool
 		expectedExportedCount    int64
+		inflightAttrs            attribute.Set
+		attributes               attribute.Set
+		wantErr                  error
 	}{
 		{
 			name:                     "Enabled",
+			ctx:                      context.Background(),
+			exporterOpts:             []stdoutmetric.Option{testEncoderOption()},
 			selfObservabilityEnabled: true,
 			expectedExportedCount:    19,
+			inflightAttrs:            attribute.NewSet(componentNameAttr, componentTypeAttr),
+			attributes:               attribute.NewSet(componentNameAttr, componentTypeAttr),
 		},
 		{
 			name:                     "Disabled",
+			ctx:                      context.Background(),
+			exporterOpts:             []stdoutmetric.Option{testEncoderOption()},
 			selfObservabilityEnabled: false,
 			expectedExportedCount:    0,
+		},
+		{
+			name:                     "EncodingError",
+			ctx:                      context.Background(),
+			exporterOpts:             []stdoutmetric.Option{stdoutmetric.WithEncoder(failingEncoder{})},
+			selfObservabilityEnabled: true,
+			expectedExportedCount:    19,
+			inflightAttrs:            attribute.NewSet(componentNameAttr, componentTypeAttr),
+			attributes: attribute.NewSet(
+				componentNameAttr,
+				componentTypeAttr,
+				semconv.ErrorType(wantErr),
+			),
+			wantErr: wantErr,
 		},
 	}
 	for _, tt := range tests {
@@ -221,101 +253,25 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 			otel.SetMeterProvider(mp)
 			t.Cleanup(func() { otel.SetMeterProvider(origMp) })
 
-			exp, err := stdoutmetric.New(testEncoderOption())
+			exp, err := stdoutmetric.New(tt.exporterOpts...)
 			require.NoError(t, err)
+			rm := &metricdata.ResourceMetrics{ScopeMetrics: scopeMetrics()}
 
-			rm := &metricdata.ResourceMetrics{
-				ScopeMetrics: []metricdata.ScopeMetrics{
-					{
-						Metrics: []metricdata.Metrics{
-							{
-								Name: "gauge_int64",
-								Data: metricdata.Gauge[int64]{
-									DataPoints: []metricdata.DataPoint[int64]{{Value: 1}, {Value: 2}},
-								},
-							},
-							{
-								Name: "gauge_float64",
-								Data: metricdata.Gauge[float64]{
-									DataPoints: []metricdata.DataPoint[float64]{
-										{Value: 1.0},
-										{Value: 2.0},
-										{Value: 3.0},
-									},
-								},
-							},
-							{
-								Name: "sum_int64",
-								Data: metricdata.Sum[int64]{
-									DataPoints: []metricdata.DataPoint[int64]{{Value: 10}},
-								},
-							},
-							{
-								Name: "sum_float64",
-								Data: metricdata.Sum[float64]{
-									DataPoints: []metricdata.DataPoint[float64]{{Value: 10.5}, {Value: 20.5}},
-								},
-							},
-							{
-								Name: "histogram_int64",
-								Data: metricdata.Histogram[int64]{
-									DataPoints: []metricdata.HistogramDataPoint[int64]{
-										{Count: 1},
-										{Count: 2},
-										{Count: 3},
-									},
-								},
-							},
-							{
-								Name: "histogram_float64",
-								Data: metricdata.Histogram[float64]{
-									DataPoints: []metricdata.HistogramDataPoint[float64]{{Count: 1}},
-								},
-							},
-							{
-								Name: "exponential_histogram_int64",
-								Data: metricdata.ExponentialHistogram[int64]{
-									DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
-										{Count: 1},
-										{Count: 2},
-									},
-								},
-							},
-							{
-								Name: "exponential_histogram_float64",
-								Data: metricdata.ExponentialHistogram[float64]{
-									DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
-										{Count: 1},
-										{Count: 2},
-										{Count: 3},
-										{Count: 4},
-									},
-								},
-							},
-							{
-								Name: "summary",
-								Data: metricdata.Summary{
-									DataPoints: []metricdata.SummaryDataPoint{{Count: 1}},
-								},
-							},
-						},
-					},
-				},
+			err = exp.Export(tt.ctx, rm)
+			if tt.wantErr != nil {
+				assert.EqualError(t, err, tt.wantErr.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 
-			ctx := context.Background()
-			err = exp.Export(ctx, rm)
-			require.NoError(t, err)
-
 			var metrics metricdata.ResourceMetrics
-			err = reader.Collect(ctx, &metrics)
+			err = reader.Collect(tt.ctx, &metrics)
 			require.NoError(t, err)
 
 			if !tt.selfObservabilityEnabled {
 				assert.Empty(t, metrics.ScopeMetrics)
 			} else {
 				assert.Len(t, metrics.ScopeMetrics, 1)
-				durationMetric := metrics.ScopeMetrics[0].Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0]
 				expectedMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
@@ -330,11 +286,8 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 							Data: metricdata.Sum[int64]{
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
-										Value: 0,
-										Attributes: attribute.NewSet(
-											semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0"),
-											semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"),
-										),
+										Value:      0,
+										Attributes: tt.inflightAttrs,
 									},
 								},
 								Temporality: metricdata.CumulativeTemporality,
@@ -347,11 +300,8 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 							Data: metricdata.Sum[int64]{
 								DataPoints: []metricdata.DataPoint[int64]{
 									{
-										Value: tt.expectedExportedCount,
-										Attributes: attribute.NewSet(
-											semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0"),
-											semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"),
-										),
+										Value:      tt.expectedExportedCount,
+										Attributes: tt.attributes,
 									},
 								},
 								Temporality: metricdata.CumulativeTemporality,
@@ -365,16 +315,7 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 							Data: metricdata.Histogram[float64]{
 								DataPoints: []metricdata.HistogramDataPoint[float64]{
 									{
-										Attributes: attribute.NewSet(
-											semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0"),
-											semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"),
-										),
-										Count:        durationMetric.Count,
-										Bounds:       durationMetric.Bounds,
-										BucketCounts: durationMetric.BucketCounts,
-										Min:          durationMetric.Min,
-										Max:          durationMetric.Max,
-										Sum:          durationMetric.Sum,
+										Attributes: tt.attributes,
 									},
 								},
 								Temporality: metricdata.CumulativeTemporality,
@@ -382,9 +323,92 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 						},
 					},
 				}
-				metricdatatest.AssertEqual(t, expectedMetrics, metrics.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+				assert.Equal(t, expectedMetrics.Scope, metrics.ScopeMetrics[0].Scope)
+				metricdatatest.AssertEqual(t, expectedMetrics.Metrics[0], metrics.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, expectedMetrics.Metrics[1], metrics.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, expectedMetrics.Metrics[2], metrics.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			}
+			_ = counter.SetExporterID(0)
 		})
+	}
+}
+
+func scopeMetrics() []metricdata.ScopeMetrics {
+	return []metricdata.ScopeMetrics{
+		{
+			Metrics: []metricdata.Metrics{
+				{
+					Name: "gauge_int64",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{{Value: 1}, {Value: 2}},
+					},
+				},
+				{
+					Name: "gauge_float64",
+					Data: metricdata.Gauge[float64]{
+						DataPoints: []metricdata.DataPoint[float64]{
+							{Value: 1.0},
+							{Value: 2.0},
+							{Value: 3.0},
+						},
+					},
+				},
+				{
+					Name: "sum_int64",
+					Data: metricdata.Sum[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{{Value: 10}},
+					},
+				},
+				{
+					Name: "sum_float64",
+					Data: metricdata.Sum[float64]{
+						DataPoints: []metricdata.DataPoint[float64]{{Value: 10.5}, {Value: 20.5}},
+					},
+				},
+				{
+					Name: "histogram_int64",
+					Data: metricdata.Histogram[int64]{
+						DataPoints: []metricdata.HistogramDataPoint[int64]{
+							{Count: 1},
+							{Count: 2},
+							{Count: 3},
+						},
+					},
+				},
+				{
+					Name: "histogram_float64",
+					Data: metricdata.Histogram[float64]{
+						DataPoints: []metricdata.HistogramDataPoint[float64]{{Count: 1}},
+					},
+				},
+				{
+					Name: "exponential_histogram_int64",
+					Data: metricdata.ExponentialHistogram[int64]{
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+							{Count: 1},
+							{Count: 2},
+						},
+					},
+				},
+				{
+					Name: "exponential_histogram_float64",
+					Data: metricdata.ExponentialHistogram[float64]{
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+							{Count: 1},
+							{Count: 2},
+							{Count: 3},
+							{Count: 4},
+						},
+					},
+				},
+				{
+					Name: "summary",
+					Data: metricdata.Summary{
+						DataPoints: []metricdata.SummaryDataPoint{{Count: 1}},
+					},
+				},
+			},
+		},
 	}
 }
 

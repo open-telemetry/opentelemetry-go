@@ -80,8 +80,7 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(er
 				*attrs = (*attrs)[:0] // reset the slice for reuse
 				measureAttrsPool.Put(attrs)
 			}()
-			copy(*attrs, em.attrs)
-			*attrs = append(*attrs, semconv.ErrorType(err))
+			*attrs = append(*attrs, em.attrs[0], em.attrs[1], semconv.ErrorType(err))
 		}
 		em.exported.Add(ctx, count, *attrs...)
 		em.duration.Record(ctx, durationSeconds, *attrs...)
