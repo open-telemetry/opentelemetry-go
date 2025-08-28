@@ -272,7 +272,7 @@ func BenchmarkStringSlice(b *testing.B) {
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
-func BenchmarkEquals(b *testing.B) {
+func BenchmarkSetEquals(b *testing.B) {
 	b.Run("Empty", func(b *testing.B) {
 		benchmarkEquals(b, attribute.EmptySet())
 	})
