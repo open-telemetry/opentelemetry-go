@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 // The methods of this type are not expected to be called concurrently.
