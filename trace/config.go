@@ -308,8 +308,9 @@ func WithInstrumentationVersion(version string) TracerOption {
 //
 // The passed attributes will be de-duplicated.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
+	set := attribute.NewSet(attr...)
 	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-		config.attrs = attribute.NewSet(attr...)
+		config.attrs = set
 		return config
 	})
 }

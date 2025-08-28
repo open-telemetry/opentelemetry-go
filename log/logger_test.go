@@ -4,6 +4,7 @@
 package log_test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,14 +20,23 @@ func TestNewLoggerConfig(t *testing.T) {
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
 	)
-
-	c := log.NewLoggerConfig(
+	options := []log.LoggerOption{
 		log.WithInstrumentationVersion(version),
 		log.WithSchemaURL(schemaURL),
 		log.WithInstrumentationAttributes(attr.ToSlice()...),
-	)
+	}
 
-	assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
-	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
-	assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
+	// Ensure that options can be used concurrently.
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c := log.NewLoggerConfig(options...)
+			assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
+			assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+			assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
+		}()
+	}
+	wg.Wait()
 }

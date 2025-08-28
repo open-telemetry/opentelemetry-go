@@ -4,6 +4,7 @@
 package trace
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -217,18 +218,27 @@ func TestTracerConfig(t *testing.T) {
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
 	)
-
-	c := NewTracerConfig(
+	options := []TracerOption{
 		// Multiple calls should overwrite.
 		WithInstrumentationVersion(v1),
 		WithInstrumentationVersion(v2),
 		WithSchemaURL(schemaURL),
 		WithInstrumentationAttributes(attrs.ToSlice()...),
-	)
+	}
 
-	assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
-	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
-	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+	// Ensure that options can be used concurrently.
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c := NewTracerConfig(options...)
+			assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
+			assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+			assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+		}()
+	}
+	wg.Wait()
 }
 
 // Save benchmark results to a file level var to avoid the compiler optimizing

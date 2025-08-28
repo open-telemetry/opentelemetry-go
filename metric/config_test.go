@@ -4,6 +4,7 @@
 package metric_test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,21 +13,30 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-func TestConfig(t *testing.T) {
+func TestNewMeterConfig(t *testing.T) {
 	version := "v1.1.1"
 	schemaURL := "https://opentelemetry.io/schemas/1.0.0"
 	attr := attribute.NewSet(
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
 	)
-
-	c := metric.NewMeterConfig(
+	options := []metric.MeterOption{
 		metric.WithInstrumentationVersion(version),
 		metric.WithSchemaURL(schemaURL),
 		metric.WithInstrumentationAttributes(attr.ToSlice()...),
-	)
+	}
 
-	assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
-	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
-	assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
+	// Ensure that options can be used concurrently.
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c := metric.NewMeterConfig(options...)
+			assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
+			assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+			assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
+		}()
+	}
+	wg.Wait()
 }
