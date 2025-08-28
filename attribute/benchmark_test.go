@@ -316,7 +316,7 @@ func BenchmarkEquals(b *testing.B) {
 	})
 }
 
-func benchmarkEquals(b *testing.B, set *attribute.Set) {
+func benchmarkSetEquals(b *testing.B, set *attribute.Set) {
 	b.ResetTimer()
 	for range b.N {
 		if !set.Equals(set) {
