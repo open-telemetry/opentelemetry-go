@@ -312,7 +312,7 @@ func BenchmarkSetEquals(b *testing.B) {
 			attribute.Int("i", 42),
 			attribute.Int("j", 42),
 		)
-		benchmarkEquals(b, &set)
+		benchmarkSetEquals(b, &set)
 	})
 }
 
