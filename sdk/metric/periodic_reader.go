@@ -105,7 +105,7 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // exporter. That is left to the user to accomplish.
 func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *PeriodicReader {
 	conf := newPeriodicReaderConfig(options)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	r := &PeriodicReader{
 		interval: conf.interval,
 		timeout:  conf.timeout,
@@ -144,7 +144,7 @@ type PeriodicReader struct {
 	flushCh  chan chan error
 
 	done         chan struct{}
-	cancel       context.CancelFunc
+	cancel       context.CancelCauseFunc
 	shutdownOnce sync.Once
 
 	rmPool sync.Pool
@@ -316,7 +316,7 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		}
 
 		// Stop the run loop.
-		r.cancel()
+		r.cancel(errors.New("reader is shutting down"))
 		<-r.done
 
 		// Any future call to Collect will now return ErrReaderShutdown.
