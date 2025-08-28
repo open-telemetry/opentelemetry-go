@@ -19,8 +19,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
@@ -308,31 +311,79 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 			err = reader.Collect(ctx, &metrics)
 			require.NoError(t, err)
 
-			var foundExported, foundDuration, foundInflight bool
-			var exportedCount int64
-
-			for _, sm := range metrics.ScopeMetrics {
-				for _, m := range sm.Metrics {
-					switch m.Name {
-					case otelconv.SDKExporterMetricDataPointExported{}.Name():
-						foundExported = true
-						if sum, ok := m.Data.(metricdata.Sum[int64]); ok {
-							for _, dp := range sum.DataPoints {
-								exportedCount += dp.Value
-							}
-						}
-					case otelconv.SDKExporterOperationDuration{}.Name():
-						foundDuration = true
-					case otelconv.SDKExporterMetricDataPointInflight{}.Name():
-						foundInflight = true
-					}
+			if !tt.selfObservabilityEnabled {
+				assert.Empty(t, metrics.ScopeMetrics)
+			} else {
+				assert.Len(t, metrics.ScopeMetrics, 1)
+				durationMetric := metrics.ScopeMetrics[0].Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0]
+				expectedMetrics := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+							Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+							Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 0,
+										Attributes: attribute.NewSet(
+											semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0"),
+											semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+							Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+							Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: tt.expectedExportedCount,
+										Attributes: attribute.NewSet(
+											semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0"),
+											semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(
+											semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0"),
+											semconv.OTelComponentTypeKey.String("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"),
+										),
+										Count:        durationMetric.Count,
+										Bounds:       durationMetric.Bounds,
+										BucketCounts: durationMetric.BucketCounts,
+										Min:          durationMetric.Min,
+										Max:          durationMetric.Max,
+										Sum:          durationMetric.Sum,
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+							},
+						},
+					},
 				}
+				metricdatatest.AssertEqual(t, expectedMetrics, metrics.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 			}
-
-			assert.Equal(t, tt.selfObservabilityEnabled, foundExported)
-			assert.Equal(t, tt.selfObservabilityEnabled, foundDuration)
-			assert.Equal(t, tt.selfObservabilityEnabled, foundInflight)
-			assert.Equal(t, tt.expectedExportedCount, exportedCount)
 		})
 	}
 }
