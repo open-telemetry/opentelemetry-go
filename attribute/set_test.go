@@ -386,7 +386,7 @@ func TestMarshalJSON(t *testing.T) {
 			set := attribute.NewSet(tc.kvs...)
 			by, err := set.MarshalJSON()
 			require.NoError(t, err)
-			require.Equal(t, tc.wantJSON, string(by))
+			assert.JSONEq(t, tc.wantJSON, string(by))
 		})
 	}
 }
