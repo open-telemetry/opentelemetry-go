@@ -93,7 +93,7 @@ func (em *ExporterMetrics) TrackExport(
 	*attrs = append([]attribute.KeyValue{}, em.presetAttrs...)
 
 	begin := time.Now()
-	em.logInflightMetric.Add(ctx, count, *attrs...)
+	em.logInflightMetric.AddSet(ctx, count, attribute.NewSet(*attrs...))
 	return func(err error, successCount int64, code codes.Code) {
 		defer func() {
 			*attrs = (*attrs)[:0]
@@ -101,17 +101,17 @@ func (em *ExporterMetrics) TrackExport(
 		}()
 
 		duration := time.Since(begin).Seconds()
-		em.logInflightMetric.Add(ctx, -count, *attrs...)
-		em.logExportedMetric.Add(ctx, successCount, *attrs...)
+		em.logInflightMetric.AddSet(ctx, -count, attribute.NewSet(*attrs...))
+		em.logExportedMetric.AddSet(ctx, successCount, attribute.NewSet(*attrs...))
 		if err != nil {
 			*attrs = append(*attrs, semconv.ErrorType(err))
-			em.logExportedMetric.Add(ctx, count-successCount, *attrs...)
+			em.logExportedMetric.AddSet(ctx, count-successCount, attribute.NewSet(*attrs...))
 		}
 		*attrs = append(
 			*attrs,
 			em.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
 		)
-		em.logExportedDurationMetric.Record(ctx, duration, *attrs...)
+		em.logExportedDurationMetric.RecordSet(ctx, duration, attribute.NewSet(*attrs...))
 	}
 }
 
