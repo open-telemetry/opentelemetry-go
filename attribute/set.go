@@ -31,9 +31,9 @@ type (
 
 	// Distinct is a unique identifier of a Set.
 	//
-	// Distinct is designed to be ensures equivalence stability: comparisons
-	// will return the save value across versions. For this reason, Distinct
-	// should always be used as a map key instead of a Set.
+	// Distinct is designed to ensure equivalence stability: comparisons will
+	// return the same value across versions. For this reason, Distinct should
+	// always be used as a map key instead of a Set.
 	Distinct struct {
 		iface any
 	}

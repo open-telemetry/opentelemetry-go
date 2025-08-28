@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestDefaultExperimental(t *testing.T) {
