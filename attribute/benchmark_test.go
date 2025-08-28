@@ -274,7 +274,7 @@ func BenchmarkStringSlice(b *testing.B) {
 
 func BenchmarkSetEquals(b *testing.B) {
 	b.Run("Empty", func(b *testing.B) {
-		benchmarkEquals(b, attribute.EmptySet())
+		benchmarkSetEquals(b, attribute.EmptySet())
 	})
 	b.Run("1 string attribute", func(b *testing.B) {
 		set := attribute.NewSet(attribute.String("string", "42"))
