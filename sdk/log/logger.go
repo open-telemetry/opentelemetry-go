@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -14,8 +15,8 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -39,15 +40,9 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 		provider:             p,
 		instrumentationScope: scope,
 	}
-	l.initSelfObservability()
-	return l
-}
-
-func (l *logger) initSelfObservability() {
 	if !x.SelfObservability.Enabled() {
-		return
+		return l
 	}
-
 	l.selfObservabilityEnabled = true
 	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/sdk/log",
@@ -56,8 +51,10 @@ func (l *logger) initSelfObservability() {
 
 	var err error
 	if l.logCreatedMetric, err = otelconv.NewSDKLogCreated(m); err != nil {
+		err = fmt.Errorf("failed to create log created metric: %w", err)
 		otel.Handle(err)
 	}
+	return l
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
@@ -111,7 +108,6 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),
 		severityText:      r.SeverityText(),
-		body:              r.Body(),
 
 		traceID:    sc.TraceID(),
 		spanID:     sc.SpanID(),
@@ -126,6 +122,9 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	if l.selfObservabilityEnabled {
 		l.logCreatedMetric.Add(ctx, 1)
 	}
+
+	// This ensures we deduplicate key-value collections in the log body
+	newRecord.SetBody(r.Body())
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
 	if newRecord.observedTimestamp.IsZero() {

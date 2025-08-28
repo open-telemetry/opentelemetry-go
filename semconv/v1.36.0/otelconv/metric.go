@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "otel" namespace.
 package otelconv
@@ -212,7 +215,7 @@ func (SDKExporterLogExported) Description() string {
 	return "The number of log records for which the export has finished, either successful or failed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -228,6 +231,11 @@ func (m SDKExporterLogExported) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -241,6 +249,31 @@ func (m SDKExporterLogExported) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful exports, `error.type` MUST NOT be set. For failed exports,
+// `error.type` MUST contain the failure cause.
+// For exporters with partial success semantics (e.g. OTLP with
+// `rejected_log_records`), rejected log records MUST count as failed and only
+// non-rejected log records count as success.
+// If no rejection reason is available, `rejected` SHOULD be used as value for
+// `error.type`.
+func (m SDKExporterLogExported) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -329,7 +362,7 @@ func (SDKExporterLogInflight) Description() string {
 	return "The number of log records which were passed to the exporter, but that have not been exported yet (neither successful, nor failed)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -340,6 +373,11 @@ func (m SDKExporterLogInflight) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -353,6 +391,26 @@ func (m SDKExporterLogInflight) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful exports, `error.type` MUST NOT be set. For failed exports,
+// `error.type` MUST contain the failure cause.
+func (m SDKExporterLogInflight) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -435,7 +493,7 @@ func (SDKExporterMetricDataPointExported) Description() string {
 	return "The number of metric data points for which the export has finished, either successful or failed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -451,6 +509,11 @@ func (m SDKExporterMetricDataPointExported) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -464,6 +527,31 @@ func (m SDKExporterMetricDataPointExported) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful exports, `error.type` MUST NOT be set. For failed exports,
+// `error.type` MUST contain the failure cause.
+// For exporters with partial success semantics (e.g. OTLP with
+// `rejected_data_points`), rejected data points MUST count as failed and only
+// non-rejected data points count as success.
+// If no rejection reason is available, `rejected` SHOULD be used as value for
+// `error.type`.
+func (m SDKExporterMetricDataPointExported) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -554,7 +642,7 @@ func (SDKExporterMetricDataPointInflight) Description() string {
 	return "The number of metric data points which were passed to the exporter, but that have not been exported yet (neither successful, nor failed)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -565,6 +653,11 @@ func (m SDKExporterMetricDataPointInflight) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -578,6 +671,26 @@ func (m SDKExporterMetricDataPointInflight) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful exports, `error.type` MUST NOT be set. For failed exports,
+// `error.type` MUST contain the failure cause.
+func (m SDKExporterMetricDataPointInflight) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -659,7 +772,7 @@ func (SDKExporterOperationDuration) Description() string {
 	return "The duration of exporting a batch of telemetry records."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -677,6 +790,11 @@ func (m SDKExporterOperationDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -690,6 +808,32 @@ func (m SDKExporterOperationDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric defines successful operations using the full success definitions
+// for [http]
+// and [grpc]. Anything else is defined as an unsuccessful operation. For
+// successful
+// operations, `error.type` MUST NOT be set. For unsuccessful export operations,
+// `error.type` MUST contain a relevant failure cause.
+//
+// [http]: https://github.com/open-telemetry/opentelemetry-proto/blob/v1.5.0/docs/specification.md#full-success-1
+// [grpc]: https://github.com/open-telemetry/opentelemetry-proto/blob/v1.5.0/docs/specification.md#full-success
+func (m SDKExporterOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -792,7 +936,7 @@ func (SDKExporterSpanExported) Description() string {
 	return "The number of spans for which the export has finished, either successful or failed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -808,6 +952,11 @@ func (m SDKExporterSpanExported) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -821,6 +970,31 @@ func (m SDKExporterSpanExported) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful exports, `error.type` MUST NOT be set. For failed exports,
+// `error.type` MUST contain the failure cause.
+// For exporters with partial success semantics (e.g. OTLP with `rejected_spans`
+// ), rejected spans MUST count as failed and only non-rejected spans count as
+// success.
+// If no rejection reason is available, `rejected` SHOULD be used as value for
+// `error.type`.
+func (m SDKExporterSpanExported) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -909,7 +1083,7 @@ func (SDKExporterSpanInflight) Description() string {
 	return "The number of spans which were passed to the exporter, but that have not been exported yet (neither successful, nor failed)"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -920,6 +1094,11 @@ func (m SDKExporterSpanInflight) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -933,6 +1112,26 @@ func (m SDKExporterSpanInflight) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful exports, `error.type` MUST NOT be set. For failed exports,
+// `error.type` MUST contain the failure cause.
+func (m SDKExporterSpanInflight) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1013,7 +1212,7 @@ func (SDKLogCreated) Description() string {
 	return "The number of logs submitted to enabled SDK Loggers"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 func (m SDKLogCreated) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
@@ -1027,6 +1226,23 @@ func (m SDKLogCreated) Add(ctx context.Context, incr int64, attrs ...attribute.K
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m SDKLogCreated) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -1082,7 +1298,7 @@ func (SDKMetricReaderCollectionDuration) Description() string {
 	return "The duration of the collect operation of the metric reader."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -1096,6 +1312,11 @@ func (m SDKMetricReaderCollectionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1109,6 +1330,28 @@ func (m SDKMetricReaderCollectionDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// For successful collections, `error.type` MUST NOT be set. For failed
+// collections, `error.type` SHOULD contain the failure cause.
+// It can happen that metrics collection is successful for some MetricProducers,
+// while others fail. In that case `error.type` SHOULD be set to any of the
+// failure causes.
+func (m SDKMetricReaderCollectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1184,7 +1427,7 @@ func (SDKProcessorLogProcessed) Description() string {
 	return "The number of log records for which the processing has finished, either successful or failed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -1198,6 +1441,11 @@ func (m SDKProcessorLogProcessed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1211,6 +1459,29 @@ func (m SDKProcessorLogProcessed) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful processing, `error.type` MUST NOT be set. For failed
+// processing, `error.type` MUST contain the failure cause.
+// For the SDK Simple and Batching Log Record Processor a log record is
+// considered to be processed already when it has been submitted to the exporter,
+// not when the corresponding export call has finished.
+func (m SDKProcessorLogProcessed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -1419,7 +1690,7 @@ func (SDKProcessorSpanProcessed) Description() string {
 	return "The number of spans for which the processing has finished, either successful or failed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -1433,6 +1704,11 @@ func (m SDKProcessorSpanProcessed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1446,6 +1722,29 @@ func (m SDKProcessorSpanProcessed) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// For successful processing, `error.type` MUST NOT be set. For failed
+// processing, `error.type` MUST contain the failure cause.
+// For the SDK Simple and Batching Span Processor a span is considered to be
+// processed already when it has been submitted to the exporter, not when the
+// corresponding export call has finished.
+func (m SDKProcessorSpanProcessed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -1654,7 +1953,7 @@ func (SDKSpanLive) Description() string {
 	return "The number of created spans with `recording=true` for which the end operation has not been called yet"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m SDKSpanLive) Add(
@@ -1662,6 +1961,11 @@ func (m SDKSpanLive) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1675,6 +1979,23 @@ func (m SDKSpanLive) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m SDKSpanLive) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -1735,7 +2056,7 @@ func (SDKSpanStarted) Description() string {
 	return "The number of created spans"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -1746,6 +2067,11 @@ func (m SDKSpanStarted) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1759,6 +2085,26 @@ func (m SDKSpanStarted) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Implementations MUST record this metric for all spans, even for non-recording
+// ones.
+func (m SDKSpanStarted) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
