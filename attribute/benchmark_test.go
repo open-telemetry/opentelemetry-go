@@ -278,7 +278,7 @@ func BenchmarkSetEquals(b *testing.B) {
 	})
 	b.Run("1 string attribute", func(b *testing.B) {
 		set := attribute.NewSet(attribute.String("string", "42"))
-		benchmarkEquals(b, &set)
+		benchmarkSetEquals(b, &set)
 	})
 	b.Run("10 string attributes", func(b *testing.B) {
 		set := attribute.NewSet(
@@ -293,11 +293,11 @@ func BenchmarkSetEquals(b *testing.B) {
 			attribute.String("i", "42"),
 			attribute.String("j", "42"),
 		)
-		benchmarkEquals(b, &set)
+		benchmarkSetEquals(b, &set)
 	})
 	b.Run("1 int attribute", func(b *testing.B) {
 		set := attribute.NewSet(attribute.Int("string", 42))
-		benchmarkEquals(b, &set)
+		benchmarkSetEquals(b, &set)
 	})
 	b.Run("10 int attributes", func(b *testing.B) {
 		set := attribute.NewSet(
