@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -18,6 +19,17 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
+
+var measureAttrsPool = sync.Pool{
+	New: func() any {
+		// "component.name" + "component.type" + "error.type"
+		const n = 1 + 1 + 1
+		s := make([]attribute.KeyValue, 0, n)
+		// Return a pointer to a slice instead of a slice itself
+		// to avoid allocations on every call.
+		return &s
+	},
+}
 
 type ExporterMetrics struct {
 	inflight otelconv.SDKExporterMetricDataPointInflight
@@ -60,14 +72,18 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(er
 	em.inflight.Add(ctx, count, em.attrs...)
 	return func(err error) {
 		durationSeconds := time.Since(begin).Seconds()
-		attrs := em.attrs
-		em.inflight.Add(ctx, -count, attrs...)
+		attrs := &em.attrs
+		em.inflight.Add(ctx, -count, *attrs...)
 		if err != nil {
-			attrs = make([]attribute.KeyValue, len(em.attrs)+1)
-			copy(attrs, em.attrs)
-			attrs = append(attrs, semconv.ErrorType(err))
+			attrs = measureAttrsPool.Get().(*[]attribute.KeyValue)
+			defer func() {
+				*attrs = (*attrs)[:0] // reset the slice for reuse
+				measureAttrsPool.Put(attrs)
+			}()
+			copy(*attrs, em.attrs)
+			*attrs = append(*attrs, semconv.ErrorType(err))
 		}
-		em.exported.Add(ctx, count, attrs...)
-		em.duration.Record(ctx, durationSeconds, attrs...)
+		em.exported.Add(ctx, count, *attrs...)
+		em.duration.Record(ctx, durationSeconds, *attrs...)
 	}
 }

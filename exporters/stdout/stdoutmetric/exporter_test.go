@@ -216,7 +216,7 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 			mp := metric.NewMeterProvider(metric.WithReader(reader))
 			origMp := otel.GetMeterProvider()
 			otel.SetMeterProvider(mp)
-			defer otel.SetMeterProvider(origMp)
+			t.Cleanup(func() { otel.SetMeterProvider(origMp) })
 
 			exp, err := stdoutmetric.New(testEncoderOption())
 			require.NoError(t, err)
@@ -343,7 +343,7 @@ func TestExporter_Export_EncodingErrorTracking(t *testing.T) {
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
 	origMp := otel.GetMeterProvider()
 	otel.SetMeterProvider(mp)
-	defer otel.SetMeterProvider(origMp)
+	t.Cleanup(func() { otel.SetMeterProvider(origMp) })
 
 	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(failingEncoder{}))
 	assert.NoError(t, err)
