@@ -64,7 +64,7 @@ func NewSimpleSpanProcessor(exporter SpanExporter) SpanProcessor {
 			fmt.Sprintf("%s/%d", otelconv.ComponentTypeSimpleSpanProcessor, nextSimpleProcessorID()))
 
 		var err error
-		ssp.spansProcessedCounter, err = newInst()
+		ssp.spansProcessedCounter, err = newSpanProcessedInst()
 		if err != nil {
 			msg := "failed to create self-observability metrics for simple span processor: %w"
 			err := fmt.Errorf(msg, err)
@@ -85,7 +85,7 @@ func nextSimpleProcessorID() int64 {
 	return simpleProcessorIDCounter.Add(1) - 1
 }
 
-func newInst() (otelconv.SDKProcessorSpanProcessed, error) {
+func newSpanProcessedInst() (otelconv.SDKProcessorSpanProcessed, error) {
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
