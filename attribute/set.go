@@ -178,7 +178,16 @@ func (l *Set) Equivalent() Distinct {
 
 // Equals reports whether the argument set is equivalent to this set.
 func (l *Set) Equals(o *Set) bool {
-	return l.Equivalent() == o.Equivalent()
+	if l.Equivalent() != o.Equivalent() {
+		return false
+	}
+	if l == nil || l.hash == 0 {
+		l = emptySet
+	}
+	if o == nil || o.hash == 0 {
+		o = emptySet
+	}
+	return l.data == o.data
 }
 
 // Encoded returns the encoded form of this set, according to encoder.
