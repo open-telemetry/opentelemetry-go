@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/counter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
@@ -22,14 +23,6 @@ import (
 // component. It is not a standardized OTel component type, so it uses the
 // Go package prefixed type name to ensure uniqueness and identity.
 const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
-
-var exporterIDCounter atomic.Int64
-
-// nextExporterID returns an identifier for this stdoutmetric exporter,
-// starting with 0 and incrementing by 1 each time it is called.
-func nextExporterID() int64 {
-	return exporterIDCounter.Add(1) - 1
-}
 
 // exporter is an OpenTelemetry metric exporter.
 type exporter struct {
@@ -61,7 +54,7 @@ func New(options ...Option) (metric.Exporter, error) {
 	exp.encVal.Store(*cfg.encoder)
 	var err error
 	if exp.selfObservabilityEnabled {
-		componentName := fmt.Sprintf("%s/%d", otelComponentType, nextExporterID())
+		componentName := fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())
 		exp.exporterMetric, err = selfobservability.NewExporterMetrics(
 			"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
 			semconv.OTelComponentName(componentName),
