@@ -228,7 +228,7 @@ func TestTracerConfig(t *testing.T) {
 
 	// Ensure that options can be used concurrently.
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

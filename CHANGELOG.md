@@ -80,7 +80,9 @@ The next release will require at least [Go 1.24].
 - `SetBody` method of `Record` in `go.opentelemetry.io/otel/sdk/log` now deduplicates key-value collections (`log.Value` of `log.KindMap` from `go.opentelemetry.io/otel/log`). (#7002)
 - Fix the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability component type and name. (#7195)
 - Fix partial export count metric in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7199)
-- Fix a data race in WithInstrumentationAttributes options. (#7266)
+- Fix a data race in `WithInstrumentationAttributes` option in `go.opentelemetry.io/otel/trace`. (#7266)
+- Fix a data race in `WithInstrumentationAttributes` option in `go.opentelemetry.io/otel/metric`. (#7266)
+- Fix a data race in `WithInstrumentationAttributes` option in `go.opentelemetry.io/otel/log`. (#7266)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
