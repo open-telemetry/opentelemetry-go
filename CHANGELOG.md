@@ -68,6 +68,9 @@ The next release will require at least [Go 1.24].
 - Change `SDKProcessorLogQueueCapacity`, `SDKProcessorLogQueueSize`, `SDKProcessorSpanQueueSize`, and `SDKProcessorSpanQueueCapacity` in `go.opentelemetry.io/otel/semconv/v1.36.0/otelconv` to use a `Int64ObservableUpDownCounter`. (#7041)
 - Change `DefaultExemplarReservoirProviderSelector` in `go.opentelemetry.io/otel/sdk/metric` to use `runtime.GOMAXPROCS(0)` instead of `runtime.NumCPU()` for the `FixedSizeReservoirProvider` default size. (#7094)
 - Optimize `TraceIDFromHex` and `SpanIDFromHex` in `go.opentelemetry.io/otel/sdk/trace`. (#6791)
+- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/trace` synchronously de-duplicates the passed attributes instead of delegating it to the returned `TracerOption`. (#7270)
+- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/meter` synchronously de-duplicates the passed attributes instead of delegating it to the returned `MeterOption`. (#7270)
+- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/log` synchronously de-duplicates the passed attributes instead of delegating it to the returned `LoggerOption`. (#7270)
 
 ### Deprecated
 

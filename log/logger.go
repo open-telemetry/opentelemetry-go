@@ -117,7 +117,7 @@ func WithInstrumentationVersion(version string) LoggerOption {
 // WithInstrumentationAttributes returns a [LoggerOption] that sets the
 // instrumentation attributes of a [Logger].
 //
-// The passed attributes will be de-duplicated.
+// Note that the passed attributes are de-duplicated by WithInstrumentationAttributes.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 	set := attribute.NewSet(attr...)
 	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
