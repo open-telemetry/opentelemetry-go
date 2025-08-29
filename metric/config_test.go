@@ -16,15 +16,19 @@ import (
 func TestNewMeterConfig(t *testing.T) {
 	version := "v1.1.1"
 	schemaURL := "https://opentelemetry.io/schemas/1.0.0"
-	attr := attribute.NewSet(
+	attr := []attribute.KeyValue{
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
-	)
+	}
+	attrSet := attribute.NewSet(attr...)
 	options := []metric.MeterOption{
 		metric.WithInstrumentationVersion(version),
 		metric.WithSchemaURL(schemaURL),
-		metric.WithInstrumentationAttributes(attr.ToSlice()...),
+		metric.WithInstrumentationAttributes(attr...),
 	}
+
+	// Modifications to attr should not affect the config.
+	attr[0] = attribute.String("user", "bob")
 
 	// Ensure that options can be used concurrently.
 	var wg sync.WaitGroup
@@ -35,7 +39,7 @@ func TestNewMeterConfig(t *testing.T) {
 			c := metric.NewMeterConfig(options...)
 			assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
 			assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
-			assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
+			assert.Equal(t, attrSet, c.InstrumentationAttributes(), "instrumentation attributes")
 		}()
 	}
 	wg.Wait()
