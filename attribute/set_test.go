@@ -348,6 +348,133 @@ func args(m reflect.Method) []reflect.Value {
 	return out
 }
 
+func TestMarshalJSON(t *testing.T) {
+	for _, tc := range []struct {
+		desc     string
+		kvs      []attribute.KeyValue
+		wantJSON string
+	}{
+		{
+			desc:     "empty",
+			kvs:      []attribute.KeyValue{},
+			wantJSON: `[]`,
+		},
+		{
+			desc:     "single string attribute",
+			kvs:      []attribute.KeyValue{attribute.String("A", "a")},
+			wantJSON: `[{"Key":"A","Value":{"Type":"STRING","Value":"a"}}]`,
+		},
+		{
+			desc: "many mixed attributes",
+			kvs: []attribute.KeyValue{
+				attribute.Bool("A", true),
+				attribute.BoolSlice("B", []bool{true, false}),
+				attribute.Int("C", 1),
+				attribute.IntSlice("D", []int{2, 3}),
+				attribute.Int64("E", 22),
+				attribute.Int64Slice("F", []int64{33, 44}),
+				attribute.Float64("G", 1.1),
+				attribute.Float64Slice("H", []float64{2.2, 3.3}),
+				attribute.String("I", "Z"),
+				attribute.StringSlice("J", []string{"X", "Y"}),
+				attribute.Stringer("K", &simpleStringer{val: "foo"}),
+			},
+			wantJSON: `[
+                         {
+                           "Key": "A",
+                           "Value": {
+                             "Type": "BOOL",
+                             "Value": true
+                           }
+                         },
+                         {
+                           "Key": "B",
+                           "Value": {
+                             "Type": "BOOLSLICE",
+                             "Value": [true, false]
+                           }
+                         },
+                         {
+                           "Key": "C",
+                           "Value": {
+                             "Type": "INT64",
+                             "Value": 1
+                           }
+                         },
+                         {
+                           "Key": "D",
+                           "Value": {
+                             "Type": "INT64SLICE",
+                             "Value": [2, 3]
+                           }
+                         },
+                         {
+                           "Key": "E",
+                           "Value": {
+                             "Type": "INT64",
+                             "Value": 22
+                           }
+                         },
+                         {
+                           "Key": "F",
+                           "Value": {
+                             "Type": "INT64SLICE",
+                             "Value": [33, 44]
+                           }
+                         },
+                         {
+                           "Key": "G",
+                           "Value": {
+                             "Type": "FLOAT64",
+                             "Value": 1.1
+                           }
+                         },
+                         {
+                           "Key": "H",
+                           "Value": {
+                             "Type": "FLOAT64SLICE",
+                             "Value": [2.2, 3.3]
+                           }
+                         },
+                         {
+                           "Key": "I",
+                           "Value": {
+                             "Type": "STRING",
+                             "Value": "Z"
+                           }
+                         },
+                         {
+                           "Key": "J",
+                           "Value": {
+                             "Type": "STRINGSLICE",
+                             "Value": ["X", "Y"]
+                           }
+                         },
+                         {
+                           "Key": "K",
+                           "Value": {
+                             "Type": "STRING",
+                             "Value": "foo"
+                           }
+                         }
+                       ]`,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			set := attribute.NewSet(tc.kvs...)
+			by, err := set.MarshalJSON()
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.wantJSON, string(by))
+		})
+	}
+}
+
+type simpleStringer struct {
+	val string
+}
+
+func (s *simpleStringer) String() string { return s.val }
+
 func BenchmarkFiltering(b *testing.B) {
 	var kvs [26]attribute.KeyValue
 	buf := [1]byte{'A' - 1}
