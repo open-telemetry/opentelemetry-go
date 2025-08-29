@@ -3432,6 +3432,7 @@ It contains api and sdk for trace and meter.
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.38.0...HEAD
 [1.38.0/0.60.0/0.14.0/0.0.13]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.38.0
+[0.59.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/exporters/prometheus/v0.59.1
 [1.37.0/0.59.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.37.0
 [0.12.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.2
 [0.12.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.1
