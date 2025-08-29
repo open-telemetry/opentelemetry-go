@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.38.0/0.60.0/0.14.0/0.0.13] 2025-08-29
 
 This release is the last to support [Go 1.23].
@@ -81,9 +84,6 @@ The next release will require at least [Go 1.24].
 
 - Deprecate `WithoutUnits` and `WithoutCounterSuffixes` options, preferring `WithTranslationStrategy` instead. (#7111)
 - Deprecate support for `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`. Use `WithCardinalityLimit` option instead. (#7166)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [0.59.1] 2025-07-21
 
