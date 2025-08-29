@@ -24,14 +24,15 @@ import (
 func TestMeterConcurrentSafe(*testing.T) {
 	const name = "TestMeterConcurrentSafe meter"
 	mp := NewMeterProvider()
+	opt := api.WithInstrumentationAttributes(attribute.String("key", "value"))
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.Meter(name)
+		_ = mp.Meter(name, opt)
 	}()
 
-	_ = mp.Meter(name)
+	_ = mp.Meter(name, opt)
 	<-done
 }
 
