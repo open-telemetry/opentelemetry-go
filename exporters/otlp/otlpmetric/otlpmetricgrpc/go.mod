@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
 
-go 1.23.0
+go 1.24.0
 
 retract v0.32.2 // Contains unresolvable dependencies.
 
