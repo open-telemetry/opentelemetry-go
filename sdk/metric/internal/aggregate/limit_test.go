@@ -15,28 +15,28 @@ func TestLimiterAttributes(t *testing.T) {
 	m := map[attribute.Distinct]struct{}{alice.Equivalent(): {}}
 	t.Run("NoLimit", func(t *testing.T) {
 		l := newLimiter[struct{}](0)
-		assert.Equal(t, alice, l.Attributes(alice, m))
-		assert.Equal(t, bob, l.Attributes(bob, m))
+		assert.Equal(t, alice, l.Attributes(alice, len(m), m))
+		assert.Equal(t, bob, l.Attributes(bob, len(m), m))
 	})
 
 	t.Run("NotAtLimit/Exists", func(t *testing.T) {
 		l := newLimiter[struct{}](3)
-		assert.Equal(t, alice, l.Attributes(alice, m))
+		assert.Equal(t, alice, l.Attributes(alice, len(m), m))
 	})
 
 	t.Run("NotAtLimit/DoesNotExist", func(t *testing.T) {
 		l := newLimiter[struct{}](3)
-		assert.Equal(t, bob, l.Attributes(bob, m))
+		assert.Equal(t, bob, l.Attributes(bob, len(m), m))
 	})
 
 	t.Run("AtLimit/Exists", func(t *testing.T) {
 		l := newLimiter[struct{}](2)
-		assert.Equal(t, alice, l.Attributes(alice, m))
+		assert.Equal(t, alice, l.Attributes(alice, len(m), m))
 	})
 
 	t.Run("AtLimit/DoesNotExist", func(t *testing.T) {
 		l := newLimiter[struct{}](2)
-		assert.Equal(t, overflowSet, l.Attributes(bob, m))
+		assert.Equal(t, overflowSet, l.Attributes(bob, len(m), m))
 	})
 }
 
@@ -50,7 +50,7 @@ func BenchmarkLimiterAttributes(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		limitedAttr = l.Attributes(alice, m)
-		limitedAttr = l.Attributes(bob, m)
+		limitedAttr = l.Attributes(alice, len(m), m)
+		limitedAttr = l.Attributes(bob, len(m), m)
 	}
 }

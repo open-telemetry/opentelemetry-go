@@ -176,7 +176,9 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			for _, v := range tt.values {
 				h.measure(context.Background(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			dps := h.values[alice.Equivalent()]
+			require.Len(t, dps, 1)
+			dp := dps[0]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
@@ -218,7 +220,9 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			for _, v := range tt.values {
 				h.measure(context.Background(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			dps := h.values[alice.Equivalent()]
+			require.Len(t, dps, 1)
+			dp := dps[0]
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)

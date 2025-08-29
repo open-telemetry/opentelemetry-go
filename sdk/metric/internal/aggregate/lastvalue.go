@@ -22,8 +22,8 @@ type datapoint[N int64 | float64] struct {
 func newLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *lastValue[N] {
 	return &lastValue[N]{
 		newRes: r,
-		limit:  newLimiter[datapoint[N]](limit),
-		values: make(map[attribute.Distinct]datapoint[N]),
+		limit:  newLimiter[[]datapoint[N]](limit),
+		values: make(map[attribute.Distinct][]datapoint[N]),
 		start:  now(),
 	}
 }
@@ -33,26 +33,43 @@ type lastValue[N int64 | float64] struct {
 	sync.Mutex
 
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
-	limit  limiter[datapoint[N]]
-	values map[attribute.Distinct]datapoint[N]
-	start  time.Time
+	limit  limiter[[]datapoint[N]]
+	// It is possible for attribute.Distinct to have collisions, so handle
+	// colllisions by keeping a list of points that have the same hash.
+	values map[attribute.Distinct][]datapoint[N]
+	// cardinality tracks the total number of datapoints stored in values.
+	cardinality int
+	start       time.Time
 }
 
 func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	s.Lock()
 	defer s.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
-	d, ok := s.values[attr.Equivalent()]
-	if !ok {
-		d.res = s.newRes(attr)
+	attr := s.limit.Attributes(fltrAttr, s.cardinality, s.values)
+	vals, ok := s.values[attr.Equivalent()]
+	if ok {
+		// handle hash collisions by iterating over values and ensuring
+		// attributes are equal before using the value.
+		for i, d := range vals {
+			if !d.attrs.Equals(&attr) {
+				continue
+			}
+			d.value = value
+			d.res.Offer(ctx, value, droppedAttr)
+			vals[i] = d
+			return
+		}
 	}
 
-	d.attrs = attr
-	d.value = value
+	d := datapoint[N]{
+		res:   s.newRes(attr),
+		attrs: attr,
+		value: value,
+	}
+	s.values[attr.Equivalent()] = append(vals, d)
+	s.cardinality++
 	d.res.Offer(ctx, value, droppedAttr)
-
-	s.values[attr.Equivalent()] = d
 }
 
 func (s *lastValue[N]) delta(
@@ -69,6 +86,7 @@ func (s *lastValue[N]) delta(
 	n := s.copyDpts(&gData.DataPoints, t)
 	// Do not report stale values.
 	clear(s.values)
+	s.cardinality = 0
 	// Update start time for delta temporality.
 	s.start = t
 
@@ -101,17 +119,19 @@ func (s *lastValue[N]) cumulative(
 // copyDpts copies the datapoints held by s into dest. The number of datapoints
 // copied is returned.
 func (s *lastValue[N]) copyDpts(dest *[]metricdata.DataPoint[N], t time.Time) int {
-	n := len(s.values)
+	n := s.cardinality
 	*dest = reset(*dest, n, n)
 
 	var i int
-	for _, v := range s.values {
-		(*dest)[i].Attributes = v.attrs
-		(*dest)[i].StartTime = s.start
-		(*dest)[i].Time = t
-		(*dest)[i].Value = v.value
-		collectExemplars(&(*dest)[i].Exemplars, v.res.Collect)
-		i++
+	for _, vals := range s.values {
+		for _, v := range vals {
+			(*dest)[i].Attributes = v.attrs
+			(*dest)[i].StartTime = s.start
+			(*dest)[i].Time = t
+			(*dest)[i].Value = v.value
+			collectExemplars(&(*dest)[i].Exemplars, v.res.Collect)
+			i++
+		}
 	}
 	return n
 }
@@ -144,6 +164,7 @@ func (s *precomputedLastValue[N]) delta(
 	n := s.copyDpts(&gData.DataPoints, t)
 	// Do not report stale values.
 	clear(s.values)
+	s.cardinality = 0
 	// Update start time for delta temporality.
 	s.start = t
 
@@ -166,6 +187,7 @@ func (s *precomputedLastValue[N]) cumulative(
 	n := s.copyDpts(&gData.DataPoints, t)
 	// Do not report stale values.
 	clear(s.values)
+	s.cardinality = 0
 	*dest = gData
 
 	return n

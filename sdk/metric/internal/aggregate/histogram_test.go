@@ -344,7 +344,8 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h.cumulative(&data)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
-	require.Equal(t, hdp.BucketCounts, h.values[alice.Equivalent()].counts)
+	require.Len(t, h.values[alice.Equivalent()], 1)
+	require.Equal(t, hdp.BucketCounts, h.values[alice.Equivalent()][0].counts)
 
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
@@ -352,7 +353,7 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	assert.Equal(
 		t,
 		cpCounts,
-		h.values[alice.Equivalent()].counts,
+		h.values[alice.Equivalent()][0].counts,
 		"modifying the Aggregator bucket counts should not change the Aggregator",
 	)
 }

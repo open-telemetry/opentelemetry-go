@@ -301,8 +301,8 @@ func newExponentialHistogram[N int64 | float64](
 		maxScale: maxScale,
 
 		newRes: r,
-		limit:  newLimiter[*expoHistogramDataPoint[N]](limit),
-		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		limit:  newLimiter[[]*expoHistogramDataPoint[N]](limit),
+		values: make(map[attribute.Distinct][]*expoHistogramDataPoint[N]),
 
 		start: now(),
 	}
@@ -316,10 +316,15 @@ type expoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int32
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*expoHistogramDataPoint[N]]
-	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	limit  limiter[[]*expoHistogramDataPoint[N]]
+	// It is possible for attribute.Distinct to have collisions, so handle
+	// colllisions by keeping a list of points that have the same hash.
+	values map[attribute.Distinct][]*expoHistogramDataPoint[N]
+	// cardinality tracks the total number of *expoHistogramDataPoint stored in
+	// values
+	cardinality int
+	valuesMu    sync.Mutex
 
 	start time.Time
 }
@@ -338,15 +343,26 @@ func (e *expoHistogram[N]) measure(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	attr := e.limit.Attributes(fltrAttr, e.values)
-	v, ok := e.values[attr.Equivalent()]
-	if !ok {
-		v = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-		v.res = e.newRes(attr)
-
-		e.values[attr.Equivalent()] = v
+	attr := e.limit.Attributes(fltrAttr, e.cardinality, e.values)
+	vals, ok := e.values[attr.Equivalent()]
+	if ok {
+		// handle hash collisions by iterating over values and ensuring
+		// attributes are equal before using the value.
+		for i, v := range vals {
+			if !v.attrs.Equals(&attr) {
+				continue
+			}
+			v.record(value)
+			v.res.Offer(ctx, value, droppedAttr)
+			vals[i] = v
+			return
+		}
 	}
+	v := newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+	v.res = e.newRes(attr)
 	v.record(value)
+	e.values[attr.Equivalent()] = append(vals, v)
+	e.cardinality++
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
@@ -363,49 +379,52 @@ func (e *expoHistogram[N]) delta(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	n := len(e.values)
+	n := e.cardinality
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range e.values {
-		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Scale = val.scale
-		hDPts[i].ZeroCount = val.zeroCount
-		hDPts[i].ZeroThreshold = 0.0
+	for _, vals := range e.values {
+		for _, val := range vals {
+			hDPts[i].Attributes = val.attrs
+			hDPts[i].StartTime = e.start
+			hDPts[i].Time = t
+			hDPts[i].Count = val.count
+			hDPts[i].Scale = val.scale
+			hDPts[i].ZeroCount = val.zeroCount
+			hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+			hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
+			hDPts[i].PositiveBucket.Counts = reset(
+				hDPts[i].PositiveBucket.Counts,
+				len(val.posBuckets.counts),
+				len(val.posBuckets.counts),
+			)
+			copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
+			hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
+			hDPts[i].NegativeBucket.Counts = reset(
+				hDPts[i].NegativeBucket.Counts,
+				len(val.negBuckets.counts),
+				len(val.negBuckets.counts),
+			)
+			copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
 
-		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			if !e.noSum {
+				hDPts[i].Sum = val.sum
+			}
+			if !e.noMinMax {
+				hDPts[i].Min = metricdata.NewExtrema(val.min)
+				hDPts[i].Max = metricdata.NewExtrema(val.max)
+			}
+
+			collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+
+			i++
 		}
-		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
-		}
-
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
-
-		i++
 	}
 	// Unused attribute sets do not report.
 	clear(e.values)
+	e.cardinality = 0
 
 	e.start = t
 	h.DataPoints = hDPts
@@ -426,50 +445,52 @@ func (e *expoHistogram[N]) cumulative(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	n := len(e.values)
+	n := e.cardinality
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range e.values {
-		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Scale = val.scale
-		hDPts[i].ZeroCount = val.zeroCount
-		hDPts[i].ZeroThreshold = 0.0
+	for _, vals := range e.values {
+		for _, val := range vals {
+			hDPts[i].Attributes = val.attrs
+			hDPts[i].StartTime = e.start
+			hDPts[i].Time = t
+			hDPts[i].Count = val.count
+			hDPts[i].Scale = val.scale
+			hDPts[i].ZeroCount = val.zeroCount
+			hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+			hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
+			hDPts[i].PositiveBucket.Counts = reset(
+				hDPts[i].PositiveBucket.Counts,
+				len(val.posBuckets.counts),
+				len(val.posBuckets.counts),
+			)
+			copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
+			hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
+			hDPts[i].NegativeBucket.Counts = reset(
+				hDPts[i].NegativeBucket.Counts,
+				len(val.negBuckets.counts),
+				len(val.negBuckets.counts),
+			)
+			copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
 
-		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			if !e.noSum {
+				hDPts[i].Sum = val.sum
+			}
+			if !e.noMinMax {
+				hDPts[i].Min = metricdata.NewExtrema(val.min)
+				hDPts[i].Max = metricdata.NewExtrema(val.max)
+			}
+
+			collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+
+			i++
+			// TODO (#3006): This will use an unbounded amount of memory if there
+			// are unbounded number of attribute sets being aggregated. Attribute
+			// sets that become "stale" need to be forgotten so this will not
+			// overload the system.
 		}
-		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
-		}
-
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
-
-		i++
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
 	}
 
 	h.DataPoints = hDPts
