@@ -3,9 +3,7 @@
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
-import (
-	"go.opentelemetry.io/otel/attribute"
-)
+import "go.opentelemetry.io/otel/attribute"
 
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
