@@ -379,7 +379,85 @@ func TestMarshalJSON(t *testing.T) {
 				attribute.StringSlice("J", []string{"X", "Y"}),
 				attribute.Stringer("K", &simpleStringer{val: "foo"}),
 			},
-			wantJSON: `[{"Key":"A","Value":{"Type":"BOOL","Value":true}},{"Key":"B","Value":{"Type":"BOOLSLICE","Value":[true,false]}},{"Key":"C","Value":{"Type":"INT64","Value":1}},{"Key":"D","Value":{"Type":"INT64SLICE","Value":[2,3]}},{"Key":"E","Value":{"Type":"INT64","Value":22}},{"Key":"F","Value":{"Type":"INT64SLICE","Value":[33,44]}},{"Key":"G","Value":{"Type":"FLOAT64","Value":1.1}},{"Key":"H","Value":{"Type":"FLOAT64SLICE","Value":[2.2,3.3]}},{"Key":"I","Value":{"Type":"STRING","Value":"Z"}},{"Key":"J","Value":{"Type":"STRINGSLICE","Value":["X","Y"]}},{"Key":"K","Value":{"Type":"STRING","Value":"foo"}}]`,
+			wantJSON: `[
+                         {
+                           "Key": "A",
+                           "Value": {
+                             "Type": "BOOL",
+                             "Value": true
+                           }
+                         },
+                         {
+                           "Key": "B",
+                           "Value": {
+                             "Type": "BOOLSLICE",
+                             "Value": [true, false]
+                           }
+                         },
+                         {
+                           "Key": "C",
+                           "Value": {
+                             "Type": "INT64",
+                             "Value": 1
+                           }
+                         },
+                         {
+                           "Key": "D",
+                           "Value": {
+                             "Type": "INT64SLICE",
+                             "Value": [2, 3]
+                           }
+                         },
+                         {
+                           "Key": "E",
+                           "Value": {
+                             "Type": "INT64",
+                             "Value": 22
+                           }
+                         },
+                         {
+                           "Key": "F",
+                           "Value": {
+                             "Type": "INT64SLICE",
+                             "Value": [33, 44]
+                           }
+                         },
+                         {
+                           "Key": "G",
+                           "Value": {
+                             "Type": "FLOAT64",
+                             "Value": 1.1
+                           }
+                         },
+                         {
+                           "Key": "H",
+                           "Value": {
+                             "Type": "FLOAT64SLICE",
+                             "Value": [2.2, 3.3]
+                           }
+                         },
+                         {
+                           "Key": "I",
+                           "Value": {
+                             "Type": "STRING",
+                             "Value": "Z"
+                           }
+                         },
+                         {
+                           "Key": "J",
+                           "Value": {
+                             "Type": "STRINGSLICE",
+                             "Value": ["X", "Y"]
+                           }
+                         },
+                         {
+                           "Key": "K",
+                           "Value": {
+                             "Type": "STRING",
+                             "Value": "foo"
+                           }
+                         }
+                       ]`,
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
