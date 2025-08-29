@@ -10,10 +10,19 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/counter"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/selfobservability"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 )
+
+// otelComponentType is a name identifying the type of the OpenTelemetry
+// component. It is not a standardized OTel component type, so it uses the
+// Go package prefixed type name to ensure uniqueness and identity.
+const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
 
 // exporter is an OpenTelemetry metric exporter.
 type exporter struct {
@@ -25,6 +34,9 @@ type exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	redactTimestamps bool
+
+	selfObservabilityEnabled bool
+	exporterMetric           *selfobservability.ExporterMetrics
 }
 
 // New returns a configured metric exporter.
@@ -34,12 +46,22 @@ type exporter struct {
 func New(options ...Option) (metric.Exporter, error) {
 	cfg := newConfig(options...)
 	exp := &exporter{
-		temporalitySelector: cfg.temporalitySelector,
-		aggregationSelector: cfg.aggregationSelector,
-		redactTimestamps:    cfg.redactTimestamps,
+		temporalitySelector:      cfg.temporalitySelector,
+		aggregationSelector:      cfg.aggregationSelector,
+		redactTimestamps:         cfg.redactTimestamps,
+		selfObservabilityEnabled: x.SelfObservability.Enabled(),
 	}
 	exp.encVal.Store(*cfg.encoder)
-	return exp, nil
+	var err error
+	if exp.selfObservabilityEnabled {
+		componentName := fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())
+		exp.exporterMetric, err = selfobservability.NewExporterMetrics(
+			"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
+			semconv.OTelComponentName(componentName),
+			semconv.OTelComponentTypeKey.String(otelComponentType),
+		)
+	}
+	return exp, err
 }
 
 func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
@@ -50,9 +72,12 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return e.aggregationSelector(k)
 }
 
-func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
-	if err := ctx.Err(); err != nil {
-		return err
+func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) (err error) {
+	trackExportFunc := e.trackExport(ctx, countDataPoints(data))
+	defer func() { trackExportFunc(err) }()
+	err = ctx.Err()
+	if err != nil {
+		return
 	}
 	if e.redactTimestamps {
 		redactTimestamps(data)
@@ -61,6 +86,13 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	global.Debug("STDOUT exporter export", "Data", data)
 
 	return e.encVal.Load().(encoderHolder).Encode(data)
+}
+
+func (e *exporter) trackExport(ctx context.Context, count int64) func(err error) {
+	if !e.selfObservabilityEnabled {
+		return func(error) {}
+	}
+	return e.exporterMetric.TrackExport(ctx, count)
 }
 
 func (*exporter) ForceFlush(context.Context) error {
@@ -158,4 +190,38 @@ func redactDataPointTimestamps[T int64 | float64](sdp []metricdata.DataPoint[T])
 		}
 	}
 	return out
+}
+
+// countDataPoints counts the total number of data points in a ResourceMetrics.
+func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
+	if rm == nil {
+		return 0
+	}
+
+	var total int64
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Gauge[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Gauge[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Summary:
+				total += int64(len(data.DataPoints))
+			}
+		}
+	}
+	return total
 }
