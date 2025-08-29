@@ -119,8 +119,9 @@ func WithInstrumentationVersion(version string) LoggerOption {
 //
 // The passed attributes will be de-duplicated.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
+	set := attribute.NewSet(attr...)
 	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-		config.attrs = attribute.NewSet(attr...)
+		config.attrs = set
 		return config
 	})
 }

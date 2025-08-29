@@ -79,6 +79,9 @@ The next release will require at least [Go 1.24].
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` to not append a suffix if it's already present in metric name. (#7088)
 - Fix the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability component type and name. (#7195)
 - Fix partial export count metric in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7199)
+- Fix a data race when reusing the `WithInstrumentationAttributes` option in concurrent calls to `go.opentelemetry.io/otel/trace.TraceProvider.Tracer`. (#7266)
+- Fix a data race when reusing the `WithInstrumentationAttributes` option in concurrent calls to `go.opentelemetry.io/otel/metric.MeterProvider.Meter`. (#7266)
+- Fix a data race when reusing the `WithInstrumentationAttributes` option in concurrent calls to `go.opentelemetry.io/otel/log.LogProvider.Logger`. (#7266)
 
 ### Deprecated
 

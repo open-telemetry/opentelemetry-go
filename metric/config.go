@@ -66,8 +66,9 @@ func WithInstrumentationVersion(version string) MeterOption {
 //
 // The passed attributes will be de-duplicated.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) MeterOption {
+	set := attribute.NewSet(attr...)
 	return meterOptionFunc(func(config MeterConfig) MeterConfig {
-		config.attrs = attribute.NewSet(attr...)
+		config.attrs = set
 		return config
 	})
 }
