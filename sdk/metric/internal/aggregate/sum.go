@@ -22,15 +22,19 @@ type sumValue[N int64 | float64] struct {
 type valueMap[N int64 | float64] struct {
 	sync.Mutex
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
-	limit  limiter[sumValue[N]]
-	values map[attribute.Distinct]sumValue[N]
+	limit  limiter[[]sumValue[N]]
+	// It is possible for attribute.Distinct to have collisions, so handle
+	// colllisions by keeping a list of points that have the same hash.
+	values map[attribute.Distinct][]sumValue[N]
+	// cardinality tracks the total number of sumValue stored in values.
+	cardinality int
 }
 
 func newValueMap[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *valueMap[N] {
 	return &valueMap[N]{
 		newRes: r,
-		limit:  newLimiter[sumValue[N]](limit),
-		values: make(map[attribute.Distinct]sumValue[N]),
+		limit:  newLimiter[[]sumValue[N]](limit),
+		values: make(map[attribute.Distinct][]sumValue[N]),
 	}
 }
 
@@ -38,17 +42,29 @@ func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 	s.Lock()
 	defer s.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
-	v, ok := s.values[attr.Equivalent()]
-	if !ok {
-		v.res = s.newRes(attr)
+	attr := s.limit.Attributes(fltrAttr, s.cardinality, s.values)
+	vals, ok := s.values[attr.Equivalent()]
+	if ok {
+		// handle hash collisions by iterating over values and ensuring
+		// attributes are equal before using the value.
+		for i, v := range vals {
+			if !v.attrs.Equals(&attr) {
+				continue
+			}
+			v.n += value
+			v.res.Offer(ctx, value, droppedAttr)
+			vals[i] = v
+			return
+		}
 	}
-
-	v.attrs = attr
-	v.n += value
+	v := sumValue[N]{
+		res:   s.newRes(attr),
+		attrs: attr,
+		n:     value,
+	}
+	s.values[attr.Equivalent()] = append(vals, v)
+	s.cardinality++
 	v.res.Offer(ctx, value, droppedAttr)
-
-	s.values[attr.Equivalent()] = v
 }
 
 // newSum returns an aggregator that summarizes a set of measurements as their
@@ -84,20 +100,23 @@ func (s *sum[N]) delta(
 	s.Lock()
 	defer s.Unlock()
 
-	n := len(s.values)
+	n := s.cardinality
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for _, val := range s.values {
-		dPts[i].Attributes = val.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = val.n
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
-		i++
+	for _, vals := range s.values {
+		for _, val := range vals {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = val.n
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+			i++
+		}
 	}
 	// Do not report stale values.
 	clear(s.values)
+	s.cardinality = 0
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -121,21 +140,23 @@ func (s *sum[N]) cumulative(
 	s.Lock()
 	defer s.Unlock()
 
-	n := len(s.values)
+	n := s.cardinality
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for _, value := range s.values {
-		dPts[i].Attributes = value.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = value.n
-		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
-		i++
+	for _, values := range s.values {
+		for _, value := range values {
+			dPts[i].Attributes = value.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = value.n
+			collectExemplars(&dPts[i].Exemplars, value.res.Collect)
+			// TODO (#3006): This will use an unbounded amount of memory if there
+			// are unbounded number of attribute sets being aggregated. Attribute
+			// sets that become "stale" need to be forgotten so this will not
+			// overload the system.
+			i++
+		}
 	}
 
 	sData.DataPoints = dPts
@@ -184,24 +205,27 @@ func (s *precomputedSum[N]) delta(
 	s.Lock()
 	defer s.Unlock()
 
-	n := len(s.values)
+	n := s.cardinality
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for key, value := range s.values {
-		delta := value.n - s.reported[key]
+	for key, vals := range s.values {
+		for _, value := range vals {
+			delta := value.n - s.reported[key]
 
-		dPts[i].Attributes = value.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = delta
-		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
+			dPts[i].Attributes = value.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = delta
+			collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 
-		newReported[key] = value.n
-		i++
+			newReported[key] = value.n
+			i++
+		}
 	}
 	// Unused attribute sets do not report.
 	clear(s.values)
+	s.cardinality = 0
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -226,21 +250,24 @@ func (s *precomputedSum[N]) cumulative(
 	s.Lock()
 	defer s.Unlock()
 
-	n := len(s.values)
+	n := s.cardinality
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	for _, val := range s.values {
-		dPts[i].Attributes = val.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = val.n
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+	for _, vals := range s.values {
+		for _, val := range vals {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = val.n
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 
-		i++
+			i++
+		}
 	}
 	// Unused attribute sets do not report.
 	clear(s.values)
+	s.cardinality = 0
 
 	sData.DataPoints = dPts
 	*dest = sData

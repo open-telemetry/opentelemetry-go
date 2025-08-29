@@ -47,10 +47,14 @@ type histValues[N int64 | float64] struct {
 	noSum  bool
 	bounds []float64
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*buckets[N]]
-	values   map[attribute.Distinct]*buckets[N]
-	valuesMu sync.Mutex
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	limit  limiter[[]*buckets[N]]
+	// It is possible for attribute.Distinct to have collisions, so handle
+	// colllisions by keeping a list of points that have the same hash.
+	values map[attribute.Distinct][]*buckets[N]
+	// cardinality tracks the total number of *buckets stored in values.
+	cardinality int
+	valuesMu    sync.Mutex
 }
 
 func newHistValues[N int64 | float64](
@@ -69,8 +73,8 @@ func newHistValues[N int64 | float64](
 		noSum:  noSum,
 		bounds: b,
 		newRes: r,
-		limit:  newLimiter[*buckets[N]](limit),
-		values: make(map[attribute.Distinct]*buckets[N]),
+		limit:  newLimiter[[]*buckets[N]](limit),
+		values: make(map[attribute.Distinct][]*buckets[N]),
 	}
 }
 
@@ -92,27 +96,41 @@ func (s *histValues[N]) measure(
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
-	b, ok := s.values[attr.Equivalent()]
-	if !ok {
-		// N+1 buckets. For example:
-		//
-		//   bounds = [0, 5, 10]
-		//
-		// Then,
-		//
-		//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
-		b = newBuckets[N](attr, len(s.bounds)+1)
-		b.res = s.newRes(attr)
-
-		// Ensure min and max are recorded values (not zero), for new buckets.
-		b.min, b.max = value, value
-		s.values[attr.Equivalent()] = b
+	attr := s.limit.Attributes(fltrAttr, s.cardinality, s.values)
+	vals, ok := s.values[attr.Equivalent()]
+	if ok {
+		// handle hash collisions by iterating over values and ensuring
+		// attributes are equal before using the value.
+		for i, b := range vals {
+			if !b.attrs.Equals(&attr) {
+				continue
+			}
+			b.bin(idx, value)
+			if !s.noSum {
+				b.sum(value)
+			}
+			b.res.Offer(ctx, value, droppedAttr)
+			vals[i] = b
+			return
+		}
 	}
+	// N+1 buckets. For example:
+	//
+	//   bounds = [0, 5, 10]
+	//
+	// Then,
+	//
+	//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
+	b := newBuckets[N](attr, len(s.bounds)+1)
+	b.res = s.newRes(attr)
+	// Ensure min and max are recorded values (not zero), for new buckets.
+	b.min, b.max = value, value
 	b.bin(idx, value)
 	if !s.noSum {
 		b.sum(value)
 	}
+	s.values[attr.Equivalent()] = append(vals, b)
+	s.cardinality++
 	b.res.Offer(ctx, value, droppedAttr)
 }
 
@@ -156,33 +174,36 @@ func (s *histogram[N]) delta(
 	// Do not allow modification of our copy of bounds.
 	bounds := slices.Clone(s.bounds)
 
-	n := len(s.values)
+	n := s.cardinality
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range s.values {
-		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = s.start
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Bounds = bounds
-		hDPts[i].BucketCounts = val.counts
+	for _, vals := range s.values {
+		for _, val := range vals {
+			hDPts[i].Attributes = val.attrs
+			hDPts[i].StartTime = s.start
+			hDPts[i].Time = t
+			hDPts[i].Count = val.count
+			hDPts[i].Bounds = bounds
+			hDPts[i].BucketCounts = val.counts
 
-		if !s.noSum {
-			hDPts[i].Sum = val.total
+			if !s.noSum {
+				hDPts[i].Sum = val.total
+			}
+
+			if !s.noMinMax {
+				hDPts[i].Min = metricdata.NewExtrema(val.min)
+				hDPts[i].Max = metricdata.NewExtrema(val.max)
+			}
+
+			collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+
+			i++
 		}
-
-		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
-		}
-
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
-
-		i++
 	}
 	// Unused attribute sets do not report.
 	clear(s.values)
+	s.cardinality = 0
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -208,40 +229,42 @@ func (s *histogram[N]) cumulative(
 	// Do not allow modification of our copy of bounds.
 	bounds := slices.Clone(s.bounds)
 
-	n := len(s.values)
+	n := s.cardinality
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range s.values {
-		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = s.start
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Bounds = bounds
+	for _, vals := range s.values {
+		for _, val := range vals {
+			hDPts[i].Attributes = val.attrs
+			hDPts[i].StartTime = s.start
+			hDPts[i].Time = t
+			hDPts[i].Count = val.count
+			hDPts[i].Bounds = bounds
 
-		// The HistogramDataPoint field values returned need to be copies of
-		// the buckets value as we will keep updating them.
-		//
-		// TODO (#3047): Making copies for bounds and counts incurs a large
-		// memory allocation footprint. Alternatives should be explored.
-		hDPts[i].BucketCounts = slices.Clone(val.counts)
+			// The HistogramDataPoint field values returned need to be copies of
+			// the buckets value as we will keep updating them.
+			//
+			// TODO (#3047): Making copies for bounds and counts incurs a large
+			// memory allocation footprint. Alternatives should be explored.
+			hDPts[i].BucketCounts = slices.Clone(val.counts)
 
-		if !s.noSum {
-			hDPts[i].Sum = val.total
+			if !s.noSum {
+				hDPts[i].Sum = val.total
+			}
+
+			if !s.noMinMax {
+				hDPts[i].Min = metricdata.NewExtrema(val.min)
+				hDPts[i].Max = metricdata.NewExtrema(val.max)
+			}
+
+			collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+
+			i++
+			// TODO (#3006): This will use an unbounded amount of memory if there
+			// are unbounded number of attribute sets being aggregated. Attribute
+			// sets that become "stale" need to be forgotten so this will not
+			// overload the system.
 		}
-
-		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
-		}
-
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
-
-		i++
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
 	}
 
 	h.DataPoints = hDPts
