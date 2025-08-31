@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
 
-go 1.23.0
+go 1.24.0
 
 // Contains broken dependency on go.opentelemetry.io/otel/sdk/log/logtest.
 retract v0.12.0
