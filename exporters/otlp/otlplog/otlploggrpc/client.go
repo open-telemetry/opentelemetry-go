@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -21,8 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 // The methods of this type are not expected to be called concurrently.
@@ -217,9 +217,9 @@ func newNoopClient() *noopClient {
 	return &noopClient{}
 }
 
-func (c *noopClient) UploadLogs(context.Context, []*logpb.ResourceLogs) error { return nil }
+func (*noopClient) UploadLogs(context.Context, []*logpb.ResourceLogs) error { return nil }
 
-func (c *noopClient) Shutdown(context.Context) error { return nil }
+func (*noopClient) Shutdown(context.Context) error { return nil }
 
 // retryable returns if err identifies a request that can be retried and a
 // duration to wait for if an explicit throttle time is included in err.

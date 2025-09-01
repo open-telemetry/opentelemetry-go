@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "db" namespace.
 package dbconv
@@ -24,9 +27,11 @@ var (
 type ClientConnectionStateAttr string
 
 var (
-	// ClientConnectionStateIdle is the none.
+	// ClientConnectionStateIdle is the standardized value "idle" of
+	// ClientConnectionStateAttr.
 	ClientConnectionStateIdle ClientConnectionStateAttr = "idle"
-	// ClientConnectionStateUsed is the none.
+	// ClientConnectionStateUsed is the standardized value "used" of
+	// ClientConnectionStateAttr.
 	ClientConnectionStateUsed ClientConnectionStateAttr = "used"
 )
 
@@ -262,7 +267,7 @@ func (ClientConnectionCount) Description() string {
 	return "The number of connections that are currently in state described by the `state` attribute"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -280,6 +285,11 @@ func (m ClientConnectionCount) Add(
 	clientConnectionState ClientConnectionStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -297,6 +307,23 @@ func (m ClientConnectionCount) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientConnectionCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -351,7 +378,7 @@ func (ClientConnectionCreateTime) Description() string {
 	return "The time it took to create a new connection"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -366,6 +393,11 @@ func (m ClientConnectionCreateTime) Record(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -382,6 +414,22 @@ func (m ClientConnectionCreateTime) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientConnectionCreateTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -435,7 +483,7 @@ func (ClientConnectionIdleMax) Description() string {
 	return "The maximum number of idle open connections allowed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -450,6 +498,11 @@ func (m ClientConnectionIdleMax) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -466,6 +519,23 @@ func (m ClientConnectionIdleMax) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientConnectionIdleMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -519,7 +589,7 @@ func (ClientConnectionIdleMin) Description() string {
 	return "The minimum number of idle open connections allowed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -534,6 +604,11 @@ func (m ClientConnectionIdleMin) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -550,6 +625,23 @@ func (m ClientConnectionIdleMin) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientConnectionIdleMin) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -603,7 +695,7 @@ func (ClientConnectionMax) Description() string {
 	return "The maximum number of open connections allowed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -618,6 +710,11 @@ func (m ClientConnectionMax) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -634,6 +731,23 @@ func (m ClientConnectionMax) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientConnectionMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -689,7 +803,7 @@ func (ClientConnectionPendingRequests) Description() string {
 	return "The number of current pending requests for an open connection"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -704,6 +818,11 @@ func (m ClientConnectionPendingRequests) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -720,6 +839,23 @@ func (m ClientConnectionPendingRequests) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientConnectionPendingRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -774,7 +910,7 @@ func (ClientConnectionTimeouts) Description() string {
 	return "The number of connection timeouts that have occurred trying to obtain a connection from the pool"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -789,6 +925,11 @@ func (m ClientConnectionTimeouts) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -805,6 +946,23 @@ func (m ClientConnectionTimeouts) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m ClientConnectionTimeouts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -859,7 +1017,7 @@ func (ClientConnectionUseTime) Description() string {
 	return "The time between borrowing a connection and returning it to the pool"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -874,6 +1032,11 @@ func (m ClientConnectionUseTime) Record(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -890,6 +1053,22 @@ func (m ClientConnectionUseTime) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientConnectionUseTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -943,7 +1122,7 @@ func (ClientConnectionWaitTime) Description() string {
 	return "The time it took to obtain an open connection from the pool"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The clientConnectionPoolName is the the name of the connection pool; unique
 // within the instrumented application. In case the connection pool
@@ -958,6 +1137,11 @@ func (m ClientConnectionWaitTime) Record(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -974,6 +1158,22 @@ func (m ClientConnectionWaitTime) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientConnectionWaitTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1027,7 +1227,7 @@ func (ClientOperationDuration) Description() string {
 	return "Duration of database client operations."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The systemName is the the database management system (DBMS) product as
 // identified by the client instrumentation.
@@ -1041,6 +1241,11 @@ func (m ClientOperationDuration) Record(
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1057,6 +1262,24 @@ func (m ClientOperationDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Batch operations SHOULD be recorded as a single operation.
+func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -1192,7 +1415,7 @@ func (ClientResponseReturnedRows) Description() string {
 	return "The actual number of records returned by the database operation."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The systemName is the the database management system (DBMS) product as
 // identified by the client instrumentation.
@@ -1204,6 +1427,11 @@ func (m ClientResponseReturnedRows) Record(
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -1220,6 +1448,22 @@ func (m ClientResponseReturnedRows) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m ClientResponseReturnedRows) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 

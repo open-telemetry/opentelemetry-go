@@ -293,6 +293,45 @@ func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
 	})
 }
 
+func BenchmarkTraceIDFromHex(b *testing.B) {
+	want := trace.TraceID{
+		0xde,
+		0xad,
+		0xbe,
+		0xef,
+		0x01,
+		0x23,
+		0x45,
+		0x67,
+		0x89,
+		0xab,
+		0xcd,
+		0xef,
+		0x01,
+		0x23,
+		0x45,
+		0x67,
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		got, _ := trace.TraceIDFromHex("deadbeef0123456789abcdef01234567")
+		if got != want {
+			b.Fatalf("got = %q want = %q", got.String(), want)
+		}
+	}
+}
+
+func BenchmarkSpanIDFromHex(b *testing.B) {
+	want := trace.SpanID{0xde, 0xad, 0xbe, 0xef, 0x01, 0x23, 0x45, 0x67}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		got, _ := trace.SpanIDFromHex("deadbeef01234567")
+		if got != want {
+			b.Fatalf("got = %q want = %q", got.String(), want)
+		}
+	}
+}
+
 func BenchmarkTraceID_DotString(b *testing.B) {
 	t, _ := trace.TraceIDFromHex("0000000000000001000000000000002a")
 	sc := trace.NewSpanContext(trace.SpanContextConfig{TraceID: t})
@@ -367,7 +406,7 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 	b.Cleanup(func(l logr.Logger) func() {
 		return func() { global.SetLogger(l) }
 	}(global.GetLogger()))
-	global.SetLogger(funcr.New(func(prefix, args string) {}, funcr.Options{Verbosity: 5}))
+	global.SetLogger(funcr.New(func(string, string) {}, funcr.Options{Verbosity: 5}))
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(
 			tracetest.NewNoopExporter(),

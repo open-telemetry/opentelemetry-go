@@ -28,7 +28,7 @@ type altMeterProvider struct {
 
 var _ metric.MeterProvider = &altMeterProvider{}
 
-func (amp *altMeterProvider) Meter(name string, opts ...metric.MeterOption) metric.Meter {
+func (amp *altMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
 	am := &altMeter{
 		provider: amp,
 	}
@@ -106,28 +106,28 @@ func (*altRegistration) Unregister() error {
 	return nil
 }
 
-func (am *altMeter) Int64Counter(name string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+func (*altMeter) Int64Counter(name string, _ ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64Counter(name)
 }
 
-func (am *altMeter) Int64UpDownCounter(
+func (*altMeter) Int64UpDownCounter(
 	name string,
 	_ ...metric.Int64UpDownCounterOption,
 ) (metric.Int64UpDownCounter, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64UpDownCounter(name)
 }
 
-func (am *altMeter) Int64Histogram(name string, _ ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
+func (*altMeter) Int64Histogram(name string, _ ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64Histogram(name)
 }
 
-func (am *altMeter) Int64Gauge(name string, _ ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+func (*altMeter) Int64Gauge(name string, _ ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
 	return noop.NewMeterProvider().Meter("noop").Int64Gauge(name)
 }
 
 func (am *altMeter) Int64ObservableCounter(
-	name string,
-	options ...metric.Int64ObservableCounterOption,
+	string,
+	...metric.Int64ObservableCounterOption,
 ) (metric.Int64ObservableCounter, error) {
 	return &testAiCounter{
 		meter: am,
@@ -135,8 +135,8 @@ func (am *altMeter) Int64ObservableCounter(
 }
 
 func (am *altMeter) Int64ObservableUpDownCounter(
-	name string,
-	options ...metric.Int64ObservableUpDownCounterOption,
+	string,
+	...metric.Int64ObservableUpDownCounterOption,
 ) (metric.Int64ObservableUpDownCounter, error) {
 	return &testAiUpDownCounter{
 		meter: am,
@@ -144,39 +144,39 @@ func (am *altMeter) Int64ObservableUpDownCounter(
 }
 
 func (am *altMeter) Int64ObservableGauge(
-	name string,
-	options ...metric.Int64ObservableGaugeOption,
+	string,
+	...metric.Int64ObservableGaugeOption,
 ) (metric.Int64ObservableGauge, error) {
 	return &testAiGauge{
 		meter: am,
 	}, nil
 }
 
-func (am *altMeter) Float64Counter(name string, _ ...metric.Float64CounterOption) (metric.Float64Counter, error) {
+func (*altMeter) Float64Counter(name string, _ ...metric.Float64CounterOption) (metric.Float64Counter, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64Counter(name)
 }
 
-func (am *altMeter) Float64UpDownCounter(
+func (*altMeter) Float64UpDownCounter(
 	name string,
 	_ ...metric.Float64UpDownCounterOption,
 ) (metric.Float64UpDownCounter, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64UpDownCounter(name)
 }
 
-func (am *altMeter) Float64Histogram(
+func (*altMeter) Float64Histogram(
 	name string,
-	options ...metric.Float64HistogramOption,
+	_ ...metric.Float64HistogramOption,
 ) (metric.Float64Histogram, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64Histogram(name)
 }
 
-func (am *altMeter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+func (*altMeter) Float64Gauge(name string, _ ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
 	return noop.NewMeterProvider().Meter("noop").Float64Gauge(name)
 }
 
 func (am *altMeter) Float64ObservableCounter(
-	name string,
-	options ...metric.Float64ObservableCounterOption,
+	string,
+	...metric.Float64ObservableCounterOption,
 ) (metric.Float64ObservableCounter, error) {
 	return &testAfCounter{
 		meter: am,
@@ -184,8 +184,8 @@ func (am *altMeter) Float64ObservableCounter(
 }
 
 func (am *altMeter) Float64ObservableUpDownCounter(
-	name string,
-	options ...metric.Float64ObservableUpDownCounterOption,
+	string,
+	...metric.Float64ObservableUpDownCounterOption,
 ) (metric.Float64ObservableUpDownCounter, error) {
 	return &testAfUpDownCounter{
 		meter: am,
@@ -193,8 +193,8 @@ func (am *altMeter) Float64ObservableUpDownCounter(
 }
 
 func (am *altMeter) Float64ObservableGauge(
-	name string,
-	options ...metric.Float64ObservableGaugeOption,
+	string,
+	...metric.Float64ObservableGaugeOption,
 ) (metric.Float64ObservableGauge, error) {
 	return &testAfGauge{
 		meter: am,

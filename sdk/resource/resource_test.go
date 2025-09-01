@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 var (
@@ -796,7 +796,7 @@ func TestResourceConcurrentSafe(t *testing.T) {
 
 type fakeDetector struct{}
 
-func (f fakeDetector) Detect(_ context.Context) (*resource.Resource, error) {
+func (fakeDetector) Detect(context.Context) (*resource.Resource, error) {
 	// A bit pedantic, but resource.NewWithAttributes returns an empty Resource when
 	// no attributes specified. We want to make sure that this is concurrent-safe.
 	return resource.NewWithAttributes("https://opentelemetry.io/schemas/1.21.0"), nil

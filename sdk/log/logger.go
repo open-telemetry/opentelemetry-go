@@ -5,12 +5,18 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/x"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -24,13 +30,31 @@ type logger struct {
 
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope
+
+	selfObservabilityEnabled bool
+	logCreatedMetric         otelconv.SDKLogCreated
 }
 
 func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
-	return &logger{
+	l := &logger{
 		provider:             p,
 		instrumentationScope: scope,
 	}
+	if !x.SelfObservability.Enabled() {
+		return l
+	}
+	l.selfObservabilityEnabled = true
+	mp := otel.GetMeterProvider()
+	m := mp.Meter("go.opentelemetry.io/otel/sdk/log",
+		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithSchemaURL(semconv.SchemaURL))
+
+	var err error
+	if l.logCreatedMetric, err = otelconv.NewSDKLogCreated(m); err != nil {
+		err = fmt.Errorf("failed to create log created metric: %w", err)
+		otel.Handle(err)
+	}
+	return l
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
@@ -84,7 +108,6 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),
 		severityText:      r.SeverityText(),
-		body:              r.Body(),
 
 		traceID:    sc.TraceID(),
 		spanID:     sc.SpanID(),
@@ -96,6 +119,12 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeCountLimit:       l.provider.attributeCountLimit,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
+	if l.selfObservabilityEnabled {
+		l.logCreatedMetric.Add(ctx, 1)
+	}
+
+	// This ensures we deduplicate key-value collections in the log body
+	newRecord.SetBody(r.Body())
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
 	if newRecord.observedTimestamp.IsZero() {

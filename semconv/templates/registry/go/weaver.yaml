@@ -27,7 +27,6 @@ templates:
         "exclude_deprecated": true,
         "exclude_root_namespace": $excluded_namespaces,
       }) 
-      | map(select(has("deprecated") | not))
       | semconv_group_metrics_by_root_namespace
     application_mode: each
     file_name: "{{ctx.root_namespace | camel_case | lower }}conv/metric.go"
@@ -70,7 +69,7 @@ text_maps:
     boolean: bool
     boolean[]: "...bool"
   instrument:
-    cpu.time: Float64ObservableCounter
+    system.cpu.time: Float64ObservableCounter
     go.config.gogc: Int64ObservableUpDownCounter
     go.goroutine.count: Int64ObservableUpDownCounter
     go.memory.allocated: Int64ObservableCounter
