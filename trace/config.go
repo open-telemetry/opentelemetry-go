@@ -307,6 +307,9 @@ func WithInstrumentationVersion(version string) TracerOption {
 // WithInstrumentationAttributes sets the instrumentation attributes.
 //
 // The passed attributes will be de-duplicated.
+//
+// Note that [WithInstrumentationAttributeSet] is recommended as
+// it is more efficient and also allows safely reusing the passed argument.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
 	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
 		config.attrs = attribute.NewSet(attr...)

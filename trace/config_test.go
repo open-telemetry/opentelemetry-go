@@ -275,7 +275,6 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 		{
 			name: "with instrumentation attribute",
 			options: []TracerOption{
-				WithSchemaURL("testing URL"),
 				WithInstrumentationAttributes(attribute.String("key", "value")),
 			},
 		},
