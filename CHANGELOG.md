@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/trace` synchronously de-duplicates the passed attributes instead of delegating it to the returned `TracerOption`. (#7266)
+- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/meter` synchronously de-duplicates the passed attributes instead of delegating it to the returned `MeterOption`. (#7266)
+- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/log` synchronously de-duplicates the passed attributes instead of delegating it to the returned `LoggerOption`. (#7266)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
@@ -76,9 +82,6 @@ The next release will require at least [Go 1.24].
 - Optimize `TraceIDFromHex` and `SpanIDFromHex` in `go.opentelemetry.io/otel/sdk/trace`. (#6791)
 - Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
 - Change `DefaultExemplarReservoirProviderSelector` in `go.opentelemetry.io/otel/sdk/metric` to use `runtime.GOMAXPROCS(0)` instead of `runtime.NumCPU()` for the `FixedSizeReservoirProvider` default size. (#7094)
-- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/trace` synchronously de-duplicates the passed attributes instead of delegating it to the returned `TracerOption`. (#7266)
-- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/meter` synchronously de-duplicates the passed attributes instead of delegating it to the returned `MeterOption`. (#7266)
-- `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/log` synchronously de-duplicates the passed attributes instead of delegating it to the returned `LoggerOption`. (#7266)
 
 ### Fixed
 
@@ -86,9 +89,6 @@ The next release will require at least [Go 1.24].
 - Fix `go.opentelemetry.io/otel/exporters/prometheus` to not append a suffix if it's already present in metric name. (#7088)
 - Fix the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability component type and name. (#7195)
 - Fix partial export count metric in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7199)
-- Fix a data race when reusing the `WithInstrumentationAttributes` option in concurrent calls to `go.opentelemetry.io/otel/trace.TraceProvider.Tracer`. (#7266)
-- Fix a data race when reusing the `WithInstrumentationAttributes` option in concurrent calls to `go.opentelemetry.io/otel/metric.MeterProvider.Meter`. (#7266)
-- Fix a data race when reusing the `WithInstrumentationAttributes` option in concurrent calls to `go.opentelemetry.io/otel/log.LogProvider.Logger`. (#7266)
 
 ### Deprecated
 
