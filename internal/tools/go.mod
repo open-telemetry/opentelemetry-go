@@ -98,7 +98,7 @@ require (
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32 // indirect
-	github.com/golangci/go-printf-func-name v0.1.0 // indirect
+	github.com/golangci/go-printf-func-name v0.1.1 // indirect
 	github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6 // indirect
 	github.com/golangci/golines v0.0.0-20250821215611-d4663ad2c370 // indirect
 	github.com/golangci/misspell v0.7.0 // indirect
