@@ -125,6 +125,15 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 	})
 }
 
+// WithInstrumentationAttributeSet returns a [LoggerOption] that sets the
+// instrumentation attributes of a [Logger].
+func WithInstrumentationAttributeSet(set attribute.Set) LoggerOption {
+	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+		config.attrs = set
+		return config
+	})
+}
+
 // WithSchemaURL returns a [LoggerOption] that sets the schema URL for a
 // [Logger].
 func WithSchemaURL(schemaURL string) LoggerOption {

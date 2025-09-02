@@ -231,6 +231,19 @@ func TestTracerConfig(t *testing.T) {
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
+func TestWithInstrumentationAttributeSet(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("service", "test"),
+		attribute.Int("three", 3),
+	)
+
+	c := NewTracerConfig(
+		WithInstrumentationAttributeSet(attrs),
+	)
+
+	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+}
+
 // Save benchmark results to a file level var to avoid the compiler optimizing
 // away the actual work.
 var (

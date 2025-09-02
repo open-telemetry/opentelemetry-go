@@ -30,3 +30,16 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
 	assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
 }
+
+func TestWithInstrumentationAttributeSet(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("service", "test"),
+		attribute.Int("three", 3),
+	)
+
+	c := metric.NewMeterConfig(
+		metric.WithInstrumentationAttributeSet(attrs),
+	)
+
+	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+}

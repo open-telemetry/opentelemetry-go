@@ -72,6 +72,14 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) MeterOption {
 	})
 }
 
+// WithInstrumentationAttributeSet sets the instrumentation attributes.
+func WithInstrumentationAttributeSet(set attribute.Set) MeterOption {
+	return meterOptionFunc(func(config MeterConfig) MeterConfig {
+		config.attrs = set
+		return config
+	})
+}
+
 // WithSchemaURL sets the schema URL.
 func WithSchemaURL(schemaURL string) MeterOption {
 	return meterOptionFunc(func(config MeterConfig) MeterConfig {

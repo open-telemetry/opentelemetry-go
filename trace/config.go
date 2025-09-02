@@ -314,6 +314,14 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
 	})
 }
 
+// WithInstrumentationAttributeSet sets the instrumentation attributes.
+func WithInstrumentationAttributeSet(set attribute.Set) TracerOption {
+	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
+		config.attrs = set
+		return config
+	})
+}
+
 // WithSchemaURL sets the schema URL for the Tracer.
 func WithSchemaURL(schemaURL string) TracerOption {
 	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
