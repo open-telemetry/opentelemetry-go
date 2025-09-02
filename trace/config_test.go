@@ -272,6 +272,19 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 				WithSchemaURL("testing URL"),
 			},
 		},
+		{
+			name: "with instrumentation attribute",
+			options: []TracerOption{
+				WithSchemaURL("testing URL"),
+				WithInstrumentationAttributes(attribute.String("key", "value")),
+			},
+		},
+		{
+			name: "with instrumentation attribute set",
+			options: []TracerOption{
+				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
+			},
+		},
 	} {
 		b.Run(bb.name, func(b *testing.B) {
 			b.ReportAllocs()
