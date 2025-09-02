@@ -135,7 +135,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["1.25.0", "1.24.0", "1.23.0"]
+        go-version: ["1.25.0", "1.24.0"]
         platform:
           - os: ubuntu-latest
             arch: "386"

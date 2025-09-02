@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -2872,7 +2872,6 @@ func TestRecordOnlySampler(t *testing.T) {
 }
 
 func BenchmarkTraceStart(b *testing.B) {
-	tracer := NewTracerProvider().Tracer("")
 	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
 
 	l1 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
@@ -2882,6 +2881,7 @@ func BenchmarkTraceStart(b *testing.B) {
 
 	for _, tt := range []struct {
 		name    string
+		env     map[string]string
 		options []trace.SpanStartOption
 	}{
 		{
@@ -2902,8 +2902,20 @@ func BenchmarkTraceStart(b *testing.B) {
 				),
 			},
 		},
+		{
+			name: "SelfObservabilityEnabled",
+			env: map[string]string{
+				"OTEL_GO_X_SELF_OBSERVABILITY": "True",
+			},
+		},
 	} {
 		b.Run(tt.name, func(b *testing.B) {
+			for k, v := range tt.env {
+				b.Setenv(k, v)
+			}
+
+			tracer := NewTracerProvider().Tracer("")
+
 			spans := make([]trace.Span, b.N)
 			b.ReportAllocs()
 			b.ResetTimer()
