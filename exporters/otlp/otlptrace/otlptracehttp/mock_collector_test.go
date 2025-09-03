@@ -147,13 +147,13 @@ func (c *mockCollector) getInjectHTTPStatus() int {
 
 func (c *mockCollector) getInjectResponseHeader() (h map[string]string) {
 	if len(c.injectResponseHeader) == 0 {
-		return
+		return h
 	}
 	h, c.injectResponseHeader = c.injectResponseHeader[0], c.injectResponseHeader[1:]
 	if len(c.injectResponseHeader) == 0 {
 		c.injectResponseHeader = nil
 	}
-	return
+	return h
 }
 
 func readRequest(r *http.Request) ([]byte, error) {
