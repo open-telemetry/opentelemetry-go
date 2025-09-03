@@ -70,6 +70,8 @@ The next release will require at least [Go 1.24].
 - The `go.opentelemetry.io/otel/semconv/v1.37.0` package.
   The package contains semantic conventions from the `v1.37.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.37.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.36.0.`(#7254)
+- Add experimental self-observability simple span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
+  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7162)
 
 ### Changed
 
