@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `WithInstrumentationAttributeSet` option to `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/trace` packages.
   This provides a concurrent-safe and performant alternative to `WithInstrumentationAttributes` by accepting a pre-constructed `attribute.Set`. (#7287)
+- Greatly reduce the cost of recording metrics in `go.opentelemetry.io/otel/sdk/metric` using hashing for map keys. (#7175)
 
 ### Fixed
 
@@ -29,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/trace` synchronously de-duplicates the passed attributes instead of delegating it to the returned `TracerOption`. (#7266)
 - `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/meter` synchronously de-duplicates the passed attributes instead of delegating it to the returned `MeterOption`. (#7266)
 - `WithInstrumentationAttributes` in `go.opentelemetry.io/otel/log` synchronously de-duplicates the passed attributes instead of delegating it to the returned `LoggerOption`. (#7266)
+- `Distinct` in `go.opentelemetry.io/otel/attribute` is no longer guaranteed to uniquely identify an attribute set. Collisions between `Distinct` values for different Sets are possible with extremely high cardinality (billions of series per instrument), but are highly unlikely. (#7175)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -88,8 +90,6 @@ The next release will require at least [Go 1.24].
 - The `go.opentelemetry.io/otel/semconv/v1.37.0` package.
   The package contains semantic conventions from the `v1.37.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.37.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.36.0.`(#7254)
-- Greatly reduce the cost of recording metrics in `go.opentelemetry.io/otel/sdk/metric` using hashing for map keys. (#7175)
-- `Distinct` in `go.opentelemetry.io/otel/attribute` is no longer guaranteed to uniquely identify an attribute set. Collisions between `Distinct` values for different Sets are theoretically possible, but highly unlikely. (#7175)
 
 ### Changed
 
