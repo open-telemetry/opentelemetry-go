@@ -145,7 +145,8 @@ func (c *mockCollector) getInjectHTTPStatus() int {
 	return status
 }
 
-func (c *mockCollector) getInjectResponseHeader() (h map[string]string) {
+func (c *mockCollector) getInjectResponseHeader() map[string]string {
+	var h map[string]string
 	if len(c.injectResponseHeader) == 0 {
 		return h
 	}
