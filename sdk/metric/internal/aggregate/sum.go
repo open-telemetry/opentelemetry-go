@@ -13,42 +13,44 @@ import (
 )
 
 type sumValue[N int64 | float64] struct {
-	n     N
+	n     *counter[N]
 	res   FilteredExemplarReservoir[N]
 	attrs attribute.Set
 }
 
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
-	sync.Mutex
+	sync.RWMutex
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	limit  limiter[sumValue[N]]
-	values map[attribute.Distinct]sumValue[N]
+	values map[attribute.Distinct]*sumValue[N]
 }
 
 func newValueMap[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *valueMap[N] {
 	return &valueMap[N]{
 		newRes: r,
 		limit:  newLimiter[sumValue[N]](limit),
-		values: make(map[attribute.Distinct]sumValue[N]),
+		values: make(map[attribute.Distinct]*sumValue[N]),
 	}
 }
 
 func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	s.Lock()
-	defer s.Unlock()
-
+	s.RLock()
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	v, ok := s.values[attr.Equivalent()]
+	s.RUnlock()
 	if !ok {
-		v.res = s.newRes(attr)
+		v = &sumValue[N]{
+			n:     &counter[N]{},
+			res:   s.newRes(attr),
+			attrs: attr,
+		}
+		s.Lock()
+		s.values[attr.Equivalent()] = v
+		s.Unlock()
 	}
-
-	v.attrs = attr
-	v.n += value
 	v.res.Offer(ctx, value, droppedAttr)
-
-	s.values[attr.Equivalent()] = v
+	v.n.add(value)
 }
 
 // newSum returns an aggregator that summarizes a set of measurements as their
@@ -92,7 +94,7 @@ func (s *sum[N]) delta(
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
+		dPts[i].Value = val.n.value()
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		i++
 	}
@@ -129,7 +131,7 @@ func (s *sum[N]) cumulative(
 		dPts[i].Attributes = value.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = value.n
+		dPts[i].Value = value.n.value()
 		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
@@ -189,7 +191,7 @@ func (s *precomputedSum[N]) delta(
 
 	var i int
 	for key, value := range s.values {
-		delta := value.n - s.reported[key]
+		delta := value.n.value() - s.reported[key]
 
 		dPts[i].Attributes = value.attrs
 		dPts[i].StartTime = s.start
@@ -197,7 +199,7 @@ func (s *precomputedSum[N]) delta(
 		dPts[i].Value = delta
 		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 
-		newReported[key] = value.n
+		newReported[key] = value.n.value()
 		i++
 	}
 	// Unused attribute sets do not report.
@@ -234,7 +236,7 @@ func (s *precomputedSum[N]) cumulative(
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
+		dPts[i].Value = val.n.value()
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 
 		i++
