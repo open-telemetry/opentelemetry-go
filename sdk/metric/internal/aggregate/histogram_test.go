@@ -277,21 +277,22 @@ func TestBucketsBin(t *testing.T) {
 
 func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
-		b := newBuckets[N](alice, 3)
+		b := &buckets[N]{
+			attrs:  alice,
+			counts: make([]uint64, 3),
+			res:    dropExemplars[N](alice),
+		}
 		assertB := func(counts []uint64, count uint64, mi, ma N) {
 			t.Helper()
 			assert.Equal(t, counts, b.counts)
 			assert.Equal(t, count, b.count)
-			assert.Equal(t, mi, b.min)
-			assert.Equal(t, ma, b.max)
+			assert.Equal(t, mi, b.minMax.loadMin())
+			assert.Equal(t, ma, b.minMax.loadMax())
 		}
 
-		assertB([]uint64{0, 0, 0}, 0, 0, 0)
-		b.bin(1)
-		b.minMax(2)
-		assertB([]uint64{0, 1, 0}, 1, 0, 2)
-		b.bin(0)
-		b.minMax(-1)
+		b.measure(context.Background(), 2, 1, nil)
+		assertB([]uint64{0, 1, 0}, 1, 2, 2)
+		b.measure(context.Background(), -1, 0, nil)
 		assertB([]uint64{1, 1, 0}, 2, -1, 2)
 	}
 }
@@ -303,18 +304,21 @@ func TestBucketsSum(t *testing.T) {
 
 func testBucketsSum[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
-		b := newBuckets[N](alice, 3)
+		b := &buckets[N]{
+			attrs:  alice,
+			counts: make([]uint64, 3),
+		}
 
 		var want N
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.load())
 
-		b.sum(2)
+		b.total.add(2)
 		want = 2
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.load())
 
-		b.sum(-1)
+		b.total.add(-1)
 		want = 1
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.load())
 	}
 }
 

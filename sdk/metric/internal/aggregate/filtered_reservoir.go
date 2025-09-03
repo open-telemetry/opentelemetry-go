@@ -5,6 +5,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -27,6 +28,7 @@ type FilteredExemplarReservoir[N int64 | float64] interface {
 
 // filteredExemplarReservoir handles the pre-sampled exemplar of measurements made.
 type filteredExemplarReservoir[N int64 | float64] struct {
+	mu        sync.Mutex
 	filter    exemplar.Filter
 	reservoir exemplar.Reservoir
 }
@@ -45,9 +47,17 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 
 func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
 	if f.filter(ctx) {
+		// We need to lock here because the individual aggregation only holds a
+		// read lock.
+		f.mu.Lock()
+		defer f.mu.Unlock()
 		// only record the current time if we are sampling this measurement.
 		f.reservoir.Offer(ctx, time.Now(), exemplar.NewValue(val), attr)
 	}
 }
 
-func (f *filteredExemplarReservoir[N]) Collect(dest *[]exemplar.Exemplar) { f.reservoir.Collect(dest) }
+func (f *filteredExemplarReservoir[N]) Collect(dest *[]exemplar.Exemplar) {
+	// No need to lock here because the individual aggregation already holds
+	// the RW lock.
+	f.reservoir.Collect(dest)
+}

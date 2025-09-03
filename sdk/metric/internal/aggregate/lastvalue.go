@@ -14,44 +14,61 @@ import (
 
 // datapoint is timestamped measurement data.
 type datapoint[N int64 | float64] struct {
+	value atomicIntOrFloat[N]
 	attrs attribute.Set
-	value N
 	res   FilteredExemplarReservoir[N]
+}
+
+func (d *datapoint[N]) measure(ctx context.Context, value N, droppedAttr []attribute.KeyValue) {
+	d.res.Offer(ctx, value, droppedAttr)
+	d.value.store(value)
 }
 
 func newLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *lastValue[N] {
 	return &lastValue[N]{
 		newRes: r,
 		limit:  newLimiter[datapoint[N]](limit),
-		values: make(map[attribute.Distinct]datapoint[N]),
+		values: make(map[attribute.Distinct]*datapoint[N]),
 		start:  now(),
 	}
 }
 
 // lastValue summarizes a set of measurements as the last one made.
 type lastValue[N int64 | float64] struct {
-	sync.Mutex
+	sync.RWMutex
 
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	limit  limiter[datapoint[N]]
-	values map[attribute.Distinct]datapoint[N]
+	values map[attribute.Distinct]*datapoint[N]
 	start  time.Time
 }
 
 func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	s.Lock()
-	defer s.Unlock()
-
+	// Hold the RLock even after we are done reading from the values map to
+	// ensure we don't race with collection.
+	s.RLock()
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	d, ok := s.values[attr.Equivalent()]
-	if !ok {
-		d.res = s.newRes(attr)
+	if ok {
+		d.measure(ctx, value, droppedAttr)
+		s.RUnlock()
+		return
 	}
-
-	d.attrs = attr
-	d.value = value
-	d.res.Offer(ctx, value, droppedAttr)
-
+	s.RUnlock()
+	// Switch to a full lock to add a new element to the map.
+	s.Lock()
+	defer s.Unlock()
+	// Check that the element wasn't added since we last checked.
+	d, ok = s.values[attr.Equivalent()]
+	if ok {
+		d.measure(ctx, value, droppedAttr)
+		return
+	}
+	d = &datapoint[N]{
+		res:   s.newRes(attr),
+		attrs: attr,
+	}
+	d.measure(ctx, value, droppedAttr)
 	s.values[attr.Equivalent()] = d
 }
 
@@ -85,6 +102,9 @@ func (s *lastValue[N]) cumulative(
 	// the DataPoints is missed (better luck next time).
 	gData, _ := (*dest).(metricdata.Gauge[N])
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a last value.
 	s.Lock()
 	defer s.Unlock()
 
@@ -109,7 +129,7 @@ func (s *lastValue[N]) copyDpts(dest *[]metricdata.DataPoint[N], t time.Time) in
 		(*dest)[i].Attributes = v.attrs
 		(*dest)[i].StartTime = s.start
 		(*dest)[i].Time = t
-		(*dest)[i].Value = v.value
+		(*dest)[i].Value = v.value.load()
 		collectExemplars(&(*dest)[i].Exemplars, v.res.Collect)
 		i++
 	}
@@ -138,6 +158,9 @@ func (s *precomputedLastValue[N]) delta(
 	// the DataPoints is missed (better luck next time).
 	gData, _ := (*dest).(metricdata.Gauge[N])
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a last value.
 	s.Lock()
 	defer s.Unlock()
 
@@ -160,6 +183,9 @@ func (s *precomputedLastValue[N]) cumulative(
 	// the DataPoints is missed (better luck next time).
 	gData, _ := (*dest).(metricdata.Gauge[N])
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a last value.
 	s.Lock()
 	defer s.Unlock()
 
