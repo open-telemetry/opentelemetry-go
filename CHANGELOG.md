@@ -89,6 +89,7 @@ The next release will require at least [Go 1.24].
   The package contains semantic conventions from the `v1.37.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.37.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.36.0.`(#7254)
 - Greatly reduce the cost of recording metrics in `go.opentelemetry.io/otel/sdk/metric` using hashing for map keys. (#7175)
+- `Distinct` in `go.opentelemetry.io/otel/attribute` is no longer guaranteed to uniquely identify an attribute set. Collisions between `Distinct` values for different Sets are theoretically possible, but highly unlikely. (#7175)
 
 ### Changed
 

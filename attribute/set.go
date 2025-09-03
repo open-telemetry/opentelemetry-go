@@ -25,18 +25,17 @@ type (
 	// the Equals method to ensure stable equivalence checking.
 	//
 	// Users should also use the Distinct returned from Equivalent as a map key
-	// instead of a Set directly. In addition to that type providing guarantees
-	// on stable equivalence, it may also provide performance improvements.
+	// instead of a Set directly. Set has relatively poor performance when used
+	// as a map key compared to Distinct.
 	Set struct {
 		hash fnv.Hash
 		data any
 	}
 
-	// Distinct is a unique identifier of a Set.
+	// Distinct is an identifier of a Set which is very likely to be unique.
 	//
-	// Distinct is designed to ensure equivalence stability: comparisons will
-	// return the same value across versions. For this reason, Distinct should
-	// always be used as a map key instead of a Set.
+	// Distinct should be used as a map key instead of a Set for to provide better
+	// performance for map operations.
 	Distinct struct {
 		hash fnv.Hash
 	}
@@ -165,8 +164,8 @@ func (l *Set) ToSlice() []KeyValue {
 	return iter.ToSlice()
 }
 
-// Equivalent returns a value that may be used as a map key. The Distinct type
-// guarantees that the result will equal the equivalent. Distinct value of any
+// Equivalent returns a value that may be used as a map key. Equal Distinct
+// values are very likely to be equivalent attribute Sets. Distinct value of any
 // attribute set with the same elements as this, where sets are made unique by
 // choosing the last value in the input for any given key.
 func (l *Set) Equivalent() Distinct {
