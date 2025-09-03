@@ -726,7 +726,7 @@ To this:
 ```go
 // ❌ Avoid this pattern.
 type SDKComponent struct {
-	/* other SDKComponnent fields... */
+	/* other SDKComponent fields... */
 
 	inflight otelconv.SDKComponentInflight
 	exported otelconv.SDKComponentExported
@@ -782,10 +782,10 @@ func newInstrumentation() (*instrumentation, error) {
 	inst := &instrumentation{}
 
 	var err, e error
-    inst.inflight, e = otelconv.NewSDKComponentInflight(m)
+    inst.inflight, e = otelconv.NewSDKComponentInflight(meter)
 	err = errors.Join(err, e)
 
-    inst.exported, e = otelconv.NewSDKComponentExported(m)
+    inst.exported, e = otelconv.NewSDKComponentExported(meter)
 	err = errors.Join(err, e)
 
     return inst, err
@@ -939,7 +939,7 @@ type instrumentation struct {
     counter otelconv.SDKComponentCounter
 }
 
-func newInstrumentation(componentName) (*instrumentation, error) {
+func newInstrumentation(componentName string) (*instrumentation, error) {
     if !x.SelfObservability.Enabled() {
         return nil, nil
     }
@@ -953,12 +953,12 @@ func newInstrumentation(componentName) (*instrumentation, error) {
 	cmpnt := semconv.OTelComponentName(componentName)
 	cmpntT := semconv.OTelComponentTypeKey.String(otelComponentType)
 	// Ensure all instruments are bound to these attributes.
-	m = bind.Meter(m, cmpnt, cmpntT)
+	meter = bind.Meter(meter, cmpnt, cmpntT)
 
 	inst := &instrumentation{}
 
 	var err error
-    inst.counter, err = otelconv.NewSDKComponentCounter(m)
+    inst.counter, err = otelconv.NewSDKComponentCounter(meter)
     return inst, err
 }
 
@@ -968,7 +968,7 @@ func (i *instrumentation) record(ctx context.Context, value int64) {
 }
 ```
 
-Note, that binding is not always a performance win.
+Note, binding is not always a performance win.
 Adding additional attributes to a bound instrument likely requires more allocations than building the attribute set at measurement time.
 Benchmark and profile to ensure this is a win for your use case.
 
@@ -1104,12 +1104,12 @@ Component names and types should follow [semantic convention](https://github.com
 If a component is not a well-known type specified in the semantic conventions, use the package path scope type as a stable identifier.
 
 ```go
-cmponentType := "go.opentelemetry.io/otel/sdk/trace.Span"
+componentType := "go.opentelemetry.io/otel/sdk/trace.Span"
 ```
 
 ```go
 // ❌ Do not do this.
-cmponentType := "trace-span"
+componentType := "trace-span"
 ```
 
 The component name should be a stable unique identifier for the specific instance of the component.
