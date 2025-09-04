@@ -923,61 +923,6 @@ func spanLiveSet(sampled bool) attribute.Set {
 }
 ```
 
-##### Bind common attribute sets for repeated measurements
-
-If a single static set of attributes are used for measurements and they are known at compile time, [`bind`] these attributes to the instrument.
-
-```go
-import (
-	"github.com/MrAlias/bind"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
-)
-
-type instrumentation struct {
-    counter otelconv.SDKComponentCounter
-}
-
-func newInstrumentation(componentName string) (*instrumentation, error) {
-    if !x.SelfObservability.Enabled() {
-        return nil, nil
-    }
- 
-    meter := otel.GetMeterProvider().Meter(
-        "<component-package-name>",
-        metric.WithInstrumentationVersion(sdk.Version()),
-        metric.WithSchemaURL(semconv.SchemaURL),
-    )
-
-	cmpnt := semconv.OTelComponentName(componentName)
-	cmpntT := semconv.OTelComponentTypeKey.String(otelComponentType)
-	// Ensure all instruments are bound to these attributes.
-	meter = bind.Meter(meter, cmpnt, cmpntT)
-
-	inst := &instrumentation{}
-
-	var err error
-    inst.counter, err = otelconv.NewSDKComponentCounter(meter)
-    return inst, err
-}
-
-func (i *instrumentation) record(ctx context.Context, value int64) {
-	// Add with the bound attributes.
-    i.counter.Add(ctx, value)
-}
-```
-
-Note, binding is not always a performance win.
-Adding additional attributes to a bound instrument likely requires more allocations than building the attribute set at measurement time.
-Benchmark and profile to ensure this is a win for your use case.
-
-References:
-
-- [`bind` example in `stdouttrace`](https://github.com/open-telemetry/opentelemetry-go/pull/7226)
-
-[`bind`]: https://pkg.go.dev/github.com/MrAlias/bind
-
 ##### Benchmarking
 
 Always provide benchmarks when introducing or refactoring instrumentation.
