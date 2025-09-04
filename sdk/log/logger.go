@@ -31,8 +31,8 @@ type logger struct {
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope
 
-	selfObservabilityEnabled bool
-	logCreatedMetric         otelconv.SDKLogCreated
+	observabilityEnabled bool
+	logCreatedMetric     otelconv.SDKLogCreated
 }
 
 func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
@@ -40,10 +40,10 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 		provider:             p,
 		instrumentationScope: scope,
 	}
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return l
 	}
-	l.selfObservabilityEnabled = true
+	l.observabilityEnabled = true
 	mp := otel.GetMeterProvider()
 	m := mp.Meter("go.opentelemetry.io/otel/sdk/log",
 		metric.WithInstrumentationVersion(sdk.Version()),
@@ -119,7 +119,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeCountLimit:       l.provider.attributeCountLimit,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
-	if l.selfObservabilityEnabled {
+	if l.observabilityEnabled {
 		l.logCreatedMetric.Add(ctx, 1)
 	}
 

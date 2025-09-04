@@ -78,10 +78,10 @@ type batchSpanProcessor struct {
 	queue   chan ReadOnlySpan
 	dropped uint32
 
-	selfObservabilityEnabled bool
-	callbackRegistration     metric.Registration
-	spansProcessedCounter    otelconv.SDKProcessorSpanProcessed
-	componentNameAttr        attribute.KeyValue
+	observabilityEnabled  bool
+	callbackRegistration  metric.Registration
+	spansProcessedCounter otelconv.SDKProcessorSpanProcessed
+	componentNameAttr     attribute.KeyValue
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -124,8 +124,8 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		stopCh: make(chan struct{}),
 	}
 
-	if x.SelfObservability.Enabled() {
-		bsp.selfObservabilityEnabled = true
+	if x.Observability.Enabled() {
+		bsp.observabilityEnabled = true
 		bsp.componentNameAttr = componentName()
 
 		var err error
@@ -172,7 +172,7 @@ func newBSPObs(
 	qMax int64,
 ) (otelconv.SDKProcessorSpanProcessed, metric.Registration, error) {
 	meter := otel.GetMeterProvider().Meter(
-		selfObsScopeName,
+		obsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
@@ -242,7 +242,7 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 		case <-ctx.Done():
 			err = ctx.Err()
 		}
-		if bsp.selfObservabilityEnabled {
+		if bsp.observabilityEnabled {
 			err = errors.Join(err, bsp.callbackRegistration.Unregister())
 		}
 	})
@@ -357,7 +357,7 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 	if l := len(bsp.batch); l > 0 {
 		global.Debug("exporting spans", "count", len(bsp.batch), "total_dropped", atomic.LoadUint32(&bsp.dropped))
-		if bsp.selfObservabilityEnabled {
+		if bsp.observabilityEnabled {
 			bsp.spansProcessedCounter.Add(ctx, int64(l),
 				bsp.componentNameAttr,
 				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor))
@@ -470,7 +470,7 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 	case bsp.queue <- sd:
 		return true
 	case <-ctx.Done():
-		if bsp.selfObservabilityEnabled {
+		if bsp.observabilityEnabled {
 			bsp.spansProcessedCounter.Add(ctx, 1,
 				bsp.componentNameAttr,
 				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor),
@@ -490,7 +490,7 @@ func (bsp *batchSpanProcessor) enqueueDrop(ctx context.Context, sd ReadOnlySpan)
 		return true
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
-		if bsp.selfObservabilityEnabled {
+		if bsp.observabilityEnabled {
 			bsp.spansProcessedCounter.Add(ctx, 1,
 				bsp.componentNameAttr,
 				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor),

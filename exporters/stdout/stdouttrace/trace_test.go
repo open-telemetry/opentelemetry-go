@@ -240,7 +240,7 @@ func TestExporterShutdownNoError(t *testing.T) {
 	}
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestObservability(t *testing.T) {
 	defaultCallExportSpans := func(t *testing.T, exporter *stdouttrace.Exporter) {
 		require.NoError(t, exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
 			{Name: "/foo"},
@@ -598,7 +598,7 @@ func TestSelfObservability(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.enabled {
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 				// Reset component name counter for each test.
 				_ = counter.SetExporterID(0)
@@ -653,13 +653,13 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 	return nil, m.err
 }
 
-func TestSelfObservabilityInstrumentErrors(t *testing.T) {
+func TestObservabilityInstrumentErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
 	mp := &errMeterProvider{err: assert.AnError}
 	otel.SetMeterProvider(mp)
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	_, err := stdouttrace.New()
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
 
@@ -692,8 +692,8 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		_ = err
 	}
 
-	b.Run("SelfObservability", func(b *testing.B) {
-		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 		run(b)
 	})
 
