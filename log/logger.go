@@ -114,13 +114,36 @@ func WithInstrumentationVersion(version string) LoggerOption {
 	})
 }
 
+// mergeSets returns the union of keys between a and b. Any duplicate keys will
+// use the value associated with b.
+func mergeSets(a, b attribute.Set) attribute.Set {
+	// NewMergeIterator uses the first value for any duplicates.
+	iter := attribute.NewMergeIterator(&b, &a)
+	merged := make([]attribute.KeyValue, 0, a.Len()+b.Len())
+	for iter.Next() {
+		merged = append(merged, iter.Attribute())
+	}
+	return attribute.NewSet(merged...)
+}
+
 // WithInstrumentationAttributes returns a [LoggerOption] that sets the
 // instrumentation attributes of a [Logger].
 //
 // The passed attributes will be de-duplicated.
+//
+// If multiple WithInstrumentationAttributes options are passed the
+// attributes will be merged together in the order they are passed. Attributes
+// with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-		config.attrs = attribute.NewSet(attr...)
+		newAttrs := attribute.NewSet(attr...)
+		switch {
+		case newAttrs.Len() == 0:
+		case config.attrs.Len() == 0:
+			config.attrs = newAttrs
+		default:
+			config.attrs = mergeSets(config.attrs, newAttrs)
+		}
 		return config
 	})
 }
