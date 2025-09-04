@@ -29,9 +29,6 @@ const (
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
-	attrs attribute.Set
-	res   FilteredExemplarReservoir[N]
-
 	count uint64
 	min   N
 	max   N
@@ -46,6 +43,9 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	posBuckets expoBuckets
 	negBuckets expoBuckets
 	zeroCount  uint64
+
+	attrs attribute.Set
+	res   FilteredExemplarReservoir[N]
 }
 
 func newExpoHistogramDataPoint[N int64 | float64](
