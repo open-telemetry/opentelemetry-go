@@ -287,9 +287,11 @@ func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 		}
 
 		assertB([]uint64{0, 0, 0}, 0, 0, 0)
-		b.bin(1, 2)
+		b.bin(1)
+		b.minMax(2)
 		assertB([]uint64{0, 1, 0}, 1, 0, 2)
-		b.bin(0, -1)
+		b.bin(0)
+		b.minMax(-1)
 		assertB([]uint64{1, 1, 0}, 2, -1, 2)
 	}
 }
