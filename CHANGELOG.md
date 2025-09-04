@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Rename the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable to `OTEL_GO_X_OBSERVABILITY` in `go.opentelemetry.io/otel/sdk/trace`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7302)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
