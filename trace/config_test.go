@@ -4,6 +4,7 @@
 package trace
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -213,22 +214,35 @@ func TestTracerConfig(t *testing.T) {
 	v1 := "semver:0.0.1"
 	v2 := "semver:1.0.0"
 	schemaURL := "https://opentelemetry.io/schemas/1.21.0"
-	attrs := attribute.NewSet(
+	attrs := []attribute.KeyValue{
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
-	)
-
-	c := NewTracerConfig(
+	}
+	attrSet := attribute.NewSet(attrs...)
+	options := []TracerOption{
 		// Multiple calls should overwrite.
 		WithInstrumentationVersion(v1),
 		WithInstrumentationVersion(v2),
 		WithSchemaURL(schemaURL),
-		WithInstrumentationAttributes(attrs.ToSlice()...),
-	)
+		WithInstrumentationAttributes(attrs...),
+	}
 
-	assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
-	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
-	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+	// Modifications to attr should not affect the config.
+	attrs[0] = attribute.String("user", "bob")
+
+	// Ensure that options can be used concurrently.
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c := NewTracerConfig(options...)
+			assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
+			assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+			assert.Equal(t, attrSet, c.InstrumentationAttributes(), "instrumentation attributes")
+		}()
+	}
+	wg.Wait()
 }
 
 // Save benchmark results to a file level var to avoid the compiler optimizing
