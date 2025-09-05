@@ -278,18 +278,22 @@ func TestBucketsBin(t *testing.T) {
 func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		b := newBuckets[N](alice, 3)
+		b.min.Store(N(0))
+		b.max.Store(N(0))
 		assertB := func(counts []uint64, count uint64, mi, ma N) {
 			t.Helper()
 			assert.Equal(t, counts, b.counts)
 			assert.Equal(t, count, b.count)
-			assert.Equal(t, mi, b.min)
-			assert.Equal(t, ma, b.max)
+			assert.Equal(t, mi, b.min.Load().(N))
+			assert.Equal(t, ma, b.max.Load().(N))
 		}
 
 		assertB([]uint64{0, 0, 0}, 0, 0, 0)
-		b.bin(1, 2)
+		b.bin(1)
+		b.minMax(2)
 		assertB([]uint64{0, 1, 0}, 1, 0, 2)
-		b.bin(0, -1)
+		b.bin(0)
+		b.minMax(-1)
 		assertB([]uint64{1, 1, 0}, 2, -1, 2)
 	}
 }
@@ -304,15 +308,15 @@ func testBucketsSum[N int64 | float64]() func(t *testing.T) {
 		b := newBuckets[N](alice, 3)
 
 		var want N
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.value())
 
-		b.sum(2)
+		b.total.add(2)
 		want = 2
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.value())
 
-		b.sum(-1)
+		b.total.add(-1)
 		want = 1
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.value())
 	}
 }
 

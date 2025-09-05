@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Improve performance of concurrent measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7189)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)

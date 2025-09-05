@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -15,47 +16,58 @@ import (
 )
 
 type buckets[N int64 | float64] struct {
+	count    uint64
+	counts   []uint64
+	min, max atomic.Value
+	total    *counter[N]
+
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
-
-	counts   []uint64
-	count    uint64
-	total    N
-	min, max N
 }
 
 // newBuckets returns buckets with n bins.
 func newBuckets[N int64 | float64](attrs attribute.Set, n int) *buckets[N] {
-	return &buckets[N]{attrs: attrs, counts: make([]uint64, n)}
+	return &buckets[N]{attrs: attrs, counts: make([]uint64, n), total: &counter[N]{}}
 }
 
-func (b *buckets[N]) sum(value N) { b.total += value }
+func (b *buckets[N]) bin(idx int) {
+	atomic.AddUint64(&b.counts[idx], 1)
+	atomic.AddUint64(&b.count, 1)
+}
 
-func (b *buckets[N]) bin(idx int, value N) {
-	b.counts[idx]++
-	b.count++
-	if value < b.min {
-		b.min = value
-	} else if value > b.max {
-		b.max = value
+func (b *buckets[N]) minMax(value N) {
+	for {
+		minLoaded := b.min.Load()
+		if value < minLoaded.(N) && !b.min.CompareAndSwap(minLoaded, value) {
+			// We got a new min value, but lost the race. Try again.
+			continue
+		}
+		maxLoaded := b.max.Load()
+		if value > maxLoaded.(N) && !b.max.CompareAndSwap(maxLoaded, value) {
+			// We got a new max value, but lost the race. Try again.
+			continue
+		}
+		return
 	}
 }
 
 // histValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
 type histValues[N int64 | float64] struct {
-	noSum  bool
-	bounds []float64
+	noSum    bool
+	noMinMax bool
+	bounds   []float64
 
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*buckets[N]]
+	limit    limiter[buckets[N]]
 	values   map[attribute.Distinct]*buckets[N]
-	valuesMu sync.Mutex
+	valuesMu sync.RWMutex
 }
 
 func newHistValues[N int64 | float64](
 	bounds []float64,
 	noSum bool,
+	noMinMax bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *histValues[N] {
@@ -66,11 +78,12 @@ func newHistValues[N int64 | float64](
 	b := slices.Clone(bounds)
 	slices.Sort(b)
 	return &histValues[N]{
-		noSum:  noSum,
-		bounds: b,
-		newRes: r,
-		limit:  newLimiter[*buckets[N]](limit),
-		values: make(map[attribute.Distinct]*buckets[N]),
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		bounds:   b,
+		newRes:   r,
+		limit:    newLimiter[buckets[N]](limit),
+		values:   make(map[attribute.Distinct]*buckets[N]),
 	}
 }
 
@@ -89,11 +102,11 @@ func (s *histValues[N]) measure(
 	// (s.bounds[len(s.bounds)-1], +∞).
 	idx := sort.SearchFloat64s(s.bounds, float64(value))
 
-	s.valuesMu.Lock()
-	defer s.valuesMu.Unlock()
+	s.valuesMu.RLock()
 
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	b, ok := s.values[attr.Equivalent()]
+	s.valuesMu.RUnlock()
 	if !ok {
 		// N+1 buckets. For example:
 		//
@@ -106,12 +119,20 @@ func (s *histValues[N]) measure(
 		b.res = s.newRes(attr)
 
 		// Ensure min and max are recorded values (not zero), for new buckets.
-		b.min, b.max = value, value
+		if !s.noMinMax {
+			b.min.Store(value)
+			b.max.Store(value)
+		}
+		s.valuesMu.Lock()
 		s.values[attr.Equivalent()] = b
+		s.valuesMu.Unlock()
 	}
-	b.bin(idx, value)
+	b.bin(idx)
+	if !s.noMinMax {
+		b.minMax(value)
+	}
 	if !s.noSum {
-		b.sum(value)
+		b.total.add(value)
 	}
 	b.res.Offer(ctx, value, droppedAttr)
 }
@@ -125,8 +146,7 @@ func newHistogram[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *histogram[N] {
 	return &histogram[N]{
-		histValues: newHistValues[N](boundaries, noSum, limit, r),
-		noMinMax:   noMinMax,
+		histValues: newHistValues[N](boundaries, noSum, noMinMax, limit, r),
 		start:      now(),
 	}
 }
@@ -136,8 +156,7 @@ func newHistogram[N int64 | float64](
 type histogram[N int64 | float64] struct {
 	*histValues[N]
 
-	noMinMax bool
-	start    time.Time
+	start time.Time
 }
 
 func (s *histogram[N]) delta(
@@ -169,12 +188,12 @@ func (s *histogram[N]) delta(
 		hDPts[i].BucketCounts = val.counts
 
 		if !s.noSum {
-			hDPts[i].Sum = val.total
+			hDPts[i].Sum = val.total.value()
 		}
 
 		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			hDPts[i].Min = metricdata.NewExtrema(val.min.Load().(N))
+			hDPts[i].Max = metricdata.NewExtrema(val.max.Load().(N))
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
@@ -227,12 +246,12 @@ func (s *histogram[N]) cumulative(
 		hDPts[i].BucketCounts = slices.Clone(val.counts)
 
 		if !s.noSum {
-			hDPts[i].Sum = val.total
+			hDPts[i].Sum = val.total.value()
 		}
 
 		if !s.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			hDPts[i].Min = metricdata.NewExtrema(val.min.Load().(N))
+			hDPts[i].Max = metricdata.NewExtrema(val.max.Load().(N))
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
