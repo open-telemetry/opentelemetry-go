@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- Add experimental self-observability prometheus exporter metrics in `go.opentelemetry.io/otel/exporters/prometheus`.
+  Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7174)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
@@ -70,8 +74,6 @@ The next release will require at least [Go 1.24].
 - The `go.opentelemetry.io/otel/semconv/v1.37.0` package.
   The package contains semantic conventions from the `v1.37.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.37.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.36.0.`(#7254)
-- Add experimental self-observability prometheus exporter metrics in `go.opentelemetry.io/otel/exporters/prometheus`.
-  Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7174)
 
 ### Changed
 
