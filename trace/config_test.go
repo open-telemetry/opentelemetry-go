@@ -231,6 +231,19 @@ func TestTracerConfig(t *testing.T) {
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
+func TestWithInstrumentationAttributeSet(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("service", "test"),
+		attribute.Int("three", 3),
+	)
+
+	c := NewTracerConfig(
+		WithInstrumentationAttributeSet(attrs),
+	)
+
+	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+}
+
 // Save benchmark results to a file level var to avoid the compiler optimizing
 // away the actual work.
 var (
@@ -257,6 +270,18 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 			name: "with a schema url",
 			options: []TracerOption{
 				WithSchemaURL("testing URL"),
+			},
+		},
+		{
+			name: "with instrumentation attribute",
+			options: []TracerOption{
+				WithInstrumentationAttributes(attribute.String("key", "value")),
+			},
+		},
+		{
+			name: "with instrumentation attribute set",
+			options: []TracerOption{
+				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
 			},
 		},
 	} {

@@ -65,9 +65,20 @@ func WithInstrumentationVersion(version string) MeterOption {
 // WithInstrumentationAttributes sets the instrumentation attributes.
 //
 // The passed attributes will be de-duplicated.
+//
+// Note that [WithInstrumentationAttributeSet] is recommended as
+// it is more efficient and also allows safely reusing the passed argument.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) MeterOption {
 	return meterOptionFunc(func(config MeterConfig) MeterConfig {
 		config.attrs = attribute.NewSet(attr...)
+		return config
+	})
+}
+
+// WithInstrumentationAttributeSet sets the instrumentation attributes.
+func WithInstrumentationAttributeSet(set attribute.Set) MeterOption {
+	return meterOptionFunc(func(config MeterConfig) MeterConfig {
+		config.attrs = set
 		return config
 	})
 }
