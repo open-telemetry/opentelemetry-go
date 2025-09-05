@@ -496,14 +496,8 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	if s.tracer.selfObservabilityEnabled {
-		defer func() {
-			// Add the span to the context to ensure the metric is recorded
-			// with the correct span context.
-			ctx := trace.ContextWithSpan(context.Background(), s)
-			set := spanLiveSet(s.spanContext.IsSampled())
-			s.tracer.spanLiveMetric.AddSet(ctx, -1, set)
-		}()
+	if s.tracer.inst != nil {
+		defer s.tracer.inst.SpanEnded(s)
 	}
 
 	sps := s.tracer.provider.getSpanProcessors()
