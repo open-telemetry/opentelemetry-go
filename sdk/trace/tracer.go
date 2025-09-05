@@ -20,9 +20,9 @@ type tracer struct {
 	provider             *TracerProvider
 	instrumentationScope instrumentation.Scope
 
-	selfObservabilityEnabled bool
-	spanLiveMetric           otelconv.SDKSpanLive
-	spanStartedMetric        otelconv.SDKSpanStarted
+	observabilityEnabled bool
+	spanLiveMetric       otelconv.SDKSpanLive
+	spanStartedMetric    otelconv.SDKSpanStarted
 }
 
 var _ trace.Tracer = &tracer{}
@@ -53,7 +53,7 @@ func (tr *tracer) Start(
 
 	s := tr.newSpan(ctx, name, &config)
 	newCtx := trace.ContextWithSpan(ctx, s)
-	if tr.selfObservabilityEnabled {
+	if tr.observabilityEnabled {
 		psc := trace.SpanContextFromContext(ctx)
 		set := spanStartedSet(psc, s)
 		tr.spanStartedMetric.AddSet(newCtx, 1, set)
@@ -168,7 +168,7 @@ func (tr *tracer) newRecordingSpan(
 	s.SetAttributes(sr.Attributes...)
 	s.SetAttributes(config.Attributes()...)
 
-	if tr.selfObservabilityEnabled {
+	if tr.observabilityEnabled {
 		// Propagate any existing values from the context with the new span to
 		// the measurement context.
 		ctx = trace.ContextWithSpan(ctx, s)

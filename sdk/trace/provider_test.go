@@ -401,18 +401,18 @@ func TestTracerProviderReturnsSameTracer(t *testing.T) {
 	assert.Same(t, t2, t5)
 }
 
-func TestTracerProviderSelfObservability(t *testing.T) {
+func TestTracerProviderObservability(t *testing.T) {
 	handler.Reset()
 	p := NewTracerProvider()
 
-	// Enable self-observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	// Enable observability
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	tr := p.Tracer("test-tracer")
 	require.IsType(t, &tracer{}, tr)
 
 	tStruct := tr.(*tracer)
-	assert.True(t, tStruct.selfObservabilityEnabled, "Self-observability should be enabled")
+	assert.True(t, tStruct.observabilityEnabled, "observability should be enabled")
 
 	// Verify instruments are created
 	assert.NotNil(t, tStruct.spanLiveMetric, "spanLiveMetric should be created")
@@ -423,7 +423,7 @@ func TestTracerProviderSelfObservability(t *testing.T) {
 	assert.Empty(t, handlerErrs, "No errors should occur during instrument creation")
 }
 
-func TestTracerProviderSelfObservabilityErrorsHandled(t *testing.T) {
+func TestTracerProviderObservabilityErrorsHandled(t *testing.T) {
 	handler.Reset()
 
 	orig := otel.GetMeterProvider()
@@ -432,8 +432,8 @@ func TestTracerProviderSelfObservabilityErrorsHandled(t *testing.T) {
 
 	p := NewTracerProvider()
 
-	// Enable self-observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	// Enable observability
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	// Create a tracer to trigger instrument creation.
 	tr := p.Tracer("test-tracer")

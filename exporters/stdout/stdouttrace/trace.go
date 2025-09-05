@@ -46,17 +46,17 @@ func New(options ...Option) (*Exporter, error) {
 		timestamps: cfg.Timestamps,
 	}
 
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return exporter, nil
 	}
 
-	exporter.selfObservabilityEnabled = true
-	exporter.selfObservabilityAttrs = []attribute.KeyValue{
+	exporter.observabilityEnabled = true
+	exporter.observabilityAttrs = []attribute.KeyValue{
 		semconv.OTelComponentName(fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())),
 		semconv.OTelComponentTypeKey.String(otelComponentType),
 	}
-	s := attribute.NewSet(exporter.selfObservabilityAttrs...)
-	exporter.selfObservabilitySetOpt = metric.WithAttributeSet(s)
+	s := attribute.NewSet(exporter.observabilityAttrs...)
+	exporter.observabilitySetOpt = metric.WithAttributeSet(s)
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -91,12 +91,12 @@ type Exporter struct {
 	stoppedMu sync.RWMutex
 	stopped   bool
 
-	selfObservabilityEnabled bool
-	selfObservabilityAttrs   []attribute.KeyValue // selfObservability common attributes
-	selfObservabilitySetOpt  metric.MeasurementOption
-	spanInflightMetric       otelconv.SDKExporterSpanInflight
-	spanExportedMetric       otelconv.SDKExporterSpanExported
-	operationDurationMetric  otelconv.SDKExporterOperationDuration
+	observabilityEnabled    bool
+	observabilityAttrs      []attribute.KeyValue // Observability common attributes
+	observabilitySetOpt     metric.MeasurementOption
+	spanInflightMetric      otelconv.SDKExporterSpanInflight
+	spanExportedMetric      otelconv.SDKExporterSpanExported
+	operationDurationMetric otelconv.SDKExporterOperationDuration
 }
 
 var (
@@ -131,7 +131,7 @@ var (
 // ExportSpans writes spans in json format to stdout.
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
 	var success int64
-	if e.selfObservabilityEnabled {
+	if e.observabilityEnabled {
 		count := int64(len(spans))
 
 		addOpt := addOptPool.Get().(*[]metric.AddOption)
@@ -140,7 +140,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 			addOptPool.Put(addOpt)
 		}()
 
-		*addOpt = append(*addOpt, e.selfObservabilitySetOpt)
+		*addOpt = append(*addOpt, e.observabilitySetOpt)
 
 		e.spanInflightMetric.Inst().Add(ctx, count, *addOpt...)
 		defer func(starting time.Time) {
@@ -152,16 +152,17 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 			// were exported which is meaningful for certain aggregations.
 			e.spanExportedMetric.Inst().Add(ctx, success, *addOpt...)
 
-			mOpt := e.selfObservabilitySetOpt
+			mOpt := e.observabilitySetOpt
 			if err != nil {
-				// additional attributes for self-observability,
-				// only spanExportedMetric and operationDurationMetric are supported.
+				// additional attributes for observability, only
+				// spanExportedMetric and operationDurationMetric are
+				// supported.
 				attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
 				defer func() {
 					*attrs = (*attrs)[:0] // reset the slice for reuse
 					measureAttrsPool.Put(attrs)
 				}()
-				*attrs = append(*attrs, e.selfObservabilityAttrs...)
+				*attrs = append(*attrs, e.observabilityAttrs...)
 				*attrs = append(*attrs, semconv.ErrorType(err))
 
 				// Do not inefficiently make a copy of attrs by using

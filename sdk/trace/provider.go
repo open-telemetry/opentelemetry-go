@@ -26,7 +26,7 @@ import (
 
 const (
 	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
-	selfObsScopeName  = "go.opentelemetry.io/otel/sdk/trace"
+	obsScopeName      = "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // tracerProviderConfig.
@@ -163,15 +163,15 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		t, ok := p.namedTracer[is]
 		if !ok {
 			t = &tracer{
-				provider:                 p,
-				instrumentationScope:     is,
-				selfObservabilityEnabled: x.SelfObservability.Enabled(),
+				provider:             p,
+				instrumentationScope: is,
+				observabilityEnabled: x.Observability.Enabled(),
 			}
-			if t.selfObservabilityEnabled {
+			if t.observabilityEnabled {
 				var err error
 				t.spanLiveMetric, t.spanStartedMetric, err = newInst()
 				if err != nil {
-					msg := "failed to create self-observability metrics for tracer: %w"
+					msg := "failed to create observability metrics for tracer: %w"
 					err := fmt.Errorf(msg, err)
 					otel.Handle(err)
 				}
@@ -203,7 +203,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 
 func newInst() (otelconv.SDKSpanLive, otelconv.SDKSpanStarted, error) {
 	m := otel.GetMeterProvider().Meter(
-		selfObsScopeName,
+		obsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
