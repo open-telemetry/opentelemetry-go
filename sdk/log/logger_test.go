@@ -23,8 +23,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,10 +57,20 @@ func TestLoggerEmit(t *testing.T) {
 	rWithNoObservedTimestamp := r
 	rWithNoObservedTimestamp.SetObservedTimestamp(time.Time{})
 
-	rWithoutDeduplicateAttributes := r
-	rWithoutDeduplicateAttributes.AddAttributes(
+	rWithAllowKeyDuplication := r
+	rWithAllowKeyDuplication.AddAttributes(
 		log.String("k1", "str1"),
 	)
+	rWithAllowKeyDuplication.SetBody(log.MapValue(
+		log.Int64("1", 2),
+		log.Int64("1", 3),
+	))
+
+	rWithDuplicatesInBody := r
+	rWithDuplicatesInBody.SetBody(log.MapValue(
+		log.Int64("1", 2),
+		log.Int64("1", 3),
+	))
 
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		context.Background(),
@@ -222,7 +232,7 @@ func TestLoggerEmit(t *testing.T) {
 			},
 		},
 		{
-			name: "WithoutAttributeDeduplication",
+			name: "WithAllowKeyDuplication",
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p0),
 				WithProcessor(p1),
@@ -232,15 +242,15 @@ func TestLoggerEmit(t *testing.T) {
 				WithAllowKeyDuplication(),
 			), instrumentation.Scope{Name: "scope"}),
 			ctx:    context.Background(),
-			record: rWithoutDeduplicateAttributes,
+			record: rWithAllowKeyDuplication,
 			expectedRecords: []Record{
 				{
-					eventName:                 r.EventName(),
-					timestamp:                 r.Timestamp(),
-					body:                      r.Body(),
-					severity:                  r.Severity(),
-					severityText:              r.SeverityText(),
-					observedTimestamp:         r.ObservedTimestamp(),
+					eventName:                 rWithAllowKeyDuplication.EventName(),
+					timestamp:                 rWithAllowKeyDuplication.Timestamp(),
+					body:                      rWithAllowKeyDuplication.Body(),
+					severity:                  rWithAllowKeyDuplication.Severity(),
+					severityText:              rWithAllowKeyDuplication.SeverityText(),
+					observedTimestamp:         rWithAllowKeyDuplication.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 5,
 					attributeCountLimit:       5,
@@ -252,6 +262,39 @@ func TestLoggerEmit(t *testing.T) {
 					},
 					nFront:       3,
 					allowDupKeys: true,
+				},
+			},
+		},
+		{
+			name: "WithDuplicatesInBody",
+			logger: newLogger(NewLoggerProvider(
+				WithProcessor(p0),
+				WithProcessor(p1),
+				WithAttributeValueLengthLimit(5),
+				WithAttributeCountLimit(5),
+				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+			), instrumentation.Scope{Name: "scope"}),
+			ctx:    context.Background(),
+			record: rWithDuplicatesInBody,
+			expectedRecords: []Record{
+				{
+					eventName: rWithDuplicatesInBody.EventName(),
+					timestamp: rWithDuplicatesInBody.Timestamp(),
+					body: log.MapValue(
+						log.Int64("1", 3),
+					),
+					severity:                  rWithDuplicatesInBody.Severity(),
+					severityText:              rWithDuplicatesInBody.SeverityText(),
+					observedTimestamp:         rWithDuplicatesInBody.ObservedTimestamp(),
+					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
+					attributeValueLengthLimit: 5,
+					attributeCountLimit:       5,
+					scope:                     &instrumentation.Scope{Name: "scope"},
+					front: [attributesInlineCount]log.KeyValue{
+						log.String("k1", "str"),
+						log.Float64("k2", 1.0),
+					},
+					nFront: 2,
 				},
 			},
 		},

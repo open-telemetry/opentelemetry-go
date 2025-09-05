@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "messaging" namespace.
 package messagingconv
@@ -133,7 +136,7 @@ func (ClientConsumedMessages) Description() string {
 	return "Number of messages that were delivered to the application."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The operationName is the the system-specific name of the messaging operation.
 //
@@ -155,6 +158,11 @@ func (m ClientConsumedMessages) Add(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -172,6 +180,30 @@ func (m ClientConsumedMessages) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Records the number of messages pulled from the broker or number of messages
+// dispatched to the application in push-based scenarios.
+// The metric SHOULD be reported once per message delivery. For example, if
+// receiving and processing operations are both instrumented for a single message
+// delivery, this counter is incremented when the message is received and not
+// reported when it is processed.
+func (m ClientConsumedMessages) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -282,7 +314,7 @@ func (ClientOperationDuration) Description() string {
 	return "Duration of messaging operation initiated by a producer or consumer client."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the system-specific name of the messaging operation.
 //
@@ -300,6 +332,11 @@ func (m ClientOperationDuration) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -317,6 +354,25 @@ func (m ClientOperationDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric SHOULD NOT be used to report processing duration - processing
+// duration is reported in `messaging.process.duration` metric.
+func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -433,7 +489,7 @@ func (ClientSentMessages) Description() string {
 	return "Number of messages producer attempted to send to the broker."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The operationName is the the system-specific name of the messaging operation.
 //
@@ -451,6 +507,11 @@ func (m ClientSentMessages) Add(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -468,6 +529,26 @@ func (m ClientSentMessages) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// This metric MUST NOT count messages that were created but haven't yet been
+// sent.
+func (m ClientSentMessages) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -563,7 +644,7 @@ func (ProcessDuration) Description() string {
 	return "Duration of processing operation."
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The operationName is the the system-specific name of the messaging operation.
 //
@@ -581,6 +662,11 @@ func (m ProcessDuration) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -598,6 +684,25 @@ func (m ProcessDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// This metric MUST be reported for operations with `messaging.operation.type`
+// that matches `process`.
+func (m ProcessDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 

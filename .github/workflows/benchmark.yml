@@ -18,7 +18,7 @@ jobs:
     runs-on: oracle-bare-metal-64cpu-512gb-x86-64
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
@@ -33,7 +33,7 @@ jobs:
           # So we can fetch the exact benchmark data from the previous commit.
           key: ${{ runner.os }}-benchmark-${{ github.event.before }}
       - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
+        uses: benchmark-action/github-action-benchmark@4e0b38bc48375986542b13c0d8976b7b80c60c00 # v1.20.5
         with:
           name: Benchmarks
           tool: 'go'
