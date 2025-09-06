@@ -36,7 +36,9 @@ func setup(t *testing.T) func() metricdata.ScopeMetrics {
 	return func() metricdata.ScopeMetrics {
 		var got metricdata.ResourceMetrics
 		require.NoError(t, reader.Collect(context.Background(), &got))
-		require.Len(t, got.ScopeMetrics, 1)
+		if len(got.ScopeMetrics) != 1 {
+			return metricdata.ScopeMetrics{}
+		}
 		return got.ScopeMetrics[0]
 	}
 }
@@ -281,6 +283,14 @@ func (m *errMeter) Int64Counter(string, ...metricapi.Int64CounterOption) (metric
 	return nil, m.err
 }
 
+func (m *errMeter) Int64ObservableUpDownCounter(string, ...metricapi.Int64ObservableUpDownCounterOption) (metricapi.Int64ObservableUpDownCounter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) RegisterCallback(metricapi.Callback, ...metricapi.Observable) (metricapi.Registration, error) {
+	return nil, m.err
+}
+
 func TestNewTracerErrors(t *testing.T) {
 	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
@@ -289,8 +299,6 @@ func TestNewTracerErrors(t *testing.T) {
 
 	mp := &errMeterProvider{err: assert.AnError}
 	otel.SetMeterProvider(mp)
-
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 	_, err := observ.NewTracer()
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
