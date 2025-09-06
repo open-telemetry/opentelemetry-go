@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
@@ -2259,9 +2260,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2320,9 +2321,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want = metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2386,9 +2387,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2435,9 +2436,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2512,9 +2513,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2578,9 +2579,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2651,9 +2652,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want = metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
