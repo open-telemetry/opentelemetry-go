@@ -571,3 +571,15 @@ func TestConfigLinkMutability(t *testing.T) {
 	want := SpanConfig{links: []Link{l0, l1}}
 	assert.Equal(t, want, conf)
 }
+
+func BenchmarkTraceID_hexBytes(b *testing.B) {
+	run := func(b *testing.B, id TraceID) {
+		b.ResetTimer()
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = id.hexBytes()
+		}
+	}
+
+	run(b, [16]byte{128, 241, 152, 238, 86, 52, 59, 168, 100, 254, 139, 42, 87, 211, 239, 247})
+}

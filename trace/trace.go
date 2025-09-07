@@ -4,6 +4,7 @@
 package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
+	"encoding/hex"
 	"encoding/json"
 )
 
@@ -59,24 +60,9 @@ func (t TraceID) String() string {
 
 // hexBytes returns the hex string representation form of a TraceID.
 func (t TraceID) hexBytes() [32]byte {
-	return [32]byte{
-		hexLU[t[0x0]>>4], hexLU[t[0x0]&0xf],
-		hexLU[t[0x1]>>4], hexLU[t[0x1]&0xf],
-		hexLU[t[0x2]>>4], hexLU[t[0x2]&0xf],
-		hexLU[t[0x3]>>4], hexLU[t[0x3]&0xf],
-		hexLU[t[0x4]>>4], hexLU[t[0x4]&0xf],
-		hexLU[t[0x5]>>4], hexLU[t[0x5]&0xf],
-		hexLU[t[0x6]>>4], hexLU[t[0x6]&0xf],
-		hexLU[t[0x7]>>4], hexLU[t[0x7]&0xf],
-		hexLU[t[0x8]>>4], hexLU[t[0x8]&0xf],
-		hexLU[t[0x9]>>4], hexLU[t[0x9]&0xf],
-		hexLU[t[0xa]>>4], hexLU[t[0xa]&0xf],
-		hexLU[t[0xb]>>4], hexLU[t[0xb]&0xf],
-		hexLU[t[0xc]>>4], hexLU[t[0xc]&0xf],
-		hexLU[t[0xd]>>4], hexLU[t[0xd]&0xf],
-		hexLU[t[0xe]>>4], hexLU[t[0xe]&0xf],
-		hexLU[t[0xf]>>4], hexLU[t[0xf]&0xf],
-	}
+	var out [32]byte
+	hex.Encode(out[:], t[:])
+	return out
 }
 
 // SpanID is a unique identity of a span in a trace.
