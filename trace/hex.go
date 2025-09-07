@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package trace // import "go.opentelemetry.io/otel/trace"
+
 import "math"
 
 const (
