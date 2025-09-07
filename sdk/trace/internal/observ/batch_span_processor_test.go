@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -102,7 +103,7 @@ func TestBSPCallback(t *testing.T) {
 
 	require.NoError(t, bsp.Shutdown())
 	got := collect()
-	assert.Len(t, got.Metrics, 0, "no metrics after shutdown")
+	assert.Empty(t, got.Metrics, "no metrics after shutdown")
 }
 
 func processed(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {

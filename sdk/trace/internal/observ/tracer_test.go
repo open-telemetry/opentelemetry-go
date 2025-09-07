@@ -9,9 +9,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	metricapi "go.opentelemetry.io/otel/metric"
+	mapi "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -20,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
-	traceapi "go.opentelemetry.io/otel/trace"
+	tapi "go.opentelemetry.io/otel/trace"
 )
 
 func setup(t *testing.T) func() metricdata.ScopeMetrics {
@@ -169,7 +170,7 @@ func recStarted() metricdata.Metrics {
 type recOnly struct{}
 
 func (recOnly) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
-	psc := traceapi.SpanContextFromContext(p.ParentContext)
+	psc := tapi.SpanContextFromContext(p.ParentContext)
 	return trace.SamplingResult{
 		Decision:   trace.RecordOnly,
 		Tracestate: psc.TraceState(),
@@ -204,11 +205,11 @@ func TestTracerRemoteParent(t *testing.T) {
 	collect := setup(t)
 	tracer := trace.NewTracerProvider().Tracer(t.Name())
 
-	ctx := traceapi.ContextWithRemoteSpanContext(
+	ctx := tapi.ContextWithRemoteSpanContext(
 		context.Background(),
-		traceapi.NewSpanContext(traceapi.SpanContextConfig{
-			TraceID:    traceapi.TraceID{0x01},
-			SpanID:     traceapi.SpanID{0x01},
+		tapi.NewSpanContext(tapi.SpanContextConfig{
+			TraceID:    tapi.TraceID{0x01},
+			SpanID:     tapi.SpanID{0x01},
 			TraceFlags: 0x1,
 			Remote:     true,
 		}))
@@ -260,34 +261,37 @@ func TestNewTracerObservabilityDisabled(t *testing.T) {
 }
 
 type errMeterProvider struct {
-	metricapi.MeterProvider
+	mapi.MeterProvider
 
 	err error
 }
 
-func (m *errMeterProvider) Meter(string, ...metricapi.MeterOption) metricapi.Meter {
+func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
 	return &errMeter{err: m.err}
 }
 
 type errMeter struct {
-	metricapi.Meter
+	mapi.Meter
 
 	err error
 }
 
-func (m *errMeter) Int64UpDownCounter(string, ...metricapi.Int64UpDownCounterOption) (metricapi.Int64UpDownCounter, error) {
+func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
 	return nil, m.err
 }
 
-func (m *errMeter) Int64Counter(string, ...metricapi.Int64CounterOption) (metricapi.Int64Counter, error) {
+func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
 	return nil, m.err
 }
 
-func (m *errMeter) Int64ObservableUpDownCounter(string, ...metricapi.Int64ObservableUpDownCounterOption) (metricapi.Int64ObservableUpDownCounter, error) {
+func (m *errMeter) Int64ObservableUpDownCounter(
+	string,
+	...mapi.Int64ObservableUpDownCounterOption,
+) (mapi.Int64ObservableUpDownCounter, error) {
 	return nil, m.err
 }
 
-func (m *errMeter) RegisterCallback(metricapi.Callback, ...metricapi.Observable) (metricapi.Registration, error) {
+func (m *errMeter) RegisterCallback(mapi.Callback, ...mapi.Observable) (mapi.Registration, error) {
 	return nil, m.err
 }
 
