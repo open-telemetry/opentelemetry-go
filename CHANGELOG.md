@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Optimize `TraceID` and `SpanID` encoding with a hex lookup table in `go.opentelemetry.io/otel/trace`. (#7321)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
