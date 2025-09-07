@@ -12,60 +12,12 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	mapi "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	tapi "go.opentelemetry.io/otel/trace"
 )
-
-func setup(t *testing.T) func() metricdata.ScopeMetrics {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-
-	orig := otel.GetMeterProvider()
-	t.Cleanup(func() { otel.SetMeterProvider(orig) })
-
-	reader := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	otel.SetMeterProvider(mp)
-
-	return func() metricdata.ScopeMetrics {
-		var got metricdata.ResourceMetrics
-		require.NoError(t, reader.Collect(context.Background(), &got))
-		if len(got.ScopeMetrics) != 1 {
-			return metricdata.ScopeMetrics{}
-		}
-		return got.ScopeMetrics[0]
-	}
-}
-
-func scopeMetrics(metrics ...metricdata.Metrics) metricdata.ScopeMetrics {
-	return metricdata.ScopeMetrics{
-		Scope: instrumentation.Scope{
-			Name:      observ.ScopeName,
-			Version:   sdk.Version(),
-			SchemaURL: observ.SchemaURL,
-		},
-		Metrics: metrics,
-	}
-}
-
-func check(t *testing.T, got metricdata.ScopeMetrics, want ...metricdata.Metrics) {
-	o := []metricdatatest.Option{
-		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreExemplars(),
-	}
-	metricdatatest.AssertEqual(t, scopeMetrics(want...), got, o...)
-}
-
-func dPt(set attribute.Set, value int64) metricdata.DataPoint[int64] {
-	return metricdata.DataPoint[int64]{Attributes: set, Value: value}
-}
 
 func live(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
 	return metricdata.Metrics{
@@ -101,7 +53,7 @@ func started(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
 	}
 }
 
-func sampledStarted() metricdata.Metrics {
+func sampledStarted(value int64) metricdata.Metrics {
 	set := attribute.NewSet(
 		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
 			otelconv.SpanParentOriginNone,
@@ -110,7 +62,7 @@ func sampledStarted() metricdata.Metrics {
 			otelconv.SpanSamplingResultRecordAndSample,
 		),
 	)
-	return started(dPt(set, 1))
+	return started(dPt(set, value))
 }
 
 func TestTracer(t *testing.T) {
@@ -118,13 +70,13 @@ func TestTracer(t *testing.T) {
 	tracer := trace.NewTracerProvider().Tracer(t.Name())
 
 	_, span := tracer.Start(context.Background(), "span")
-	check(t, collect(), sampledLive(1), sampledStarted())
+	check(t, collect(), sampledLive(1), sampledStarted(1))
 
 	span.End()
-	check(t, collect(), sampledLive(0), sampledStarted())
+	check(t, collect(), sampledLive(0), sampledStarted(1))
 }
 
-func dropStarted() metricdata.Metrics {
+func dropStarted(value int64) metricdata.Metrics {
 	set := attribute.NewSet(
 		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
 			otelconv.SpanParentOriginNone,
@@ -133,7 +85,7 @@ func dropStarted() metricdata.Metrics {
 			otelconv.SpanSamplingResultDrop,
 		),
 	)
-	return started(dPt(set, 1))
+	return started(dPt(set, value))
 }
 
 func TestTracerNonRecording(t *testing.T) {
@@ -143,7 +95,7 @@ func TestTracerNonRecording(t *testing.T) {
 	).Tracer(t.Name())
 
 	_, _ = tracer.Start(context.Background(), "span")
-	check(t, collect(), dropStarted())
+	check(t, collect(), dropStarted(1))
 }
 
 func recLive(value int64) metricdata.Metrics {
@@ -155,7 +107,7 @@ func recLive(value int64) metricdata.Metrics {
 	return live(dPt(set, value))
 }
 
-func recStarted() metricdata.Metrics {
+func recStarted(value int64) metricdata.Metrics {
 	set := attribute.NewSet(
 		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
 			otelconv.SpanParentOriginNone,
@@ -164,7 +116,7 @@ func recStarted() metricdata.Metrics {
 			otelconv.SpanSamplingResultRecordOnly,
 		),
 	)
-	return started(dPt(set, 1))
+	return started(dPt(set, value))
 }
 
 type recOnly struct{}
@@ -179,7 +131,17 @@ func (recOnly) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
 
 func (recOnly) Description() string { return "RecordingOnly" }
 
-func remoteStarted() metricdata.Metrics {
+func TestTracerRecordOnly(t *testing.T) {
+	collect := setup(t)
+	tracer := trace.NewTracerProvider(
+		trace.WithSampler(recOnly{}),
+	).Tracer(t.Name())
+
+	_, _ = tracer.Start(context.Background(), "span")
+	check(t, collect(), recLive(1), recStarted(1))
+}
+
+func remoteStarted(value int64) metricdata.Metrics {
 	set := attribute.NewSet(
 		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
 			otelconv.SpanParentOriginRemote,
@@ -188,17 +150,7 @@ func remoteStarted() metricdata.Metrics {
 			otelconv.SpanSamplingResultRecordAndSample,
 		),
 	)
-	return started(dPt(set, 1))
-}
-
-func TestTracerRecordOnly(t *testing.T) {
-	collect := setup(t)
-	tracer := trace.NewTracerProvider(
-		trace.WithSampler(recOnly{}),
-	).Tracer(t.Name())
-
-	_, _ = tracer.Start(context.Background(), "span")
-	check(t, collect(), recLive(1), recStarted())
+	return started(dPt(set, value))
 }
 
 func TestTracerRemoteParent(t *testing.T) {
@@ -215,10 +167,10 @@ func TestTracerRemoteParent(t *testing.T) {
 		}))
 
 	_, _ = tracer.Start(ctx, "span")
-	check(t, collect(), sampledLive(1), remoteStarted())
+	check(t, collect(), sampledLive(1), remoteStarted(1))
 }
 
-func chainStarted() metricdata.Metrics {
+func chainStarted(parent, child int64) metricdata.Metrics {
 	noParentSet := attribute.NewSet(
 		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
 			otelconv.SpanParentOriginNone,
@@ -235,7 +187,7 @@ func chainStarted() metricdata.Metrics {
 			otelconv.SpanSamplingResultRecordAndSample,
 		),
 	)
-	return started(dPt(noParentSet, 1), dPt(localSet, 1))
+	return started(dPt(noParentSet, parent), dPt(localSet, child))
 }
 
 func TestTracerLocalParent(t *testing.T) {
@@ -245,12 +197,12 @@ func TestTracerLocalParent(t *testing.T) {
 	ctx, parent := tracer.Start(context.Background(), "parent")
 	_, child := tracer.Start(ctx, "child")
 
-	check(t, collect(), sampledLive(2), chainStarted())
+	check(t, collect(), sampledLive(2), chainStarted(1, 1))
 
 	child.End()
 	parent.End()
 
-	check(t, collect(), sampledLive(0), chainStarted())
+	check(t, collect(), sampledLive(0), chainStarted(1, 1))
 }
 
 func TestNewTracerObservabilityDisabled(t *testing.T) {
@@ -258,41 +210,6 @@ func TestNewTracerObservabilityDisabled(t *testing.T) {
 	tracer, err := observ.NewTracer()
 	assert.NoError(t, err)
 	assert.Nil(t, tracer)
-}
-
-type errMeterProvider struct {
-	mapi.MeterProvider
-
-	err error
-}
-
-func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
-	return &errMeter{err: m.err}
-}
-
-type errMeter struct {
-	mapi.Meter
-
-	err error
-}
-
-func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) Int64ObservableUpDownCounter(
-	string,
-	...mapi.Int64ObservableUpDownCounterOption,
-) (mapi.Int64ObservableUpDownCounter, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) RegisterCallback(mapi.Callback, ...mapi.Observable) (mapi.Registration, error) {
-	return nil, m.err
 }
 
 func TestNewTracerErrors(t *testing.T) {
