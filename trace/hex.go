@@ -38,10 +38,13 @@ const (
 		"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
 )
 
+// hexTable is a precomputed lookup table that maps each possible byte value (0–255)
+// to its two-character lowercase hexadecimal representation.
+// Example: hexTable[15] == {'0', 'f'} and hexTable[255] == {'f', 'f'}.
+// This avoids repeated shift/mask operations at runtime and speeds up encoding.
 var hexTable [math.MaxUint8 + 1][2]byte
 
 func init() {
-	const hexLU = "0123456789abcdef"
 	for i := range math.MaxUint8 + 1 {
 		hexTable[i] = [2]byte{hexLU[i>>4], hexLU[i&0x0f]}
 	}

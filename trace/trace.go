@@ -110,14 +110,14 @@ func (s SpanID) String() string {
 
 func (s SpanID) hexBytes() [16]byte {
 	return [16]byte{
-		hexLU[s[0]>>4], hexLU[s[0]&0xf],
-		hexLU[s[1]>>4], hexLU[s[1]&0xf],
-		hexLU[s[2]>>4], hexLU[s[2]&0xf],
-		hexLU[s[3]>>4], hexLU[s[3]&0xf],
-		hexLU[s[4]>>4], hexLU[s[4]&0xf],
-		hexLU[s[5]>>4], hexLU[s[5]&0xf],
-		hexLU[s[6]>>4], hexLU[s[6]&0xf],
-		hexLU[s[7]>>4], hexLU[s[7]&0xf],
+		hexTable[s[0x0]][0], hexTable[s[0x0]][1],
+		hexTable[s[0x1]][0], hexTable[s[0x1]][1],
+		hexTable[s[0x2]][0], hexTable[s[0x2]][1],
+		hexTable[s[0x3]][0], hexTable[s[0x3]][1],
+		hexTable[s[0x4]][0], hexTable[s[0x4]][1],
+		hexTable[s[0x5]][0], hexTable[s[0x5]][1],
+		hexTable[s[0x6]][0], hexTable[s[0x6]][1],
+		hexTable[s[0x7]][0], hexTable[s[0x7]][1],
 	}
 }
 
