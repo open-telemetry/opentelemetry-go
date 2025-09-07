@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	schemaURL  = "https://opentelemetry.io/schemas/1.0.0"
+	schemaURL  = "https://opentelemetry.io/schemas/1.37.0"
 	completeIP = Instrument{
 		Name:        "foo",
 		Description: "foo desc",

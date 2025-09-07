@@ -145,7 +145,7 @@ func ExampleNewView() {
 		Scope: instrumentation.Scope{
 			Name:      "http",
 			Version:   "0.34.0",
-			SchemaURL: "https://opentelemetry.io/schemas/1.0.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.37.0",
 		},
 	})
 	fmt.Println("name:", stream.Name)
