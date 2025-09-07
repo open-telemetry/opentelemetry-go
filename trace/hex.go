@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 package trace // import "go.opentelemetry.io/otel/trace"
+import "math"
 
 const (
 	// hexLU is a hex lookup table of the 16 lowercase hex digits.
@@ -36,3 +37,12 @@ const (
 		"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff" +
 		"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
 )
+
+var hexTable [math.MaxUint8 + 1][2]byte
+
+func init() {
+	const hexLU = "0123456789abcdef"
+	for i := range math.MaxUint8 + 1 {
+		hexTable[i] = [2]byte{hexLU[i>>4], hexLU[i&0x0f]}
+	}
+}
