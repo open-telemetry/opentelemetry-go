@@ -90,4 +90,49 @@ func TestWithInstrumentationAttributesMerge(t *testing.T) {
 		assert.Equal(t, alice, c.InstrumentationAttributes(),
 			"Empty attributes should not affect existing ones.")
 	})
+
+	t.Run("SameKeyWithSet", func(t *testing.T) {
+		c := metric.NewMeterConfig(
+			metric.WithInstrumentationAttributeSet(alice),
+			metric.WithInstrumentationAttributeSet(bob),
+		)
+		assert.Equal(t, bob, c.InstrumentationAttributes(),
+			"Later values for the same key should overwrite earlier ones.")
+	})
+
+	t.Run("DifferentKeysWithSet", func(t *testing.T) {
+		c := metric.NewMeterConfig(
+			metric.WithInstrumentationAttributeSet(alice),
+			metric.WithInstrumentationAttributeSet(attribute.NewSet(adminAttr)),
+		)
+		assert.Equal(t, aliceAdmin, c.InstrumentationAttributes(),
+			"Different keys should be merged.")
+	})
+
+	t.Run("MixedWithSet", func(t *testing.T) {
+		c := metric.NewMeterConfig(
+			metric.WithInstrumentationAttributeSet(aliceAdmin),
+			metric.WithInstrumentationAttributeSet(bob),
+		)
+		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
+			"Combination of same and different keys should be merged.")
+	})
+
+	t.Run("MergedEmptyWithSet", func(t *testing.T) {
+		c := metric.NewMeterConfig(
+			metric.WithInstrumentationAttributeSet(alice),
+			metric.WithInstrumentationAttributeSet(attribute.NewSet()),
+		)
+		assert.Equal(t, alice, c.InstrumentationAttributes(),
+			"Empty attribute set should not affect existing ones.")
+	})
+
+	t.Run("MixedAttributesAndSet", func(t *testing.T) {
+		c := metric.NewMeterConfig(
+			metric.WithInstrumentationAttributes(aliceAttr),
+			metric.WithInstrumentationAttributeSet(attribute.NewSet(bobAttr, adminAttr)),
+		)
+		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
+			"Attributes and attribute sets should be merged together.")
+	})
 }
