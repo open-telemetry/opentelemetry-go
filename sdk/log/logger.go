@@ -5,18 +5,12 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,8 +25,9 @@ type logger struct {
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope
 
-	selfObservabilityEnabled bool
-	logCreatedMetric         otelconv.SDKLogCreated
+	// recCntIncr increments the count of log records created. It will be nil
+	// if observability is disabled.
+	recCntIncr func(context.Context)
 }
 
 func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
@@ -40,18 +35,10 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 		provider:             p,
 		instrumentationScope: scope,
 	}
-	if !x.SelfObservability.Enabled() {
-		return l
-	}
-	l.selfObservabilityEnabled = true
-	mp := otel.GetMeterProvider()
-	m := mp.Meter("go.opentelemetry.io/otel/sdk/log",
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL))
 
 	var err error
-	if l.logCreatedMetric, err = otelconv.NewSDKLogCreated(m); err != nil {
-		err = fmt.Errorf("failed to create log created metric: %w", err)
+	l.recCntIncr, err = newRecordCounterIncr()
+	if err != nil {
 		otel.Handle(err)
 	}
 	return l
@@ -119,8 +106,8 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeCountLimit:       l.provider.attributeCountLimit,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
-	if l.selfObservabilityEnabled {
-		l.logCreatedMetric.Add(ctx, 1)
+	if l.recCntIncr != nil {
+		l.recCntIncr(ctx)
 	}
 
 	// This ensures we deduplicate key-value collections in the log body
