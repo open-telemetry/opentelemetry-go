@@ -43,3 +43,50 @@ func TestWithInstrumentationAttributeSet(t *testing.T) {
 
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
+
+func TestWithInstrumentationAttributesMerge(t *testing.T) {
+	aliceAttr := attribute.String("user", "Alice")
+	bobAttr := attribute.String("user", "Bob")
+	adminAttr := attribute.Bool("admin", true)
+
+	alice := attribute.NewSet(aliceAttr)
+	bob := attribute.NewSet(bobAttr)
+	aliceAdmin := attribute.NewSet(aliceAttr, adminAttr)
+	bobAdmin := attribute.NewSet(bobAttr, adminAttr)
+
+	t.Run("SameKey", func(t *testing.T) {
+		c := log.NewLoggerConfig(
+			log.WithInstrumentationAttributes(aliceAttr),
+			log.WithInstrumentationAttributes(bobAttr),
+		)
+		assert.Equal(t, bob, c.InstrumentationAttributes(),
+			"Later values for the same key should overwrite earlier ones.")
+	})
+
+	t.Run("DifferentKeys", func(t *testing.T) {
+		c := log.NewLoggerConfig(
+			log.WithInstrumentationAttributes(aliceAttr),
+			log.WithInstrumentationAttributes(adminAttr),
+		)
+		assert.Equal(t, aliceAdmin, c.InstrumentationAttributes(),
+			"Different keys should be merged.")
+	})
+
+	t.Run("Mixed", func(t *testing.T) {
+		c := log.NewLoggerConfig(
+			log.WithInstrumentationAttributes(aliceAttr, adminAttr),
+			log.WithInstrumentationAttributes(bobAttr),
+		)
+		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
+			"Combination of same and different keys should be merged.")
+	})
+
+	t.Run("MergedEmpty", func(t *testing.T) {
+		c := log.NewLoggerConfig(
+			log.WithInstrumentationAttributes(aliceAttr),
+			log.WithInstrumentationAttributes(),
+		)
+		assert.Equal(t, alice, c.InstrumentationAttributes(),
+			"Empty attributes should not affect existing ones.")
+	})
+}
