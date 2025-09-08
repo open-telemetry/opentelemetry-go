@@ -23,8 +23,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/prometheus/internal/counter"
 	selfobs "go.opentelemetry.io/otel/exporters/prometheus/internal/selfobservability"
 	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -2265,5 +2267,302 @@ func TestEscapingErrorHandling(t *testing.T) {
 				tc.checkMetricFamilies(t, got)
 			}
 		})
+	}
+}
+
+// BenchmarkExporterCollect benchmarks the export operation with and without self-observability.
+func BenchmarkExporterCollect(b *testing.B) {
+	// Create test metrics data (similar to SpanStubs in stdout trace)
+	testMetrics := createBenchmarkMetrics()
+
+	run := func(b *testing.B) {
+		// Reset counter for consistent component naming
+		counter.SetExporterID(0)
+
+		registry := prometheus.NewRegistry()
+		exporter, err := New(WithRegisterer(registry))
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			ctx := context.Background()
+			err = exporter.Collect(ctx, &testMetrics)
+		}
+		_ = err // Prevent compiler optimization
+	}
+
+	b.Run("SelfObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
+}
+
+// BenchmarkCollectorCollect benchmarks the collection operation through registry.
+func BenchmarkCollectorCollect(b *testing.B) {
+	run := func(b *testing.B) {
+		// Reset counter for consistent component naming
+		counter.SetExporterID(0)
+
+		registry := prometheus.NewRegistry()
+		exporter, err := New(WithRegisterer(registry))
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		// Pre-populate with metrics
+		ctx := context.Background()
+		var metrics metricdata.ResourceMetrics
+		_ = exporter.Collect(ctx, &metrics)
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			// Use the registry to collect metrics from the collector
+			metricFamilies, err := registry.Gather()
+			if err != nil {
+				b.Fatal(err)
+			}
+			_ = metricFamilies // Use the result to prevent optimization
+		}
+	}
+
+	b.Run("SelfObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
+}
+
+// BenchmarkSelfObservabilityOperations benchmarks individual self-observability operations.
+func BenchmarkSelfObservabilityOperations(b *testing.B) {
+	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	// Reset counter for consistent component naming
+	counter.SetExporterID(0)
+
+	// Create self-observability instance directly for testing
+	selfObs, err := selfobs.NewSelfObservability()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	b.Run("TrackExport", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			completeFn := selfObs.TrackExport(ctx, 100)
+			completeFn(nil, 100) // successful export
+		}
+	})
+
+	b.Run("RecordOperationDuration", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			completeFn := selfObs.RecordOperationDuration(ctx)
+			completeFn(nil) // successful operation
+		}
+	})
+
+	b.Run("RecordCollectionDuration", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = selfObs.RecordCollectionDuration(ctx, func() error {
+				return nil // successful collection
+			})
+		}
+	})
+}
+
+// BenchmarkAttributePooling specifically tests the attribute pooling optimization.
+func BenchmarkAttributePooling(b *testing.B) {
+	run := func(b *testing.B) {
+		// Reset counter for consistent component naming
+		counter.SetExporterID(0)
+
+		selfObs, err := selfobs.NewSelfObservability()
+		if err != nil {
+			b.Fatalf("failed to create self-observability: %v", err)
+		}
+
+		ctx := context.Background()
+
+		b.Run("ConcurrentTrackExport", func(b *testing.B) {
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					completeFn := selfObs.TrackExport(ctx, 50)
+					completeFn(nil, 50)
+				}
+			})
+		})
+
+		b.Run("ConcurrentOperationDuration", func(b *testing.B) {
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					completeFn := selfObs.RecordOperationDuration(ctx)
+					completeFn(nil)
+				}
+			})
+		})
+	}
+
+	b.Run("SelfObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+		run(b)
+	})
+}
+
+// BenchmarkExporterMemoryProfile benchmarks with different data sizes.
+func BenchmarkExporterMemoryProfile(b *testing.B) {
+	dataSizes := []struct {
+		name        string
+		metricCount int
+		dataPoints  int
+	}{
+		{"Small_10metrics_100points", 10, 100},
+		{"Medium_50metrics_500points", 50, 500},
+		{"Large_100metrics_1000points", 100, 1000},
+	}
+
+	run := func(b *testing.B, ds struct {
+		name        string
+		metricCount int
+		dataPoints  int
+	},
+	) {
+		// Reset counter for consistent component naming
+		counter.SetExporterID(0)
+
+		// Create metric provider with the exporter
+		exporter, err := New()
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		mp := metric.NewMeterProvider(metric.WithReader(exporter))
+		meter := mp.Meter("benchmark")
+
+		// Create metrics to match the requested data size
+		instruments := make([]otelmetric.Int64Counter, ds.metricCount)
+		for i := 0; i < ds.metricCount; i++ {
+			counter, err := meter.Int64Counter(fmt.Sprintf("benchmark_counter_%d", i))
+			if err != nil {
+				b.Fatalf("failed to create counter: %v", err)
+			}
+			instruments[i] = counter
+		}
+
+		// Pre-populate with data points
+		ctx := context.Background()
+		for i, counter := range instruments {
+			for j := 0; j < ds.dataPoints; j++ {
+				counter.Add(ctx, int64((i+1)*(j+1)*10), otelmetric.WithAttributes(
+					attribute.String("method", "GET"),
+					attribute.String("status", "200"),
+					attribute.Int("metric_index", i),
+					attribute.Int("point_index", j),
+				))
+			}
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			var testMetrics metricdata.ResourceMetrics
+			_ = exporter.Collect(ctx, &testMetrics)
+		}
+	}
+
+	for _, ds := range dataSizes {
+		b.Run(ds.name+"_SelfObservability", func(b *testing.B) {
+			b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+			run(b, ds)
+		})
+
+		b.Run(ds.name+"_NoObservability", func(b *testing.B) {
+			b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+			run(b, ds)
+		})
+	}
+}
+
+func createBenchmarkMetrics() metricdata.ResourceMetrics {
+	benchmarkTime := time.Now()
+	return metricdata.ResourceMetrics{
+		Resource: resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("benchmark-test"),
+			semconv.ServiceVersion("1.0.0"),
+		),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{
+					Name:    "benchmark-scope",
+					Version: "1.0.0",
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "benchmark_counter",
+						Description: "A counter for benchmark testing",
+						Unit:        "1",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										attribute.String("method", "GET"),
+										attribute.String("status", "200"),
+									),
+									Time:  benchmarkTime,
+									Value: 100,
+								},
+								{
+									Attributes: attribute.NewSet(
+										attribute.String("method", "POST"),
+										attribute.String("status", "201"),
+									),
+									Time:  benchmarkTime,
+									Value: 50,
+								},
+							},
+						},
+					},
+					{
+						Name:        "benchmark_histogram",
+						Description: "A histogram for benchmark testing",
+						Unit:        "ms",
+						Data: metricdata.Histogram[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										attribute.String("endpoint", "/api/v1"),
+									),
+									Time:         benchmarkTime,
+									Count:        100,
+									Sum:          5000,
+									Bounds:       []float64{1, 5, 10, 25, 50, 100, 250, 500, 1000},
+									BucketCounts: []uint64{5, 10, 15, 20, 20, 15, 10, 4, 1, 0},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }

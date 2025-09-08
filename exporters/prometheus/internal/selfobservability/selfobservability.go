@@ -25,7 +25,8 @@ var otelComponentType = string(otelconv.ComponentTypePrometheusHTTPTextMetricExp
 
 var attrsPool = sync.Pool{
 	New: func() any {
-		const n = 8
+		// "component.name" + "component.type" + "error.type"
+		const n = 1 + 1 + 1
 		s := make([]attribute.KeyValue, 0, n)
 		return &s
 	},
