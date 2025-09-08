@@ -12,6 +12,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
@@ -145,4 +147,77 @@ func TestBSPProcessed(t *testing.T) {
 		dPt(bspSet(), p0+p1),
 		dPt(bspSet(observ.ErrQueueFull), e0+e1),
 	))
+}
+
+func BenchmarkBSP(b *testing.B) {
+	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	newBSP := func(b *testing.B) *observ.BSP {
+		b.Helper()
+		bsp, err := observ.NewBSP(id, func() int64 { return 3 }, 5)
+		require.NoError(b, err)
+		require.NotNil(b, bsp)
+		b.Cleanup(func() {
+			if err := bsp.Shutdown(); err != nil {
+				b.Errorf("Shutdown: %v", err)
+			}
+		})
+		return bsp
+	}
+	ctx := context.Background()
+
+	b.Run("Processed", func(b *testing.B) {
+		orig := otel.GetMeterProvider()
+		b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+		// Ensure deterministic benchmark by using noop meter.
+		otel.SetMeterProvider(noop.NewMeterProvider())
+
+		bsp := newBSP(b)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				bsp.Processed(ctx, 10)
+			}
+		})
+	})
+	b.Run("ProcessedQueueFull", func(b *testing.B) {
+		orig := otel.GetMeterProvider()
+		b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+		// Ensure deterministic benchmark by using noop meter.
+		otel.SetMeterProvider(noop.NewMeterProvider())
+
+		bsp := newBSP(b)
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				bsp.ProcessedQueueFull(ctx, 1)
+			}
+		})
+	})
+	b.Run("Callback", func(b *testing.B) {
+		orig := otel.GetMeterProvider()
+		b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+		reader := metric.NewManualReader()
+		mp := metric.NewMeterProvider(metric.WithReader(reader))
+		otel.SetMeterProvider(mp)
+
+		bsp := newBSP(b)
+		var got metricdata.ResourceMetrics
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		for b.Loop() {
+			_ = reader.Collect(ctx, &got)
+		}
+
+		_ = got
+		_ = bsp
+	})
 }
