@@ -247,9 +247,8 @@ func TestWithInstrumentationAttributeSet(t *testing.T) {
 // Save benchmark results to a file level var to avoid the compiler optimizing
 // away the actual work.
 var (
-	tracerConfig TracerConfig
-	spanConfig   SpanConfig
-	eventConfig  EventConfig
+	spanConfig  SpanConfig
+	eventConfig EventConfig
 )
 
 func BenchmarkNewTracerConfig(b *testing.B) {
@@ -275,13 +274,13 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 		{
 			name: "with instrumentation attribute",
 			options: []TracerOption{
-				WithInstrumentationAttributes(attribute.String("foo", "value")),
+				WithInstrumentationAttributes(attribute.String("key", "value")),
 			},
 		},
 		{
 			name: "with instrumentation attribute set",
 			options: []TracerOption{
-				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("bar", "value"))),
+				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
 			},
 		},
 	} {
@@ -289,8 +288,8 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
-				tracerConfig = NewTracerConfig(bb.options...)
+			for b.Loop() {
+				NewTracerConfig(bb.options...)
 			}
 		})
 	}

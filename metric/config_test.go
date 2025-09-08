@@ -136,3 +136,47 @@ func TestWithInstrumentationAttributesMerge(t *testing.T) {
 			"Attributes and attribute sets should be merged together.")
 	})
 }
+
+func BenchmarkNewMeterConfig(b *testing.B) {
+	for _, bb := range []struct {
+		name    string
+		options []metric.MeterOption
+	}{
+		{
+			name: "with no options",
+		},
+		{
+			name: "with an instrumentation version",
+			options: []metric.MeterOption{
+				metric.WithInstrumentationVersion("testing version"),
+			},
+		},
+		{
+			name: "with a schema url",
+			options: []metric.MeterOption{
+				metric.WithSchemaURL("testing URL"),
+			},
+		},
+		{
+			name: "with instrumentation attribute",
+			options: []metric.MeterOption{
+				metric.WithInstrumentationAttributes(attribute.String("key", "value")),
+			},
+		},
+		{
+			name: "with instrumentation attribute set",
+			options: []metric.MeterOption{
+				metric.WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
+			},
+		},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for b.Loop() {
+				metric.NewMeterConfig(bb.options...)
+			}
+		})
+	}
+}

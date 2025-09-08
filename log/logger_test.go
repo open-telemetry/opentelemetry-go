@@ -135,3 +135,47 @@ func TestWithInstrumentationAttributesMerge(t *testing.T) {
 			"Attributes and attribute sets should be merged together.")
 	})
 }
+
+func BenchmarkNewLoggerConfig(b *testing.B) {
+	for _, bb := range []struct {
+		name    string
+		options []log.LoggerOption
+	}{
+		{
+			name: "with no options",
+		},
+		{
+			name: "with an instrumentation version",
+			options: []log.LoggerOption{
+				log.WithInstrumentationVersion("testing version"),
+			},
+		},
+		{
+			name: "with a schema url",
+			options: []log.LoggerOption{
+				log.WithSchemaURL("testing URL"),
+			},
+		},
+		{
+			name: "with instrumentation attribute",
+			options: []log.LoggerOption{
+				log.WithInstrumentationAttributes(attribute.String("foo", "value")),
+			},
+		},
+		{
+			name: "with instrumentation attribute set",
+			options: []log.LoggerOption{
+				log.WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("bar", "value"))),
+			},
+		},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for b.Loop() {
+				log.NewLoggerConfig(bb.options...)
+			}
+		})
+	}
+}
