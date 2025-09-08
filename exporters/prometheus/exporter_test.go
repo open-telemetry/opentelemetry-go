@@ -2458,18 +2458,18 @@ func BenchmarkExporterMemoryProfile(b *testing.B) {
 		// Create metrics to match the requested data size
 		instruments := make([]otelmetric.Int64Counter, ds.metricCount)
 		for i := 0; i < ds.metricCount; i++ {
-			counter, err := meter.Int64Counter(fmt.Sprintf("benchmark_counter_%d", i))
+			c, err := meter.Int64Counter(fmt.Sprintf("benchmark_counter_%d", i))
 			if err != nil {
 				b.Fatalf("failed to create counter: %v", err)
 			}
-			instruments[i] = counter
+			instruments[i] = c
 		}
 
 		// Pre-populate with data points
 		ctx := context.Background()
-		for i, counter := range instruments {
+		for i, c := range instruments {
 			for j := 0; j < ds.dataPoints; j++ {
-				counter.Add(ctx, int64((i+1)*(j+1)*10), otelmetric.WithAttributes(
+				c.Add(ctx, int64((i+1)*(j+1)*10), otelmetric.WithAttributes(
 					attribute.String("method", "GET"),
 					attribute.String("status", "200"),
 					attribute.Int("metric_index", i),
