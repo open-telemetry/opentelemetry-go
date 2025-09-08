@@ -41,6 +41,11 @@ type ConfigGogc struct {
 	metric.Int64ObservableUpDownCounter
 }
 
+var newConfigGogcOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Heap size target percentage configured by the user, otherwise 100."),
+	metric.WithUnit("%"),
+}
+
 // NewConfigGogc returns a new ConfigGogc instrument.
 func NewConfigGogc(
 	m metric.Meter,
@@ -51,12 +56,15 @@ func NewConfigGogc(
 		return ConfigGogc{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newConfigGogcOpts
+	} else {
+		opt = append(opt, newConfigGogcOpts...)
+	}
+
 	i, err := m.Int64ObservableUpDownCounter(
 		"go.config.gogc",
-		append([]metric.Int64ObservableUpDownCounterOption{
-			metric.WithDescription("Heap size target percentage configured by the user, otherwise 100."),
-			metric.WithUnit("%"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ConfigGogc{noop.Int64ObservableUpDownCounter{}}, err
@@ -91,6 +99,11 @@ type GoroutineCount struct {
 	metric.Int64ObservableUpDownCounter
 }
 
+var newGoroutineCountOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Count of live goroutines."),
+	metric.WithUnit("{goroutine}"),
+}
+
 // NewGoroutineCount returns a new GoroutineCount instrument.
 func NewGoroutineCount(
 	m metric.Meter,
@@ -101,12 +114,15 @@ func NewGoroutineCount(
 		return GoroutineCount{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newGoroutineCountOpts
+	} else {
+		opt = append(opt, newGoroutineCountOpts...)
+	}
+
 	i, err := m.Int64ObservableUpDownCounter(
 		"go.goroutine.count",
-		append([]metric.Int64ObservableUpDownCounterOption{
-			metric.WithDescription("Count of live goroutines."),
-			metric.WithUnit("{goroutine}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return GoroutineCount{noop.Int64ObservableUpDownCounter{}}, err
@@ -141,6 +157,11 @@ type MemoryAllocated struct {
 	metric.Int64ObservableCounter
 }
 
+var newMemoryAllocatedOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Memory allocated to the heap by the application."),
+	metric.WithUnit("By"),
+}
+
 // NewMemoryAllocated returns a new MemoryAllocated instrument.
 func NewMemoryAllocated(
 	m metric.Meter,
@@ -151,12 +172,15 @@ func NewMemoryAllocated(
 		return MemoryAllocated{noop.Int64ObservableCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newMemoryAllocatedOpts
+	} else {
+		opt = append(opt, newMemoryAllocatedOpts...)
+	}
+
 	i, err := m.Int64ObservableCounter(
 		"go.memory.allocated",
-		append([]metric.Int64ObservableCounterOption{
-			metric.WithDescription("Memory allocated to the heap by the application."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return MemoryAllocated{noop.Int64ObservableCounter{}}, err
@@ -191,6 +215,11 @@ type MemoryAllocations struct {
 	metric.Int64ObservableCounter
 }
 
+var newMemoryAllocationsOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Count of allocations to the heap by the application."),
+	metric.WithUnit("{allocation}"),
+}
+
 // NewMemoryAllocations returns a new MemoryAllocations instrument.
 func NewMemoryAllocations(
 	m metric.Meter,
@@ -201,12 +230,15 @@ func NewMemoryAllocations(
 		return MemoryAllocations{noop.Int64ObservableCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newMemoryAllocationsOpts
+	} else {
+		opt = append(opt, newMemoryAllocationsOpts...)
+	}
+
 	i, err := m.Int64ObservableCounter(
 		"go.memory.allocations",
-		append([]metric.Int64ObservableCounterOption{
-			metric.WithDescription("Count of allocations to the heap by the application."),
-			metric.WithUnit("{allocation}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return MemoryAllocations{noop.Int64ObservableCounter{}}, err
@@ -241,6 +273,11 @@ type MemoryGCGoal struct {
 	metric.Int64ObservableUpDownCounter
 }
 
+var newMemoryGCGoalOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Heap size target for the end of the GC cycle."),
+	metric.WithUnit("By"),
+}
+
 // NewMemoryGCGoal returns a new MemoryGCGoal instrument.
 func NewMemoryGCGoal(
 	m metric.Meter,
@@ -251,12 +288,15 @@ func NewMemoryGCGoal(
 		return MemoryGCGoal{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newMemoryGCGoalOpts
+	} else {
+		opt = append(opt, newMemoryGCGoalOpts...)
+	}
+
 	i, err := m.Int64ObservableUpDownCounter(
 		"go.memory.gc.goal",
-		append([]metric.Int64ObservableUpDownCounterOption{
-			metric.WithDescription("Heap size target for the end of the GC cycle."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return MemoryGCGoal{noop.Int64ObservableUpDownCounter{}}, err
@@ -291,6 +331,11 @@ type MemoryLimit struct {
 	metric.Int64ObservableUpDownCounter
 }
 
+var newMemoryLimitOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Go runtime memory limit configured by the user, if a limit exists."),
+	metric.WithUnit("By"),
+}
+
 // NewMemoryLimit returns a new MemoryLimit instrument.
 func NewMemoryLimit(
 	m metric.Meter,
@@ -301,12 +346,15 @@ func NewMemoryLimit(
 		return MemoryLimit{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newMemoryLimitOpts
+	} else {
+		opt = append(opt, newMemoryLimitOpts...)
+	}
+
 	i, err := m.Int64ObservableUpDownCounter(
 		"go.memory.limit",
-		append([]metric.Int64ObservableUpDownCounterOption{
-			metric.WithDescription("Go runtime memory limit configured by the user, if a limit exists."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return MemoryLimit{noop.Int64ObservableUpDownCounter{}}, err
@@ -341,6 +389,11 @@ type MemoryUsed struct {
 	metric.Int64ObservableUpDownCounter
 }
 
+var newMemoryUsedOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Memory used by the Go runtime."),
+	metric.WithUnit("By"),
+}
+
 // NewMemoryUsed returns a new MemoryUsed instrument.
 func NewMemoryUsed(
 	m metric.Meter,
@@ -351,12 +404,15 @@ func NewMemoryUsed(
 		return MemoryUsed{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newMemoryUsedOpts
+	} else {
+		opt = append(opt, newMemoryUsedOpts...)
+	}
+
 	i, err := m.Int64ObservableUpDownCounter(
 		"go.memory.used",
-		append([]metric.Int64ObservableUpDownCounterOption{
-			metric.WithDescription("Memory used by the Go runtime."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return MemoryUsed{noop.Int64ObservableUpDownCounter{}}, err
@@ -397,6 +453,11 @@ type ProcessorLimit struct {
 	metric.Int64ObservableUpDownCounter
 }
 
+var newProcessorLimitOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of OS threads that can execute user-level Go code simultaneously."),
+	metric.WithUnit("{thread}"),
+}
+
 // NewProcessorLimit returns a new ProcessorLimit instrument.
 func NewProcessorLimit(
 	m metric.Meter,
@@ -407,12 +468,15 @@ func NewProcessorLimit(
 		return ProcessorLimit{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newProcessorLimitOpts
+	} else {
+		opt = append(opt, newProcessorLimitOpts...)
+	}
+
 	i, err := m.Int64ObservableUpDownCounter(
 		"go.processor.limit",
-		append([]metric.Int64ObservableUpDownCounterOption{
-			metric.WithDescription("The number of OS threads that can execute user-level Go code simultaneously."),
-			metric.WithUnit("{thread}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ProcessorLimit{noop.Int64ObservableUpDownCounter{}}, err
@@ -448,6 +512,11 @@ type ScheduleDuration struct {
 	metric.Float64Histogram
 }
 
+var newScheduleDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("The time goroutines have spent in the scheduler in a runnable state before actually running."),
+	metric.WithUnit("s"),
+}
+
 // NewScheduleDuration returns a new ScheduleDuration instrument.
 func NewScheduleDuration(
 	m metric.Meter,
@@ -458,12 +527,15 @@ func NewScheduleDuration(
 		return ScheduleDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newScheduleDurationOpts
+	} else {
+		opt = append(opt, newScheduleDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"go.schedule.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("The time goroutines have spent in the scheduler in a runnable state before actually running."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ScheduleDuration{noop.Float64Histogram{}}, err
