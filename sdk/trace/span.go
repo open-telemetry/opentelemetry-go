@@ -497,7 +497,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	s.mu.Unlock()
 
 	if s.tracer.inst != nil {
-		defer s.tracer.inst.SpanEnded(s)
+		// Add the span to the context to ensure the metric is recorded with
+		// the correct span context.
+		//
+		// TODO:: Avoid this allocation. Track the context when the span
+		// is created that already contains the span.
+		ctx := trace.ContextWithSpan(context.Background(), s)
+		defer s.tracer.inst.SpanEnded(ctx, s)
 	}
 
 	sps := s.tracer.provider.getSpanProcessors()

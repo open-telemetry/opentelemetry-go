@@ -70,10 +70,7 @@ func (t *Tracer) SpanLive(ctx context.Context, span trace.Span) {
 	t.spanLiveMetric.AddSet(ctx, 1, set)
 }
 
-func (t *Tracer) SpanEnded(span trace.Span) {
-	// Add the span to the context to ensure the metric is recorded
-	// with the correct span context.
-	ctx := trace.ContextWithSpan(context.Background(), span)
+func (t *Tracer) SpanEnded(ctx context.Context, span trace.Span) {
 	set := spanLiveSet(span.SpanContext().IsSampled())
 	t.spanLiveMetric.AddSet(ctx, -1, set)
 }
