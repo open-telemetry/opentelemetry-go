@@ -23,13 +23,18 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	selfobs "go.opentelemetry.io/otel/exporters/prometheus/internal/selfobservability"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// Define the component type constant for tests
+var otelComponentType = string(otelconv.ComponentTypePrometheusHTTPTextMetricExporter)
 
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
@@ -701,26 +706,21 @@ func TestPrometheusExporter(t *testing.T) {
 }
 
 // Self-observability: verify inflight/exported counters and duration histograms are recorded.
-func TestSelfObservability_ExporterMetrics(t *testing.T) {
-	testCases := []struct {
-		name string
-		test func(t *testing.T, getSelfObsMetrics func() metricdata.ResourceMetrics)
-	}{
+func TestSelfObservability(t *testing.T) {
+	type testCase struct {
+		name                     string
+		selfObservabilityEnabled bool
+		setupMetrics             func(t *testing.T, meter otelmetric.Meter)
+		setupExporter            func(t *testing.T) (*prometheus.Registry, *Exporter)
+		verifyMetrics            func(t *testing.T, rm metricdata.ResourceMetrics)
+	}
+
+	testCases := []testCase{
 		{
-			name: "BasicExportMetrics",
-			test: func(t *testing.T, getSelfObsMetrics func() metricdata.ResourceMetrics) {
+			name:                     "BasicExportMetrics_Enabled",
+			selfObservabilityEnabled: true,
+			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
 				ctx := context.Background()
-
-				// Use a dedicated registry so Gather triggers only this exporter
-				registry := prometheus.NewPedanticRegistry()
-				exporter, err := New(WithRegisterer(registry))
-				require.NoError(t, err)
-
-				// App metrics provider uses the exporter as reader
-				provider := metric.NewMeterProvider(metric.WithReader(exporter))
-				meter := provider.Meter("testmeter")
-
-				// Create test metrics with multiple data points
 				a1 := otelmetric.WithAttributes(attribute.String("key", "value1"))
 				a2 := otelmetric.WithAttributes(attribute.String("key", "value2"))
 
@@ -733,15 +733,14 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 				require.NoError(t, err)
 				gauge.Record(ctx, 10, a1)
 				gauge.Record(ctx, 20, a2)
-
-				// Trigger scrape to generate self-observability metrics
-				_, err = registry.Gather()
+			},
+			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {
+				registry := prometheus.NewPedanticRegistry()
+				exporter, err := New(WithRegisterer(registry))
 				require.NoError(t, err)
-
-				// Collect self-observability metrics
-				rm := getSelfObsMetrics()
-
-				// Helper function to find metrics by name
+				return registry, exporter
+			},
+			verifyMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				findMetric := func(name string) *metricdata.Metrics {
 					for _, sm := range rm.ScopeMetrics {
 						for i := range sm.Metrics {
@@ -757,7 +756,7 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 				exportedMetric := findMetric("otel.sdk.exporter.metric_data_point.exported")
 				require.NotNil(t, exportedMetric, "missing metric otel.sdk.exporter.metric_data_point.exported")
 
-				// Also verify common self-observability attributes are attached
+				// Verify attributes and total count
 				typeAttrFound := false
 				nameAttrFound := false
 				nameAttrHasPrefix := false
@@ -799,13 +798,13 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 					t.Fatalf("unexpected data type for exported metric: %T", data)
 				}
 
-				assert.True(t, typeAttrFound, "expected otel.component.type attribute on self-observability metrics")
-				assert.True(t, nameAttrFound, "expected otel.component.name attribute on self-observability metrics")
-				assert.True(t, nameAttrHasPrefix, "expected otel.component.name to have '<type>/' prefix")
+				assert.True(t, typeAttrFound, "expected otel.component.type attribute")
+				assert.True(t, nameAttrFound, "expected otel.component.name attribute")
+				assert.True(t, nameAttrHasPrefix, "expected otel.component.name to have prefix")
 
-				// Test inflight data points metric (should be 0 after scrape completion)
+				// Test inflight data points metric (should be 0 after completion)
 				inflightMetric := findMetric("otel.sdk.exporter.metric_data_point.inflight")
-				require.NotNil(t, inflightMetric, "missing metric otel.sdk.exporter.metric_data_point.inflight")
+				require.NotNil(t, inflightMetric, "missing inflight metric")
 
 				switch data := inflightMetric.Data.(type) {
 				case metricdata.Sum[int64]:
@@ -826,32 +825,21 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 			},
 		},
 		{
-			name: "DurationMetrics",
-			test: func(t *testing.T, getSelfObsMetrics func() metricdata.ResourceMetrics) {
+			name:                     "DurationMetrics_Enabled",
+			selfObservabilityEnabled: true,
+			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
 				ctx := context.Background()
-
-				// Use a dedicated registry so Gather triggers only this exporter
-				registry := prometheus.NewPedanticRegistry()
-				exporter, err := New(WithRegisterer(registry))
-				require.NoError(t, err)
-
-				// App metrics provider uses the exporter as reader
-				provider := metric.NewMeterProvider(metric.WithReader(exporter))
-				meter := provider.Meter("testmeter")
-
-				// Create a simple counter to trigger export
 				counter, err := meter.Float64Counter("duration_test_counter")
 				require.NoError(t, err)
 				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("test", "duration")))
-
-				// Trigger scrape to generate self-observability metrics
-				_, err = registry.Gather()
+			},
+			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {
+				registry := prometheus.NewPedanticRegistry()
+				exporter, err := New(WithRegisterer(registry))
 				require.NoError(t, err)
-
-				// Collect self-observability metrics
-				rm := getSelfObsMetrics()
-
-				// Helper function to find metrics by name
+				return registry, exporter
+			},
+			verifyMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				findMetric := func(name string) *metricdata.Metrics {
 					for _, sm := range rm.ScopeMetrics {
 						for i := range sm.Metrics {
@@ -863,9 +851,9 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 					return nil
 				}
 
-				// Test collection duration metric (should have at least one data point)
+				// Test collection duration metric
 				collectionDurationMetric := findMetric("otel.sdk.metric_reader.collection.duration")
-				require.NotNil(t, collectionDurationMetric, "missing metric otel.sdk.metric_reader.collection.duration")
+				require.NotNil(t, collectionDurationMetric, "missing collection duration metric")
 
 				switch data := collectionDurationMetric.Data.(type) {
 				case metricdata.Histogram[float64]:
@@ -884,9 +872,9 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 					t.Fatalf("unexpected data type for collection duration metric: %T", data)
 				}
 
-				// Test operation duration metric (should have at least one data point)
+				// Test operation duration metric
 				operationDurationMetric := findMetric("otel.sdk.exporter.operation.duration")
-				require.NotNil(t, operationDurationMetric, "missing metric otel.sdk.exporter.operation.duration")
+				require.NotNil(t, operationDurationMetric, "missing operation duration metric")
 
 				switch data := operationDurationMetric.Data.(type) {
 				case metricdata.Histogram[float64]:
@@ -907,24 +895,18 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 			},
 		},
 		{
-			name: "EmptyExport",
-			test: func(t *testing.T, getSelfObsMetrics func() metricdata.ResourceMetrics) {
-				// Use a dedicated registry so Gather triggers only this exporter
+			name:                     "EmptyExport_Enabled",
+			selfObservabilityEnabled: true,
+			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
+				// Don't create any metrics
+			},
+			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {
 				registry := prometheus.NewPedanticRegistry()
 				exporter, err := New(WithRegisterer(registry))
 				require.NoError(t, err)
-
-				// App metrics provider uses the exporter as reader (but we don't create any metrics)
-				metric.NewMeterProvider(metric.WithReader(exporter))
-
-				// Trigger scrape without any metrics to export
-				_, err = registry.Gather()
-				require.NoError(t, err)
-
-				// Collect self-observability metrics
-				rm := getSelfObsMetrics()
-
-				// Helper function to find metrics by name
+				return registry, exporter
+			},
+			verifyMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				findMetric := func(name string) *metricdata.Metrics {
 					for _, sm := range rm.ScopeMetrics {
 						for i := range sm.Metrics {
@@ -936,122 +918,69 @@ func TestSelfObservability_ExporterMetrics(t *testing.T) {
 					return nil
 				}
 
-				// When no data points are exported, the exported/inflight metrics should not be created
-				// since there are no data points to track
+				// When no data points are exported, exported/inflight metrics should not exist
 				exportedMetric := findMetric("otel.sdk.exporter.metric_data_point.exported")
-				assert.Nil(t, exportedMetric, "exported metric should not exist when no data points are exported")
+				assert.Nil(t, exportedMetric, "exported metric should not exist when no data points exported")
 
 				inflightMetric := findMetric("otel.sdk.exporter.metric_data_point.inflight")
-				assert.Nil(t, inflightMetric, "inflight metric should not exist when no data points are exported")
+				assert.Nil(t, inflightMetric, "inflight metric should not exist when no data points exported")
 
-				// Collection duration should still be recorded even when no metrics are exported
+				// Duration metrics should still be recorded
 				collectionDurationMetric := findMetric("otel.sdk.metric_reader.collection.duration")
-				require.NotNil(t, collectionDurationMetric, "missing metric otel.sdk.metric_reader.collection.duration")
+				require.NotNil(t, collectionDurationMetric, "missing collection duration metric")
 
-				// Operation duration should also be recorded
 				operationDurationMetric := findMetric("otel.sdk.exporter.operation.duration")
-				require.NotNil(t, operationDurationMetric, "missing metric otel.sdk.exporter.operation.duration")
+				require.NotNil(t, operationDurationMetric, "missing operation duration metric")
 			},
 		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Enable self-observability feature flag
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-
-			// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
-			selfObsReader := metric.NewManualReader()
-			selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
-
-			// Override global MeterProvider so self-observability instruments are created there
-			prevMP := otel.GetMeterProvider()
-			otel.SetMeterProvider(selfObsProvider)
-			t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
-
-			getSelfObsMetrics := func() metricdata.ResourceMetrics {
-				var rm metricdata.ResourceMetrics
-				err := selfObsReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-				return rm
-			}
-
-			tc.test(t, getSelfObsMetrics)
-		})
-	}
-}
-
-// Test self-observability when disabled and error scenarios.
-func TestSelfObservability_DisabledAndErrorScenarios(t *testing.T) {
-	testCases := []struct {
-		name string
-		test func(t *testing.T)
-	}{
 		{
-			name: "SelfObservabilityDisabled",
-			test: func(t *testing.T) {
+			name:                     "SelfObservability_Disabled",
+			selfObservabilityEnabled: false,
+			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
 				ctx := context.Background()
-
-				// Disable self-observability feature flag
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
-
-				// Use a dedicated registry
-				registry := prometheus.NewPedanticRegistry()
-				exporter, err := New(WithRegisterer(registry))
-				require.NoError(t, err)
-
-				// App metrics provider uses the exporter as reader
-				provider := metric.NewMeterProvider(metric.WithReader(exporter))
-				meter := provider.Meter("testmeter")
-
-				// Create test metrics
-				counter, err := meter.Float64Counter("test_counter")
+				counter, err := meter.Float64Counter("disabled_test_counter")
 				require.NoError(t, err)
 				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("key", "value")))
-
-				// Trigger scrape - self-observability should be disabled so no tracking occurs
-				_, err = registry.Gather()
+			},
+			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {
+				registry := prometheus.NewPedanticRegistry()
+				exporter, err := New(WithRegisterer(registry))
 				require.NoError(t, err)
-
-				// Since self-observability is disabled, the collector's selfObs should be nil
-				// This tests the c.selfObs == nil code paths
+				return registry, exporter
+			},
+			verifyMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				// When self-observability is disabled, no self-observability metrics should exist
+				for _, sm := range rm.ScopeMetrics {
+					for _, m := range sm.Metrics {
+						assert.NotEqual(t, "otel.sdk.exporter.metric_data_point.exported", m.Name,
+							"exported metric should not exist when disabled")
+						assert.NotEqual(t, "otel.sdk.exporter.metric_data_point.inflight", m.Name,
+							"inflight metric should not exist when disabled")
+						assert.NotEqual(t, "otel.sdk.exporter.operation.duration", m.Name,
+							"operation duration metric should not exist when disabled")
+						assert.NotEqual(t, "otel.sdk.metric_reader.collection.duration", m.Name,
+							"collection duration metric should not exist when disabled")
+					}
+				}
+				// Should have no self-observability metrics at all
+				assert.Empty(t, rm.ScopeMetrics, "No self-observability metrics should be created when disabled")
 			},
 		},
 		{
-			name: "CollectionDurationWithError",
-			test: func(t *testing.T) {
-				// Enable self-observability feature flag
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-
-				// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
-				selfObsReader := metric.NewManualReader()
-				selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
-
-				// Override global MeterProvider
-				prevMP := otel.GetMeterProvider()
-				otel.SetMeterProvider(selfObsProvider)
-				t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
-
-				// Use a dedicated registry
+			name:                     "ErrorScenario_Shutdown",
+			selfObservabilityEnabled: true,
+			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
+				// Don't create metrics since we'll shut down the exporter
+			},
+			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {
 				registry := prometheus.NewPedanticRegistry()
-
-				// Create a normal exporter but with a reader that will cause errors
 				exporter, err := New(WithRegisterer(registry))
 				require.NoError(t, err)
-
-				// Instead of using a faulty reader, we'll simulate collection error by triggering
-				// collection on a shut down reader to generate errors
+				// Shutdown the exporter to cause collection errors
 				_ = exporter.Shutdown(context.Background())
-
-				// Try to trigger scrape after shutdown which should generate errors
-				_, _ = registry.Gather()
-
-				// Collect self-observability metrics
-				var rm metricdata.ResourceMetrics
-				err = selfObsReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-
-				// Check that collection duration metrics were recorded
+				return registry, exporter
+			},
+			verifyMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				findMetric := func(name string) *metricdata.Metrics {
 					for _, sm := range rm.ScopeMetrics {
 						for i := range sm.Metrics {
@@ -1063,109 +992,51 @@ func TestSelfObservability_DisabledAndErrorScenarios(t *testing.T) {
 					return nil
 				}
 
+				// Collection duration should still be recorded even with errors
 				collectionDurationMetric := findMetric("otel.sdk.metric_reader.collection.duration")
 				if collectionDurationMetric != nil {
 					t.Log("Collection duration metric found - error scenario tested")
 				}
 			},
 		},
-		{
-			name: "DataPointFailureWithInvalidExponentialHistogram",
-			test: func(t *testing.T) {
-				// This test focuses on testing self-observability during errors
-
-				// Enable self-observability feature flag
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-
-				// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
-				selfObsReader := metric.NewManualReader()
-				selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
-
-				// Override global MeterProvider
-				prevMP := otel.GetMeterProvider()
-				otel.SetMeterProvider(selfObsProvider)
-				t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
-
-				ctx := context.Background()
-
-				// Create a collector with self-observability
-				registry := prometheus.NewPedanticRegistry()
-				exporter, err := New(WithRegisterer(registry))
-				require.NoError(t, err)
-
-				// Create test metrics that will be processed normally
-				provider := metric.NewMeterProvider(metric.WithReader(exporter))
-				meter := provider.Meter("testmeter")
-
-				counter, err := meter.Float64Counter("test_counter")
-				require.NoError(t, err)
-				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("test", "failure")))
-
-				// Trigger collection
-				_, err = registry.Gather()
-				require.NoError(t, err)
-
-				// Collect self-observability metrics
-				var rm metricdata.ResourceMetrics
-				err = selfObsReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-
-				// At minimum, we should have operation duration metric showing successful operation
-				findMetric := func(name string) *metricdata.Metrics {
-					for _, sm := range rm.ScopeMetrics {
-						for i := range sm.Metrics {
-							if sm.Metrics[i].Name == name {
-								return &sm.Metrics[i]
-							}
-						}
-					}
-					return nil
-				}
-
-				operationDurationMetric := findMetric("otel.sdk.exporter.operation.duration")
-				require.NotNil(t, operationDurationMetric, "operation duration metric should be present")
-
-				// The error tracking path is hard to test directly through the public API
-				// since the SDK normally doesn't generate invalid exponential histogram data.
-				// However, the test has improved coverage by testing self-observability paths.
-
-				// Let's verify that we have some self-observability metrics
-				exportedMetric := findMetric("otel.sdk.exporter.metric_data_point.exported")
-				assert.NotNil(t, exportedMetric, "exported metric should be present")
-			},
-		},
-		{
-			name: "SelfObservabilityNilPath",
-			test: func(t *testing.T) {
-				// Disable self-observability to test the nil paths
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
-
-				// Create a normal exporter, but with self-obs disabled the collector.selfObs will be nil
-				registry := prometheus.NewPedanticRegistry()
-				exporter, err := New(WithRegisterer(registry))
-				require.NoError(t, err)
-
-				// Create some metrics to process
-				ctx := context.Background()
-				provider := metric.NewMeterProvider(metric.WithReader(exporter))
-				meter := provider.Meter("testmeter")
-
-				counter, err := meter.Float64Counter("nil_path_test_counter")
-				require.NoError(t, err)
-				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("key", "value")))
-
-				// These should not panic even when selfObs is nil (disabled)
-				_, err = registry.Gather()
-				require.NoError(t, err)
-
-				// This tests the c.selfObs == nil code paths in trackDataPoints* methods
-			},
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.test(t)
+			// Set environment variable based on test case
+			if tc.selfObservabilityEnabled {
+				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+			} else {
+				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+			}
+
+			// Set up self-observability metrics capture
+			selfObsReader := metric.NewManualReader()
+			selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
+
+			// Override global MeterProvider
+			prevMP := otel.GetMeterProvider()
+			otel.SetMeterProvider(selfObsProvider)
+			t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
+
+			// Setup exporter
+			registry, exporter := tc.setupExporter(t)
+
+			// Setup metrics
+			provider := metric.NewMeterProvider(metric.WithReader(exporter))
+			meter := provider.Meter("testmeter")
+			tc.setupMetrics(t, meter)
+
+			// Trigger scrape
+			_, err := registry.Gather()
+			require.NoError(t, err)
+
+			// Collect and verify self-observability metrics
+			var rm metricdata.ResourceMetrics
+			err = selfObsReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			tc.verifyMetrics(t, rm)
 		})
 	}
 }
@@ -1773,7 +1644,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 	})
 
 	t.Run("error_handling_for_invalid_scales", func(t *testing.T) {
-		// Enable self-observability to test error tracking and completion tracker coverage
+		// Enable self-observability to test error tracking
 		t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
 
 		// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
@@ -1825,10 +1696,9 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			Description: "test",
 		}
 
-		// Create collector with self-observability enabled
-		collector := &collector{}
-		initErr := collector.initSelfObservability()
-		require.NoError(t, initErr)
+		// Create a self-observability instance for testing
+		selfObs, err := selfobs.NewSelfObservability()
+		require.NoError(t, err)
 
 		addExponentialHistogramMetric(
 			ch,
@@ -1837,7 +1707,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			"test_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			collector.selfObs, // Use the selfObservability instance from collector
+			selfObs,
 		)
 		assert.Error(t, capturedError)
 		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
@@ -1850,7 +1720,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 
 		// Check that self-observability metrics were recorded for the failure
 		var rm metricdata.ResourceMetrics
-		err := selfObsReader.Collect(context.Background(), &rm)
+		err = selfObsReader.Collect(context.Background(), &rm)
 		require.NoError(t, err)
 
 		// The error tracking should have been called during processing
@@ -2011,7 +1881,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_high_scale_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
+			nil, // No self-observability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2074,7 +1944,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_very_high_scale_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
+			nil, // No self-observability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2137,7 +2007,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_histogram_with_negative_buckets",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
+			nil, // No self-observability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2194,7 +2064,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			"test_int64_exponential_histogram",
 			keyVals{},
 			otlptranslator.LabelNamer{},
-			&selfObservability{enabled: false}, // Use disabled selfObservability for unit test
+			nil, // No self-observability for unit test
 		)
 
 		// Verify a metric was produced
@@ -2396,354 +2266,4 @@ func TestEscapingErrorHandling(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestCollectorCompletionTrackerPattern(t *testing.T) {
-	// Test the new defer-based completion tracking pattern
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-
-	// Set up a dedicated MeterProvider/Reader to capture self-observability metrics
-	selfObsReader := metric.NewManualReader()
-	selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
-
-	// Override global MeterProvider
-	prevMP := otel.GetMeterProvider()
-	otel.SetMeterProvider(selfObsProvider)
-	t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
-
-	// Create collector with self-observability enabled
-	collector := &collector{}
-	initErr := collector.initSelfObservability()
-	require.NoError(t, initErr)
-
-	ctx := context.Background()
-
-	// Test the new defer pattern with completionTracker
-	func() {
-		// Simulate processing 8 data points using the new pattern
-		tracker := collector.selfObs.startTracking(8)
-		defer tracker.complete()
-
-		// Simulate processing data points with mixed success/failure
-		tracker.trackSuccess()                                                             // 1st data point succeeds
-		tracker.trackSuccess()                                                             // 2nd data point succeeds
-		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 3rd data point fails
-		tracker.trackSuccess()                                                             // 4th data point succeeds
-		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 5th data point fails
-		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 6th data point fails
-		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 7th data point fails
-		tracker.trackRejectionWithError(&rejectedDataPointError{reason: "test rejection"}) // 8th data point fails
-		// Total: 3 successes, 5 failures
-	}()
-
-	// Collect self-observability metrics
-	var rm metricdata.ResourceMetrics
-	err := selfObsReader.Collect(ctx, &rm)
-	require.NoError(t, err)
-
-	// Helper to find metrics
-	findMetric := func(name string) *metricdata.Metrics {
-		for _, sm := range rm.ScopeMetrics {
-			for i := range sm.Metrics {
-				if sm.Metrics[i].Name == name {
-					return &sm.Metrics[i]
-				}
-			}
-		}
-		return nil
-	}
-
-	// Verify inflight metric (started 3, failed 2, succeeded 1 = 0 remaining)
-	inflight := findMetric("otel.sdk.exporter.metric_data_point.inflight")
-	require.NotNil(t, inflight, "inflight metric should exist")
-	switch data := inflight.Data.(type) {
-	case metricdata.Sum[int64]:
-		totalInflight := int64(0)
-		for _, dp := range data.DataPoints {
-			totalInflight += dp.Value
-		}
-		assert.Equal(t, int64(0), totalInflight, "Expected 0 inflight metrics (8 started - 5 failed - 3 succeeded)")
-	case metricdata.Sum[float64]:
-		totalInflight := float64(0)
-		for _, dp := range data.DataPoints {
-			totalInflight += dp.Value
-		}
-		assert.InDelta(t, 0.0, totalInflight, 0.001, "Expected 0 inflight metrics (8 started - 5 failed - 3 succeeded)")
-	}
-
-	// Verify exported metric contains both successful and failed exports
-	exported := findMetric("otel.sdk.exporter.metric_data_point.exported")
-	require.NotNil(t, exported, "exported metric should exist")
-
-	switch data := exported.Data.(type) {
-	case metricdata.Sum[int64]:
-		totalExported := int64(0)
-		errorCount := int64(0)
-		successCount := int64(0)
-
-		for _, dp := range data.DataPoints {
-			totalExported += dp.Value
-			hasError := false
-			for _, attr := range dp.Attributes.ToSlice() {
-				if attr.Key == "error.type" {
-					hasError = true
-					// Should be the classifiedError type since that's what gets reported
-					assert.Contains(t, attr.Value.AsString(), "classifiedError")
-					errorCount += dp.Value
-				}
-			}
-			if !hasError {
-				successCount += dp.Value
-			}
-		}
-
-		assert.Equal(t, int64(8), totalExported, "Expected 8 total exported (5 failed + 3 succeeded)")
-		assert.Equal(t, int64(5), errorCount, "Expected 5 failed exports")
-		assert.Equal(t, int64(3), successCount, "Expected 3 successful exports")
-
-	case metricdata.Sum[float64]:
-		totalExported := float64(0)
-		errorCount := float64(0)
-		successCount := float64(0)
-
-		for _, dp := range data.DataPoints {
-			totalExported += dp.Value
-			hasError := false
-			for _, attr := range dp.Attributes.ToSlice() {
-				if attr.Key == "error.type" {
-					hasError = true
-					assert.Contains(t, attr.Value.AsString(), "classifiedError")
-					errorCount += dp.Value
-				}
-			}
-			if !hasError {
-				successCount += dp.Value
-			}
-		}
-
-		assert.InDelta(t, 8.0, totalExported, 0.001, "Expected 8 total exported (5 failed + 3 succeeded)")
-		assert.InDelta(t, 5.0, errorCount, 0.001, "Expected 5 failed exports")
-		assert.InDelta(t, 3.0, successCount, 0.001, "Expected 3 successful exports")
-	}
-}
-
-func TestCollectorCompleteDataPointsWithFailureDisabled(t *testing.T) {
-	// Test that calling completion tracker methods when self-observability is disabled doesn't panic
-	collector := &collector{}
-	// Don't initialize self-observability (selfObs will be nil or disabled)
-
-	testError := &rejectedDataPointError{reason: "test error"}
-
-	// Should not panic when selfObs is disabled
-	require.NotPanics(t, func() {
-		if collector.selfObs != nil && collector.selfObs.enabled {
-			tracker := collector.selfObs.startTracking(1)
-			tracker.trackRejectionWithError(testError)
-			tracker.complete()
-		}
-	})
-}
-
-func TestCollectorErrorScenariosWithSelfObservability(t *testing.T) {
-	// Test various error scenarios that trigger the completion tracker's error handling
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-
-	// Set up self-observability metrics capture
-	selfObsReader := metric.NewManualReader()
-	selfObsProvider := metric.NewMeterProvider(metric.WithReader(selfObsReader))
-	prevMP := otel.GetMeterProvider()
-	otel.SetMeterProvider(selfObsProvider)
-	t.Cleanup(func() { otel.SetMeterProvider(prevMP) })
-
-	tests := []struct {
-		name        string
-		setupData   func() metricdata.Metrics
-		expectedErr string
-	}{
-		{
-			name: "invalid_exponential_histogram_scale",
-			setupData: func() metricdata.Metrics {
-				now := time.Now()
-				return metricdata.Metrics{
-					Name:        "test_exp_histogram",
-					Description: "test exponential histogram with invalid scale",
-					Data: metricdata.ExponentialHistogram[float64]{
-						Temporality: metricdata.CumulativeTemporality,
-						DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
-							{
-								Attributes:    attribute.NewSet(),
-								StartTime:     now,
-								Time:          now,
-								Count:         1,
-								Sum:           10.0,
-								Scale:         -5, // Invalid scale below -4
-								ZeroCount:     0,
-								ZeroThreshold: 0.0,
-								PositiveBucket: metricdata.ExponentialBucket{
-									Offset: 1,
-									Counts: []uint64{1},
-								},
-							},
-						},
-					},
-				}
-			},
-			expectedErr: "scale -5 is below minimum",
-		},
-		{
-			name: "exponential_histogram_count_overflow",
-			setupData: func() metricdata.Metrics {
-				now := time.Now()
-				return metricdata.Metrics{
-					Name:        "test_exp_histogram_overflow",
-					Description: "test exponential histogram with count overflow",
-					Data: metricdata.ExponentialHistogram[float64]{
-						Temporality: metricdata.CumulativeTemporality,
-						DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
-							{
-								Attributes:    attribute.NewSet(),
-								StartTime:     now,
-								Time:          now,
-								Count:         1,
-								Sum:           10.0,
-								Scale:         0,
-								ZeroCount:     0,
-								ZeroThreshold: 0.0,
-								PositiveBucket: metricdata.ExponentialBucket{
-									Offset: 1,
-									Counts: []uint64{math.MaxUint64}, // Count too large for int64
-								},
-							},
-						},
-					},
-				}
-			},
-			expectedErr: "too large to be represented as int64",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var capturedErrors []error
-			originalHandler := otel.GetErrorHandler()
-			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-				capturedErrors = append(capturedErrors, err)
-			}))
-			defer otel.SetErrorHandler(originalHandler)
-
-			// Create collector with self-observability
-			collector := &collector{}
-			initErr := collector.initSelfObservability()
-			require.NoError(t, initErr)
-
-			// Create metrics channel
-			ch := make(chan prometheus.Metric, 10)
-			defer close(ch)
-
-			// Process the test data
-			m := tt.setupData()
-			if data, ok := m.Data.(metricdata.ExponentialHistogram[float64]); ok {
-				addExponentialHistogramMetric(
-					ch,
-					data,
-					m,
-					m.Name,
-					keyVals{},
-					otlptranslator.LabelNamer{},
-					collector.selfObs,
-				)
-			}
-
-			// Verify error was captured
-			require.NotEmpty(t, capturedErrors, "Expected error to be captured")
-			assert.Contains(t, capturedErrors[0].Error(), tt.expectedErr)
-
-			// Collect self-observability metrics
-			var rm metricdata.ResourceMetrics
-			err := selfObsReader.Collect(context.Background(), &rm)
-			require.NoError(t, err)
-
-			// Find exported metric with error attributes
-			var exportedWithErrors *metricdata.Metrics
-			for _, sm := range rm.ScopeMetrics {
-				for i := range sm.Metrics {
-					if sm.Metrics[i].Name == "otel.sdk.exporter.metric_data_point.exported" {
-						exportedWithErrors = &sm.Metrics[i]
-						break
-					}
-				}
-			}
-
-			require.NotNil(t, exportedWithErrors, "Expected exported metric to exist")
-
-			// Verify that failed exports are recorded with error attributes
-			switch data := exportedWithErrors.Data.(type) {
-			case metricdata.Sum[int64]:
-				foundError := false
-				for _, dp := range data.DataPoints {
-					for _, attr := range dp.Attributes.ToSlice() {
-						if attr.Key == "error.type" {
-							foundError = true
-							assert.Contains(t, attr.Value.AsString(), "classifiedError")
-							assert.Positive(t, dp.Value)
-						}
-					}
-				}
-				assert.True(t, foundError, "Expected to find exported metric with error.type attribute")
-
-			case metricdata.Sum[float64]:
-				foundError := false
-				for _, dp := range data.DataPoints {
-					for _, attr := range dp.Attributes.ToSlice() {
-						if attr.Key == "error.type" {
-							foundError = true
-							assert.Contains(t, attr.Value.AsString(), "classifiedError")
-							assert.Greater(t, dp.Value, float64(0))
-						}
-					}
-				}
-				assert.True(t, foundError, "Expected to find exported metric with error.type attribute")
-			}
-		})
-	}
-}
-
-func TestGetPooledAttrs(t *testing.T) {
-	base := []attribute.KeyValue{attribute.String("foo", "bar")}
-
-	// Without error: should include only base attrs
-	vals, release := getPooledAttrs(base, nil)
-	require.NotNil(t, release)
-	require.GreaterOrEqual(t, len(vals), 1)
-
-	// Verify base attribute is present and error.type is not
-	hasFoo := false
-	hasErrorType := false
-	for _, kv := range vals {
-		if string(kv.Key) == "foo" && kv.Value.AsString() == "bar" {
-			hasFoo = true
-		}
-		if string(kv.Key) == "error.type" {
-			hasErrorType = true
-		}
-	}
-	assert.True(t, hasFoo, "expected base attribute present")
-	assert.False(t, hasErrorType, "did not expect error.type without error")
-	release()
-
-	// With error: should include error.type attribute
-	testErr := errors.New("boom")
-	vals2, release2 := getPooledAttrs(nil, testErr)
-	require.NotNil(t, release2)
-
-	hasErrorType = false
-	for _, kv := range vals2 {
-		if string(kv.Key) == "error.type" {
-			hasErrorType = true
-			// Value should contain the Go error type name
-			assert.Contains(t, kv.Value.AsString(), "errors.errorString")
-		}
-	}
-	assert.True(t, hasErrorType, "expected error.type attribute when error provided")
-	release2()
 }
