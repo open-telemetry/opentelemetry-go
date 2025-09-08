@@ -496,7 +496,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	if s.tracer.inst != nil {
+	if s.tracer.inst.Enabled() {
 		// Add the span to the context to ensure the metric is recorded with
 		// the correct span context.
 		//

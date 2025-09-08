@@ -210,7 +210,7 @@ func TestNewTracerObservabilityDisabled(t *testing.T) {
 	// Do not set OTEL_GO_X_SELF_OBSERVABILITY
 	tracer, err := observ.NewTracer()
 	assert.NoError(t, err)
-	assert.Nil(t, tracer)
+	assert.False(t, tracer.Enabled())
 }
 
 func TestNewTracerErrors(t *testing.T) {
@@ -240,7 +240,7 @@ func BenchmarkTracer(b *testing.B) {
 
 	tracer, err := observ.NewTracer()
 	require.NoError(b, err)
-	require.NotNil(b, tracer)
+	require.True(b, tracer.Enabled())
 
 	t := otel.GetTracerProvider().Tracer(b.Name())
 	ctx, span := t.Start(context.Background(), "parent")
@@ -284,7 +284,7 @@ func BenchmarkNewTracer(b *testing.B) {
 	// Ensure deterministic benchmark by using noop meter.
 	otel.SetMeterProvider(noop.NewMeterProvider())
 
-	var tracer *observ.Tracer
+	var tracer observ.Tracer
 
 	b.ReportAllocs()
 	b.ResetTimer()

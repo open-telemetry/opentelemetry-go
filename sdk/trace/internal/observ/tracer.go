@@ -26,21 +26,24 @@ const (
 	SchemaURL = semconv.SchemaURL
 )
 
+var meterOpts = []metric.MeterOption{
+	metric.WithInstrumentationVersion(sdk.Version()),
+	metric.WithSchemaURL(SchemaURL),
+}
+
 // Tracer is instrumentation for an OTel SDK Tracer.
 type Tracer struct {
+	enabled bool
+
 	live    metric.Int64UpDownCounter
 	started metric.Int64Counter
 }
 
-func NewTracer() (*Tracer, error) {
+func NewTracer() (Tracer, error) {
 	if !x.SelfObservability.Enabled() {
-		return nil, nil
+		return Tracer{}, nil
 	}
-	meter := otel.GetMeterProvider().Meter(
-		ScopeName,
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(SchemaURL),
-	)
+	meter := otel.GetMeterProvider().Meter(ScopeName, meterOpts...)
 
 	var err error
 	l, e := otelconv.NewSDKSpanLive(meter)
@@ -55,10 +58,12 @@ func NewTracer() (*Tracer, error) {
 		err = errors.Join(err, e)
 	}
 
-	return Tracer{live: l.Inst(), started: s.Inst()}, err
+	return Tracer{enabled: true, live: l.Inst(), started: s.Inst()}, err
 }
 
-func (t *Tracer) SpanStarted(ctx context.Context, psc trace.SpanContext, span trace.Span) {
+func (t Tracer) Enabled() bool { return t.enabled }
+
+func (t Tracer) SpanStarted(ctx context.Context, psc trace.SpanContext, span trace.Span) {
 	key := spanStartedKey{
 		parent:   parentStateNoParent,
 		sampling: samplingStateDrop,
@@ -84,15 +89,15 @@ func (t *Tracer) SpanStarted(ctx context.Context, psc trace.SpanContext, span tr
 	t.started.Add(ctx, 1, opts...)
 }
 
-func (t *Tracer) SpanLive(ctx context.Context, span trace.Span) {
+func (t Tracer) SpanLive(ctx context.Context, span trace.Span) {
 	t.spanLive(ctx, 1, span)
 }
 
-func (t *Tracer) SpanEnded(ctx context.Context, span trace.Span) {
+func (t Tracer) SpanEnded(ctx context.Context, span trace.Span) {
 	t.spanLive(ctx, -1, span)
 }
 
-func (t *Tracer) spanLive(ctx context.Context, value int64, span trace.Span) {
+func (t Tracer) spanLive(ctx context.Context, value int64, span trace.Span) {
 	key := spanLiveKey{sampled: span.SpanContext().IsSampled()}
 	opts := spanLiveOpts[key]
 	t.live.Add(ctx, value, opts...)

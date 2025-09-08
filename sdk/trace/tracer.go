@@ -19,7 +19,7 @@ type tracer struct {
 	provider             *TracerProvider
 	instrumentationScope instrumentation.Scope
 
-	inst *observ.Tracer
+	inst observ.Tracer
 }
 
 var _ trace.Tracer = &tracer{}
@@ -50,7 +50,7 @@ func (tr *tracer) Start(
 
 	s := tr.newSpan(ctx, name, &config)
 	newCtx := trace.ContextWithSpan(ctx, s)
-	if tr.inst != nil {
+	if tr.inst.Enabled() {
 		psc := trace.SpanContextFromContext(ctx)
 		tr.inst.SpanStarted(newCtx, psc, s)
 	}
@@ -164,7 +164,7 @@ func (tr *tracer) newRecordingSpan(
 	s.SetAttributes(sr.Attributes...)
 	s.SetAttributes(config.Attributes()...)
 
-	if tr.inst != nil {
+	if tr.inst.Enabled() {
 		// Propagate any existing values from the context with the new span to
 		// the measurement context.
 		ctx = trace.ContextWithSpan(ctx, s)

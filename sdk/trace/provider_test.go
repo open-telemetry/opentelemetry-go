@@ -412,7 +412,7 @@ func TestTracerProviderSelfObservability(t *testing.T) {
 	require.IsType(t, &tracer{}, tr)
 
 	tStruct := tr.(*tracer)
-	assert.NotNil(t, tStruct.inst, "Self-observability should be enabled")
+	assert.True(t, tStruct.inst.Enabled(), "Self-observability should be enabled")
 
 	// Verify errors are passed to the otel handler
 	handlerErrs := handler.errs
