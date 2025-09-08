@@ -12,6 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
@@ -226,4 +227,50 @@ func TestNewTracerErrors(t *testing.T) {
 
 	assert.ErrorContains(t, err, "span live metric")
 	assert.ErrorContains(t, err, "span started metric")
+}
+
+func BenchmarkTracer(b *testing.B) {
+	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	orig := otel.GetMeterProvider()
+	b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Ensure deterministic benchmark by using noop meter.
+	otel.SetMeterProvider(noop.NewMeterProvider())
+
+	tracer, err := observ.NewTracer()
+	require.NoError(b, err)
+	require.NotNil(b, tracer)
+
+	t := otel.GetTracerProvider().Tracer(b.Name())
+	ctx, span := t.Start(context.Background(), "parent")
+	psc := span.SpanContext()
+	span.End()
+
+	b.Run("SpanStarted", func(b *testing.B) {
+		b.ReportAllocs()
+		b.RunParallel(func(p *testing.PB) {
+			for p.Next() {
+				tracer.SpanStarted(ctx, psc, span)
+			}
+		})
+	})
+
+	b.Run("SpanLive", func(b *testing.B) {
+		b.ReportAllocs()
+		b.RunParallel(func(p *testing.PB) {
+			for p.Next() {
+				tracer.SpanLive(ctx, span)
+			}
+		})
+	})
+
+	b.Run("SpanEnded", func(b *testing.B) {
+		b.ReportAllocs()
+		b.RunParallel(func(p *testing.PB) {
+			for p.Next() {
+				tracer.SpanEnded(ctx, span)
+			}
+		})
+	})
 }
