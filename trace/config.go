@@ -324,13 +324,17 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // attributes will be merged together in the order they are passed. Attributes
 // with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
+	if len(attr) == 0 {
+		return tracerOptionFunc(func(config TracerConfig) TracerConfig {
+			return config
+		})
+	}
+
 	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
 		newAttrs := attribute.NewSet(attr...)
-		switch {
-		case newAttrs.Len() == 0:
-		case config.attrs.Len() == 0:
+		if config.attrs.Len() == 0 {
 			config.attrs = newAttrs
-		default:
+		} else {
 			config.attrs = mergeSets(config.attrs, newAttrs)
 		}
 		return config

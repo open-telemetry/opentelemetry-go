@@ -135,13 +135,17 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // attributes will be merged together in the order they are passed. Attributes
 // with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
+	if len(attr) == 0 {
+		return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+			return config
+		})
+	}
+
 	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
 		newAttrs := attribute.NewSet(attr...)
-		switch {
-		case newAttrs.Len() == 0:
-		case config.attrs.Len() == 0:
+		if config.attrs.Len() == 0 {
 			config.attrs = newAttrs
-		default:
+		} else {
 			config.attrs = mergeSets(config.attrs, newAttrs)
 		}
 		return config

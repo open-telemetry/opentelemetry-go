@@ -70,13 +70,17 @@ func WithInstrumentationVersion(version string) MeterOption {
 // attributes will be merged together in the order they are passed. Attributes
 // with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) MeterOption {
+	if len(attr) == 0 {
+		return meterOptionFunc(func(config MeterConfig) MeterConfig {
+			return config
+		})
+	}
+
 	return meterOptionFunc(func(config MeterConfig) MeterConfig {
 		newAttrs := attribute.NewSet(attr...)
-		switch {
-		case newAttrs.Len() == 0:
-		case config.attrs.Len() == 0:
+		if config.attrs.Len() == 0 {
 			config.attrs = newAttrs
-		default:
+		} else {
 			config.attrs = mergeSets(config.attrs, newAttrs)
 		}
 		return config
