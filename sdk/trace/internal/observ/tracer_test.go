@@ -274,3 +274,23 @@ func BenchmarkTracer(b *testing.B) {
 		})
 	})
 }
+
+func BenchmarkNewTracer(b *testing.B) {
+	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	orig := otel.GetMeterProvider()
+	b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Ensure deterministic benchmark by using noop meter.
+	otel.SetMeterProvider(noop.NewMeterProvider())
+
+	var tracer *observ.Tracer
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		tracer, _ = observ.NewTracer()
+	}
+
+	_ = tracer
+}
