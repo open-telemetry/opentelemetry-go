@@ -304,12 +304,39 @@ func WithInstrumentationVersion(version string) TracerOption {
 	})
 }
 
+// mergeSets returns the union of keys between a and b. Any duplicate keys will
+// use the value associated with b.
+func mergeSets(a, b attribute.Set) attribute.Set {
+	// NewMergeIterator uses the first value for any duplicates.
+	iter := attribute.NewMergeIterator(&b, &a)
+	merged := make([]attribute.KeyValue, 0, a.Len()+b.Len())
+	for iter.Next() {
+		merged = append(merged, iter.Attribute())
+	}
+	return attribute.NewSet(merged...)
+}
+
 // WithInstrumentationAttributes sets the instrumentation attributes.
 //
 // The passed attributes will be de-duplicated.
+//
+// If multiple WithInstrumentationAttributes options are passed the
+// attributes will be merged together in the order they are passed. Attributes
+// with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
+	if len(attr) == 0 {
+		return tracerOptionFunc(func(config TracerConfig) TracerConfig {
+			return config
+		})
+	}
+
 	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-		config.attrs = attribute.NewSet(attr...)
+		newAttrs := attribute.NewSet(attr...)
+		if config.attrs.Len() == 0 {
+			config.attrs = newAttrs
+		} else {
+			config.attrs = mergeSets(config.attrs, newAttrs)
+		}
 		return config
 	})
 }

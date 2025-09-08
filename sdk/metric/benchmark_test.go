@@ -45,11 +45,21 @@ func BenchmarkSyncMeasure(b *testing.B) {
 	}
 }
 
+func exponentialAggregationSelector(ik InstrumentKind) Aggregation {
+	if ik == InstrumentKindHistogram {
+		return AggregationBase2ExponentialHistogram{MaxScale: 20, MaxSize: 160}
+	}
+	return AggregationDefault{}
+}
+
 func benchSyncViews(views ...View) func(*testing.B) {
 	ctx := context.Background()
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
 	meter := provider.Meter("benchSyncViews")
+	expRdr := NewManualReader(WithAggregationSelector(exponentialAggregationSelector))
+	expProvider := NewMeterProvider(WithReader(expRdr), WithView(views...))
+	expMeter := expProvider.Meter("benchSyncViews")
 	return func(b *testing.B) {
 		iCtr, err := meter.Int64Counter("int64-counter")
 		assert.NoError(b, err)
@@ -102,6 +112,24 @@ func benchSyncViews(views ...View) func(*testing.B) {
 			return func(s attribute.Set) func() {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
 				return func() { fHist.Record(ctx, 1, o...) }
+			}
+		}()))
+
+		expIHist, err := expMeter.Int64Histogram("exponential-int64-histogram")
+		assert.NoError(b, err)
+		b.Run("ExponentialInt64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { expIHist.Record(ctx, 1, o...) }
+			}
+		}()))
+
+		expFHist, err := expMeter.Float64Histogram("exponential-float64-histogram")
+		assert.NoError(b, err)
+		b.Run("ExponentialFloat64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { expFHist.Record(ctx, 1, o...) }
 			}
 		}()))
 	}
