@@ -28,8 +28,8 @@ const (
 
 // Tracer is instrumentation for an OTel SDK Tracer.
 type Tracer struct {
-	spanLiveMetric    otelconv.SDKSpanLive
-	spanStartedMetric otelconv.SDKSpanStarted
+	live    metric.Int64UpDownCounter
+	started metric.Int64Counter
 }
 
 func NewTracer() (*Tracer, error) {
@@ -43,102 +43,23 @@ func NewTracer() (*Tracer, error) {
 	)
 
 	var err error
-	spanLiveMetric, e := otelconv.NewSDKSpanLive(meter)
+	l, e := otelconv.NewSDKSpanLive(meter)
 	if e != nil {
 		e = fmt.Errorf("failed to create span live metric: %w", e)
 		err = errors.Join(err, e)
 	}
 
-	spanStartedMetric, e := otelconv.NewSDKSpanStarted(meter)
+	s, e := otelconv.NewSDKSpanStarted(meter)
 	if e != nil {
 		e = fmt.Errorf("failed to create span started metric: %w", e)
 		err = errors.Join(err, e)
 	}
-	return &Tracer{
-		spanLiveMetric:    spanLiveMetric,
-		spanStartedMetric: spanStartedMetric,
-	}, err
+
+	return Tracer{live: l.Inst(), started: s.Inst()}, err
 }
 
 func (t *Tracer) SpanStarted(ctx context.Context, psc trace.SpanContext, span trace.Span) {
-	set := spanStartedSet(psc, span)
-	t.spanStartedMetric.AddSet(ctx, 1, set)
-}
-
-func (t *Tracer) SpanLive(ctx context.Context, span trace.Span) {
-	set := spanLiveSet(span.SpanContext().IsSampled())
-	t.spanLiveMetric.AddSet(ctx, 1, set)
-}
-
-func (t *Tracer) SpanEnded(ctx context.Context, span trace.Span) {
-	set := spanLiveSet(span.SpanContext().IsSampled())
-	t.spanLiveMetric.AddSet(ctx, -1, set)
-}
-
-type parentState int
-
-const (
-	parentStateNoParent parentState = iota
-	parentStateLocalParent
-	parentStateRemoteParent
-)
-
-type samplingState int
-
-const (
-	samplingStateDrop samplingState = iota
-	samplingStateRecordOnly
-	samplingStateRecordAndSample
-)
-
-type spanStartedSetKey struct {
-	parent   parentState
-	sampling samplingState
-}
-
-var spanStartedSetCache = map[spanStartedSetKey]attribute.Set{
-	{parentStateNoParent, samplingStateDrop}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
-	),
-	{parentStateLocalParent, samplingStateDrop}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
-	),
-	{parentStateRemoteParent, samplingStateDrop}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
-	),
-
-	{parentStateNoParent, samplingStateRecordOnly}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
-	),
-	{parentStateLocalParent, samplingStateRecordOnly}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
-	),
-	{parentStateRemoteParent, samplingStateRecordOnly}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
-	),
-
-	{parentStateNoParent, samplingStateRecordAndSample}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
-	),
-	{parentStateLocalParent, samplingStateRecordAndSample}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
-	),
-	{parentStateRemoteParent, samplingStateRecordAndSample}: attribute.NewSet(
-		otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
-		otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
-	),
-}
-
-func spanStartedSet(psc trace.SpanContext, span trace.Span) attribute.Set {
-	key := spanStartedSetKey{
+	key := spanStartedKey{
 		parent:   parentStateNoParent,
 		sampling: samplingStateDrop,
 	}
@@ -159,27 +80,148 @@ func spanStartedSet(psc trace.SpanContext, span trace.Span) attribute.Set {
 		}
 	}
 
-	return spanStartedSetCache[key]
+	opts := spanStartedOpts[key]
+	t.started.Add(ctx, 1, opts...)
 }
 
-type spanLiveSetKey struct {
+func (t *Tracer) SpanLive(ctx context.Context, span trace.Span) {
+	t.spanLive(ctx, 1, span)
+}
+
+func (t *Tracer) SpanEnded(ctx context.Context, span trace.Span) {
+	t.spanLive(ctx, -1, span)
+}
+
+func (t *Tracer) spanLive(ctx context.Context, value int64, span trace.Span) {
+	key := spanLiveKey{sampled: span.SpanContext().IsSampled()}
+	opts := spanLiveOpts[key]
+	t.live.Add(ctx, value, opts...)
+}
+
+type parentState int
+
+const (
+	parentStateNoParent parentState = iota
+	parentStateLocalParent
+	parentStateRemoteParent
+)
+
+type samplingState int
+
+const (
+	samplingStateDrop samplingState = iota
+	samplingStateRecordOnly
+	samplingStateRecordAndSample
+)
+
+type spanStartedKey struct {
+	parent   parentState
+	sampling samplingState
+}
+
+var spanStartedOpts = map[spanStartedKey][]metric.AddOption{
+	{
+		parentStateNoParent,
+		samplingStateDrop,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
+		)),
+	},
+	{
+		parentStateLocalParent,
+		samplingStateDrop,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
+		)),
+	},
+	{
+		parentStateRemoteParent,
+		samplingStateDrop,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop),
+		)),
+	},
+
+	{
+		parentStateNoParent,
+		samplingStateRecordOnly,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
+		)),
+	},
+	{
+		parentStateLocalParent,
+		samplingStateRecordOnly,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
+		)),
+	},
+	{
+		parentStateRemoteParent,
+		samplingStateRecordOnly,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly),
+		)),
+	},
+
+	{
+		parentStateNoParent,
+		samplingStateRecordAndSample,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginNone),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+		)),
+	},
+	{
+		parentStateLocalParent,
+		samplingStateRecordAndSample,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+		)),
+	},
+	{
+		parentStateRemoteParent,
+		samplingStateRecordAndSample,
+	}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote),
+			otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordAndSample),
+		)),
+	},
+}
+
+type spanLiveKey struct {
 	sampled bool
 }
 
-var spanLiveSetCache = map[spanLiveSetKey]attribute.Set{
-	{true}: attribute.NewSet(
-		otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
-			otelconv.SpanSamplingResultRecordAndSample,
-		),
-	),
-	{false}: attribute.NewSet(
-		otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
-			otelconv.SpanSamplingResultRecordOnly,
-		),
-	),
-}
-
-func spanLiveSet(sampled bool) attribute.Set {
-	key := spanLiveSetKey{sampled: sampled}
-	return spanLiveSetCache[key]
+var spanLiveOpts = map[spanLiveKey][]metric.AddOption{
+	{true}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+				otelconv.SpanSamplingResultRecordAndSample,
+			),
+		)),
+	},
+	{false}: {
+		metric.WithAttributeSet(attribute.NewSet(
+			otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+				otelconv.SpanSamplingResultRecordOnly,
+			),
+		)),
+	},
 }
