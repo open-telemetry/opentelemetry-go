@@ -33,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Define the component type constant for tests
+// Define the component type constant for tests.
 var otelComponentType = string(otelconv.ComponentTypePrometheusHTTPTextMetricExporter)
 
 func TestPrometheusExporter(t *testing.T) {
@@ -897,7 +897,7 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name:                     "EmptyExport_Enabled",
 			selfObservabilityEnabled: true,
-			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
+			setupMetrics: func(_ *testing.T, _ otelmetric.Meter) {
 				// Don't create any metrics
 			},
 			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {
@@ -969,7 +969,7 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name:                     "ErrorScenario_Shutdown",
 			selfObservabilityEnabled: true,
-			setupMetrics: func(t *testing.T, meter otelmetric.Meter) {
+			setupMetrics: func(_ *testing.T, _ otelmetric.Meter) {
 				// Don't create metrics since we'll shut down the exporter
 			},
 			setupExporter: func(t *testing.T) (*prometheus.Registry, *Exporter) {

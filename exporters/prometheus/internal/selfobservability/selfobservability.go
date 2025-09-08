@@ -1,4 +1,9 @@
-package selfobservability
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package selfobservability provides self-observability metrics for prometheus exporter.
+// This is an experimental feature controlled by the x.SelfObservability feature flag.
+package selfobservability // import "go.opentelemetry.io/otel/exporters/prometheus/internal/selfobservability"
 
 import (
 	"context"
@@ -94,7 +99,6 @@ func (obs *SelfObservability) RecordCollectionDuration(
 	}()
 
 	err := operation()
-
 	if err != nil {
 		*attrs = append(*attrs, semconv.ErrorType(err))
 	}

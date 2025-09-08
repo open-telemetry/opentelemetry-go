@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package selfobservability
 
 import (
@@ -149,10 +152,8 @@ func TestSelfObservability_ContextMethods(t *testing.T) {
 			},
 		},
 		{
-			name: "background_context",
-			setupContext: func() context.Context {
-				return context.Background()
-			},
+			name:         "background_context",
+			setupContext: context.Background,
 			verifyContext: func(t *testing.T, obs *SelfObservability, expectedCtx context.Context) {
 				obs.SetContext(expectedCtx)
 				retrievedCtx := obs.GetContext()
@@ -217,7 +218,7 @@ func TestSelfObservability_RecordCollectionDuration(t *testing.T) {
 				case metricdata.Histogram[float64]:
 					require.Len(t, data.DataPoints, 1)
 					dp := data.DataPoints[0]
-					assert.True(t, dp.Sum > 0, "duration should be greater than 0")
+					assert.Positive(t, dp.Sum, "duration should be greater than 0")
 					assert.Equal(t, uint64(1), dp.Count, "count should be 1")
 
 					// Verify attributes contain component info
@@ -270,7 +271,7 @@ func TestSelfObservability_RecordCollectionDuration(t *testing.T) {
 				case metricdata.Histogram[float64]:
 					require.Len(t, data.DataPoints, 1)
 					dp := data.DataPoints[0]
-					assert.True(t, dp.Sum > 0, "duration should be greater than 0")
+					assert.Positive(t, dp.Sum, "duration should be greater than 0")
 
 					// Verify error attribute is present
 					attrs := dp.Attributes.ToSlice()
@@ -332,7 +333,7 @@ func TestSelfObservability_RecordOperationDuration(t *testing.T) {
 		{
 			name:         "successful_operation",
 			operationErr: nil,
-			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, hasError bool) {
+			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, _ bool) {
 				var rm metricdata.ResourceMetrics
 				err := reader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
@@ -354,7 +355,7 @@ func TestSelfObservability_RecordOperationDuration(t *testing.T) {
 				case metricdata.Histogram[float64]:
 					require.Len(t, data.DataPoints, 1)
 					dp := data.DataPoints[0]
-					assert.True(t, dp.Sum > 0, "duration should be greater than 0")
+					assert.Positive(t, dp.Sum, "duration should be greater than 0")
 					assert.Equal(t, uint64(1), dp.Count, "count should be 1")
 
 					// For successful operations, should not have error attribute
@@ -374,7 +375,7 @@ func TestSelfObservability_RecordOperationDuration(t *testing.T) {
 		{
 			name:         "operation_with_error",
 			operationErr: errors.New("operation failed"),
-			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, hasError bool) {
+			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, _ bool) {
 				var rm metricdata.ResourceMetrics
 				err := reader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
@@ -396,7 +397,7 @@ func TestSelfObservability_RecordOperationDuration(t *testing.T) {
 				case metricdata.Histogram[float64]:
 					require.Len(t, data.DataPoints, 1)
 					dp := data.DataPoints[0]
-					assert.True(t, dp.Sum > 0, "duration should be greater than 0")
+					assert.Positive(t, dp.Sum, "duration should be greater than 0")
 
 					// For failed operations, should have error attribute
 					attrs := dp.Attributes.ToSlice()
@@ -460,7 +461,7 @@ func TestSelfObservability_TrackExport(t *testing.T) {
 			exportCount:  5,
 			exportErr:    nil,
 			successCount: 5,
-			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, exportCount, successCount int64, hasError bool) {
+			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, _, successCount int64, _ bool) {
 				var rm metricdata.ResourceMetrics
 				err := reader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
@@ -511,7 +512,7 @@ func TestSelfObservability_TrackExport(t *testing.T) {
 			exportCount:  10,
 			exportErr:    errors.New("partial failure"),
 			successCount: 7,
-			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, exportCount, successCount int64, hasError bool) {
+			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, exportCount, successCount int64, _ bool) {
 				var rm metricdata.ResourceMetrics
 				err := reader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
@@ -566,7 +567,7 @@ func TestSelfObservability_TrackExport(t *testing.T) {
 			exportCount:  0,
 			exportErr:    nil,
 			successCount: 0,
-			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, exportCount, successCount int64, hasError bool) {
+			verifyMetrics: func(t *testing.T, reader sdkmetric.Reader, _, _ int64, _ bool) {
 				var rm metricdata.ResourceMetrics
 				err := reader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
