@@ -8,14 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Changed
+### Fixed
 
-- Improve performance of histogram `Record` in `go.opentelemetry.io/otel/sdk/metric` when min and max are disabled using `NoMinMax`. (#7306)
-- Optimize `TraceID` and `SpanID` encoding with a hex lookup table in `go.opentelemetry.io/otel/trace`. (#7321)
+- Fix `WithInstrumentationAttributes` options in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/log` to properly merge attributes when passed multiple times instead of replacing them. Attributes with duplicate keys will use the last value passed. (#7300)
 
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
+
+### Changed
+
+- Improve performance of histogram `Record` in `go.opentelemetry.io/otel/sdk/metric` when min and max are disabled using `NoMinMax`. (#7306)
+- Optimize `TraceID` and `SpanID` encoding with a hex lookup table in `go.opentelemetry.io/otel/trace`. (#7321)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
