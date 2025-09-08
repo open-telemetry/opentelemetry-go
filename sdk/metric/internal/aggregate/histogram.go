@@ -31,9 +31,12 @@ func newBuckets[N int64 | float64](attrs attribute.Set, n int) *buckets[N] {
 
 func (b *buckets[N]) sum(value N) { b.total += value }
 
-func (b *buckets[N]) bin(idx int, value N) {
+func (b *buckets[N]) bin(idx int) {
 	b.counts[idx]++
 	b.count++
+}
+
+func (b *buckets[N]) minMax(value N) {
 	if value < b.min {
 		b.min = value
 	} else if value > b.max {
@@ -44,8 +47,9 @@ func (b *buckets[N]) bin(idx int, value N) {
 // histValues summarizes a set of measurements as an histValues with
 // explicitly defined buckets.
 type histValues[N int64 | float64] struct {
-	noSum  bool
-	bounds []float64
+	noMinMax bool
+	noSum    bool
+	bounds   []float64
 
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
 	limit    limiter[*buckets[N]]
@@ -55,7 +59,7 @@ type histValues[N int64 | float64] struct {
 
 func newHistValues[N int64 | float64](
 	bounds []float64,
-	noSum bool,
+	noMinMax, noSum bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *histValues[N] {
@@ -66,11 +70,12 @@ func newHistValues[N int64 | float64](
 	b := slices.Clone(bounds)
 	slices.Sort(b)
 	return &histValues[N]{
-		noSum:  noSum,
-		bounds: b,
-		newRes: r,
-		limit:  newLimiter[*buckets[N]](limit),
-		values: make(map[attribute.Distinct]*buckets[N]),
+		noMinMax: noMinMax,
+		noSum:    noSum,
+		bounds:   b,
+		newRes:   r,
+		limit:    newLimiter[*buckets[N]](limit),
+		values:   make(map[attribute.Distinct]*buckets[N]),
 	}
 }
 
@@ -109,7 +114,10 @@ func (s *histValues[N]) measure(
 		b.min, b.max = value, value
 		s.values[attr.Equivalent()] = b
 	}
-	b.bin(idx, value)
+	b.bin(idx)
+	if !s.noMinMax {
+		b.minMax(value)
+	}
 	if !s.noSum {
 		b.sum(value)
 	}
@@ -125,8 +133,7 @@ func newHistogram[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *histogram[N] {
 	return &histogram[N]{
-		histValues: newHistValues[N](boundaries, noSum, limit, r),
-		noMinMax:   noMinMax,
+		histValues: newHistValues[N](boundaries, noMinMax, noSum, limit, r),
 		start:      now(),
 	}
 }
@@ -136,8 +143,7 @@ func newHistogram[N int64 | float64](
 type histogram[N int64 | float64] struct {
 	*histValues[N]
 
-	noMinMax bool
-	start    time.Time
+	start time.Time
 }
 
 func (s *histogram[N]) delta(
