@@ -135,7 +135,7 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // it is more efficient and also allows safely reusing the passed argument.
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
-// options are passed the attributes will be merged together in the order
+// options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 	if len(attr) == 0 {
@@ -159,7 +159,7 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 // instrumentation attributes of a [Logger].
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
-// options are passed the attributes will be merged together in the order
+// options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributeSet(set attribute.Set) LoggerOption {
 	if set.Len() == 0 {
