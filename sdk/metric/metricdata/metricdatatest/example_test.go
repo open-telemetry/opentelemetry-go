@@ -90,6 +90,15 @@ func Example() {
 	)
 	fmt.Printf("Counter metrics match: %t\n", counterEqual)
 
+	// Verify counter aggregations
+	hasAggregationsEqual := metricdatatest.AssertAggregationsEqual(
+		mockT,
+		expectedCounter.Data,
+		actualCounter.Data,
+		metricdatatest.IgnoreTimestamp(),
+	)
+	fmt.Printf("Counter has expected aggregations: %t\n", hasAggregationsEqual)
+
 	// Verify histogram metrics (ignoring exact values)
 	histogramEqual := metricdatatest.AssertEqual(
 		mockT,
@@ -119,6 +128,7 @@ func Example() {
 
 	// Output:
 	// Counter metrics match: true
+	// Counter has expected aggregations: true
 	// Histogram metrics match (ignoring values): true
 	// Gauge metrics match: true
 	// Counter has expected attributes: true
