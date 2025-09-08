@@ -275,13 +275,13 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 		{
 			name: "with instrumentation attribute",
 			options: []TracerOption{
-				WithInstrumentationAttributes(attribute.String("key", "value")),
+				WithInstrumentationAttributes(attribute.String("foo", "value")),
 			},
 		},
 		{
 			name: "with instrumentation attribute set",
 			options: []TracerOption{
-				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
+				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("bar", "value"))),
 			},
 		},
 	} {
