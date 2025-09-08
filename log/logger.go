@@ -155,15 +155,25 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 	})
 }
 
-// WithInstrumentationAttributeSet returns a [LoggerOption] that sets the
+// WithInstrumentationAttributeSet returns a [LoggerOption] that adds the
 // instrumentation attributes of a [Logger].
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributeSet(set attribute.Set) LoggerOption {
+	if set.Len() == 0 {
+		return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+			return config
+		})
+	}
+
 	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-		config.attrs = set
+		if config.attrs.Len() == 0 {
+			config.attrs = set
+		} else {
+			config.attrs = mergeSets(config.attrs, set)
+		}
 		return config
 	})
 }

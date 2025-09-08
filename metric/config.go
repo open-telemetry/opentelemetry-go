@@ -62,7 +62,7 @@ func WithInstrumentationVersion(version string) MeterOption {
 	})
 }
 
-// WithInstrumentationAttributes sets the instrumentation attributes.
+// WithInstrumentationAttributes adds the instrumentation attributes.
 //
 // The passed attributes will be de-duplicated.
 //
@@ -90,10 +90,24 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) MeterOption {
 	})
 }
 
-// WithInstrumentationAttributeSet sets the instrumentation attributes.
+// WithInstrumentationAttributeSet adds the instrumentation attributes.
+//
+// If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
+// options are passed the attributes will be merged together in the order
+// they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributeSet(set attribute.Set) MeterOption {
+	if set.Len() == 0 {
+		return meterOptionFunc(func(config MeterConfig) MeterConfig {
+			return config
+		})
+	}
+
 	return meterOptionFunc(func(config MeterConfig) MeterConfig {
-		config.attrs = set
+		if config.attrs.Len() == 0 {
+			config.attrs = set
+		} else {
+			config.attrs = mergeSets(config.attrs, set)
+		}
 		return config
 	})
 }
