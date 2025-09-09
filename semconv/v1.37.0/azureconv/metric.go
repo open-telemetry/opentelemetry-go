@@ -59,6 +59,11 @@ type CosmosDBClientActiveInstanceCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newCosmosDBClientActiveInstanceCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of active client instances."),
+	metric.WithUnit("{instance}"),
+}
+
 // NewCosmosDBClientActiveInstanceCount returns a new
 // CosmosDBClientActiveInstanceCount instrument.
 func NewCosmosDBClientActiveInstanceCount(
@@ -70,12 +75,15 @@ func NewCosmosDBClientActiveInstanceCount(
 		return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newCosmosDBClientActiveInstanceCountOpts
+	} else {
+		opt = append(opt, newCosmosDBClientActiveInstanceCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"azure.cosmosdb.client.active_instance.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of active client instances."),
-			metric.WithUnit("{instance}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
@@ -171,6 +179,11 @@ type CosmosDBClientOperationRequestCharge struct {
 	metric.Int64Histogram
 }
 
+var newCosmosDBClientOperationRequestChargeOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("[Request units](https://learn.microsoft.com/azure/cosmos-db/request-units) consumed by the operation."),
+	metric.WithUnit("{request_unit}"),
+}
+
 // NewCosmosDBClientOperationRequestCharge returns a new
 // CosmosDBClientOperationRequestCharge instrument.
 func NewCosmosDBClientOperationRequestCharge(
@@ -182,12 +195,15 @@ func NewCosmosDBClientOperationRequestCharge(
 		return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newCosmosDBClientOperationRequestChargeOpts
+	} else {
+		opt = append(opt, newCosmosDBClientOperationRequestChargeOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"azure.cosmosdb.client.operation.request_charge",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("[Request units](https://learn.microsoft.com/azure/cosmos-db/request-units) consumed by the operation."),
-			metric.WithUnit("{request_unit}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
