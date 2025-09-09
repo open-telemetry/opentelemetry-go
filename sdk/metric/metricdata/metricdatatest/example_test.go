@@ -6,210 +6,142 @@ package metricdatatest_test
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
-// This example demonstrates a scenario using manualreader, meterprovider,
-// and metricdatatest to verify metrics in a testing environment.
-func Example() {
+func ExampleAssertEqual() {
 	ctx := context.Background()
 
-	// Create a resource
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName("payment-processor"),
-		semconv.ServiceVersion("0.1.0"),
-	)
-
-	// Create a manual reader for collecting metrics on demand
+	// Create a meterprovider with a reader
 	reader := sdkmetric.NewManualReader()
-
-	// Create a meter provider with the manual reader
-	meterProvider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithResource(res),
-		sdkmetric.WithReader(reader),
-	)
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {
-		err := meterProvider.Shutdown(context.Background())
-		if err != nil {
-			log.Fatalln(err)
-		}
+		_ = mp.Shutdown(ctx)
 	}()
 
-	// Get a meter from the provider
-	meter := meterProvider.Meter("payment-processor-metrics")
-
-	// Simulate operations and record metrics
-	simulateOperationsAndRecordMetrics(ctx, meter)
+	// Create an instrument(eg: counter/histogram/gauge) and simulate an operation
+	meter := mp.Meter("payment-service")
+	counter, _ := meter.Int64Counter("payment.requests")
+	counter.Add(ctx, 5)
 
 	// Collect the metrics
-	metrics := metricdata.ResourceMetrics{}
-	err := reader.Collect(ctx, &metrics)
-	if err != nil {
-		fmt.Printf("Failed to collect metrics: %v\n", err)
-		return
-	}
+	rm := &metricdata.ResourceMetrics{}
+	_ = reader.Collect(ctx, rm)
+	actualMetrics, _ := getMetrics("payment.requests", rm)
 
-	// Create expected metrics for comparison
-	expectedCounter := createExpectedCounter()
-	expectedHistogram := createExpectedHistogram()
-	expectedGauge := createExpectedGauge()
-
-	// Find the actual metrics from the collected data
-	var actualCounter, actualHistogram, actualGauge metricdata.Metrics
-	for _, scopeMetrics := range metrics.ScopeMetrics {
-		for _, m := range scopeMetrics.Metrics {
-			switch m.Name {
-			case "payment.requests":
-				actualCounter = m
-			case "payment.duration":
-				actualHistogram = m
-			case "payment.balance":
-				actualGauge = m
-			}
-		}
-	}
-
-	// In a real test, you would use a testing.T instance instead of mockT
-	mockT := &mockTestingT{}
-
-	// Verify counter metrics
-	counterEqual := metricdatatest.AssertEqual(
-		mockT,
-		expectedCounter,
-		actualCounter,
-		metricdatatest.IgnoreTimestamp(),
-	)
-	fmt.Printf("Counter metrics match: %t\n", counterEqual)
-
-	// Verify counter aggregations
-	hasAggregationsEqual := metricdatatest.AssertAggregationsEqual(
-		mockT,
-		expectedCounter.Data,
-		actualCounter.Data,
-		metricdatatest.IgnoreTimestamp(),
-	)
-	fmt.Printf("Counter has expected aggregations: %t\n", hasAggregationsEqual)
-
-	// Verify histogram metrics (ignoring exact values)
-	histogramEqual := metricdatatest.AssertEqual(
-		mockT,
-		expectedHistogram,
-		actualHistogram,
-		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreValue(),
-	)
-	fmt.Printf("Histogram metrics match (ignoring values): %t\n", histogramEqual)
-
-	// Verify gauge metrics
-	gaugeEqual := metricdatatest.AssertEqual(
-		mockT,
-		expectedGauge,
-		actualGauge,
-		metricdatatest.IgnoreTimestamp(),
-	)
-	fmt.Printf("Gauge metrics match: %t\n", gaugeEqual)
-
-	// Verify attributes on the counter data points
-	hasAttrs := metricdatatest.AssertHasAttributes(
-		mockT,
-		actualCounter,
-		attribute.String("payment.method", "credit_card"),
-	)
-	fmt.Printf("Counter has expected attributes: %t\n", hasAttrs)
-
-	// Output:
-	// Counter metrics match: true
-	// Counter has expected aggregations: true
-	// Histogram metrics match (ignoring values): true
-	// Gauge metrics match: true
-	// Counter has expected attributes: true
-}
-
-// Helper function to simulate operations and record metrics
-func simulateOperationsAndRecordMetrics(ctx context.Context, meter metric.Meter) {
-	// Create instruments (errors are ignored in this example)
-	counter, _ := meter.Int64Counter(
-		"payment.requests",
-		metric.WithDescription("Number of payment requests received"),
-		metric.WithUnit("{request}"),
-	)
-
-	histogram, _ := meter.Float64Histogram(
-		"payment.duration",
-		metric.WithDescription("Duration of payment processing"),
-		metric.WithUnit("ms"),
-	)
-
-	gauge, _ := meter.Float64Gauge(
-		"payment.balance",
-		metric.WithDescription("Current account balance"),
-		metric.WithUnit("USD"),
-	)
-
-	commonAttrs := attribute.NewSet(
-		attribute.String("payment.method", "credit_card"),
-	)
-
-	// Simulate processing payments
-	counter.Add(ctx, 3, metric.WithAttributeSet(commonAttrs))
-
-	// Record processing durations
-	histogram.Record(ctx, 125.3, metric.WithAttributeSet(commonAttrs))
-	histogram.Record(ctx, 98.7, metric.WithAttributeSet(commonAttrs))
-
-	// Record current balance
-	gauge.Record(ctx, 1250.60, metric.WithAttributeSet(commonAttrs))
-}
-
-// Helper function to create expected counter metrics
-func createExpectedCounter() metricdata.Metrics {
-	commonAttrs := attribute.NewSet(
-		attribute.String("payment.method", "credit_card"),
-	)
-
-	return metricdata.Metrics{
-		Name:        "payment.requests",
-		Description: "Number of payment requests received",
-		Unit:        "{request}",
+	expectedMetrics := metricdata.Metrics{
+		Name: "payment.requests",
 		Data: metricdata.Sum[int64]{
-			DataPoints: []metricdata.DataPoint[int64]{
-				{
-					Attributes: commonAttrs,
-					Value:      3,
-				},
-			},
+			DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
 			Temporality: metricdata.CumulativeTemporality,
 			IsMonotonic: true,
 		},
 	}
+
+	// Compare expected metrics with the actual one
+	mockTest := &mockTestingT{}
+	assertEqual := metricdatatest.AssertEqual(
+		mockTest,
+		expectedMetrics,
+		actualMetrics,
+		metricdatatest.IgnoreTimestamp(), // ignoring timestamps
+	)
+	fmt.Printf("Metrics matched as expected: %t\n", assertEqual)
+
+	// Output:
+	// Metrics matched as expected: true
 }
 
-// Helper function to create expected histogram metrics
-func createExpectedHistogram() metricdata.Metrics {
-	commonAttrs := attribute.NewSet(
-		attribute.String("payment.method", "credit_card"),
-	)
+func ExampleAssertAggregationsEqual() {
+	ctx := context.Background()
 
-	return metricdata.Metrics{
-		Name:        "payment.duration",
-		Description: "Duration of payment processing",
-		Unit:        "ms",
+	// Create a meterprovider with a reader
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		_ = mp.Shutdown(ctx)
+	}()
+
+	// Create an instrument(eg: counter/histogram/gauge) and simulate an operation
+	meter := mp.Meter("payment-service")
+	counter, _ := meter.Int64Counter("payment.duration")
+	counter.Add(ctx, 5)
+
+	// Collect the metrics
+	rm := &metricdata.ResourceMetrics{}
+	_ = reader.Collect(ctx, rm)
+	actualMetrics, _ := getMetrics("payment.duration", rm)
+
+	expectedMetrics := metricdata.Metrics{
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+
+	// Verify the expected data with the actual one.
+	mockTest := &mockTestingT{}
+
+	// Compare Aggregations
+	hasEqualAggregations := metricdatatest.AssertAggregationsEqual(
+		mockTest,
+		expectedMetrics.Data,
+		actualMetrics.Data,
+		metricdatatest.IgnoreTimestamp(),
+	)
+	fmt.Printf("Aggregations are matching as expected: %t\n", hasEqualAggregations)
+
+	// Output:
+	// Aggregations are matching as expected: true
+}
+
+func ExampleAssertHasAttributes() {
+	ctx := context.Background()
+
+	// Create a meterprovider with a reader
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		_ = mp.Shutdown(ctx)
+	}()
+
+	// Simulate an operation using an instrument(eg: counter)
+	meter := mp.Meter("payment-service")
+	counter, _ := meter.Int64Counter("payment.requests")
+
+	// Add attribute to the measurement
+	attributes := attribute.NewSet(attribute.String("payment.method", "credit_card"))
+	counter.Add(ctx, 5, metric.WithAttributeSet(attributes))
+
+	// Collect the metrics
+	rm := &metricdata.ResourceMetrics{}
+	_ = reader.Collect(ctx, rm)
+	actualMetrics, _ := getMetrics("payment.requests", rm)
+
+	// Verify the attributes in the actualMetrics
+	mockTest := &mockTestingT{}
+	hasAttributes := metricdatatest.AssertHasAttributes(mockTest, actualMetrics, attributes.ToSlice()...)
+	fmt.Printf("Metrics has expected attributes : %t\n", hasAttributes)
+
+	// Output:
+	// Metrics has expected attributes : true
+}
+
+func ExampleIgnoreValue() {
+	expectedMetrics := metricdata.Metrics{
+		Name: "payment.duration",
 		Data: metricdata.Histogram[float64]{
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
 				{
-					Attributes: commonAttrs,
-					//Values do not matter since we use metricdatatest.IgnoreValue() while asserting
 					Count:        2,
-					Sum:          224.0, // 125.3 + 98.7
+					Sum:          224.0,
 					Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000},
 					BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0},
 				},
@@ -217,34 +149,115 @@ func createExpectedHistogram() metricdata.Metrics {
 			Temporality: metricdata.CumulativeTemporality,
 		},
 	}
-}
 
-// Helper function to create expected gauge metrics
-func createExpectedGauge() metricdata.Metrics {
-	commonAttrs := attribute.NewSet(
-		attribute.String("payment.method", "credit_card"),
-	)
-
-	return metricdata.Metrics{
-		Name:        "payment.balance",
-		Description: "Current account balance",
-		Unit:        "USD",
-		Data: metricdata.Gauge[float64]{
-			DataPoints: []metricdata.DataPoint[float64]{
+	actualMetrics := metricdata.Metrics{
+		Name: "payment.duration",
+		Data: metricdata.Histogram[float64]{
+			// Aggregate measurements are different in expected metrics
+			DataPoints: []metricdata.HistogramDataPoint[float64]{
 				{
-					Attributes: commonAttrs,
-					Value:      1250.60,
+					Count:        10,
+					Sum:          0,
+					Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000},
+					BucketCounts: []uint64{1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0},
 				},
 			},
+			Temporality: metricdata.CumulativeTemporality,
 		},
 	}
+
+	mockTest := &mockTestingT{}
+
+	// Compare metrics without values
+	ignoreValue := metricdatatest.AssertEqual(
+		mockTest,
+		expectedMetrics,
+		actualMetrics,
+		metricdatatest.IgnoreValue(),
+	)
+	fmt.Printf("Metrics matched irrespective of difference in values: %t\n", ignoreValue)
+
+	// Output:
+	// Metrics matched irrespective of difference in values: true
 }
 
-// mockTestingT implements the metricdatatest.TestingT interface for examples
+func ExampleIgnoreExemplars() {
+	// Histogram data with Exemplars
+	expectedMetrics := metricdata.Metrics{
+		Name: "payment.duration",
+		Data: metricdata.Histogram[float64]{
+			DataPoints: []metricdata.HistogramDataPoint[float64]{
+				{
+					Count:        2,
+					Sum:          224.0,
+					Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000},
+					BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0},
+					Exemplars: []metricdata.Exemplar[float64]{
+						{
+							FilteredAttributes: []attribute.KeyValue{
+								attribute.String("payment.type", "recurring"),
+							},
+							Time:    time.Now(),
+							Value:   15.0,
+							SpanID:  []byte{1, 2, 3, 4, 5, 6, 7, 8},
+							TraceID: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+						},
+					},
+				},
+			},
+			Temporality: metricdata.CumulativeTemporality,
+		},
+	}
+
+	// Histogram data without Exemplars
+	actualMetrics := metricdata.Metrics{
+		Name: "payment.duration",
+		Data: metricdata.Histogram[float64]{
+			// Aggregate measurements are different from expected metrics
+			DataPoints: []metricdata.HistogramDataPoint[float64]{
+				{
+					Count:        2,
+					Sum:          224.0,
+					Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000},
+					BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0},
+				},
+			},
+			Temporality: metricdata.CumulativeTemporality,
+		},
+	}
+
+	mockTest := &mockTestingT{}
+
+	// Compare metrics
+	ignoreExemplars := metricdatatest.AssertEqual(
+		mockTest,
+		expectedMetrics,
+		actualMetrics,
+		metricdatatest.IgnoreExemplars(),
+	)
+	fmt.Printf("Metrics matched irrespective of difference in exemplars: %t\n", ignoreExemplars)
+
+	// Output:
+	// Metrics matched irrespective of difference in exemplars: true
+}
+
+// Helper function to retrieve the metrics.
+func getMetrics(name string, rm *metricdata.ResourceMetrics) (metricdata.Metrics, bool) { //nolint
+	for _, scopeMetrics := range rm.ScopeMetrics {
+		for _, m := range scopeMetrics.Metrics {
+			if m.Name == name {
+				return m, true
+			}
+		}
+	}
+	return metricdata.Metrics{}, false
+}
+
+// mockTestingT implements the metricdatatest.TestingT interface for examples.
 type mockTestingT struct {
-	errors []string
+	errors []string //nolint
 }
 
-func (m *mockTestingT) Helper() {}
+func (*mockTestingT) Helper() {}
 
-func (m *mockTestingT) Error(args ...any) {}
+func (*mockTestingT) Error(...any) {}
