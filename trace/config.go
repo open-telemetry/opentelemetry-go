@@ -304,12 +304,64 @@ func WithInstrumentationVersion(version string) TracerOption {
 	})
 }
 
-// WithInstrumentationAttributes sets the instrumentation attributes.
+// mergeSets returns the union of keys between a and b. Any duplicate keys will
+// use the value associated with b.
+func mergeSets(a, b attribute.Set) attribute.Set {
+	// NewMergeIterator uses the first value for any duplicates.
+	iter := attribute.NewMergeIterator(&b, &a)
+	merged := make([]attribute.KeyValue, 0, a.Len()+b.Len())
+	for iter.Next() {
+		merged = append(merged, iter.Attribute())
+	}
+	return attribute.NewSet(merged...)
+}
+
+// WithInstrumentationAttributes adds the instrumentation attributes.
 //
 // The passed attributes will be de-duplicated.
+//
+// Note that [WithInstrumentationAttributeSet] is recommended as
+// it is more efficient and also allows safely reusing the passed argument.
+//
+// If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
+// options are passed, the attributes will be merged together in the order
+// they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
+	if len(attr) == 0 {
+		return tracerOptionFunc(func(config TracerConfig) TracerConfig {
+			return config
+		})
+	}
+
 	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-		config.attrs = attribute.NewSet(attr...)
+		newAttrs := attribute.NewSet(attr...)
+		if config.attrs.Len() == 0 {
+			config.attrs = newAttrs
+		} else {
+			config.attrs = mergeSets(config.attrs, newAttrs)
+		}
+		return config
+	})
+}
+
+// WithInstrumentationAttributeSet adds the instrumentation attributes.
+//
+// If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
+// options are passed, the attributes will be merged together in the order
+// they are passed. Attributes with duplicate keys will use the last value passed.
+func WithInstrumentationAttributeSet(set attribute.Set) TracerOption {
+	if set.Len() == 0 {
+		return tracerOptionFunc(func(config TracerConfig) TracerConfig {
+			return config
+		})
+	}
+
+	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
+		if config.attrs.Len() == 0 {
+			config.attrs = set
+		} else {
+			config.attrs = mergeSets(config.attrs, set)
+		}
 		return config
 	})
 }
