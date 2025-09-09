@@ -179,6 +179,11 @@ type ContainerCPULimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerCPULimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Maximum CPU resource limit set for the container."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewContainerCPULimit returns a new ContainerCPULimit instrument.
 func NewContainerCPULimit(
 	m metric.Meter,
@@ -189,12 +194,15 @@ func NewContainerCPULimit(
 		return ContainerCPULimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerCPULimitOpts
+	} else {
+		opt = append(opt, newContainerCPULimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.cpu.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Maximum CPU resource limit set for the container."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerCPULimit{noop.Int64UpDownCounter{}}, err
@@ -271,6 +279,11 @@ type ContainerCPURequest struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerCPURequestOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("CPU resource requested for the container."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewContainerCPURequest returns a new ContainerCPURequest instrument.
 func NewContainerCPURequest(
 	m metric.Meter,
@@ -281,12 +294,15 @@ func NewContainerCPURequest(
 		return ContainerCPURequest{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerCPURequestOpts
+	} else {
+		opt = append(opt, newContainerCPURequestOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.cpu.request",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("CPU resource requested for the container."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerCPURequest{noop.Int64UpDownCounter{}}, err
@@ -364,6 +380,11 @@ type ContainerEphemeralStorageLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerEphemeralStorageLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Maximum ephemeral storage resource limit set for the container."),
+	metric.WithUnit("By"),
+}
+
 // NewContainerEphemeralStorageLimit returns a new ContainerEphemeralStorageLimit
 // instrument.
 func NewContainerEphemeralStorageLimit(
@@ -375,12 +396,15 @@ func NewContainerEphemeralStorageLimit(
 		return ContainerEphemeralStorageLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerEphemeralStorageLimitOpts
+	} else {
+		opt = append(opt, newContainerEphemeralStorageLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.ephemeral_storage.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Maximum ephemeral storage resource limit set for the container."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerEphemeralStorageLimit{noop.Int64UpDownCounter{}}, err
@@ -458,6 +482,11 @@ type ContainerEphemeralStorageRequest struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerEphemeralStorageRequestOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Ephemeral storage resource requested for the container."),
+	metric.WithUnit("By"),
+}
+
 // NewContainerEphemeralStorageRequest returns a new
 // ContainerEphemeralStorageRequest instrument.
 func NewContainerEphemeralStorageRequest(
@@ -469,12 +498,15 @@ func NewContainerEphemeralStorageRequest(
 		return ContainerEphemeralStorageRequest{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerEphemeralStorageRequestOpts
+	} else {
+		opt = append(opt, newContainerEphemeralStorageRequestOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.ephemeral_storage.request",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Ephemeral storage resource requested for the container."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerEphemeralStorageRequest{noop.Int64UpDownCounter{}}, err
@@ -551,6 +583,11 @@ type ContainerMemoryLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerMemoryLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Maximum memory resource limit set for the container."),
+	metric.WithUnit("By"),
+}
+
 // NewContainerMemoryLimit returns a new ContainerMemoryLimit instrument.
 func NewContainerMemoryLimit(
 	m metric.Meter,
@@ -561,12 +598,15 @@ func NewContainerMemoryLimit(
 		return ContainerMemoryLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerMemoryLimitOpts
+	} else {
+		opt = append(opt, newContainerMemoryLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.memory.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Maximum memory resource limit set for the container."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerMemoryLimit{noop.Int64UpDownCounter{}}, err
@@ -643,6 +683,11 @@ type ContainerMemoryRequest struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerMemoryRequestOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Memory resource requested for the container."),
+	metric.WithUnit("By"),
+}
+
 // NewContainerMemoryRequest returns a new ContainerMemoryRequest instrument.
 func NewContainerMemoryRequest(
 	m metric.Meter,
@@ -653,12 +698,15 @@ func NewContainerMemoryRequest(
 		return ContainerMemoryRequest{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerMemoryRequestOpts
+	} else {
+		opt = append(opt, newContainerMemoryRequestOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.memory.request",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Memory resource requested for the container."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerMemoryRequest{noop.Int64UpDownCounter{}}, err
@@ -736,6 +784,11 @@ type ContainerReady struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerReadyOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Indicates whether the container is currently marked as ready to accept traffic, based on its readiness probe (1 = ready, 0 = not ready)."),
+	metric.WithUnit("{container}"),
+}
+
 // NewContainerReady returns a new ContainerReady instrument.
 func NewContainerReady(
 	m metric.Meter,
@@ -746,12 +799,15 @@ func NewContainerReady(
 		return ContainerReady{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerReadyOpts
+	} else {
+		opt = append(opt, newContainerReadyOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.ready",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Indicates whether the container is currently marked as ready to accept traffic, based on its readiness probe (1 = ready, 0 = not ready)."),
-			metric.WithUnit("{container}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerReady{noop.Int64UpDownCounter{}}, err
@@ -831,6 +887,11 @@ type ContainerRestartCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerRestartCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Describes how many times the container has restarted (since the last counter reset)."),
+	metric.WithUnit("{restart}"),
+}
+
 // NewContainerRestartCount returns a new ContainerRestartCount instrument.
 func NewContainerRestartCount(
 	m metric.Meter,
@@ -841,12 +902,15 @@ func NewContainerRestartCount(
 		return ContainerRestartCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerRestartCountOpts
+	} else {
+		opt = append(opt, newContainerRestartCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.restart.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Describes how many times the container has restarted (since the last counter reset)."),
-			metric.WithUnit("{restart}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerRestartCount{noop.Int64UpDownCounter{}}, err
@@ -936,6 +1000,11 @@ type ContainerStatusReason struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerStatusReasonOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Describes the number of K8s containers that are currently in a state for a given reason."),
+	metric.WithUnit("{container}"),
+}
+
 // NewContainerStatusReason returns a new ContainerStatusReason instrument.
 func NewContainerStatusReason(
 	m metric.Meter,
@@ -946,12 +1015,15 @@ func NewContainerStatusReason(
 		return ContainerStatusReason{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerStatusReasonOpts
+	} else {
+		opt = append(opt, newContainerStatusReasonOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.status.reason",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Describes the number of K8s containers that are currently in a state for a given reason."),
-			metric.WithUnit("{container}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerStatusReason{noop.Int64UpDownCounter{}}, err
@@ -1049,6 +1121,11 @@ type ContainerStatusState struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerStatusStateOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Describes the number of K8s containers that are currently in a given state."),
+	metric.WithUnit("{container}"),
+}
+
 // NewContainerStatusState returns a new ContainerStatusState instrument.
 func NewContainerStatusState(
 	m metric.Meter,
@@ -1059,12 +1136,15 @@ func NewContainerStatusState(
 		return ContainerStatusState{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerStatusStateOpts
+	} else {
+		opt = append(opt, newContainerStatusStateOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.status.state",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Describes the number of K8s containers that are currently in a given state."),
-			metric.WithUnit("{container}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerStatusState{noop.Int64UpDownCounter{}}, err
@@ -1160,6 +1240,11 @@ type ContainerStorageLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerStorageLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Maximum storage resource limit set for the container."),
+	metric.WithUnit("By"),
+}
+
 // NewContainerStorageLimit returns a new ContainerStorageLimit instrument.
 func NewContainerStorageLimit(
 	m metric.Meter,
@@ -1170,12 +1255,15 @@ func NewContainerStorageLimit(
 		return ContainerStorageLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerStorageLimitOpts
+	} else {
+		opt = append(opt, newContainerStorageLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.storage.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Maximum storage resource limit set for the container."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerStorageLimit{noop.Int64UpDownCounter{}}, err
@@ -1252,6 +1340,11 @@ type ContainerStorageRequest struct {
 	metric.Int64UpDownCounter
 }
 
+var newContainerStorageRequestOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Storage resource requested for the container."),
+	metric.WithUnit("By"),
+}
+
 // NewContainerStorageRequest returns a new ContainerStorageRequest instrument.
 func NewContainerStorageRequest(
 	m metric.Meter,
@@ -1262,12 +1355,15 @@ func NewContainerStorageRequest(
 		return ContainerStorageRequest{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContainerStorageRequestOpts
+	} else {
+		opt = append(opt, newContainerStorageRequestOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.container.storage.request",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Storage resource requested for the container."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContainerStorageRequest{noop.Int64UpDownCounter{}}, err
@@ -1344,6 +1440,11 @@ type CronJobActiveJobs struct {
 	metric.Int64UpDownCounter
 }
 
+var newCronJobActiveJobsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of actively running jobs for a cronjob."),
+	metric.WithUnit("{job}"),
+}
+
 // NewCronJobActiveJobs returns a new CronJobActiveJobs instrument.
 func NewCronJobActiveJobs(
 	m metric.Meter,
@@ -1354,12 +1455,15 @@ func NewCronJobActiveJobs(
 		return CronJobActiveJobs{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newCronJobActiveJobsOpts
+	} else {
+		opt = append(opt, newCronJobActiveJobsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.cronjob.active_jobs",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of actively running jobs for a cronjob."),
-			metric.WithUnit("{job}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return CronJobActiveJobs{noop.Int64UpDownCounter{}}, err
@@ -1439,6 +1543,11 @@ type DaemonSetCurrentScheduledNodes struct {
 	metric.Int64UpDownCounter
 }
 
+var newDaemonSetCurrentScheduledNodesOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of nodes that are running at least 1 daemon pod and are supposed to run the daemon pod."),
+	metric.WithUnit("{node}"),
+}
+
 // NewDaemonSetCurrentScheduledNodes returns a new DaemonSetCurrentScheduledNodes
 // instrument.
 func NewDaemonSetCurrentScheduledNodes(
@@ -1450,12 +1559,15 @@ func NewDaemonSetCurrentScheduledNodes(
 		return DaemonSetCurrentScheduledNodes{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newDaemonSetCurrentScheduledNodesOpts
+	} else {
+		opt = append(opt, newDaemonSetCurrentScheduledNodesOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.daemonset.current_scheduled_nodes",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of nodes that are running at least 1 daemon pod and are supposed to run the daemon pod."),
-			metric.WithUnit("{node}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return DaemonSetCurrentScheduledNodes{noop.Int64UpDownCounter{}}, err
@@ -1535,6 +1647,11 @@ type DaemonSetDesiredScheduledNodes struct {
 	metric.Int64UpDownCounter
 }
 
+var newDaemonSetDesiredScheduledNodesOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of nodes that should be running the daemon pod (including nodes currently running the daemon pod)."),
+	metric.WithUnit("{node}"),
+}
+
 // NewDaemonSetDesiredScheduledNodes returns a new DaemonSetDesiredScheduledNodes
 // instrument.
 func NewDaemonSetDesiredScheduledNodes(
@@ -1546,12 +1663,15 @@ func NewDaemonSetDesiredScheduledNodes(
 		return DaemonSetDesiredScheduledNodes{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newDaemonSetDesiredScheduledNodesOpts
+	} else {
+		opt = append(opt, newDaemonSetDesiredScheduledNodesOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.daemonset.desired_scheduled_nodes",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of nodes that should be running the daemon pod (including nodes currently running the daemon pod)."),
-			metric.WithUnit("{node}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return DaemonSetDesiredScheduledNodes{noop.Int64UpDownCounter{}}, err
@@ -1631,6 +1751,11 @@ type DaemonSetMisscheduledNodes struct {
 	metric.Int64UpDownCounter
 }
 
+var newDaemonSetMisscheduledNodesOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of nodes that are running the daemon pod, but are not supposed to run the daemon pod."),
+	metric.WithUnit("{node}"),
+}
+
 // NewDaemonSetMisscheduledNodes returns a new DaemonSetMisscheduledNodes
 // instrument.
 func NewDaemonSetMisscheduledNodes(
@@ -1642,12 +1767,15 @@ func NewDaemonSetMisscheduledNodes(
 		return DaemonSetMisscheduledNodes{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newDaemonSetMisscheduledNodesOpts
+	} else {
+		opt = append(opt, newDaemonSetMisscheduledNodesOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.daemonset.misscheduled_nodes",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of nodes that are running the daemon pod, but are not supposed to run the daemon pod."),
-			metric.WithUnit("{node}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return DaemonSetMisscheduledNodes{noop.Int64UpDownCounter{}}, err
@@ -1727,6 +1855,11 @@ type DaemonSetReadyNodes struct {
 	metric.Int64UpDownCounter
 }
 
+var newDaemonSetReadyNodesOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of nodes that should be running the daemon pod and have one or more of the daemon pod running and ready."),
+	metric.WithUnit("{node}"),
+}
+
 // NewDaemonSetReadyNodes returns a new DaemonSetReadyNodes instrument.
 func NewDaemonSetReadyNodes(
 	m metric.Meter,
@@ -1737,12 +1870,15 @@ func NewDaemonSetReadyNodes(
 		return DaemonSetReadyNodes{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newDaemonSetReadyNodesOpts
+	} else {
+		opt = append(opt, newDaemonSetReadyNodesOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.daemonset.ready_nodes",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of nodes that should be running the daemon pod and have one or more of the daemon pod running and ready."),
-			metric.WithUnit("{node}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return DaemonSetReadyNodes{noop.Int64UpDownCounter{}}, err
@@ -1822,6 +1958,11 @@ type DeploymentAvailablePods struct {
 	metric.Int64UpDownCounter
 }
 
+var newDeploymentAvailablePodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this deployment."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewDeploymentAvailablePods returns a new DeploymentAvailablePods instrument.
 func NewDeploymentAvailablePods(
 	m metric.Meter,
@@ -1832,12 +1973,15 @@ func NewDeploymentAvailablePods(
 		return DeploymentAvailablePods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newDeploymentAvailablePodsOpts
+	} else {
+		opt = append(opt, newDeploymentAvailablePodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.deployment.available_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this deployment."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return DeploymentAvailablePods{noop.Int64UpDownCounter{}}, err
@@ -1916,6 +2060,11 @@ type DeploymentDesiredPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newDeploymentDesiredPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this deployment."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewDeploymentDesiredPods returns a new DeploymentDesiredPods instrument.
 func NewDeploymentDesiredPods(
 	m metric.Meter,
@@ -1926,12 +2075,15 @@ func NewDeploymentDesiredPods(
 		return DeploymentDesiredPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newDeploymentDesiredPodsOpts
+	} else {
+		opt = append(opt, newDeploymentDesiredPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.deployment.desired_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of desired replica pods in this deployment."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return DeploymentDesiredPods{noop.Int64UpDownCounter{}}, err
@@ -2011,6 +2163,11 @@ type HPACurrentPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newHPACurrentPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewHPACurrentPods returns a new HPACurrentPods instrument.
 func NewHPACurrentPods(
 	m metric.Meter,
@@ -2021,12 +2178,15 @@ func NewHPACurrentPods(
 		return HPACurrentPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPACurrentPodsOpts
+	} else {
+		opt = append(opt, newHPACurrentPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.hpa.current_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPACurrentPods{noop.Int64UpDownCounter{}}, err
@@ -2106,6 +2266,11 @@ type HPADesiredPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newHPADesiredPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewHPADesiredPods returns a new HPADesiredPods instrument.
 func NewHPADesiredPods(
 	m metric.Meter,
@@ -2116,12 +2281,15 @@ func NewHPADesiredPods(
 		return HPADesiredPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPADesiredPodsOpts
+	} else {
+		opt = append(opt, newHPADesiredPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.hpa.desired_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPADesiredPods{noop.Int64UpDownCounter{}}, err
@@ -2200,6 +2368,11 @@ type HPAMaxPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newHPAMaxPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The upper limit for the number of replica pods to which the autoscaler can scale up."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewHPAMaxPods returns a new HPAMaxPods instrument.
 func NewHPAMaxPods(
 	m metric.Meter,
@@ -2210,12 +2383,15 @@ func NewHPAMaxPods(
 		return HPAMaxPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPAMaxPodsOpts
+	} else {
+		opt = append(opt, newHPAMaxPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.hpa.max_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The upper limit for the number of replica pods to which the autoscaler can scale up."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPAMaxPods{noop.Int64UpDownCounter{}}, err
@@ -2295,6 +2471,11 @@ type HPAMetricTargetCPUAverageUtilization struct {
 	metric.Int64Gauge
 }
 
+var newHPAMetricTargetCPUAverageUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Target average utilization, in percentage, for CPU resource in HPA config."),
+	metric.WithUnit("1"),
+}
+
 // NewHPAMetricTargetCPUAverageUtilization returns a new
 // HPAMetricTargetCPUAverageUtilization instrument.
 func NewHPAMetricTargetCPUAverageUtilization(
@@ -2306,12 +2487,15 @@ func NewHPAMetricTargetCPUAverageUtilization(
 		return HPAMetricTargetCPUAverageUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPAMetricTargetCPUAverageUtilizationOpts
+	} else {
+		opt = append(opt, newHPAMetricTargetCPUAverageUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.hpa.metric.target.cpu.average_utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Target average utilization, in percentage, for CPU resource in HPA config."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPAMetricTargetCPUAverageUtilization{noop.Int64Gauge{}}, err
@@ -2425,6 +2609,11 @@ type HPAMetricTargetCPUAverageValue struct {
 	metric.Int64Gauge
 }
 
+var newHPAMetricTargetCPUAverageValueOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Target average value for CPU resource in HPA config."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewHPAMetricTargetCPUAverageValue returns a new HPAMetricTargetCPUAverageValue
 // instrument.
 func NewHPAMetricTargetCPUAverageValue(
@@ -2436,12 +2625,15 @@ func NewHPAMetricTargetCPUAverageValue(
 		return HPAMetricTargetCPUAverageValue{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPAMetricTargetCPUAverageValueOpts
+	} else {
+		opt = append(opt, newHPAMetricTargetCPUAverageValueOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.hpa.metric.target.cpu.average_value",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Target average value for CPU resource in HPA config."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPAMetricTargetCPUAverageValue{noop.Int64Gauge{}}, err
@@ -2554,6 +2746,11 @@ type HPAMetricTargetCPUValue struct {
 	metric.Int64Gauge
 }
 
+var newHPAMetricTargetCPUValueOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Target value for CPU resource in HPA config."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewHPAMetricTargetCPUValue returns a new HPAMetricTargetCPUValue instrument.
 func NewHPAMetricTargetCPUValue(
 	m metric.Meter,
@@ -2564,12 +2761,15 @@ func NewHPAMetricTargetCPUValue(
 		return HPAMetricTargetCPUValue{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPAMetricTargetCPUValueOpts
+	} else {
+		opt = append(opt, newHPAMetricTargetCPUValueOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.hpa.metric.target.cpu.value",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Target value for CPU resource in HPA config."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPAMetricTargetCPUValue{noop.Int64Gauge{}}, err
@@ -2682,6 +2882,11 @@ type HPAMinPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newHPAMinPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The lower limit for the number of replica pods to which the autoscaler can scale down."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewHPAMinPods returns a new HPAMinPods instrument.
 func NewHPAMinPods(
 	m metric.Meter,
@@ -2692,12 +2897,15 @@ func NewHPAMinPods(
 		return HPAMinPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHPAMinPodsOpts
+	} else {
+		opt = append(opt, newHPAMinPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.hpa.min_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The lower limit for the number of replica pods to which the autoscaler can scale down."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HPAMinPods{noop.Int64UpDownCounter{}}, err
@@ -2776,6 +2984,11 @@ type JobActivePods struct {
 	metric.Int64UpDownCounter
 }
 
+var newJobActivePodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of pending and actively running pods for a job."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewJobActivePods returns a new JobActivePods instrument.
 func NewJobActivePods(
 	m metric.Meter,
@@ -2786,12 +2999,15 @@ func NewJobActivePods(
 		return JobActivePods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newJobActivePodsOpts
+	} else {
+		opt = append(opt, newJobActivePodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.job.active_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of pending and actively running pods for a job."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return JobActivePods{noop.Int64UpDownCounter{}}, err
@@ -2871,6 +3087,11 @@ type JobDesiredSuccessfulPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newJobDesiredSuccessfulPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The desired number of successfully finished pods the job should be run with."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewJobDesiredSuccessfulPods returns a new JobDesiredSuccessfulPods instrument.
 func NewJobDesiredSuccessfulPods(
 	m metric.Meter,
@@ -2881,12 +3102,15 @@ func NewJobDesiredSuccessfulPods(
 		return JobDesiredSuccessfulPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newJobDesiredSuccessfulPodsOpts
+	} else {
+		opt = append(opt, newJobDesiredSuccessfulPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.job.desired_successful_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The desired number of successfully finished pods the job should be run with."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return JobDesiredSuccessfulPods{noop.Int64UpDownCounter{}}, err
@@ -2965,6 +3189,11 @@ type JobFailedPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newJobFailedPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of pods which reached phase Failed for a job."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewJobFailedPods returns a new JobFailedPods instrument.
 func NewJobFailedPods(
 	m metric.Meter,
@@ -2975,12 +3204,15 @@ func NewJobFailedPods(
 		return JobFailedPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newJobFailedPodsOpts
+	} else {
+		opt = append(opt, newJobFailedPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.job.failed_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of pods which reached phase Failed for a job."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return JobFailedPods{noop.Int64UpDownCounter{}}, err
@@ -3059,6 +3291,11 @@ type JobMaxParallelPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newJobMaxParallelPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The max desired number of pods the job should run at any given time."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewJobMaxParallelPods returns a new JobMaxParallelPods instrument.
 func NewJobMaxParallelPods(
 	m metric.Meter,
@@ -3069,12 +3306,15 @@ func NewJobMaxParallelPods(
 		return JobMaxParallelPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newJobMaxParallelPodsOpts
+	} else {
+		opt = append(opt, newJobMaxParallelPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.job.max_parallel_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The max desired number of pods the job should run at any given time."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return JobMaxParallelPods{noop.Int64UpDownCounter{}}, err
@@ -3153,6 +3393,11 @@ type JobSuccessfulPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newJobSuccessfulPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of pods which reached phase Succeeded for a job."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewJobSuccessfulPods returns a new JobSuccessfulPods instrument.
 func NewJobSuccessfulPods(
 	m metric.Meter,
@@ -3163,12 +3408,15 @@ func NewJobSuccessfulPods(
 		return JobSuccessfulPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newJobSuccessfulPodsOpts
+	} else {
+		opt = append(opt, newJobSuccessfulPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.job.successful_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of pods which reached phase Succeeded for a job."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return JobSuccessfulPods{noop.Int64UpDownCounter{}}, err
@@ -3247,6 +3495,11 @@ type NamespacePhase struct {
 	metric.Int64UpDownCounter
 }
 
+var newNamespacePhaseOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Describes number of K8s namespaces that are currently in a given phase."),
+	metric.WithUnit("{namespace}"),
+}
+
 // NewNamespacePhase returns a new NamespacePhase instrument.
 func NewNamespacePhase(
 	m metric.Meter,
@@ -3257,12 +3510,15 @@ func NewNamespacePhase(
 		return NamespacePhase{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNamespacePhaseOpts
+	} else {
+		opt = append(opt, newNamespacePhaseOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.namespace.phase",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Describes number of K8s namespaces that are currently in a given phase."),
-			metric.WithUnit("{namespace}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NamespacePhase{noop.Int64UpDownCounter{}}, err
@@ -3347,6 +3603,11 @@ type NodeAllocatableCPU struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeAllocatableCPUOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Amount of cpu allocatable on the node."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewNodeAllocatableCPU returns a new NodeAllocatableCPU instrument.
 func NewNodeAllocatableCPU(
 	m metric.Meter,
@@ -3357,12 +3618,15 @@ func NewNodeAllocatableCPU(
 		return NodeAllocatableCPU{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeAllocatableCPUOpts
+	} else {
+		opt = append(opt, newNodeAllocatableCPUOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.allocatable.cpu",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Amount of cpu allocatable on the node."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeAllocatableCPU{noop.Int64UpDownCounter{}}, err
@@ -3432,6 +3696,11 @@ type NodeAllocatableEphemeralStorage struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeAllocatableEphemeralStorageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Amount of ephemeral-storage allocatable on the node."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeAllocatableEphemeralStorage returns a new
 // NodeAllocatableEphemeralStorage instrument.
 func NewNodeAllocatableEphemeralStorage(
@@ -3443,12 +3712,15 @@ func NewNodeAllocatableEphemeralStorage(
 		return NodeAllocatableEphemeralStorage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeAllocatableEphemeralStorageOpts
+	} else {
+		opt = append(opt, newNodeAllocatableEphemeralStorageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.allocatable.ephemeral_storage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Amount of ephemeral-storage allocatable on the node."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeAllocatableEphemeralStorage{noop.Int64UpDownCounter{}}, err
@@ -3517,6 +3789,11 @@ type NodeAllocatableMemory struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeAllocatableMemoryOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Amount of memory allocatable on the node."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeAllocatableMemory returns a new NodeAllocatableMemory instrument.
 func NewNodeAllocatableMemory(
 	m metric.Meter,
@@ -3527,12 +3804,15 @@ func NewNodeAllocatableMemory(
 		return NodeAllocatableMemory{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeAllocatableMemoryOpts
+	} else {
+		opt = append(opt, newNodeAllocatableMemoryOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.allocatable.memory",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Amount of memory allocatable on the node."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeAllocatableMemory{noop.Int64UpDownCounter{}}, err
@@ -3601,6 +3881,11 @@ type NodeAllocatablePods struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeAllocatablePodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Amount of pods allocatable on the node."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewNodeAllocatablePods returns a new NodeAllocatablePods instrument.
 func NewNodeAllocatablePods(
 	m metric.Meter,
@@ -3611,12 +3896,15 @@ func NewNodeAllocatablePods(
 		return NodeAllocatablePods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeAllocatablePodsOpts
+	} else {
+		opt = append(opt, newNodeAllocatablePodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.allocatable.pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Amount of pods allocatable on the node."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeAllocatablePods{noop.Int64UpDownCounter{}}, err
@@ -3685,6 +3973,11 @@ type NodeConditionStatus struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeConditionStatusOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Describes the condition of a particular Node."),
+	metric.WithUnit("{node}"),
+}
+
 // NewNodeConditionStatus returns a new NodeConditionStatus instrument.
 func NewNodeConditionStatus(
 	m metric.Meter,
@@ -3695,12 +3988,15 @@ func NewNodeConditionStatus(
 		return NodeConditionStatus{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeConditionStatusOpts
+	} else {
+		opt = append(opt, newNodeConditionStatusOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.condition.status",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Describes the condition of a particular Node."),
-			metric.WithUnit("{node}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeConditionStatus{noop.Int64UpDownCounter{}}, err
@@ -3798,6 +4094,11 @@ type NodeCPUTime struct {
 	metric.Float64Counter
 }
 
+var newNodeCPUTimeOpts = []metric.Float64CounterOption{
+	metric.WithDescription("Total CPU time consumed."),
+	metric.WithUnit("s"),
+}
+
 // NewNodeCPUTime returns a new NodeCPUTime instrument.
 func NewNodeCPUTime(
 	m metric.Meter,
@@ -3808,12 +4109,15 @@ func NewNodeCPUTime(
 		return NodeCPUTime{noop.Float64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeCPUTimeOpts
+	} else {
+		opt = append(opt, newNodeCPUTimeOpts...)
+	}
+
 	i, err := m.Float64Counter(
 		"k8s.node.cpu.time",
-		append([]metric.Float64CounterOption{
-			metric.WithDescription("Total CPU time consumed."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeCPUTime{noop.Float64Counter{}}, err
@@ -3886,6 +4190,11 @@ type NodeCPUUsage struct {
 	metric.Int64Gauge
 }
 
+var newNodeCPUUsageOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Node's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewNodeCPUUsage returns a new NodeCPUUsage instrument.
 func NewNodeCPUUsage(
 	m metric.Meter,
@@ -3896,12 +4205,15 @@ func NewNodeCPUUsage(
 		return NodeCPUUsage{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeCPUUsageOpts
+	} else {
+		opt = append(opt, newNodeCPUUsageOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.node.cpu.usage",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Node's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeCPUUsage{noop.Int64Gauge{}}, err
@@ -3975,6 +4287,11 @@ type NodeFilesystemAvailable struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeFilesystemAvailableOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Node filesystem available bytes."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeFilesystemAvailable returns a new NodeFilesystemAvailable instrument.
 func NewNodeFilesystemAvailable(
 	m metric.Meter,
@@ -3985,12 +4302,15 @@ func NewNodeFilesystemAvailable(
 		return NodeFilesystemAvailable{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeFilesystemAvailableOpts
+	} else {
+		opt = append(opt, newNodeFilesystemAvailableOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.filesystem.available",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Node filesystem available bytes."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeFilesystemAvailable{noop.Int64UpDownCounter{}}, err
@@ -4075,6 +4395,11 @@ type NodeFilesystemCapacity struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeFilesystemCapacityOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Node filesystem capacity."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeFilesystemCapacity returns a new NodeFilesystemCapacity instrument.
 func NewNodeFilesystemCapacity(
 	m metric.Meter,
@@ -4085,12 +4410,15 @@ func NewNodeFilesystemCapacity(
 		return NodeFilesystemCapacity{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeFilesystemCapacityOpts
+	} else {
+		opt = append(opt, newNodeFilesystemCapacityOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.filesystem.capacity",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Node filesystem capacity."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeFilesystemCapacity{noop.Int64UpDownCounter{}}, err
@@ -4175,6 +4503,11 @@ type NodeFilesystemUsage struct {
 	metric.Int64UpDownCounter
 }
 
+var newNodeFilesystemUsageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Node filesystem usage."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeFilesystemUsage returns a new NodeFilesystemUsage instrument.
 func NewNodeFilesystemUsage(
 	m metric.Meter,
@@ -4185,12 +4518,15 @@ func NewNodeFilesystemUsage(
 		return NodeFilesystemUsage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeFilesystemUsageOpts
+	} else {
+		opt = append(opt, newNodeFilesystemUsageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.node.filesystem.usage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Node filesystem usage."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeFilesystemUsage{noop.Int64UpDownCounter{}}, err
@@ -4279,6 +4615,11 @@ type NodeMemoryUsage struct {
 	metric.Int64Gauge
 }
 
+var newNodeMemoryUsageOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Memory usage of the Node."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeMemoryUsage returns a new NodeMemoryUsage instrument.
 func NewNodeMemoryUsage(
 	m metric.Meter,
@@ -4289,12 +4630,15 @@ func NewNodeMemoryUsage(
 		return NodeMemoryUsage{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeMemoryUsageOpts
+	} else {
+		opt = append(opt, newNodeMemoryUsageOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.node.memory.usage",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Memory usage of the Node."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeMemoryUsage{noop.Int64Gauge{}}, err
@@ -4366,6 +4710,11 @@ type NodeNetworkErrors struct {
 	metric.Int64Counter
 }
 
+var newNodeNetworkErrorsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Node network errors."),
+	metric.WithUnit("{error}"),
+}
+
 // NewNodeNetworkErrors returns a new NodeNetworkErrors instrument.
 func NewNodeNetworkErrors(
 	m metric.Meter,
@@ -4376,12 +4725,15 @@ func NewNodeNetworkErrors(
 		return NodeNetworkErrors{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeNetworkErrorsOpts
+	} else {
+		opt = append(opt, newNodeNetworkErrorsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"k8s.node.network.errors",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Node network errors."),
-			metric.WithUnit("{error}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeNetworkErrors{noop.Int64Counter{}}, err
@@ -4476,6 +4828,11 @@ type NodeNetworkIO struct {
 	metric.Int64Counter
 }
 
+var newNodeNetworkIOOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Network bytes for the Node."),
+	metric.WithUnit("By"),
+}
+
 // NewNodeNetworkIO returns a new NodeNetworkIO instrument.
 func NewNodeNetworkIO(
 	m metric.Meter,
@@ -4486,12 +4843,15 @@ func NewNodeNetworkIO(
 		return NodeNetworkIO{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeNetworkIOOpts
+	} else {
+		opt = append(opt, newNodeNetworkIOOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"k8s.node.network.io",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Network bytes for the Node."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeNetworkIO{noop.Int64Counter{}}, err
@@ -4586,6 +4946,11 @@ type NodeUptime struct {
 	metric.Float64Gauge
 }
 
+var newNodeUptimeOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("The time the Node has been running."),
+	metric.WithUnit("s"),
+}
+
 // NewNodeUptime returns a new NodeUptime instrument.
 func NewNodeUptime(
 	m metric.Meter,
@@ -4596,12 +4961,15 @@ func NewNodeUptime(
 		return NodeUptime{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNodeUptimeOpts
+	} else {
+		opt = append(opt, newNodeUptimeOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"k8s.node.uptime",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("The time the Node has been running."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NodeUptime{noop.Float64Gauge{}}, err
@@ -4677,6 +5045,11 @@ type PodCPUTime struct {
 	metric.Float64Counter
 }
 
+var newPodCPUTimeOpts = []metric.Float64CounterOption{
+	metric.WithDescription("Total CPU time consumed."),
+	metric.WithUnit("s"),
+}
+
 // NewPodCPUTime returns a new PodCPUTime instrument.
 func NewPodCPUTime(
 	m metric.Meter,
@@ -4687,12 +5060,15 @@ func NewPodCPUTime(
 		return PodCPUTime{noop.Float64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodCPUTimeOpts
+	} else {
+		opt = append(opt, newPodCPUTimeOpts...)
+	}
+
 	i, err := m.Float64Counter(
 		"k8s.pod.cpu.time",
-		append([]metric.Float64CounterOption{
-			metric.WithDescription("Total CPU time consumed."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodCPUTime{noop.Float64Counter{}}, err
@@ -4765,6 +5141,11 @@ type PodCPUUsage struct {
 	metric.Int64Gauge
 }
 
+var newPodCPUUsageOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Pod's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewPodCPUUsage returns a new PodCPUUsage instrument.
 func NewPodCPUUsage(
 	m metric.Meter,
@@ -4775,12 +5156,15 @@ func NewPodCPUUsage(
 		return PodCPUUsage{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodCPUUsageOpts
+	} else {
+		opt = append(opt, newPodCPUUsageOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.pod.cpu.usage",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Pod's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodCPUUsage{noop.Int64Gauge{}}, err
@@ -4854,6 +5238,11 @@ type PodFilesystemAvailable struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodFilesystemAvailableOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Pod filesystem available bytes."),
+	metric.WithUnit("By"),
+}
+
 // NewPodFilesystemAvailable returns a new PodFilesystemAvailable instrument.
 func NewPodFilesystemAvailable(
 	m metric.Meter,
@@ -4864,12 +5253,15 @@ func NewPodFilesystemAvailable(
 		return PodFilesystemAvailable{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodFilesystemAvailableOpts
+	} else {
+		opt = append(opt, newPodFilesystemAvailableOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.filesystem.available",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Pod filesystem available bytes."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodFilesystemAvailable{noop.Int64UpDownCounter{}}, err
@@ -4954,6 +5346,11 @@ type PodFilesystemCapacity struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodFilesystemCapacityOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Pod filesystem capacity."),
+	metric.WithUnit("By"),
+}
+
 // NewPodFilesystemCapacity returns a new PodFilesystemCapacity instrument.
 func NewPodFilesystemCapacity(
 	m metric.Meter,
@@ -4964,12 +5361,15 @@ func NewPodFilesystemCapacity(
 		return PodFilesystemCapacity{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodFilesystemCapacityOpts
+	} else {
+		opt = append(opt, newPodFilesystemCapacityOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.filesystem.capacity",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Pod filesystem capacity."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodFilesystemCapacity{noop.Int64UpDownCounter{}}, err
@@ -5054,6 +5454,11 @@ type PodFilesystemUsage struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodFilesystemUsageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Pod filesystem usage."),
+	metric.WithUnit("By"),
+}
+
 // NewPodFilesystemUsage returns a new PodFilesystemUsage instrument.
 func NewPodFilesystemUsage(
 	m metric.Meter,
@@ -5064,12 +5469,15 @@ func NewPodFilesystemUsage(
 		return PodFilesystemUsage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodFilesystemUsageOpts
+	} else {
+		opt = append(opt, newPodFilesystemUsageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.filesystem.usage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Pod filesystem usage."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodFilesystemUsage{noop.Int64UpDownCounter{}}, err
@@ -5158,6 +5566,11 @@ type PodMemoryUsage struct {
 	metric.Int64Gauge
 }
 
+var newPodMemoryUsageOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Memory usage of the Pod."),
+	metric.WithUnit("By"),
+}
+
 // NewPodMemoryUsage returns a new PodMemoryUsage instrument.
 func NewPodMemoryUsage(
 	m metric.Meter,
@@ -5168,12 +5581,15 @@ func NewPodMemoryUsage(
 		return PodMemoryUsage{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodMemoryUsageOpts
+	} else {
+		opt = append(opt, newPodMemoryUsageOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"k8s.pod.memory.usage",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Memory usage of the Pod."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodMemoryUsage{noop.Int64Gauge{}}, err
@@ -5245,6 +5661,11 @@ type PodNetworkErrors struct {
 	metric.Int64Counter
 }
 
+var newPodNetworkErrorsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Pod network errors."),
+	metric.WithUnit("{error}"),
+}
+
 // NewPodNetworkErrors returns a new PodNetworkErrors instrument.
 func NewPodNetworkErrors(
 	m metric.Meter,
@@ -5255,12 +5676,15 @@ func NewPodNetworkErrors(
 		return PodNetworkErrors{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodNetworkErrorsOpts
+	} else {
+		opt = append(opt, newPodNetworkErrorsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"k8s.pod.network.errors",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Pod network errors."),
-			metric.WithUnit("{error}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodNetworkErrors{noop.Int64Counter{}}, err
@@ -5355,6 +5779,11 @@ type PodNetworkIO struct {
 	metric.Int64Counter
 }
 
+var newPodNetworkIOOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Network bytes for the Pod."),
+	metric.WithUnit("By"),
+}
+
 // NewPodNetworkIO returns a new PodNetworkIO instrument.
 func NewPodNetworkIO(
 	m metric.Meter,
@@ -5365,12 +5794,15 @@ func NewPodNetworkIO(
 		return PodNetworkIO{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodNetworkIOOpts
+	} else {
+		opt = append(opt, newPodNetworkIOOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"k8s.pod.network.io",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Network bytes for the Pod."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodNetworkIO{noop.Int64Counter{}}, err
@@ -5465,6 +5897,11 @@ type PodUptime struct {
 	metric.Float64Gauge
 }
 
+var newPodUptimeOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("The time the Pod has been running."),
+	metric.WithUnit("s"),
+}
+
 // NewPodUptime returns a new PodUptime instrument.
 func NewPodUptime(
 	m metric.Meter,
@@ -5475,12 +5912,15 @@ func NewPodUptime(
 		return PodUptime{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodUptimeOpts
+	} else {
+		opt = append(opt, newPodUptimeOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"k8s.pod.uptime",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("The time the Pod has been running."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodUptime{noop.Float64Gauge{}}, err
@@ -5556,6 +5996,11 @@ type PodVolumeAvailable struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodVolumeAvailableOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Pod volume storage space available."),
+	metric.WithUnit("By"),
+}
+
 // NewPodVolumeAvailable returns a new PodVolumeAvailable instrument.
 func NewPodVolumeAvailable(
 	m metric.Meter,
@@ -5566,12 +6011,15 @@ func NewPodVolumeAvailable(
 		return PodVolumeAvailable{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodVolumeAvailableOpts
+	} else {
+		opt = append(opt, newPodVolumeAvailableOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.volume.available",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Pod volume storage space available."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodVolumeAvailable{noop.Int64UpDownCounter{}}, err
@@ -5680,6 +6128,11 @@ type PodVolumeCapacity struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodVolumeCapacityOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Pod volume total capacity."),
+	metric.WithUnit("By"),
+}
+
 // NewPodVolumeCapacity returns a new PodVolumeCapacity instrument.
 func NewPodVolumeCapacity(
 	m metric.Meter,
@@ -5690,12 +6143,15 @@ func NewPodVolumeCapacity(
 		return PodVolumeCapacity{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodVolumeCapacityOpts
+	} else {
+		opt = append(opt, newPodVolumeCapacityOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.volume.capacity",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Pod volume total capacity."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodVolumeCapacity{noop.Int64UpDownCounter{}}, err
@@ -5804,6 +6260,11 @@ type PodVolumeInodeCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodVolumeInodeCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The total inodes in the filesystem of the Pod's volume."),
+	metric.WithUnit("{inode}"),
+}
+
 // NewPodVolumeInodeCount returns a new PodVolumeInodeCount instrument.
 func NewPodVolumeInodeCount(
 	m metric.Meter,
@@ -5814,12 +6275,15 @@ func NewPodVolumeInodeCount(
 		return PodVolumeInodeCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodVolumeInodeCountOpts
+	} else {
+		opt = append(opt, newPodVolumeInodeCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.volume.inode.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The total inodes in the filesystem of the Pod's volume."),
-			metric.WithUnit("{inode}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodVolumeInodeCount{noop.Int64UpDownCounter{}}, err
@@ -5928,6 +6392,11 @@ type PodVolumeInodeFree struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodVolumeInodeFreeOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The free inodes in the filesystem of the Pod's volume."),
+	metric.WithUnit("{inode}"),
+}
+
 // NewPodVolumeInodeFree returns a new PodVolumeInodeFree instrument.
 func NewPodVolumeInodeFree(
 	m metric.Meter,
@@ -5938,12 +6407,15 @@ func NewPodVolumeInodeFree(
 		return PodVolumeInodeFree{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodVolumeInodeFreeOpts
+	} else {
+		opt = append(opt, newPodVolumeInodeFreeOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.volume.inode.free",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The free inodes in the filesystem of the Pod's volume."),
-			metric.WithUnit("{inode}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodVolumeInodeFree{noop.Int64UpDownCounter{}}, err
@@ -6052,6 +6524,11 @@ type PodVolumeInodeUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodVolumeInodeUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The inodes used by the filesystem of the Pod's volume."),
+	metric.WithUnit("{inode}"),
+}
+
 // NewPodVolumeInodeUsed returns a new PodVolumeInodeUsed instrument.
 func NewPodVolumeInodeUsed(
 	m metric.Meter,
@@ -6062,12 +6539,15 @@ func NewPodVolumeInodeUsed(
 		return PodVolumeInodeUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodVolumeInodeUsedOpts
+	} else {
+		opt = append(opt, newPodVolumeInodeUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.volume.inode.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The inodes used by the filesystem of the Pod's volume."),
-			metric.WithUnit("{inode}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodVolumeInodeUsed{noop.Int64UpDownCounter{}}, err
@@ -6182,6 +6662,11 @@ type PodVolumeUsage struct {
 	metric.Int64UpDownCounter
 }
 
+var newPodVolumeUsageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Pod volume usage."),
+	metric.WithUnit("By"),
+}
+
 // NewPodVolumeUsage returns a new PodVolumeUsage instrument.
 func NewPodVolumeUsage(
 	m metric.Meter,
@@ -6192,12 +6677,15 @@ func NewPodVolumeUsage(
 		return PodVolumeUsage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPodVolumeUsageOpts
+	} else {
+		opt = append(opt, newPodVolumeUsageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.pod.volume.usage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Pod volume usage."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PodVolumeUsage{noop.Int64UpDownCounter{}}, err
@@ -6311,6 +6799,11 @@ type ReplicaSetAvailablePods struct {
 	metric.Int64UpDownCounter
 }
 
+var newReplicaSetAvailablePodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this replicaset."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewReplicaSetAvailablePods returns a new ReplicaSetAvailablePods instrument.
 func NewReplicaSetAvailablePods(
 	m metric.Meter,
@@ -6321,12 +6814,15 @@ func NewReplicaSetAvailablePods(
 		return ReplicaSetAvailablePods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newReplicaSetAvailablePodsOpts
+	} else {
+		opt = append(opt, newReplicaSetAvailablePodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.replicaset.available_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this replicaset."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ReplicaSetAvailablePods{noop.Int64UpDownCounter{}}, err
@@ -6405,6 +6901,11 @@ type ReplicaSetDesiredPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newReplicaSetDesiredPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this replicaset."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewReplicaSetDesiredPods returns a new ReplicaSetDesiredPods instrument.
 func NewReplicaSetDesiredPods(
 	m metric.Meter,
@@ -6415,12 +6916,15 @@ func NewReplicaSetDesiredPods(
 		return ReplicaSetDesiredPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newReplicaSetDesiredPodsOpts
+	} else {
+		opt = append(opt, newReplicaSetDesiredPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.replicaset.desired_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of desired replica pods in this replicaset."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ReplicaSetDesiredPods{noop.Int64UpDownCounter{}}, err
@@ -6500,6 +7004,11 @@ type ReplicationControllerAvailablePods struct {
 	metric.Int64UpDownCounter
 }
 
+var newReplicationControllerAvailablePodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this replication controller."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewReplicationControllerAvailablePods returns a new
 // ReplicationControllerAvailablePods instrument.
 func NewReplicationControllerAvailablePods(
@@ -6511,12 +7020,15 @@ func NewReplicationControllerAvailablePods(
 		return ReplicationControllerAvailablePods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newReplicationControllerAvailablePodsOpts
+	} else {
+		opt = append(opt, newReplicationControllerAvailablePodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.replicationcontroller.available_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this replication controller."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ReplicationControllerAvailablePods{noop.Int64UpDownCounter{}}, err
@@ -6596,6 +7108,11 @@ type ReplicationControllerDesiredPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newReplicationControllerDesiredPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this replication controller."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewReplicationControllerDesiredPods returns a new
 // ReplicationControllerDesiredPods instrument.
 func NewReplicationControllerDesiredPods(
@@ -6607,12 +7124,15 @@ func NewReplicationControllerDesiredPods(
 		return ReplicationControllerDesiredPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newReplicationControllerDesiredPodsOpts
+	} else {
+		opt = append(opt, newReplicationControllerDesiredPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.replicationcontroller.desired_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of desired replica pods in this replication controller."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ReplicationControllerDesiredPods{noop.Int64UpDownCounter{}}, err
@@ -6693,6 +7213,11 @@ type ResourceQuotaCPULimitHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaCPULimitHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewResourceQuotaCPULimitHard returns a new ResourceQuotaCPULimitHard
 // instrument.
 func NewResourceQuotaCPULimitHard(
@@ -6704,12 +7229,15 @@ func NewResourceQuotaCPULimitHard(
 		return ResourceQuotaCPULimitHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPULimitHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPULimitHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.limit.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaCPULimitHard{noop.Int64UpDownCounter{}}, err
@@ -6790,6 +7318,11 @@ type ResourceQuotaCPULimitUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaCPULimitUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewResourceQuotaCPULimitUsed returns a new ResourceQuotaCPULimitUsed
 // instrument.
 func NewResourceQuotaCPULimitUsed(
@@ -6801,12 +7334,15 @@ func NewResourceQuotaCPULimitUsed(
 		return ResourceQuotaCPULimitUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPULimitUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPULimitUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.limit.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
@@ -6887,6 +7423,11 @@ type ResourceQuotaCPURequestHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaCPURequestHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewResourceQuotaCPURequestHard returns a new ResourceQuotaCPURequestHard
 // instrument.
 func NewResourceQuotaCPURequestHard(
@@ -6898,12 +7439,15 @@ func NewResourceQuotaCPURequestHard(
 		return ResourceQuotaCPURequestHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPURequestHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPURequestHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.request.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaCPURequestHard{noop.Int64UpDownCounter{}}, err
@@ -6984,6 +7528,11 @@ type ResourceQuotaCPURequestUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaCPURequestUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
 // NewResourceQuotaCPURequestUsed returns a new ResourceQuotaCPURequestUsed
 // instrument.
 func NewResourceQuotaCPURequestUsed(
@@ -6995,12 +7544,15 @@ func NewResourceQuotaCPURequestUsed(
 		return ResourceQuotaCPURequestUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPURequestUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPURequestUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.cpu.request.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("{cpu}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
@@ -7082,6 +7634,11 @@ type ResourceQuotaEphemeralStorageLimitHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaEphemeralStorageLimitHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaEphemeralStorageLimitHard returns a new
 // ResourceQuotaEphemeralStorageLimitHard instrument.
 func NewResourceQuotaEphemeralStorageLimitHard(
@@ -7093,12 +7650,15 @@ func NewResourceQuotaEphemeralStorageLimitHard(
 		return ResourceQuotaEphemeralStorageLimitHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageLimitHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageLimitHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.limit.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaEphemeralStorageLimitHard{noop.Int64UpDownCounter{}}, err
@@ -7180,6 +7740,11 @@ type ResourceQuotaEphemeralStorageLimitUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaEphemeralStorageLimitUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaEphemeralStorageLimitUsed returns a new
 // ResourceQuotaEphemeralStorageLimitUsed instrument.
 func NewResourceQuotaEphemeralStorageLimitUsed(
@@ -7191,12 +7756,15 @@ func NewResourceQuotaEphemeralStorageLimitUsed(
 		return ResourceQuotaEphemeralStorageLimitUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageLimitUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageLimitUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.limit.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaEphemeralStorageLimitUsed{noop.Int64UpDownCounter{}}, err
@@ -7278,6 +7846,11 @@ type ResourceQuotaEphemeralStorageRequestHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaEphemeralStorageRequestHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaEphemeralStorageRequestHard returns a new
 // ResourceQuotaEphemeralStorageRequestHard instrument.
 func NewResourceQuotaEphemeralStorageRequestHard(
@@ -7289,12 +7862,15 @@ func NewResourceQuotaEphemeralStorageRequestHard(
 		return ResourceQuotaEphemeralStorageRequestHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageRequestHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageRequestHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.request.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaEphemeralStorageRequestHard{noop.Int64UpDownCounter{}}, err
@@ -7376,6 +7952,11 @@ type ResourceQuotaEphemeralStorageRequestUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaEphemeralStorageRequestUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaEphemeralStorageRequestUsed returns a new
 // ResourceQuotaEphemeralStorageRequestUsed instrument.
 func NewResourceQuotaEphemeralStorageRequestUsed(
@@ -7387,12 +7968,15 @@ func NewResourceQuotaEphemeralStorageRequestUsed(
 		return ResourceQuotaEphemeralStorageRequestUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageRequestUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageRequestUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.ephemeral_storage.request.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaEphemeralStorageRequestUsed{noop.Int64UpDownCounter{}}, err
@@ -7474,6 +8058,11 @@ type ResourceQuotaHugepageCountRequestHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaHugepageCountRequestHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{hugepage}"),
+}
+
 // NewResourceQuotaHugepageCountRequestHard returns a new
 // ResourceQuotaHugepageCountRequestHard instrument.
 func NewResourceQuotaHugepageCountRequestHard(
@@ -7485,12 +8074,15 @@ func NewResourceQuotaHugepageCountRequestHard(
 		return ResourceQuotaHugepageCountRequestHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaHugepageCountRequestHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaHugepageCountRequestHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.hugepage_count.request.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("{hugepage}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaHugepageCountRequestHard{noop.Int64UpDownCounter{}}, err
@@ -7588,6 +8180,11 @@ type ResourceQuotaHugepageCountRequestUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaHugepageCountRequestUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{hugepage}"),
+}
+
 // NewResourceQuotaHugepageCountRequestUsed returns a new
 // ResourceQuotaHugepageCountRequestUsed instrument.
 func NewResourceQuotaHugepageCountRequestUsed(
@@ -7599,12 +8196,15 @@ func NewResourceQuotaHugepageCountRequestUsed(
 		return ResourceQuotaHugepageCountRequestUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaHugepageCountRequestUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaHugepageCountRequestUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.hugepage_count.request.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("{hugepage}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaHugepageCountRequestUsed{noop.Int64UpDownCounter{}}, err
@@ -7701,6 +8301,11 @@ type ResourceQuotaMemoryLimitHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaMemoryLimitHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaMemoryLimitHard returns a new ResourceQuotaMemoryLimitHard
 // instrument.
 func NewResourceQuotaMemoryLimitHard(
@@ -7712,12 +8317,15 @@ func NewResourceQuotaMemoryLimitHard(
 		return ResourceQuotaMemoryLimitHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryLimitHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryLimitHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.limit.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaMemoryLimitHard{noop.Int64UpDownCounter{}}, err
@@ -7798,6 +8406,11 @@ type ResourceQuotaMemoryLimitUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaMemoryLimitUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaMemoryLimitUsed returns a new ResourceQuotaMemoryLimitUsed
 // instrument.
 func NewResourceQuotaMemoryLimitUsed(
@@ -7809,12 +8422,15 @@ func NewResourceQuotaMemoryLimitUsed(
 		return ResourceQuotaMemoryLimitUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryLimitUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryLimitUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.limit.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaMemoryLimitUsed{noop.Int64UpDownCounter{}}, err
@@ -7895,6 +8511,11 @@ type ResourceQuotaMemoryRequestHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaMemoryRequestHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaMemoryRequestHard returns a new ResourceQuotaMemoryRequestHard
 // instrument.
 func NewResourceQuotaMemoryRequestHard(
@@ -7906,12 +8527,15 @@ func NewResourceQuotaMemoryRequestHard(
 		return ResourceQuotaMemoryRequestHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryRequestHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryRequestHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.request.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaMemoryRequestHard{noop.Int64UpDownCounter{}}, err
@@ -7992,6 +8616,11 @@ type ResourceQuotaMemoryRequestUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaMemoryRequestUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaMemoryRequestUsed returns a new ResourceQuotaMemoryRequestUsed
 // instrument.
 func NewResourceQuotaMemoryRequestUsed(
@@ -8003,12 +8632,15 @@ func NewResourceQuotaMemoryRequestUsed(
 		return ResourceQuotaMemoryRequestUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryRequestUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryRequestUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.memory.request.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaMemoryRequestUsed{noop.Int64UpDownCounter{}}, err
@@ -8089,6 +8721,11 @@ type ResourceQuotaObjectCountHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaObjectCountHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{object}"),
+}
+
 // NewResourceQuotaObjectCountHard returns a new ResourceQuotaObjectCountHard
 // instrument.
 func NewResourceQuotaObjectCountHard(
@@ -8100,12 +8737,15 @@ func NewResourceQuotaObjectCountHard(
 		return ResourceQuotaObjectCountHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaObjectCountHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaObjectCountHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.object_count.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("{object}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaObjectCountHard{noop.Int64UpDownCounter{}}, err
@@ -8203,6 +8843,11 @@ type ResourceQuotaObjectCountUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaObjectCountUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{object}"),
+}
+
 // NewResourceQuotaObjectCountUsed returns a new ResourceQuotaObjectCountUsed
 // instrument.
 func NewResourceQuotaObjectCountUsed(
@@ -8214,12 +8859,15 @@ func NewResourceQuotaObjectCountUsed(
 		return ResourceQuotaObjectCountUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaObjectCountUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaObjectCountUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.object_count.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("{object}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaObjectCountUsed{noop.Int64UpDownCounter{}}, err
@@ -8319,6 +8967,11 @@ type ResourceQuotaPersistentvolumeclaimCountHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaPersistentvolumeclaimCountHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
 // NewResourceQuotaPersistentvolumeclaimCountHard returns a new
 // ResourceQuotaPersistentvolumeclaimCountHard instrument.
 func NewResourceQuotaPersistentvolumeclaimCountHard(
@@ -8330,12 +8983,15 @@ func NewResourceQuotaPersistentvolumeclaimCountHard(
 		return ResourceQuotaPersistentvolumeclaimCountHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaPersistentvolumeclaimCountHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.persistentvolumeclaim_count.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("{persistentvolumeclaim}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaPersistentvolumeclaimCountHard{noop.Int64UpDownCounter{}}, err
@@ -8447,6 +9103,11 @@ type ResourceQuotaPersistentvolumeclaimCountUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaPersistentvolumeclaimCountUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
 // NewResourceQuotaPersistentvolumeclaimCountUsed returns a new
 // ResourceQuotaPersistentvolumeclaimCountUsed instrument.
 func NewResourceQuotaPersistentvolumeclaimCountUsed(
@@ -8458,12 +9119,15 @@ func NewResourceQuotaPersistentvolumeclaimCountUsed(
 		return ResourceQuotaPersistentvolumeclaimCountUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaPersistentvolumeclaimCountUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.persistentvolumeclaim_count.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("{persistentvolumeclaim}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaPersistentvolumeclaimCountUsed{noop.Int64UpDownCounter{}}, err
@@ -8573,6 +9237,11 @@ type ResourceQuotaStorageRequestHard struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaStorageRequestHardOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaStorageRequestHard returns a new
 // ResourceQuotaStorageRequestHard instrument.
 func NewResourceQuotaStorageRequestHard(
@@ -8584,12 +9253,15 @@ func NewResourceQuotaStorageRequestHard(
 		return ResourceQuotaStorageRequestHard{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaStorageRequestHardOpts
+	} else {
+		opt = append(opt, newResourceQuotaStorageRequestHardOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.storage.request.hard",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaStorageRequestHard{noop.Int64UpDownCounter{}}, err
@@ -8699,6 +9371,11 @@ type ResourceQuotaStorageRequestUsed struct {
 	metric.Int64UpDownCounter
 }
 
+var newResourceQuotaStorageRequestUsedOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
 // NewResourceQuotaStorageRequestUsed returns a new
 // ResourceQuotaStorageRequestUsed instrument.
 func NewResourceQuotaStorageRequestUsed(
@@ -8710,12 +9387,15 @@ func NewResourceQuotaStorageRequestUsed(
 		return ResourceQuotaStorageRequestUsed{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newResourceQuotaStorageRequestUsedOpts
+	} else {
+		opt = append(opt, newResourceQuotaStorageRequestUsedOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.resourcequota.storage.request.used",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ResourceQuotaStorageRequestUsed{noop.Int64UpDownCounter{}}, err
@@ -8824,6 +9504,11 @@ type StatefulSetCurrentPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newStatefulSetCurrentPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of replica pods created by the statefulset controller from the statefulset version indicated by currentRevision."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewStatefulSetCurrentPods returns a new StatefulSetCurrentPods instrument.
 func NewStatefulSetCurrentPods(
 	m metric.Meter,
@@ -8834,12 +9519,15 @@ func NewStatefulSetCurrentPods(
 		return StatefulSetCurrentPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newStatefulSetCurrentPodsOpts
+	} else {
+		opt = append(opt, newStatefulSetCurrentPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.statefulset.current_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of replica pods created by the statefulset controller from the statefulset version indicated by currentRevision."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return StatefulSetCurrentPods{noop.Int64UpDownCounter{}}, err
@@ -8918,6 +9606,11 @@ type StatefulSetDesiredPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newStatefulSetDesiredPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this statefulset."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewStatefulSetDesiredPods returns a new StatefulSetDesiredPods instrument.
 func NewStatefulSetDesiredPods(
 	m metric.Meter,
@@ -8928,12 +9621,15 @@ func NewStatefulSetDesiredPods(
 		return StatefulSetDesiredPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newStatefulSetDesiredPodsOpts
+	} else {
+		opt = append(opt, newStatefulSetDesiredPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.statefulset.desired_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of desired replica pods in this statefulset."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return StatefulSetDesiredPods{noop.Int64UpDownCounter{}}, err
@@ -9012,6 +9708,11 @@ type StatefulSetReadyPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newStatefulSetReadyPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of replica pods created for this statefulset with a Ready Condition."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewStatefulSetReadyPods returns a new StatefulSetReadyPods instrument.
 func NewStatefulSetReadyPods(
 	m metric.Meter,
@@ -9022,12 +9723,15 @@ func NewStatefulSetReadyPods(
 		return StatefulSetReadyPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newStatefulSetReadyPodsOpts
+	} else {
+		opt = append(opt, newStatefulSetReadyPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.statefulset.ready_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of replica pods created for this statefulset with a Ready Condition."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return StatefulSetReadyPods{noop.Int64UpDownCounter{}}, err
@@ -9107,6 +9811,11 @@ type StatefulSetUpdatedPods struct {
 	metric.Int64UpDownCounter
 }
 
+var newStatefulSetUpdatedPodsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of replica pods created by the statefulset controller from the statefulset version indicated by updateRevision."),
+	metric.WithUnit("{pod}"),
+}
+
 // NewStatefulSetUpdatedPods returns a new StatefulSetUpdatedPods instrument.
 func NewStatefulSetUpdatedPods(
 	m metric.Meter,
@@ -9117,12 +9826,15 @@ func NewStatefulSetUpdatedPods(
 		return StatefulSetUpdatedPods{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newStatefulSetUpdatedPodsOpts
+	} else {
+		opt = append(opt, newStatefulSetUpdatedPodsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"k8s.statefulset.updated_pods",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of replica pods created by the statefulset controller from the statefulset version indicated by updateRevision."),
-			metric.WithUnit("{pod}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return StatefulSetUpdatedPods{noop.Int64UpDownCounter{}}, err
