@@ -129,30 +129,15 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // WithInstrumentationAttributes returns a [LoggerOption] that sets the
 // instrumentation attributes of a [Logger].
 //
-// The passed attributes will be de-duplicated.
-//
-// Note that [WithInstrumentationAttributeSet] is recommended as
-// it is more efficient and also allows safely reusing the passed argument.
+// This is equivalent to calling WithInstrumentationAttributeSet with an
+// attribute.Set created from the passed attributes.
+// [WithInstrumentationAttributeSet] is recommended for more control.
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
-	if len(attr) == 0 {
-		return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-			return config
-		})
-	}
-
-	newAttrs := attribute.NewSet(attr...)
-	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-		if config.attrs.Len() == 0 {
-			config.attrs = newAttrs
-		} else {
-			config.attrs = mergeSets(config.attrs, newAttrs)
-		}
-		return config
-	})
+	return WithInstrumentationAttributeSet(attribute.NewSet(attr...))
 }
 
 // WithInstrumentationAttributeSet returns a [LoggerOption] that adds the

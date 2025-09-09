@@ -318,30 +318,15 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 
 // WithInstrumentationAttributes adds the instrumentation attributes.
 //
-// The passed attributes will be de-duplicated.
-//
-// Note that [WithInstrumentationAttributeSet] is recommended as
-// it is more efficient and also allows safely reusing the passed argument.
+// This is equivalent to calling WithInstrumentationAttributeSet with an
+// attribute.Set created from the passed attributes.
+// [WithInstrumentationAttributeSet] is recommended for more control.
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
-	if len(attr) == 0 {
-		return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-			return config
-		})
-	}
-
-	newAttrs := attribute.NewSet(attr...)
-	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-		if config.attrs.Len() == 0 {
-			config.attrs = newAttrs
-		} else {
-			config.attrs = mergeSets(config.attrs, newAttrs)
-		}
-		return config
-	})
+	return WithInstrumentationAttributeSet(attribute.NewSet(attr...))
 }
 
 // WithInstrumentationAttributeSet adds the instrumentation attributes.
