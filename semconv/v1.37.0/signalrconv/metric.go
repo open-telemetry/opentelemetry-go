@@ -58,6 +58,11 @@ type ServerActiveConnections struct {
 	metric.Int64UpDownCounter
 }
 
+var newServerActiveConnectionsOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Number of connections that are currently active on the server."),
+	metric.WithUnit("{connection}"),
+}
+
 // NewServerActiveConnections returns a new ServerActiveConnections instrument.
 func NewServerActiveConnections(
 	m metric.Meter,
@@ -68,12 +73,15 @@ func NewServerActiveConnections(
 		return ServerActiveConnections{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerActiveConnectionsOpts
+	} else {
+		opt = append(opt, newServerActiveConnectionsOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"signalr.server.active_connections",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Number of connections that are currently active on the server."),
-			metric.WithUnit("{connection}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerActiveConnections{noop.Int64UpDownCounter{}}, err
@@ -175,6 +183,11 @@ type ServerConnectionDuration struct {
 	metric.Float64Histogram
 }
 
+var newServerConnectionDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("The duration of connections on the server."),
+	metric.WithUnit("s"),
+}
+
 // NewServerConnectionDuration returns a new ServerConnectionDuration instrument.
 func NewServerConnectionDuration(
 	m metric.Meter,
@@ -185,12 +198,15 @@ func NewServerConnectionDuration(
 		return ServerConnectionDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerConnectionDurationOpts
+	} else {
+		opt = append(opt, newServerConnectionDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"signalr.server.connection.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("The duration of connections on the server."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerConnectionDuration{noop.Float64Histogram{}}, err

@@ -192,6 +192,11 @@ type BatteryCharge struct {
 	metric.Int64Gauge
 }
 
+var newBatteryChargeOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Remaining fraction of battery charge."),
+	metric.WithUnit("1"),
+}
+
 // NewBatteryCharge returns a new BatteryCharge instrument.
 func NewBatteryCharge(
 	m metric.Meter,
@@ -202,12 +207,15 @@ func NewBatteryCharge(
 		return BatteryCharge{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newBatteryChargeOpts
+	} else {
+		opt = append(opt, newBatteryChargeOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.battery.charge",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Remaining fraction of battery charge."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return BatteryCharge{noop.Int64Gauge{}}, err
@@ -336,6 +344,11 @@ type BatteryChargeLimit struct {
 	metric.Int64Gauge
 }
 
+var newBatteryChargeLimitOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Lower limit of battery charge fraction to ensure proper operation."),
+	metric.WithUnit("1"),
+}
+
 // NewBatteryChargeLimit returns a new BatteryChargeLimit instrument.
 func NewBatteryChargeLimit(
 	m metric.Meter,
@@ -346,12 +359,15 @@ func NewBatteryChargeLimit(
 		return BatteryChargeLimit{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newBatteryChargeLimitOpts
+	} else {
+		opt = append(opt, newBatteryChargeLimitOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.battery.charge.limit",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Lower limit of battery charge fraction to ensure proper operation."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return BatteryChargeLimit{noop.Int64Gauge{}}, err
@@ -490,6 +506,11 @@ type BatteryTimeLeft struct {
 	metric.Float64Gauge
 }
 
+var newBatteryTimeLeftOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("Time left before battery is completely charged or discharged."),
+	metric.WithUnit("s"),
+}
+
 // NewBatteryTimeLeft returns a new BatteryTimeLeft instrument.
 func NewBatteryTimeLeft(
 	m metric.Meter,
@@ -500,12 +521,15 @@ func NewBatteryTimeLeft(
 		return BatteryTimeLeft{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newBatteryTimeLeftOpts
+	} else {
+		opt = append(opt, newBatteryTimeLeftOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"hw.battery.time_left",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("Time left before battery is completely charged or discharged."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return BatteryTimeLeft{noop.Float64Gauge{}}, err
@@ -643,6 +667,11 @@ type CPUSpeed struct {
 	metric.Int64Gauge
 }
 
+var newCPUSpeedOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("CPU current frequency."),
+	metric.WithUnit("Hz"),
+}
+
 // NewCPUSpeed returns a new CPUSpeed instrument.
 func NewCPUSpeed(
 	m metric.Meter,
@@ -653,12 +682,15 @@ func NewCPUSpeed(
 		return CPUSpeed{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newCPUSpeedOpts
+	} else {
+		opt = append(opt, newCPUSpeedOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.cpu.speed",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("CPU current frequency."),
-			metric.WithUnit("Hz"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return CPUSpeed{noop.Int64Gauge{}}, err
@@ -771,6 +803,11 @@ type CPUSpeedLimit struct {
 	metric.Int64Gauge
 }
 
+var newCPUSpeedLimitOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("CPU maximum frequency."),
+	metric.WithUnit("Hz"),
+}
+
 // NewCPUSpeedLimit returns a new CPUSpeedLimit instrument.
 func NewCPUSpeedLimit(
 	m metric.Meter,
@@ -781,12 +818,15 @@ func NewCPUSpeedLimit(
 		return CPUSpeedLimit{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newCPUSpeedLimitOpts
+	} else {
+		opt = append(opt, newCPUSpeedLimitOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.cpu.speed.limit",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("CPU maximum frequency."),
-			metric.WithUnit("Hz"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return CPUSpeedLimit{noop.Int64Gauge{}}, err
@@ -905,6 +945,11 @@ type Energy struct {
 	metric.Int64Counter
 }
 
+var newEnergyOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Energy consumed by the component."),
+	metric.WithUnit("J"),
+}
+
 // NewEnergy returns a new Energy instrument.
 func NewEnergy(
 	m metric.Meter,
@@ -915,12 +960,15 @@ func NewEnergy(
 		return Energy{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newEnergyOpts
+	} else {
+		opt = append(opt, newEnergyOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.energy",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Energy consumed by the component."),
-			metric.WithUnit("J"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return Energy{noop.Int64Counter{}}, err
@@ -1025,6 +1073,11 @@ type Errors struct {
 	metric.Int64Counter
 }
 
+var newErrorsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Number of errors encountered by the component."),
+	metric.WithUnit("{error}"),
+}
+
 // NewErrors returns a new Errors instrument.
 func NewErrors(
 	m metric.Meter,
@@ -1035,12 +1088,15 @@ func NewErrors(
 		return Errors{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newErrorsOpts
+	} else {
+		opt = append(opt, newErrorsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.errors",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Number of errors encountered by the component."),
-			metric.WithUnit("{error}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return Errors{noop.Int64Counter{}}, err
@@ -1158,6 +1214,11 @@ type FanSpeed struct {
 	metric.Int64Gauge
 }
 
+var newFanSpeedOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Fan speed in revolutions per minute."),
+	metric.WithUnit("rpm"),
+}
+
 // NewFanSpeed returns a new FanSpeed instrument.
 func NewFanSpeed(
 	m metric.Meter,
@@ -1168,12 +1229,15 @@ func NewFanSpeed(
 		return FanSpeed{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newFanSpeedOpts
+	} else {
+		opt = append(opt, newFanSpeedOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.fan.speed",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Fan speed in revolutions per minute."),
-			metric.WithUnit("rpm"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return FanSpeed{noop.Int64Gauge{}}, err
@@ -1279,6 +1343,11 @@ type FanSpeedLimit struct {
 	metric.Int64Gauge
 }
 
+var newFanSpeedLimitOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Speed limit in rpm."),
+	metric.WithUnit("rpm"),
+}
+
 // NewFanSpeedLimit returns a new FanSpeedLimit instrument.
 func NewFanSpeedLimit(
 	m metric.Meter,
@@ -1289,12 +1358,15 @@ func NewFanSpeedLimit(
 		return FanSpeedLimit{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newFanSpeedLimitOpts
+	} else {
+		opt = append(opt, newFanSpeedLimitOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.fan.speed.limit",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Speed limit in rpm."),
-			metric.WithUnit("rpm"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return FanSpeedLimit{noop.Int64Gauge{}}, err
@@ -1406,6 +1478,11 @@ type FanSpeedRatio struct {
 	metric.Int64Gauge
 }
 
+var newFanSpeedRatioOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Fan speed expressed as a fraction of its maximum speed."),
+	metric.WithUnit("1"),
+}
+
 // NewFanSpeedRatio returns a new FanSpeedRatio instrument.
 func NewFanSpeedRatio(
 	m metric.Meter,
@@ -1416,12 +1493,15 @@ func NewFanSpeedRatio(
 		return FanSpeedRatio{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newFanSpeedRatioOpts
+	} else {
+		opt = append(opt, newFanSpeedRatioOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.fan.speed_ratio",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Fan speed expressed as a fraction of its maximum speed."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return FanSpeedRatio{noop.Int64Gauge{}}, err
@@ -1527,6 +1607,11 @@ type GpuIO struct {
 	metric.Int64Counter
 }
 
+var newGpuIOOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Received and transmitted bytes by the GPU."),
+	metric.WithUnit("By"),
+}
+
 // NewGpuIO returns a new GpuIO instrument.
 func NewGpuIO(
 	m metric.Meter,
@@ -1537,12 +1622,15 @@ func NewGpuIO(
 		return GpuIO{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newGpuIOOpts
+	} else {
+		opt = append(opt, newGpuIOOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.gpu.io",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Received and transmitted bytes by the GPU."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return GpuIO{noop.Int64Counter{}}, err
@@ -1681,6 +1769,11 @@ type GpuMemoryLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newGpuMemoryLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Size of the GPU memory."),
+	metric.WithUnit("By"),
+}
+
 // NewGpuMemoryLimit returns a new GpuMemoryLimit instrument.
 func NewGpuMemoryLimit(
 	m metric.Meter,
@@ -1691,12 +1784,15 @@ func NewGpuMemoryLimit(
 		return GpuMemoryLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newGpuMemoryLimitOpts
+	} else {
+		opt = append(opt, newGpuMemoryLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.gpu.memory.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Size of the GPU memory."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return GpuMemoryLimit{noop.Int64UpDownCounter{}}, err
@@ -1830,6 +1926,11 @@ type GpuMemoryUsage struct {
 	metric.Int64UpDownCounter
 }
 
+var newGpuMemoryUsageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("GPU memory used."),
+	metric.WithUnit("By"),
+}
+
 // NewGpuMemoryUsage returns a new GpuMemoryUsage instrument.
 func NewGpuMemoryUsage(
 	m metric.Meter,
@@ -1840,12 +1941,15 @@ func NewGpuMemoryUsage(
 		return GpuMemoryUsage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newGpuMemoryUsageOpts
+	} else {
+		opt = append(opt, newGpuMemoryUsageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.gpu.memory.usage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("GPU memory used."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return GpuMemoryUsage{noop.Int64UpDownCounter{}}, err
@@ -1980,6 +2084,11 @@ type GpuMemoryUtilization struct {
 	metric.Int64Gauge
 }
 
+var newGpuMemoryUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Fraction of GPU memory used."),
+	metric.WithUnit("1"),
+}
+
 // NewGpuMemoryUtilization returns a new GpuMemoryUtilization instrument.
 func NewGpuMemoryUtilization(
 	m metric.Meter,
@@ -1990,12 +2099,15 @@ func NewGpuMemoryUtilization(
 		return GpuMemoryUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newGpuMemoryUtilizationOpts
+	} else {
+		opt = append(opt, newGpuMemoryUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.gpu.memory.utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Fraction of GPU memory used."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return GpuMemoryUtilization{noop.Int64Gauge{}}, err
@@ -2129,6 +2241,11 @@ type GpuUtilization struct {
 	metric.Int64Gauge
 }
 
+var newGpuUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Fraction of time spent in a specific task."),
+	metric.WithUnit("1"),
+}
+
 // NewGpuUtilization returns a new GpuUtilization instrument.
 func NewGpuUtilization(
 	m metric.Meter,
@@ -2139,12 +2256,15 @@ func NewGpuUtilization(
 		return GpuUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newGpuUtilizationOpts
+	} else {
+		opt = append(opt, newGpuUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.gpu.utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Fraction of time spent in a specific task."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return GpuUtilization{noop.Int64Gauge{}}, err
@@ -2284,6 +2404,11 @@ type HostAmbientTemperature struct {
 	metric.Int64Gauge
 }
 
+var newHostAmbientTemperatureOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Ambient (external) temperature of the physical host."),
+	metric.WithUnit("Cel"),
+}
+
 // NewHostAmbientTemperature returns a new HostAmbientTemperature instrument.
 func NewHostAmbientTemperature(
 	m metric.Meter,
@@ -2294,12 +2419,15 @@ func NewHostAmbientTemperature(
 		return HostAmbientTemperature{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHostAmbientTemperatureOpts
+	} else {
+		opt = append(opt, newHostAmbientTemperatureOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.host.ambient_temperature",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Ambient (external) temperature of the physical host."),
-			metric.WithUnit("Cel"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HostAmbientTemperature{noop.Int64Gauge{}}, err
@@ -2399,6 +2527,11 @@ type HostEnergy struct {
 	metric.Int64Counter
 }
 
+var newHostEnergyOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Total energy consumed by the entire physical host, in joules."),
+	metric.WithUnit("J"),
+}
+
 // NewHostEnergy returns a new HostEnergy instrument.
 func NewHostEnergy(
 	m metric.Meter,
@@ -2409,12 +2542,15 @@ func NewHostEnergy(
 		return HostEnergy{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHostEnergyOpts
+	} else {
+		opt = append(opt, newHostEnergyOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.host.energy",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Total energy consumed by the entire physical host, in joules."),
-			metric.WithUnit("J"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HostEnergy{noop.Int64Counter{}}, err
@@ -2526,6 +2662,11 @@ type HostHeatingMargin struct {
 	metric.Int64Gauge
 }
 
+var newHostHeatingMarginOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."),
+	metric.WithUnit("Cel"),
+}
+
 // NewHostHeatingMargin returns a new HostHeatingMargin instrument.
 func NewHostHeatingMargin(
 	m metric.Meter,
@@ -2536,12 +2677,15 @@ func NewHostHeatingMargin(
 		return HostHeatingMargin{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHostHeatingMarginOpts
+	} else {
+		opt = append(opt, newHostHeatingMarginOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.host.heating_margin",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."),
-			metric.WithUnit("Cel"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HostHeatingMargin{noop.Int64Gauge{}}, err
@@ -2641,6 +2785,11 @@ type HostPower struct {
 	metric.Int64Gauge
 }
 
+var newHostPowerOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."),
+	metric.WithUnit("W"),
+}
+
 // NewHostPower returns a new HostPower instrument.
 func NewHostPower(
 	m metric.Meter,
@@ -2651,12 +2800,15 @@ func NewHostPower(
 		return HostPower{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newHostPowerOpts
+	} else {
+		opt = append(opt, newHostPowerOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.host.power",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."),
-			metric.WithUnit("W"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return HostPower{noop.Int64Gauge{}}, err
@@ -2766,6 +2918,11 @@ type LogicalDiskLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newLogicalDiskLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Size of the logical disk."),
+	metric.WithUnit("By"),
+}
+
 // NewLogicalDiskLimit returns a new LogicalDiskLimit instrument.
 func NewLogicalDiskLimit(
 	m metric.Meter,
@@ -2776,12 +2933,15 @@ func NewLogicalDiskLimit(
 		return LogicalDiskLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newLogicalDiskLimitOpts
+	} else {
+		opt = append(opt, newLogicalDiskLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.logical_disk.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Size of the logical disk."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return LogicalDiskLimit{noop.Int64UpDownCounter{}}, err
@@ -2889,6 +3049,11 @@ type LogicalDiskUsage struct {
 	metric.Int64UpDownCounter
 }
 
+var newLogicalDiskUsageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Logical disk space usage."),
+	metric.WithUnit("By"),
+}
+
 // NewLogicalDiskUsage returns a new LogicalDiskUsage instrument.
 func NewLogicalDiskUsage(
 	m metric.Meter,
@@ -2899,12 +3064,15 @@ func NewLogicalDiskUsage(
 		return LogicalDiskUsage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newLogicalDiskUsageOpts
+	} else {
+		opt = append(opt, newLogicalDiskUsageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.logical_disk.usage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Logical disk space usage."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return LogicalDiskUsage{noop.Int64UpDownCounter{}}, err
@@ -3016,6 +3184,11 @@ type LogicalDiskUtilization struct {
 	metric.Int64Gauge
 }
 
+var newLogicalDiskUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Logical disk space utilization as a fraction."),
+	metric.WithUnit("1"),
+}
+
 // NewLogicalDiskUtilization returns a new LogicalDiskUtilization instrument.
 func NewLogicalDiskUtilization(
 	m metric.Meter,
@@ -3026,12 +3199,15 @@ func NewLogicalDiskUtilization(
 		return LogicalDiskUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newLogicalDiskUtilizationOpts
+	} else {
+		opt = append(opt, newLogicalDiskUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.logical_disk.utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Logical disk space utilization as a fraction."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return LogicalDiskUtilization{noop.Int64Gauge{}}, err
@@ -3142,6 +3318,11 @@ type MemorySize struct {
 	metric.Int64UpDownCounter
 }
 
+var newMemorySizeOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Size of the memory module."),
+	metric.WithUnit("By"),
+}
+
 // NewMemorySize returns a new MemorySize instrument.
 func NewMemorySize(
 	m metric.Meter,
@@ -3152,12 +3333,15 @@ func NewMemorySize(
 		return MemorySize{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newMemorySizeOpts
+	} else {
+		opt = append(opt, newMemorySizeOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.memory.size",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Size of the memory module."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return MemorySize{noop.Int64UpDownCounter{}}, err
@@ -3284,6 +3468,11 @@ type NetworkBandwidthLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newNetworkBandwidthLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Link speed."),
+	metric.WithUnit("By/s"),
+}
+
 // NewNetworkBandwidthLimit returns a new NetworkBandwidthLimit instrument.
 func NewNetworkBandwidthLimit(
 	m metric.Meter,
@@ -3294,12 +3483,15 @@ func NewNetworkBandwidthLimit(
 		return NetworkBandwidthLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNetworkBandwidthLimitOpts
+	} else {
+		opt = append(opt, newNetworkBandwidthLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.network.bandwidth.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Link speed."),
-			metric.WithUnit("By/s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NetworkBandwidthLimit{noop.Int64UpDownCounter{}}, err
@@ -3434,6 +3626,11 @@ type NetworkBandwidthUtilization struct {
 	metric.Int64Gauge
 }
 
+var newNetworkBandwidthUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Utilization of the network bandwidth as a fraction."),
+	metric.WithUnit("1"),
+}
+
 // NewNetworkBandwidthUtilization returns a new NetworkBandwidthUtilization
 // instrument.
 func NewNetworkBandwidthUtilization(
@@ -3445,12 +3642,15 @@ func NewNetworkBandwidthUtilization(
 		return NetworkBandwidthUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNetworkBandwidthUtilizationOpts
+	} else {
+		opt = append(opt, newNetworkBandwidthUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.network.bandwidth.utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Utilization of the network bandwidth as a fraction."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NetworkBandwidthUtilization{noop.Int64Gauge{}}, err
@@ -3584,6 +3784,11 @@ type NetworkIO struct {
 	metric.Int64Counter
 }
 
+var newNetworkIOOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Received and transmitted network traffic in bytes."),
+	metric.WithUnit("By"),
+}
+
 // NewNetworkIO returns a new NetworkIO instrument.
 func NewNetworkIO(
 	m metric.Meter,
@@ -3594,12 +3799,15 @@ func NewNetworkIO(
 		return NetworkIO{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNetworkIOOpts
+	} else {
+		opt = append(opt, newNetworkIOOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.network.io",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Received and transmitted network traffic in bytes."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NetworkIO{noop.Int64Counter{}}, err
@@ -3738,6 +3946,11 @@ type NetworkPackets struct {
 	metric.Int64Counter
 }
 
+var newNetworkPacketsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Received and transmitted network traffic in packets (or frames)."),
+	metric.WithUnit("{packet}"),
+}
+
 // NewNetworkPackets returns a new NetworkPackets instrument.
 func NewNetworkPackets(
 	m metric.Meter,
@@ -3748,12 +3961,15 @@ func NewNetworkPackets(
 		return NetworkPackets{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNetworkPacketsOpts
+	} else {
+		opt = append(opt, newNetworkPacketsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.network.packets",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Received and transmitted network traffic in packets (or frames)."),
-			metric.WithUnit("{packet}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NetworkPackets{noop.Int64Counter{}}, err
@@ -3892,6 +4108,11 @@ type NetworkUp struct {
 	metric.Int64UpDownCounter
 }
 
+var newNetworkUpOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Link status: `1` (up) or `0` (down)."),
+	metric.WithUnit("1"),
+}
+
 // NewNetworkUp returns a new NetworkUp instrument.
 func NewNetworkUp(
 	m metric.Meter,
@@ -3902,12 +4123,15 @@ func NewNetworkUp(
 		return NetworkUp{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newNetworkUpOpts
+	} else {
+		opt = append(opt, newNetworkUpOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.network.up",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Link status: `1` (up) or `0` (down)."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return NetworkUp{noop.Int64UpDownCounter{}}, err
@@ -4042,6 +4266,11 @@ type PhysicalDiskEnduranceUtilization struct {
 	metric.Int64Gauge
 }
 
+var newPhysicalDiskEnduranceUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Endurance remaining for this SSD disk."),
+	metric.WithUnit("1"),
+}
+
 // NewPhysicalDiskEnduranceUtilization returns a new
 // PhysicalDiskEnduranceUtilization instrument.
 func NewPhysicalDiskEnduranceUtilization(
@@ -4053,12 +4282,15 @@ func NewPhysicalDiskEnduranceUtilization(
 		return PhysicalDiskEnduranceUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPhysicalDiskEnduranceUtilizationOpts
+	} else {
+		opt = append(opt, newPhysicalDiskEnduranceUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.physical_disk.endurance_utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Endurance remaining for this SSD disk."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PhysicalDiskEnduranceUtilization{noop.Int64Gauge{}}, err
@@ -4196,6 +4428,11 @@ type PhysicalDiskSize struct {
 	metric.Int64UpDownCounter
 }
 
+var newPhysicalDiskSizeOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Size of the disk."),
+	metric.WithUnit("By"),
+}
+
 // NewPhysicalDiskSize returns a new PhysicalDiskSize instrument.
 func NewPhysicalDiskSize(
 	m metric.Meter,
@@ -4206,12 +4443,15 @@ func NewPhysicalDiskSize(
 		return PhysicalDiskSize{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPhysicalDiskSizeOpts
+	} else {
+		opt = append(opt, newPhysicalDiskSizeOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.physical_disk.size",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Size of the disk."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PhysicalDiskSize{noop.Int64UpDownCounter{}}, err
@@ -4349,6 +4589,11 @@ type PhysicalDiskSmart struct {
 	metric.Int64Gauge
 }
 
+var newPhysicalDiskSmartOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Value of the corresponding [S.M.A.R.T.](https://wikipedia.org/wiki/S.M.A.R.T.) (Self-Monitoring, Analysis, and Reporting Technology) attribute."),
+	metric.WithUnit("1"),
+}
+
 // NewPhysicalDiskSmart returns a new PhysicalDiskSmart instrument.
 func NewPhysicalDiskSmart(
 	m metric.Meter,
@@ -4359,12 +4604,15 @@ func NewPhysicalDiskSmart(
 		return PhysicalDiskSmart{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPhysicalDiskSmartOpts
+	} else {
+		opt = append(opt, newPhysicalDiskSmartOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.physical_disk.smart",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Value of the corresponding [S.M.A.R.T.](https://wikipedia.org/wiki/S.M.A.R.T.) (Self-Monitoring, Analysis, and Reporting Technology) attribute."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PhysicalDiskSmart{noop.Int64Gauge{}}, err
@@ -4508,6 +4756,11 @@ type Power struct {
 	metric.Int64Gauge
 }
 
+var newPowerOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Instantaneous power consumed by the component."),
+	metric.WithUnit("W"),
+}
+
 // NewPower returns a new Power instrument.
 func NewPower(
 	m metric.Meter,
@@ -4518,12 +4771,15 @@ func NewPower(
 		return Power{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPowerOpts
+	} else {
+		opt = append(opt, newPowerOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.power",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Instantaneous power consumed by the component."),
-			metric.WithUnit("W"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return Power{noop.Int64Gauge{}}, err
@@ -4631,6 +4887,11 @@ type PowerSupplyLimit struct {
 	metric.Int64UpDownCounter
 }
 
+var newPowerSupplyLimitOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Maximum power output of the power supply."),
+	metric.WithUnit("W"),
+}
+
 // NewPowerSupplyLimit returns a new PowerSupplyLimit instrument.
 func NewPowerSupplyLimit(
 	m metric.Meter,
@@ -4641,12 +4902,15 @@ func NewPowerSupplyLimit(
 		return PowerSupplyLimit{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPowerSupplyLimitOpts
+	} else {
+		opt = append(opt, newPowerSupplyLimitOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.power_supply.limit",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Maximum power output of the power supply."),
-			metric.WithUnit("W"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PowerSupplyLimit{noop.Int64UpDownCounter{}}, err
@@ -4773,6 +5037,11 @@ type PowerSupplyUsage struct {
 	metric.Int64UpDownCounter
 }
 
+var newPowerSupplyUsageOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Current power output of the power supply."),
+	metric.WithUnit("W"),
+}
+
 // NewPowerSupplyUsage returns a new PowerSupplyUsage instrument.
 func NewPowerSupplyUsage(
 	m metric.Meter,
@@ -4783,12 +5052,15 @@ func NewPowerSupplyUsage(
 		return PowerSupplyUsage{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPowerSupplyUsageOpts
+	} else {
+		opt = append(opt, newPowerSupplyUsageOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.power_supply.usage",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Current power output of the power supply."),
-			metric.WithUnit("W"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PowerSupplyUsage{noop.Int64UpDownCounter{}}, err
@@ -4910,6 +5182,11 @@ type PowerSupplyUtilization struct {
 	metric.Int64Gauge
 }
 
+var newPowerSupplyUtilizationOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Utilization of the power supply as a fraction of its maximum output."),
+	metric.WithUnit("1"),
+}
+
 // NewPowerSupplyUtilization returns a new PowerSupplyUtilization instrument.
 func NewPowerSupplyUtilization(
 	m metric.Meter,
@@ -4920,12 +5197,15 @@ func NewPowerSupplyUtilization(
 		return PowerSupplyUtilization{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPowerSupplyUtilizationOpts
+	} else {
+		opt = append(opt, newPowerSupplyUtilizationOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.power_supply.utilization",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Utilization of the power supply as a fraction of its maximum output."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PowerSupplyUtilization{noop.Int64Gauge{}}, err
@@ -5045,6 +5325,11 @@ type Status struct {
 	metric.Int64UpDownCounter
 }
 
+var newStatusOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("Operational status: `1` (true) or `0` (false) for each of the possible states."),
+	metric.WithUnit("1"),
+}
+
 // NewStatus returns a new Status instrument.
 func NewStatus(
 	m metric.Meter,
@@ -5055,12 +5340,15 @@ func NewStatus(
 		return Status{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newStatusOpts
+	} else {
+		opt = append(opt, newStatusOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"hw.status",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("Operational status: `1` (true) or `0` (false) for each of the possible states."),
-			metric.WithUnit("1"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return Status{noop.Int64UpDownCounter{}}, err
@@ -5185,6 +5473,11 @@ type TapeDriveOperations struct {
 	metric.Int64Counter
 }
 
+var newTapeDriveOperationsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Operations performed by the tape drive."),
+	metric.WithUnit("{operation}"),
+}
+
 // NewTapeDriveOperations returns a new TapeDriveOperations instrument.
 func NewTapeDriveOperations(
 	m metric.Meter,
@@ -5195,12 +5488,15 @@ func NewTapeDriveOperations(
 		return TapeDriveOperations{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newTapeDriveOperationsOpts
+	} else {
+		opt = append(opt, newTapeDriveOperationsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"hw.tape_drive.operations",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Operations performed by the tape drive."),
-			metric.WithUnit("{operation}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return TapeDriveOperations{noop.Int64Counter{}}, err
@@ -5328,6 +5624,11 @@ type Temperature struct {
 	metric.Int64Gauge
 }
 
+var newTemperatureOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Temperature in degrees Celsius."),
+	metric.WithUnit("Cel"),
+}
+
 // NewTemperature returns a new Temperature instrument.
 func NewTemperature(
 	m metric.Meter,
@@ -5338,12 +5639,15 @@ func NewTemperature(
 		return Temperature{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newTemperatureOpts
+	} else {
+		opt = append(opt, newTemperatureOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.temperature",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Temperature in degrees Celsius."),
-			metric.WithUnit("Cel"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return Temperature{noop.Int64Gauge{}}, err
@@ -5449,6 +5753,11 @@ type TemperatureLimit struct {
 	metric.Int64Gauge
 }
 
+var newTemperatureLimitOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Temperature limit in degrees Celsius."),
+	metric.WithUnit("Cel"),
+}
+
 // NewTemperatureLimit returns a new TemperatureLimit instrument.
 func NewTemperatureLimit(
 	m metric.Meter,
@@ -5459,12 +5768,15 @@ func NewTemperatureLimit(
 		return TemperatureLimit{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newTemperatureLimitOpts
+	} else {
+		opt = append(opt, newTemperatureLimitOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.temperature.limit",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Temperature limit in degrees Celsius."),
-			metric.WithUnit("Cel"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return TemperatureLimit{noop.Int64Gauge{}}, err
@@ -5576,6 +5888,11 @@ type Voltage struct {
 	metric.Int64Gauge
 }
 
+var newVoltageOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Voltage measured by the sensor."),
+	metric.WithUnit("V"),
+}
+
 // NewVoltage returns a new Voltage instrument.
 func NewVoltage(
 	m metric.Meter,
@@ -5586,12 +5903,15 @@ func NewVoltage(
 		return Voltage{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newVoltageOpts
+	} else {
+		opt = append(opt, newVoltageOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.voltage",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Voltage measured by the sensor."),
-			metric.WithUnit("V"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return Voltage{noop.Int64Gauge{}}, err
@@ -5697,6 +6017,11 @@ type VoltageLimit struct {
 	metric.Int64Gauge
 }
 
+var newVoltageLimitOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Voltage limit in Volts."),
+	metric.WithUnit("V"),
+}
+
 // NewVoltageLimit returns a new VoltageLimit instrument.
 func NewVoltageLimit(
 	m metric.Meter,
@@ -5707,12 +6032,15 @@ func NewVoltageLimit(
 		return VoltageLimit{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newVoltageLimitOpts
+	} else {
+		opt = append(opt, newVoltageLimitOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.voltage.limit",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Voltage limit in Volts."),
-			metric.WithUnit("V"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return VoltageLimit{noop.Int64Gauge{}}, err
@@ -5824,6 +6152,11 @@ type VoltageNominal struct {
 	metric.Int64Gauge
 }
 
+var newVoltageNominalOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("Nominal (expected) voltage."),
+	metric.WithUnit("V"),
+}
+
 // NewVoltageNominal returns a new VoltageNominal instrument.
 func NewVoltageNominal(
 	m metric.Meter,
@@ -5834,12 +6167,15 @@ func NewVoltageNominal(
 		return VoltageNominal{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newVoltageNominalOpts
+	} else {
+		opt = append(opt, newVoltageNominalOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"hw.voltage.nominal",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("Nominal (expected) voltage."),
-			metric.WithUnit("V"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return VoltageNominal{noop.Int64Gauge{}}, err
