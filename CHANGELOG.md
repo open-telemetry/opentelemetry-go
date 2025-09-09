@@ -8,11 +8,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithInstrumentationAttributeSet` option to `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/trace` packages.
+  This provides a concurrent-safe and performant alternative to `WithInstrumentationAttributes` by accepting a pre-constructed `attribute.Set`. (#7287)
+
+### Fixed
+
+- Fix `WithInstrumentationAttributes` options in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/log` to properly merge attributes when passed multiple times instead of replacing them. Attributes with duplicate keys will use the last value passed. (#7300)
+
+### Removed
+
+- Drop support for [Go 1.23]. (#7274)
+
+### Changed
+
+- Improve performance of histogram `Record` in `go.opentelemetry.io/otel/sdk/metric` when min and max are disabled using `NoMinMax`. (#7306)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.38.0/0.60.0/0.14.0/0.0.13] 2025-08-29
+
 This release is the last to support [Go 1.23].
 The next release will require at least [Go 1.24].
 
 ### Added
 
+- Add native histogram exemplar support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6772)
 - Add template attribute functions to the `go.opentelmetry.io/otel/semconv/v1.34.0` package. (#6939)
   - `ContainerLabel`
   - `DBOperationParameter`
@@ -46,13 +69,12 @@ The next release will require at least [Go 1.24].
 - Add `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` which can be used to disable deduplication for log records. (#6968)
 - Add `WithCardinalityLimit` option to configure the cardinality limit in `go.opentelemetry.io/otel/sdk/metric`. (#6996, #7065, #7081, #7164, #7165, #7179)
 - Add `Clone` method to `Record` in `go.opentelemetry.io/otel/log` that returns a copy of the record with no shared state. (#7001)
-- The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
-  The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
-  See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032)
 - Add experimental self-observability span and batch span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
   Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027, #6393, #7209)
+- The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
+  The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032, #7041)
 - Add support for configuring Prometheus name translation using `WithTranslationStrategy` option in `go.opentelemetry.io/otel/exporters/prometheus`. The current default translation strategy when UTF-8 mode is enabled is `NoUTF8EscapingWithSuffixes`, but a future release will change the default strategy to `UnderscoreEscapingWithSuffixes` for compliance with the specification. (#7111)
-- Add native histogram exemplar support in `go.opentelemetry.io/otel/exporters/prometheus`. (#6772)
 - Add experimental self-observability log metrics in `go.opentelemetry.io/otel/sdk/log`.
   Check the `go.opentelemetry.io/otel/sdk/log/internal/x` package documentation for more information. (#7121)
 - Add experimental self-observability trace exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`.
@@ -66,25 +88,21 @@ The next release will require at least [Go 1.24].
 
 ### Changed
 
-- Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
-- Change `SDKProcessorLogQueueCapacity`, `SDKProcessorLogQueueSize`, `SDKProcessorSpanQueueSize`, and `SDKProcessorSpanQueueCapacity` in `go.opentelemetry.io/otel/semconv/v1.36.0/otelconv` to use a `Int64ObservableUpDownCounter`. (#7041)
-- Change `DefaultExemplarReservoirProviderSelector` in `go.opentelemetry.io/otel/sdk/metric` to use `runtime.GOMAXPROCS(0)` instead of `runtime.NumCPU()` for the `FixedSizeReservoirProvider` default size. (#7094)
 - Optimize `TraceIDFromHex` and `SpanIDFromHex` in `go.opentelemetry.io/otel/sdk/trace`. (#6791)
-
-### Deprecated
-
-- Deprecate support for `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`. Use `WithCardinalityLimit` option instead. (#7166)
-- Deprecate `WithoutUnits` and `WithoutCounterSuffixes` options, preferring `WithTranslationStrategy` instead. (#7111)
+- Change `AssertEqual` in `go.opentelemetry.io/otel/log/logtest` to accept `TestingT` in order to support benchmarks and fuzz tests. (#6908)
+- Change `DefaultExemplarReservoirProviderSelector` in `go.opentelemetry.io/otel/sdk/metric` to use `runtime.GOMAXPROCS(0)` instead of `runtime.NumCPU()` for the `FixedSizeReservoirProvider` default size. (#7094)
 
 ### Fixed
 
-- Fix `go.opentelemetry.io/otel/exporters/prometheus` to not append a suffix if it's already present in metric name. (#7088)
 - `SetBody` method of `Record` in `go.opentelemetry.io/otel/sdk/log` now deduplicates key-value collections (`log.Value` of `log.KindMap` from `go.opentelemetry.io/otel/log`). (#7002)
+- Fix `go.opentelemetry.io/otel/exporters/prometheus` to not append a suffix if it's already present in metric name. (#7088)
 - Fix the `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability component type and name. (#7195)
 - Fix partial export count metric in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7199)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Deprecated
+
+- Deprecate `WithoutUnits` and `WithoutCounterSuffixes` options, preferring `WithTranslationStrategy` instead. (#7111)
+- Deprecate support for `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`. Use `WithCardinalityLimit` option instead. (#7166)
 
 ## [0.59.1] 2025-07-21
 
@@ -3431,7 +3449,9 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.37.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.38.0...HEAD
+[1.38.0/0.60.0/0.14.0/0.0.13]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.38.0
+[0.59.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/exporters/prometheus/v0.59.1
 [1.37.0/0.59.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.37.0
 [0.12.2]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.2
 [0.12.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/log/v0.12.1

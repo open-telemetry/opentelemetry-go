@@ -675,6 +675,441 @@ force flushing telemetry, shutting down a signal provider) the context cancellat
 should be honored. This means all work done on behalf of the user provided context
 should be canceled.
 
+### Observability
+
+OpenTelemetry Go SDK components should be instrumented to enable users observability for the health and performance of the telemetry pipeline itself.
+This allows operators to understand how well their observability infrastructure is functioning and to identify potential issues before they impact their applications.
+
+This section outlines the best practices for building instrumentation in OpenTelemetry Go SDK components.
+
+#### Environment Variable Activation
+
+Self-observability features are currently experimental.
+They should be disabled by default and activated through the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable.
+This follows the established experimental feature pattern used throughout the SDK.
+
+Components should check for this environment variable using a consistent pattern:
+
+```go
+import "go.opentelemetry.io/otel/*/internal/x"
+
+if x.SelfObservability.Enabled() {
+    // Initialize self-observability metrics
+}
+```
+
+**References**:
+
+- [stdouttrace exporter](./exporters/stdout/stdouttrace/internal/x/x.go)
+- [sdk](./sdk/internal/x/x.go)
+
+#### Encapsulation
+
+Instrumentation should be encapsulated within a dedicated `struct` (e.g. `instrumentation`).
+It should not be mixed into the instrumented component.
+
+Prefer this:
+
+```go
+type SDKComponent struct {
+    inst *instrumentation
+}
+
+type instrumentation struct {
+	inflight otelconv.SDKComponentInflight
+	exported otelconv.SDKComponentExported
+}
+```
+
+To this:
+
+```go
+// ❌ Avoid this pattern.
+type SDKComponent struct {
+	/* other SDKComponent fields... */
+
+	inflight otelconv.SDKComponentInflight
+	exported otelconv.SDKComponentExported
+}
+```
+
+The instrumentation code should not bloat the code being instrumented.
+Likely, this means its own file, or its own package if it is complex or reused.
+
+#### Initialization
+
+Instrumentation setup should be explicit, side-effect free, and local to the relevant component.
+Avoid relying on global or implicit [side effects][side-effect] for initialization.
+
+Encapsulate setup in constructor functions, ensuring clear ownership and scope:
+
+```go
+import (
+	"errors"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+)
+
+type SDKComponent struct {
+    inst *instrumentation
+}
+
+func NewSDKComponent(config Config) (*SDKComponent, error) {
+    inst, err := newInstrumentation()
+    if err != nil {
+        return nil, err
+    }
+    return &SDKComponent{inst: inst}, nil
+}
+
+type instrumentation struct {
+    inflight otelconv.SDKComponentInflight
+    exported otelconv.SDKComponentExported
+}
+
+func newInstrumentation() (*instrumentation, error) {
+    if !x.SelfObservability.Enabled() {
+        return nil, nil
+    }
+ 
+    meter := otel.GetMeterProvider().Meter(
+        "<component-package-name>",
+        metric.WithInstrumentationVersion(sdk.Version()),
+        metric.WithSchemaURL(semconv.SchemaURL),
+    )
+
+	inst := &instrumentation{}
+
+	var err, e error
+    inst.inflight, e = otelconv.NewSDKComponentInflight(meter)
+	err = errors.Join(err, e)
+
+    inst.exported, e = otelconv.NewSDKComponentExported(meter)
+	err = errors.Join(err, e)
+
+    return inst, err
+}
+```
+
+```go
+// ❌ Avoid this pattern.
+func (c *Component) initObservability() {
+	// Initialize observability metrics
+	if !x.SelfObservability.Enabled() {
+		return
+	}
+
+	// Initialize observability metrics
+	c.inst = &instrumentation{/* ... */}
+}
+```
+
+[side-effect]: https://en.wikipedia.org/wiki/Side_effect_(computer_science)
+
+#### Performance
+
+When observability is disabled there should be little to no overhead.
+
+```go
+func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+	if e.inst != nil {
+		attrs := expensiveOperation()
+		e.inst.recordSpanInflight(ctx, int64(len(spans)), attrs...)
+	}
+    // Export spans...
+}
+```
+
+```go
+// ❌ Avoid this pattern.
+func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+	attrs := expensiveOperation()
+	e.inst.recordSpanInflight(ctx, int64(len(spans)), attrs...)
+    // Export spans...
+}
+
+func (i *instrumentation) recordSpanInflight(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
+	if i == nil || i.inflight == nil {
+		return
+	}
+	i.inflight.Add(ctx, count, metric.WithAttributes(attrs...))
+}
+```
+
+When observability is enabled, the instrumentation code paths should be optimized to reduce allocation and computation overhead.
+
+##### Attribute and Option Allocation Management
+
+Pool attribute slices and options with [`sync.Pool`] to minimize allocations in measurement calls with dynamic attributes.
+
+```go
+var (
+	attrPool = sync.Pool{
+        New: func() any {
+		    // Pre-allocate common capacity
+    		knownCap := 8 // Adjust based on expected usage
+            s := make([]attribute.KeyValue, 0, knownCap)
+    		// Return a pointer to avoid extra allocation on Put().
+            return &s
+        },
+    }
+
+	addOptPool = &sync.Pool{
+		New: func() any {
+			const n = 1 // WithAttributeSet
+			o := make([]metric.AddOption, 0, n)
+    		// Return a pointer to avoid extra allocation on Put().
+			return &o
+		},
+	}
+)
+
+func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...attribute.KeyValue) {
+    attrs := attrPool.Get().(*[]attribute.KeyValue)
+    defer func() {
+        *attrs = (*attrs)[:0] // Reset.
+        attrPool.Put(attrs)
+    }()
+
+    *attrs = append(*attrs, baseAttrs...)
+    // Add any dynamic attributes.
+    *attrs = append(*attrs, semconv.OTelComponentName("exporter-1"))
+
+	addOpt := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*addOpt = (*addOpt)[:0]
+		addOptPool.Put(addOpt)
+	}()
+
+	set := attribute.NewSet(*attrs...)
+	*addOpt = append(*addOpt, metric.WithAttributeSet(set))
+
+    i.counter.Add(ctx, value, *addOpt...)
+}
+```
+
+Pools are most effective when there are many pooled objects of the same sufficiently large size, and the objects are repeatedly used.
+This amortizes the cost of allocation and synchronization.
+Ideally, the pools should be scoped to be used as widely as possible within the component to maximize this efficiency while still ensure correctness.
+
+[`sync.Pool`]: https://pkg.go.dev/sync#Pool
+
+##### Cache common attribute sets for repeated measurements
+
+If a static set of attributes are used for measurements and they are known at compile time, pre-compute and cache these attributes.
+
+```go
+type spanLiveSetKey struct {
+	sampled bool
+}
+
+var spanLiveSetCache = map[spanLiveSetKey]attribute.Set{
+	{true}: attribute.NewSet(
+		otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+			otelconv.SpanSamplingResultRecordAndSample,
+		),
+	),
+	{false}: attribute.NewSet(
+		otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+			otelconv.SpanSamplingResultRecordOnly,
+		),
+	),
+}
+
+func spanLiveSet(sampled bool) attribute.Set {
+	key := spanLiveSetKey{sampled: sampled}
+	return spanLiveSetCache[key]
+}
+```
+
+##### Benchmarking
+
+Always provide benchmarks when introducing or refactoring instrumentation.
+Demonstrate the impact (allocs/op, B/op, ns/op) in enabled/disabled scenarios:
+
+```go
+func BenchmarkExportSpans(b *testing.B) {
+    scenarios := []struct {
+        name           string
+        selfObsEnabled bool
+    }{
+        {"SelfObsDisabled", false},
+        {"SelfObsEnabled", true},
+    }
+ 
+    for _, scenario := range scenarios {
+        b.Run(scenario.name, func(b *testing.B) {
+            b.Setenv(
+				"OTEL_GO_X_SELF_OBSERVABILITY",
+				strconv.FormatBool(scenario.selfObsEnabled),
+			)
+
+            exporter := NewExporter()
+            spans := generateTestSpans(100)
+
+            b.ResetTimer()
+            b.ReportAllocs()
+
+            for i := 0; i < b.N; i++ {
+                _ = exporter.ExportSpans(context.Background(), spans)
+            }
+        })
+    }
+}
+```
+
+#### Error Handling and Robustness
+
+Errors should be reported back to the caller if possible, and partial failures should be handled as gracefully as possible.
+
+```go
+func newInstrumentation() (*instrumentation, error) {
+    if !x.SelfObservability.Enabled() {
+        return nil, nil
+    }
+ 
+    m := otel.GetMeterProvider().Meter(/* initialize meter */)
+    counter, err := otelconv.NewSDKComponentCounter(m)
+	// Use the partially initialized counter if available.
+	i := &instrumentation{counter: counter}
+	// Return any error to the caller.
+    return i, err
+}
+```
+
+```go
+// ❌ Avoid this pattern.
+func newInstrumentation() *instrumentation {
+    if !x.SelfObservability.Enabled() {
+        return nil, nil
+    }
+ 
+    m := otel.GetMeterProvider().Meter(/* initialize meter */)
+    counter, err := otelconv.NewSDKComponentCounter(m)
+	if err != nil {
+		// ❌ Do not dump the error to the OTel Handler. Return it to the
+		// caller.
+		otel.Handle(err)
+		// ❌ Do not return nil if we can still use the partially initialized
+		// counter.
+		return nil
+	}
+    return &instrumentation{counter: counter}
+}
+```
+
+If the instrumented component cannot report the error to the user, let it report the error to `otel.Handle`.
+
+#### Context Propagation
+
+Ensure observability measurements receive the correct context, especially for trace exemplars and distributed context:
+
+```go
+func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+    // Use the provided context for observability measurements
+    e.inst.recordSpanExportStarted(ctx, len(spans))
+ 
+    err := e.doExport(ctx, spans)
+
+    if err != nil {
+        e.inst.recordSpanExportFailed(ctx, len(spans), err)
+    } else {
+        e.inst.recordSpanExportSucceeded(ctx, len(spans))
+    }
+ 
+    return err
+}
+```
+
+```go
+// ❌ Avoid this pattern.
+func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+    // ❌ Do not break the context propagation.
+    e.inst.recordSpanExportStarted(context.Background(), len(spans))
+ 
+    err := e.doExport(ctx, spans)
+
+	/* ... */
+ 
+    return err
+}
+```
+
+#### Semantic Conventions Compliance
+
+All self-observability metrics should follow the [OpenTelemetry Semantic Conventions for SDK metrics](https://github.com/open-telemetry/semantic-conventions/blob/1cf2476ae5e518225a766990a28a6d5602bd5a30/docs/otel/sdk-metrics.md).
+
+Use the metric semantic conventions convenience package [otelconv](./semconv/v1.37.0/otelconv/metric.go).
+
+##### Component Identification
+
+Component names and types should follow [semantic convention](https://github.com/open-telemetry/semantic-conventions/blob/1cf2476ae5e518225a766990a28a6d5602bd5a30/docs/registry/attributes/otel.md#otel-component-attributes).
+
+If a component is not a well-known type specified in the semantic conventions, use the package path scope type as a stable identifier.
+
+```go
+componentType := "go.opentelemetry.io/otel/sdk/trace.Span"
+```
+
+```go
+// ❌ Do not do this.
+componentType := "trace-span"
+```
+
+The component name should be a stable unique identifier for the specific instance of the component.
+
+Use a global counter to ensure uniqueness if necessary.
+
+```go
+// Unique 0-based ID counter for component instances.
+var componentIDCounter atomic.Int64
+
+// nextID returns the next unique ID for a component.
+func nextID() int64 {
+	return componentIDCounter.Add(1) - 1
+}
+
+// componentName returns a unique name for the component instance.
+func componentName() attribute.KeyValue {
+	id := nextID()
+	name := fmt.Sprintf("%s/%d", componentType, id)
+	return semconv.OTelComponentName(name)
+}
+```
+
+The component ID will need to be resettable for deterministic testing.
+If test are in a different package than the component being tested (i.e. a `<component package>_test` package name), use a generated `counter` internal package to manage the counter.
+See [stdouttrace exporter example](./exporters/stdout/stdouttrace/internal/gen.go) for reference.
+
+#### Testing
+
+Use deterministic testing with isolated state:
+
+```go
+func TestSelfObservability(t *testing.T) {
+	// Restore state after test to ensure this does not affect other tests.
+    prev := otel.GetMeterProvider()
+    t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
+    // Isolate the meter provider for deterministic testing
+    reader := metric.NewManualReader()
+    meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+    otel.SetMeterProvider(meterProvider)
+
+	// Use t.Setenv to ensure environment variable is restored after test.
+    t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+
+	// Reset component ID counter to ensure deterministic component names.
+	componentIDCounter.Store(0)
+ 
+	/* ... test code ... */
+}
+```
+
+Test order should not affect results.
+Ensure that any global state (e.g. component ID counters) is reset between tests.
+
 ## Approvers and Maintainers
 
 ### Maintainers
