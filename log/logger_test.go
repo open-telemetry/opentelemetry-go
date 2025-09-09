@@ -16,16 +16,29 @@ import (
 func TestNewLoggerConfig(t *testing.T) {
 	version := "v1.1.1"
 	schemaURL := "https://opentelemetry.io/schemas/1.37.0"
+	attr := attribute.NewSet(
+		attribute.String("user", "alice"),
+		attribute.Bool("admin", true),
+	)
+
+	c := log.NewLoggerConfig(
+		log.WithInstrumentationVersion(version),
+		log.WithSchemaURL(schemaURL),
+		log.WithInstrumentationAttributes(attr.ToSlice()...),
+	)
+
+	assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
+	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+	assert.Equal(t, attr, c.InstrumentationAttributes(), "instrumentation attributes")
+}
+
+func TestWithInstrumentationAttributesConcurrentSafe(t *testing.T) {
 	attr := []attribute.KeyValue{
 		attribute.String("user", "alice"),
 		attribute.Bool("admin", true),
 	}
 	attrSet := attribute.NewSet(attr...)
-	options := []log.LoggerOption{
-		log.WithInstrumentationVersion(version),
-		log.WithSchemaURL(schemaURL),
-		log.WithInstrumentationAttributes(attr...),
-	}
+	option := log.WithInstrumentationAttributes(attr...)
 
 	// Modifications to attr should not affect the config.
 	attr[0] = attribute.String("user", "bob")
@@ -36,9 +49,7 @@ func TestNewLoggerConfig(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c := log.NewLoggerConfig(options...)
-			assert.Equal(t, version, c.InstrumentationVersion(), "instrumentation version")
-			assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
+			c := log.NewLoggerConfig(option)
 			assert.Equal(t, attrSet, c.InstrumentationAttributes(), "instrumentation attributes")
 		}()
 	}
