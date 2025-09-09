@@ -31,7 +31,7 @@ const (
 	ComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdouttrace.Exporter"
 
 	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
+	ScopeName = "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/observ"
 
 	// SchemaURL is the schema URL of the metrics produced by this
 	// instrumentation.
