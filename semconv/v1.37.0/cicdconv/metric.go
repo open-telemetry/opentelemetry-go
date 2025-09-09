@@ -97,6 +97,11 @@ type PipelineRunActive struct {
 	metric.Int64UpDownCounter
 }
 
+var newPipelineRunActiveOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of pipeline runs currently active in the system by state."),
+	metric.WithUnit("{run}"),
+}
+
 // NewPipelineRunActive returns a new PipelineRunActive instrument.
 func NewPipelineRunActive(
 	m metric.Meter,
@@ -107,12 +112,15 @@ func NewPipelineRunActive(
 		return PipelineRunActive{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPipelineRunActiveOpts
+	} else {
+		opt = append(opt, newPipelineRunActiveOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"cicd.pipeline.run.active",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of pipeline runs currently active in the system by state."),
-			metric.WithUnit("{run}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PipelineRunActive{noop.Int64UpDownCounter{}}, err
@@ -203,6 +211,11 @@ type PipelineRunDuration struct {
 	metric.Float64Histogram
 }
 
+var newPipelineRunDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Duration of a pipeline run grouped by pipeline, state and result."),
+	metric.WithUnit("s"),
+}
+
 // NewPipelineRunDuration returns a new PipelineRunDuration instrument.
 func NewPipelineRunDuration(
 	m metric.Meter,
@@ -213,12 +226,15 @@ func NewPipelineRunDuration(
 		return PipelineRunDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPipelineRunDurationOpts
+	} else {
+		opt = append(opt, newPipelineRunDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"cicd.pipeline.run.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Duration of a pipeline run grouped by pipeline, state and result."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PipelineRunDuration{noop.Float64Histogram{}}, err
@@ -324,6 +340,11 @@ type PipelineRunErrors struct {
 	metric.Int64Counter
 }
 
+var newPipelineRunErrorsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("The number of errors encountered in pipeline runs (eg. compile, test failures)."),
+	metric.WithUnit("{error}"),
+}
+
 // NewPipelineRunErrors returns a new PipelineRunErrors instrument.
 func NewPipelineRunErrors(
 	m metric.Meter,
@@ -334,12 +355,15 @@ func NewPipelineRunErrors(
 		return PipelineRunErrors{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newPipelineRunErrorsOpts
+	} else {
+		opt = append(opt, newPipelineRunErrorsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"cicd.pipeline.run.errors",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("The number of errors encountered in pipeline runs (eg. compile, test failures)."),
-			metric.WithUnit("{error}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return PipelineRunErrors{noop.Int64Counter{}}, err
@@ -439,6 +463,11 @@ type SystemErrors struct {
 	metric.Int64Counter
 }
 
+var newSystemErrorsOpts = []metric.Int64CounterOption{
+	metric.WithDescription("The number of errors in a component of the CICD system (eg. controller, scheduler, agent)."),
+	metric.WithUnit("{error}"),
+}
+
 // NewSystemErrors returns a new SystemErrors instrument.
 func NewSystemErrors(
 	m metric.Meter,
@@ -449,12 +478,15 @@ func NewSystemErrors(
 		return SystemErrors{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newSystemErrorsOpts
+	} else {
+		opt = append(opt, newSystemErrorsOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"cicd.system.errors",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("The number of errors in a component of the CICD system (eg. controller, scheduler, agent)."),
-			metric.WithUnit("{error}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return SystemErrors{noop.Int64Counter{}}, err
@@ -549,6 +581,11 @@ type WorkerCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newWorkerCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of workers on the CICD system by state."),
+	metric.WithUnit("{count}"),
+}
+
 // NewWorkerCount returns a new WorkerCount instrument.
 func NewWorkerCount(
 	m metric.Meter,
@@ -559,12 +596,15 @@ func NewWorkerCount(
 		return WorkerCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newWorkerCountOpts
+	} else {
+		opt = append(opt, newWorkerCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"cicd.worker.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of workers on the CICD system by state."),
-			metric.WithUnit("{count}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return WorkerCount{noop.Int64UpDownCounter{}}, err
