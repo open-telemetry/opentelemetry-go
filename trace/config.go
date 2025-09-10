@@ -318,8 +318,8 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 
 // WithInstrumentationAttributes adds the instrumentation attributes.
 //
-// This is equivalent to calling WithInstrumentationAttributeSet with an
-// attribute.Set created from the passed attributes.
+// This is equivalent to calling [WithInstrumentationAttributeSet] with an
+// [attribute.Set] created from the passed attributes.
 // [WithInstrumentationAttributeSet] is recommended for more control.
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
