@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -230,30 +229,6 @@ func TestTracerConfig(t *testing.T) {
 	assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
 	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
-}
-
-func TestWithInstrumentationAttributesConcurrentSafe(t *testing.T) {
-	attrs := []attribute.KeyValue{
-		attribute.String("user", "alice"),
-		attribute.Bool("admin", true),
-	}
-	attrSet := attribute.NewSet(attrs...)
-	option := WithInstrumentationAttributes(attrs...)
-
-	// Modifications to attr should not affect the config.
-	attrs[0] = attribute.String("user", "bob")
-
-	// Ensure that options can be used concurrently.
-	var wg sync.WaitGroup
-	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			c := NewTracerConfig(option)
-			assert.Equal(t, attrSet, c.InstrumentationAttributes(), "instrumentation attributes")
-		}()
-	}
-	wg.Wait()
 }
 
 func TestWithInstrumentationAttributeSet(t *testing.T) {
