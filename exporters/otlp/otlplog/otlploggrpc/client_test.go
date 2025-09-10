@@ -30,7 +30,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -621,7 +621,7 @@ func TestSelfObservability(t *testing.T) {
 			enabled: false,
 			test: func(t *testing.T, _ func() metricdata.ScopeMetrics) {
 				client, _ := clientFactory(t, nil)
-				assert.Empty(t, client.exporterMetric)
+				assert.Empty(t, client.instrumentation)
 			},
 		},
 		{
@@ -635,7 +635,7 @@ func TestSelfObservability(t *testing.T) {
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
 					0,
 				)
-				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -757,7 +757,7 @@ func TestSelfObservability(t *testing.T) {
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
 					1,
 				)
-				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -898,7 +898,7 @@ func TestSelfObservability(t *testing.T) {
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
 					2,
 				)
-				serverAddrAttrs := selfobservability.ServerAddrAttrs(client.conn.Target())
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",

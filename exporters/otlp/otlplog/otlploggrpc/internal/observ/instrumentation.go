@@ -1,9 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package selfobservability provides self-observability metrics for OTLP log exporters.
+// Package observ provides self-observability metrics for OTLP log exporters.
 // This is an experimental feature controlled by the x.SelfObservability feature flag.
-package selfobservability // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
+package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 
 import (
 	"context"
@@ -59,9 +59,9 @@ func put[T any](p *sync.Pool, s *[]T) {
 
 // Instrumentation is experimental instrumentation for the exporter.
 type Instrumentation struct {
-	logInflightMetric         otelconv.SDKExporterLogInflight
-	logExportedMetric         otelconv.SDKExporterLogExported
-	logExportedDurationMetric otelconv.SDKExporterOperationDuration
+	logInflightMetric         metric.Int64UpDownCounter
+	logExportedMetric         metric.Int64Counter
+	logExportedDurationMetric metric.Float64Histogram
 	presetAttrs               []attribute.KeyValue
 	setOpt                    metric.MeasurementOption
 }
@@ -72,7 +72,7 @@ func NewInstrumentation(
 	componentType otelconv.ComponentTypeAttr,
 	target string,
 ) (*Instrumentation, error) {
-	em := &Instrumentation{}
+	i := &Instrumentation{}
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -81,36 +81,44 @@ func NewInstrumentation(
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
-	var err, e error
-	if em.logInflightMetric, e = otelconv.NewSDKExporterLogInflight(m); e != nil {
+	var err error
+
+	logInflightMetric, e := otelconv.NewSDKExporterLogInflight(m)
+	if e != nil {
 		e = fmt.Errorf("failed to create span inflight metric: %w", e)
 		otel.Handle(e)
 		err = errors.Join(err, e)
 	}
-	if em.logExportedMetric, e = otelconv.NewSDKExporterLogExported(m); e != nil {
+	i.logInflightMetric = logInflightMetric.Inst()
+
+	logExportedMetric, e := otelconv.NewSDKExporterLogExported(m)
+	if e != nil {
 		e = fmt.Errorf("failed to create span exported metric: %w", e)
 		otel.Handle(e)
 		err = errors.Join(err, e)
 	}
-	if em.logExportedDurationMetric, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+	i.logExportedMetric = logExportedMetric.Inst()
+
+	logOpDurationMetric, e := otelconv.NewSDKExporterOperationDuration(m)
+	if e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
 		otel.Handle(e)
 		err = errors.Join(err, e)
 	}
-
+	i.logExportedDurationMetric = logOpDurationMetric.Inst()
 	if err != nil {
 		return nil, err
 	}
 
-	em.presetAttrs = []attribute.KeyValue{
+	i.presetAttrs = []attribute.KeyValue{
 		semconv.OTelComponentName(componentName),
 		semconv.OTelComponentTypeKey.String(string(componentType)),
 	}
-	em.presetAttrs = append(em.presetAttrs, ServerAddrAttrs(target)...)
-	s := attribute.NewSet(em.presetAttrs...)
-	em.setOpt = metric.WithAttributeSet(s)
+	i.presetAttrs = append(i.presetAttrs, ServerAddrAttrs(target)...)
+	s := attribute.NewSet(i.presetAttrs...)
+	i.setOpt = metric.WithAttributeSet(s)
 
-	return em, nil
+	return i, nil
 }
 
 // ExportSpanDone is a function that is called when a call to an Exporter's
@@ -129,7 +137,7 @@ func (i *Instrumentation) ExportSpans(ctx context.Context, count int64) ExportSp
 	*addOpt = append(*addOpt, i.setOpt)
 
 	start := time.Now()
-	i.logInflightMetric.Inst().Add(ctx, count, *addOpt...)
+	i.logInflightMetric.Add(ctx, count, *addOpt...)
 
 	return i.end(ctx, start, count)
 }
@@ -142,8 +150,8 @@ func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64)
 		*addOpt = append(*addOpt, i.setOpt)
 
 		duration := time.Since(start).Seconds()
-		i.logInflightMetric.Inst().Add(ctx, -count, *addOpt...)
-		i.logExportedMetric.Inst().Add(ctx, success, *addOpt...)
+		i.logInflightMetric.Add(ctx, -count, *addOpt...)
+		i.logExportedMetric.Add(ctx, success, *addOpt...)
 
 		mOpt := i.setOpt
 		if err != nil {
@@ -157,7 +165,7 @@ func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64)
 
 			*addOpt = append((*addOpt)[:0], mOpt)
 
-			i.logExportedMetric.Inst().Add(ctx, count-success, *addOpt...)
+			i.logExportedMetric.Add(ctx, count-success, *addOpt...)
 		}
 
 		recordOpt := get[metric.RecordOption](recordOptPool)
@@ -166,10 +174,10 @@ func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64)
 			*recordOpt,
 			mOpt,
 			metric.WithAttributes(
-				i.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
+				semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 			),
 		)
-		i.logExportedDurationMetric.Inst().Record(ctx, duration, *recordOpt...)
+		i.logExportedDurationMetric.Record(ctx, duration, *recordOpt...)
 	}
 }
 

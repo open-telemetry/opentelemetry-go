@@ -23,8 +23,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/selfobservability"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
@@ -43,7 +43,7 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
-	exporterMetric *selfobservability.Instrumentation
+	instrumentation *observ.Instrumentation
 }
 
 // Used for testing.
@@ -85,7 +85,7 @@ func newClient(cfg config) (*client, error) {
 	id := counter.NextExporterID()
 	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 	var err error
-	c.exporterMetric, err = selfobservability.NewInstrumentation(
+	c.instrumentation, err = observ.NewInstrumentation(
 		"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 		componentName,
 		otelconv.ComponentTypeOtlpGRPCLogExporter,
@@ -154,9 +154,9 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 	success := int64(len(rl))
 	// partialSuccessErr records an error when the export is partially successful.
 	var partialSuccessErr error
-	if c.exporterMetric != nil {
+	if c.instrumentation != nil {
 		count := len(rl)
-		trackExportFunc := c.exporterMetric.ExportSpans(ctx, int64(count))
+		trackExportFunc := c.instrumentation.ExportSpans(ctx, int64(count))
 		defer func() {
 			if partialSuccessErr != nil {
 				trackExportFunc(partialSuccessErr, success, status.Code(partialSuccessErr))
