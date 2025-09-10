@@ -33,7 +33,7 @@ func ExampleAssertEqual() {
 	// Collect the metrics
 	rm := &metricdata.ResourceMetrics{}
 	_ = reader.Collect(ctx, rm)
-	actualMetrics, _ := getMetrics("payment.requests", rm)
+	got, _ := getMetrics("payment.requests", rm)
 
 	want := metricdata.Metrics{
 		Name: "payment.requests",
