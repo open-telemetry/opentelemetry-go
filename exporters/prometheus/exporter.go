@@ -20,6 +20,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/prometheus/internal/counter"
+	"go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -92,6 +94,8 @@ type collector struct {
 	metricNamer       otlptranslator.MetricNamer
 	labelNamer        otlptranslator.LabelNamer
 	unitNamer         otlptranslator.UnitNamer
+
+	inst *observ.Instrumentation
 }
 
 // New returns a Prometheus Exporter.
@@ -137,7 +141,10 @@ func New(opts ...Option) (*Exporter, error) {
 		Reader: reader,
 	}
 
-	return e, nil
+	var err error
+	collector.inst, err = observ.NewInstrumentation(counter.NextExporterID())
+
+	return e, err
 }
 
 // Describe implements prometheus.Collector.
@@ -153,9 +160,25 @@ func (*collector) Describe(chan<- *prometheus.Desc) {
 //
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
+	var err error
+	ctx := context.TODO()
+
+	if c.inst != nil {
+		endOp := c.inst.RecordOperationDuration(ctx)
+		defer func() { endOp(err) }()
+	}
+
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
 	defer metricsPool.Put(metrics)
-	err := c.reader.Collect(context.TODO(), metrics)
+
+	if c.inst != nil {
+		err = c.inst.RecordCollectionDuration(ctx, func() error {
+			return c.reader.Collect(ctx, metrics)
+		})
+	} else {
+		err = c.reader.Collect(ctx, metrics)
+	}
+
 	if err != nil {
 		if errors.Is(err, metric.ErrReaderShutdown) {
 			return
@@ -174,15 +197,16 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		defer c.mu.Unlock()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
-			targetInfo, err := c.createInfoMetric(
+			targetInfo, e := c.createInfoMetric(
 				otlptranslator.TargetInfoMetricName,
 				targetInfoDescription,
 				metrics.Resource,
 			)
-			if err != nil {
+			if e != nil {
 				// If the target info metric is invalid, disable sending it.
 				c.disableTargetInfo = true
-				otel.Handle(err)
+				otel.Handle(e)
+				err = errors.Join(err, fmt.Errorf("failed to createInfoMetric: %w", e))
 				return
 			}
 
@@ -195,14 +219,15 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	if c.resourceAttributesFilter != nil && len(c.resourceKeyVals.keys) == 0 {
-		err := c.createResourceAttributes(metrics.Resource)
-		if err != nil {
-			otel.Handle(err)
+		e := c.createResourceAttributes(metrics.Resource)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to createResourceAttributes: %w", e))
 			return
 		}
 	}
 
-	for _, scopeMetrics := range metrics.ScopeMetrics {
+	for j, scopeMetrics := range metrics.ScopeMetrics {
 		n := len(c.resourceKeyVals.keys) + 2 // resource attrs + scope name + scope version
 		kv := keyVals{
 			keys: make([]string, 0, n),
@@ -213,9 +238,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals, err := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
-			if err != nil {
-				otel.Handle(err)
+			attrKeys, attrVals, e := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
+			if e != nil {
+				otel.Handle(e)
+				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d: %w", j, e))
 				continue
 			}
 			for i := range attrKeys {
@@ -228,16 +254,17 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		kv.keys = append(kv.keys, c.resourceKeyVals.keys...)
 		kv.vals = append(kv.vals, c.resourceKeyVals.vals...)
 
-		for _, m := range scopeMetrics.Metrics {
+		for k, m := range scopeMetrics.Metrics {
 			typ := c.metricType(m)
 			if typ == nil {
 				continue
 			}
-			name, err := c.getName(m)
-			if err != nil {
+			name, e := c.getName(m)
+			if e != nil {
 				// TODO(#7066): Handle this error better. It's not clear this can be
 				// reached, bad metric names should / will be caught at creation time.
-				otel.Handle(err)
+				otel.Handle(e)
+				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d, Metrics %d: %w", j, k, e))
 				continue
 			}
 
@@ -252,21 +279,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer)
+				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer)
+				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer)
+				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			}
 		}
 	}
@@ -332,11 +359,21 @@ func addExponentialHistogramMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	inst *observ.Instrumentation,
+	ctx context.Context,
 ) {
-	for _, dp := range histogram.DataPoints {
-		keys, values, err := getAttrs(dp.Attributes, labelNamer)
-		if err != nil {
-			otel.Handle(err)
+	var err error
+	var success int64
+	if inst != nil {
+		end := inst.TrackScrape(ctx, int64(len(histogram.DataPoints)))
+		defer func() { end(success, err) }()
+	}
+
+	for j, dp := range histogram.DataPoints {
+		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to getAttrs for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
 		keys = append(keys, kv.keys...)
@@ -348,9 +385,12 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
-			otel.Handle(fmt.Errorf(
+			e := fmt.Errorf(
 				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-				scale))
+				scale,
+			)
+			otel.Handle(e)
+			err = errors.Join(err, e)
 			continue
 		}
 
@@ -368,7 +408,9 @@ func addExponentialHistogramMetric[N int64 | float64](
 		positiveBuckets := make(map[int]int64)
 		for i, c := range positiveBucket.Counts {
 			if c > math.MaxInt64 {
-				otel.Handle(fmt.Errorf("positive count %d is too large to be represented as int64", c))
+				e := fmt.Errorf("positive count %d is too large to be represented as int64", c)
+				otel.Handle(e)
+				err = errors.Join(err, e)
 				continue
 			}
 			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
@@ -377,13 +419,15 @@ func addExponentialHistogramMetric[N int64 | float64](
 		negativeBuckets := make(map[int]int64)
 		for i, c := range negativeBucket.Counts {
 			if c > math.MaxInt64 {
-				otel.Handle(fmt.Errorf("negative count %d is too large to be represented as int64", c))
+				e := fmt.Errorf("negative count %d is too large to be represented as int64", c)
+				otel.Handle(e)
+				err = errors.Join(err, e)
 				continue
 			}
 			negativeBuckets[int(negativeBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
-		m, err := prometheus.NewConstNativeHistogram(
+		m, e := prometheus.NewConstNativeHistogram(
 			desc,
 			dp.Count,
 			float64(dp.Sum),
@@ -394,12 +438,18 @@ func addExponentialHistogramMetric[N int64 | float64](
 			dp.ZeroThreshold,
 			dp.StartTime,
 			values...)
-		if err != nil {
-			otel.Handle(err)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(
+				err,
+				fmt.Errorf("failed to NewConstNativeHistogram for histogram.DataPoints %d: %w", j, e),
+			)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
+
+		success++
 	}
 }
 
@@ -410,11 +460,21 @@ func addHistogramMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	inst *observ.Instrumentation,
+	ctx context.Context,
 ) {
-	for _, dp := range histogram.DataPoints {
-		keys, values, err := getAttrs(dp.Attributes, labelNamer)
-		if err != nil {
-			otel.Handle(err)
+	var err error
+	var success int64
+	if inst != nil {
+		end := inst.TrackScrape(ctx, int64(len(histogram.DataPoints)))
+		defer func() { end(success, err) }()
+	}
+
+	for j, dp := range histogram.DataPoints {
+		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to getAttrs for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
 		keys = append(keys, kv.keys...)
@@ -428,13 +488,16 @@ func addHistogramMetric[N int64 | float64](
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
-		if err != nil {
-			otel.Handle(err)
+		m, e := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
 		ch <- m
+
+		success++
 	}
 }
 
@@ -445,25 +508,36 @@ func addSumMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	inst *observ.Instrumentation,
+	ctx context.Context,
 ) {
+	var err error
+	var success int64
+	if inst != nil {
+		end := inst.TrackScrape(ctx, int64(len(sum.DataPoints)))
+		defer func() { end(success, err) }()
+	}
+
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
 		valueType = prometheus.GaugeValue
 	}
 
-	for _, dp := range sum.DataPoints {
-		keys, values, err := getAttrs(dp.Attributes, labelNamer)
-		if err != nil {
-			otel.Handle(err)
+	for i, dp := range sum.DataPoints {
+		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to getAttrs for sum.DataPoints %d: %w", i, e))
 			continue
 		}
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
-		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
-		if err != nil {
-			otel.Handle(err)
+		m, e := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for sum.DataPoints %d: %w", i, e))
 			continue
 		}
 		// GaugeValues don't support Exemplars at this time
@@ -472,6 +546,8 @@ func addSumMetric[N int64 | float64](
 			m = addExemplars(m, dp.Exemplars, labelNamer)
 		}
 		ch <- m
+
+		success++
 	}
 }
 
@@ -482,23 +558,36 @@ func addGaugeMetric[N int64 | float64](
 	name string,
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
+	inst *observ.Instrumentation,
+	ctx context.Context,
 ) {
-	for _, dp := range gauge.DataPoints {
-		keys, values, err := getAttrs(dp.Attributes, labelNamer)
-		if err != nil {
-			otel.Handle(err)
+	var err error
+	var success int64
+	if inst != nil {
+		end := inst.TrackScrape(ctx, int64(len(gauge.DataPoints)))
+		defer func() { end(success, err) }()
+	}
+
+	for i, dp := range gauge.DataPoints {
+		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to getAttrs for gauge.DataPoints %d: %w", i, e))
 			continue
 		}
 		keys = append(keys, kv.keys...)
 		values = append(values, kv.vals...)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
-		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
-		if err != nil {
-			otel.Handle(err)
+		m, e := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
+		if e != nil {
+			otel.Handle(e)
+			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for gauge.DataPoints %d: %w", i, e))
 			continue
 		}
 		ch <- m
+
+		success++
 	}
 }
 
