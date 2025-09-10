@@ -45,7 +45,7 @@ func ExampleAssertEqual() {
 	}
 
 	// Compare expected metrics with the actual one
-	mockTest := &mockTestingT{}
+	t := &mockTestingT{}
 	assertEqual := metricdatatest.AssertEqual(
 		mockTest,
 		expectedMetrics,
