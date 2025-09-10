@@ -361,6 +361,13 @@ func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption 
 	})
 }
 
+func WithTemporalityPreference(pref metric.TemporalityPreference) GenericOption {
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.TemporalitySelector = metric.TemporalitySelectorForPreference(pref)
+		return cfg
+	})
+}
+
 func WithAggregationSelector(selector metric.AggregationSelector) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.AggregationSelector = selector
