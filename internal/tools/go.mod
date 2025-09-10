@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/gotmpl v0.26.2
 	go.opentelemetry.io/build-tools/multimod v0.26.2
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
-	golang.org/x/tools v0.36.0
+	golang.org/x/tools v0.37.0
 	golang.org/x/vuln v1.1.4
 )
 
