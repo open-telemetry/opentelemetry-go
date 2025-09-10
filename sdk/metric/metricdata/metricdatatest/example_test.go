@@ -52,7 +52,7 @@ func ExampleAssertEqual() {
 		actualMetrics,
 		metricdatatest.IgnoreTimestamp(), // ignoring timestamps
 	)
-	fmt.Printf("Metrics matched as expected: %t\n", assertEqual)
+	fmt.Printf("Metrics are equal: %t\n", assertEqual)
 
 	// Output:
 	// Metrics matched as expected: true
