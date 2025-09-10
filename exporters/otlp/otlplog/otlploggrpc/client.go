@@ -43,7 +43,7 @@ type client struct {
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
 
-	exporterMetric *selfobservability.ExporterMetrics
+	exporterMetric *selfobservability.Instrumentation
 }
 
 // Used for testing.
@@ -85,7 +85,7 @@ func newClient(cfg config) (*client, error) {
 	id := counter.NextExporterID()
 	componentName := fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 	var err error
-	c.exporterMetric, err = selfobservability.NewExporterMetrics(
+	c.exporterMetric, err = selfobservability.NewInstrumentation(
 		"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
 		componentName,
 		otelconv.ComponentTypeOtlpGRPCLogExporter,
@@ -156,7 +156,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 	var partialSuccessErr error
 	if c.exporterMetric != nil {
 		count := len(rl)
-		trackExportFunc := c.exporterMetric.TrackExport(ctx, int64(count))
+		trackExportFunc := c.exporterMetric.ExportSpans(ctx, int64(count))
 		defer func() {
 			if partialSuccessErr != nil {
 				trackExportFunc(partialSuccessErr, success, status.Code(partialSuccessErr))

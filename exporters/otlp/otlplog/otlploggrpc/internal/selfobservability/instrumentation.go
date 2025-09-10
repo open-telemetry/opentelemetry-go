@@ -26,28 +26,53 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
-var attrsPool = sync.Pool{
-	New: func() any {
-		// "component.name" + "component.type" + "error.type" + "server.address" + "server.port" + "rpc.grpc.status_code"
-		const n = 1 + 1 + 1 + 1 + 1 + 1
-		s := make([]attribute.KeyValue, 0, n)
-		return &s
-	},
+var (
+	attrsPool = &sync.Pool{
+		New: func() any {
+			// "component.name" + "component.type" + "error.type" + "server.address" + "server.port"
+			const n = 1 + 1 + 1 + 1 + 1
+			s := make([]attribute.KeyValue, 0, n)
+			return &s
+		},
+	}
+	addOpPool = &sync.Pool{
+		New: func() any {
+			const n = 1 // WithAttributeSet
+			o := make([]metric.AddOption, 0, n)
+			return &o
+		},
+	}
+	recordOptPool = &sync.Pool{
+		New: func() any {
+			const n = 1 + 1 // WithAttributeSet + "rpc.grpc.status_code"
+			o := make([]metric.RecordOption, 0, n)
+			return &o
+		},
+	}
+)
+
+func get[T any](p *sync.Pool) *[]T { return p.Get().(*[]T) }
+func put[T any](p *sync.Pool, s *[]T) {
+	*s = (*s)[:0]
+	p.Put(s)
 }
 
-type ExporterMetrics struct {
+// Instrumentation is experimental instrumentation for the exporter.
+type Instrumentation struct {
 	logInflightMetric         otelconv.SDKExporterLogInflight
 	logExportedMetric         otelconv.SDKExporterLogExported
 	logExportedDurationMetric otelconv.SDKExporterOperationDuration
 	presetAttrs               []attribute.KeyValue
+	setOpt                    metric.MeasurementOption
 }
 
-func NewExporterMetrics(
+// NewInstrumentation returns instrumentation for otlplog grpc exporter.
+func NewInstrumentation(
 	name, componentName string,
 	componentType otelconv.ComponentTypeAttr,
 	target string,
-) (*ExporterMetrics, error) {
-	em := &ExporterMetrics{}
+) (*Instrumentation, error) {
+	em := &Instrumentation{}
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -82,39 +107,74 @@ func NewExporterMetrics(
 		semconv.OTelComponentTypeKey.String(string(componentType)),
 	}
 	em.presetAttrs = append(em.presetAttrs, ServerAddrAttrs(target)...)
+	s := attribute.NewSet(em.presetAttrs...)
+	em.setOpt = metric.WithAttributeSet(s)
+
 	return em, nil
 }
 
-func (em *ExporterMetrics) TrackExport(
-	ctx context.Context,
-	count int64,
-) func(err error, successCount int64, code codes.Code) {
-	attrs := attrsPool.Get().(*[]attribute.KeyValue)
-	*attrs = append([]attribute.KeyValue{}, em.presetAttrs...)
+// ExportSpanDone is a function that is called when a call to an Exporter's
+// ExportSpans method completes
+//
+// The number of successful exports is provided as success. Any error that is encountered is provided as error
+// The code of last gRPC requests performed in scope of this export call.
+type ExportSpanDone func(err error, success int64, code codes.Code)
 
-	begin := time.Now()
-	em.logInflightMetric.AddSet(ctx, count, attribute.NewSet(*attrs...))
-	return func(err error, successCount int64, code codes.Code) {
-		defer func() {
-			*attrs = (*attrs)[:0]
-			attrsPool.Put(attrs)
-		}()
+// ExportSpans instruments the ExportSpans method of the exporter. It returns a
+// function that needs to be deferred so it is called when the method returns.
+func (i *Instrumentation) ExportSpans(ctx context.Context, count int64) ExportSpanDone {
+	addOpt := get[metric.AddOption](addOpPool)
+	defer put(addOpPool, addOpt)
 
-		duration := time.Since(begin).Seconds()
-		em.logInflightMetric.AddSet(ctx, -count, attribute.NewSet(*attrs...))
-		em.logExportedMetric.AddSet(ctx, successCount, attribute.NewSet(*attrs...))
+	*addOpt = append(*addOpt, i.setOpt)
+
+	start := time.Now()
+	i.logInflightMetric.Inst().Add(ctx, count, *addOpt...)
+
+	return i.end(ctx, start, count)
+}
+
+func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64) ExportSpanDone {
+	return func(err error, success int64, code codes.Code) {
+		addOpt := get[metric.AddOption](addOpPool)
+		defer put(addOpPool, addOpt)
+
+		*addOpt = append(*addOpt, i.setOpt)
+
+		duration := time.Since(start).Seconds()
+		i.logInflightMetric.Inst().Add(ctx, -count, *addOpt...)
+		i.logExportedMetric.Inst().Add(ctx, success, *addOpt...)
+
+		mOpt := i.setOpt
 		if err != nil {
+			attrs := get[attribute.KeyValue](attrsPool)
+			defer put(attrsPool, attrs)
+			*attrs = append(*attrs, i.presetAttrs...)
 			*attrs = append(*attrs, semconv.ErrorType(err))
-			em.logExportedMetric.AddSet(ctx, count-successCount, attribute.NewSet(*attrs...))
+
+			set := attribute.NewSet(*attrs...)
+			mOpt = metric.WithAttributeSet(set)
+
+			*addOpt = append((*addOpt)[:0], mOpt)
+
+			i.logExportedMetric.Inst().Add(ctx, count-success, *addOpt...)
 		}
-		*attrs = append(
-			*attrs,
-			em.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
+
+		recordOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recordOpt)
+		*recordOpt = append(
+			*recordOpt,
+			mOpt,
+			metric.WithAttributes(
+				i.logExportedDurationMetric.AttrRPCGRPCStatusCode(otelconv.RPCGRPCStatusCodeAttr(code)),
+			),
 		)
-		em.logExportedDurationMetric.RecordSet(ctx, duration, attribute.NewSet(*attrs...))
+		i.logExportedDurationMetric.Inst().Record(ctx, duration, *recordOpt...)
 	}
 }
 
+// ServerAddrAttrs is a function that extracts server address and port attributes
+// from a target string.
 func ServerAddrAttrs(target string) []attribute.KeyValue {
 	if !strings.Contains(target, "://") {
 		return splitHostPortAttrs(target)

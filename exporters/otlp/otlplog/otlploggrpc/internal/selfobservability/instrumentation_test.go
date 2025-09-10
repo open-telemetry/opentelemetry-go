@@ -45,7 +45,7 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 
 func TestNewExporterMetrics(t *testing.T) {
 	t.Run("No Error", func(t *testing.T) {
-		em, err := NewExporterMetrics(
+		em, err := NewInstrumentation(
 			"newExportMetricsTest",
 			"newExportMetricsTest/1",
 			"newExportMetricsTest",
@@ -70,7 +70,7 @@ func TestNewExporterMetrics(t *testing.T) {
 		mp := &errMeterProvider{err: assert.AnError}
 		otel.SetMeterProvider(mp)
 
-		_, err := NewExporterMetrics(
+		_, err := NewInstrumentation(
 			"newExportMetrics",
 			"newExportMetrics/1",
 			"newExportMetrics",
