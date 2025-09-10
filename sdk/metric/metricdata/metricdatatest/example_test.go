@@ -35,7 +35,7 @@ func ExampleAssertEqual() {
 	_ = reader.Collect(ctx, rm)
 	actualMetrics, _ := getMetrics("payment.requests", rm)
 
-	expectedMetrics := metricdata.Metrics{
+	want := metricdata.Metrics{
 		Name: "payment.requests",
 		Data: metricdata.Sum[int64]{
 			DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
