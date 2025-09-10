@@ -28,6 +28,11 @@ type ClientDuration struct {
 	metric.Float64Histogram
 }
 
+var newClientDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Measures the duration of outbound RPC."),
+	metric.WithUnit("ms"),
+}
+
 // NewClientDuration returns a new ClientDuration instrument.
 func NewClientDuration(
 	m metric.Meter,
@@ -38,12 +43,15 @@ func NewClientDuration(
 		return ClientDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientDurationOpts
+	} else {
+		opt = append(opt, newClientDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"rpc.client.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Measures the duration of outbound RPC."),
-			metric.WithUnit("ms"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientDuration{noop.Float64Histogram{}}, err
@@ -121,6 +129,11 @@ type ClientRequestSize struct {
 	metric.Int64Histogram
 }
 
+var newClientRequestSizeOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the size of RPC request messages (uncompressed)."),
+	metric.WithUnit("By"),
+}
+
 // NewClientRequestSize returns a new ClientRequestSize instrument.
 func NewClientRequestSize(
 	m metric.Meter,
@@ -131,12 +144,15 @@ func NewClientRequestSize(
 		return ClientRequestSize{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientRequestSizeOpts
+	} else {
+		opt = append(opt, newClientRequestSizeOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.client.request.size",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the size of RPC request messages (uncompressed)."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientRequestSize{noop.Int64Histogram{}}, err
@@ -208,6 +224,11 @@ type ClientRequestsPerRPC struct {
 	metric.Int64Histogram
 }
 
+var newClientRequestsPerRPCOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the number of messages received per RPC."),
+	metric.WithUnit("{count}"),
+}
+
 // NewClientRequestsPerRPC returns a new ClientRequestsPerRPC instrument.
 func NewClientRequestsPerRPC(
 	m metric.Meter,
@@ -218,12 +239,15 @@ func NewClientRequestsPerRPC(
 		return ClientRequestsPerRPC{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientRequestsPerRPCOpts
+	} else {
+		opt = append(opt, newClientRequestsPerRPCOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.client.requests_per_rpc",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the number of messages received per RPC."),
-			metric.WithUnit("{count}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientRequestsPerRPC{noop.Int64Histogram{}}, err
@@ -299,6 +323,11 @@ type ClientResponseSize struct {
 	metric.Int64Histogram
 }
 
+var newClientResponseSizeOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the size of RPC response messages (uncompressed)."),
+	metric.WithUnit("By"),
+}
+
 // NewClientResponseSize returns a new ClientResponseSize instrument.
 func NewClientResponseSize(
 	m metric.Meter,
@@ -309,12 +338,15 @@ func NewClientResponseSize(
 		return ClientResponseSize{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientResponseSizeOpts
+	} else {
+		opt = append(opt, newClientResponseSizeOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.client.response.size",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the size of RPC response messages (uncompressed)."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientResponseSize{noop.Int64Histogram{}}, err
@@ -386,6 +418,11 @@ type ClientResponsesPerRPC struct {
 	metric.Int64Histogram
 }
 
+var newClientResponsesPerRPCOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the number of messages sent per RPC."),
+	metric.WithUnit("{count}"),
+}
+
 // NewClientResponsesPerRPC returns a new ClientResponsesPerRPC instrument.
 func NewClientResponsesPerRPC(
 	m metric.Meter,
@@ -396,12 +433,15 @@ func NewClientResponsesPerRPC(
 		return ClientResponsesPerRPC{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientResponsesPerRPCOpts
+	} else {
+		opt = append(opt, newClientResponsesPerRPCOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.client.responses_per_rpc",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the number of messages sent per RPC."),
-			metric.WithUnit("{count}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientResponsesPerRPC{noop.Int64Histogram{}}, err
@@ -477,6 +517,11 @@ type ServerDuration struct {
 	metric.Float64Histogram
 }
 
+var newServerDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Measures the duration of inbound RPC."),
+	metric.WithUnit("ms"),
+}
+
 // NewServerDuration returns a new ServerDuration instrument.
 func NewServerDuration(
 	m metric.Meter,
@@ -487,12 +532,15 @@ func NewServerDuration(
 		return ServerDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerDurationOpts
+	} else {
+		opt = append(opt, newServerDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"rpc.server.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Measures the duration of inbound RPC."),
-			metric.WithUnit("ms"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerDuration{noop.Float64Histogram{}}, err
@@ -570,6 +618,11 @@ type ServerRequestSize struct {
 	metric.Int64Histogram
 }
 
+var newServerRequestSizeOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the size of RPC request messages (uncompressed)."),
+	metric.WithUnit("By"),
+}
+
 // NewServerRequestSize returns a new ServerRequestSize instrument.
 func NewServerRequestSize(
 	m metric.Meter,
@@ -580,12 +633,15 @@ func NewServerRequestSize(
 		return ServerRequestSize{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerRequestSizeOpts
+	} else {
+		opt = append(opt, newServerRequestSizeOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.server.request.size",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the size of RPC request messages (uncompressed)."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerRequestSize{noop.Int64Histogram{}}, err
@@ -657,6 +713,11 @@ type ServerRequestsPerRPC struct {
 	metric.Int64Histogram
 }
 
+var newServerRequestsPerRPCOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the number of messages received per RPC."),
+	metric.WithUnit("{count}"),
+}
+
 // NewServerRequestsPerRPC returns a new ServerRequestsPerRPC instrument.
 func NewServerRequestsPerRPC(
 	m metric.Meter,
@@ -667,12 +728,15 @@ func NewServerRequestsPerRPC(
 		return ServerRequestsPerRPC{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerRequestsPerRPCOpts
+	} else {
+		opt = append(opt, newServerRequestsPerRPCOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.server.requests_per_rpc",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the number of messages received per RPC."),
-			metric.WithUnit("{count}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerRequestsPerRPC{noop.Int64Histogram{}}, err
@@ -748,6 +812,11 @@ type ServerResponseSize struct {
 	metric.Int64Histogram
 }
 
+var newServerResponseSizeOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the size of RPC response messages (uncompressed)."),
+	metric.WithUnit("By"),
+}
+
 // NewServerResponseSize returns a new ServerResponseSize instrument.
 func NewServerResponseSize(
 	m metric.Meter,
@@ -758,12 +827,15 @@ func NewServerResponseSize(
 		return ServerResponseSize{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerResponseSizeOpts
+	} else {
+		opt = append(opt, newServerResponseSizeOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.server.response.size",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the size of RPC response messages (uncompressed)."),
-			metric.WithUnit("By"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerResponseSize{noop.Int64Histogram{}}, err
@@ -835,6 +907,11 @@ type ServerResponsesPerRPC struct {
 	metric.Int64Histogram
 }
 
+var newServerResponsesPerRPCOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Measures the number of messages sent per RPC."),
+	metric.WithUnit("{count}"),
+}
+
 // NewServerResponsesPerRPC returns a new ServerResponsesPerRPC instrument.
 func NewServerResponsesPerRPC(
 	m metric.Meter,
@@ -845,12 +922,15 @@ func NewServerResponsesPerRPC(
 		return ServerResponsesPerRPC{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerResponsesPerRPCOpts
+	} else {
+		opt = append(opt, newServerResponsesPerRPCOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"rpc.server.responses_per_rpc",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Measures the number of messages sent per RPC."),
-			metric.WithUnit("{count}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerResponsesPerRPC{noop.Int64Histogram{}}, err
