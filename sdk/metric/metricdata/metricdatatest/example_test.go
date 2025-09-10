@@ -44,18 +44,18 @@ func ExampleAssertEqual() {
 		},
 	}
 
-	// Compare expected metrics with the actual one
+	// Compare expected metrics with the received one
 	t := &mockTestingT{}
 	assertEqual := metricdatatest.AssertEqual(
-		mockTest,
-		expectedMetrics,
-		actualMetrics,
+		t,
+		want,
+		got,
 		metricdatatest.IgnoreTimestamp(), // ignoring timestamps
 	)
 	fmt.Printf("Metrics are equal: %t\n", assertEqual)
 
 	// Output:
-	// Metrics matched as expected: true
+	// Metrics are equal: true
 }
 
 func ExampleAssertAggregationsEqual() {
@@ -76,9 +76,9 @@ func ExampleAssertAggregationsEqual() {
 	// Collect the metrics
 	rm := &metricdata.ResourceMetrics{}
 	_ = reader.Collect(ctx, rm)
-	actualMetrics, _ := getMetrics("payment.duration", rm)
+	got, _ := getMetrics("payment.duration", rm)
 
-	expectedMetrics := metricdata.Metrics{
+	want := metricdata.Metrics{
 		Data: metricdata.Sum[int64]{
 			DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
 			Temporality: metricdata.CumulativeTemporality,
@@ -86,20 +86,20 @@ func ExampleAssertAggregationsEqual() {
 		},
 	}
 
-	// Verify the expected data with the actual one.
-	mockTest := &mockTestingT{}
+	// Verify the expected data with the received one.
+	t := &mockTestingT{}
 
 	// Compare Aggregations
 	hasEqualAggregations := metricdatatest.AssertAggregationsEqual(
-		mockTest,
-		expectedMetrics.Data,
-		actualMetrics.Data,
+		t,
+		want.Data,
+		got.Data,
 		metricdatatest.IgnoreTimestamp(),
 	)
-	fmt.Printf("Aggregations are matching as expected: %t\n", hasEqualAggregations)
+	fmt.Printf("Aggregations are equal: %t\n", hasEqualAggregations)
 
 	// Output:
-	// Aggregations are matching as expected: true
+	// Aggregations are equal: true
 }
 
 func ExampleAssertHasAttributes() {
@@ -123,19 +123,19 @@ func ExampleAssertHasAttributes() {
 	// Collect the metrics
 	rm := &metricdata.ResourceMetrics{}
 	_ = reader.Collect(ctx, rm)
-	actualMetrics, _ := getMetrics("payment.requests", rm)
+	metrics, _ := getMetrics("payment.requests", rm)
 
-	// Verify the attributes in the actualMetrics
-	mockTest := &mockTestingT{}
-	hasAttributes := metricdatatest.AssertHasAttributes(mockTest, actualMetrics, attributes.ToSlice()...)
-	fmt.Printf("Metrics has expected attributes : %t\n", hasAttributes)
+	// Verify the attributes in the received metrics
+	t := &mockTestingT{}
+	hasAttributes := metricdatatest.AssertHasAttributes(t, metrics, attributes.ToSlice()...)
+	fmt.Printf("Metrics contains attributes: %t\n", hasAttributes)
 
 	// Output:
-	// Metrics has expected attributes : true
+	// Metrics contains attributes: true
 }
 
 func ExampleIgnoreValue() {
-	expectedMetrics := metricdata.Metrics{
+	want := metricdata.Metrics{
 		Name: "payment.duration",
 		Data: metricdata.Histogram[float64]{
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -150,10 +150,10 @@ func ExampleIgnoreValue() {
 		},
 	}
 
-	actualMetrics := metricdata.Metrics{
+	got := metricdata.Metrics{
 		Name: "payment.duration",
 		Data: metricdata.Histogram[float64]{
-			// Aggregate measurements are different in expected metrics
+			// Aggregate measurements are different in received metrics
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
 				{
 					Count:        10,
@@ -166,24 +166,24 @@ func ExampleIgnoreValue() {
 		},
 	}
 
-	mockTest := &mockTestingT{}
+	t := &mockTestingT{}
 
 	// Compare metrics without values
 	ignoreValue := metricdatatest.AssertEqual(
-		mockTest,
-		expectedMetrics,
-		actualMetrics,
+		t,
+		want,
+		got,
 		metricdatatest.IgnoreValue(),
 	)
-	fmt.Printf("Metrics matched irrespective of difference in values: %t\n", ignoreValue)
+	fmt.Printf("Metrics are equal(ignoring values): %t\n", ignoreValue)
 
 	// Output:
-	// Metrics matched irrespective of difference in values: true
+	// Metrics are equal(ignoring values): true
 }
 
 func ExampleIgnoreExemplars() {
 	// Histogram data with Exemplars
-	expectedMetrics := metricdata.Metrics{
+	want := metricdata.Metrics{
 		Name: "payment.duration",
 		Data: metricdata.Histogram[float64]{
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -210,10 +210,10 @@ func ExampleIgnoreExemplars() {
 	}
 
 	// Histogram data without Exemplars
-	actualMetrics := metricdata.Metrics{
+	got := metricdata.Metrics{
 		Name: "payment.duration",
 		Data: metricdata.Histogram[float64]{
-			// Aggregate measurements are different from expected metrics
+			// Aggregate measurements are different in received metrics(exemplars)
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
 				{
 					Count:        2,
@@ -226,19 +226,19 @@ func ExampleIgnoreExemplars() {
 		},
 	}
 
-	mockTest := &mockTestingT{}
+	t := &mockTestingT{}
 
 	// Compare metrics
 	ignoreExemplars := metricdatatest.AssertEqual(
-		mockTest,
-		expectedMetrics,
-		actualMetrics,
+		t,
+		want,
+		got,
 		metricdatatest.IgnoreExemplars(),
 	)
-	fmt.Printf("Metrics matched irrespective of difference in exemplars: %t\n", ignoreExemplars)
+	fmt.Printf("Metrics are equal(ignoring exemplars): %t\n", ignoreExemplars)
 
 	// Output:
-	// Metrics matched irrespective of difference in exemplars: true
+	// Metrics are equal(ignoring exemplars): true
 }
 
 // Helper function to retrieve the metrics.
