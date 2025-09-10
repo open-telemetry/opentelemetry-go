@@ -64,7 +64,7 @@ func WithInstrumentationVersion(version string) MeterOption {
 
 // WithInstrumentationAttributes adds the instrumentation attributes.
 //
-// This is equivalent to calling WithInstrumentationAttributeSet with an
+// This is equivalent to calling [WithInstrumentationAttributeSet] with an
 // [attribute.Set] created from the passed attributes.
 // [WithInstrumentationAttributeSet] is recommended for more control.
 //
