@@ -4,6 +4,7 @@
 package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -326,7 +327,8 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
-	return WithInstrumentationAttributeSet(attribute.NewSet(attr...))
+	set := attribute.NewSet(slices.Clone(attr)...)
+	return WithInstrumentationAttributeSet(set)
 }
 
 // WithInstrumentationAttributeSet adds the instrumentation attributes.

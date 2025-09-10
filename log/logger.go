@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"context"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -137,7 +138,8 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
-	return WithInstrumentationAttributeSet(attribute.NewSet(attr...))
+	set := attribute.NewSet(slices.Clone(attr)...)
+	return WithInstrumentationAttributeSet(set)
 }
 
 // WithInstrumentationAttributeSet returns a [LoggerOption] that adds the

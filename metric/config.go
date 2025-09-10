@@ -3,7 +3,11 @@
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"slices"
+
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // MeterConfig contains options for Meters.
 type MeterConfig struct {
@@ -72,7 +76,8 @@ func WithInstrumentationVersion(version string) MeterOption {
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) MeterOption {
-	return WithInstrumentationAttributeSet(attribute.NewSet(attr...))
+	set := attribute.NewSet(slices.Clone(attr)...)
+	return WithInstrumentationAttributeSet(set)
 }
 
 // WithInstrumentationAttributeSet adds the instrumentation attributes.
