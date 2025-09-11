@@ -65,7 +65,7 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	mp := &errMeterProvider{err: assert.AnError}
 	otel.SetMeterProvider(mp)
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	_, err := observ.NewInstrumentation(ID)
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors should be joined")
