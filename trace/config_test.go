@@ -231,6 +231,23 @@ func TestTracerConfig(t *testing.T) {
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
+func TestWithInstrumentationAttributesNotLazy(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.String("service", "test"),
+		attribute.Int("three", 3),
+	}
+	want := attribute.NewSet(attrs...)
+
+	// WithInstrumentationAttributes is expected to immediately
+	// create an immutable set from the attributes, so later changes
+	// to attrs should not affect the config.
+	opt := WithInstrumentationAttributes(attrs...)
+	attrs[0] = attribute.String("service", "changed")
+
+	c := NewTracerConfig(opt)
+	assert.Equal(t, want, c.InstrumentationAttributes(), "instrumentation attributes")
+}
+
 func TestWithInstrumentationAttributeSet(t *testing.T) {
 	attrs := attribute.NewSet(
 		attribute.String("service", "test"),
