@@ -32,13 +32,13 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		})
-		ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+		ctx := trace.ContextWithRemoteSpanContext(b.Context(), sc)
 		fn(ctx, b)
 	})
 
 	b.Run("WithoutSpanContext", func(b *testing.B) {
 		b.ReportAllocs()
-		ctx := context.Background()
+		ctx := b.Context()
 		fn(ctx, b)
 	})
 }
@@ -46,7 +46,7 @@ func injectSubBenchmarks(b *testing.B, fn func(context.Context, *testing.B)) {
 func BenchmarkExtract(b *testing.B) {
 	extractSubBenchmarks(b, func(b *testing.B, req *http.Request) {
 		var propagator propagation.TraceContext
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
