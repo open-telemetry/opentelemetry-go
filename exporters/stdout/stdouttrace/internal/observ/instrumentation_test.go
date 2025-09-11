@@ -76,7 +76,7 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 }
 
 func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
-	// Do not set OTEL_GO_X_SELF_OBSERVABILITY.
+	// Do not set OTEL_GO_X_OBSERVABILITY.
 	got, err := observ.NewInstrumentation(ID)
 	assert.NoError(t, err)
 	assert.Nil(t, got)
