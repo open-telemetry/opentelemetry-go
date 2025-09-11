@@ -298,7 +298,7 @@ func BenchmarkInstrumentationExportLogs(b *testing.B) {
 		b.Fatalf("failed to create instrumentation: %v", err)
 	}
 
-	var end ExportLogDone
+	var end ExportLogsDone
 	err = errors.New("benchmark error")
 
 	b.ReportAllocs()

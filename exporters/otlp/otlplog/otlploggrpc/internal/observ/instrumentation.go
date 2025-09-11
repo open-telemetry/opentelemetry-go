@@ -120,16 +120,16 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	return i, nil
 }
 
-// ExportLogDone is a function that is called when a call to an Exporter's
+// ExportLogsDone is a function that is called when a call to an Exporter's
 // ExportLogs method completes
 //
 // The number of successful exports is provided as success. Any error that is encountered is provided as error
 // The code of last gRPC requests performed in scope of this export call.
-type ExportLogDone func(err error, success int64, code codes.Code)
+type ExportLogsDone func(err error, success int64, code codes.Code)
 
 // ExportLogs instruments the ExportLogs method of the exporter. It returns a
 // function that needs to be deferred so it is called when the method returns.
-func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportLogDone {
+func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportLogsDone {
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
 
@@ -141,7 +141,7 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportLog
 	return i.end(ctx, start, count)
 }
 
-func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64) ExportLogDone {
+func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64) ExportLogsDone {
 	return func(err error, success int64, code codes.Code) {
 		addOpt := get[metric.AddOption](addOpPool)
 		defer put(addOpPool, addOpt)
