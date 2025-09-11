@@ -196,7 +196,7 @@ func (i *Instrumentation) RecordCollectionDuration(
 
 type ScrapeDone func(success int64, err error)
 
-func (i *Instrumentation) TrackScrape(ctx context.Context, n int64) ScrapeDone {
+func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportMetricsDone {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, i.setOpt)
