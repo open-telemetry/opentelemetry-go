@@ -29,14 +29,14 @@ func TestBSPComponentName(t *testing.T) {
 }
 
 func TestNewBSPDisabled(t *testing.T) {
-	// Do not set OTEL_GO_X_SELF_OBSERVABILITY
+	// Do not set OTEL_GO_X_OBSERVABILITY
 	bsp, err := observ.NewBSP(id, nil, 0)
 	assert.NoError(t, err)
 	assert.Nil(t, bsp)
 }
 
 func TestNewBSPErrors(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
@@ -150,7 +150,7 @@ func TestBSPProcessed(t *testing.T) {
 }
 
 func BenchmarkBSP(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	newBSP := func(b *testing.B) *observ.BSP {
 		b.Helper()

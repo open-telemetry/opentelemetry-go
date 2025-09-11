@@ -65,7 +65,7 @@ func TestNewInstrumentationObservabiltyErrors(t *testing.T) {
 	mp := &errMeterProvider{err: assert.AnError}
 	otel.SetMeterProvider(mp)
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	_, err := observ.NewInstrumentation(ID)
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
@@ -76,7 +76,7 @@ func TestNewInstrumentationObservabiltyErrors(t *testing.T) {
 }
 
 func TestNewInstrumentationObservabiltyDisabled(t *testing.T) {
-	// Do not set OTEL_GO_X_SELF_OBSERVABILITY.
+	// Do not set OTEL_GO_X_OBSERVABILITY.
 	got, err := observ.NewInstrumentation(ID)
 	assert.NoError(t, err)
 	assert.Nil(t, got)
@@ -85,7 +85,7 @@ func TestNewInstrumentationObservabiltyDisabled(t *testing.T) {
 func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetrics) {
 	t.Helper()
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	original := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(original) })
@@ -220,7 +220,7 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 }
 
 func BenchmarkInstrumentationExportSpans(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	inst, err := observ.NewInstrumentation(ID)
 	if err != nil {
 		b.Fatalf("failed to create instrumentation: %v", err)

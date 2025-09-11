@@ -657,7 +657,7 @@ var dropSpanMetricsView = sdkmetric.NewView(
 )
 
 func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(
@@ -699,7 +699,7 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	// Reset for deterministic component ID.
 	processorIDCounter.Store(componentID)
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(
@@ -724,14 +724,14 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
-	assertSelfObsScopeMetrics(t, reader, expectMetrics{
+	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:    2,
 		queueSize:        0,
 		successProcessed: 2,
 	})
 	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
 	generateSpan(t, tr, testOption{genNumSpans: 3})
-	assertSelfObsScopeMetrics(t, reader, expectMetrics{
+	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:      2,
 		queueSize:          2,
 		queueFullProcessed: 1,
@@ -743,7 +743,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	// Reset for deterministic component ID.
 	processorIDCounter.Store(componentID)
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(
@@ -770,7 +770,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
-	assertSelfObsScopeMetrics(t, reader, expectMetrics{
+	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:    2,
 		queueSize:        0,
 		successProcessed: 2,
@@ -781,7 +781,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 		// Generate a span which blocks because the queue is full.
 		generateSpan(t, tr, testOption{genNumSpans: 1})
 	}()
-	assertSelfObsScopeMetrics(t, reader, expectMetrics{
+	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:    2,
 		queueSize:        2,
 		successProcessed: 2,
@@ -791,7 +791,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	assert.Error(t, tp.ForceFlush(ctx))
-	assertSelfObsScopeMetrics(t, reader, expectMetrics{
+	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:      2,
 		queueSize:          2,
 		queueFullProcessed: 1,
@@ -806,7 +806,7 @@ type expectMetrics struct {
 	queueFullProcessed int64
 }
 
-func assertSelfObsScopeMetrics(
+func assertObsScopeMetrics(
 	t *testing.T,
 	reader sdkmetric.Reader,
 	expectation expectMetrics,

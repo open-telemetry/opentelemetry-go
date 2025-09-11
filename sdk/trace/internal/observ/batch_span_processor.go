@@ -48,7 +48,7 @@ type BSP struct {
 }
 
 func NewBSP(id int64, qLen func() int64, qMax int64) (*BSP, error) {
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 

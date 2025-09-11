@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"context"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -129,30 +130,16 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // WithInstrumentationAttributes returns a [LoggerOption] that sets the
 // instrumentation attributes of a [Logger].
 //
-// The passed attributes will be de-duplicated.
-//
-// Note that [WithInstrumentationAttributeSet] is recommended as
-// it is more efficient and also allows safely reusing the passed argument.
+// This is equivalent to calling WithInstrumentationAttributeSet with an
+// [attribute.Set] created from a clone of the passed attributes.
+// [WithInstrumentationAttributeSet] is recommended for more control.
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
-	if len(attr) == 0 {
-		return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-			return config
-		})
-	}
-
-	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-		newAttrs := attribute.NewSet(attr...)
-		if config.attrs.Len() == 0 {
-			config.attrs = newAttrs
-		} else {
-			config.attrs = mergeSets(config.attrs, newAttrs)
-		}
-		return config
-	})
+	set := attribute.NewSet(slices.Clone(attr)...)
+	return WithInstrumentationAttributeSet(set)
 }
 
 // WithInstrumentationAttributeSet returns a [LoggerOption] that adds the

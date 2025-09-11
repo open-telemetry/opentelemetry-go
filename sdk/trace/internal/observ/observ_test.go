@@ -21,7 +21,7 @@ import (
 )
 
 func setup(t *testing.T) func() metricdata.ScopeMetrics {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
