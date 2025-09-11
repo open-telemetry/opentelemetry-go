@@ -186,8 +186,6 @@ func collectionDuration(err error) metricdata.Metrics {
 	}
 }
 
-/* ---------------------------- assertions --------------------------- */
-
 func assertTrackScrapeMetrics(t *testing.T, got metricdata.ScopeMetrics, total, success int64, err error) {
 	t.Helper()
 
