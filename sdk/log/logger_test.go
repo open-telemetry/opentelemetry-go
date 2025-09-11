@@ -402,30 +402,30 @@ func TestLoggerEnabled(t *testing.T) {
 	}
 }
 
-func TestLoggerSelfObservability(t *testing.T) {
+func TestLoggerObservability(t *testing.T) {
 	testCases := []struct {
-		name                     string
-		selfObservabilityEnabled bool
-		records                  []log.Record
-		wantLogRecordCount       int64
+		name               string
+		enabled            bool
+		records            []log.Record
+		wantLogRecordCount int64
 	}{
 		{
-			name:                     "Disabled",
-			selfObservabilityEnabled: false,
-			records:                  []log.Record{{}, {}},
-			wantLogRecordCount:       0,
+			name:               "Disabled",
+			enabled:            false,
+			records:            []log.Record{{}, {}},
+			wantLogRecordCount: 0,
 		},
 		{
-			name:                     "Enabled",
-			selfObservabilityEnabled: true,
-			records:                  []log.Record{{}, {}, {}, {}, {}},
-			wantLogRecordCount:       5,
+			name:               "Enabled",
+			enabled:            true,
+			records:            []log.Record{{}, {}, {}, {}, {}},
+			wantLogRecordCount: 5,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tc.selfObservabilityEnabled))
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tc.enabled))
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() {
 				otel.SetMeterProvider(prev)
@@ -469,7 +469,7 @@ func TestLoggerSelfObservability(t *testing.T) {
 	}
 }
 
-func TestNewLoggerSelfObservabilityErrorHandled(t *testing.T) {
+func TestNewLoggerObservabilityErrorHandled(t *testing.T) {
 	errHandler := otel.GetErrorHandler()
 	t.Cleanup(func() {
 		otel.SetErrorHandler(errHandler)
@@ -483,7 +483,7 @@ func TestNewLoggerSelfObservabilityErrorHandled(t *testing.T) {
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
 	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError})
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 	_ = l
 	require.Len(t, errs, 1)

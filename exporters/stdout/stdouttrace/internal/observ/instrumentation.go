@@ -98,7 +98,7 @@ type Instrumentation struct {
 //
 // If the experimental observability is disabled, nil is returned.
 func NewInstrumentation(id int64) (*Instrumentation, error) {
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 
