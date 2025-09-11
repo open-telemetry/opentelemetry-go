@@ -73,7 +73,7 @@ func ExampleAssertAggregationsEqual() {
 	counter, _ := meter.Int64Counter("payment.count")
 	counter.Add(ctx, 5)
 
-	// Collect the metricss
+	// Collect the metrics
 	rm := &metricdata.ResourceMetrics{}
 	_ = reader.Collect(ctx, rm)
 	got, _ := getMetrics("payment.count", rm)
