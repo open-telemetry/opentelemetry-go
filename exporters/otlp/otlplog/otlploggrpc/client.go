@@ -22,7 +22,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 )
 
 // The methods of this type are not expected to be called concurrently.
@@ -38,6 +41,8 @@ type client struct {
 	ourConn bool
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
+
+	instrumentation *observ.Instrumentation
 }
 
 // Used for testing.
@@ -72,7 +77,14 @@ func newClient(cfg config) (*client, error) {
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
 
-	return c, nil
+	if !x.Observability.Enabled() {
+		return c, nil
+	}
+
+	id := counter.NextExporterID()
+	var err error
+	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
+	return c, err
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -121,7 +133,7 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 // The otlplog.Exporter synchronizes access to client methods, and
 // ensures this is not called after the Exporter is shutdown. Only thing
 // to do here is send data.
-func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error {
+func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err error) {
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
@@ -132,16 +144,33 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
+	success := int64(len(rl))
+	// partialSuccessErr records an error when the export is partially successful.
+	var partialSuccessErr error
+	if c.instrumentation != nil {
+		count := len(rl)
+		trackExportFunc := c.instrumentation.ExportLogs(ctx, int64(count))
+		defer func() {
+			if partialSuccessErr != nil {
+				trackExportFunc(partialSuccessErr, success, status.Code(partialSuccessErr))
+				return
+			}
+			trackExportFunc(err, success, status.Code(err))
+		}()
+	}
+
 	return c.requestFunc(ctx, func(ctx context.Context) error {
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
+
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
+			success -= n
 			if n != 0 || msg != "" {
-				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				otel.Handle(err)
+				partialSuccessErr = fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
+				otel.Handle(partialSuccessErr)
 			}
 		}
 		// nil is converted to OK.
@@ -149,6 +178,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			// Success.
 			return nil
 		}
+		success = 0
 		return err
 	})
 }

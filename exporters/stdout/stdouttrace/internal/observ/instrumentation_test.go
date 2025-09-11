@@ -59,7 +59,7 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 	return nil, m.err
 }
 
-func TestNewInstrumentationObservabiltyErrors(t *testing.T) {
+func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
 	mp := &errMeterProvider{err: assert.AnError}
@@ -75,7 +75,7 @@ func TestNewInstrumentationObservabiltyErrors(t *testing.T) {
 	assert.ErrorContains(t, err, "operation duration metric")
 }
 
-func TestNewInstrumentationObservabiltyDisabled(t *testing.T) {
+func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
 	// Do not set OTEL_GO_X_SELF_OBSERVABILITY.
 	got, err := observ.NewInstrumentation(ID)
 	assert.NoError(t, err)

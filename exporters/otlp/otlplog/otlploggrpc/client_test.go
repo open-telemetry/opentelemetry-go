@@ -29,8 +29,16 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 var (
@@ -600,4 +608,420 @@ func TestConfig(t *testing.T) {
 		require.Contains(t, got, additionalKey)
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
+}
+
+func TestSelfObservability(t *testing.T) {
+	testCases := []struct {
+		name    string
+		enabled bool
+		test    func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
+	}{
+		{
+			name:    "disable",
+			enabled: false,
+			test: func(t *testing.T, _ func() metricdata.ScopeMetrics) {
+				client, _ := clientFactory(t, nil)
+				assert.Empty(t, client.instrumentation)
+			},
+		},
+		{
+			name:    "upload success",
+			enabled: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				ctx := context.Background()
+				client, coll := clientFactory(t, nil)
+				componentName := fmt.Sprintf(
+					"%s/%d",
+					otelconv.ComponentTypeOtlpGRPCLogExporter,
+					0,
+				)
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+				wantMetrics := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterLogInflight{}.Name(),
+							Description: otelconv.SDKExporterLogInflight{}.Description(),
+							Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogInflight{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+										Value: 0,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterLogExported{}.Name(),
+							Description: otelconv.SDKExporterLogExported{}.Description(),
+							Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+										Value: int64(len(resourceLogs)),
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+												otelconv.RPCGRPCStatusCodeAttr(
+													codes.OK,
+												),
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+										Count: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+				require.NoError(t, client.Shutdown(ctx))
+				got := coll.Collect().Dump()
+				require.Len(t, got, 1, "upload of one ResourceLogs")
+				diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
+				if diff != "" {
+					t.Fatalf("unexpected ResourceLogs:\n%s", diff)
+				}
+				g := scopeMetrics()
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					wantMetrics.Metrics[2],
+					g.Metrics[2],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
+			},
+		},
+		{
+			name:    "partial success",
+			enabled: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				const n, msg = 2, "bad data"
+				rCh := make(chan exportResult, 1)
+				rCh <- exportResult{
+					Response: &collogpb.ExportLogsServiceResponse{
+						PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+							RejectedLogRecords: n,
+							ErrorMessage:       msg,
+						},
+					},
+				}
+				ctx := context.Background()
+				client, _ := clientFactory(t, rCh)
+
+				componentName := fmt.Sprintf(
+					"%s/%d",
+					otelconv.ComponentTypeOtlpGRPCLogExporter,
+					1,
+				)
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
+				wantMetrics := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterLogInflight{}.Name(),
+							Description: otelconv.SDKExporterLogInflight{}.Description(),
+							Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogInflight{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+
+										Value: 0,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterLogExported{}.Name(),
+							Description: otelconv.SDKExporterLogExported{}.Description(),
+							Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+										Value: int64(len(resourceLogs)) - 2,
+									},
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											semconv.ErrorType(wantErr),
+										),
+										Value: 2,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+												otelconv.RPCGRPCStatusCodeAttr(
+													status.Code(wantErr),
+												),
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											semconv.ErrorType(wantErr),
+										),
+										Count: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				defer func(orig otel.ErrorHandler) {
+					otel.SetErrorHandler(orig)
+				}(otel.GetErrorHandler())
+
+				var errs []error
+				eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
+				otel.SetErrorHandler(eh)
+
+				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+
+				require.Len(t, errs, 1)
+				assert.ErrorContains(t, errs[0], wantErr.Error())
+
+				g := scopeMetrics()
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					wantMetrics.Metrics[2],
+					g.Metrics[2],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
+			},
+		},
+		{
+			name:    "upload failure",
+			enabled: true,
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				wantErr := status.Error(codes.InvalidArgument, "request contains invalid arguments")
+				wantErrTypeAttr := semconv.ErrorType(wantErr)
+				wantGRPCStatusCodeAttr := otelconv.RPCGRPCStatusCodeAttr(codes.InvalidArgument)
+				rCh := make(chan exportResult, 1)
+				rCh <- exportResult{
+					Err: wantErr,
+				}
+				ctx := context.Background()
+				client, _ := clientFactory(t, rCh)
+				err := client.UploadLogs(ctx, resourceLogs)
+				assert.ErrorContains(t, err, "request contains invalid arguments")
+
+				componentName := fmt.Sprintf(
+					"%s/%d",
+					otelconv.ComponentTypeOtlpGRPCLogExporter,
+					2,
+				)
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+				wantMetrics := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKExporterLogInflight{}.Name(),
+							Description: otelconv.SDKExporterLogInflight{}.Description(),
+							Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogInflight{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+										Value: 0,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterLogExported{}.Name(),
+							Description: otelconv.SDKExporterLogExported{}.Description(),
+							Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+										),
+										Value: 0,
+									},
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterLogExported{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											wantErrTypeAttr,
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+							Description: otelconv.SDKExporterOperationDuration{}.Description(),
+							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+							Data: metricdata.Histogram[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.HistogramDataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
+												otelconv.ComponentTypeOtlpGRPCLogExporter,
+											),
+											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+												wantGRPCStatusCodeAttr,
+											),
+											serverAddrAttrs[0],
+											serverAddrAttrs[1],
+											wantErrTypeAttr,
+										),
+										Count: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+				g := scopeMetrics()
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					wantMetrics.Metrics[2],
+					g.Metrics[2],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue(),
+				)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.enabled {
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
+			}
+			prev := otel.GetMeterProvider()
+			t.Cleanup(func() {
+				otel.SetMeterProvider(prev)
+			})
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			scopeMetrics := func() metricdata.ScopeMetrics {
+				var got metricdata.ResourceMetrics
+				err := r.Collect(context.Background(), &got)
+				require.NoError(t, err)
+				require.Len(t, got.ScopeMetrics, 1)
+				return got.ScopeMetrics[0]
+			}
+			tc.test(t, scopeMetrics)
+		})
+	}
 }
