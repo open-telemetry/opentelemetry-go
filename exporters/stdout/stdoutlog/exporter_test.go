@@ -16,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -24,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -932,7 +933,7 @@ func TestNewSelfObservability(t *testing.T) {
 
 			if ranOnce {
 				// Reset the global exporter ID counter for deterministic tests
-				exporterIDCounter.Store(0) // First call to nextExporterID() will return 0
+				counter.SetExporterID(0) // First call to NextExporterID() will return 0
 			}
 
 			prev := otel.GetMeterProvider()
