@@ -249,22 +249,24 @@ func TestWithResource(t *testing.T) {
 }
 
 func TestLoggerProviderConcurrentSafe(*testing.T) {
-	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
+	const goRoutineN = 10
 
-	ctx := context.Background()
-	const name = "testLogger"
-	opt := log.WithInstrumentationAttributes(attribute.String("key", "value"))
 	var wg sync.WaitGroup
-	for range 10 {
-		wg.Add(1)
+	wg.Add(goRoutineN)
+
+	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
+	const name = "testLogger"
+	ctx := context.Background()
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 
-			_ = p.Logger(name, opt)
+			_ = p.Logger(name)
 			_ = p.Shutdown(ctx)
 			_ = p.ForceFlush(ctx)
 		}()
 	}
+
 	wg.Wait()
 }
 

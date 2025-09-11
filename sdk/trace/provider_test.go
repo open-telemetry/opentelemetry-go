@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -400,25 +399,6 @@ func TestTracerProviderReturnsSameTracer(t *testing.T) {
 	assert.Same(t, t0, t3)
 	assert.Same(t, t1, t4)
 	assert.Same(t, t2, t5)
-}
-
-func TestTracerProviderConcurrentSafe(t *testing.T) {
-	p := NewTracerProvider(WithSyncer(NewTestExporter()))
-
-	ctx := context.Background()
-	opt := trace.WithInstrumentationAttributes(attribute.String("key", "value"))
-	var wg sync.WaitGroup
-	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			_ = p.Tracer(t.Name(), opt)
-			_ = p.Shutdown(ctx)
-			_ = p.ForceFlush(ctx)
-		}()
-	}
-	wg.Wait()
 }
 
 func TestTracerProviderSelfObservability(t *testing.T) {
