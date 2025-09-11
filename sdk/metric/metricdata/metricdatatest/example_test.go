@@ -253,7 +253,8 @@ func getMetrics(name string, rm *metricdata.ResourceMetrics) (metricdata.Metrics
 	return metricdata.Metrics{}, false
 }
 
-// mockTestingT implements the metricdatatest.TestingT interface for examples.
+// mockTestingT implements the [metricdatatest.TestingT] interface for examples.
+// Usually, we use [*testing.T] as a substitute.
 type mockTestingT struct {
 	errors []string //nolint
 }
