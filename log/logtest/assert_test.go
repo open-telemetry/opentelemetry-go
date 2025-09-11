@@ -4,7 +4,6 @@
 package logtest
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -63,7 +62,7 @@ func TestAssertEqualRecording(t *testing.T) {
 				Scope{Name: t.Name()}: []Record{
 					{
 						Timestamp:  y2k,
-						Context:    context.Background(),
+						Context:    t.Context(),
 						Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
 					},
 				},
@@ -72,7 +71,7 @@ func TestAssertEqualRecording(t *testing.T) {
 				Scope{Name: t.Name()}: []Record{
 					{
 						Timestamp:  y2k,
-						Context:    context.Background(),
+						Context:    t.Context(),
 						Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
 					},
 				},
@@ -145,12 +144,12 @@ func TestAssertEqualRecord(t *testing.T) {
 			name: "equal records",
 			a: Record{
 				Timestamp:  y2k,
-				Context:    context.Background(),
+				Context:    t.Context(),
 				Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
 			},
 			b: Record{
 				Timestamp:  y2k,
-				Context:    context.Background(),
+				Context:    t.Context(),
 				Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
 			},
 			want: true,
