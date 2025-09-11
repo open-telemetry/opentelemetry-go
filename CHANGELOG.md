@@ -12,12 +12,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `WithInstrumentationAttributeSet` option to `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/trace` packages.
   This provides a concurrent-safe and performant alternative to `WithInstrumentationAttributes` by accepting a pre-constructed `attribute.Set`. (#7287)
+- Add experimental self-observability prometheus exporter metrics in `go.opentelemetry.io/otel/exporters/prometheus`.
+  Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7345)
 
 ### Fixed
 
 - Fix `WithInstrumentationAttributes` options in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/log` to properly merge attributes when passed multiple times instead of replacing them. Attributes with duplicate keys will use the last value passed. (#7300)
-- Add experimental self-observability prometheus exporter metrics in `go.opentelemetry.io/otel/exporters/prometheus`.
-  Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7345)
 
 ### Removed
 
