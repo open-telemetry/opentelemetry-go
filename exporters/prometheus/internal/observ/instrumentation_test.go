@@ -59,8 +59,6 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 	return nil, m.err
 }
 
-/* ------------------------------ tests ------------------------------ */
-
 func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
