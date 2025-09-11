@@ -112,7 +112,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			ctxKey := testCtxKey{}
 			ctxValue := "ctx value"
-			ctx := context.WithValue(context.Background(), ctxKey, ctxValue)
+			ctx := context.WithValue(t.Context(), ctxKey, ctxValue)
 
 			ctx, _ = subject.Start(ctx, "test")
 
@@ -124,7 +124,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			_, span := subject.Start(context.Background(), "test")
+			_, span := subject.Start(t.Context(), "test")
 
 			require.NotNil(t, span)
 			require.True(t, span.SpanContext().IsValid())
@@ -135,7 +135,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			ctx, span := subject.Start(context.Background(), "test")
+			ctx, span := subject.Start(t.Context(), "test")
 
 			require.NotNil(t, span)
 			require.NotEqual(t, trace.SpanContext{}, span.SpanContext())
@@ -147,8 +147,8 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			_, span1 := subject.Start(context.Background(), "span1")
-			_, span2 := subject.Start(context.Background(), "span2")
+			_, span1 := subject.Start(t.Context(), "span1")
+			_, span2 := subject.Start(t.Context(), "span2")
 
 			sc1 := span1.SpanContext()
 			sc2 := span2.SpanContext()
@@ -162,7 +162,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			ctx, parent := subject.Start(context.Background(), "parent")
+			ctx, parent := subject.Start(t.Context(), "parent")
 			_, child := subject.Start(ctx, "child")
 
 			psc := parent.SpanContext()
@@ -177,7 +177,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			ctx, parent := subject.Start(context.Background(), "parent")
+			ctx, parent := subject.Start(t.Context(), "parent")
 			_, child := subject.Start(ctx, "child", trace.WithNewRoot())
 
 			psc := parent.SpanContext()
@@ -192,8 +192,8 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			_, remoteParent := subject.Start(context.Background(), "remote parent")
-			parentCtx := trace.ContextWithRemoteSpanContext(context.Background(), remoteParent.SpanContext())
+			_, remoteParent := subject.Start(t.Context(), "remote parent")
+			parentCtx := trace.ContextWithRemoteSpanContext(t.Context(), remoteParent.SpanContext())
 			_, child := subject.Start(parentCtx, "child")
 
 			psc := remoteParent.SpanContext()
@@ -208,8 +208,8 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			subject := subjectFactory()
 
-			_, remoteParent := subject.Start(context.Background(), "remote parent")
-			parentCtx := trace.ContextWithRemoteSpanContext(context.Background(), remoteParent.SpanContext())
+			_, remoteParent := subject.Start(t.Context(), "remote parent")
+			parentCtx := trace.ContextWithRemoteSpanContext(t.Context(), remoteParent.SpanContext())
 			_, child := subject.Start(parentCtx, "child", trace.WithNewRoot())
 
 			psc := remoteParent.SpanContext()
@@ -224,7 +224,7 @@ func (h *harness) testTracer(subjectFactory func() trace.Tracer) {
 
 			tracer := subjectFactory()
 
-			ctx, parent := tracer.Start(context.Background(), "span")
+			ctx, parent := tracer.Start(t.Context(), "span")
 
 			runner := func(tp trace.Tracer) <-chan struct{} {
 				done := make(chan struct{})
@@ -284,12 +284,12 @@ func (h *harness) testSpan(tracerFactory func() trace.Tracer) {
 	mechanisms := map[string]func() trace.Span{
 		"Span created via Tracer#Start": func() trace.Span {
 			tracer := tracerFactory()
-			_, subject := tracer.Start(context.Background(), "test")
+			_, subject := tracer.Start(h.t.Context(), "test")
 
 			return subject
 		},
 		"Span created via span.TracerProvider()": func() trace.Span {
-			ctx, spanA := tracerFactory().Start(context.Background(), "span1")
+			ctx, spanA := tracerFactory().Start(h.t.Context(), "span1")
 
 			_, spanB := spanA.TracerProvider().Tracer("second").Start(ctx, "span2")
 			return spanB

@@ -119,7 +119,7 @@ func BenchmarkProcessor(b *testing.B) {
 						log.Int("int", 123),
 						log.Bool("bool", true),
 					)
-					logger.Emit(context.Background(), r)
+					logger.Emit(b.Context(), r)
 				}
 			})
 		})
