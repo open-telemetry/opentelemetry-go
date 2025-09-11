@@ -469,6 +469,17 @@ func TestMarshalJSON(t *testing.T) {
 	}
 }
 
+func TestSetEqualsEmpty(t *testing.T) {
+	e := attribute.EmptySet()
+	empty := *e
+
+	alt := attribute.NewSet(attribute.String("A", "B"))
+	*e = alt
+
+	var s attribute.Set
+	assert.Truef(t, s.Equals(&empty), "expected %v to equal empty set %v", s, attribute.EmptySet())
+}
+
 type simpleStringer struct {
 	val string
 }
