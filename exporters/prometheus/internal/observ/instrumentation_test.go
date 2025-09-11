@@ -286,7 +286,7 @@ func TestRecordCollectionDuration_Error(t *testing.T) {
 /* ----------------------------- benchmark --------------------------- */
 
 func BenchmarkInstrumentationTrackScrape(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	inst, err := observ.NewInstrumentation(ID)
 	if err != nil {
 		b.Fatalf("failed to create instrumentation: %v", err)
