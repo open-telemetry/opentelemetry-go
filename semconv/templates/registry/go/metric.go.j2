@@ -58,6 +58,11 @@ type {{ metric_name }} struct {
 	metric.{{ metric_inst }}
 }
 
+var new{{ metric_name }}Opts = []metric.{{ metric_inst }}Option{
+	metric.WithDescription("{{ i.desc(metric) }}"),
+	metric.WithUnit("{{metric.unit}}"),
+}
+
 {{ ["New" ~ metric_name ~ " returns a new " ~ metric_name ~ " instrument."] | comment }}
 func New{{ metric_name }}(
 	m metric.Meter,
@@ -68,12 +73,15 @@ func New{{ metric_name }}(
 		return {{metric_name}}{noop.{{ metric_inst }}{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = new{{ metric_name }}Opts
+	} else {
+		opt = append(opt, new{{ metric_name }}Opts...)
+	}
+
 	i, err := m.{{ metric_inst }}(
 		"{{metric.metric_name}}",
-		append([]metric.{{ metric_inst }}Option{
-			metric.WithDescription("{{ i.desc(metric) }}"),
-			metric.WithUnit("{{metric.unit}}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return {{metric_name}}{noop.{{ metric_inst }}{}}, err

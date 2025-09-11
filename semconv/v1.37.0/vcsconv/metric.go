@@ -153,6 +153,11 @@ type ChangeCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newChangeCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of changes (pull requests/merge requests/changelists) in a repository, categorized by their state (e.g. open or merged)."),
+	metric.WithUnit("{change}"),
+}
+
 // NewChangeCount returns a new ChangeCount instrument.
 func NewChangeCount(
 	m metric.Meter,
@@ -163,12 +168,15 @@ func NewChangeCount(
 		return ChangeCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newChangeCountOpts
+	} else {
+		opt = append(opt, newChangeCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"vcs.change.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of changes (pull requests/merge requests/changelists) in a repository, categorized by their state (e.g. open or merged)."),
-			metric.WithUnit("{change}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ChangeCount{noop.Int64UpDownCounter{}}, err
@@ -285,6 +293,11 @@ type ChangeDuration struct {
 	metric.Float64Gauge
 }
 
+var newChangeDurationOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("The time duration a change (pull request/merge request/changelist) has been in a given state."),
+	metric.WithUnit("s"),
+}
+
 // NewChangeDuration returns a new ChangeDuration instrument.
 func NewChangeDuration(
 	m metric.Meter,
@@ -295,12 +308,15 @@ func NewChangeDuration(
 		return ChangeDuration{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newChangeDurationOpts
+	} else {
+		opt = append(opt, newChangeDurationOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"vcs.change.duration",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("The time duration a change (pull request/merge request/changelist) has been in a given state."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ChangeDuration{noop.Float64Gauge{}}, err
@@ -423,6 +439,11 @@ type ChangeTimeToApproval struct {
 	metric.Float64Gauge
 }
 
+var newChangeTimeToApprovalOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."),
+	metric.WithUnit("s"),
+}
+
 // NewChangeTimeToApproval returns a new ChangeTimeToApproval instrument.
 func NewChangeTimeToApproval(
 	m metric.Meter,
@@ -433,12 +454,15 @@ func NewChangeTimeToApproval(
 		return ChangeTimeToApproval{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newChangeTimeToApprovalOpts
+	} else {
+		opt = append(opt, newChangeTimeToApprovalOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"vcs.change.time_to_approval",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ChangeTimeToApproval{noop.Float64Gauge{}}, err
@@ -585,6 +609,11 @@ type ChangeTimeToMerge struct {
 	metric.Float64Gauge
 }
 
+var newChangeTimeToMergeOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."),
+	metric.WithUnit("s"),
+}
+
 // NewChangeTimeToMerge returns a new ChangeTimeToMerge instrument.
 func NewChangeTimeToMerge(
 	m metric.Meter,
@@ -595,12 +624,15 @@ func NewChangeTimeToMerge(
 		return ChangeTimeToMerge{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newChangeTimeToMergeOpts
+	} else {
+		opt = append(opt, newChangeTimeToMergeOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"vcs.change.time_to_merge",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ChangeTimeToMerge{noop.Float64Gauge{}}, err
@@ -746,6 +778,11 @@ type ContributorCount struct {
 	metric.Int64Gauge
 }
 
+var newContributorCountOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("The number of unique contributors to a repository."),
+	metric.WithUnit("{contributor}"),
+}
+
 // NewContributorCount returns a new ContributorCount instrument.
 func NewContributorCount(
 	m metric.Meter,
@@ -756,12 +793,15 @@ func NewContributorCount(
 		return ContributorCount{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newContributorCountOpts
+	} else {
+		opt = append(opt, newContributorCountOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"vcs.contributor.count",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("The number of unique contributors to a repository."),
-			metric.WithUnit("{contributor}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ContributorCount{noop.Int64Gauge{}}, err
@@ -872,6 +912,11 @@ type RefCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newRefCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of refs of type branch or tag in a repository."),
+	metric.WithUnit("{ref}"),
+}
+
 // NewRefCount returns a new RefCount instrument.
 func NewRefCount(
 	m metric.Meter,
@@ -882,12 +927,15 @@ func NewRefCount(
 		return RefCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newRefCountOpts
+	} else {
+		opt = append(opt, newRefCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"vcs.ref.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of refs of type branch or tag in a repository."),
-			metric.WithUnit("{ref}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return RefCount{noop.Int64UpDownCounter{}}, err
@@ -1005,6 +1053,11 @@ type RefLinesDelta struct {
 	metric.Int64Gauge
 }
 
+var newRefLinesDeltaOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."),
+	metric.WithUnit("{line}"),
+}
+
 // NewRefLinesDelta returns a new RefLinesDelta instrument.
 func NewRefLinesDelta(
 	m metric.Meter,
@@ -1015,12 +1068,15 @@ func NewRefLinesDelta(
 		return RefLinesDelta{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newRefLinesDeltaOpts
+	} else {
+		opt = append(opt, newRefLinesDeltaOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"vcs.ref.lines_delta",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."),
-			metric.WithUnit("{line}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return RefLinesDelta{noop.Int64Gauge{}}, err
@@ -1181,6 +1237,11 @@ type RefRevisionsDelta struct {
 	metric.Int64Gauge
 }
 
+var newRefRevisionsDeltaOpts = []metric.Int64GaugeOption{
+	metric.WithDescription("The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute."),
+	metric.WithUnit("{revision}"),
+}
+
 // NewRefRevisionsDelta returns a new RefRevisionsDelta instrument.
 func NewRefRevisionsDelta(
 	m metric.Meter,
@@ -1191,12 +1252,15 @@ func NewRefRevisionsDelta(
 		return RefRevisionsDelta{noop.Int64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newRefRevisionsDeltaOpts
+	} else {
+		opt = append(opt, newRefRevisionsDeltaOpts...)
+	}
+
 	i, err := m.Int64Gauge(
 		"vcs.ref.revisions_delta",
-		append([]metric.Int64GaugeOption{
-			metric.WithDescription("The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute."),
-			metric.WithUnit("{revision}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return RefRevisionsDelta{noop.Int64Gauge{}}, err
@@ -1352,6 +1416,11 @@ type RefTime struct {
 	metric.Float64Gauge
 }
 
+var newRefTimeOpts = []metric.Float64GaugeOption{
+	metric.WithDescription("Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`."),
+	metric.WithUnit("s"),
+}
+
 // NewRefTime returns a new RefTime instrument.
 func NewRefTime(
 	m metric.Meter,
@@ -1362,12 +1431,15 @@ func NewRefTime(
 		return RefTime{noop.Float64Gauge{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newRefTimeOpts
+	} else {
+		opt = append(opt, newRefTimeOpts...)
+	}
+
 	i, err := m.Float64Gauge(
 		"vcs.ref.time",
-		append([]metric.Float64GaugeOption{
-			metric.WithDescription("Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return RefTime{noop.Float64Gauge{}}, err
@@ -1489,6 +1561,11 @@ type RepositoryCount struct {
 	metric.Int64UpDownCounter
 }
 
+var newRepositoryCountOpts = []metric.Int64UpDownCounterOption{
+	metric.WithDescription("The number of repositories in an organization."),
+	metric.WithUnit("{repository}"),
+}
+
 // NewRepositoryCount returns a new RepositoryCount instrument.
 func NewRepositoryCount(
 	m metric.Meter,
@@ -1499,12 +1576,15 @@ func NewRepositoryCount(
 		return RepositoryCount{noop.Int64UpDownCounter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newRepositoryCountOpts
+	} else {
+		opt = append(opt, newRepositoryCountOpts...)
+	}
+
 	i, err := m.Int64UpDownCounter(
 		"vcs.repository.count",
-		append([]metric.Int64UpDownCounterOption{
-			metric.WithDescription("The number of repositories in an organization."),
-			metric.WithUnit("{repository}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return RepositoryCount{noop.Int64UpDownCounter{}}, err

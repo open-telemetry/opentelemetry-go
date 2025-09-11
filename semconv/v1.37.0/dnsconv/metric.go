@@ -38,6 +38,11 @@ type LookupDuration struct {
 	metric.Float64Histogram
 }
 
+var newLookupDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Measures the time taken to perform a DNS lookup."),
+	metric.WithUnit("s"),
+}
+
 // NewLookupDuration returns a new LookupDuration instrument.
 func NewLookupDuration(
 	m metric.Meter,
@@ -48,12 +53,15 @@ func NewLookupDuration(
 		return LookupDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newLookupDurationOpts
+	} else {
+		opt = append(opt, newLookupDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"dns.lookup.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Measures the time taken to perform a DNS lookup."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return LookupDuration{noop.Float64Histogram{}}, err
