@@ -217,8 +217,6 @@ func assertCollectionOnly(t *testing.T, got metricdata.ScopeMetrics, err error) 
 	metricdatatest.AssertEqual(t, want, m[0], o, metricdatatest.IgnoreValue())
 }
 
-/* --------------------------- TrackScrape --------------------------- */
-
 func TestInstrumentationTrackScrape_Success(t *testing.T) {
 	inst, collect := setup(t)
 
