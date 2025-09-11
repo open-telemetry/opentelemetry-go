@@ -408,9 +408,9 @@ func BenchmarkSpanEnd(b *testing.B) {
 			name: "Default",
 		},
 		{
-			name: "SelfObservabilityEnabled",
+			name: "ObservabilityEnabled",
 			env: map[string]string{
-				"OTEL_GO_X_SELF_OBSERVABILITY": "True",
+				"OTEL_GO_X_OBSERVABILITY": "True",
 			},
 		},
 	}

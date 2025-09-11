@@ -684,8 +684,8 @@ This section outlines the best practices for building instrumentation in OpenTel
 
 #### Environment Variable Activation
 
-Self-observability features are currently experimental.
-They should be disabled by default and activated through the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable.
+Observability features are currently experimental.
+They should be disabled by default and activated through the `OTEL_GO_X_OBSERVABILITY` environment variable.
 This follows the established experimental feature pattern used throughout the SDK.
 
 Components should check for this environment variable using a consistent pattern:
@@ -693,8 +693,8 @@ Components should check for this environment variable using a consistent pattern
 ```go
 import "go.opentelemetry.io/otel/*/internal/x"
 
-if x.SelfObservability.Enabled() {
-    // Initialize self-observability metrics
+if x.Observability.Enabled() {
+    // Initialize observability metrics
 }
 ```
 
@@ -769,7 +769,7 @@ type instrumentation struct {
 }
 
 func newInstrumentation() (*instrumentation, error) {
-    if !x.SelfObservability.Enabled() {
+    if !x.Observability.Enabled() {
         return nil, nil
     }
  
@@ -796,7 +796,7 @@ func newInstrumentation() (*instrumentation, error) {
 // ❌ Avoid this pattern.
 func (c *Component) initObservability() {
 	// Initialize observability metrics
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return
 	}
 
@@ -932,17 +932,17 @@ Demonstrate the impact (allocs/op, B/op, ns/op) in enabled/disabled scenarios:
 func BenchmarkExportSpans(b *testing.B) {
     scenarios := []struct {
         name           string
-        selfObsEnabled bool
+        obsEnabled bool
     }{
-        {"SelfObsDisabled", false},
-        {"SelfObsEnabled", true},
+        {"ObsDisabled", false},
+        {"ObsEnabled", true},
     }
  
     for _, scenario := range scenarios {
         b.Run(scenario.name, func(b *testing.B) {
             b.Setenv(
-				"OTEL_GO_X_SELF_OBSERVABILITY",
-				strconv.FormatBool(scenario.selfObsEnabled),
+				"OTEL_GO_X_OBSERVABILITY",
+				strconv.FormatBool(scenario.obsEnabled),
 			)
 
             exporter := NewExporter()
@@ -965,7 +965,7 @@ Errors should be reported back to the caller if possible, and partial failures s
 
 ```go
 func newInstrumentation() (*instrumentation, error) {
-    if !x.SelfObservability.Enabled() {
+    if !x.Observability.Enabled() {
         return nil, nil
     }
  
@@ -981,7 +981,7 @@ func newInstrumentation() (*instrumentation, error) {
 ```go
 // ❌ Avoid this pattern.
 func newInstrumentation() *instrumentation {
-    if !x.SelfObservability.Enabled() {
+    if !x.Observability.Enabled() {
         return nil, nil
     }
  
@@ -1038,7 +1038,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 #### Semantic Conventions Compliance
 
-All self-observability metrics should follow the [OpenTelemetry Semantic Conventions for SDK metrics](https://github.com/open-telemetry/semantic-conventions/blob/1cf2476ae5e518225a766990a28a6d5602bd5a30/docs/otel/sdk-metrics.md).
+All observability metrics should follow the [OpenTelemetry Semantic Conventions for SDK metrics](https://github.com/open-telemetry/semantic-conventions/blob/1cf2476ae5e518225a766990a28a6d5602bd5a30/docs/otel/sdk-metrics.md).
 
 Use the metric semantic conventions convenience package [otelconv](./semconv/v1.37.0/otelconv/metric.go).
 
@@ -1087,7 +1087,7 @@ See [stdouttrace exporter example](./exporters/stdout/stdouttrace/internal/gen.g
 Use deterministic testing with isolated state:
 
 ```go
-func TestSelfObservability(t *testing.T) {
+func TestObservability(t *testing.T) {
 	// Restore state after test to ensure this does not affect other tests.
     prev := otel.GetMeterProvider()
     t.Cleanup(func() { otel.SetMeterProvider(prev) })
@@ -1098,7 +1098,7 @@ func TestSelfObservability(t *testing.T) {
     otel.SetMeterProvider(meterProvider)
 
 	// Use t.Setenv to ensure environment variable is restored after test.
-    t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+    t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	// Reset component ID counter to ensure deterministic component names.
 	componentIDCounter.Store(0)
