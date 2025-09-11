@@ -496,7 +496,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	if s.tracer.selfObservabilityEnabled {
+	if s.tracer.observabilityEnabled {
 		defer func() {
 			// Add the span to the context to ensure the metric is recorded
 			// with the correct span context.
