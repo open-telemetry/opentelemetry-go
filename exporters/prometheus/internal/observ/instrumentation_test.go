@@ -88,7 +88,7 @@ func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
 func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetrics) {
 	t.Helper()
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	original := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(original) })
