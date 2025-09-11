@@ -194,7 +194,7 @@ func (i *Instrumentation) RecordCollectionDuration(
 	return err
 }
 
-type ScrapeDone func(success int64, err error)
+type ExportMetricsDone func(success int64, err error)
 
 func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportMetricsDone {
 	addOpt := get[metric.AddOption](addOptPool)
