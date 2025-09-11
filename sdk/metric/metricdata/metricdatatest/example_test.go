@@ -70,7 +70,7 @@ func ExampleAssertAggregationsEqual() {
 
 	// Create an instrument(eg: counter/histogram/gauge) and simulate an operation
 	meter := mp.Meter("payment-service")
-	counter, _ := meter.Int64Counter("payment.duration")
+	counter, _ := meter.Int64Counter("payment.count")
 	counter.Add(ctx, 5)
 
 	// Collect the metrics
