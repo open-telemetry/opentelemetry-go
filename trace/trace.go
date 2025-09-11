@@ -60,22 +60,22 @@ func (t TraceID) String() string {
 // hexBytes returns the hex string representation form of a TraceID.
 func (t TraceID) hexBytes() [32]byte {
 	return [32]byte{
-		hexLU[t[0x0]>>4], hexLU[t[0x0]&0xf],
-		hexLU[t[0x1]>>4], hexLU[t[0x1]&0xf],
-		hexLU[t[0x2]>>4], hexLU[t[0x2]&0xf],
-		hexLU[t[0x3]>>4], hexLU[t[0x3]&0xf],
-		hexLU[t[0x4]>>4], hexLU[t[0x4]&0xf],
-		hexLU[t[0x5]>>4], hexLU[t[0x5]&0xf],
-		hexLU[t[0x6]>>4], hexLU[t[0x6]&0xf],
-		hexLU[t[0x7]>>4], hexLU[t[0x7]&0xf],
-		hexLU[t[0x8]>>4], hexLU[t[0x8]&0xf],
-		hexLU[t[0x9]>>4], hexLU[t[0x9]&0xf],
-		hexLU[t[0xa]>>4], hexLU[t[0xa]&0xf],
-		hexLU[t[0xb]>>4], hexLU[t[0xb]&0xf],
-		hexLU[t[0xc]>>4], hexLU[t[0xc]&0xf],
-		hexLU[t[0xd]>>4], hexLU[t[0xd]&0xf],
-		hexLU[t[0xe]>>4], hexLU[t[0xe]&0xf],
-		hexLU[t[0xf]>>4], hexLU[t[0xf]&0xf],
+		hexTable[t[0x0]][0], hexTable[t[0x0]][1],
+		hexTable[t[0x1]][0], hexTable[t[0x1]][1],
+		hexTable[t[0x2]][0], hexTable[t[0x2]][1],
+		hexTable[t[0x3]][0], hexTable[t[0x3]][1],
+		hexTable[t[0x4]][0], hexTable[t[0x4]][1],
+		hexTable[t[0x5]][0], hexTable[t[0x5]][1],
+		hexTable[t[0x6]][0], hexTable[t[0x6]][1],
+		hexTable[t[0x7]][0], hexTable[t[0x7]][1],
+		hexTable[t[0x8]][0], hexTable[t[0x8]][1],
+		hexTable[t[0x9]][0], hexTable[t[0x9]][1],
+		hexTable[t[0xa]][0], hexTable[t[0xa]][1],
+		hexTable[t[0xb]][0], hexTable[t[0xb]][1],
+		hexTable[t[0xc]][0], hexTable[t[0xc]][1],
+		hexTable[t[0xd]][0], hexTable[t[0xd]][1],
+		hexTable[t[0xe]][0], hexTable[t[0xe]][1],
+		hexTable[t[0xf]][0], hexTable[t[0xf]][1],
 	}
 }
 
@@ -110,14 +110,14 @@ func (s SpanID) String() string {
 
 func (s SpanID) hexBytes() [16]byte {
 	return [16]byte{
-		hexLU[s[0]>>4], hexLU[s[0]&0xf],
-		hexLU[s[1]>>4], hexLU[s[1]&0xf],
-		hexLU[s[2]>>4], hexLU[s[2]&0xf],
-		hexLU[s[3]>>4], hexLU[s[3]&0xf],
-		hexLU[s[4]>>4], hexLU[s[4]&0xf],
-		hexLU[s[5]>>4], hexLU[s[5]&0xf],
-		hexLU[s[6]>>4], hexLU[s[6]&0xf],
-		hexLU[s[7]>>4], hexLU[s[7]&0xf],
+		hexTable[s[0x0]][0], hexTable[s[0x0]][1],
+		hexTable[s[0x1]][0], hexTable[s[0x1]][1],
+		hexTable[s[0x2]][0], hexTable[s[0x2]][1],
+		hexTable[s[0x3]][0], hexTable[s[0x3]][1],
+		hexTable[s[0x4]][0], hexTable[s[0x4]][1],
+		hexTable[s[0x5]][0], hexTable[s[0x5]][1],
+		hexTable[s[0x6]][0], hexTable[s[0x6]][1],
+		hexTable[s[0x7]][0], hexTable[s[0x7]][1],
 	}
 }
 
