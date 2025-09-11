@@ -34,7 +34,7 @@ func (c *client) UploadTraces(context.Context, []*tracepb.ResourceSpans) error {
 }
 
 func TestExporterClientError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	exp, err := otlptrace.New(ctx, &client{
 		uploadErr: context.Canceled,
 	})

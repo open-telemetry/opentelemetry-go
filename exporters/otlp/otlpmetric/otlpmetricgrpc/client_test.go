@@ -162,7 +162,7 @@ func TestClient(t *testing.T) {
 		coll, err := otest.NewGRPCCollector("", rCh)
 		require.NoError(t, err)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		addr := coll.Addr().String()
 		opts := []Option{WithEndpoint(addr), WithInsecure()}
 		cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
@@ -179,7 +179,7 @@ func TestConfig(t *testing.T) {
 		coll, err := otest.NewGRPCCollector("", rCh)
 		require.NoError(t, err)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		opts := append([]Option{
 			WithEndpoint(coll.Addr().String()),
 			WithInsecure(),
@@ -209,7 +209,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc(nil, WithHeaders(headers))
 		t.Cleanup(coll.Shutdown)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		additionalKey := "additional-custom-header"
 		ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -244,7 +244,7 @@ func TestConfig(t *testing.T) {
 		customerUserAgent := "custom-user-agent"
 		exp, coll := factoryFunc(nil, WithDialOption(grpc.WithUserAgent(customerUserAgent)))
 		t.Cleanup(coll.Shutdown)
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
 		require.NoError(t, exp.Shutdown(ctx))

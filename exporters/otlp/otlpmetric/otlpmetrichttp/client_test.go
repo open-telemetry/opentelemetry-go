@@ -57,7 +57,7 @@ func TestClient(t *testing.T) {
 }
 
 func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	coll, err := otest.NewHTTPCollector("", nil, otest.WithHTTPCollectorRespondingPlainText())
 	require.NoError(t, err)
 
@@ -74,7 +74,7 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	exp, err := New(ctx, WithEndpoint("host:invalid-port"))
 	assert.Error(t, err)
 	assert.Nil(t, exp)
@@ -91,7 +91,7 @@ func TestConfig(t *testing.T) {
 		}
 		opts = append(opts, o...)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		exp, err := New(ctx, opts...)
 		require.NoError(t, err)
 		return exp, coll
@@ -115,7 +115,7 @@ func TestConfig(t *testing.T) {
 		key := http.CanonicalHeaderKey("my-custom-header")
 		headers := map[string]string{key: "custom-value"}
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
-		ctx := context.Background()
+		ctx := t.Context()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -242,7 +242,7 @@ func TestConfig(t *testing.T) {
 		key := http.CanonicalHeaderKey("user-agent")
 		headers := map[string]string{key: "custom-user-agent"}
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
-		ctx := context.Background()
+		ctx := t.Context()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -264,7 +264,7 @@ func TestConfig(t *testing.T) {
 				},
 			},
 		}))
-		ctx := context.Background()
+		ctx := t.Context()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -282,7 +282,7 @@ func TestConfig(t *testing.T) {
 			r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
 			return r.URL, nil
 		}))
-		ctx := context.Background()
+		ctx := t.Context()
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
