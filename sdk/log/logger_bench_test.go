@@ -93,7 +93,7 @@ func BenchmarkLoggerEmitObservability(b *testing.B) {
 	b.Run("Disabled", run(newLogger(lp, scope)))
 
 	b.Run("Enabled", func(b *testing.B) {
-		b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 		run(newLogger(lp, scope))(b)
 	})

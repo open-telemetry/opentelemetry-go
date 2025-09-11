@@ -207,14 +207,14 @@ func TestTracerLocalParent(t *testing.T) {
 }
 
 func TestNewTracerObservabilityDisabled(t *testing.T) {
-	// Do not set OTEL_GO_X_SELF_OBSERVABILITY
+	// Do not set OTEL_GO_X_OBSERVABILITY
 	tracer, err := observ.NewTracer()
 	assert.NoError(t, err)
 	assert.False(t, tracer.Enabled())
 }
 
 func TestNewTracerErrors(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
@@ -230,7 +230,7 @@ func TestNewTracerErrors(t *testing.T) {
 }
 
 func BenchmarkTracer(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	orig := otel.GetMeterProvider()
 	b.Cleanup(func() { otel.SetMeterProvider(orig) })
@@ -276,7 +276,7 @@ func BenchmarkTracer(b *testing.B) {
 }
 
 func BenchmarkNewTracer(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	orig := otel.GetMeterProvider()
 	b.Cleanup(func() { otel.SetMeterProvider(orig) })

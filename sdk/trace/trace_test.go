@@ -2247,7 +2247,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestObservability(t *testing.T) {
 	testCases := []struct {
 		name string
 		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
@@ -2724,7 +2724,7 @@ func TestSelfObservability(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() { otel.SetMeterProvider(prev) })
 
@@ -2750,8 +2750,8 @@ type ctxKeyT string
 // ctxKey is a context key used to store and retrieve values in the context.
 var ctxKey = ctxKeyT("testKey")
 
-func TestSelfObservabilityContextPropagation(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+func TestObservabilityContextPropagation(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 	prev := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(prev) })
 
@@ -2806,7 +2806,7 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 	tp := NewTracerProvider()
 
 	wrap := func(parentCtx context.Context, name string, fn func(context.Context)) {
-		const tracer = "TestSelfObservabilityContextPropagation"
+		const tracer = "TestObservabilityContextPropagation"
 		ctx, s := tp.Tracer(tracer).Start(parentCtx, name)
 		defer s.End()
 		fn(ctx)
@@ -2904,9 +2904,9 @@ func BenchmarkTraceStart(b *testing.B) {
 			},
 		},
 		{
-			name: "SelfObservabilityEnabled",
+			name: "ObservabilityEnabled",
 			env: map[string]string{
-				"OTEL_GO_X_SELF_OBSERVABILITY": "True",
+				"OTEL_GO_X_OBSERVABILITY": "True",
 			},
 		},
 	} {

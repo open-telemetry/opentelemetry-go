@@ -18,7 +18,7 @@ import (
 // newRecordCounterIncr returns a function that increments the log record
 // counter metric. If observability is disabled, it returns nil.
 func newRecordCounterIncr() (func(context.Context), error) {
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 

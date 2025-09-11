@@ -40,7 +40,7 @@ type Tracer struct {
 }
 
 func NewTracer() (Tracer, error) {
-	if !x.SelfObservability.Enabled() {
+	if !x.Observability.Enabled() {
 		return Tracer{}, nil
 	}
 	meter := otel.GetMeterProvider().Meter(ScopeName, meterOpts...)

@@ -21,7 +21,7 @@ import (
 
 const (
 	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
-	selfObsScopeName  = "go.opentelemetry.io/otel/sdk/trace"
+	obsScopeName      = "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // tracerProviderConfig.
