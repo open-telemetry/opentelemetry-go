@@ -168,30 +168,26 @@ func (i *Instrumentation) RecordOperationDuration(
 	}
 }
 
-func (i *Instrumentation) RecordCollectionDuration(
-	ctx context.Context,
-	operation func() error,
-) error {
+func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) func(err error) {
 	start := time.Now()
 
-	recordOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recordOpt)
-	*recordOpt = append(*recordOpt, i.setOpt)
+	return func(err error) {
+		recordOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recordOpt)
+		*recordOpt = append(*recordOpt, i.setOpt)
 
-	err := operation()
-	if err != nil {
-		attrs := get[attribute.KeyValue](measureAttrsPool)
-		defer put(measureAttrsPool, attrs)
-		*attrs = append(*attrs, i.attrs...)
-		*attrs = append(*attrs, semconv.ErrorType(err))
+		if err != nil {
+			attrs := get[attribute.KeyValue](measureAttrsPool)
+			defer put(measureAttrsPool, attrs)
+			*attrs = append(*attrs, i.attrs...)
+			*attrs = append(*attrs, semconv.ErrorType(err))
 
-		set := attribute.NewSet(*attrs...)
-		*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
+			set := attribute.NewSet(*attrs...)
+			*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
+		}
+
+		i.collectionDuration.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
 	}
-
-	i.collectionDuration.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
-
-	return err
 }
 
 type ExportMetricsDone func(success int64, err error)
@@ -206,7 +202,7 @@ func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportMetr
 	return i.end(ctx, n)
 }
 
-func (i *Instrumentation) end(ctx context.Context, n int64) ScrapeDone {
+func (i *Instrumentation) end(ctx context.Context, n int64) ExportMetricsDone {
 	return func(success int64, err error) {
 		addOpt := get[metric.AddOption](addOptPool)
 		defer put(addOptPool, addOpt)

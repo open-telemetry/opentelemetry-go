@@ -172,9 +172,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	defer metricsPool.Put(metrics)
 
 	if c.inst != nil {
-		err = c.inst.RecordCollectionDuration(ctx, func() error {
-			return c.reader.Collect(ctx, metrics)
-		})
+		endCollection := c.inst.RecordCollectionDuration(ctx)
+		err = c.reader.Collect(ctx, metrics)
+		endCollection(err)
 	} else {
 		err = c.reader.Collect(ctx, metrics)
 	}
@@ -365,7 +365,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.TrackScrape(ctx, int64(len(histogram.DataPoints)))
+		end := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
 		defer func() { end(success, err) }()
 	}
 
@@ -466,7 +466,7 @@ func addHistogramMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.TrackScrape(ctx, int64(len(histogram.DataPoints)))
+		end := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
 		defer func() { end(success, err) }()
 	}
 
@@ -514,7 +514,7 @@ func addSumMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.TrackScrape(ctx, int64(len(sum.DataPoints)))
+		end := inst.ExportMetrics(ctx, int64(len(sum.DataPoints)))
 		defer func() { end(success, err) }()
 	}
 
@@ -564,7 +564,7 @@ func addGaugeMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.TrackScrape(ctx, int64(len(gauge.DataPoints)))
+		end := inst.ExportMetrics(ctx, int64(len(gauge.DataPoints)))
 		defer func() { end(success, err) }()
 	}
 

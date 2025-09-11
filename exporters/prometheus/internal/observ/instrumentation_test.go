@@ -31,8 +31,6 @@ var Scope = instrumentation.Scope{
 	SchemaURL: observ.SchemaURL,
 }
 
-/* ---------- helpers to force instrument-creation failures ---------- */
-
 type errMeterProvider struct {
 	mapi.MeterProvider
 	err error
@@ -184,7 +182,7 @@ func collectionDuration(err error) metricdata.Metrics {
 	}
 }
 
-func assertTrackScrapeMetrics(t *testing.T, got metricdata.ScopeMetrics, total, success int64, err error) {
+func assertExportMetricsMetrics(t *testing.T, got metricdata.ScopeMetrics, total, success int64, err error) {
 	t.Helper()
 
 	assert.Equal(t, Scope, got.Scope, "unexpected scope")
@@ -217,58 +215,56 @@ func assertCollectionOnly(t *testing.T, got metricdata.ScopeMetrics, err error) 
 	metricdatatest.AssertEqual(t, want, m[0], o, metricdatatest.IgnoreValue())
 }
 
-func TestInstrumentationTrackScrape_Success(t *testing.T) {
+func TestInstrumentationExportMetrics_Success(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
 	endOp := inst.RecordOperationDuration(context.Background())
-	end := inst.TrackScrape(context.Background(), n)
+	end := inst.ExportMetrics(context.Background(), n)
 
 	end(n, nil)
 	endOp(nil)
 
-	assertTrackScrapeMetrics(t, collect(), n, n, nil)
+	assertExportMetricsMetrics(t, collect(), n, n, nil)
 }
 
-func TestInstrumentationTrackScrape_AllErrored(t *testing.T) {
+func TestInstrumentationExportMetrics_AllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
 	err := assert.AnError
 
 	endOp := inst.RecordOperationDuration(context.Background())
-	end := inst.TrackScrape(context.Background(), n)
+	end := inst.ExportMetrics(context.Background(), n)
 
 	const success = 0
 	end(success, err)
 	endOp(err)
 
-	assertTrackScrapeMetrics(t, collect(), n, success, err)
+	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
 
-func TestInstrumentationTrackScrape_PartialErrored(t *testing.T) {
+func TestInstrumentationExportMetrics_PartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
 	err := assert.AnError
 
 	endOp := inst.RecordOperationDuration(context.Background())
-	end := inst.TrackScrape(context.Background(), n)
+	end := inst.ExportMetrics(context.Background(), n)
 
 	const success = 5
 	end(success, err)
 	endOp(err)
 
-	assertTrackScrapeMetrics(t, collect(), n, success, err)
+	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
-
-/* ---------------------- RecordCollectionDuration ------------------- */
 
 func TestRecordCollectionDuration_Success(t *testing.T) {
 	inst, collect := setup(t)
 
-	err := inst.RecordCollectionDuration(context.Background(), func() error { return nil })
-	require.NoError(t, err)
+	endCollection := inst.RecordCollectionDuration(context.Background())
+	endCollection(nil)
 
 	assertCollectionOnly(t, collect(), nil)
 }
@@ -277,33 +273,62 @@ func TestRecordCollectionDuration_Error(t *testing.T) {
 	inst, collect := setup(t)
 
 	wantErr := assert.AnError
-	err := inst.RecordCollectionDuration(context.Background(), func() error { return wantErr })
-	require.ErrorIs(t, err, wantErr)
+	endCollection := inst.RecordCollectionDuration(context.Background())
+	endCollection(wantErr)
 
 	assertCollectionOnly(t, collect(), wantErr)
 }
 
-/* ----------------------------- benchmark --------------------------- */
-
-func BenchmarkInstrumentationTrackScrape(b *testing.B) {
+func BenchmarkInstrumentationExportMetrics(b *testing.B) {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	inst, err := observ.NewInstrumentation(ID)
 	if err != nil {
 		b.Fatalf("failed to create instrumentation: %v", err)
 	}
 
-	var end observ.ScrapeDone
 	benchErr := errors.New("benchmark error")
 	ctx := context.Background()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		end = inst.TrackScrape(ctx, 10)
+		end := inst.ExportMetrics(ctx, 10)
 		end(4, benchErr)
+	}
+}
 
+func BenchmarkInstrumentationRecordOperationDuration(b *testing.B) {
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	inst, err := observ.NewInstrumentation(ID)
+	if err != nil {
+		b.Fatalf("failed to create instrumentation: %v", err)
+	}
+
+	benchErr := errors.New("benchmark error")
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
 		done := inst.RecordOperationDuration(ctx)
 		done(benchErr)
 	}
-	_ = end
+}
+
+func BenchmarkInstrumentationRecordCollectionDuration(b *testing.B) {
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	inst, err := observ.NewInstrumentation(ID)
+	if err != nil {
+		b.Fatalf("failed to create instrumentation: %v", err)
+	}
+
+	benchErr := errors.New("benchmark error")
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		endCollection := inst.RecordCollectionDuration(ctx)
+		endCollection(benchErr)
+	}
 }
