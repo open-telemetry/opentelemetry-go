@@ -242,7 +242,8 @@ func ExampleIgnoreExemplars() {
 }
 
 // Helper function to retrieve the metrics.
-func getMetrics(name string, rm *metricdata.ResourceMetrics) (metricdata.Metrics, bool) { //nolint
+// nolint:unparam // 'bool' return value currently unused, but retained for completeness
+func getMetrics(name string, rm *metricdata.ResourceMetrics) (metricdata.Metrics, bool) {
 	for _, scopeMetrics := range rm.ScopeMetrics {
 		for _, m := range scopeMetrics.Metrics {
 			if m.Name == name {
@@ -255,9 +256,7 @@ func getMetrics(name string, rm *metricdata.ResourceMetrics) (metricdata.Metrics
 
 // mockTestingT implements the [metricdatatest.TestingT] interface for examples.
 // Usually, we use [*testing.T] as a substitute.
-type mockTestingT struct {
-	errors []string //nolint
-}
+type mockTestingT struct{}
 
 func (*mockTestingT) Helper() {}
 
