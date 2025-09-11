@@ -109,8 +109,6 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 	}
 }
 
-/* ----------------------- expected-data builders --------------------- */
-
 func set(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(observ.ComponentName(ID)),
