@@ -14,7 +14,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
@@ -28,6 +27,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

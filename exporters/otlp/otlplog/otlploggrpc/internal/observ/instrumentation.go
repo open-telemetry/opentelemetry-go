@@ -16,9 +16,10 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
-	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
