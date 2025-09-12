@@ -552,7 +552,7 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 
 	bsp := NewBatchSpanProcessor(newIndefiniteExporter(t))
 	t.Cleanup(func() {
-		assert.NoError(t, bsp.Shutdown(context.Background()))
+		assert.NoError(t, bsp.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
 	})
 
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
@@ -586,7 +586,7 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 	tp := basicTracerProvider(t)
 	tp.RegisterSpanProcessor(bsp)
 	t.Cleanup(func() {
-		assert.NoError(t, tp.Shutdown(context.Background()))
+		assert.NoError(t, tp.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
 	})
 
 	tracer := tp.Tracer("tracer")
@@ -663,7 +663,9 @@ func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
-	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	t.Cleanup(func() {
+		assert.NoError(t, me.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+	})
 	bsp := NewBatchSpanProcessor(
 		me,
 		// Make sure timeout doesn't trigger during the test.
@@ -702,7 +704,9 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
-	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	t.Cleanup(func() {
+		assert.NoError(t, me.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+	})
 	bsp := NewBatchSpanProcessor(
 		me,
 		// Make sure timeout doesn't trigger during the test.
@@ -737,7 +741,9 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
-	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	t.Cleanup(func() {
+		assert.NoError(t, me.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+	})
 	bsp := NewBatchSpanProcessor(
 		me,
 		// Use WithBlocking so we can trigger a queueFull using ForceFlush.

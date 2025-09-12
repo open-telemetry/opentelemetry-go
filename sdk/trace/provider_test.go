@@ -340,6 +340,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 
 					stp := NewTracerProvider(WithSyncer(NewTestExporter()))
 					t.Cleanup(func() {
+						//nolint:usetesting // used to assert Shutdown
 						require.NoError(t, stp.Shutdown(context.Background()))
 					})
 					assert.Equal(t, test.description, stp.sampler.Description())

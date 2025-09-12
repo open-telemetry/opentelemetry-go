@@ -22,7 +22,7 @@ import (
 func basicTracerProvider(t *testing.T) *TracerProvider {
 	tp := NewTracerProvider(WithSampler(AlwaysSample()))
 	t.Cleanup(func() {
-		assert.NoError(t, tp.Shutdown(context.Background()))
+		assert.NoError(t, tp.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
 	})
 	return tp
 }

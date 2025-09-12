@@ -194,7 +194,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(coll.Shutdown)
 
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
@@ -233,7 +233,7 @@ func TestConfig(t *testing.T) {
 			WithRetry(RetryConfig{Enabled: false}),
 		)
 		t.Cleanup(coll.Shutdown)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
 		assert.ErrorContains(t, err, "DeadlineExceeded")

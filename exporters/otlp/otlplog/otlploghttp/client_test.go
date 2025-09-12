@@ -647,7 +647,7 @@ func TestConfig(t *testing.T) {
 			WithTimeout(time.Millisecond),
 			WithRetry(RetryConfig{Enabled: false}),
 		)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -742,7 +742,7 @@ func TestConfig(t *testing.T) {
 		ePt := "https://localhost:0"
 		tlsCfg := &tls.Config{InsecureSkipVerify: true}
 		exp, coll := factoryFunc(ePt, nil, WithTLSClientConfig(tlsCfg))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))

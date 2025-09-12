@@ -100,7 +100,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithEndpointURL", func(t *testing.T) {
 		coll, err := otest.NewHTTPCollector("", nil)
 		require.NoError(t, err)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 
 		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
 		require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestConfig(t *testing.T) {
 			WithTimeout(time.Millisecond),
 			WithRetry(RetryConfig{Enabled: false}),
 		)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -147,7 +147,7 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithCompression(GzipCompression))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -183,7 +183,7 @@ func TestConfig(t *testing.T) {
 			MaxInterval:     time.Millisecond,
 			MaxElapsedTime:  time.Minute,
 		}))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -202,7 +202,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
 			Enabled: false,
 		}))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -220,7 +220,7 @@ func TestConfig(t *testing.T) {
 		path := "/prefix/v2/metrics"
 		ePt := fmt.Sprintf("http://localhost:0%s", path)
 		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -231,7 +231,7 @@ func TestConfig(t *testing.T) {
 		ePt := "https://localhost:0"
 		tlsCfg := &tls.Config{InsecureSkipVerify: true}
 		exp, coll := factoryFunc(ePt, nil, WithTLSClientConfig(tlsCfg))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -301,7 +301,7 @@ func TestConfig(t *testing.T) {
 			Err:    exporterErr,
 		}}
 		exp, coll := factoryFunc("", rCh)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // used to assert Shutdown
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })

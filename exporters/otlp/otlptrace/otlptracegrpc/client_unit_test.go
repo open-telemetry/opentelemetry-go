@@ -170,7 +170,7 @@ func TestExportContextHonorsClientTimeout(t *testing.T) {
 }
 
 func TestExportContextLinksStopSignal(t *testing.T) {
-	rootCtx := context.Background()
+	rootCtx := context.Background() //nolint:usetesting // used to assert Stop
 
 	client := newClient(WithInsecure())
 	t.Cleanup(func() { require.NoError(t, client.Stop(rootCtx)) })
