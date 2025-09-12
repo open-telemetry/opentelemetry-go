@@ -4,6 +4,7 @@
 package trace_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -385,7 +386,7 @@ func BenchmarkSpanProcessorOnEnd(b *testing.B) {
 				sdktrace.WithMaxExportBatchSize(bb.batchSize),
 			)
 			b.Cleanup(func() {
-				_ = bsp.Shutdown(b.Context())
+				_ = bsp.Shutdown(context.Background()) //nolint:usetesting // used to assert Shutdown
 			})
 			snap := tracetest.SpanStub{}.Snapshot()
 
@@ -412,7 +413,7 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	b.Cleanup(func() {
-		_ = tp.Shutdown(b.Context())
+		_ = tp.Shutdown(context.Background()) //nolint:usetesting // used to assert Shutdown
 	})
 	tracer := tp.Tracer("bench")
 	ctx := b.Context()
