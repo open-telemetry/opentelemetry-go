@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 )
 
 // The methods of this type are not expected to be called concurrently.
@@ -77,12 +76,8 @@ func newClient(cfg config) (*client, error) {
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
 
-	if !x.Observability.Enabled() {
-		return c, nil
-	}
-
-	id := counter.NextExporterID()
 	var err error
+	id := counter.NextExporterID()
 	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
 	return c, err
 }

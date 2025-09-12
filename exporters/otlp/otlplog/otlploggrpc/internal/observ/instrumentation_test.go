@@ -292,7 +292,7 @@ func TestInstrumentationExportLogAllErrors(t *testing.T) {
 }
 
 func BenchmarkInstrumentationExportLogs(b *testing.B) {
-	b.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	inst, err := NewInstrumentation(ID, TARGET)
 	if err != nil {
 		b.Fatalf("failed to create instrumentation: %v", err)

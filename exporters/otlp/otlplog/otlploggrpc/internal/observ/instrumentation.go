@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package observ provides self-observability metrics for OTLP log exporters.
+// Package observ provides observability metrics for OTLP log exporters.
 // This is an experimental feature controlled by the x.SelfObservability feature flag.
 package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 
@@ -16,18 +16,26 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
-// ScopeName is the unique name of the meter used for instrumentation.
-const ScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlpgrpclog/internal/observ"
+const (
+	// ScopeName is the unique name of the meter used for instrumentation.
+	ScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlpgrpclog/internal/observ"
+
+	// Version is the current version of this instrumentation.
+	//
+	// This matches the version of the exporter.
+	Version = internal.Version
+)
 
 var (
 	attrsPool = &sync.Pool{
@@ -75,12 +83,16 @@ type Instrumentation struct {
 
 // NewInstrumentation returns instrumentation for otlplog grpc exporter.
 func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
+	if !x.Observability.Enabled() {
+		return nil, nil
+	}
+
 	i := &Instrumentation{}
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithInstrumentationVersion(Version),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
@@ -109,9 +121,10 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	i.presetAttrs = []attribute.KeyValue{
 		semconv.OTelComponentName(GetComponentName(id)),
-		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
+		semconv.OTelComponentTypeOtlpGRPCLogExporter,
 	}
 	i.presetAttrs = append(i.presetAttrs, ServerAddrAttrs(target)...)
 	s := attribute.NewSet(i.presetAttrs...)
@@ -130,12 +143,12 @@ type ExportLogsDone func(err error, success int64, code codes.Code)
 // ExportLogs instruments the ExportLogs method of the exporter. It returns a
 // function that needs to be deferred so it is called when the method returns.
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportLogsDone {
+	start := time.Now()
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
 
 	*addOpt = append(*addOpt, i.setOpt)
 
-	start := time.Now()
 	i.logInflightMetric.Add(ctx, count, *addOpt...)
 
 	return i.end(ctx, start, count)
@@ -148,7 +161,6 @@ func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64)
 
 		*addOpt = append(*addOpt, i.setOpt)
 
-		duration := time.Since(start).Seconds()
 		i.logInflightMetric.Add(ctx, -count, *addOpt...)
 		i.logExportedMetric.Add(ctx, success, *addOpt...)
 
@@ -176,7 +188,7 @@ func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64)
 				semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 			),
 		)
-		i.logExportedDurationMetric.Record(ctx, duration, *recordOpt...)
+		i.logExportedDurationMetric.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
 	}
 }
 
