@@ -171,13 +171,12 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
 	defer metricsPool.Put(metrics)
 
+	endCollection := func(error) {}
 	if c.inst != nil {
-		endCollection := c.inst.RecordCollectionDuration(ctx)
-		err = c.reader.Collect(ctx, metrics)
-		endCollection(err)
-	} else {
-		err = c.reader.Collect(ctx, metrics)
+		endCollection = c.inst.RecordCollectionDuration(ctx)
 	}
+	err = c.reader.Collect(ctx, metrics)
+	endCollection(err)
 
 	if err != nil {
 		if errors.Is(err, metric.ErrReaderShutdown) {
