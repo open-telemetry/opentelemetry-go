@@ -25,10 +25,13 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
+
+const componentID = 0
 
 type testBatchExporter struct {
 	mu            sync.Mutex
@@ -693,6 +696,9 @@ func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 }
 
 func TestBatchSpanProcessorMetrics(t *testing.T) {
+	// Reset for deterministic component ID.
+	processorIDCounter.Store(componentID)
+
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
@@ -710,7 +716,6 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 		WithMaxQueueSize(2),
 		WithMaxExportBatchSize(2),
 	)
-	internalBsp := bsp.(*batchSpanProcessor)
 	tp.RegisterSpanProcessor(bsp)
 
 	tr := tp.Tracer("TestBatchSpanProcessorMetrics")
@@ -719,15 +724,25 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
-	assertObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
-		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 2,
+	})
 	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
 	generateSpan(t, tr, testOption{genNumSpans: 3})
-	assertObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
-		expectMetrics{queueCapacity: 2, queueSize: 2, queueFullProcessed: 1, successProcessed: 2})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:      2,
+		queueSize:          2,
+		queueFullProcessed: 1,
+		successProcessed:   2,
+	})
 }
 
 func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
+	// Reset for deterministic component ID.
+	processorIDCounter.Store(componentID)
+
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	tp := basicTracerProvider(t)
 	reader := sdkmetric.NewManualReader()
@@ -747,7 +762,6 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 		WithMaxQueueSize(2),
 		WithMaxExportBatchSize(2),
 	)
-	internalBsp := bsp.(*batchSpanProcessor)
 	tp.RegisterSpanProcessor(bsp)
 
 	tr := tp.Tracer("TestBatchSpanProcessorBlockingMetrics")
@@ -756,23 +770,33 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
-	assertObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
-		expectMetrics{queueCapacity: 2, queueSize: 0, successProcessed: 2})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 2,
+	})
 	// Generate 2 spans to fill the queue.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
 	go func() {
 		// Generate a span which blocks because the queue is full.
 		generateSpan(t, tr, testOption{genNumSpans: 1})
 	}()
-	assertObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
-		expectMetrics{queueCapacity: 2, queueSize: 2, successProcessed: 2})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        2,
+		successProcessed: 2,
+	})
 
 	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	assert.Error(t, tp.ForceFlush(ctx))
-	assertObsScopeMetrics(t, internalBsp.componentNameAttr, reader,
-		expectMetrics{queueCapacity: 2, queueSize: 2, queueFullProcessed: 1, successProcessed: 2})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:      2,
+		queueSize:          2,
+		queueFullProcessed: 1,
+		successProcessed:   2,
+	})
 }
 
 type expectMetrics struct {
@@ -782,13 +806,16 @@ type expectMetrics struct {
 	queueFullProcessed int64
 }
 
-func assertObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, reader sdkmetric.Reader,
+func assertObsScopeMetrics(
+	t *testing.T,
+	reader sdkmetric.Reader,
 	expectation expectMetrics,
 ) {
 	t.Helper()
 	gotResourceMetrics := new(metricdata.ResourceMetrics)
 	assert.NoError(t, reader.Collect(context.Background(), gotResourceMetrics))
 
+	componentNameAttr := observ.BSPComponentName(componentID)
 	baseAttrs := attribute.NewSet(
 		semconv.OTelComponentTypeBatchingSpanProcessor,
 		componentNameAttr,
@@ -832,7 +859,7 @@ func assertObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, r
 			Attributes: attribute.NewSet(
 				semconv.OTelComponentTypeBatchingSpanProcessor,
 				componentNameAttr,
-				semconv.ErrorTypeKey.String(string(queueFull)),
+				observ.ErrQueueFull,
 			),
 		})
 	}
@@ -854,9 +881,9 @@ func assertObsScopeMetrics(t *testing.T, componentNameAttr attribute.KeyValue, r
 
 	wantScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
-			Name:      "go.opentelemetry.io/otel/sdk/trace",
+			Name:      observ.ScopeName,
 			Version:   sdk.Version(),
-			SchemaURL: semconv.SchemaURL,
+			SchemaURL: observ.SchemaURL,
 		},
 		Metrics: wantMetrics,
 	}
