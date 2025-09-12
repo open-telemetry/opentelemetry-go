@@ -60,6 +60,8 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 }
 
 func TestNewExporterMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
 	t.Run("No Error", func(t *testing.T) {
 		em, err := NewInstrumentation(ID, "localhost:8080")
 		require.NoError(t, err)

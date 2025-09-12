@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
@@ -755,7 +756,7 @@ func TestSelfObservability(t *testing.T) {
 				componentName := fmt.Sprintf(
 					"%s/%d",
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					1,
+					0,
 				)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
@@ -896,7 +897,7 @@ func TestSelfObservability(t *testing.T) {
 				componentName := fmt.Sprintf(
 					"%s/%d",
 					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					2,
+					0,
 				)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
@@ -1004,7 +1005,10 @@ func TestSelfObservability(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.enabled {
-				t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+				// Reset component name counter for each test.
+				_ = counter.SetExporterID(0)
 			}
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() {
