@@ -10,7 +10,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -235,7 +234,7 @@ func setup(t *testing.T) (*Instrumentation, func() metricdata.ScopeMetrics) {
 
 var Scope = instrumentation.Scope{
 	Name:      ScopeName,
-	Version:   sdk.Version(),
+	Version:   Version,
 	SchemaURL: semconv.SchemaURL,
 }
 
