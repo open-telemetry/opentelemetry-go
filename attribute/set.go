@@ -50,8 +50,18 @@ var (
 	// keyValueType is used in computeDistinctReflect.
 	keyValueType = reflect.TypeOf(KeyValue{})
 
-	// emptySet is returned for empty attribute sets.
-	emptySet = &Set{
+	// userDefinedEmptySet is an empty set. It was mistakenly exposed to users
+	// as something they can assign to, so it must remain addressable and
+	// mutable.
+	//
+	// This is kept for backwards compatibility, but should not be used in new code.
+	userDefinedEmptySet = &Set{
+		equivalent: Distinct{
+			iface: [0]KeyValue{},
+		},
+	}
+
+	emptySet = Set{
 		equivalent: Distinct{
 			iface: [0]KeyValue{},
 		},
@@ -62,7 +72,11 @@ var (
 //
 // This is a convenience provided for optimized calling utility.
 func EmptySet() *Set {
-	return emptySet
+	// Continue to return the pointer to the user-defined empty set for
+	// backwards-compatibility.
+	//
+	// New code should not use this, instead use emptySet.
+	return userDefinedEmptySet
 }
 
 // reflectValue abbreviates reflect.ValueOf(d).
@@ -169,12 +183,6 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return encoder.Encode(l.Iter())
 }
 
-func empty() Set {
-	return Set{
-		equivalent: emptySet.equivalent,
-	}
-}
-
 // NewSet returns a new Set. See the documentation for
 // NewSetWithSortableFiltered for more details.
 //
@@ -204,7 +212,7 @@ func NewSetWithSortable(kvs []KeyValue, _ *Sortable) Set {
 func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	// Check for empty set.
 	if len(kvs) == 0 {
-		return empty(), nil
+		return emptySet, nil
 	}
 
 	// Stable sort so the following de-duplication can implement
