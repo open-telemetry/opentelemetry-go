@@ -41,7 +41,7 @@ func TestLoggerProviderConcurrentSafe(*testing.T) {
 	<-done
 }
 
-func TestLoggerConcurrentSafe(*testing.T) {
+func TestLoggerConcurrentSafe(t *testing.T) {
 	l := &logger{}
 
 	done := make(chan struct{})
@@ -50,7 +50,7 @@ func TestLoggerConcurrentSafe(*testing.T) {
 	go func() {
 		defer close(done)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		var r log.Record
 		var param log.EnabledParameters
 

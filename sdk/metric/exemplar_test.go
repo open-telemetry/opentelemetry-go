@@ -27,7 +27,7 @@ func TestFixedSizeExemplarConcurrentSafe(t *testing.T) {
 	i1, err := m.Int64Counter("counter.1")
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	add := func() {
 		i0.Add(ctx, 1)

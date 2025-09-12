@@ -4,7 +4,6 @@
 package observ_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -100,7 +99,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 
 	return inst, func() metricdata.ScopeMetrics {
 		var rm metricdata.ResourceMetrics
-		require.NoError(t, r.Collect(context.Background(), &rm))
+		require.NoError(t, r.Collect(t.Context(), &rm))
 
 		require.Len(t, rm.ScopeMetrics, 1)
 		return rm.ScopeMetrics[0]
@@ -191,7 +190,7 @@ func TestInstrumentationExportSpans(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(context.Background(), n)
+	end := inst.ExportSpans(t.Context(), n)
 	end(n, nil)
 
 	assertMetrics(t, collect(), n, n, nil)
@@ -201,7 +200,7 @@ func TestInstrumentationExportSpansAllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(context.Background(), n)
+	end := inst.ExportSpans(t.Context(), n)
 	const success = 0
 	end(success, assert.AnError)
 
@@ -212,7 +211,7 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(context.Background(), n)
+	end := inst.ExportSpans(t.Context(), n)
 	const success = 5
 	end(success, assert.AnError)
 
@@ -232,7 +231,7 @@ func BenchmarkInstrumentationExportSpans(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		end = inst.ExportSpans(context.Background(), 10)
+		end = inst.ExportSpans(b.Context(), 10)
 		end(4, err)
 	}
 	_ = end

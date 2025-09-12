@@ -77,7 +77,7 @@ func TestDetect(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("case-%s", c.name), func(t *testing.T) {
-			r, err := resource.Detect(context.Background(), c.detectors...)
+			r, err := resource.Detect(t.Context(), c.detectors...)
 			if c.wantErr != nil {
 				assert.ErrorIs(t, err, c.wantErr)
 				if errors.Is(c.wantErr, resource.ErrSchemaURLConflict) {

@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,7 +16,7 @@ func TestNewIDs(t *testing.T) {
 	n := 1000
 
 	for range n {
-		traceID, spanID := gen.NewIDs(context.Background())
+		traceID, spanID := gen.NewIDs(t.Context())
 		assert.Truef(t, traceID.IsValid(), "trace id: %s", traceID.String())
 		assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
 	}
@@ -29,13 +28,13 @@ func TestNewSpanID(t *testing.T) {
 	n := 1000
 
 	for range n {
-		spanID := gen.NewSpanID(context.Background(), testTraceID)
+		spanID := gen.NewSpanID(t.Context(), testTraceID)
 		assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
 	}
 }
 
 func TestNewSpanIDWithInvalidTraceID(t *testing.T) {
 	gen := defaultIDGenerator()
-	spanID := gen.NewSpanID(context.Background(), trace.TraceID{})
+	spanID := gen.NewSpanID(t.Context(), trace.TraceID{})
 	assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
 }

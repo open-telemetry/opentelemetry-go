@@ -4,7 +4,6 @@
 package exemplar
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -24,7 +23,7 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
-		ctx := context.Background()
+		ctx := t.Context()
 
 		t.Run("CaptureSpanContext", func(t *testing.T) {
 			t.Helper()
@@ -137,7 +136,7 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 			}
 			r := rp(*attribute.EmptySet())
 
-			r.Offer(context.Background(), staticTime, NewValue(N(10)), nil)
+			r.Offer(t.Context(), staticTime, NewValue(N(10)), nil)
 
 			dest := []Exemplar{{}} // Should be reset to empty.
 			r.Collect(&dest)

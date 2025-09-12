@@ -46,7 +46,7 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 
 	r := new(log.Record)
 	r.SetSeverityText("test")
-	_ = s.OnEmit(context.Background(), r)
+	_ = s.OnEmit(t.Context(), r)
 
 	require.True(t, e.exportCalled, "exporter Export not called")
 	assert.Equal(t, []log.Record{*r}, e.records)
@@ -55,14 +55,14 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 func TestSimpleProcessorShutdown(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
-	_ = s.Shutdown(context.Background())
+	_ = s.Shutdown(t.Context())
 	require.True(t, e.shutdownCalled, "exporter Shutdown not called")
 }
 
 func TestSimpleProcessorForceFlush(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
-	_ = s.ForceFlush(context.Background())
+	_ = s.ForceFlush(t.Context())
 	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
 }
 
@@ -88,7 +88,7 @@ func (*writerExporter) ForceFlush(context.Context) error {
 func TestSimpleProcessorEmpty(t *testing.T) {
 	assert.NotPanics(t, func() {
 		var s log.SimpleProcessor
-		ctx := context.Background()
+		ctx := t.Context()
 		record := new(log.Record)
 		assert.NoError(t, s.OnEmit(ctx, record), "OnEmit")
 		assert.NoError(t, s.ForceFlush(ctx), "ForceFlush")
@@ -96,7 +96,7 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 	})
 }
 
-func TestSimpleProcessorConcurrentSafe(*testing.T) {
+func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup
@@ -104,7 +104,7 @@ func TestSimpleProcessorConcurrentSafe(*testing.T) {
 
 	r := new(log.Record)
 	r.SetSeverityText("test")
-	ctx := context.Background()
+	ctx := t.Context()
 	e := &writerExporter{new(strings.Builder)}
 	s := log.NewSimpleProcessor(e)
 	for range goRoutineN {
@@ -123,7 +123,7 @@ func TestSimpleProcessorConcurrentSafe(*testing.T) {
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 	r := new(log.Record)
 	r.SetSeverityText("test")
-	ctx := context.Background()
+	ctx := b.Context()
 	s := log.NewSimpleProcessor(nil)
 
 	b.ReportAllocs()

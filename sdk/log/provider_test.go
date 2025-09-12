@@ -248,7 +248,7 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
-func TestLoggerProviderConcurrentSafe(*testing.T) {
+func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
 	var wg sync.WaitGroup
@@ -256,7 +256,7 @@ func TestLoggerProviderConcurrentSafe(*testing.T) {
 
 	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
 	const name = "testLogger"
-	ctx := context.Background()
+	ctx := t.Context()
 	for range goRoutineN {
 		go func() {
 			defer wg.Done()
@@ -301,7 +301,7 @@ func TestLoggerProviderLogger(t *testing.T) {
 	})
 
 	t.Run("Stopped", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		p := NewLoggerProvider()
 		_ = p.Shutdown(ctx)
 		l := p.Logger("testing")
@@ -344,7 +344,7 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		proc := newProcessor("")
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, p.Shutdown(ctx))
 		require.Equal(t, 1, proc.shutdownCalls, "processor Shutdown not called")
 
@@ -357,7 +357,7 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		proc.Err = assert.AnError
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
 }
@@ -367,7 +367,7 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		proc := newProcessor("")
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, p.ForceFlush(ctx))
 		require.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush not called")
 
@@ -381,7 +381,7 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		proc := newProcessor("")
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, p.ForceFlush(ctx))
 		require.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush not called")
 
@@ -394,7 +394,7 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		proc.Err = assert.AnError
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError, "processor error not returned")
 	})
 }
@@ -415,5 +415,5 @@ func BenchmarkLoggerProviderLogger(b *testing.B) {
 	}
 
 	b.StopTimer()
-	loggers[0].Enabled(context.Background(), log.EnabledParameters{})
+	loggers[0].Enabled(b.Context(), log.EnabledParameters{})
 }

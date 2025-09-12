@@ -4,7 +4,6 @@
 package resource_test
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/user"
@@ -124,7 +123,7 @@ func TestRuntimeArch(t *testing.T) {
 }
 
 func testWithProcessExecutablePathError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessExecutablePath(),
@@ -135,7 +134,7 @@ func testWithProcessExecutablePathError(t *testing.T) {
 }
 
 func testWithProcessOwnerError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessOwner(),

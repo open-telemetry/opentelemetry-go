@@ -57,7 +57,7 @@ func TestConfigReaderSignalsEmpty(t *testing.T) {
 	require.NotNil(t, f)
 	require.NotNil(t, s)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, s(ctx))
 	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
@@ -81,7 +81,7 @@ func TestConfigReaderSignalsForwarded(t *testing.T) {
 	require.NotNil(t, f)
 	require.NotNil(t, s)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, s(ctx))
@@ -102,7 +102,7 @@ func TestConfigReaderSignalsForwardedErrors(t *testing.T) {
 	require.NotNil(t, f)
 	require.NotNil(t, s)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.ErrorIs(t, f(ctx), assert.AnError)
 	assert.ErrorIs(t, s(ctx), assert.AnError)
 	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
@@ -118,7 +118,7 @@ func TestUnifyMultiError(t *testing.T) {
 		func(context.Context) error { return e0 },
 		func(context.Context) error { return e1 },
 		func(context.Context) error { return e2 },
-	})(context.Background())
+	})(t.Context())
 	assert.ErrorIs(t, err, e0)
 	assert.ErrorIs(t, err, e1)
 	assert.ErrorIs(t, err, e2)
@@ -299,8 +299,8 @@ func TestWithExemplarFilterOff(t *testing.T) {
 			}
 			c := newConfig(tc.opts)
 			assert.NotNil(t, c.exemplarFilter)
-			assert.Equal(t, tc.expectFilterNotSampled, c.exemplarFilter(context.Background()))
-			assert.Equal(t, tc.expectFilterSampled, c.exemplarFilter(sample(context.Background())))
+			assert.Equal(t, tc.expectFilterNotSampled, c.exemplarFilter(t.Context()))
+			assert.Equal(t, tc.expectFilterSampled, c.exemplarFilter(sample(t.Context())))
 		})
 	}
 }

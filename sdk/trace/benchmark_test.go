@@ -22,7 +22,7 @@ import (
 func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanLimits(limits))
 	tracer := tp.Tracer(b.Name())
-	ctx := context.Background()
+	ctx := b.Context()
 
 	const count = 8
 
@@ -120,7 +120,7 @@ func BenchmarkSpanSetAttributesOverCapacity(b *testing.B) {
 	limits.AttributeCountLimit = 1
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanLimits(limits))
 	tracer := tp.Tracer("BenchmarkSpanSetAttributesOverCapacity")
-	ctx := context.Background()
+	ctx := b.Context()
 	attrs := make([]attribute.KeyValue, 128)
 	for i := range attrs {
 		key := fmt.Sprintf("key-%d", i)
@@ -139,7 +139,7 @@ func BenchmarkSpanSetAttributesOverCapacity(b *testing.B) {
 
 func BenchmarkStartEndSpan(b *testing.B) {
 	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
@@ -150,7 +150,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -168,7 +168,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -190,7 +190,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_all(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With all Attribute types", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -209,7 +209,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With all Attributes types twice", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -233,7 +233,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 
 func BenchmarkSpanWithEvents_4(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -249,7 +249,7 @@ func BenchmarkSpanWithEvents_4(b *testing.B) {
 
 func BenchmarkSpanWithEvents_8(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -269,7 +269,7 @@ func BenchmarkSpanWithEvents_8(b *testing.B) {
 
 func BenchmarkSpanWithEvents_WithStackTrace(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -282,7 +282,7 @@ func BenchmarkSpanWithEvents_WithStackTrace(b *testing.B) {
 
 func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -386,7 +386,7 @@ func BenchmarkSpanProcessorOnEnd(b *testing.B) {
 				sdktrace.WithMaxExportBatchSize(bb.batchSize),
 			)
 			b.Cleanup(func() {
-				_ = bsp.Shutdown(context.Background())
+				_ = bsp.Shutdown(context.Background()) //nolint:usetesting // used to assert Shutdown
 			})
 			snap := tracetest.SpanStub{}.Snapshot()
 
@@ -413,10 +413,10 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	b.Cleanup(func() {
-		_ = tp.Shutdown(context.Background())
+		_ = tp.Shutdown(context.Background()) //nolint:usetesting // used to assert Shutdown
 	})
 	tracer := tp.Tracer("bench")
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.ResetTimer()
 	b.ReportAllocs()

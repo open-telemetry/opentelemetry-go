@@ -4,7 +4,6 @@
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestNewTraceBridge(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
 	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
 	bridge := newTraceBridge([]TraceOption{WithTracerProvider(tp)})
-	_, span := bridge.StartSpan(context.Background(), "foo")
+	_, span := bridge.StartSpan(t.Context(), "foo")
 	span.End()
 	gotSpans := exporter.GetSpans()
 	require.Len(t, gotSpans, 1)
@@ -197,7 +196,7 @@ func TestInstallTraceBridge(t *testing.T) {
 			)
 
 			ctx, span := octrace.DefaultTracer.StartSpan(
-				context.Background(),
+				t.Context(),
 				"test-span",
 			)
 			assert.NotNil(

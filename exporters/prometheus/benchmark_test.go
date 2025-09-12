@@ -4,7 +4,6 @@
 package prometheus
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -15,7 +14,7 @@ import (
 )
 
 func benchmarkCollect(b *testing.B, n int) {
-	ctx := context.Background()
+	ctx := b.Context()
 	registry := prometheus.NewRegistry()
 	exporter, err := New(WithRegisterer(registry))
 	require.NoError(b, err)

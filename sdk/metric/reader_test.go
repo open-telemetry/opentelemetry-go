@@ -270,8 +270,7 @@ func (p testExternalProducer) Produce(ctx context.Context) ([]metricdata.ScopeMe
 	return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
 }
 
-func benchReaderCollectFunc(r Reader) func(*testing.B) {
-	ctx := context.Background()
+func benchReaderCollectFunc(r Reader) func(b *testing.B) {
 	r.register(testSDKProducer{})
 
 	// Store benchmark results in a closure to prevent the compiler from
@@ -286,7 +285,7 @@ func benchReaderCollectFunc(r Reader) func(*testing.B) {
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			err = r.Collect(ctx, &collectedMetrics)
+			err = r.Collect(b.Context(), &collectedMetrics)
 			assert.Equalf(
 				b,
 				testResourceMetricsA,
