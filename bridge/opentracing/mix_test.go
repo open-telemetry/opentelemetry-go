@@ -568,9 +568,8 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	return ctx
 }
 
-func generateBaggageKeys(key string) (otKey, otelKey string) {
-	otKey, otelKey = key+"-Ot", key+"-Otel"
-	return
+func generateBaggageKeys(key string) (string, string) {
+	return key + "-Ot", key + "-Otel"
 }
 
 // helpers

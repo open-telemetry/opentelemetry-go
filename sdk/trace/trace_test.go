@@ -2256,7 +2256,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestObservability(t *testing.T) {
 	testCases := []struct {
 		name string
 		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
@@ -2733,7 +2733,7 @@ func TestSelfObservability(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() { otel.SetMeterProvider(prev) })
 
@@ -2759,8 +2759,8 @@ type ctxKeyT string
 // ctxKey is a context key used to store and retrieve values in the context.
 var ctxKey = ctxKeyT("testKey")
 
-func TestSelfObservabilityContextPropagation(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+func TestObservabilityContextPropagation(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 	prev := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(prev) })
 
@@ -2815,7 +2815,7 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 	tp := NewTracerProvider()
 
 	wrap := func(parentCtx context.Context, name string, fn func(context.Context)) {
-		const tracer = "TestSelfObservabilityContextPropagation"
+		const tracer = "TestObservabilityContextPropagation"
 		ctx, s := tp.Tracer(tracer).Start(parentCtx, name)
 		defer s.End()
 		fn(ctx)
@@ -2882,7 +2882,6 @@ func TestRecordOnlySampler(t *testing.T) {
 }
 
 func BenchmarkTraceStart(b *testing.B) {
-	tracer := NewTracerProvider().Tracer("")
 	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
 
 	l1 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
@@ -2892,6 +2891,7 @@ func BenchmarkTraceStart(b *testing.B) {
 
 	for _, tt := range []struct {
 		name    string
+		env     map[string]string
 		options []trace.SpanStartOption
 	}{
 		{
@@ -2912,8 +2912,20 @@ func BenchmarkTraceStart(b *testing.B) {
 				),
 			},
 		},
+		{
+			name: "ObservabilityEnabled",
+			env: map[string]string{
+				"OTEL_GO_X_OBSERVABILITY": "True",
+			},
+		},
 	} {
 		b.Run(tt.name, func(b *testing.B) {
+			for k, v := range tt.env {
+				b.Setenv(k, v)
+			}
+
+			tracer := NewTracerProvider().Tracer("")
+
 			spans := make([]trace.Span, b.N)
 			b.ReportAllocs()
 			b.ResetTimer()
