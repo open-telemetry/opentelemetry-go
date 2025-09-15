@@ -4,7 +4,6 @@
 package observ_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -129,7 +128,7 @@ func TestBSPProcessed(t *testing.T) {
 	require.NotNil(t, bsp)
 	require.NoError(t, bsp.Shutdown()) // Unregister callback.
 
-	ctx := context.Background()
+	ctx := t.Context()
 	const p0 int64 = 10
 	bsp.Processed(ctx, p0)
 	const e0 int64 = 1
@@ -164,7 +163,7 @@ func BenchmarkBSP(b *testing.B) {
 		})
 		return bsp
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	b.Run("Processed", func(b *testing.B) {
 		orig := otel.GetMeterProvider()
