@@ -13,17 +13,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/trace/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
-)
-
-const (
-	// ScopeName is the name of the instrumentation scope.
-	ScopeName = "go.opentelemetry.io/otel/sdk/trace/internal/observ"
-
-	// SchemaURL is the schema URL of the instrumentation.
-	SchemaURL = semconv.SchemaURL
 )
 
 var meterOpts = []metric.MeterOption{
