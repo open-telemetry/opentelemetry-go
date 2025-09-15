@@ -30,6 +30,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// producerFunc adapts a function to implement metric.Producer.
+type producerFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
+
+func (f producerFunc) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) { return f(ctx) }
+
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
 		name                string
@@ -760,6 +765,7 @@ func TestDuplicateMetrics(t *testing.T) {
 		recordMetrics         func(ctx context.Context, meterA, meterB otelmetric.Meter)
 		options               []Option
 		possibleExpectedFiles []string
+		expectGatherError     bool
 	}{
 		{
 			name: "no_conflict_two_counters",
@@ -946,6 +952,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				"testdata/conflict_type_counter_and_updowncounter_1.txt",
 				"testdata/conflict_type_counter_and_updowncounter_2.txt",
 			},
+			expectGatherError: true,
 		},
 		{
 			name: "conflict_type_histogram_and_updowncounter",
@@ -966,6 +973,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				"testdata/conflict_type_histogram_and_updowncounter_1.txt",
 				"testdata/conflict_type_histogram_and_updowncounter_2.txt",
 			},
+			expectGatherError: true,
 		},
 	}
 
@@ -1006,19 +1014,26 @@ func TestDuplicateMetrics(t *testing.T) {
 
 			tc.recordMetrics(ctx, meterA, meterB)
 
-			match := false
-			for _, filename := range tc.possibleExpectedFiles {
-				file, ferr := os.Open(filename)
-				require.NoError(t, ferr)
-				t.Cleanup(func() { require.NoError(t, file.Close()) })
+			if tc.expectGatherError {
+				// With improved error handling, conflicting instrument types emit an invalid metric.
+				// Gathering should surface an error instead of silently dropping.
+				_, err := registry.Gather()
+				require.Error(t, err)
+			} else {
+				match := false
+				for _, filename := range tc.possibleExpectedFiles {
+					file, ferr := os.Open(filename)
+					require.NoError(t, ferr)
+					t.Cleanup(func() { require.NoError(t, file.Close()) })
 
-				err = testutil.GatherAndCompare(registry, file)
-				if err == nil {
-					match = true
-					break
+					err = testutil.GatherAndCompare(registry, file)
+					if err == nil {
+						match = true
+						break
+					}
 				}
+				require.Truef(t, match, "expected export not produced: %v", err)
 			}
-			require.Truef(t, match, "expected export not produced: %v", err)
 		})
 	}
 }
@@ -1350,14 +1365,19 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 		)
-		assert.Error(t, capturedError)
-		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
+		// Expect an invalid metric to be sent that carries the scale error.
+		var pm prometheus.Metric
 		select {
-		case <-ch:
-			t.Error("Expected no metrics to be produced for invalid scale")
+		case pm = <-ch:
 		default:
-			// No metrics were produced for the invalid scale
+			t.Fatalf("expected an invalid metric to be emitted for invalid scale, but channel was empty")
 		}
+		var dtoMetric dto.Metric
+		werr := pm.Write(&dtoMetric)
+		require.Error(t, werr)
+		assert.Contains(t, werr.Error(), "below minimum supported scale -4")
+		// The exporter reports via invalid metric, not the global otel error handler.
+		assert.NoError(t, capturedError)
 	})
 }
 
@@ -1748,16 +1768,113 @@ func TestDownscaleExponentialBucketEdgeCases(t *testing.T) {
 // TestEscapingErrorHandling increases test coverage by exercising some error
 // conditions.
 func TestEscapingErrorHandling(t *testing.T) {
+	// Helper to create a producer that emits a Summary (unsupported) metric.
+	makeSummaryProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "summary_metric",
+							Description: "unsupported summary",
+							Data:        metricdata.Summary{},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+	// Helper to create a producer that emits a metric with an invalid name, to
+	// force getName() to fail and exercise reportError at that branch.
+	makeBadNameProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "$%^&", // intentionally invalid; translation should fail normalization
+							Description: "bad name for translation",
+							// Any supported type is fine; getName runs before add* functions.
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{Value: 1},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+	// Helper to create a producer that emits an ExponentialHistogram with a bad
+	// label, to exercise addExponentialHistogramMetric getAttrs error path.
+	makeBadEHProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "exp_hist_metric",
+							Description: "bad label",
+							Data: metricdata.ExponentialHistogram[float64]{
+								DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+									{
+										Attributes:    attribute.NewSet(attribute.Key("$%^&").String("B")),
+										Scale:         0,
+										Count:         1,
+										ZeroThreshold: 0,
+									},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+	// Helper to create a producer that emits an ExponentialHistogram with
+	// inconsistent bucket counts vs total Count to trigger constructor error in addExponentialHistogramMetric.
+	makeBadEHCountProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name: "exp_hist_metric_bad",
+							Data: metricdata.ExponentialHistogram[float64]{
+								DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+									{
+										Scale:         0,
+										Count:         0,
+										ZeroThreshold: 0,
+										PositiveBucket: metricdata.ExponentialBucket{
+											Offset: 0,
+											Counts: []uint64{1},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+
 	testCases := []struct {
-		name                string
-		namespace           string
-		counterName         string
-		customScopeAttrs    []attribute.KeyValue
-		customResourceAttrs []attribute.KeyValue
-		labelName           string
-		expectNewErr        string
-		expectMetricErr     string
-		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
+		name                    string
+		namespace               string
+		counterName             string
+		customScopeAttrs        []attribute.KeyValue
+		customResourceAttrs     []attribute.KeyValue
+		labelName               string
+		producer                metric.Producer
+		skipInstrument          bool
+		record                  func(ctx context.Context, meter otelmetric.Meter) error
+		expectNewErr            string
+		expectMetricErr         string
+		expectGatherErrContains string
+		checkMetricFamilies     func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
 		{
 			name:        "simple happy path",
@@ -1777,6 +1894,14 @@ func TestEscapingErrorHandling(t *testing.T) {
 			namespace:    "$%^&",
 			counterName:  "foo",
 			expectNewErr: `normalization for label name "$%^&" resulted in invalid name "____"`,
+		},
+		{
+			name: "bad translated metric name via producer",
+			// Use a producer to emit a metric with an invalid name to trigger getName error.
+			producer:       makeBadNameProducer(),
+			skipInstrument: true,
+			// Error message comes from normalization in the translator; match on a stable substring.
+			expectGatherErrContains: "normalization",
 		},
 		{
 			name:        "good namespace, names should be escaped",
@@ -1809,10 +1934,9 @@ func TestEscapingErrorHandling(t *testing.T) {
 			customScopeAttrs: []attribute.KeyValue{
 				attribute.Key("$%^&").String("B"),
 			},
-			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
-				require.Len(t, mfs, 1)
-				require.Equal(t, "target_info", mfs[0].GetName())
-			},
+			// With improved error handling, invalid scope label names result in an invalid metric
+			// and Gather returns an error containing the normalization failure.
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
 		},
 		{
 			name:            "bad translated metric name",
@@ -1821,15 +1945,92 @@ func TestEscapingErrorHandling(t *testing.T) {
 		},
 		{
 			// label names are not translated and therefore not checked until
-			// collection time, and there is no place to catch and return this error.
-			// Instead we drop the metric.
-			name:        "bad translated label name",
-			counterName: "foo",
-			labelName:   "$%^&",
-			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
-				require.Len(t, mfs, 1)
-				require.Equal(t, "target_info", mfs[0].GetName())
+			// collection time; with improved error handling, we emit an invalid metric and
+			// surface the error during Gather.
+			name:                    "bad translated label name",
+			counterName:             "foo",
+			labelName:               "$%^&",
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+		},
+		{
+			name: "unsupported data type via producer",
+			// Use a producer to emit a Summary data point; no SDK instruments.
+			producer:                makeSummaryProducer(),
+			skipInstrument:          true,
+			expectGatherErrContains: "invalid metric type",
+		},
+		{
+			name:                    "bad exponential histogram label name via producer",
+			producer:                makeBadEHProducer(),
+			skipInstrument:          true,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+		},
+		{
+			name:                    "exponential histogram constructor error via producer (count mismatch)",
+			producer:                makeBadEHCountProducer(),
+			skipInstrument:          true,
+			expectGatherErrContains: "count",
+		},
+		{
+			name: "sum constructor error via duplicate label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				c, err := meter.Int64Counter("sum_metric_dup")
+				if err != nil {
+					return err
+				}
+				// Duplicate variable label name with scope label to make Desc invalid.
+				c.Add(ctx, 1, otelmetric.WithAttributes(attribute.String(scopeNameLabel, "x")))
+				return nil
 			},
+			expectGatherErrContains: "duplicate label",
+		},
+		{
+			name: "gauge constructor error via duplicate label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				g, err := meter.Float64Gauge("gauge_metric_dup")
+				if err != nil {
+					return err
+				}
+				g.Record(ctx, 1.0, otelmetric.WithAttributes(attribute.String(scopeNameLabel, "x")))
+				return nil
+			},
+			expectGatherErrContains: "duplicate label",
+		},
+		{
+			name: "histogram constructor error via duplicate label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				h, err := meter.Float64Histogram("hist_metric_dup")
+				if err != nil {
+					return err
+				}
+				h.Record(ctx, 1.23, otelmetric.WithAttributes(attribute.String(scopeNameLabel, "x")))
+				return nil
+			},
+			expectGatherErrContains: "duplicate label",
+		},
+		{
+			name: "bad gauge label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				g, err := meter.Float64Gauge("gauge_metric")
+				if err != nil {
+					return err
+				}
+				g.Record(ctx, 1, otelmetric.WithAttributes(attribute.Key("$%^&").String("B")))
+				return nil
+			},
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+		},
+		{
+			name: "bad histogram label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				h, err := meter.Float64Histogram("hist_metric")
+				if err != nil {
+					return err
+				}
+				h.Record(ctx, 1.23, otelmetric.WithAttributes(attribute.Key("$%^&").String("B")))
+				return nil
+			},
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
 		},
 	}
 
@@ -1845,49 +2046,66 @@ func TestEscapingErrorHandling(t *testing.T) {
 			})
 			ctx = trace.ContextWithSpanContext(ctx, sc)
 
-			exporter, err := New(
+			opts := []Option{
 				WithRegisterer(registry),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 				WithNamespace(tc.namespace),
 				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
-			)
+			}
+			if tc.producer != nil {
+				opts = append(opts, WithProducer(tc.producer))
+			}
+			exporter, err := New(opts...)
 			if tc.expectNewErr != "" {
 				require.ErrorContains(t, err, tc.expectNewErr)
 				return
 			}
 			require.NoError(t, err)
-
-			res, err := resource.New(ctx,
-				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
-				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
-				resource.WithAttributes(tc.customResourceAttrs...),
-			)
-			require.NoError(t, err)
-			provider := metric.NewMeterProvider(
-				metric.WithReader(exporter),
-				metric.WithResource(res),
-			)
-
-			fooCounter, err := provider.Meter(
-				"meterfoo",
-				otelmetric.WithInstrumentationVersion("v0.1.0"),
-				otelmetric.WithInstrumentationAttributes(tc.customScopeAttrs...),
-			).
-				Int64Counter(
-					tc.counterName,
-					otelmetric.WithUnit("s"),
-					otelmetric.WithDescription(fmt.Sprintf(`meter %q counter`, tc.counterName)))
-			if tc.expectMetricErr != "" {
-				require.ErrorContains(t, err, tc.expectMetricErr)
+			if !tc.skipInstrument {
+				res, err := resource.New(ctx,
+					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+					resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+					resource.WithAttributes(tc.customResourceAttrs...),
+				)
+				require.NoError(t, err)
+				provider := metric.NewMeterProvider(
+					metric.WithReader(exporter),
+					metric.WithResource(res),
+				)
+				meter := provider.Meter(
+					"meterfoo",
+					otelmetric.WithInstrumentationVersion("v0.1.0"),
+					otelmetric.WithInstrumentationAttributes(tc.customScopeAttrs...),
+				)
+				if tc.record != nil {
+					err := tc.record(ctx, meter)
+					require.NoError(t, err)
+				} else {
+					fooCounter, err := meter.Int64Counter(
+						tc.counterName,
+						otelmetric.WithUnit("s"),
+						otelmetric.WithDescription(fmt.Sprintf(`meter %q counter`, tc.counterName)))
+					if tc.expectMetricErr != "" {
+						require.ErrorContains(t, err, tc.expectMetricErr)
+						return
+					}
+					require.NoError(t, err)
+					var addOpts []otelmetric.AddOption
+					if tc.labelName != "" {
+						addOpts = append(addOpts, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
+					}
+					fooCounter.Add(ctx, 100, addOpts...)
+				}
+			} else {
+				// When skipping instruments, still register the reader so Collect will run.
+				_ = metric.NewMeterProvider(metric.WithReader(exporter))
+			}
+			got, err := registry.Gather()
+			if tc.expectGatherErrContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectGatherErrContains)
 				return
 			}
-			require.NoError(t, err)
-			var opts []otelmetric.AddOption
-			if tc.labelName != "" {
-				opts = append(opts, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
-			}
-			fooCounter.Add(ctx, 100, opts...)
-			got, err := registry.Gather()
 			require.NoError(t, err)
 			if tc.checkMetricFamilies != nil {
 				tc.checkMetricFamilies(t, got)
