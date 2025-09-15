@@ -151,12 +151,22 @@ type recordingSpan struct {
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
+
+	// origCtx is the context used when starting this span that has the
+	// recordingSpan instance set as the active span. If not nil, it is used
+	// when ending the span to ensure any metrics are recorded with a context
+	// containing this span without requiring an additional allocation.
+	origCtx context.Context
 }
 
 var (
 	_ ReadWriteSpan = (*recordingSpan)(nil)
 	_ runtimeTracer = (*recordingSpan)(nil)
 )
+
+func (s *recordingSpan) setOrigCtx(ctx context.Context) {
+	s.origCtx = ctx
+}
 
 // SpanContext returns the SpanContext of this span.
 func (s *recordingSpan) SpanContext() trace.SpanContext {
@@ -497,12 +507,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	s.mu.Unlock()
 
 	if s.tracer.inst.Enabled() {
-		// Add the span to the context to ensure the metric is recorded with
-		// the correct span context.
-		//
-		// TODO: Avoid this allocation. Track the context when the span
-		// is created that already contains the span.
-		ctx := trace.ContextWithSpan(context.Background(), s)
+		ctx := s.origCtx
+		if ctx == nil {
+			// This should not happen as the origCtx should be set, but
+			// ensure trace information is propagated in the case of an
+			// error.
+			ctx = trace.ContextWithSpan(context.Background(), s)
+		}
 		defer s.tracer.inst.SpanEnded(ctx, s)
 	}
 

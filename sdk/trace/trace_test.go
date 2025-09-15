@@ -2781,15 +2781,8 @@ func TestObservabilityContextPropagation(t *testing.T) {
 			isValid := s.SpanContext().IsValid()
 			assert.True(t, isValid, "Context should have a valid span")
 
-			if s.IsRecording() {
-				// Check if the context value is propagated correctly for Span
-				// starts. The Span end operation does not receive any user
-				// context so do not check this if the span is not recording
-				// (i.e. end operation).
-
-				got := ctx.Value(ctxKey)
-				assert.Equal(t, want, got, "Context value not propagated")
-			}
+			got := ctx.Value(ctxKey)
+			assert.Equal(t, want, got, "Context value not propagated")
 		}
 		n <- count
 	}()
