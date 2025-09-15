@@ -54,6 +54,14 @@ func (tr *tracer) Start(
 	s := tr.newSpan(ctx, name, &config)
 	newCtx := trace.ContextWithSpan(ctx, s)
 	if tr.observabilityEnabled {
+		if o, ok := s.(interface{ setOrigCtx(context.Context) }); ok {
+			// If this is a recording span, store the original context.
+			// This allows later retrieval of baggage and other information
+			// that may have been stored in the context at span start time and
+			// to avoid the allocation of repeatedly calling
+			// trace.ContextWithSpan.
+			o.setOrigCtx(newCtx)
+		}
 		psc := trace.SpanContextFromContext(ctx)
 		set := spanStartedSet(psc, s)
 		tr.spanStartedMetric.AddSet(newCtx, 1, set)
