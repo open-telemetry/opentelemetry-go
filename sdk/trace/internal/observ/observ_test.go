@@ -4,7 +4,6 @@
 package observ_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,7 +31,7 @@ func setup(t *testing.T) func() metricdata.ScopeMetrics {
 
 	return func() metricdata.ScopeMetrics {
 		var got metricdata.ResourceMetrics
-		require.NoError(t, reader.Collect(context.Background(), &got))
+		require.NoError(t, reader.Collect(t.Context(), &got))
 		if len(got.ScopeMetrics) != 1 {
 			return metricdata.ScopeMetrics{}
 		}
