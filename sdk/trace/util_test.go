@@ -22,7 +22,8 @@ import (
 func basicTracerProvider(t *testing.T) *TracerProvider {
 	tp := NewTracerProvider(WithSampler(AlwaysSample()))
 	t.Cleanup(func() {
-		assert.NoError(t, tp.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, tp.Shutdown(context.Background()))
 	})
 	return tp
 }

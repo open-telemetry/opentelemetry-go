@@ -552,7 +552,8 @@ func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
 
 	bsp := NewBatchSpanProcessor(newIndefiniteExporter(t))
 	t.Cleanup(func() {
-		assert.NoError(t, bsp.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, bsp.Shutdown(context.Background()))
 	})
 
 	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
@@ -586,7 +587,8 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 	tp := basicTracerProvider(t)
 	tp.RegisterSpanProcessor(bsp)
 	t.Cleanup(func() {
-		assert.NoError(t, tp.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, tp.Shutdown(context.Background()))
 	})
 
 	tracer := tp.Tracer("tracer")
@@ -664,7 +666,8 @@ func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
 	t.Cleanup(func() {
-		assert.NoError(t, me.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
 	})
 	bsp := NewBatchSpanProcessor(
 		me,
@@ -705,7 +708,8 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
 	t.Cleanup(func() {
-		assert.NoError(t, me.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
 	})
 	bsp := NewBatchSpanProcessor(
 		me,
@@ -742,7 +746,8 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
 	t.Cleanup(func() {
-		assert.NoError(t, me.Shutdown(context.Background())) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
 	})
 	bsp := NewBatchSpanProcessor(
 		me,

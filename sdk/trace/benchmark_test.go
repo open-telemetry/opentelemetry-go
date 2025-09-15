@@ -386,7 +386,8 @@ func BenchmarkSpanProcessorOnEnd(b *testing.B) {
 				sdktrace.WithMaxExportBatchSize(bb.batchSize),
 			)
 			b.Cleanup(func() {
-				_ = bsp.Shutdown(context.Background()) //nolint:usetesting // used to assert Shutdown
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				_ = bsp.Shutdown(context.Background())
 			})
 			snap := tracetest.SpanStub{}.Snapshot()
 
@@ -413,7 +414,8 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	b.Cleanup(func() {
-		_ = tp.Shutdown(context.Background()) //nolint:usetesting // used to assert Shutdown
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		_ = tp.Shutdown(context.Background())
 	})
 	tracer := tp.Tracer("bench")
 	ctx := b.Context()

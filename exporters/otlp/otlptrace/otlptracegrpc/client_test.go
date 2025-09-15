@@ -225,7 +225,7 @@ func TestNewWithHeaders(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background() //nolint:usetesting // used to assert Shutdown
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	additionalKey := "additional-custom-header"
 	ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
@@ -241,7 +241,7 @@ func TestNewWithHeaders(t *testing.T) {
 }
 
 func TestExportSpansTimeoutHonored(t *testing.T) {
-	//nolint:usetesting // used to assert Shutdown
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	ctx, cancel := contextWithTimeout(context.Background(), t, 1*time.Minute)
 	t.Cleanup(cancel)
 
@@ -390,7 +390,7 @@ func TestEmptyData(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background() //nolint:usetesting // used to assert Shutdown
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
@@ -410,7 +410,7 @@ func TestPartialSuccess(t *testing.T) {
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		errs = append(errs, err)
 	}))
-	ctx := context.Background() //nolint:usetesting // used to assert Shutdown
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
@@ -425,7 +425,7 @@ func TestCustomUserAgent(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background() //nolint:usetesting // used to assert Shutdown
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlptracegrpc.WithDialOption(grpc.WithUserAgent(customUserAgent)))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
