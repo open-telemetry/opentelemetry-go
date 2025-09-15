@@ -506,7 +506,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	if s.tracer.observabilityEnabled {
+	if s.tracer.inst.Enabled() {
 		ctx := s.origCtx
 		if ctx == nil {
 			// This should not happen as the origCtx should be set, but
@@ -514,10 +514,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 			// error.
 			ctx = trace.ContextWithSpan(context.Background(), s)
 		}
-		defer func(ctx context.Context) {
-			set := spanLiveSet(s.spanContext.IsSampled())
-			s.tracer.spanLiveMetric.AddSet(ctx, -1, set)
-		}(ctx)
+		defer s.tracer.inst.SpanEnded(ctx, s)
 	}
 
 	sps := s.tracer.provider.getSpanProcessors()
