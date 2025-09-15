@@ -413,11 +413,7 @@ func TestTracerProviderObservability(t *testing.T) {
 	require.IsType(t, &tracer{}, tr)
 
 	tStruct := tr.(*tracer)
-	assert.True(t, tStruct.observabilityEnabled, "observability should be enabled")
-
-	// Verify instruments are created
-	assert.NotNil(t, tStruct.spanLiveMetric, "spanLiveMetric should be created")
-	assert.NotNil(t, tStruct.spanStartedMetric, "spanStartedMetric should be created")
+	assert.True(t, tStruct.inst.Enabled(), "observability should be enabled")
 
 	// Verify errors are passed to the otel handler
 	handlerErrs := handler.errs
