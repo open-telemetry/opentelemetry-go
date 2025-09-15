@@ -163,7 +163,7 @@ func BenchmarkBSP(b *testing.B) {
 		})
 		return bsp
 	}
-	ctx := t.Context()
+	ctx := b.Context()
 
 	b.Run("Processed", func(b *testing.B) {
 		orig := otel.GetMeterProvider()
