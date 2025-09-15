@@ -215,7 +215,7 @@ func assertCollectionOnly(t *testing.T, got metricdata.ScopeMetrics, err error) 
 	metricdatatest.AssertEqual(t, want, m[0], o, metricdatatest.IgnoreValue())
 }
 
-func TestInstrumentationExportMetrics_Success(t *testing.T) {
+func TestInstrumentationExportMetricsSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
@@ -228,7 +228,7 @@ func TestInstrumentationExportMetrics_Success(t *testing.T) {
 	assertExportMetricsMetrics(t, collect(), n, n, nil)
 }
 
-func TestInstrumentationExportMetrics_AllErrored(t *testing.T) {
+func TestInstrumentationExportMetricsAllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
@@ -244,7 +244,7 @@ func TestInstrumentationExportMetrics_AllErrored(t *testing.T) {
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
 
-func TestInstrumentationExportMetrics_PartialErrored(t *testing.T) {
+func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
@@ -260,7 +260,7 @@ func TestInstrumentationExportMetrics_PartialErrored(t *testing.T) {
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
 
-func TestRecordCollectionDuration_Success(t *testing.T) {
+func TestRecordCollectionDurationSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
 	endCollection := inst.RecordCollectionDuration(context.Background())
@@ -269,7 +269,7 @@ func TestRecordCollectionDuration_Success(t *testing.T) {
 	assertCollectionOnly(t, collect(), nil)
 }
 
-func TestRecordCollectionDuration_Error(t *testing.T) {
+func TestRecordCollectionDurationError(t *testing.T) {
 	inst, collect := setup(t)
 
 	wantErr := assert.AnError

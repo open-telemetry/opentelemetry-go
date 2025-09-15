@@ -27,7 +27,7 @@ const (
 	ComponentType = "go.opentelemetry.io/otel/exporters/prometheus/prometheus.Exporter"
 
 	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/prometheus/internal/x"
+	ScopeName = "go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
 
 	// SchemaURL is the schema URL of the metrics produced by this
 	// instrumentation.
@@ -144,9 +144,12 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	return i, err
 }
 
+// RecordDurationDone ...
+type RecordDurationDone func(error)
+
 func (i *Instrumentation) RecordOperationDuration(
 	ctx context.Context,
-) func(err error) {
+) RecordDurationDone {
 	start := time.Now()
 
 	return func(err error) {
@@ -168,7 +171,7 @@ func (i *Instrumentation) RecordOperationDuration(
 	}
 }
 
-func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) func(err error) {
+func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) RecordDurationDone {
 	start := time.Now()
 
 	return func(err error) {
@@ -190,6 +193,11 @@ func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) func(err
 	}
 }
 
+// ExportMetricsDone is a function that is called when a call to an Exporter's
+// export methods completes.
+//
+// The number of successful exports is provided as success. Any error that is
+// encountered is provided as err.
 type ExportMetricsDone func(success int64, err error)
 
 func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportMetricsDone {
