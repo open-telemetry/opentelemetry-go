@@ -2052,9 +2052,9 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.enableObservability {
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 			} else {
-				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "")
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "")
 			}
 
 			// Setup observability metric collection
@@ -2170,7 +2170,7 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Enable observability
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 			// Setup observability metric collection
 			originalMP := otel.GetMeterProvider()
@@ -2247,7 +2247,7 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 
 func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 	// Enable observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	// Setup observability metric collection
 	originalMP := otel.GetMeterProvider()
@@ -2330,7 +2330,7 @@ func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 
 func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
 	// Enable observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	// Setup observability metric collection
 	originalMP := otel.GetMeterProvider()
@@ -2403,7 +2403,7 @@ func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
 
 func TestExporterSelfInstrumentationInitErrors(t *testing.T) {
 	// Test when NewInstrumentation returns an error
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	// Set up a meter provider that will cause NewInstrumentation to fail
 	original := otel.GetMeterProvider()

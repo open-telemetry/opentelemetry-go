@@ -161,6 +161,8 @@ func (*collector) Describe(chan<- *prometheus.Desc) {
 // This method is safe to call concurrently.
 func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	var err error
+	// Blocked by this issue: Propagate context.Context through Gather and Collect (#1538)
+	// https://github.com/prometheus/client_golang/issues/1538.
 	ctx := context.TODO()
 
 	if c.inst != nil {

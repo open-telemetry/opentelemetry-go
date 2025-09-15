@@ -144,11 +144,23 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	return i, err
 }
 
-// RecordDurationDone ...
+// RecordDurationDone is a function that is called when a call to an Exporters'
+// RecordOperationDuration or RecordCollectionDuration completes
+//
+// Any error that is encountered is provided as err.
 type RecordDurationDone func(error)
 
-func (i *Instrumentation) RecordOperationDuration(
+func (i *Instrumentation) RecordOperationDuration(ctx context.Context) RecordDurationDone {
+	return i.recordDuration(ctx, i.operationDuration)
+}
+
+func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) RecordDurationDone {
+	return i.recordDuration(ctx, i.collectionDuration)
+}
+
+func (i *Instrumentation) recordDuration(
 	ctx context.Context,
+	h metric.Float64Histogram,
 ) RecordDurationDone {
 	start := time.Now()
 
@@ -167,29 +179,7 @@ func (i *Instrumentation) RecordOperationDuration(
 			*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
 		}
 
-		i.operationDuration.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
-	}
-}
-
-func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) RecordDurationDone {
-	start := time.Now()
-
-	return func(err error) {
-		recordOpt := get[metric.RecordOption](recordOptPool)
-		defer put(recordOptPool, recordOpt)
-		*recordOpt = append(*recordOpt, i.setOpt)
-
-		if err != nil {
-			attrs := get[attribute.KeyValue](measureAttrsPool)
-			defer put(measureAttrsPool, attrs)
-			*attrs = append(*attrs, i.attrs...)
-			*attrs = append(*attrs, semconv.ErrorType(err))
-
-			set := attribute.NewSet(*attrs...)
-			*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
-		}
-
-		i.collectionDuration.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
+		h.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
 	}
 }
 
