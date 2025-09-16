@@ -142,8 +142,8 @@ func BenchmarkHashKVs(b *testing.B) {
 
 	b.ResetTimer()
 	b.ReportAllocs()
-	for range b.N {
-		h = hashKVs(attrs)
+	for b.Loop() {
+		hashKVs(attrs)
 	}
 }
 
