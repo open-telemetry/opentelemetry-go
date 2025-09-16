@@ -148,14 +148,167 @@ func BenchmarkHashKVs(b *testing.B) {
 }
 
 func FuzzHashKVs(f *testing.F) {
-	f.Fuzz(func(_ *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, f float64, b bool) {
-		kvs := []KeyValue{
-			String(k1, s),
-			Int(k2, i),
-			Int64(k3, i64),
-			Float64(k4, f),
-			Bool(k5, b),
+	// Add seed inputs to ensure coverage of edge cases.
+	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
+	f.Add("key", "value", "🌍", "test", "bool", "float", -1, int64(-1), -1.0, true, uint8(1))
+	f.Add("duplicate", "duplicate", "duplicate", "duplicate", "duplicate", "NaN", 0, int64(0), math.Inf(1), false, uint8(2))
+	
+	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, fVal float64, b bool, sliceType uint8) {
+		// Test variable number of attributes (0-10).
+		numAttrs := len(k1) % 11 // Use key length to determine number of attributes.
+		if numAttrs == 0 && len(k1) == 0 {
+			// Test empty set.
+			h := hashKVs(nil)
+			if h == 0 {
+				t.Error("hash of empty slice should not be zero")
+			}
+			return
 		}
-		h = hashKVs(kvs)
+		
+		var kvs []KeyValue
+		
+		// Add basic types.
+		if numAttrs > 0 {
+			kvs = append(kvs, String(k1, s))
+		}
+		if numAttrs > 1 {
+			kvs = append(kvs, Int(k2, i))
+		}
+		if numAttrs > 2 {
+			kvs = append(kvs, Int64(k3, i64))
+		}
+		if numAttrs > 3 {
+			kvs = append(kvs, Float64(k4, fVal))
+		}
+		if numAttrs > 4 {
+			kvs = append(kvs, Bool(k5, b))
+		}
+		
+		// Add slice types based on sliceType parameter
+		if numAttrs > 5 {
+			switch sliceType % 4 {
+			case 0:
+				// Test BoolSlice with variable length.
+				bools := make([]bool, len(s)%5) // 0-4 elements
+				for i := range bools {
+					bools[i] = (i+len(k1))%2 == 0
+				}
+				kvs = append(kvs, BoolSlice("boolslice", bools))
+			case 1:
+				// Test IntSlice with variable length.
+				ints := make([]int, len(s)%6) // 0-5 elements  
+				for i := range ints {
+					ints[i] = i + len(k2)
+				}
+				kvs = append(kvs, IntSlice("intslice", ints))
+			case 2:
+				// Test Int64Slice with variable length.
+				int64s := make([]int64, len(s)%4) // 0-3 elements
+				for i := range int64s {
+					int64s[i] = int64(i) + i64
+				}
+				kvs = append(kvs, Int64Slice("int64slice", int64s))
+			case 3:
+				// Test Float64Slice with variable length and special values.
+				float64s := make([]float64, len(s)%5) // 0-4 elements
+				for i := range float64s {
+					switch i % 4 {
+					case 0:
+						float64s[i] = fVal
+					case 1:
+						float64s[i] = math.Inf(1) // +Inf
+					case 2:
+						float64s[i] = math.Inf(-1) // -Inf  
+					case 3:
+						float64s[i] = math.NaN() // NaN
+					}
+				}
+				kvs = append(kvs, Float64Slice("float64slice", float64s))
+			}
+		}
+		
+		// Add StringSlice.
+		if numAttrs > 6 {
+			strings := make([]string, len(k1)%4) // 0-3 elements
+			for i := range strings {
+				strings[i] = fmt.Sprintf("%s_%d", s, i)
+			}
+			kvs = append(kvs, StringSlice("stringslice", strings))
+		}
+		
+		// Test duplicate keys (should be handled by Set construction).
+		if numAttrs > 7 && len(k1) > 0 {
+			kvs = append(kvs, String(k1, "duplicate_key_value"))
+		}
+		
+		// Add more attributes with Unicode keys.
+		if numAttrs > 8 {
+			kvs = append(kvs, String("🔑", "unicode_key"))
+		}
+		if numAttrs > 9 {
+			kvs = append(kvs, String("empty", ""))
+		}
+		
+		// Sort to ensure consistent ordering (as Set would do).
+		slices.SortFunc(kvs, func(a, b KeyValue) int {
+			return cmp.Compare(string(a.Key), string(b.Key))
+		})
+		
+		// Remove duplicates (as Set will do).
+		if len(kvs) > 1 {
+			j := 0
+			for i := 1; i < len(kvs); i++ {
+				if kvs[j].Key != kvs[i].Key {
+					j++
+					kvs[j] = kvs[i]
+				} else {
+					// Keep the later value for duplicate keys.
+					kvs[j] = kvs[i]
+				}
+			}
+			kvs = kvs[:j+1]
+		}
+		
+		// Hash the key-value pairs.
+		h1 := hashKVs(kvs)
+		h2 := hashKVs(kvs) // Should be deterministic
+		
+		if h1 != h2 {
+			t.Errorf("hash is not deterministic: %d != %d for kvs=%v", h1, h2, kvs)
+		}
+		
+		if h1 == 0 && len(kvs) > 0 {
+			t.Errorf("hash should not be zero for non-empty input: kvs=%v", kvs)
+		}
+		
+		// Test that different inputs produce different hashes (most of the time).
+		// This is a probabilistic test - collisions are possible but rare.
+		if len(kvs) > 0 {
+			// Modify one value slightly.
+			modifiedKvs := make([]KeyValue, len(kvs))
+			copy(modifiedKvs, kvs)
+			if len(modifiedKvs) > 0 {
+				switch modifiedKvs[0].Value.Type() {
+				case STRING:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), modifiedKvs[0].Value.AsString()+"_modified")
+				case INT64:
+					modifiedKvs[0] = Int64(string(modifiedKvs[0].Key), modifiedKvs[0].Value.AsInt64()+1)
+				case BOOL:
+					modifiedKvs[0] = Bool(string(modifiedKvs[0].Key), !modifiedKvs[0].Value.AsBool())
+				case FLOAT64:
+					val := modifiedKvs[0].Value.AsFloat64()
+					if !math.IsNaN(val) && !math.IsInf(val, 0) {
+						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
+					}
+				}
+				
+				h3 := hashKVs(modifiedKvs)
+				// Note: We don't assert h1 != h3 because hash collisions are theoretically possible
+				// but we can log suspicious cases for manual review.
+				if h1 == h3 && !reflect.DeepEqual(kvs, modifiedKvs) {
+					t.Logf("Potential hash collision detected: original=%v, modified=%v, hash=%d", kvs, modifiedKvs, h1)
+				}
+			}
+		}
 	})
 }
