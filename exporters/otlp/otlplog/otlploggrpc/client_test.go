@@ -5,7 +5,6 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -28,7 +27,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
@@ -548,21 +546,9 @@ func TestClient(t *testing.T) {
 		ctx := context.Background()
 		client, _ := clientFactory(t, rCh)
 
-		defer func(orig otel.ErrorHandler) {
-			otel.SetErrorHandler(orig)
-		}(otel.GetErrorHandler())
-
-		var errs []error
-		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-		otel.SetErrorHandler(eh)
-
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-
-		require.Len(t, errs, 1)
-		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-		assert.ErrorContains(t, errs[0], want)
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
 }
 
