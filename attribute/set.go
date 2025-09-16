@@ -181,10 +181,10 @@ func (l *Set) Equals(o *Set) bool {
 		return false
 	}
 	if l == nil || l.hash == 0 {
-		l = emptySet
+		l = &emptySet
 	}
 	if o == nil || o.hash == 0 {
-		o = emptySet
+		o = &emptySet
 	}
 	return l.data == o.data
 }

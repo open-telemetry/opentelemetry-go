@@ -4,7 +4,11 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"cmp"
 	"fmt"
+	"math"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -152,7 +156,7 @@ func FuzzHashKVs(f *testing.F) {
 	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
 	f.Add("key", "value", "🌍", "test", "bool", "float", -1, int64(-1), -1.0, true, uint8(1))
 	f.Add("duplicate", "duplicate", "duplicate", "duplicate", "duplicate", "NaN", 0, int64(0), math.Inf(1), false, uint8(2))
-	
+
 	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, fVal float64, b bool, sliceType uint8) {
 		// Test variable number of attributes (0-10).
 		numAttrs := len(k1) % 11 // Use key length to determine number of attributes.
@@ -164,9 +168,9 @@ func FuzzHashKVs(f *testing.F) {
 			}
 			return
 		}
-		
+
 		var kvs []KeyValue
-		
+
 		// Add basic types.
 		if numAttrs > 0 {
 			kvs = append(kvs, String(k1, s))
@@ -183,7 +187,7 @@ func FuzzHashKVs(f *testing.F) {
 		if numAttrs > 4 {
 			kvs = append(kvs, Bool(k5, b))
 		}
-		
+
 		// Add slice types based on sliceType parameter
 		if numAttrs > 5 {
 			switch sliceType % 4 {
@@ -196,7 +200,7 @@ func FuzzHashKVs(f *testing.F) {
 				kvs = append(kvs, BoolSlice("boolslice", bools))
 			case 1:
 				// Test IntSlice with variable length.
-				ints := make([]int, len(s)%6) // 0-5 elements  
+				ints := make([]int, len(s)%6) // 0-5 elements
 				for i := range ints {
 					ints[i] = i + len(k2)
 				}
@@ -218,7 +222,7 @@ func FuzzHashKVs(f *testing.F) {
 					case 1:
 						float64s[i] = math.Inf(1) // +Inf
 					case 2:
-						float64s[i] = math.Inf(-1) // -Inf  
+						float64s[i] = math.Inf(-1) // -Inf
 					case 3:
 						float64s[i] = math.NaN() // NaN
 					}
@@ -226,7 +230,7 @@ func FuzzHashKVs(f *testing.F) {
 				kvs = append(kvs, Float64Slice("float64slice", float64s))
 			}
 		}
-		
+
 		// Add StringSlice.
 		if numAttrs > 6 {
 			strings := make([]string, len(k1)%4) // 0-3 elements
@@ -235,12 +239,12 @@ func FuzzHashKVs(f *testing.F) {
 			}
 			kvs = append(kvs, StringSlice("stringslice", strings))
 		}
-		
+
 		// Test duplicate keys (should be handled by Set construction).
 		if numAttrs > 7 && len(k1) > 0 {
 			kvs = append(kvs, String(k1, "duplicate_key_value"))
 		}
-		
+
 		// Add more attributes with Unicode keys.
 		if numAttrs > 8 {
 			kvs = append(kvs, String("🔑", "unicode_key"))
@@ -248,12 +252,12 @@ func FuzzHashKVs(f *testing.F) {
 		if numAttrs > 9 {
 			kvs = append(kvs, String("empty", ""))
 		}
-		
+
 		// Sort to ensure consistent ordering (as Set would do).
 		slices.SortFunc(kvs, func(a, b KeyValue) int {
 			return cmp.Compare(string(a.Key), string(b.Key))
 		})
-		
+
 		// Remove duplicates (as Set will do).
 		if len(kvs) > 1 {
 			j := 0
@@ -268,19 +272,19 @@ func FuzzHashKVs(f *testing.F) {
 			}
 			kvs = kvs[:j+1]
 		}
-		
+
 		// Hash the key-value pairs.
 		h1 := hashKVs(kvs)
 		h2 := hashKVs(kvs) // Should be deterministic
-		
+
 		if h1 != h2 {
 			t.Errorf("hash is not deterministic: %d != %d for kvs=%v", h1, h2, kvs)
 		}
-		
+
 		if h1 == 0 && len(kvs) > 0 {
 			t.Errorf("hash should not be zero for non-empty input: kvs=%v", kvs)
 		}
-		
+
 		// Test that different inputs produce different hashes (most of the time).
 		// This is a probabilistic test - collisions are possible but rare.
 		if len(kvs) > 0 {
@@ -301,7 +305,7 @@ func FuzzHashKVs(f *testing.F) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
 					}
 				}
-				
+
 				h3 := hashKVs(modifiedKvs)
 				// Note: We don't assert h1 != h3 because hash collisions are theoretically possible
 				// but we can log suspicious cases for manual review.
