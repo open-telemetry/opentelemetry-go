@@ -1030,3 +1030,49 @@ func TestClientObservability(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkExporterExportLogs(b *testing.B) {
+	run := func(b *testing.B, enableObservability bool) {
+		if enableObservability {
+			b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		} else {
+			b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		}
+
+		coll, err := newGRPCCollector("", nil)
+		require.NoError(b, err)
+		defer coll.srv.Stop()
+
+		ctx := context.Background()
+		opts := []Option{
+			WithEndpoint(coll.listener.Addr().String()),
+			WithInsecure(),
+		}
+		exp, err := New(ctx, opts...)
+		require.NoError(b, err)
+		defer func() {
+			assert.NoError(b, exp.Shutdown(ctx))
+		}()
+
+		logs := make([]log.Record, 1000)
+		for i := range logs {
+			logs[i] = log.Record{}
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			err := exp.Export(ctx, logs)
+			require.NoError(b, err)
+		}
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		run(b, false)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		run(b, false)
+	})
+}
