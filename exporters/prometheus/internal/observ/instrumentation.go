@@ -145,7 +145,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 }
 
 // RecordDurationDone is a function that is called when a call to an Exporters'
-// RecordOperationDuration or RecordCollectionDuration completes
+// RecordOperationDuration or RecordCollectionDuration completes.
 //
 // Any error that is encountered is provided as err.
 type RecordDurationDone func(error)
