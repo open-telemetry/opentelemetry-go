@@ -658,7 +658,7 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithCompression(GzipCompression))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
