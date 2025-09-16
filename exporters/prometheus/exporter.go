@@ -215,7 +215,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			attrKeys, attrVals, err := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			if err != nil {
-				otel.Handle(err)
+				reportError(ch, nil, err)
 				continue
 			}
 			for i := range attrKeys {
@@ -231,18 +231,20 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		for _, m := range scopeMetrics.Metrics {
 			typ := c.metricType(m)
 			if typ == nil {
+				reportError(ch, nil, errors.New("invalid metric type"))
 				continue
 			}
 			name, err := c.getName(m)
 			if err != nil {
 				// TODO(#7066): Handle this error better. It's not clear this can be
 				// reached, bad metric names should / will be caught at creation time.
-				otel.Handle(err)
+				reportError(ch, nil, err)
 				continue
 			}
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
+				reportError(ch, nil, errors.New("invalid metric"))
 				continue
 			}
 
@@ -336,7 +338,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 	for _, dp := range histogram.DataPoints {
 		keys, values, err := getAttrs(dp.Attributes, labelNamer)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, nil, err)
 			continue
 		}
 		keys = append(keys, kv.keys...)
@@ -348,9 +350,14 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
-			otel.Handle(fmt.Errorf(
-				"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-				scale))
+			reportError(
+				ch,
+				desc,
+				fmt.Errorf(
+					"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
+					scale,
+				),
+			)
 			continue
 		}
 
@@ -395,7 +402,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			dp.StartTime,
 			values...)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, desc, err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
@@ -414,7 +421,7 @@ func addHistogramMetric[N int64 | float64](
 	for _, dp := range histogram.DataPoints {
 		keys, values, err := getAttrs(dp.Attributes, labelNamer)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, nil, err)
 			continue
 		}
 		keys = append(keys, kv.keys...)
@@ -430,7 +437,7 @@ func addHistogramMetric[N int64 | float64](
 		}
 		m, err := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, desc, err)
 			continue
 		}
 		m = addExemplars(m, dp.Exemplars, labelNamer)
@@ -454,7 +461,7 @@ func addSumMetric[N int64 | float64](
 	for _, dp := range sum.DataPoints {
 		keys, values, err := getAttrs(dp.Attributes, labelNamer)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, nil, err)
 			continue
 		}
 		keys = append(keys, kv.keys...)
@@ -463,7 +470,7 @@ func addSumMetric[N int64 | float64](
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, desc, err)
 			continue
 		}
 		// GaugeValues don't support Exemplars at this time
@@ -486,7 +493,7 @@ func addGaugeMetric[N int64 | float64](
 	for _, dp := range gauge.DataPoints {
 		keys, values, err := getAttrs(dp.Attributes, labelNamer)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, nil, err)
 			continue
 		}
 		keys = append(keys, kv.keys...)
@@ -495,7 +502,7 @@ func addGaugeMetric[N int64 | float64](
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
 		if err != nil {
-			otel.Handle(err)
+			reportError(ch, desc, err)
 			continue
 		}
 		ch <- m
@@ -712,4 +719,11 @@ func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.La
 		labels[name] = attr.Value.Emit()
 	}
 	return labels, nil
+}
+
+func reportError(ch chan<- prometheus.Metric, desc *prometheus.Desc, err error) {
+	if desc == nil {
+		desc = prometheus.NewInvalidDesc(err)
+	}
+	ch <- prometheus.NewInvalidMetric(desc, err)
 }
