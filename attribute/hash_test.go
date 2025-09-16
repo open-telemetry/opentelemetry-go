@@ -136,8 +136,6 @@ func slice(kvs []KeyValue) string {
 	return b.String()
 }
 
-var h fnv.Hash
-
 func BenchmarkHashKVs(b *testing.B) {
 	attrs := make([]KeyValue, len(keyVals))
 	for i := range keyVals {
@@ -155,12 +153,13 @@ func FuzzHashKVs(f *testing.F) {
 	// Add seed inputs to ensure coverage of edge cases.
 	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
 	f.Add("key", "value", "🌍", "test", "bool", "float", -1, int64(-1), -1.0, true, uint8(1))
-	f.Add("duplicate", "duplicate", "duplicate", "duplicate", "duplicate", "NaN", 0, int64(0), math.Inf(1), false, uint8(2))
+	f.Add("duplicate", "duplicate", "duplicate", "duplicate", "duplicate", "NaN",
+		0, int64(0), math.Inf(1), false, uint8(2))
 
 	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, fVal float64, b bool, sliceType uint8) {
 		// Test variable number of attributes (0-10).
 		numAttrs := len(k1) % 11 // Use key length to determine number of attributes.
-		if numAttrs == 0 && len(k1) == 0 {
+		if numAttrs == 0 && k1 == "" {
 			// Test empty set.
 			h := hashKVs(nil)
 			if h == 0 {
@@ -241,7 +240,7 @@ func FuzzHashKVs(f *testing.F) {
 		}
 
 		// Test duplicate keys (should be handled by Set construction).
-		if numAttrs > 7 && len(k1) > 0 {
+		if numAttrs > 7 && k1 != "" {
 			kvs = append(kvs, String(k1, "duplicate_key_value"))
 		}
 
