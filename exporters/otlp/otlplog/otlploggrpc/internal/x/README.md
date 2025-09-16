@@ -12,7 +12,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ### Observability
 
-The `otlploggrpc` exporter provides a self-observability feature that allows you to monitor the exporter itself.
+The `otlploggrpc` exporter can be configured to provide observability about itself using OpenTelemetry metrics.
 
 To opt-in, set the environment variable `OTEL_GO_X_OBSERVABILITY` to `true`.
 

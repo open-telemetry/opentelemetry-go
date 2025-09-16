@@ -27,8 +27,8 @@ func newFeature[T any](suffix string, parse func(string) (T, bool)) Feature[T] {
 	}
 }
 
-// Observability is an experimental feature flag that determines if SDK
-// self-observability metrics are enabled.
+// Observability is an experimental feature flag that determines if exporter
+// observability metrics are enabled.
 //
 // To enable this feature set the OTEL_GO_X_OBSERVABILITY environment variable
 // to the case-insensitive string value of "true" (i.e. "True" and "TRUE"

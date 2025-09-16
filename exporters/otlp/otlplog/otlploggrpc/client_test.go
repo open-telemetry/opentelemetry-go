@@ -612,7 +612,7 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestClientObservability(t *testing.T) {
 	testCases := []struct {
 		name    string
 		enabled bool

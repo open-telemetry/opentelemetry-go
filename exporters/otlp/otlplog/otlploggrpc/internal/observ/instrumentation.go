@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package observ provides observability metrics for OTLP log exporters.
-// This is an experimental feature controlled by the x.SelfObservability feature flag.
+// This is an experimental feature controlled by the x.Observability feature flag.
 package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 
 import (
@@ -30,7 +30,7 @@ import (
 
 const (
 	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlpgrpclog/internal/observ"
+	ScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 
 	// Version is the current version of this instrumentation.
 	//
