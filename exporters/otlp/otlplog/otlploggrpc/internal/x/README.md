@@ -23,3 +23,14 @@ When enabled, the exporter will create the following metrics using the global `M
 - `otel.sdk.exporter.operation.duration`
 
 Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
+
+[Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.36.0/docs/otel/sdk-metrics.md
+
+## Compatibility and Stability
+
+Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../../../VERSIONING.md).
+These features may be removed or modified in successive version releases, including patch versions.
+
+When an experimental feature is promoted to a stable feature, a migration path will be included in the changelog entry of the release.
+There is no guarantee that any environment variable feature flags that enabled the experimental feature will be supported by the stable version.
+If they are supported, they may be accompanied with a deprecation notice stating a timeline for the removal of that support.
