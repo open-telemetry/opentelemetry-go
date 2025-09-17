@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -641,7 +643,7 @@ func TestClientObservability(t *testing.T) {
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-						Version:   sdk.Version(),
+						Version:   internal.Version,
 						SchemaURL: semconv.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
@@ -764,7 +766,7 @@ func TestClientObservability(t *testing.T) {
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-						Version:   sdk.Version(),
+						Version:   internal.Version,
 						SchemaURL: semconv.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
