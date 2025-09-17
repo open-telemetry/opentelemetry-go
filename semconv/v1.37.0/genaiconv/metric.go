@@ -147,6 +147,11 @@ type ClientOperationDuration struct {
 	metric.Float64Histogram
 }
 
+var newClientOperationDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("GenAI operation duration."),
+	metric.WithUnit("s"),
+}
+
 // NewClientOperationDuration returns a new ClientOperationDuration instrument.
 func NewClientOperationDuration(
 	m metric.Meter,
@@ -157,12 +162,15 @@ func NewClientOperationDuration(
 		return ClientOperationDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientOperationDurationOpts
+	} else {
+		opt = append(opt, newClientOperationDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"gen_ai.client.operation.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("GenAI operation duration."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientOperationDuration{noop.Float64Histogram{}}, err
@@ -286,6 +294,11 @@ type ClientTokenUsage struct {
 	metric.Int64Histogram
 }
 
+var newClientTokenUsageOpts = []metric.Int64HistogramOption{
+	metric.WithDescription("Number of input and output tokens used."),
+	metric.WithUnit("{token}"),
+}
+
 // NewClientTokenUsage returns a new ClientTokenUsage instrument.
 func NewClientTokenUsage(
 	m metric.Meter,
@@ -296,12 +309,15 @@ func NewClientTokenUsage(
 		return ClientTokenUsage{noop.Int64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientTokenUsageOpts
+	} else {
+		opt = append(opt, newClientTokenUsageOpts...)
+	}
+
 	i, err := m.Int64Histogram(
 		"gen_ai.client.token.usage",
-		append([]metric.Int64HistogramOption{
-			metric.WithDescription("Number of input and output tokens used."),
-			metric.WithUnit("{token}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientTokenUsage{noop.Int64Histogram{}}, err
@@ -423,6 +439,11 @@ type ServerRequestDuration struct {
 	metric.Float64Histogram
 }
 
+var newServerRequestDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Generative AI server request duration such as time-to-last byte or last output token."),
+	metric.WithUnit("s"),
+}
+
 // NewServerRequestDuration returns a new ServerRequestDuration instrument.
 func NewServerRequestDuration(
 	m metric.Meter,
@@ -433,12 +454,15 @@ func NewServerRequestDuration(
 		return ServerRequestDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerRequestDurationOpts
+	} else {
+		opt = append(opt, newServerRequestDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"gen_ai.server.request.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Generative AI server request duration such as time-to-last byte or last output token."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerRequestDuration{noop.Float64Histogram{}}, err
@@ -563,6 +587,11 @@ type ServerTimePerOutputToken struct {
 	metric.Float64Histogram
 }
 
+var newServerTimePerOutputTokenOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Time per output token generated after the first token for successful responses."),
+	metric.WithUnit("s"),
+}
+
 // NewServerTimePerOutputToken returns a new ServerTimePerOutputToken instrument.
 func NewServerTimePerOutputToken(
 	m metric.Meter,
@@ -573,12 +602,15 @@ func NewServerTimePerOutputToken(
 		return ServerTimePerOutputToken{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerTimePerOutputTokenOpts
+	} else {
+		opt = append(opt, newServerTimePerOutputTokenOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"gen_ai.server.time_per_output_token",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Time per output token generated after the first token for successful responses."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerTimePerOutputToken{noop.Float64Histogram{}}, err
@@ -695,6 +727,11 @@ type ServerTimeToFirstToken struct {
 	metric.Float64Histogram
 }
 
+var newServerTimeToFirstTokenOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Time to generate first token for successful responses."),
+	metric.WithUnit("s"),
+}
+
 // NewServerTimeToFirstToken returns a new ServerTimeToFirstToken instrument.
 func NewServerTimeToFirstToken(
 	m metric.Meter,
@@ -705,12 +742,15 @@ func NewServerTimeToFirstToken(
 		return ServerTimeToFirstToken{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newServerTimeToFirstTokenOpts
+	} else {
+		opt = append(opt, newServerTimeToFirstTokenOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"gen_ai.server.time_to_first_token",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Time to generate first token for successful responses."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ServerTimeToFirstToken{noop.Float64Histogram{}}, err

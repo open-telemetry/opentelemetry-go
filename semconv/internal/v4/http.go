@@ -286,7 +286,7 @@ func firstHostPort(source ...string) (host string, port int) {
 			break
 		}
 	}
-	return
+	return host, port
 }
 
 // RequestHeader returns the contents of h as OpenTelemetry attributes.

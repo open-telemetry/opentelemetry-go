@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
@@ -2246,7 +2247,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestObservability(t *testing.T) {
 	testCases := []struct {
 		name string
 		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
@@ -2259,9 +2260,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2320,9 +2321,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want = metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2386,9 +2387,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2435,9 +2436,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2512,9 +2513,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2578,9 +2579,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2651,9 +2652,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want = metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2723,7 +2724,7 @@ func TestSelfObservability(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() { otel.SetMeterProvider(prev) })
 
@@ -2749,8 +2750,8 @@ type ctxKeyT string
 // ctxKey is a context key used to store and retrieve values in the context.
 var ctxKey = ctxKeyT("testKey")
 
-func TestSelfObservabilityContextPropagation(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+func TestObservabilityContextPropagation(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 	prev := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(prev) })
 
@@ -2780,15 +2781,8 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 			isValid := s.SpanContext().IsValid()
 			assert.True(t, isValid, "Context should have a valid span")
 
-			if s.IsRecording() {
-				// Check if the context value is propagated correctly for Span
-				// starts. The Span end operation does not receive any user
-				// context so do not check this if the span is not recording
-				// (i.e. end operation).
-
-				got := ctx.Value(ctxKey)
-				assert.Equal(t, want, got, "Context value not propagated")
-			}
+			got := ctx.Value(ctxKey)
+			assert.Equal(t, want, got, "Context value not propagated")
 		}
 		n <- count
 	}()
@@ -2805,7 +2799,7 @@ func TestSelfObservabilityContextPropagation(t *testing.T) {
 	tp := NewTracerProvider()
 
 	wrap := func(parentCtx context.Context, name string, fn func(context.Context)) {
-		const tracer = "TestSelfObservabilityContextPropagation"
+		const tracer = "TestObservabilityContextPropagation"
 		ctx, s := tp.Tracer(tracer).Start(parentCtx, name)
 		defer s.End()
 		fn(ctx)
@@ -2872,7 +2866,6 @@ func TestRecordOnlySampler(t *testing.T) {
 }
 
 func BenchmarkTraceStart(b *testing.B) {
-	tracer := NewTracerProvider().Tracer("")
 	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
 
 	l1 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
@@ -2882,6 +2875,7 @@ func BenchmarkTraceStart(b *testing.B) {
 
 	for _, tt := range []struct {
 		name    string
+		env     map[string]string
 		options []trace.SpanStartOption
 	}{
 		{
@@ -2902,8 +2896,20 @@ func BenchmarkTraceStart(b *testing.B) {
 				),
 			},
 		},
+		{
+			name: "ObservabilityEnabled",
+			env: map[string]string{
+				"OTEL_GO_X_OBSERVABILITY": "True",
+			},
+		},
 	} {
 		b.Run(tt.name, func(b *testing.B) {
+			for k, v := range tt.env {
+				b.Setenv(k, v)
+			}
+
+			tracer := NewTracerProvider().Tracer("")
+
 			spans := make([]trace.Span, b.N)
 			b.ReportAllocs()
 			b.ResetTimer()

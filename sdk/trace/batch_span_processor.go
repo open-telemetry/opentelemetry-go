@@ -6,20 +6,14 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/internal/env"
-	"go.opentelemetry.io/otel/sdk/trace/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -32,8 +26,6 @@ const (
 	DefaultExportTimeout      = 30000
 	DefaultMaxExportBatchSize = 512
 )
-
-var queueFull = otelconv.ErrorTypeAttr("queue_full")
 
 // BatchSpanProcessorOption configures a BatchSpanProcessor.
 type BatchSpanProcessorOption func(o *BatchSpanProcessorOptions)
@@ -78,10 +70,7 @@ type batchSpanProcessor struct {
 	queue   chan ReadOnlySpan
 	dropped uint32
 
-	selfObservabilityEnabled bool
-	callbackRegistration     metric.Registration
-	spansProcessedCounter    otelconv.SDKProcessorSpanProcessed
-	componentNameAttr        attribute.KeyValue
+	inst *observ.BSP
 
 	batch      []ReadOnlySpan
 	batchMutex sync.Mutex
@@ -124,7 +113,15 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		stopCh: make(chan struct{}),
 	}
 
-	bsp.configureSelfObservability()
+	var err error
+	bsp.inst, err = observ.NewBSP(
+		nextProcessorID(),
+		func() int64 { return int64(len(bsp.queue)) },
+		int64(bsp.o.MaxQueueSize),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
 
 	bsp.stopWait.Add(1)
 	go func() {
@@ -142,47 +139,6 @@ var processorIDCounter atomic.Int64
 // starting with 0 and incrementing by 1 each time it is called.
 func nextProcessorID() int64 {
 	return processorIDCounter.Add(1) - 1
-}
-
-// configureSelfObservability configures metrics for the batch span processor.
-func (bsp *batchSpanProcessor) configureSelfObservability() {
-	if !x.SelfObservability.Enabled() {
-		return
-	}
-	bsp.selfObservabilityEnabled = true
-	bsp.componentNameAttr = semconv.OTelComponentName(
-		fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingSpanProcessor, nextProcessorID()))
-	meter := otel.GetMeterProvider().Meter(
-		selfObsScopeName,
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL),
-	)
-
-	queueCapacityUpDownCounter, err := otelconv.NewSDKProcessorSpanQueueCapacity(meter)
-	if err != nil {
-		otel.Handle(err)
-	}
-	queueSizeUpDownCounter, err := otelconv.NewSDKProcessorSpanQueueSize(meter)
-	if err != nil {
-		otel.Handle(err)
-	}
-	bsp.spansProcessedCounter, err = otelconv.NewSDKProcessorSpanProcessed(meter)
-	if err != nil {
-		otel.Handle(err)
-	}
-
-	callbackAttributesOpt := metric.WithAttributes(bsp.componentNameAttr,
-		semconv.OTelComponentTypeBatchingSpanProcessor)
-	bsp.callbackRegistration, err = meter.RegisterCallback(
-		func(_ context.Context, o metric.Observer) error {
-			o.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(len(bsp.queue)), callbackAttributesOpt)
-			o.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(bsp.o.MaxQueueSize), callbackAttributesOpt)
-			return nil
-		},
-		queueSizeUpDownCounter.Inst(), queueCapacityUpDownCounter.Inst())
-	if err != nil {
-		otel.Handle(err)
-	}
 }
 
 // OnStart method does nothing.
@@ -225,8 +181,8 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 		case <-ctx.Done():
 			err = ctx.Err()
 		}
-		if bsp.selfObservabilityEnabled {
-			err = errors.Join(err, bsp.callbackRegistration.Unregister())
+		if bsp.inst != nil {
+			err = errors.Join(err, bsp.inst.Shutdown())
 		}
 	})
 	return err
@@ -340,10 +296,8 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 
 	if l := len(bsp.batch); l > 0 {
 		global.Debug("exporting spans", "count", len(bsp.batch), "total_dropped", atomic.LoadUint32(&bsp.dropped))
-		if bsp.selfObservabilityEnabled {
-			bsp.spansProcessedCounter.Add(ctx, int64(l),
-				bsp.componentNameAttr,
-				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor))
+		if bsp.inst != nil {
+			bsp.inst.Processed(ctx, int64(l))
 		}
 		err := bsp.e.ExportSpans(ctx, bsp.batch)
 
@@ -453,11 +407,8 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 	case bsp.queue <- sd:
 		return true
 	case <-ctx.Done():
-		if bsp.selfObservabilityEnabled {
-			bsp.spansProcessedCounter.Add(ctx, 1,
-				bsp.componentNameAttr,
-				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor),
-				bsp.spansProcessedCounter.AttrErrorType(queueFull))
+		if bsp.inst != nil {
+			bsp.inst.ProcessedQueueFull(ctx, 1)
 		}
 		return false
 	}
@@ -473,11 +424,8 @@ func (bsp *batchSpanProcessor) enqueueDrop(ctx context.Context, sd ReadOnlySpan)
 		return true
 	default:
 		atomic.AddUint32(&bsp.dropped, 1)
-		if bsp.selfObservabilityEnabled {
-			bsp.spansProcessedCounter.Add(ctx, 1,
-				bsp.componentNameAttr,
-				bsp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingSpanProcessor),
-				bsp.spansProcessedCounter.AttrErrorType(queueFull))
+		if bsp.inst != nil {
+			bsp.inst.ProcessedQueueFull(ctx, 1)
 		}
 	}
 	return false

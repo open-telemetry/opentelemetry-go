@@ -231,12 +231,41 @@ func TestTracerConfig(t *testing.T) {
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
+func TestWithInstrumentationAttributesNotLazy(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.String("service", "test"),
+		attribute.Int("three", 3),
+	}
+	want := attribute.NewSet(attrs...)
+
+	// WithInstrumentationAttributes is expected to immediately
+	// create an immutable set from the attributes, so later changes
+	// to attrs should not affect the config.
+	opt := WithInstrumentationAttributes(attrs...)
+	attrs[0] = attribute.String("service", "changed")
+
+	c := NewTracerConfig(opt)
+	assert.Equal(t, want, c.InstrumentationAttributes(), "instrumentation attributes")
+}
+
+func TestWithInstrumentationAttributeSet(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("service", "test"),
+		attribute.Int("three", 3),
+	)
+
+	c := NewTracerConfig(
+		WithInstrumentationAttributeSet(attrs),
+	)
+
+	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+}
+
 // Save benchmark results to a file level var to avoid the compiler optimizing
 // away the actual work.
 var (
-	tracerConfig TracerConfig
-	spanConfig   SpanConfig
-	eventConfig  EventConfig
+	spanConfig  SpanConfig
+	eventConfig EventConfig
 )
 
 func BenchmarkNewTracerConfig(b *testing.B) {
@@ -259,13 +288,25 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 				WithSchemaURL("testing URL"),
 			},
 		},
+		{
+			name: "with instrumentation attribute",
+			options: []TracerOption{
+				WithInstrumentationAttributes(attribute.String("key", "value")),
+			},
+		},
+		{
+			name: "with instrumentation attribute set",
+			options: []TracerOption{
+				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
+			},
+		},
 	} {
 		b.Run(bb.name, func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
-				tracerConfig = NewTracerConfig(bb.options...)
+			for b.Loop() {
+				NewTracerConfig(bb.options...)
 			}
 		})
 	}
@@ -410,4 +451,96 @@ func BenchmarkNewEventConfig(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestWithInstrumentationAttributesMerge(t *testing.T) {
+	aliceAttr := attribute.String("user", "Alice")
+	bobAttr := attribute.String("user", "Bob")
+	adminAttr := attribute.Bool("admin", true)
+
+	alice := attribute.NewSet(aliceAttr)
+	bob := attribute.NewSet(bobAttr)
+	aliceAdmin := attribute.NewSet(aliceAttr, adminAttr)
+	bobAdmin := attribute.NewSet(bobAttr, adminAttr)
+
+	t.Run("SameKey", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributes(aliceAttr),
+			WithInstrumentationAttributes(bobAttr),
+		)
+		assert.Equal(t, bob, c.InstrumentationAttributes(),
+			"Later values for the same key should overwrite earlier ones.")
+	})
+
+	t.Run("DifferentKeys", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributes(aliceAttr),
+			WithInstrumentationAttributes(adminAttr),
+		)
+		assert.Equal(t, aliceAdmin, c.InstrumentationAttributes(),
+			"Different keys should be merged")
+	})
+
+	t.Run("Mixed", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributes(aliceAttr, adminAttr),
+			WithInstrumentationAttributes(bobAttr),
+		)
+		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
+			"Combination of same and different keys should be merged.")
+	})
+
+	t.Run("MergedEmpty", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributes(aliceAttr),
+			WithInstrumentationAttributes(),
+		)
+		assert.Equal(t, alice, c.InstrumentationAttributes(),
+			"Empty attributes should not affect existing ones.")
+	})
+
+	t.Run("SameKeyWithSet", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributeSet(alice),
+			WithInstrumentationAttributeSet(bob),
+		)
+		assert.Equal(t, bob, c.InstrumentationAttributes(),
+			"Later values for the same key should overwrite earlier ones.")
+	})
+
+	t.Run("DifferentKeysWithSet", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributeSet(alice),
+			WithInstrumentationAttributeSet(attribute.NewSet(adminAttr)),
+		)
+		assert.Equal(t, aliceAdmin, c.InstrumentationAttributes(),
+			"Different keys should be merged.")
+	})
+
+	t.Run("MixedWithSet", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributeSet(aliceAdmin),
+			WithInstrumentationAttributeSet(bob),
+		)
+		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
+			"Combination of same and different keys should be merged.")
+	})
+
+	t.Run("MergedEmptyWithSet", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributeSet(alice),
+			WithInstrumentationAttributeSet(attribute.NewSet()),
+		)
+		assert.Equal(t, alice, c.InstrumentationAttributes(),
+			"Empty attribute set should not affect existing ones.")
+	})
+
+	t.Run("MixedAttributesAndSet", func(t *testing.T) {
+		c := NewTracerConfig(
+			WithInstrumentationAttributes(aliceAttr),
+			WithInstrumentationAttributeSet(attribute.NewSet(bobAttr, adminAttr)),
+		)
+		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
+			"Attributes and attribute sets should be merged together.")
+	})
 }

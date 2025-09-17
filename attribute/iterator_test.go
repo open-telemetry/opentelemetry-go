@@ -56,7 +56,7 @@ func TestMergedIterator(t *testing.T) {
 		for _, k := range keys {
 			result = append(result, attribute.Int(k, num))
 		}
-		return
+		return result
 	}
 
 	for _, input := range []inputs{
