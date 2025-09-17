@@ -1788,7 +1788,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 			name:         "bad namespace",
 			namespace:    "$%^&",
 			counterName:  "foo",
-			expectNewErr: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			expectNewErr: `normalization for label name "$%^&" resulted in invalid name "_"`,
 		},
 		{
 			name:        "good namespace, names should be escaped",

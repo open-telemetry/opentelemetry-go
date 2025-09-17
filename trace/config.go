@@ -4,6 +4,7 @@
 package trace // import "go.opentelemetry.io/otel/trace"
 
 import (
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -318,30 +319,16 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 
 // WithInstrumentationAttributes adds the instrumentation attributes.
 //
-// The passed attributes will be de-duplicated.
-//
-// Note that [WithInstrumentationAttributeSet] is recommended as
-// it is more efficient and also allows safely reusing the passed argument.
+// This is equivalent to calling [WithInstrumentationAttributeSet] with an
+// [attribute.Set] created from a clone of the passed attributes.
+// [WithInstrumentationAttributeSet] is recommended for more control.
 //
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) TracerOption {
-	if len(attr) == 0 {
-		return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-			return config
-		})
-	}
-
-	return tracerOptionFunc(func(config TracerConfig) TracerConfig {
-		newAttrs := attribute.NewSet(attr...)
-		if config.attrs.Len() == 0 {
-			config.attrs = newAttrs
-		} else {
-			config.attrs = mergeSets(config.attrs, newAttrs)
-		}
-		return config
-	})
+	set := attribute.NewSet(slices.Clone(attr)...)
+	return WithInstrumentationAttributeSet(set)
 }
 
 // WithInstrumentationAttributeSet adds the instrumentation attributes.
