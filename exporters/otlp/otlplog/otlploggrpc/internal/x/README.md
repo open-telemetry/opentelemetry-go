@@ -1,4 +1,4 @@
-Experimental Features
+# Experimental Features
 
 The `otlploggrpc` exporter contains features that have not yet stabilized in the OpenTelemetry specification.
 These features are added to the `otlploggrpc` exporter prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
