@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -536,6 +538,80 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestSumConcurrentSafe(t *testing.T) {
+	t.Run("Int64/DeltaSum", testDeltaSumConcurrentSafe[int64]())
+	t.Run("Float64/DeltaSum", testDeltaSumConcurrentSafe[float64]())
+	t.Run("Int64/CumulativeSum", testCumulativeSumConcurrentSafe[int64]())
+	t.Run("Float64/CumulativeSum", testCumulativeSumConcurrentSafe[float64]())
+	t.Run("Int64/DeltaPrecomputedSum", testDeltaPrecomputedSumConcurrentSafe[int64]())
+	t.Run("Float64/DeltaPrecomputedSum", testDeltaPrecomputedSumConcurrentSafe[float64]())
+	t.Run("Int64/CumulativePrecomputedSum", testCumulativePrecomputedSumConcurrentSafe[int64]())
+	t.Run("Float64/CumulativePrecomputedSum", testCumulativePrecomputedSumConcurrentSafe[float64]())
+}
+
+func validateSum[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
+	s, ok := got.(metricdata.Sum[N])
+	if !ok {
+		t.Fatalf("wrong aggregation type: %+v", got)
+	}
+	for _, dp := range s.DataPoints {
+		assert.False(t,
+			dp.Time.Before(dp.StartTime),
+			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+		)
+		switch dp.Attributes {
+		case fltrAlice:
+			// alice observations are always a multiple of 2
+			assert.Equal(t, int64(0), int64(dp.Value)%2)
+		case fltrBob:
+			// bob observations are always a multiple of 3
+			assert.Equal(t, int64(0), int64(dp.Value)%3)
+		default:
+			t.Fatalf("wrong attributes %+v", dp.Attributes)
+		}
+	}
+}
+
+func testDeltaSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	mono := false
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.Sum(mono)
+	return testConcurrentSafe[N](in, out, validateSum[N])
+}
+
+func testCumulativeSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	mono := false
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.Sum(mono)
+	return testConcurrentSafe[N](in, out, validateSum[N])
+}
+
+func testDeltaPrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	mono := false
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedSum(mono)
+	return testConcurrentSafe[N](in, out, validateSum[N])
+}
+
+func testCumulativePrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	mono := false
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedSum(mono)
+	return testConcurrentSafe[N](in, out, validateSum[N])
 }
 
 func BenchmarkSum(b *testing.B) {

@@ -223,6 +223,66 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	})
 }
 
+func TestHistogramConcurrentSafe(t *testing.T) {
+	t.Run("Int64/Delta", testDeltaHistConcurrentSafe[int64]())
+	t.Run("Float64/Delta", testDeltaHistConcurrentSafe[float64]())
+	t.Run("Int64/Cumulative", testCumulativeHistConcurrentSafe[int64]())
+	t.Run("Float64/Cumulative", testCumulativeHistConcurrentSafe[float64]())
+}
+
+func validateHistogram[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
+	s, ok := got.(metricdata.Histogram[N])
+	if !ok {
+		t.Fatalf("wrong aggregation type: %+v", got)
+	}
+	for _, dp := range s.DataPoints {
+		assert.False(t,
+			dp.Time.Before(dp.StartTime),
+			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+		)
+		switch dp.Attributes {
+		case fltrAlice:
+			// alice observations are always a multiple of 2
+			assert.Equal(t, int64(0), int64(dp.Sum)%2)
+		case fltrBob:
+			// bob observations are always a multiple of 3
+			assert.Equal(t, int64(0), int64(dp.Sum)%3)
+		default:
+			t.Fatalf("wrong attributes %+v", dp.Attributes)
+		}
+		avg := float64(dp.Sum) / float64(dp.Count)
+		if minVal, ok := dp.Min.Value(); ok {
+			assert.GreaterOrEqual(t, avg, float64(minVal))
+		}
+		if maxVal, ok := dp.Max.Value(); ok {
+			assert.LessOrEqual(t, avg, float64(maxVal))
+		}
+		var totalCount uint64
+		for _, bc := range dp.BucketCounts {
+			totalCount += bc
+		}
+		assert.Equal(t, totalCount, dp.Count)
+	}
+}
+
+func testDeltaHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExplicitBucketHistogram(bounds, noMinMax, false)
+	return testConcurrentSafe[N](in, out, validateHistogram[N])
+}
+
+func testCumulativeHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExplicitBucketHistogram(bounds, noMinMax, false)
+	return testConcurrentSafe[N](in, out, validateHistogram[N])
+}
+
 // hPointSummed returns an HistogramDataPoint that started and ended now with
 // multi number of measurements values v. It includes a min and max (set to v).
 func hPointSummed[N int64 | float64](

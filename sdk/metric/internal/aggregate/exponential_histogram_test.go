@@ -1040,6 +1040,69 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 	})
 }
 
+func TestExponentialHistogramAggregationConcurrentSafe(t *testing.T) {
+	t.Run("Int64/Delta", testDeltaExpoHistConcurrentSafe[int64]())
+	t.Run("Float64/Delta", testDeltaExpoHistConcurrentSafe[float64]())
+	t.Run("Int64/Cumulative", testCumulativeExpoHistConcurrentSafe[int64]())
+	t.Run("Float64/Cumulative", testCumulativeExpoHistConcurrentSafe[float64]())
+}
+
+func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	return testConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+}
+
+func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	return testConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+}
+
+func validateExponentialHistogram[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
+	s, ok := got.(metricdata.ExponentialHistogram[N])
+	if !ok {
+		t.Fatalf("wrong aggregation type: %+v", got)
+	}
+	for _, dp := range s.DataPoints {
+		assert.False(t,
+			dp.Time.Before(dp.StartTime),
+			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+		)
+		switch dp.Attributes {
+		case fltrAlice:
+			// alice observations are always a multiple of 2
+			assert.Equal(t, int64(0), int64(dp.Sum)%2)
+		case fltrBob:
+			// bob observations are always a multiple of 3
+			assert.Equal(t, int64(0), int64(dp.Sum)%3)
+		default:
+			t.Fatalf("wrong attributes %+v", dp.Attributes)
+		}
+		avg := float64(dp.Sum) / float64(dp.Count)
+		if minVal, ok := dp.Min.Value(); ok {
+			assert.GreaterOrEqual(t, avg, float64(minVal))
+		}
+		if maxVal, ok := dp.Max.Value(); ok {
+			assert.LessOrEqual(t, avg, float64(maxVal))
+		}
+		var totalCount uint64
+		for _, bc := range dp.PositiveBucket.Counts {
+			totalCount += bc
+		}
+		for _, bc := range dp.NegativeBucket.Counts {
+			totalCount += bc
+		}
+		assert.Equal(t, totalCount, dp.Count)
+	}
+}
+
 func FuzzGetBin(f *testing.F) {
 	values := []float64{
 		2.0,

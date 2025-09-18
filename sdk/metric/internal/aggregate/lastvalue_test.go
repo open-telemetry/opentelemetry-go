@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -466,6 +468,76 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		},
 	})
+}
+
+func TestLastValueConcurrentSafe(t *testing.T) {
+	t.Run("Int64/DeltaLastValue", testDeltaLastValueConcurrentSafe[int64]())
+	t.Run("Float64/DeltaLastValue", testDeltaLastValueConcurrentSafe[float64]())
+	t.Run("Int64/CumulativeLastValue", testCumulativeLastValueConcurrentSafe[int64]())
+	t.Run("Float64/CumulativeLastValue", testCumulativeLastValueConcurrentSafe[float64]())
+	t.Run("Int64/DeltaPrecomputedLastValue", testDeltaPrecomputedLastValueConcurrentSafe[int64]())
+	t.Run("Float64/DeltaPrecomputedLastValue", testDeltaPrecomputedLastValueConcurrentSafe[float64]())
+	t.Run("Int64/CumulativePrecomputedLastValue", testCumulativePrecomputedLastValueConcurrentSafe[int64]())
+	t.Run("Float64/CumulativePrecomputedLastValue", testCumulativePrecomputedLastValueConcurrentSafe[float64]())
+}
+
+func validateGauge[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
+	s, ok := got.(metricdata.Gauge[N])
+	if !ok {
+		t.Fatalf("wrong aggregation type: %+v", got)
+	}
+	for _, dp := range s.DataPoints {
+		assert.False(t,
+			dp.Time.Before(dp.StartTime),
+			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+		)
+		switch dp.Attributes {
+		case fltrAlice:
+			// alice observations are always a multiple of 2
+			assert.Equal(t, int64(0), int64(dp.Value)%2)
+		case fltrBob:
+			// bob observations are always a multiple of 3
+			assert.Equal(t, int64(0), int64(dp.Value)%3)
+		default:
+			t.Fatalf("wrong attributes %+v", dp.Attributes)
+		}
+	}
+}
+
+func testCumulativeLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.LastValue()
+	return testConcurrentSafe[N](in, out, validateGauge[N])
+}
+
+func testDeltaLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.LastValue()
+	return testConcurrentSafe[N](in, out, validateGauge[N])
+}
+
+func testDeltaPrecomputedLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedLastValue()
+	return testConcurrentSafe[N](in, out, validateGauge[N])
+}
+
+func testCumulativePrecomputedLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedLastValue()
+	return testConcurrentSafe[N](in, out, validateGauge[N])
 }
 
 func BenchmarkLastValue(b *testing.B) {
