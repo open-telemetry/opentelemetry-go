@@ -20,6 +20,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix `WithInstrumentationAttributes` options in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/metric`, and `go.opentelemetry.io/otel/log` to properly merge attributes when passed multiple times instead of replacing them. Attributes with duplicate keys will use the last value passed. (#7300)
 - The equality of `attribute.Set` when using the `Equal` method is not affected by the user overriding the empty set pointed to by `attribute.EmptySet` in `go.opentelemetry.io/otel/attribute`. (#7357)
+- Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#7372)
+- Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7372)
+- Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#7372)
+- Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7372)
+- Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#7372)
+- Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7372)
 
 ### Removed
 
