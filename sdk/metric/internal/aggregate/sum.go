@@ -13,41 +13,58 @@ import (
 )
 
 type sumValue[N int64 | float64] struct {
-	n     N
+	n     atomicSum[N]
 	res   FilteredExemplarReservoir[N]
 	attrs attribute.Set
 }
 
+func (s *sumValue[N]) measure(ctx context.Context, value N, droppedAttr []attribute.KeyValue) {
+	s.res.Offer(ctx, value, droppedAttr)
+	s.n.add(value)
+}
+
 // valueMap is the storage for sums.
 type valueMap[N int64 | float64] struct {
-	sync.Mutex
+	sync.RWMutex
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	limit  limiter[sumValue[N]]
-	values map[attribute.Distinct]sumValue[N]
+	values map[attribute.Distinct]*sumValue[N]
 }
 
 func newValueMap[N int64 | float64](limit int, r func(attribute.Set) FilteredExemplarReservoir[N]) *valueMap[N] {
 	return &valueMap[N]{
 		newRes: r,
 		limit:  newLimiter[sumValue[N]](limit),
-		values: make(map[attribute.Distinct]sumValue[N]),
+		values: make(map[attribute.Distinct]*sumValue[N]),
 	}
 }
 
 func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	s.Lock()
-	defer s.Unlock()
-
+	// Hold the RLock even after we are done reading from the values map to
+	// ensure we don't race with collection.
+	s.RLock()
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	v, ok := s.values[attr.Equivalent()]
-	if !ok {
-		v.res = s.newRes(attr)
+	if ok {
+		v.measure(ctx, value, droppedAttr)
+		s.RUnlock()
+		return
 	}
-
-	v.attrs = attr
-	v.n += value
-	v.res.Offer(ctx, value, droppedAttr)
-
+	s.RUnlock()
+	// Switch to a full lock to add a new element to the map.
+	s.Lock()
+	defer s.Unlock()
+	// Check that the element wasn't added since we last checked.
+	v, ok = s.values[attr.Equivalent()]
+	if ok {
+		v.measure(ctx, value, droppedAttr)
+		return
+	}
+	v = &sumValue[N]{
+		res:   s.newRes(attr),
+		attrs: attr,
+	}
+	v.measure(ctx, value, droppedAttr)
 	s.values[attr.Equivalent()] = v
 }
 
@@ -81,6 +98,9 @@ func (s *sum[N]) delta(
 	sData.Temporality = metricdata.DeltaTemporality
 	sData.IsMonotonic = s.monotonic
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a sum value.
 	s.Lock()
 	defer s.Unlock()
 
@@ -92,7 +112,7 @@ func (s *sum[N]) delta(
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
+		dPts[i].Value = val.n.load()
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		i++
 	}
@@ -118,6 +138,9 @@ func (s *sum[N]) cumulative(
 	sData.Temporality = metricdata.CumulativeTemporality
 	sData.IsMonotonic = s.monotonic
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a sum value.
 	s.Lock()
 	defer s.Unlock()
 
@@ -129,7 +152,7 @@ func (s *sum[N]) cumulative(
 		dPts[i].Attributes = value.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = value.n
+		dPts[i].Value = value.n.load()
 		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
@@ -181,6 +204,9 @@ func (s *precomputedSum[N]) delta(
 	sData.Temporality = metricdata.DeltaTemporality
 	sData.IsMonotonic = s.monotonic
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a sum value.
 	s.Lock()
 	defer s.Unlock()
 
@@ -189,7 +215,7 @@ func (s *precomputedSum[N]) delta(
 
 	var i int
 	for key, value := range s.values {
-		delta := value.n - s.reported[key]
+		delta := value.n.load() - s.reported[key]
 
 		dPts[i].Attributes = value.attrs
 		dPts[i].StartTime = s.start
@@ -197,7 +223,7 @@ func (s *precomputedSum[N]) delta(
 		dPts[i].Value = delta
 		collectExemplars(&dPts[i].Exemplars, value.res.Collect)
 
-		newReported[key] = value.n
+		newReported[key] = value.n.load()
 		i++
 	}
 	// Unused attribute sets do not report.
@@ -223,6 +249,9 @@ func (s *precomputedSum[N]) cumulative(
 	sData.Temporality = metricdata.CumulativeTemporality
 	sData.IsMonotonic = s.monotonic
 
+	// Acquire a full lock to ensure there are no concurrent measure() calls.
+	// If we only used a RLock, we could observe "partial" measurements, such
+	// as an exemplar without a sum value.
 	s.Lock()
 	defer s.Unlock()
 
@@ -234,7 +263,7 @@ func (s *precomputedSum[N]) cumulative(
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = val.n
+		dPts[i].Value = val.n.load()
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 
 		i++

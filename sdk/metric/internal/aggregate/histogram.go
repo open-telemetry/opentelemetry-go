@@ -52,7 +52,7 @@ type histValues[N int64 | float64] struct {
 	bounds   []float64
 
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*buckets[N]]
+	limit    limiter[buckets[N]]
 	values   map[attribute.Distinct]*buckets[N]
 	valuesMu sync.Mutex
 }
@@ -74,7 +74,7 @@ func newHistValues[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		limit:    newLimiter[*buckets[N]](limit),
+		limit:    newLimiter[buckets[N]](limit),
 		values:   make(map[attribute.Distinct]*buckets[N]),
 	}
 }

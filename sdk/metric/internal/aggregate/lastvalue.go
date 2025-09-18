@@ -23,7 +23,7 @@ func newLastValue[N int64 | float64](limit int, r func(attribute.Set) FilteredEx
 	return &lastValue[N]{
 		newRes: r,
 		limit:  newLimiter[datapoint[N]](limit),
-		values: make(map[attribute.Distinct]datapoint[N]),
+		values: make(map[attribute.Distinct]*datapoint[N]),
 		start:  now(),
 	}
 }
@@ -34,7 +34,7 @@ type lastValue[N int64 | float64] struct {
 
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	limit  limiter[datapoint[N]]
-	values map[attribute.Distinct]datapoint[N]
+	values map[attribute.Distinct]*datapoint[N]
 	start  time.Time
 }
 
@@ -45,7 +45,9 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.
 	attr := s.limit.Attributes(fltrAttr, s.values)
 	d, ok := s.values[attr.Equivalent()]
 	if !ok {
-		d.res = s.newRes(attr)
+		d = &datapoint[N]{
+			res: s.newRes(attr),
+		}
 	}
 
 	d.attrs = attr
