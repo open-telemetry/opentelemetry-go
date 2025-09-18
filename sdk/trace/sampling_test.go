@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"context"
 	"fmt"
 	"math/rand/v2"
 	"testing"
@@ -20,7 +19,7 @@ func TestParentBasedDefaultLocalParentSampled(t *testing.T) {
 	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := trace.ContextWithSpanContext(
-		context.Background(),
+		t.Context(),
 		trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
@@ -37,7 +36,7 @@ func TestParentBasedDefaultLocalParentNotSampled(t *testing.T) {
 	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 	parentCtx := trace.ContextWithSpanContext(
-		context.Background(),
+		t.Context(),
 		trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID: traceID,
 			SpanID:  spanID,
@@ -114,7 +113,7 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 
 			params := SamplingParameters{
 				ParentContext: trace.ContextWithSpanContext(
-					context.Background(),
+					t.Context(),
 					trace.NewSpanContext(pscc),
 				),
 			}
@@ -188,7 +187,7 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 		samplerHi := TraceIDRatioBased(ratioHi)
 		samplerLo := TraceIDRatioBased(ratioLo)
 		for range numTraces {
-			traceID, _ := idg.NewIDs(context.Background())
+			traceID, _ := idg.NewIDs(t.Context())
 
 			params := SamplingParameters{TraceID: traceID}
 			if samplerLo.ShouldSample(params).Decision == RecordAndSample {
@@ -235,7 +234,7 @@ func TestTracestateIsPassed(t *testing.T) {
 
 			params := SamplingParameters{
 				ParentContext: trace.ContextWithSpanContext(
-					context.Background(),
+					t.Context(),
 					trace.NewSpanContext(trace.SpanContextConfig{
 						TraceState: traceState,
 					}),

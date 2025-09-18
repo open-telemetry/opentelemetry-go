@@ -47,7 +47,7 @@ func TestNewPipeline(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
 
 	output := metricdata.ResourceMetrics{}
-	err := pipe.produce(context.Background(), &output)
+	err := pipe.produce(t.Context(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Empty(t, output.ScopeMetrics)
@@ -61,7 +61,7 @@ func TestNewPipeline(t *testing.T) {
 		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
-	err = pipe.produce(context.Background(), &output)
+	err = pipe.produce(t.Context(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
 	require.Len(t, output.ScopeMetrics, 1)
@@ -73,14 +73,14 @@ func TestPipelineUsesResource(t *testing.T) {
 	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0)
 
 	output := metricdata.ResourceMetrics{}
-	err := pipe.produce(context.Background(), &output)
+	err := pipe.produce(t.Context(), &output)
 	assert.NoError(t, err)
 	assert.Equal(t, res, output.Resource)
 }
 
-func TestPipelineConcurrentSafe(*testing.T) {
+func TestPipelineConcurrentSafe(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
-	ctx := context.Background()
+	ctx := t.Context()
 	var output metricdata.ResourceMetrics
 
 	var wg sync.WaitGroup
@@ -163,11 +163,11 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
-					in(context.Background(), 1, *attribute.EmptySet())
+					in(t.Context(), 1, *attribute.EmptySet())
 				}
 
 				out := metricdata.ResourceMetrics{}
-				err = test.pipe.produce(context.Background(), &out)
+				err = test.pipe.produce(t.Context(), &out)
 				require.NoError(t, err)
 				require.Len(t, out.ScopeMetrics, 1, "Aggregator not registered with pipeline")
 				sm := out.ScopeMetrics[0]
@@ -441,7 +441,7 @@ func TestExemplars(t *testing.T) {
 		t.Helper()
 
 		rm := new(metricdata.ResourceMetrics)
-		require.NoError(t, r.Collect(context.Background(), rm))
+		require.NoError(t, r.Collect(t.Context(), rm))
 
 		require.Len(t, rm.ScopeMetrics, 1, "ScopeMetrics")
 		sm := rm.ScopeMetrics[0]
@@ -460,13 +460,13 @@ func TestExemplars(t *testing.T) {
 		assert.Len(t, expo.DataPoints[0].Exemplars, nExpo)
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		SpanID:     trace.SpanID{0o1},
 		TraceID:    trace.TraceID{0o1},
 		TraceFlags: trace.FlagsSampled,
 	})
-	sampled := trace.ContextWithSpanContext(context.Background(), sc)
+	sampled := trace.ContextWithSpanContext(t.Context(), sc)
 
 	t.Run("Default", func(t *testing.T) {
 		m, r := setup("default")
@@ -570,13 +570,13 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_ = mp.pipes[0].produce(context.Background(), &metricdata.ResourceMetrics{})
+		_ = mp.pipes[0].produce(t.Context(), &metricdata.ResourceMetrics{})
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_ = mp.pipes[1].produce(context.Background(), &metricdata.ResourceMetrics{})
+		_ = mp.pipes[1].produce(t.Context(), &metricdata.ResourceMetrics{})
 	}()
 
 	wg.Wait()
@@ -598,7 +598,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 		}, oc)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
-	ctx := context.Background()
+	ctx := t.Context()
 	rm := new(metricdata.ResourceMetrics)
 	val.Add(1)
 	err = r1.Collect(ctx, rm)
@@ -650,7 +650,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 	}
 	pipe.addSync(instrumentation.Scope{Name: "test"}, inst)
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
+	ctx, cancelCtx := context.WithCancel(t.Context())
 	var shouldCancelContext bool // When true, the second callback cancels ctx
 	var shouldReturnError bool   // When true, the third callback returns an error
 	var callbackCounts [3]int

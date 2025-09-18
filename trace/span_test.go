@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -91,7 +90,7 @@ func TestLinkFromContext(t *testing.T) {
 	k1v1 := attribute.String("key1", "value1")
 	spanCtx := SpanContext{traceID: TraceID([16]byte{1}), remote: true}
 
-	receiverCtx := ContextWithRemoteSpanContext(context.Background(), spanCtx)
+	receiverCtx := ContextWithRemoteSpanContext(t.Context(), spanCtx)
 	link := LinkFromContext(receiverCtx, k1v1)
 
 	if !assertSpanContextEqual(link.SpanContext, spanCtx) {

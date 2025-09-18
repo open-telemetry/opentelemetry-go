@@ -77,17 +77,17 @@ func TestExporterExportSpan(t *testing.T) {
 		{
 			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
 			expectNow: now,
-			ctx:       context.Background(),
+			ctx:       t.Context(),
 		},
 		{
 			opts: []stdouttrace.Option{stdouttrace.WithPrettyPrint(), stdouttrace.WithoutTimestamps()},
 			// expectNow is an empty time.Time
-			ctx: context.Background(),
+			ctx: t.Context(),
 		},
 		{
 			opts: []stdouttrace.Option{},
 			ctx: func() context.Context {
-				ctx, cancel := context.WithCancel(context.Background())
+				ctx, cancel := context.WithCancel(t.Context())
 				cancel()
 				return ctx
 			}(),
@@ -214,7 +214,7 @@ func expectedJSON(now time.Time) string {
 }
 
 func TestExporterShutdownIgnoresContext(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Minute)
 	t.Cleanup(cancel)
 
 	e, err := stdouttrace.New()
@@ -234,14 +234,14 @@ func TestExporterShutdownNoError(t *testing.T) {
 		t.Fatalf("failed to create exporter: %v", err)
 	}
 
-	if err := e.Shutdown(context.Background()); err != nil {
+	if err := e.Shutdown(t.Context()); err != nil {
 		t.Errorf("shutdown errored: expected nil, got %v", err)
 	}
 }
 
 func TestObservability(t *testing.T) {
 	defaultCallExportSpans := func(t *testing.T, exporter *stdouttrace.Exporter) {
-		require.NoError(t, exporter.ExportSpans(context.Background(), tracetest.SpanStubs{
+		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{
 			{Name: "/foo"},
 			{Name: "/bar"},
 		}.Snapshots()))
@@ -358,7 +358,7 @@ func TestObservability(t *testing.T) {
 			tt.callExportSpans(t, exporter)
 
 			var rm metricdata.ResourceMetrics
-			require.NoError(t, r.Collect(context.Background(), &rm))
+			require.NoError(t, r.Collect(t.Context(), &rm))
 
 			tt.assertMetrics(t, rm)
 		})
@@ -384,7 +384,7 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			err = ex.ExportSpans(context.Background(), ss)
+			err = ex.ExportSpans(b.Context(), ss)
 		}
 		_ = err
 	}

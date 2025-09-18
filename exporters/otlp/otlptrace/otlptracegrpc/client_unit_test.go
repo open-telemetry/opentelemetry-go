@@ -136,17 +136,17 @@ func TestRetryableGRPCStatusResourceExhaustedWithRetryInfo(t *testing.T) {
 
 func TestUnstartedStop(t *testing.T) {
 	client := NewClient()
-	assert.ErrorIs(t, client.Stop(context.Background()), errAlreadyStopped)
+	assert.ErrorIs(t, client.Stop(t.Context()), errAlreadyStopped)
 }
 
 func TestUnstartedUploadTrace(t *testing.T) {
 	client := NewClient()
-	assert.ErrorIs(t, client.UploadTraces(context.Background(), nil), errShutdown)
+	assert.ErrorIs(t, client.UploadTraces(t.Context(), nil), errShutdown)
 }
 
 func TestExportContextHonorsParentDeadline(t *testing.T) {
 	now := time.Now()
-	ctx, cancel := context.WithDeadline(context.Background(), now)
+	ctx, cancel := context.WithDeadline(t.Context(), now)
 	t.Cleanup(cancel)
 
 	// Without a client timeout, the parent deadline should be used.
@@ -162,7 +162,7 @@ func TestExportContextHonorsParentDeadline(t *testing.T) {
 func TestExportContextHonorsClientTimeout(t *testing.T) {
 	// Setting a timeout should ensure a deadline is set on the context.
 	client := newClient(WithTimeout(1 * time.Second))
-	ctx, cancel := client.exportContext(context.Background())
+	ctx, cancel := client.exportContext(t.Context())
 	t.Cleanup(cancel)
 
 	_, ok := ctx.Deadline()
@@ -170,7 +170,7 @@ func TestExportContextHonorsClientTimeout(t *testing.T) {
 }
 
 func TestExportContextLinksStopSignal(t *testing.T) {
-	rootCtx := context.Background()
+	rootCtx := context.Background() //nolint:usetesting // used to assert Stop
 
 	client := newClient(WithInsecure())
 	t.Cleanup(func() { require.NoError(t, client.Stop(rootCtx)) })

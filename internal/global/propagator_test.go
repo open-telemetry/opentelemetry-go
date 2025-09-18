@@ -4,7 +4,6 @@
 package global
 
 import (
-	"context"
 	"testing"
 
 	"go.opentelemetry.io/otel/internal/internaltest"
@@ -12,7 +11,7 @@ import (
 
 func TestTextMapPropagatorDelegation(t *testing.T) {
 	ResetForTest(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	carrier := internaltest.NewTextMapCarrier(nil)
 
 	// The default should be a noop.
@@ -42,7 +41,7 @@ func TestTextMapPropagatorDelegation(t *testing.T) {
 
 func TestTextMapPropagatorDelegationNil(t *testing.T) {
 	ResetForTest(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	carrier := internaltest.NewTextMapCarrier(nil)
 
 	// The default should be a noop.

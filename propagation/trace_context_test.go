@@ -4,7 +4,6 @@
 package propagation_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -165,7 +164,7 @@ func TestExtractValidTraceContext(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(tc.header))
 			assert.Equal(t, tc.sc, trace.SpanContextFromContext(ctx))
 		})
@@ -247,7 +246,7 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := http.Header{traceparent: []string{tt.header}}
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(h))
 
 			// Failure to extract needs to result in no SpanContext being set.
@@ -316,7 +315,7 @@ func TestInjectValidTraceContext(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx = trace.ContextWithRemoteSpanContext(ctx, tc.sc)
 
 			h := http.Header{}
@@ -329,7 +328,7 @@ func TestInjectValidTraceContext(t *testing.T) {
 func TestInvalidSpanContextDropped(t *testing.T) {
 	invalidSC := trace.SpanContext{}
 	require.False(t, invalidSC.IsValid())
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), invalidSC)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), invalidSC)
 
 	header := http.Header{}
 	propagation.TraceContext{}.Inject(ctx, propagation.HeaderCarrier(header))

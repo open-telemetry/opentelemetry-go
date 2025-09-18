@@ -4,7 +4,6 @@
 package observ_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,7 +69,7 @@ func TestTracer(t *testing.T) {
 	collect := setup(t)
 	tracer := trace.NewTracerProvider().Tracer(t.Name())
 
-	_, span := tracer.Start(context.Background(), "span")
+	_, span := tracer.Start(t.Context(), "span")
 	check(t, collect(), sampledLive(1), sampledStarted(1))
 
 	span.End()
@@ -95,7 +94,7 @@ func TestTracerNonRecording(t *testing.T) {
 		trace.WithSampler(trace.NeverSample()),
 	).Tracer(t.Name())
 
-	_, _ = tracer.Start(context.Background(), "span")
+	_, _ = tracer.Start(t.Context(), "span")
 	check(t, collect(), dropStarted(1))
 }
 
@@ -138,7 +137,7 @@ func TestTracerRecordOnly(t *testing.T) {
 		trace.WithSampler(recOnly{}),
 	).Tracer(t.Name())
 
-	_, _ = tracer.Start(context.Background(), "span")
+	_, _ = tracer.Start(t.Context(), "span")
 	check(t, collect(), recLive(1), recStarted(1))
 }
 
@@ -159,7 +158,7 @@ func TestTracerRemoteParent(t *testing.T) {
 	tracer := trace.NewTracerProvider().Tracer(t.Name())
 
 	ctx := tapi.ContextWithRemoteSpanContext(
-		context.Background(),
+		t.Context(),
 		tapi.NewSpanContext(tapi.SpanContextConfig{
 			TraceID:    tapi.TraceID{0x01},
 			SpanID:     tapi.SpanID{0x01},
@@ -195,7 +194,7 @@ func TestTracerLocalParent(t *testing.T) {
 	collect := setup(t)
 	tracer := trace.NewTracerProvider().Tracer(t.Name())
 
-	ctx, parent := tracer.Start(context.Background(), "parent")
+	ctx, parent := tracer.Start(t.Context(), "parent")
 	_, child := tracer.Start(ctx, "child")
 
 	check(t, collect(), sampledLive(2), chainStarted(1, 1))
@@ -243,7 +242,7 @@ func BenchmarkTracer(b *testing.B) {
 	require.True(b, tracer.Enabled())
 
 	t := otel.GetTracerProvider().Tracer(b.Name())
-	ctx, span := t.Start(context.Background(), "parent")
+	ctx, span := t.Start(b.Context(), "parent")
 	psc := span.SpanContext()
 	span.End()
 

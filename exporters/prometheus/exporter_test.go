@@ -634,7 +634,7 @@ func TestPrometheusExporter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			registry := prometheus.NewRegistry()
 			opts := append(tc.options, WithRegisterer(registry), WithTranslationStrategy(tc.strategy))
 			exporter, err := New(opts...)
@@ -702,7 +702,7 @@ func TestPrometheusExporter(t *testing.T) {
 }
 
 func TestMultiScopes(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	registry := prometheus.NewRegistry()
 	exporter, err := New(
 		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
@@ -974,7 +974,7 @@ func TestDuplicateMetrics(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// initialize registry exporter
-			ctx := context.Background()
+			ctx := t.Context()
 			registry := prometheus.NewRegistry()
 			// This test does not set the Translation Strategy, so it defaults to
 			// UnderscoreEscapingWithSuffixes.
@@ -1029,7 +1029,7 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	// This tests makes sure that the implemented
 	// https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Collector
 	// is concurrent safe.
-	ctx := context.Background()
+	ctx := t.Context()
 	registry := prometheus.NewRegistry()
 	exporter, err := New(WithRegisterer(registry))
 	require.NoError(t, err)
@@ -1058,7 +1058,7 @@ func TestShutdownExporter(t *testing.T) {
 	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
 	otel.SetErrorHandler(eh)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	registry := prometheus.NewRegistry()
 
 	for range 3 {
@@ -1174,7 +1174,7 @@ func TestExemplars(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// initialize registry exporter
-			ctx := context.Background()
+			ctx := t.Context()
 			registry := prometheus.NewRegistry()
 			exporter, err := New(
 				WithRegisterer(registry),
@@ -1271,7 +1271,7 @@ func TestExemplars(t *testing.T) {
 }
 
 func TestExponentialHistogramScaleValidation(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("normal_exponential_histogram_works", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
@@ -1847,7 +1847,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			registry := prometheus.NewRegistry()
 
 			sc := trace.NewSpanContext(trace.SpanContextConfig{

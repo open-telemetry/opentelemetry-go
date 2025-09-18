@@ -470,7 +470,7 @@ func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollect
 func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		t.Cleanup(cancel)
 
 		t.Run("DeadlineExceeded", func(t *testing.T) {
@@ -508,7 +508,7 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("UploadLogs", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		client, coll := clientFactory(t, nil)
 
 		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
@@ -545,7 +545,7 @@ func TestClient(t *testing.T) {
 			Response: &collogpb.ExportLogsServiceResponse{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		client, _ := clientFactory(t, rCh)
 
 		defer func(orig otel.ErrorHandler) {
@@ -571,7 +571,7 @@ func TestConfig(t *testing.T) {
 		coll, err := newGRPCCollector("", rCh)
 		require.NoError(t, err)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		opts := append([]Option{
 			WithEndpoint(coll.listener.Addr().String()),
 			WithInsecure(),
@@ -587,7 +587,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc(nil, WithHeaders(headers))
 		t.Cleanup(coll.srv.Stop)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		additionalKey := "additional-custom-header"
 		ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))

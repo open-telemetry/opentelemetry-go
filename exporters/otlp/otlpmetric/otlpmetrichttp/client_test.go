@@ -57,7 +57,7 @@ func TestClient(t *testing.T) {
 }
 
 func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	coll, err := otest.NewHTTPCollector("", nil, otest.WithHTTPCollectorRespondingPlainText())
 	require.NoError(t, err)
 
@@ -74,7 +74,7 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	exp, err := New(ctx, WithEndpoint("host:invalid-port"))
 	assert.Error(t, err)
 	assert.Nil(t, exp)
@@ -91,7 +91,7 @@ func TestConfig(t *testing.T) {
 		}
 		opts = append(opts, o...)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		exp, err := New(ctx, opts...)
 		require.NoError(t, err)
 		return exp, coll
@@ -100,7 +100,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithEndpointURL", func(t *testing.T) {
 		coll, err := otest.NewHTTPCollector("", nil)
 		require.NoError(t, err)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 
 		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
 		require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestConfig(t *testing.T) {
 		key := http.CanonicalHeaderKey("my-custom-header")
 		headers := map[string]string{key: "custom-value"}
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -136,7 +136,7 @@ func TestConfig(t *testing.T) {
 			WithTimeout(time.Millisecond),
 			WithRetry(RetryConfig{Enabled: false}),
 		)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -147,7 +147,7 @@ func TestConfig(t *testing.T) {
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
 		exp, coll := factoryFunc("", nil, WithCompression(GzipCompression))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -183,7 +183,7 @@ func TestConfig(t *testing.T) {
 			MaxInterval:     time.Millisecond,
 			MaxElapsedTime:  time.Minute,
 		}))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -202,7 +202,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
 			Enabled: false,
 		}))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -220,7 +220,7 @@ func TestConfig(t *testing.T) {
 		path := "/prefix/v2/metrics"
 		ePt := fmt.Sprintf("http://localhost:0%s", path)
 		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -231,7 +231,7 @@ func TestConfig(t *testing.T) {
 		ePt := "https://localhost:0"
 		tlsCfg := &tls.Config{InsecureSkipVerify: true}
 		exp, coll := factoryFunc(ePt, nil, WithTLSClientConfig(tlsCfg))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -242,7 +242,7 @@ func TestConfig(t *testing.T) {
 		key := http.CanonicalHeaderKey("user-agent")
 		headers := map[string]string{key: "custom-user-agent"}
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -264,7 +264,7 @@ func TestConfig(t *testing.T) {
 				},
 			},
 		}))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -282,7 +282,7 @@ func TestConfig(t *testing.T) {
 			r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
 			return r.URL, nil
 		}))
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
 		// Ensure everything is flushed.
@@ -301,7 +301,7 @@ func TestConfig(t *testing.T) {
 			Err:    exporterErr,
 		}}
 		exp, coll := factoryFunc("", rCh)
-		ctx := context.Background()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })

@@ -35,40 +35,40 @@ func TestMeterConcurrentSafe(*testing.T) {
 	<-done
 }
 
-func TestForceFlushConcurrentSafe(*testing.T) {
+func TestForceFlushConcurrentSafe(t *testing.T) {
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.ForceFlush(context.Background())
+		_ = mp.ForceFlush(t.Context())
 	}()
 
-	_ = mp.ForceFlush(context.Background())
+	_ = mp.ForceFlush(t.Context())
 	<-done
 }
 
-func TestShutdownConcurrentSafe(*testing.T) {
+func TestShutdownConcurrentSafe(t *testing.T) {
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.Shutdown(context.Background())
+		_ = mp.Shutdown(t.Context())
 	}()
 
-	_ = mp.Shutdown(context.Background())
+	_ = mp.Shutdown(t.Context())
 	<-done
 }
 
-func TestMeterAndShutdownConcurrentSafe(*testing.T) {
+func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
 	const name = "TestMeterAndShutdownConcurrentSafe meter"
 	mp := NewMeterProvider()
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.Shutdown(context.Background())
+		_ = mp.Shutdown(t.Context())
 	}()
 
 	_ = mp.Meter(name)
@@ -82,12 +82,12 @@ func TestMeterDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 
 func TestForceFlushDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	mp := MeterProvider{}
-	assert.NotPanics(t, func() { _ = mp.ForceFlush(context.Background()) })
+	assert.NotPanics(t, func() { _ = mp.ForceFlush(t.Context()) })
 }
 
 func TestShutdownDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	mp := MeterProvider{}
-	assert.NotPanics(t, func() { _ = mp.Shutdown(context.Background()) })
+	assert.NotPanics(t, func() { _ = mp.Shutdown(t.Context()) })
 }
 
 func TestMeterProviderReturnsSameMeter(t *testing.T) {
@@ -120,7 +120,7 @@ func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
 	_, ok := m.(noop.Meter)
 	assert.False(t, ok, "Meter from running MeterProvider is NoOp")
 
-	require.NoError(t, mp.Shutdown(context.Background()))
+	require.NoError(t, mp.Shutdown(t.Context()))
 
 	m = mp.Meter("")
 	_, ok = m.(noop.Meter)
@@ -163,11 +163,11 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 	)
 
 	var data metricdata.ResourceMetrics
-	_ = rdr0.Collect(context.Background(), &data)
+	_ = rdr0.Collect(t.Context(), &data)
 	// Only the metrics from mp0 should be produced.
 	assert.Len(t, data.ScopeMetrics, 1)
 
-	err = rdr1.Collect(context.Background(), &data)
+	err = rdr1.Collect(t.Context(), &data)
 	assert.NoError(t, err, "Errored when collect should be a noop")
 	assert.Empty(
 		t, data.ScopeMetrics,
@@ -218,14 +218,14 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 
 			for i := range uniqueAttributesCount {
 				counter.Add(
-					context.Background(),
+					t.Context(),
 					1,
 					api.WithAttributes(attribute.Int("key", i)),
 				)
 			}
 
 			var rm metricdata.ResourceMetrics
-			err = reader.Collect(context.Background(), &rm)
+			err = reader.Collect(t.Context(), &rm)
 			require.NoError(t, err, "failed to collect metrics")
 
 			require.Len(t, rm.ScopeMetrics, 1, "expected 1 ScopeMetrics")
