@@ -5,11 +5,17 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 
@@ -746,7 +752,8 @@ func TestClientObservability(t *testing.T) {
 					0,
 				)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
-				wantErr := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
+				var wantErr error
+				wantErr = errors.Join(wantErr, errPartial{msg: msg, n: n})
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -840,18 +847,8 @@ func TestClientObservability(t *testing.T) {
 					},
 				}
 
-				defer func(orig otel.ErrorHandler) {
-					otel.SetErrorHandler(orig)
-				}(otel.GetErrorHandler())
-
-				var errs []error
-				eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-				otel.SetErrorHandler(eh)
-
-				require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-
-				require.Len(t, errs, 1)
-				assert.ErrorContains(t, errs[0], wantErr.Error())
+				err := client.UploadLogs(ctx, resourceLogs)
+				assert.ErrorContains(t, err, wantErr.Error())
 
 				g := scopeMetrics()
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
@@ -869,17 +866,20 @@ func TestClientObservability(t *testing.T) {
 			name:    "upload failure",
 			enabled: true,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
-				wantErr := status.Error(codes.InvalidArgument, "request contains invalid arguments")
+				err := status.Error(codes.InvalidArgument, "request contains invalid arguments")
+				var wantErr error
+				wantErr = errors.Join(wantErr, err)
+
 				wantErrTypeAttr := semconv.ErrorType(wantErr)
 				wantGRPCStatusCodeAttr := otelconv.RPCGRPCStatusCodeAttr(codes.InvalidArgument)
 				rCh := make(chan exportResult, 1)
 				rCh <- exportResult{
-					Err: wantErr,
+					Err: err,
 				}
 				ctx := context.Background()
 				client, _ := clientFactory(t, rCh)
-				err := client.UploadLogs(ctx, resourceLogs)
-				assert.ErrorContains(t, err, "request contains invalid arguments")
+				uploadErr := client.UploadLogs(ctx, resourceLogs)
+				assert.ErrorContains(t, uploadErr, "request contains invalid arguments")
 
 				componentName := fmt.Sprintf(
 					"%s/%d",
@@ -1015,6 +1015,160 @@ func TestClientObservability(t *testing.T) {
 			tc.test(t, scopeMetrics)
 		})
 	}
+}
+
+func TestClientObservabilityWithRetry(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	_ = counter.SetExporterID(0)
+	prev := otel.GetMeterProvider()
+	t.Cleanup(func() {
+		otel.SetMeterProvider(prev)
+	})
+
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otel.SetMeterProvider(mp)
+
+	scopeMetrics := func() metricdata.ScopeMetrics {
+		var got metricdata.ResourceMetrics
+		err := r.Collect(context.Background(), &got)
+		require.NoError(t, err)
+		require.Len(t, got.ScopeMetrics, 1)
+		return got.ScopeMetrics[0]
+	}
+
+	rCh := make(chan exportResult, 2)
+	rCh <- exportResult{
+		Err: status.Error(codes.Unavailable, "service temporarily unavailable"),
+	}
+	const n, msg = 1, "some logs rejected"
+	rCh <- exportResult{
+		Response: &collogpb.ExportLogsServiceResponse{
+			PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+				RejectedLogRecords: n,
+				ErrorMessage:       msg,
+			},
+		},
+	}
+
+	ctx := context.Background()
+	client, _ := clientFactory(t, rCh)
+
+	componentName := fmt.Sprintf(
+		"%s/%d",
+		otelconv.ComponentTypeOtlpGRPCLogExporter,
+		0,
+	)
+	serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+	var wantErr error
+	wantErr = errors.Join(wantErr, errPartial{msg: msg, n: n})
+
+	wantMetrics := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
+			Version:   internal.Version,
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterLogInflight{}.Name(),
+				Description: otelconv.SDKExporterLogInflight{}.Description(),
+				Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKExporterLogInflight{}.AttrComponentName(componentName),
+								otelconv.SDKExporterLogInflight{}.AttrComponentType(
+									otelconv.ComponentTypeOtlpGRPCLogExporter,
+								),
+								serverAddrAttrs[0],
+								serverAddrAttrs[1],
+							),
+							Value: 0,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterLogExported{}.Name(),
+				Description: otelconv.SDKExporterLogExported{}.Description(),
+				Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+								otelconv.SDKExporterLogExported{}.AttrComponentType(
+									otelconv.ComponentTypeOtlpGRPCLogExporter,
+								),
+								serverAddrAttrs[0],
+								serverAddrAttrs[1],
+							),
+							Value: int64(len(resourceLogs)) - n,
+						},
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+								otelconv.SDKExporterLogExported{}.AttrComponentType(
+									otelconv.ComponentTypeOtlpGRPCLogExporter,
+								),
+								serverAddrAttrs[0],
+								serverAddrAttrs[1],
+								semconv.ErrorType(wantErr),
+							),
+							Value: n,
+						},
+					},
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKExporterLogExported{}.AttrComponentName(componentName),
+								otelconv.SDKExporterOperationDuration{}.AttrComponentType(
+									otelconv.ComponentTypeOtlpGRPCLogExporter,
+								),
+								otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+									otelconv.RPCGRPCStatusCodeAttr(
+										status.Code(wantErr),
+									),
+								),
+								serverAddrAttrs[0],
+								serverAddrAttrs[1],
+								semconv.ErrorType(wantErr),
+							),
+							Count: 1,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := client.UploadLogs(ctx, resourceLogs)
+	assert.ErrorContains(t, err, wantErr.Error())
+
+	g := scopeMetrics()
+	metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(
+		t,
+		wantMetrics.Metrics[2],
+		g.Metrics[2],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue(),
+	)
 }
 
 func BenchmarkExporterExportLogs(b *testing.B) {

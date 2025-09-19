@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
@@ -139,8 +138,23 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
+	success := int64(len(rl))
+
+	if c.instrumentation != nil {
+		count := len(rl)
+		trackExportFunc := c.instrumentation.ExportLogs(ctx, int64(count))
+		defer func() {
+			if uploadErr != nil {
+				trackExportFunc(uploadErr, success, status.Code(uploadErr))
+				return
+			}
+			trackExportFunc(uploadErr, success, status.Code(uploadErr))
+		}()
+	}
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
+		success = int64(len(rl))
+
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
