@@ -138,11 +138,10 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	success := int64(len(rl))
-
+	count := int64(len(rl))
+	var success int64
 	if c.instrumentation != nil {
-		count := len(rl)
-		trackExportFunc := c.instrumentation.ExportLogs(ctx, int64(count))
+		trackExportFunc := c.instrumentation.ExportLogs(ctx, count)
 		defer func() {
 			if uploadErr != nil {
 				trackExportFunc(uploadErr, success, status.Code(uploadErr))
@@ -153,7 +152,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	}
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
-		success = int64(len(rl))
+		success = count
 
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
