@@ -9,7 +9,6 @@ package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlp
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -18,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -257,22 +256,11 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			ctx := context.Background()
 			client, _ := f(rCh)
 
-			defer func(orig otel.ErrorHandler) {
-				otel.SetErrorHandler(orig)
-			}(otel.GetErrorHandler())
-
-			errs := []error{}
-			eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-			otel.SetErrorHandler(eh)
-
-			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
-			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
-			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
-			require.NoError(t, client.Shutdown(ctx))
-
-			require.Len(t, errs, 1)
-			want := fmt.Sprintf("%s (%d metric data points rejected)", msg, n)
-			assert.ErrorContains(t, errs[0], want)
+			wantErr := internal.MetricPartialSuccessError(0, "")
+			assert.ErrorIs(t, client.UploadMetrics(ctx, resourceMetrics), wantErr)
+			assert.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			assert.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
+			assert.NoError(t, client.Shutdown(ctx))
 		})
 	}
 }

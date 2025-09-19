@@ -38,11 +38,7 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 var (
@@ -560,21 +556,9 @@ func TestClient(t *testing.T) {
 		ctx := context.Background()
 		client, _ := clientFactory(t, rCh)
 
-		defer func(orig otel.ErrorHandler) {
-			otel.SetErrorHandler(orig)
-		}(otel.GetErrorHandler())
-
-		var errs []error
-		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-		otel.SetErrorHandler(eh)
-
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-
-		require.Len(t, errs, 1)
-		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-		assert.ErrorContains(t, errs[0], want)
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
 }
 

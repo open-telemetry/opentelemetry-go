@@ -128,7 +128,7 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 // The otlplog.Exporter synchronizes access to client methods, and
 // ensures this is not called after the Exporter is shutdown. Only thing
 // to do here is send data.
-func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err error) {
+func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uploadErr error) {
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
@@ -139,33 +139,18 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	success := int64(len(rl))
-	// partialSuccessErr records an error when the export is partially successful.
-	var partialSuccessErr error
-	if c.instrumentation != nil {
-		count := len(rl)
-		trackExportFunc := c.instrumentation.ExportLogs(ctx, int64(count))
-		defer func() {
-			if partialSuccessErr != nil {
-				trackExportFunc(partialSuccessErr, success, status.Code(partialSuccessErr))
-				return
-			}
-			trackExportFunc(err, success, status.Code(err))
-		}()
-	}
 
-	return c.requestFunc(ctx, func(ctx context.Context) error {
+	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
-
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			success -= n
 			if n != 0 || msg != "" {
-				partialSuccessErr = fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				otel.Handle(partialSuccessErr)
+				err := errPartial{msg: msg, n: n}
+				uploadErr = errors.Join(uploadErr, err)
 			}
 		}
 		// nil is converted to OK.
@@ -175,7 +160,24 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (err 
 		}
 		success = 0
 		return err
-	})
+	}))
+}
+
+type errPartial struct {
+	msg string
+	n   int64
+}
+
+var _ error = errPartial{}
+
+func (e errPartial) Error() string {
+	const form = "OTLP partial success: %s (%d log records rejected)"
+	return fmt.Sprintf(form, e.msg, e.n)
+}
+
+func (errPartial) Is(target error) bool {
+	_, ok := target.(errPartial)
+	return ok
 }
 
 // Shutdown shuts down the client, freeing all resources.
