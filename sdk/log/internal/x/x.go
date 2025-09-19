@@ -27,9 +27,6 @@ func newFeature[T any](suffix []string, parse func(string) (T, bool)) Feature[T]
 	}
 }
 
-// Keep a package-local reference to ensure analyzers recognize usage of generic helper.
-var _ any = newFeature[string]
-
 // Keys returns the environment variable keys that can be set to enable the
 // feature.
 func (f Feature[T]) Keys() []string { return f.keys }
