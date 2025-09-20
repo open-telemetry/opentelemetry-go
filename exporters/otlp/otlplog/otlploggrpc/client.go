@@ -21,6 +21,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
 
@@ -37,6 +39,8 @@ type client struct {
 	ourConn bool
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
+
+	instrumentation *observ.Instrumentation
 }
 
 // Used for testing.
@@ -71,7 +75,10 @@ func newClient(cfg config) (*client, error) {
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
 
-	return c, nil
+	var err error
+	id := counter.NextExporterID()
+	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
+	return c, err
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -131,13 +138,29 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
+	count := int64(len(rl))
+	var success int64
+	if c.instrumentation != nil {
+		trackExportFunc := c.instrumentation.ExportLogs(ctx, count)
+		defer func() {
+			if uploadErr != nil {
+				trackExportFunc(uploadErr, success, status.Code(uploadErr))
+				return
+			}
+			trackExportFunc(uploadErr, success, status.Code(uploadErr))
+		}()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
+		success = count
+
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
+			success -= n
 			if n != 0 || msg != "" {
 				err := errPartial{msg: msg, n: n}
 				uploadErr = errors.Join(uploadErr, err)
@@ -148,6 +171,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 			// Success.
 			return nil
 		}
+		success = 0
 		return err
 	}))
 }
