@@ -178,9 +178,9 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			}
 			dp := h.values[alice.Equivalent()]
 
-			assert.Equal(t, tt.expected.max, dp.max)
-			assert.Equal(t, tt.expected.min, dp.min)
-			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
+			assert.Equal(t, tt.expected.max, dp.minMax.loadMax())
+			assert.Equal(t, tt.expected.min, dp.minMax.loadMin())
+			assert.InDelta(t, tt.expected.sum, dp.sum.load(), 0.01)
 		})
 	}
 }
@@ -220,9 +220,9 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			}
 			dp := h.values[alice.Equivalent()]
 
-			assert.Equal(t, tt.expected.max, dp.max)
-			assert.Equal(t, tt.expected.min, dp.min)
-			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
+			assert.Equal(t, tt.expected.max, dp.minMax.loadMax())
+			assert.Equal(t, tt.expected.min, dp.minMax.loadMin())
+			assert.InDelta(t, tt.expected.sum, dp.sum.load(), 0.01)
 		})
 	}
 }
@@ -703,19 +703,9 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 }
 
 func TestSubNormal(t *testing.T) {
-	want := &expoHistogramDataPoint[float64]{
-		attrs:   alice,
-		maxSize: 4,
-		count:   3,
-		min:     math.SmallestNonzeroFloat64,
-		max:     math.SmallestNonzeroFloat64,
-		sum:     3 * math.SmallestNonzeroFloat64,
-
-		scale: 20,
-		posBuckets: expoBuckets{
-			startBin: -1126170625,
-			counts:   []uint64{3},
-		},
+	wantBuckets := expoBuckets{
+		startBin: -1126170625,
+		counts:   []uint64{3},
 	}
 
 	ehdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
@@ -723,7 +713,14 @@ func TestSubNormal(t *testing.T) {
 	ehdp.record(math.SmallestNonzeroFloat64)
 	ehdp.record(math.SmallestNonzeroFloat64)
 
-	assert.Equal(t, want, ehdp)
+	assert.Equal(t, alice, ehdp.attrs)
+	assert.Equal(t, 4, ehdp.maxSize)
+	assert.Equal(t, uint64(3), ehdp.count)
+	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.minMax.loadMin())
+	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.minMax.loadMax())
+	assert.Equal(t, 3*math.SmallestNonzeroFloat64, ehdp.sum.load())
+	assert.Equal(t, int32(20), ehdp.scale)
+	assert.Equal(t, wantBuckets, ehdp.posBuckets)
 }
 
 func TestExponentialHistogramAggregation(t *testing.T) {
