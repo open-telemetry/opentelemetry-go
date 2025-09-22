@@ -597,7 +597,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithEndpointURL", func(t *testing.T) {
 		coll, err := newHTTPCollector("", nil)
 		require.NoError(t, err)
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 
 		target := "http://" + coll.Addr().String() + defaultPath
 		exp, err := New(ctx, WithEndpointURL(target))
@@ -613,7 +613,7 @@ func TestConfig(t *testing.T) {
 		key := http.CanonicalHeaderKey("my-custom-header")
 		headers := map[string]string{key: "custom-value"}
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
 		// Ensure everything is flushed.
@@ -681,7 +681,7 @@ func TestConfig(t *testing.T) {
 			MaxInterval:     time.Millisecond,
 			MaxElapsedTime:  time.Minute,
 		}))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -700,7 +700,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
 			Enabled: false,
 		}))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })
@@ -718,7 +718,7 @@ func TestConfig(t *testing.T) {
 		path := "/prefix/v2/logs"
 		ePt := fmt.Sprintf("http://localhost:0%s", path)
 		exp, coll := factoryFunc(ePt, nil, WithURLPath(path))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
@@ -740,7 +740,7 @@ func TestConfig(t *testing.T) {
 		key := http.CanonicalHeaderKey("user-agent")
 		headers := map[string]string{key: "custom-user-agent"}
 		exp, coll := factoryFunc("", nil, WithHeaders(headers))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
 		// Ensure everything is flushed.
@@ -758,7 +758,7 @@ func TestConfig(t *testing.T) {
 			r.Header.Set(headerKeySetInProxy, headerValueSetInProxy)
 			return r.URL, nil
 		}))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
 		// Ensure everything is flushed.
@@ -780,7 +780,7 @@ func TestConfig(t *testing.T) {
 				},
 			},
 		}))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
 		// Ensure everything is flushed.
@@ -802,7 +802,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc("", rCh, WithRetry(RetryConfig{
 			Enabled: false,
 		}))
-		ctx := t.Context()
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		// Push this after Shutdown so the HTTP server doesn't hang.
 		t.Cleanup(func() { close(rCh) })

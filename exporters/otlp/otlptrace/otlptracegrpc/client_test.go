@@ -99,7 +99,7 @@ func TestNewEndToEnd(t *testing.T) {
 func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 
-	ctx := t.Context()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpointURL("http://" + mc.endpoint),
 	}...)
@@ -138,7 +138,7 @@ func newGRPCExporter(
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option) {
 	mc := runMockCollector(t)
 
-	ctx := t.Context()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
 	t.Cleanup(func() {
 		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
@@ -168,7 +168,7 @@ func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := t.Context()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
@@ -271,7 +271,8 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
-	ctx, cancel := contextWithTimeout(t.Context(), t, 10*time.Second)
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
 	t.Cleanup(cancel)
 
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
