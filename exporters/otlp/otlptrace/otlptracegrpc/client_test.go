@@ -24,10 +24,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -406,18 +406,13 @@ func TestPartialSuccess(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	errs := []error{}
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errs = append(errs, err)
-	}))
-	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	ctx := context.Background()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
-	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
-	require.Len(t, errs, 1)
-	require.Contains(t, errs[0].Error(), "partially successful")
-	require.Contains(t, errs[0].Error(), "2 spans rejected")
+	err := exp.ExportSpans(ctx, roSpans)
+	want := internal.TracePartialSuccessError(0, "")
+	assert.ErrorIs(t, err, want)
 }
 
 func TestCustomUserAgent(t *testing.T) {

@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
 
@@ -121,7 +120,7 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 // The otlplog.Exporter synchronizes access to client methods, and
 // ensures this is not called after the Exporter is shutdown. Only thing
 // to do here is send data.
-func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error {
+func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uploadErr error) {
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
@@ -132,7 +131,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	return c.requestFunc(ctx, func(ctx context.Context) error {
+	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
@@ -140,8 +139,8 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
-				err := fmt.Errorf("OTLP partial success: %s (%d log records rejected)", msg, n)
-				otel.Handle(err)
+				err := errPartial{msg: msg, n: n}
+				uploadErr = errors.Join(uploadErr, err)
 			}
 		}
 		// nil is converted to OK.
@@ -150,7 +149,24 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 			return nil
 		}
 		return err
-	})
+	}))
+}
+
+type errPartial struct {
+	msg string
+	n   int64
+}
+
+var _ error = errPartial{}
+
+func (e errPartial) Error() string {
+	const form = "OTLP partial success: %s (%d log records rejected)"
+	return fmt.Sprintf(form, e.msg, e.n)
+}
+
+func (errPartial) Is(target error) bool {
+	_, ok := target.(errPartial)
+	return ok
 }
 
 // Shutdown shuts down the client, freeing all resources.

@@ -5,7 +5,6 @@ package otlptracehttp_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -20,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 )
 
@@ -270,15 +270,11 @@ func TestNoRetry(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "))
 
-	unwrapped := errors.Unwrap(err)
-	assert.Contains(
-		t,
-		unwrapped.Error(),
-		fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint),
-	)
+	msg := fmt.Sprintf("failed to send to http://%s/v1/traces: 400 Bad Request", mc.endpoint)
+	assert.ErrorContains(t, err, msg)
 
-	unwrapped2 := errors.Unwrap(unwrapped)
-	assert.Contains(t, unwrapped2.Error(), "missing required attribute aaa")
+	msg = "missing required attribute aaa"
+	assert.ErrorContains(t, err, msg)
 
 	assert.Empty(t, mc.GetSpans())
 }
@@ -417,16 +413,9 @@ func TestPartialSuccess(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(t.Context()))
 	}()
 
-	errs := []error{}
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		errs = append(errs, err)
-	}))
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.NoError(t, err)
-
-	require.Len(t, errs, 1)
-	require.Contains(t, errs[0].Error(), "partially successful")
-	require.Contains(t, errs[0].Error(), "2 spans rejected")
+	want := internal.TracePartialSuccessError(0, "")
+	assert.ErrorIs(t, err, want)
 }
 
 func TestOtherHTTPSuccess(t *testing.T) {

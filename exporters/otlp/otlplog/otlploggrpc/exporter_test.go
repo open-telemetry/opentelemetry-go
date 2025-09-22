@@ -6,7 +6,6 @@ package otlploggrpc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -17,7 +16,6 @@ import (
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
@@ -216,20 +214,8 @@ func TestExporter(t *testing.T) {
 		c, _ := clientFactory(t, rCh)
 		e := newExporter(c)
 
-		defer func(orig otel.ErrorHandler) {
-			otel.SetErrorHandler(orig)
-		}(otel.GetErrorHandler())
-
-		var errs []error
-		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-		otel.SetErrorHandler(eh)
-
-		require.NoError(t, e.Export(ctx, records))
-		require.NoError(t, e.Export(ctx, records))
-		require.NoError(t, e.Export(ctx, records))
-
-		require.Len(t, errs, 1)
-		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-		assert.ErrorContains(t, errs[0], want)
+		assert.ErrorIs(t, e.Export(ctx, records), errPartial{})
+		assert.NoError(t, e.Export(ctx, records))
+		assert.NoError(t, e.Export(ctx, records))
 	})
 }

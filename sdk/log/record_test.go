@@ -5,7 +5,10 @@ package log
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -921,6 +924,89 @@ func TestTruncate(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
+	if race() {
+		t.Skip("TODO: Fix bug https://github.com/open-telemetry/opentelemetry-go/issues/7364.")
+	}
+
+	nestedSlice := log.Slice("nested_slice",
+		log.SliceValue(log.StringValue("nested_inner1"), log.StringValue("nested_inner2")),
+		log.StringValue("nested_outer"),
+	)
+
+	nestedMap := log.Map("nested_map",
+		log.String("nested_key1", "nested_value1"),
+		log.Map("nested_map", log.String("nested_inner_key", "nested_inner_value")),
+		log.String("nested_key1", "duplicate"), // This will trigger dedup.
+	)
+
+	dedupAttributes := []log.KeyValue{
+		log.String("dedup_key1", "dedup_value1"),
+		log.String("dedup_key2", "dedup_value2"),
+		log.String("dedup_key1", "duplicate"),    // This will trigger the dedup.
+		log.String("dedup_key3", "dedup_value3"), // This will trigger attr count limit.
+	}
+
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			r := &Record{
+				attributeValueLengthLimit: 10,
+				attributeCountLimit:       4,
+				allowDupKeys:              false,
+			}
+
+			r.SetAttributes(nestedSlice)
+			r.AddAttributes(nestedMap)
+			r.AddAttributes(dedupAttributes...)
+			r.SetBody(nestedMap.Value)
+
+			var gotAttrs []log.KeyValue
+			r.WalkAttributes(func(kv log.KeyValue) bool {
+				gotAttrs = append(gotAttrs, kv)
+				return true
+			})
+			wantAttr := []log.KeyValue{
+				log.Slice("nested_slice",
+					log.SliceValue(log.StringValue("nested_inn"), log.StringValue("nested_inn")),
+					log.StringValue("nested_out"),
+				),
+				log.Map("nested_map",
+					log.String("nested_key1", "duplicate"),
+					log.Map("nested_map", log.String("nested_inner_key", "nested_inn")),
+				),
+				log.String("dedup_key1", "duplicate"),
+				log.String("dedup_key2", "dedup_valu"),
+			}
+			if !slices.EqualFunc(gotAttrs, wantAttr, func(a, b log.KeyValue) bool { return a.Equal(b) }) {
+				t.Errorf("Attributes do not match.\ngot:\n%v\nwant:\n%v", printKVs(gotAttrs), printKVs(wantAttr))
+			}
+
+			gotBody := r.Body()
+			wantBody := log.MapValue(
+				log.String("nested_key1", "duplicate"),
+				log.Map("nested_map", log.String("nested_inner_key", "nested_inn")),
+			)
+			if !gotBody.Equal(wantBody) {
+				t.Errorf("Body does not match.\ngot:\n%v\nwant:\n%v", gotBody, wantBody)
+			}
+		}()
+	}
+
+	wg.Wait()
+}
+
+func printKVs(kvs []log.KeyValue) string {
+	var sb strings.Builder
+	for _, kv := range kvs {
+		_, _ = sb.WriteString(fmt.Sprintf("%s: %s\n", kv.Key, kv.Value))
+	}
+	return sb.String()
 }
 
 func BenchmarkTruncate(b *testing.B) {
