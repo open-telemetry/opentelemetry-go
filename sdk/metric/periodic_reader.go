@@ -27,12 +27,14 @@ type periodicReaderConfig struct {
 	interval  time.Duration
 	timeout   time.Duration
 	producers []Producer
+	context   context.Context
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
+		context:  context.Background(),
 		interval: envDuration(envInterval, defaultInterval),
 		timeout:  envDuration(envTimeout, defaultTimeout),
 	}
@@ -94,6 +96,17 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 	})
 }
 
+// WithContext allows setting a context to be used when calling the collector.
+// If no context is set, the PeriodicReader will use a background context.
+// This can be used to pass context to the called collectors, such as logging
+// or tracing information.
+func WithContext(ctx context.Context) PeriodicReaderOption {
+	return periodicReaderOptionFunc(func(conf periodicReaderConfig) periodicReaderConfig {
+		conf.context = ctx
+		return conf
+	})
+}
+
 // NewPeriodicReader returns a Reader that collects and exports metric data to
 // the exporter at a defined interval. By default, the returned Reader will
 // collect and export data every 60 seconds, and will cancel any attempts that
@@ -105,7 +118,7 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // exporter. That is left to the user to accomplish.
 func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *PeriodicReader {
 	conf := newPeriodicReaderConfig(options)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(conf.context)
 	r := &PeriodicReader{
 		interval: conf.interval,
 		timeout:  conf.timeout,
