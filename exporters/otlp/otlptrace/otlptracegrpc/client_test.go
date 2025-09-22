@@ -406,7 +406,7 @@ func TestPartialSuccess(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 

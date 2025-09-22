@@ -1352,7 +1352,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			context.Background(),
+			t.Context(),
 		)
 		assert.Error(t, capturedError)
 		assert.Contains(t, capturedError.Error(), "scale -5 is below minimum")
@@ -1518,7 +1518,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			context.Background(),
+			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -1582,7 +1582,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			context.Background(),
+			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -1646,7 +1646,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			context.Background(),
+			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -1704,7 +1704,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			context.Background(),
+			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -2071,7 +2071,7 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 				observMetricsFunc = func() metricdata.ScopeMetrics {
 					var rm metricdata.ResourceMetrics
-					err := observReader.Collect(context.Background(), &rm)
+					err := observReader.Collect(t.Context(), &rm)
 					require.NoError(t, err)
 					if len(rm.ScopeMetrics) == 0 {
 						return metricdata.ScopeMetrics{}
@@ -2080,7 +2080,7 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				}
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			registry := prometheus.NewRegistry()
 
 			exporter, err := New(WithRegisterer(registry))
@@ -2152,6 +2152,7 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 			name: "reader shutdown error",
 			setupError: func() (metric.Reader, func()) {
 				reader := metric.NewManualReader()
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				return reader, func() { _ = reader.Shutdown(context.Background()) }
 			},
 			expectedMinMetrics: 1, // At least some metrics should be present
@@ -2214,7 +2215,7 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 
 			// Collect observability metrics
 			var observMetrics metricdata.ResourceMetrics
-			err = observReader.Collect(context.Background(), &observMetrics)
+			err = observReader.Collect(t.Context(), &observMetrics)
 			require.NoError(t, err)
 
 			if len(observMetrics.ScopeMetrics) > 0 {
@@ -2257,7 +2258,7 @@ func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 	observMP := metric.NewMeterProvider(metric.WithReader(observReader))
 	otel.SetMeterProvider(observMP)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	registry := prometheus.NewRegistry()
 
 	exporter, err := New(WithRegisterer(registry))
@@ -2297,7 +2298,7 @@ func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 
 	// Collect observability metrics
 	var observMetrics metricdata.ResourceMetrics
-	err = observReader.Collect(context.Background(), &observMetrics)
+	err = observReader.Collect(t.Context(), &observMetrics)
 	require.NoError(t, err)
 
 	if len(observMetrics.ScopeMetrics) > 0 {
@@ -2340,7 +2341,7 @@ func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
 	observMP := metric.NewMeterProvider(metric.WithReader(observReader))
 	otel.SetMeterProvider(observMP)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	registry := prometheus.NewRegistry()
 
 	exporter, err := New(WithRegisterer(registry))
@@ -2382,7 +2383,7 @@ func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
 
 	// Collect observability metrics
 	var observMetrics metricdata.ResourceMetrics
-	err = observReader.Collect(context.Background(), &observMetrics)
+	err = observReader.Collect(t.Context(), &observMetrics)
 	require.NoError(t, err)
 
 	if len(observMetrics.ScopeMetrics) > 0 {
