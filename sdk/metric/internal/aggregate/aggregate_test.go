@@ -95,7 +95,7 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
 					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
 				})
-				meas(context.Background(), value, attr)
+				meas(t.Context(), value, attr)
 			}
 		}
 
@@ -152,7 +152,7 @@ func benchmarkAggregate[N int64 | float64](factory func() (Measure[N], ComputeAg
 var bmarkRes metricdata.Aggregation
 
 func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measure[N], ComputeAggregation), count int) {
-	ctx := context.Background()
+	ctx := b.Context()
 	attrs := make([]attribute.Set, count)
 	for i := range attrs {
 		attrs[i] = attribute.NewSet(attribute.Int("value", i))

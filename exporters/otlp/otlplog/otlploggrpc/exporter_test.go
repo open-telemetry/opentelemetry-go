@@ -85,7 +85,7 @@ func TestExporterExport(t *testing.T) {
 
 			e := newExporter(&mockCli)
 
-			err := e.Export(context.Background(), tc.logs)
+			err := e.Export(t.Context(), tc.logs)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.logs, got)
 			assert.Equal(t, 1, mockCli.uploads)
@@ -94,7 +94,7 @@ func TestExporterExport(t *testing.T) {
 }
 
 func TestExporterShutdown(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "New")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
@@ -108,20 +108,20 @@ func TestExporterShutdown(t *testing.T) {
 }
 
 func TestExporterForceFlush(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "New")
 
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
 }
 
-func TestExporterConcurrentSafe(*testing.T) {
+func TestExporterConcurrentSafe(t *testing.T) {
 	e := newExporter(&mockClient{})
 
 	const goroutines = 10
 
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	runs := new(uint64)
 	for range goroutines {
 		wg.Add(1)
@@ -170,7 +170,7 @@ func TestExporter(t *testing.T) {
 	})
 
 	t.Run("Export", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		c, coll := clientFactory(t, nil)
 		e := newExporter(c)
 
@@ -210,7 +210,7 @@ func TestExporter(t *testing.T) {
 			Response: &collogpb.ExportLogsServiceResponse{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		c, _ := clientFactory(t, rCh)
 		e := newExporter(c)
 

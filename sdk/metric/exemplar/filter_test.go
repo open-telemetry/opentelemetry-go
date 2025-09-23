@@ -18,7 +18,7 @@ func TestTraceBasedFilter(t *testing.T) {
 }
 
 func testTraceBasedFilter[N int64 | float64](t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	assert.False(t, TraceBasedFilter(ctx), "non-sampled context should not be offered")
 	assert.True(t, TraceBasedFilter(sample(ctx)), "sampled context should be offered")
@@ -39,7 +39,7 @@ func TestAlwaysOnFilter(t *testing.T) {
 }
 
 func testAlwaysOnFiltered[N int64 | float64](t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	assert.True(t, AlwaysOnFilter(ctx), "non-sampled context should not be offered")
 	assert.True(t, AlwaysOnFilter(sample(ctx)), "sampled context should be offered")

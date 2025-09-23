@@ -82,7 +82,7 @@ func TestMultiplePropagators(t *testing.T) {
 	testProps := []propagation.TextMapPropagator{
 		propagation.TraceContext{},
 	}
-	bg := context.Background()
+	bg := t.Context()
 	// sanity check of oota propagator, ensuring that it really
 	// generates the valid span context out of thin air
 	{

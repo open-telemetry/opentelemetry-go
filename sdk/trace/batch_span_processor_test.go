@@ -94,16 +94,16 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	tp.RegisterSpanProcessor(bsp)
 	tr := tp.Tracer("NilExporter")
 
-	_, span := tr.Start(context.Background(), "foo")
+	_, span := tr.Start(t.Context(), "foo")
 	span.End()
 
 	// These should not panic.
-	bsp.OnStart(context.Background(), span.(ReadWriteSpan))
+	bsp.OnStart(t.Context(), span.(ReadWriteSpan))
 	bsp.OnEnd(span.(ReadOnlySpan))
-	if err := bsp.ForceFlush(context.Background()); err != nil {
+	if err := bsp.ForceFlush(t.Context()); err != nil {
 		t.Errorf("failed to ForceFlush the BatchSpanProcessor: %v", err)
 	}
-	if err := bsp.Shutdown(context.Background()); err != nil {
+	if err := bsp.Shutdown(t.Context()); err != nil {
 		t.Errorf("failed to Shutdown the BatchSpanProcessor: %v", err)
 	}
 }
@@ -336,20 +336,20 @@ func createAndRegisterBatchSP(option testOption, te *testBatchExporter) SpanProc
 	return NewBatchSpanProcessor(te, options...)
 }
 
-func generateSpan(_ *testing.T, tr trace.Tracer, option testOption) {
+func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	for i := 0; i < option.genNumSpans; i++ {
 		tid := sc.TraceID()
 		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
 		newSc := sc.WithTraceID(tid)
-		ctx := trace.ContextWithRemoteSpanContext(context.Background(), newSc)
+		ctx := trace.ContextWithRemoteSpanContext(t.Context(), newSc)
 		_, span := tr.Start(ctx, option.name)
 		span.End()
 	}
 }
 
-func generateSpanParallel(_ *testing.T, tr trace.Tracer, option testOption) {
+func generateSpanParallel(t *testing.T, tr trace.Tracer, option testOption) {
 	sc := getSpanContext()
 
 	wg := &sync.WaitGroup{}
@@ -359,7 +359,7 @@ func generateSpanParallel(_ *testing.T, tr trace.Tracer, option testOption) {
 
 		wg.Add(1)
 		go func(sc trace.SpanContext) {
-			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 			_, span := tr.Start(ctx, option.name)
 			span.End()
 			wg.Done()
@@ -382,14 +382,14 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 	var bp testBatchExporter
 	bsp := NewBatchSpanProcessor(&bp)
 
-	err := bsp.Shutdown(context.Background())
+	err := bsp.Shutdown(t.Context())
 	if err != nil {
 		t.Error("Error shutting the BatchSpanProcessor down\n")
 	}
 	assert.Equal(t, 1, bp.shutdownCount, "shutdown from span exporter not called")
 
 	// Multiple call to Shutdown() should not panic.
-	err = bsp.Shutdown(context.Background())
+	err = bsp.Shutdown(t.Context())
 	if err != nil {
 		t.Error("Error shutting the BatchSpanProcessor down\n")
 	}
@@ -411,12 +411,12 @@ func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 		genNumSpans: 60,
 	})
 
-	require.NoError(t, bsp.Shutdown(context.Background()), "shutting down BatchSpanProcessor")
+	require.NoError(t, bsp.Shutdown(t.Context()), "shutting down BatchSpanProcessor")
 	lenJustAfterShutdown := be.len()
 
-	_, span := tr.Start(context.Background(), "foo")
+	_, span := tr.Start(t.Context(), "foo")
 	span.End()
-	assert.NoError(t, bsp.ForceFlush(context.Background()), "force flushing BatchSpanProcessor")
+	assert.NoError(t, bsp.ForceFlush(t.Context()), "force flushing BatchSpanProcessor")
 
 	assert.Equal(t, lenJustAfterShutdown, be.len(), "OnEnd and ForceFlush should have no effect after Shutdown")
 }
@@ -447,7 +447,7 @@ func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
 	}
 
 	// Force flush any held span batches
-	err := ssp.ForceFlush(context.Background())
+	err := ssp.ForceFlush(t.Context())
 
 	assertMaxSpanDiff(t, te.len(), option.wantNumSpans, 10)
 
@@ -487,7 +487,7 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	}
 
 	// Force flush any held span batches
-	err := ssp.ForceFlush(context.Background())
+	err := ssp.ForceFlush(t.Context())
 	assert.Error(t, err)
 	assert.EqualError(t, err, "fail to export")
 
@@ -504,7 +504,7 @@ func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
 	}
 
 	// Force flush any held span batches
-	err = ssp.ForceFlush(context.Background())
+	err = ssp.ForceFlush(t.Context())
 	assert.NoError(t, err)
 
 	assertMaxSpanDiff(t, te.len(), option.wantNumSpans, 10)
@@ -549,12 +549,13 @@ func (e indefiniteExporter) ExportSpans(ctx context.Context, _ []ReadOnlySpan) e
 }
 
 func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	// Cancel the context
 	cancel()
 
 	bsp := NewBatchSpanProcessor(newIndefiniteExporter(t))
 	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		assert.NoError(t, bsp.Shutdown(context.Background()))
 	})
 
@@ -569,11 +570,11 @@ func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
 	bsp := NewBatchSpanProcessor(exp)
 	tp.RegisterSpanProcessor(bsp)
 	tr := tp.Tracer(t.Name())
-	_, span := tr.Start(context.Background(), "foo")
+	_, span := tr.Start(t.Context(), "foo")
 	span.End()
 
 	// Add timeout to context to test deadline
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond)
 	defer cancel()
 
 	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
@@ -582,13 +583,14 @@ func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
 }
 
 func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var bp testBatchExporter
 	bsp := NewBatchSpanProcessor(&bp)
 	tp := basicTracerProvider(t)
 	tp.RegisterSpanProcessor(bsp)
 	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		assert.NoError(t, tp.Shutdown(context.Background()))
 	})
 
@@ -606,7 +608,7 @@ func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
 }
 
 func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var bp testBatchExporter
 	bsp := NewBatchSpanProcessor(&bp)
 	tp := basicTracerProvider(t)
@@ -666,7 +668,10 @@ func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
-	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
+	})
 	bsp := NewBatchSpanProcessor(
 		me,
 		// Make sure timeout doesn't trigger during the test.
@@ -679,19 +684,19 @@ func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
 	tr := tp.Tracer("TestBatchSpanProcessorMetricsDisabled")
 	// Generate 2 spans, which export and block during the export call.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
 
 	// Validate that there are no metrics produced.
 	gotMetrics := new(metricdata.ResourceMetrics)
-	assert.NoError(t, reader.Collect(context.Background(), gotMetrics))
+	assert.NoError(t, reader.Collect(t.Context(), gotMetrics))
 	require.Empty(t, gotMetrics.ScopeMetrics)
 	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
 	generateSpan(t, tr, testOption{genNumSpans: 3})
 	// Validate that there are no metrics produced.
 	gotMetrics = new(metricdata.ResourceMetrics)
-	assert.NoError(t, reader.Collect(context.Background(), gotMetrics))
+	assert.NoError(t, reader.Collect(t.Context(), gotMetrics))
 	require.Empty(t, gotMetrics.ScopeMetrics)
 }
 
@@ -708,7 +713,10 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
-	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
+	})
 	bsp := NewBatchSpanProcessor(
 		me,
 		// Make sure timeout doesn't trigger during the test.
@@ -721,7 +729,7 @@ func TestBatchSpanProcessorMetrics(t *testing.T) {
 	tr := tp.Tracer("TestBatchSpanProcessorMetrics")
 	// Generate 2 spans, which export and block during the export call.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
 	assertObsScopeMetrics(t, reader, expectMetrics{
@@ -752,7 +760,10 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	)
 	otel.SetMeterProvider(meterProvider)
 	me := newBlockingExporter()
-	t.Cleanup(func() { assert.NoError(t, me.Shutdown(context.Background())) })
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
+	})
 	bsp := NewBatchSpanProcessor(
 		me,
 		// Use WithBlocking so we can trigger a queueFull using ForceFlush.
@@ -767,7 +778,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	tr := tp.Tracer("TestBatchSpanProcessorBlockingMetrics")
 	// Generate 2 spans that are exported to the exporter, which blocks.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 	assert.NoError(t, me.waitForSpans(ctx, 2))
 	assertObsScopeMetrics(t, reader, expectMetrics{
@@ -788,7 +799,7 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	})
 
 	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+	ctx, cancel = context.WithTimeout(t.Context(), 10*time.Millisecond)
 	defer cancel()
 	assert.Error(t, tp.ForceFlush(ctx))
 	assertObsScopeMetrics(t, reader, expectMetrics{
@@ -813,7 +824,7 @@ func assertObsScopeMetrics(
 ) {
 	t.Helper()
 	gotResourceMetrics := new(metricdata.ResourceMetrics)
-	assert.NoError(t, reader.Collect(context.Background(), gotResourceMetrics))
+	assert.NoError(t, reader.Collect(t.Context(), gotResourceMetrics))
 
 	componentNameAttr := observ.BSPComponentName(componentID)
 	baseAttrs := attribute.NewSet(

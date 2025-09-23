@@ -99,7 +99,7 @@ func TestNewEndToEnd(t *testing.T) {
 func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpointURL("http://" + mc.endpoint),
 	}...)
@@ -138,7 +138,7 @@ func newGRPCExporter(
 func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option) {
 	mc := runMockCollector(t)
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
 	t.Cleanup(func() {
 		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
@@ -168,7 +168,7 @@ func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
@@ -207,7 +207,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 	_, collectorPortStr, _ := net.SplitHostPort(ln.Addr().String())
 
 	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
-	ctx := context.Background()
+	ctx := t.Context()
 	exp := newGRPCExporter(t, ctx, endpoint)
 	require.NoError(t, exp.Shutdown(ctx))
 }
@@ -216,7 +216,7 @@ func TestNewWithEndpoint(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := t.Context()
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	require.NoError(t, exp.Shutdown(ctx))
 }
@@ -225,7 +225,7 @@ func TestNewWithHeaders(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	additionalKey := "additional-custom-header"
 	ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
@@ -241,6 +241,7 @@ func TestNewWithHeaders(t *testing.T) {
 }
 
 func TestExportSpansTimeoutHonored(t *testing.T) {
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	ctx, cancel := contextWithTimeout(context.Background(), t, 1*time.Minute)
 	t.Cleanup(cancel)
 
@@ -270,6 +271,7 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
 	t.Cleanup(cancel)
 
@@ -389,7 +391,7 @@ func TestEmptyData(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
@@ -405,7 +407,7 @@ func TestPartialSuccess(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
@@ -419,7 +421,7 @@ func TestCustomUserAgent(t *testing.T) {
 	mc := runMockCollector(t)
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background()
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	exp := newGRPCExporter(t, ctx, mc.endpoint,
 		otlptracegrpc.WithDialOption(grpc.WithUserAgent(customUserAgent)))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })

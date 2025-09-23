@@ -221,7 +221,7 @@ func TestSpanIsRecording(t *testing.T) {
 			"Never sample recording off":  {sampler: NeverSample(), want: false},
 		} {
 			tp := NewTracerProvider(WithSampler(tc.sampler))
-			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			_, span := tp.Tracer(name).Start(t.Context(), "StartSpan")
 			got := span.IsRecording()
 			span.End()
 			assert.Equal(t, tc.want, got, name)
@@ -234,7 +234,7 @@ func TestSpanIsRecording(t *testing.T) {
 			"Never Sample":  NeverSample(),
 		} {
 			tp := NewTracerProvider(WithSampler(tc))
-			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			_, span := tp.Tracer(name).Start(t.Context(), "StartSpan")
 			span.End()
 			got := span.IsRecording()
 			assert.False(t, got, name)
@@ -290,7 +290,7 @@ func TestSampling(t *testing.T) {
 			tr := p.Tracer("test")
 			var sampled int
 			for range total {
-				ctx := context.Background()
+				ctx := t.Context()
 				if tc.parent {
 					tid, sid := idg.NewIDs(ctx)
 					psc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -327,7 +327,7 @@ func TestSampling(t *testing.T) {
 func TestStartSpanWithParent(t *testing.T) {
 	tp := NewTracerProvider()
 	tr := tp.Tracer("SpanWithParent")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, s1 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span1-unsampled-parent1")
 	if err := checkChild(t, sc, s1); err != nil {
@@ -372,7 +372,7 @@ func TestStartSpanNewRootNotSampled(t *testing.T) {
 	sampledTr := alwaysSampleTp.Tracer("AlwaysSampled")
 	neverSampleTp := NewTracerProvider(WithSampler(ParentBased(NeverSample())))
 	neverSampledTr := neverSampleTp.Tracer("ParentBasedNeverSample")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ctx, s1 := sampledTr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span1-sampled")
 	if err := checkChild(t, sc, s1); err != nil {
@@ -436,7 +436,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx, span := startLocalSpan(ctx, tp, "SpanOne", "span0")
 	_, spanTwo := startLocalSpan(ctx, tp, "SpanTwo", "span1")
 
@@ -619,7 +619,7 @@ func TestSpanSetAttributes(t *testing.T) {
 			sl := NewSpanLimits()
 			sl.AttributeCountLimit = capacity
 			tp := NewTracerProvider(WithSyncer(te), WithSpanLimits(sl))
-			_, span := tp.Tracer(instName).Start(context.Background(), spanName)
+			_, span := tp.Tracer(instName).Start(t.Context(), spanName)
 			for _, a := range test.input {
 				span.SetAttributes(a...)
 			}
@@ -845,7 +845,7 @@ func TestLinksOverLimit(t *testing.T) {
 func TestSetSpanName(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
-	ctx := context.Background()
+	ctx := t.Context()
 
 	want := "SpanName-1"
 	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
@@ -1058,7 +1058,7 @@ func TestEndSpanTwice(t *testing.T) {
 func TestStartSpanAfterEnd(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSyncer(te))
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tr := tp.Tracer("SpanAfterEnd")
 	ctx, span0 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "parent")
@@ -1105,7 +1105,7 @@ func TestChildSpanCount(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSyncer(te))
 
 	tr := tp.Tracer("ChidSpanCount")
-	ctx, span0 := tr.Start(context.Background(), "parent")
+	ctx, span0 := tr.Start(t.Context(), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	_, span2 := tr.Start(ctx1, "span-2")
 	span2.End()
@@ -1158,7 +1158,7 @@ func TestSpanWithCanceledContext(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	_, span := tp.Tracer(t.Name()).Start(ctx, "span")
 	span.End()
@@ -1170,7 +1170,7 @@ func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(NeverSample()))
 	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
 
-	_, apiSpan := tr.Start(context.Background(), "foo")
+	_, apiSpan := tr.Start(t.Context(), "foo")
 	if _, ok := apiSpan.(runtimeTracer); ok {
 		t.Fatalf("non recording span implements runtime trace task tracking")
 	}
@@ -1184,7 +1184,7 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 	executionTracerTaskEnd := func() {
 		atomic.AddUint64(&n, 1)
 	}
-	_, apiSpan := tr.Start(context.Background(), "foo")
+	_, apiSpan := tr.Start(t.Context(), "foo")
 	s, ok := apiSpan.(*recordingSpan)
 	if !ok {
 		t.Fatal("recording span not returned from always sampled Tracer")
@@ -1205,7 +1205,7 @@ func TestCustomStartEndTime(t *testing.T) {
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
 	_, span := tp.Tracer("Custom Start and End time").Start(
-		context.Background(),
+		t.Context(),
 		"testspan",
 		trace.WithTimestamp(startTime),
 	)
@@ -1382,7 +1382,7 @@ func TestWithSpanKind(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te), WithSampler(AlwaysSample()), WithResource(resource.Empty()))
 	tr := tp.Tracer("withSpanKind")
 
-	_, span := tr.Start(context.Background(), "WithoutSpanKind")
+	_, span := tr.Start(t.Context(), "WithoutSpanKind")
 	spanData, err := endSpan(te, span)
 	if err != nil {
 		t.Error(err.Error())
@@ -1407,7 +1407,7 @@ func TestWithSpanKind(t *testing.T) {
 	for _, sk := range sks {
 		te.Reset()
 
-		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), trace.WithSpanKind(sk))
+		_, span := tr.Start(t.Context(), fmt.Sprintf("SpanKind-%v", sk), trace.WithSpanKind(sk))
 		spanData, err := endSpan(te, span)
 		if err != nil {
 			t.Error(err.Error())
@@ -1514,7 +1514,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
@@ -1549,7 +1549,7 @@ func TestSpanCapturesPanic(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	_, span := tp.Tracer("CatchPanic").Start(
-		context.Background(),
+		t.Context(),
 		"span",
 	)
 
@@ -1572,7 +1572,7 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	_, span := tp.Tracer("CatchPanic").Start(
-		context.Background(),
+		t.Context(),
 		"span",
 	)
 
@@ -1610,17 +1610,17 @@ func TestReadOnlySpan(t *testing.T) {
 	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
 
 	// Initialize parent context.
-	tID, sID := tp.idGenerator.NewIDs(context.Background())
+	tID, sID := tp.idGenerator.NewIDs(t.Context())
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
 		Remote:     true,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), parent)
 
 	// Initialize linked context.
-	tID, sID = tp.idGenerator.NewIDs(context.Background())
+	tID, sID = tp.idGenerator.NewIDs(t.Context())
 	linked := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
@@ -1692,13 +1692,13 @@ func TestReadWriteSpan(t *testing.T) {
 	tr := tp.Tracer("ReadWriteSpan")
 
 	// Initialize parent context.
-	tID, sID := tp.idGenerator.NewIDs(context.Background())
+	tID, sID := tp.idGenerator.NewIDs(t.Context())
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), parent)
 
 	_, span := tr.Start(ctx, "foo")
 	defer span.End()
@@ -1905,7 +1905,7 @@ func TestSamplerTraceState(t *testing.T) {
 				TraceFlags: trace.FlagsSampled,
 				TraceState: ts.input,
 			})
-			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc1)
+			ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc1)
 			_, span := tr.Start(ctx, ts.spanName)
 
 			// span's TraceState should be set regardless of Sampled/NonSampled state.
@@ -1968,7 +1968,7 @@ func TestWithIDGenerator(t *testing.T) {
 	)
 	for i := range numSpan {
 		func() {
-			_, span := tp.Tracer(t.Name()).Start(context.Background(), strconv.Itoa(i))
+			_, span := tp.Tracer(t.Name()).Start(t.Context(), strconv.Itoa(i))
 			defer span.End()
 
 			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
@@ -1986,7 +1986,7 @@ func TestIDsRoundTrip(t *testing.T) {
 	gen := defaultIDGenerator()
 
 	for range 1000 {
-		traceID, spanID := gen.NewIDs(context.Background())
+		traceID, spanID := gen.NewIDs(t.Context())
 		gotTraceID, err := trace.TraceIDFromHex(traceID.String())
 		assert.NoError(t, err)
 		assert.Equal(t, traceID, gotTraceID)
@@ -2256,7 +2256,7 @@ func TestObservability(t *testing.T) {
 			name: "SampledSpan",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
-				_, span := tp.Tracer("").Start(context.Background(), "StartSpan")
+				_, span := tp.Tracer("").Start(t.Context(), "StartSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -2383,7 +2383,7 @@ func TestObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(NeverSample()))
-				tp.Tracer("").Start(context.Background(), "NonRecordingSpan")
+				tp.Tracer("").Start(t.Context(), "NonRecordingSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -2432,7 +2432,7 @@ func TestObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(RecordingOnly()))
-				tp.Tracer("").Start(context.Background(), "OnlyRecordingSpan")
+				tp.Tracer("").Start(t.Context(), "OnlyRecordingSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -2500,7 +2500,7 @@ func TestObservability(t *testing.T) {
 				// Create a remote parent context
 				tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 				sid, _ := trace.SpanIDFromHex("0102040810203040")
-				remoteCtx := trace.ContextWithRemoteSpanContext(context.Background(),
+				remoteCtx := trace.ContextWithRemoteSpanContext(t.Context(),
 					trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    tid,
 						SpanID:     sid,
@@ -2574,7 +2574,7 @@ func TestObservability(t *testing.T) {
 			name: "LocalParentSpan",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
-				ctx, parentSpan := tp.Tracer("").Start(context.Background(), "ParentSpan")
+				ctx, parentSpan := tp.Tracer("").Start(t.Context(), "ParentSpan")
 				_, childSpan := tp.Tracer("").Start(ctx, "ChildSpan")
 
 				want := metricdata.ScopeMetrics{
@@ -2734,7 +2734,7 @@ func TestObservability(t *testing.T) {
 
 			scopeMetrics := func() metricdata.ScopeMetrics {
 				var got metricdata.ResourceMetrics
-				err := r.Collect(context.Background(), &got)
+				err := r.Collect(t.Context(), &got)
 				require.NoError(t, err)
 				require.Len(t, got.ScopeMetrics, 1)
 				return got.ScopeMetrics[0]
@@ -2805,12 +2805,12 @@ func TestObservabilityContextPropagation(t *testing.T) {
 		fn(ctx)
 	}
 
-	ctx := context.WithValue(context.Background(), ctxKey, want)
+	ctx := context.WithValue(t.Context(), ctxKey, want)
 	wrap(ctx, "parent", func(ctx context.Context) {
 		wrap(ctx, "child", func(context.Context) {})
 	})
 
-	require.NoError(t, tp.Shutdown(context.Background()))
+	require.NoError(t, tp.Shutdown(t.Context()))
 
 	// The TracerProvider shutdown returned, no more measurements will be sent
 	// to the exemplar filter.
@@ -2855,7 +2855,7 @@ func TestRecordOnlySampler(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithSampler(RecordingOnly()))
 
-	_, span := tp.Tracer("RecordOnly").Start(context.Background(), "test-span")
+	_, span := tp.Tracer("RecordOnly").Start(t.Context(), "test-span")
 
 	assert.True(t, span.IsRecording(), "span should be recording")
 	assert.False(t, span.SpanContext().IsSampled(), "span should not be sampled")
@@ -2866,7 +2866,7 @@ func TestRecordOnlySampler(t *testing.T) {
 }
 
 func BenchmarkTraceStart(b *testing.B) {
-	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+	ctx := trace.ContextWithSpanContext(b.Context(), trace.SpanContext{})
 
 	l1 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
 	l2 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
