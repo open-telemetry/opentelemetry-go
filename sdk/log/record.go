@@ -372,16 +372,17 @@ func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	}
 
 	// Check if deduplication is actually needed by looking for duplicate keys.
-	seen := getSeen()
-	defer putSeen(seen)
-	hasDuplicates := false
-	for _, kv := range kvs {
-		if seen[kv.Key] {
-			hasDuplicates = true
-			break
+	hasDuplicates := func() bool {
+		seen := getSeen()
+		defer putSeen(seen)
+		for _, kv := range kvs {
+			if seen[kv.Key] {
+				return true
+			}
+			seen[kv.Key] = true
 		}
-		seen[kv.Key] = true
-	}
+		return false
+	}()
 
 	if !hasDuplicates {
 		return kvs, 0 // No deduplication needed.
@@ -551,13 +552,19 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 		kvs := val.AsMap()
 		if !r.allowDupKeys && len(kvs) > 1 {
 			// Check for duplicates.
-			seen := getSeen()
-			defer putSeen(seen)
-			for _, kv := range kvs {
-				if seen[kv.Key] {
-					return true
+			hasDuplicates := func() bool {
+				seen := getSeen()
+				defer putSeen(seen)
+				for _, kv := range kvs {
+					if seen[kv.Key] {
+						return true
+					}
+					seen[kv.Key] = true
 				}
-				seen[kv.Key] = true
+				return false
+			}()
+			if hasDuplicates {
+				return true
 			}
 		}
 		for _, kv := range kvs {
@@ -635,13 +642,19 @@ func (r *Record) needsBodyDedup(val log.Value) bool {
 		kvs := val.AsMap()
 		if len(kvs) > 1 {
 			// Check for duplicates.
-			seen := getSeen()
-			defer putSeen(seen)
-			for _, kv := range kvs {
-				if seen[kv.Key] {
-					return true
+			hasDuplicates := func() bool {
+				seen := getSeen()
+				defer putSeen(seen)
+				for _, kv := range kvs {
+					if seen[kv.Key] {
+						return true
+					}
+					seen[kv.Key] = true
 				}
-				seen[kv.Key] = true
+				return false
+			}()
+			if hasDuplicates {
+				return true
 			}
 		}
 		for _, kv := range kvs {
