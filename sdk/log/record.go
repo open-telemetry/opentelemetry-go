@@ -231,16 +231,17 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		defer putIndex(rIndex)
 
 		// Check if deduplication is actually needed.
-		needsDedup := false
-		seen := getSeen()
-		defer putSeen(seen)
-		for _, a := range attrs {
-			if seen[a.Key] || rIndex[a.Key] != 0 {
-				needsDedup = true
-				break
+		needsDedup := func() bool {
+			seen := getSeen()
+			defer putSeen(seen)
+			for _, a := range attrs {
+				if seen[a.Key] || rIndex[a.Key] != 0 {
+					return true
+				}
+				seen[a.Key] = true
 			}
-			seen[a.Key] = true
-		}
+			return false
+		}()
 
 		if needsDedup {
 			// Create a new slice to avoid modifying the original.
