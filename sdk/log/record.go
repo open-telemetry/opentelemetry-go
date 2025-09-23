@@ -368,10 +368,10 @@ func head(kvs []log.KeyValue, n int) (out []log.KeyValue, dropped int) {
 // dedup deduplicates kvs front-to-back with the last value saved.
 func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	if len(kvs) <= 1 {
-		return kvs, 0 // No deduplication needed
+		return kvs, 0 // No deduplication needed.
 	}
 
-	// Check if deduplication is actually needed by looking for duplicate keys
+	// Check if deduplication is actually needed by looking for duplicate keys.
 	seen := getSeen()
 	defer putSeen(seen)
 	hasDuplicates := false
@@ -387,7 +387,7 @@ func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 		return kvs, 0 // No deduplication needed.
 	}
 
-	// Deduplication is needed, create a new slice to avoid modifying the original
+	// Deduplication is needed, create a new slice to avoid modifying the original.
 	index := getIndex()
 	defer putIndex(index)
 
