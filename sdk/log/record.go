@@ -476,7 +476,7 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 	switch val.Kind() {
 	case log.KindString:
 		s := val.AsString()
-		if len(s) > r.attributeValueLengthLimit {
+		if r.attributeValueLengthLimit >= 0 && len(s) > r.attributeValueLengthLimit {
 			val = log.StringValue(truncate(r.attributeValueLengthLimit, s))
 		}
 	case log.KindSlice:
@@ -542,7 +542,7 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 	switch val.Kind() {
 	case log.KindString:
-		return len(val.AsString()) > r.attributeValueLengthLimit
+		return r.attributeValueLengthLimit >= 0 && len(val.AsString()) > r.attributeValueLengthLimit
 	case log.KindSlice:
 		if slices.ContainsFunc(val.AsSlice(), r.needsValueLimitsOrDedup) {
 			return true
