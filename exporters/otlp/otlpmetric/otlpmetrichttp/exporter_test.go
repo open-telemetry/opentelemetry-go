@@ -4,7 +4,6 @@
 package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 	coll, err := otest.NewHTTPCollector("", nil)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	addr := coll.Addr().String()
 	opts := []Option{WithEndpoint(addr), WithInsecure()}
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
@@ -74,7 +73,7 @@ func TestExporterDoesNotBlockTemporalityAndAggregation(t *testing.T) {
 	coll, err := otest.NewHTTPCollector("", rCh)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	addr := coll.Addr().String()
 	opts := []Option{WithEndpoint(addr), WithInsecure()}
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)

@@ -25,20 +25,20 @@ func TestWait(t *testing.T) {
 		expected error
 	}{
 		{
-			ctx:   context.Background(),
+			ctx:   t.Context(),
 			delay: time.Duration(0),
 		},
 		{
-			ctx:   context.Background(),
+			ctx:   t.Context(),
 			delay: time.Duration(1),
 		},
 		{
-			ctx:   context.Background(),
+			ctx:   t.Context(),
 			delay: time.Duration(-1),
 		},
 		{
 			ctx: func() context.Context {
-				ctx, cancel := context.WithCancel(context.Background())
+				ctx, cancel := context.WithCancel(t.Context())
 				cancel()
 				return ctx
 			}(),
@@ -68,7 +68,7 @@ func TestNonRetryableError(t *testing.T) {
 		// Never stop retrying.
 		MaxElapsedTime: 0,
 	}.RequestFunc(ev)
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, reqFunc(ctx, func(context.Context) error {
 		return nil
 	}))
@@ -107,7 +107,7 @@ func TestThrottledRetry(t *testing.T) {
 	}
 	defer func() { waitFunc = origWait }()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
 		return errors.New("not this error")
 	}), assert.AnError)
@@ -139,7 +139,7 @@ func TestBackoffRetry(t *testing.T) {
 	}
 	t.Cleanup(func() { waitFunc = origWait })
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.ErrorIs(t, reqFunc(ctx, func(context.Context) error {
 		return errors.New("not this error")
 	}), assert.AnError)
@@ -157,7 +157,7 @@ func TestBackoffRetryCanceledContext(t *testing.T) {
 		MaxElapsedTime: 10 * time.Millisecond,
 	}.RequestFunc(ev)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	count := 0
 	cancel()
 	err := reqFunc(ctx, func(context.Context) error {
@@ -181,7 +181,7 @@ func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {
 		MaxElapsedTime:  tDelay - (time.Nanosecond),
 	}.RequestFunc(ev)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.Contains(t, reqFunc(ctx, func(context.Context) error {
 		return assert.AnError
 	}).Error(), "max retry time would elapse: ")
@@ -197,7 +197,7 @@ func TestMaxElapsedTime(t *testing.T) {
 		MaxElapsedTime:  delay,
 	}.RequestFunc(ev)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.Contains(t, reqFunc(ctx, func(context.Context) error {
 		return assert.AnError
 	}).Error(), "max retry time")
@@ -210,7 +210,7 @@ func TestRetryNotEnabled(t *testing.T) {
 	}
 
 	reqFunc := Config{}.RequestFunc(ev)
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, reqFunc(ctx, func(context.Context) error {
 		return nil
 	}))
@@ -226,7 +226,7 @@ func TestRetryConcurrentSafe(t *testing.T) {
 	}.RequestFunc(ev)
 
 	var wg sync.WaitGroup
-	ctx := context.Background()
+	ctx := t.Context()
 
 	for i := 1; i < 5; i++ {
 		wg.Add(1)

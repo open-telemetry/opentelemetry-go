@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"context"
 	"testing"
 )
 
@@ -24,7 +23,7 @@ func TestNoopTracerProviderTracer(t *testing.T) {
 }
 
 func TestNoopTracerStart(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	tracer := NewNoopTracerProvider().Tracer("test instrumentation")
 
 	var span Span
@@ -48,7 +47,7 @@ func TestNoopTracerStart(t *testing.T) {
 
 func TestNoopSpan(t *testing.T) {
 	tracer := NewNoopTracerProvider().Tracer("test instrumentation")
-	_, s := tracer.Start(context.Background(), "test span")
+	_, s := tracer.Start(t.Context(), "test span")
 	span := s.(noopSpan)
 
 	if got, want := span.SpanContext(), (SpanContext{}); !assertSpanContextEqual(got, want) {
@@ -71,7 +70,7 @@ func TestNonRecordingSpanTracerStart(t *testing.T) {
 	}
 	sc := NewSpanContext(SpanContextConfig{TraceID: tid, SpanID: sid})
 
-	ctx := ContextWithSpanContext(context.Background(), sc)
+	ctx := ContextWithSpanContext(t.Context(), sc)
 	_, span := NewNoopTracerProvider().Tracer("test instrumentation").Start(ctx, "span1")
 
 	if got, want := span.SpanContext(), sc; !assertSpanContextEqual(got, want) {

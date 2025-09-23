@@ -19,7 +19,7 @@ type rwSpan struct {
 
 func TestSpanRecorderOnStartAppends(t *testing.T) {
 	s0, s1 := new(rwSpan), new(rwSpan)
-	ctx := context.Background()
+	ctx := t.Context()
 	sr := new(SpanRecorder)
 
 	assert.Empty(t, sr.started)
@@ -55,7 +55,7 @@ func TestSpanRecorderOnEndAppends(t *testing.T) {
 }
 
 func TestSpanRecorderShutdownNoError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, new(SpanRecorder).Shutdown(ctx))
 
 	var c context.CancelFunc
@@ -65,7 +65,7 @@ func TestSpanRecorderShutdownNoError(t *testing.T) {
 }
 
 func TestSpanRecorderForceFlushNoError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, new(SpanRecorder).ForceFlush(ctx))
 
 	var c context.CancelFunc
@@ -103,7 +103,7 @@ func TestEndingConcurrentSafe(t *testing.T) {
 func TestStartingConcurrentSafe(t *testing.T) {
 	sr := NewSpanRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	runConcurrently(
 		func() { sr.OnStart(ctx, new(rwSpan)) },
 		func() { sr.OnStart(ctx, new(rwSpan)) },
@@ -115,7 +115,7 @@ func TestStartingConcurrentSafe(t *testing.T) {
 
 func TestResetConcurrentSafe(t *testing.T) {
 	sr := NewSpanRecorder()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	runConcurrently(
 		func() { sr.OnStart(ctx, new(rwSpan)) },

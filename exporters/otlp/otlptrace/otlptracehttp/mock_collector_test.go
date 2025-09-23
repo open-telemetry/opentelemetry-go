@@ -48,7 +48,7 @@ func (c *mockCollector) Stop() error {
 }
 
 func (c *mockCollector) MustStop(t *testing.T) {
-	assert.NoError(t, c.server.Shutdown(context.Background()))
+	assert.NoError(t, c.server.Shutdown(t.Context()))
 }
 
 func (c *mockCollector) GetSpans() []*tracepb.Span {
