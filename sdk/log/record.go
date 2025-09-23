@@ -534,7 +534,7 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 	case log.KindMap:
 		kvs := val.AsMap()
 		if !r.allowDupKeys && len(kvs) > 1 {
-			// Check for duplicates
+			// Check for duplicates.
 			seen := make(map[string]bool)
 			for _, kv := range kvs {
 				if seen[kv.Key] {
