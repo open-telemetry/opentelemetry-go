@@ -927,10 +927,6 @@ func TestTruncate(t *testing.T) {
 }
 
 func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
-	if race() {
-		t.Skip("TODO: Fix bug https://github.com/open-telemetry/opentelemetry-go/issues/7364.")
-	}
-
 	nestedSlice := log.Slice("nested_slice",
 		log.SliceValue(log.StringValue("nested_inner1"), log.StringValue("nested_inner2")),
 		log.StringValue("nested_outer"),
