@@ -986,7 +986,7 @@ func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 			gotBody := r.Body()
 			wantBody := log.MapValue(
 				log.String("nested_key1", "duplicate"),
-				log.Map("nested_map", log.String("nested_inner_key", "nested_inn")),
+				log.Map("nested_map", log.String("nested_inner_key", "nested_inner_value")),
 			)
 			if !gotBody.Equal(wantBody) {
 				t.Errorf("Body does not match.\ngot:\n%v\nwant:\n%v", gotBody, wantBody)
