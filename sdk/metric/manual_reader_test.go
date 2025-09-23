@@ -73,7 +73,7 @@ func TestManualReaderTemporality(t *testing.T) {
 }
 
 func TestManualReaderCollect(t *testing.T) {
-	expiredCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1))
+	expiredCtx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-1))
 	defer cancel()
 
 	tests := []struct {
@@ -83,7 +83,7 @@ func TestManualReaderCollect(t *testing.T) {
 	}{
 		{
 			name:        "with a valid context",
-			ctx:         context.Background(),
+			ctx:         t.Context(),
 			expectedErr: nil,
 		},
 		{

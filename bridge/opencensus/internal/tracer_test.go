@@ -51,7 +51,7 @@ func TestTracerStartSpan(t *testing.T) {
 	otelTracer := &tracer{}
 	ocTracer := internal.NewTracer(otelTracer)
 
-	ctx := context.WithValue(context.Background(), ctxKey("key"), "value")
+	ctx := context.WithValue(t.Context(), ctxKey("key"), "value")
 	name := "testing span"
 	ocTracer.StartSpan(ctx, name, octrace.WithSpanKind(octrace.SpanKindClient))
 	if h.err != nil {
@@ -76,7 +76,7 @@ func TestTracerStartSpanReportsErrors(t *testing.T) {
 	defer restore()
 
 	ocTracer := internal.NewTracer(&tracer{})
-	ocTracer.StartSpan(context.Background(), "", octrace.WithSampler(octrace.AlwaysSample()))
+	ocTracer.StartSpan(t.Context(), "", octrace.WithSampler(octrace.AlwaysSample()))
 	if h.err == nil {
 		t.Error("OC tracer.StartSpan no error when converting Sampler")
 	}
@@ -88,7 +88,7 @@ func TestTracerStartSpanWithRemoteParent(t *testing.T) {
 	sc := octrace.SpanContext{TraceID: [16]byte{1}, SpanID: [8]byte{1}}
 	converted := oc2otel.SpanContext(sc).WithRemote(true)
 
-	ocTracer.StartSpanWithRemoteParent(context.Background(), "", sc)
+	ocTracer.StartSpanWithRemoteParent(t.Context(), "", sc)
 
 	got := trace.SpanContextFromContext(otelTracer.ctx)
 	if !got.Equal(converted) {
@@ -101,7 +101,7 @@ func TestTracerFromContext(t *testing.T) {
 		TraceID: [16]byte{1},
 		SpanID:  [8]byte{1},
 	})
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 	tracer := noop.NewTracerProvider().Tracer("TestTracerFromContext")
 	// Test using the fact that the No-Op span will propagate a span context .
@@ -120,14 +120,14 @@ func TestTracerNewContext(t *testing.T) {
 		TraceID: [16]byte{1},
 		SpanID:  [8]byte{1},
 	})
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 	tracer := noop.NewTracerProvider().Tracer("TestTracerNewContext")
 	// Test using the fact that the No-Op span will propagate a span context .
 	_, s := tracer.Start(ctx, "test")
 
 	ocTracer := internal.NewTracer(tracer)
-	ctx = ocTracer.NewContext(context.Background(), internal.NewSpan(s))
+	ctx = ocTracer.NewContext(t.Context(), internal.NewSpan(s))
 	got := trace.SpanContextFromContext(ctx)
 
 	if !got.Equal(sc) {
@@ -147,7 +147,7 @@ func TestTracerNewContextErrors(t *testing.T) {
 
 	ocTracer := internal.NewTracer(&tracer{})
 	ocSpan := octrace.NewSpan(&differentSpan{})
-	ocTracer.NewContext(context.Background(), ocSpan)
+	ocTracer.NewContext(t.Context(), ocSpan)
 	if h.err == nil {
 		t.Error("tracer.NewContext did not error for unrecognized span")
 	}

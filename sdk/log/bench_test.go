@@ -104,7 +104,10 @@ func BenchmarkProcessor(b *testing.B) {
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			provider := NewLoggerProvider(tc.f()...)
-			b.Cleanup(func() { assert.NoError(b, provider.Shutdown(context.Background())) })
+			b.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(b, provider.Shutdown(context.Background()))
+			})
 			logger := provider.Logger(b.Name())
 
 			b.ReportAllocs()
@@ -119,7 +122,7 @@ func BenchmarkProcessor(b *testing.B) {
 						log.Int("int", 123),
 						log.Bool("bool", true),
 					)
-					logger.Emit(context.Background(), r)
+					logger.Emit(b.Context(), r)
 				}
 			})
 		})

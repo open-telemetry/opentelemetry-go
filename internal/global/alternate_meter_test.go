@@ -267,7 +267,7 @@ func TestMeterDelegation(t *testing.T) {
 
 	SetMeterProvider(amp)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ao := &altObserver{t: t}
 	for _, meter := range amp.meters {
 		for _, cb := range meter.cbs {
