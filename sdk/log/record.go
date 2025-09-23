@@ -41,6 +41,20 @@ func putIndex(index map[string]int) {
 	indexPool.Put(index)
 }
 
+// seenPool is a pool of boolean maps used for duplicate checking.
+var seenPool = sync.Pool{
+	New: func() any { return make(map[string]bool) },
+}
+
+func getSeen() map[string]bool {
+	return seenPool.Get().(map[string]bool)
+}
+
+func putSeen(seen map[string]bool) {
+	clear(seen)
+	seenPool.Put(seen)
+}
+
 // Record is a log record emitted by the Logger.
 // A log record with non-empty event name is interpreted as an event record.
 //
@@ -218,7 +232,8 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 
 		// Check if deduplication is actually needed.
 		needsDedup := false
-		seen := make(map[string]bool)
+		seen := getSeen()
+		defer putSeen(seen)
 		for _, a := range attrs {
 			if seen[a.Key] || rIndex[a.Key] != 0 {
 				needsDedup = true
@@ -357,7 +372,8 @@ func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 	}
 
 	// Check if deduplication is actually needed by looking for duplicate keys
-	seen := make(map[string]bool)
+	seen := getSeen()
+	defer putSeen(seen)
 	hasDuplicates := false
 	for _, kv := range kvs {
 		if seen[kv.Key] {
@@ -535,7 +551,8 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 		kvs := val.AsMap()
 		if !r.allowDupKeys && len(kvs) > 1 {
 			// Check for duplicates.
-			seen := make(map[string]bool)
+			seen := getSeen()
+			defer putSeen(seen)
 			for _, kv := range kvs {
 				if seen[kv.Key] {
 					return true
@@ -618,7 +635,8 @@ func (r *Record) needsBodyDedup(val log.Value) bool {
 		kvs := val.AsMap()
 		if len(kvs) > 1 {
 			// Check for duplicates.
-			seen := make(map[string]bool)
+			seen := getSeen()
+			defer putSeen(seen)
 			for _, kv := range kvs {
 				if seen[kv.Key] {
 					return true
