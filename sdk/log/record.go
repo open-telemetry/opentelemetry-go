@@ -486,7 +486,7 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 		needsChange := slices.ContainsFunc(sl, r.needsValueLimitsOrDedup)
 
 		if needsChange {
-			// Create a new slice to avoid modifying the original
+			// Create a new slice to avoid modifying the original.
 			newSl := make([]log.Value, len(sl))
 			for i, item := range sl {
 				newSl[i] = r.applyValueLimitsAndDedup(item)
@@ -511,7 +511,7 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 		// Check if any attribute limits need to be applied.
 		needsChange := false
 		if dropped > 0 {
-			needsChange = true // Already changed by dedup
+			needsChange = true // Already changed by dedup.
 		} else {
 			for _, kv := range newKvs {
 				if r.needsValueLimitsOrDedup(kv.Value) {
