@@ -19,10 +19,7 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-const (
-	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
-	obsScopeName      = "go.opentelemetry.io/otel/sdk/trace"
-)
+const defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
 
 // tracerProviderConfig.
 type tracerProviderConfig struct {
