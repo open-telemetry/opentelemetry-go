@@ -96,6 +96,24 @@ func benchSyncViews(views ...View) func(*testing.B) {
 			}
 		}()))
 
+		iGauge, err := meter.Int64Gauge("int64-gauge")
+		assert.NoError(b, err)
+		b.Run("Int64Gauge", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { iGauge.Record(b.Context(), 1, o...) }
+			}
+		}()))
+
+		fGauge, err := meter.Float64Gauge("float64-gauge")
+		assert.NoError(b, err)
+		b.Run("Float64Gauge", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { fGauge.Record(b.Context(), 1, o...) }
+			}
+		}()))
+
 		iHist, err := meter.Int64Histogram("int64-histogram")
 		assert.NoError(b, err)
 		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
