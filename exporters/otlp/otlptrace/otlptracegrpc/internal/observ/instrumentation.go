@@ -9,14 +9,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
@@ -94,9 +93,7 @@ type Instrumentation struct {
 //
 // If the experimental observability is disabled, nil is returned.
 func NewInstrumentation(id int64) (*Instrumentation, error) {
-	// TODO: Blocked by #7401. Use the "internal/x" package when available.
-	const envObserv = "OTEL_GO_X_OBSERVABILITY"
-	if v := os.Getenv(envObserv); !strings.EqualFold(v, "true") {
+	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 
