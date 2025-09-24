@@ -218,11 +218,9 @@ func TestInstrumentationExportMetricsSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	endOp := inst.RecordOperationDuration(t.Context())
-	end := inst.ExportMetrics(t.Context(), n)
-
-	end(n, nil)
-	endOp(nil)
+	timer := inst.RecordOperationDuration(t.Context())
+	inst.ExportMetrics(t.Context(), n).End(n, nil)
+	timer.Stop(nil)
 
 	assertExportMetricsMetrics(t, collect(), n, n, nil)
 }
@@ -233,12 +231,12 @@ func TestInstrumentationExportMetricsAllErrored(t *testing.T) {
 	const n = 10
 	err := assert.AnError
 
-	endOp := inst.RecordOperationDuration(t.Context())
-	end := inst.ExportMetrics(t.Context(), n)
+	timer := inst.RecordOperationDuration(t.Context())
+	op := inst.ExportMetrics(t.Context(), n)
 
 	const success = 0
-	end(success, err)
-	endOp(err)
+	op.End(success, err)
+	timer.Stop(err)
 
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
@@ -249,12 +247,12 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 	const n = 10
 	err := assert.AnError
 
-	endOp := inst.RecordOperationDuration(t.Context())
-	end := inst.ExportMetrics(t.Context(), n)
+	timer := inst.RecordOperationDuration(t.Context())
+	op := inst.ExportMetrics(t.Context(), n)
 
 	const success = 5
-	end(success, err)
-	endOp(err)
+	op.End(success, err)
+	timer.Stop(err)
 
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
@@ -262,8 +260,7 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 func TestRecordCollectionDurationSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
-	endCollection := inst.RecordCollectionDuration(t.Context())
-	endCollection(nil)
+	inst.RecordCollectionDuration(t.Context()).Stop(nil)
 
 	assertCollectionOnly(t, collect(), nil)
 }
@@ -272,8 +269,7 @@ func TestRecordCollectionDurationError(t *testing.T) {
 	inst, collect := setup(t)
 
 	wantErr := assert.AnError
-	endCollection := inst.RecordCollectionDuration(t.Context())
-	endCollection(wantErr)
+	inst.RecordCollectionDuration(t.Context()).Stop(wantErr)
 
 	assertCollectionOnly(t, collect(), wantErr)
 }
@@ -291,8 +287,7 @@ func BenchmarkInstrumentationExportMetrics(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		end := inst.ExportMetrics(ctx, 10)
-		end(4, benchErr)
+		inst.ExportMetrics(ctx, 10).End(4, benchErr)
 	}
 }
 
@@ -309,8 +304,7 @@ func BenchmarkInstrumentationRecordOperationDuration(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		done := inst.RecordOperationDuration(ctx)
-		done(benchErr)
+		inst.RecordOperationDuration(ctx).Stop(benchErr)
 	}
 }
 
@@ -327,7 +321,6 @@ func BenchmarkInstrumentationRecordCollectionDuration(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		endCollection := inst.RecordCollectionDuration(ctx)
-		endCollection(benchErr)
+		inst.RecordCollectionDuration(ctx).Stop(benchErr)
 	}
 }
