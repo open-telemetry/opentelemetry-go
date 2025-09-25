@@ -12,13 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,15 +29,18 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
-	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 var (
@@ -632,8 +628,8 @@ func TestClientObservability(t *testing.T) {
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-						Version:   internal.Version,
+						Name:      observ.ScopeName,
+						Version:   observ.Version,
 						SchemaURL: semconv.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
@@ -717,6 +713,13 @@ func TestClientObservability(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("unexpected ResourceLogs:\n%s", diff)
 				}
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      observ.ScopeName,
+					Version:   observ.Version,
+					SchemaURL: semconv.SchemaURL,
+				}, wantMetrics.Scope)
+
 				g := scopeMetrics()
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
@@ -756,8 +759,8 @@ func TestClientObservability(t *testing.T) {
 				wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-						Version:   internal.Version,
+						Name:      observ.ScopeName,
+						Version:   observ.Version,
 						SchemaURL: semconv.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
@@ -850,6 +853,12 @@ func TestClientObservability(t *testing.T) {
 				err := client.UploadLogs(ctx, resourceLogs)
 				assert.ErrorContains(t, err, wantErr.Error())
 
+				assert.Equal(t, instrumentation.Scope{
+					Name:      observ.ScopeName,
+					Version:   observ.Version,
+					SchemaURL: semconv.SchemaURL,
+				}, wantMetrics.Scope)
+
 				g := scopeMetrics()
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
@@ -889,8 +898,8 @@ func TestClientObservability(t *testing.T) {
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-						Version:   sdk.Version(),
+						Name:      observ.ScopeName,
+						Version:   observ.Version,
 						SchemaURL: semconv.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
@@ -977,6 +986,12 @@ func TestClientObservability(t *testing.T) {
 					},
 				}
 				g := scopeMetrics()
+				assert.Equal(t, instrumentation.Scope{
+					Name:      observ.ScopeName,
+					Version:   observ.Version,
+					SchemaURL: semconv.SchemaURL,
+				}, wantMetrics.Scope)
+
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
 				metricdatatest.AssertEqual(t, wantMetrics.Metrics[1], g.Metrics[1], metricdatatest.IgnoreTimestamp())
 				metricdatatest.AssertEqual(
@@ -1066,8 +1081,8 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 
 	wantMetrics := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
-			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-			Version:   internal.Version,
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
 			SchemaURL: semconv.SchemaURL,
 		},
 		Metrics: []metricdata.Metrics{
@@ -1158,6 +1173,12 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 
 	err := client.UploadLogs(ctx, resourceLogs)
 	assert.ErrorContains(t, err, wantErr.Error())
+
+	assert.Equal(t, instrumentation.Scope{
+		Name:      observ.ScopeName,
+		Version:   observ.Version,
+		SchemaURL: semconv.SchemaURL,
+	}, wantMetrics.Scope)
 
 	g := scopeMetrics()
 	metricdatatest.AssertEqual(t, wantMetrics.Metrics[0], g.Metrics[0], metricdatatest.IgnoreTimestamp())
