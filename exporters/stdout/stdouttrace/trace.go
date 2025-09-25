@@ -56,8 +56,8 @@ type Exporter struct {
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) (err error) {
 	var success int64
 	if e.inst != nil {
-		end := e.inst.ExportSpans(ctx, len(spans))
-		defer func() { end(success, err) }()
+		op := e.inst.ExportSpans(ctx, len(spans))
+		defer func() { op.End(success, err) }()
 	}
 
 	if err := ctx.Err(); err != nil {
