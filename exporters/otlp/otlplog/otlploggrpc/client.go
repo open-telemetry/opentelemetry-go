@@ -140,7 +140,6 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	defer cancel()
 
 	count := int64(len(rl))
-	var success int64
 	if c.instrumentation != nil {
 		eo := c.instrumentation.ExportLogs(ctx, count)
 		defer func() {
@@ -155,7 +154,6 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
-			success -= n
 			if n != 0 || msg != "" {
 				err := internal.LogPartialSuccessError(n, msg)
 				uploadErr = errors.Join(uploadErr, err)
