@@ -487,7 +487,13 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 		sl := val.AsSlice()
 
 		// First check if any limits need to be applied.
-		needsChange := slices.ContainsFunc(sl, r.needsValueLimitsOrDedup)
+		needsChange := false
+		for _, v := range sl {
+			if r.needsValueLimitsOrDedup(v) {
+				needsChange = true
+				break
+			}
+		}
 
 		if needsChange {
 			// Create a new slice to avoid modifying the original.
@@ -548,8 +554,10 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 	case log.KindString:
 		return r.attributeValueLengthLimit >= 0 && len(val.AsString()) > r.attributeValueLengthLimit
 	case log.KindSlice:
-		if slices.ContainsFunc(val.AsSlice(), r.needsValueLimitsOrDedup) {
-			return true
+		for _, v := range val.AsSlice() {
+			if r.needsValueLimitsOrDedup(v) {
+				return true
+			}
 		}
 	case log.KindMap:
 		kvs := val.AsMap()
