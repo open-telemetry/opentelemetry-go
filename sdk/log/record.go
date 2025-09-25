@@ -324,11 +324,13 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 		r.nFront++
 	}
 
-	for j, a := range attrs[i:] {
-		attrs[i+j] = r.applyAttrLimitsAndDedup(a)
-	}
+	// Make a copy to avoid modifying the original.
+	j := len(r.back)
 	r.back = slices.Grow(r.back, len(attrs[i:]))
 	r.back = append(r.back, attrs[i:]...)
+	for i, a := range r.back[j:] {
+		r.back[i+j] = r.applyAttrLimitsAndDedup(a)
+	}
 }
 
 // SetAttributes sets (and overrides) attributes to the log record.
