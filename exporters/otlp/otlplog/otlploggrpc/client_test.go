@@ -562,7 +562,7 @@ func TestClient(t *testing.T) {
 		ctx := t.Context()
 		client, _ := clientFactory(t, rCh)
 
-		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
@@ -622,7 +622,7 @@ func TestClientObservability(t *testing.T) {
 			name:    "upload success",
 			enabled: true,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
-				ctx := context.Background()
+				ctx := t.Context()
 				client, coll := clientFactory(t, nil)
 				componentName := fmt.Sprintf(
 					"%s/%d",
@@ -743,7 +743,7 @@ func TestClientObservability(t *testing.T) {
 						},
 					},
 				}
-				ctx := context.Background()
+				ctx := t.Context()
 				client, _ := clientFactory(t, rCh)
 
 				componentName := fmt.Sprintf(
@@ -753,7 +753,7 @@ func TestClientObservability(t *testing.T) {
 				)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				var wantErr error
-				wantErr = errors.Join(wantErr, errPartial{msg: msg, n: n})
+				wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
@@ -800,7 +800,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: int64(len(resourceLogs)) - 2,
+										Value: 0,
 									},
 									{
 										Attributes: attribute.NewSet(
@@ -812,7 +812,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											semconv.ErrorType(wantErr),
 										),
-										Value: 2,
+										Value: 1,
 									},
 								},
 							},
@@ -876,7 +876,7 @@ func TestClientObservability(t *testing.T) {
 				rCh <- exportResult{
 					Err: err,
 				}
-				ctx := context.Background()
+				ctx := t.Context()
 				client, _ := clientFactory(t, rCh)
 				uploadErr := client.UploadLogs(ctx, resourceLogs)
 				assert.ErrorContains(t, uploadErr, "request contains invalid arguments")
@@ -1007,7 +1007,7 @@ func TestClientObservability(t *testing.T) {
 
 			scopeMetrics := func() metricdata.ScopeMetrics {
 				var got metricdata.ResourceMetrics
-				err := r.Collect(context.Background(), &got)
+				err := r.Collect(t.Context(), &got)
 				require.NoError(t, err)
 				require.Len(t, got.ScopeMetrics, 1)
 				return got.ScopeMetrics[0]
@@ -1032,7 +1032,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 
 	scopeMetrics := func() metricdata.ScopeMetrics {
 		var got metricdata.ResourceMetrics
-		err := r.Collect(context.Background(), &got)
+		err := r.Collect(t.Context(), &got)
 		require.NoError(t, err)
 		require.Len(t, got.ScopeMetrics, 1)
 		return got.ScopeMetrics[0]
@@ -1052,7 +1052,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	client, _ := clientFactory(t, rCh)
 
 	componentName := fmt.Sprintf(
@@ -1062,7 +1062,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 	)
 	serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 	var wantErr error
-	wantErr = errors.Join(wantErr, errPartial{msg: msg, n: n})
+	wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
 
 	wantMetrics := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
@@ -1183,7 +1183,7 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 		require.NoError(b, err)
 		defer coll.srv.Stop()
 
-		ctx := context.Background()
+		ctx := b.Context()
 		opts := []Option{
 			WithEndpoint(coll.listener.Addr().String()),
 			WithInsecure(),

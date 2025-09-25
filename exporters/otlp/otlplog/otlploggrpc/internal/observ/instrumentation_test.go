@@ -4,9 +4,11 @@
 package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 
 import (
-	"context"
-	"errors"
 	"testing"
+
+	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 
 	"google.golang.org/grpc/codes"
 
@@ -226,7 +228,7 @@ func setup(t *testing.T) (*Instrumentation, func() metricdata.ScopeMetrics) {
 
 	return inst, func() metricdata.ScopeMetrics {
 		var rm metricdata.ResourceMetrics
-		require.NoError(t, r.Collect(context.Background(), &rm))
+		require.NoError(t, r.Collect(t.Context(), &rm))
 		require.Len(t, rm.ScopeMetrics, 1)
 		return rm.ScopeMetrics[0]
 	}
@@ -267,46 +269,67 @@ func assertMetrics(
 func TestInstrumentationExportLogs(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
-	end := inst.ExportLogs(context.Background(), n)
-	end(nil, n, codes.OK)
+	inst.ExportLogs(t.Context(), n).End(nil)
 	assertMetrics(t, collect(), n, n, nil, codes.OK)
 }
 
 func TestInstrumentationExportLogPartialErrors(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
-	end := inst.ExportLogs(context.Background(), n)
 	const success = 5
-	end(assert.AnError, success, codes.Canceled)
 
-	assertMetrics(t, collect(), n, success, assert.AnError, codes.Canceled)
+	err := internal.PartialSuccess{RejectedItems: success}
+	inst.ExportLogs(t.Context(), n).End(err)
+
+	assertMetrics(t, collect(), n, success, err, status.Code(err))
 }
 
 func TestInstrumentationExportLogAllErrors(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
-	end := inst.ExportLogs(context.Background(), n)
 	const success = 0
-	end(assert.AnError, success, codes.Canceled)
+	inst.ExportLogs(t.Context(), n).End(assert.AnError)
 
-	assertMetrics(t, collect(), n, success, assert.AnError, codes.Canceled)
+	assertMetrics(t, collect(), n, success, assert.AnError, status.Code(assert.AnError))
+}
+
+func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
+	inst, collect := setup(t)
+	const n = 10
+	err := internal.PartialSuccess{RejectedItems: -5}
+	inst.ExportLogs(t.Context(), n).End(err)
+
+	success := int64(n)
+	assertMetrics(t, collect(), n, success, err, status.Code(err))
+
+	err.RejectedItems = n + 5
+	inst.ExportLogs(t.Context(), n).End(err)
+
+	success += 0
+	assertMetrics(t, collect(), n+n, success, err, status.Code(err))
 }
 
 func BenchmarkInstrumentationExportLogs(b *testing.B) {
-	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	inst, err := NewInstrumentation(ID, TARGET)
-	if err != nil {
-		b.Fatalf("failed to create instrumentation: %v", err)
+	setup := func(b *testing.B) *Instrumentation {
+		b.Helper()
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		inst, err := NewInstrumentation(ID, TARGET)
+		if err != nil {
+			b.Fatalf("failed to create instrumentation: %v", err)
+		}
+		return inst
 	}
-
-	var end ExportLogsDone
-	err = errors.New("benchmark error")
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		end = inst.ExportLogs(context.Background(), 10)
-		end(err, 4, codes.Canceled)
+	run := func(err error) func(t *testing.B) {
+		return func(t *testing.B) {
+			inst := setup(b)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.ExportLogs(t.Context(), 10).End(err)
+			}
+		}
 	}
-	_ = end
+	b.Run("NoError", run(nil))
+	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}))
+	b.Run("FullError", run(assert.AnError))
 }

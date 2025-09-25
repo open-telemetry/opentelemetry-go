@@ -6,8 +6,9 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
@@ -141,19 +142,13 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	count := int64(len(rl))
 	var success int64
 	if c.instrumentation != nil {
-		trackExportFunc := c.instrumentation.ExportLogs(ctx, count)
+		eo := c.instrumentation.ExportLogs(ctx, count)
 		defer func() {
-			if uploadErr != nil {
-				trackExportFunc(uploadErr, success, status.Code(uploadErr))
-				return
-			}
-			trackExportFunc(uploadErr, success, status.Code(uploadErr))
+			eo.End(uploadErr)
 		}()
 	}
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
-		success = count
-
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
 		})
@@ -162,7 +157,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			success -= n
 			if n != 0 || msg != "" {
-				err := errPartial{msg: msg, n: n}
+				err := internal.LogPartialSuccessError(n, msg)
 				uploadErr = errors.Join(uploadErr, err)
 			}
 		}
@@ -171,26 +166,8 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 			// Success.
 			return nil
 		}
-		success = 0
 		return err
 	}))
-}
-
-type errPartial struct {
-	msg string
-	n   int64
-}
-
-var _ error = errPartial{}
-
-func (e errPartial) Error() string {
-	const form = "OTLP partial success: %s (%d log records rejected)"
-	return fmt.Sprintf(form, e.msg, e.n)
-}
-
-func (errPartial) Is(target error) bool {
-	_, ok := target.(errPartial)
-	return ok
 }
 
 // Shutdown shuts down the client, freeing all resources.

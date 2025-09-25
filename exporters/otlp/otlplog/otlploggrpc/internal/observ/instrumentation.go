@@ -16,13 +16,12 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
@@ -134,16 +133,9 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	return i, nil
 }
 
-// ExportLogsDone is a function that is called when a call to an Exporter's
-// ExportLogs method completes
-//
-// The number of successful exports is provided as success. Any error that is encountered is provided as error
-// The code of last gRPC requests performed in scope of this export call.
-type ExportLogsDone func(err error, success int64, code codes.Code)
-
 // ExportLogs instruments the ExportLogs method of the exporter. It returns a
 // function that needs to be deferred so it is called when the method returns.
-func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportLogsDone {
+func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
@@ -152,45 +144,112 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportLog
 
 	i.logInflightMetric.Add(ctx, count, *addOpt...)
 
-	return i.end(ctx, start, count)
+	return ExportOp{
+		nLogs: count,
+		ctx:   ctx,
+		start: start,
+		inst:  i,
+	}
 }
 
-func (i *Instrumentation) end(ctx context.Context, start time.Time, count int64) ExportLogsDone {
-	return func(err error, success int64, code codes.Code) {
-		addOpt := get[metric.AddOption](addOpPool)
-		defer put(addOpPool, addOpt)
+// ExportOp tracks the operation being observed by [Instrumentation.ExportLogs].
+type ExportOp struct {
+	nLogs int64
+	ctx   context.Context
+	start time.Time
 
-		*addOpt = append(*addOpt, i.setOpt)
+	inst *Instrumentation
+}
 
-		i.logInflightMetric.Add(ctx, -count, *addOpt...)
-		i.logExportedMetric.Add(ctx, success, *addOpt...)
+// End completes the observation of the operation being observed by a call to
+// [Instrumentation.ExportLogs].
+// Any error that is encountered is provided as err.
+//
+// If err is not nil, all logs will be recorded as failures unless error is of
+// type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
+// of successfully exported logs will be determined by inspecting the
+// RejectedItems field of the PartialSuccess.
+func (e ExportOp) End(err error) {
+	addOpt := get[metric.AddOption](addOpPool)
+	defer put(addOpPool, addOpt)
 
-		mOpt := i.setOpt
-		if err != nil {
-			attrs := get[attribute.KeyValue](attrsPool)
-			defer put(attrsPool, attrs)
-			*attrs = append(*attrs, i.presetAttrs...)
-			*attrs = append(*attrs, semconv.ErrorType(err))
+	*addOpt = append(*addOpt, e.inst.setOpt)
 
-			set := attribute.NewSet(*attrs...)
-			mOpt = metric.WithAttributeSet(set)
+	success := successful(e.nLogs, err)
 
-			*addOpt = append((*addOpt)[:0], mOpt)
+	e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+	e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
 
-			i.logExportedMetric.Add(ctx, count-success, *addOpt...)
-		}
+	mOpt := e.inst.setOpt
+	if err != nil {
+		// Add the error.type attribute to the attribute set.
+		attrs := get[attribute.KeyValue](attrsPool)
+		defer put(attrsPool, attrs)
+		*attrs = append(*attrs, e.inst.presetAttrs...)
+		*attrs = append(*attrs, semconv.ErrorType(err))
 
-		recordOpt := get[metric.RecordOption](recordOptPool)
-		defer put(recordOptPool, recordOpt)
-		*recordOpt = append(
-			*recordOpt,
-			mOpt,
-			metric.WithAttributes(
-				semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
-			),
-		)
-		i.logExportedDurationMetric.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
+		set := attribute.NewSet(*attrs...)
+		mOpt = metric.WithAttributeSet(set)
+
+		// Reset addOpt with new attribute set
+		*addOpt = append((*addOpt)[:0], mOpt)
+
+		e.inst.logExportedMetric.Add(e.ctx, e.nLogs-success, *addOpt...)
 	}
+
+	code := status.Code(err)
+
+	recordOpt := get[metric.RecordOption](recordOptPool)
+	defer put(recordOptPool, recordOpt)
+	*recordOpt = append(
+		*recordOpt,
+		mOpt,
+		metric.WithAttributes(
+			semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
+		),
+	)
+	duration := time.Since(e.start).Seconds()
+	e.inst.logExportedDurationMetric.Record(e.ctx, duration, *recordOpt...)
+}
+
+// successful returns the number of successfully exported logs out of the n
+// that were exported based on the provided error.
+//
+// If err is nil, n is returned. All logs were successfully exported.
+//
+// If err is not nil and not an [internal.PartialSuccess] error, 0 is returned.
+// It is assumed all logs failed to be exported.
+//
+// If err is an [internal.PartialSuccess] error, the number of successfully
+// exported logs is computed by subtracting the RejectedItems field from n. If
+// RejectedItems is negative, n is returned. If RejectedItems is greater than
+// n, 0 is returned.
+func successful(n int64, err error) int64 {
+	if err == nil {
+		return n // All log successfully exported.
+	}
+	// Split rejection calculation so successful is inlineable.
+	return n - rejectedCount(n, err)
+}
+
+var errPool = sync.Pool{
+	New: func() any {
+		return new(internal.PartialSuccess)
+	},
+}
+
+// rejectedCount returns how many out of the n logs exporter were rejected based on
+// the provided non-nil err.
+func rejectedCount(n int64, err error) int64 {
+	ps := errPool.Get().(*internal.PartialSuccess)
+	defer errPool.Put(ps)
+
+	// check for partial success
+	if errors.As(err, ps) {
+		return min(max(ps.RejectedItems, 0), n)
+	}
+	// all logs exporter
+	return n
 }
 
 // ServerAddrAttrs is a function that extracts server address and port attributes
