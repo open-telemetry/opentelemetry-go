@@ -144,81 +144,106 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	return i, err
 }
 
-// RecordDurationDone is a function that is called when a call to an Exporters'
-// RecordOperationDuration or RecordCollectionDuration completes.
+// RecordOperationDuration starts the timing of an operation.
 //
-// Any error that is encountered is provided as err.
-type RecordDurationDone func(error)
-
-func (i *Instrumentation) RecordOperationDuration(ctx context.Context) RecordDurationDone {
-	return i.recordDuration(ctx, i.operationDuration)
-}
-
-func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) RecordDurationDone {
-	return i.recordDuration(ctx, i.collectionDuration)
-}
-
-func (i *Instrumentation) recordDuration(
-	ctx context.Context,
-	h metric.Float64Histogram,
-) RecordDurationDone {
-	start := time.Now()
-
-	return func(err error) {
-		recordOpt := get[metric.RecordOption](recordOptPool)
-		defer put(recordOptPool, recordOpt)
-		*recordOpt = append(*recordOpt, i.setOpt)
-
-		if err != nil {
-			attrs := get[attribute.KeyValue](measureAttrsPool)
-			defer put(measureAttrsPool, attrs)
-			*attrs = append(*attrs, i.attrs...)
-			*attrs = append(*attrs, semconv.ErrorType(err))
-
-			set := attribute.NewSet(*attrs...)
-			*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
-		}
-
-		h.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
+// It returns a [Timer] that tracks the operation duration. The [Timer.Stop]
+// method must be called when the operation completes.
+func (i *Instrumentation) RecordOperationDuration(ctx context.Context) Timer {
+	return Timer{
+		ctx:   ctx,
+		start: time.Now(),
+		inst:  i,
+		hist:  i.operationDuration,
 	}
 }
 
-// ExportMetricsDone is a function that is called when a call to an Exporter's
-// export methods completes.
+// RecordCollectionDuration starts the timing of a collection operation.
 //
-// The number of successful exports is provided as success. Any error that is
-// encountered is provided as err.
-type ExportMetricsDone func(success int64, err error)
+// It returns a [Timer] that tracks the collection duration. The [Timer.Stop]
+// method must be called when the collection completes.
+func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) Timer {
+	return Timer{
+		ctx:   ctx,
+		start: time.Now(),
+		inst:  i,
+		hist:  i.collectionDuration,
+	}
+}
 
-func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportMetricsDone {
+// Timer tracks the duration of an operation.
+type Timer struct {
+	ctx   context.Context
+	start time.Time
+
+	inst *Instrumentation
+	hist metric.Float64Histogram
+}
+
+// Stop ends the timing operation and records the elapsed duration.
+//
+// If err is non-nil, an appropriate error type attribute will be included.
+func (t Timer) Stop(err error) {
+	recordOpt := get[metric.RecordOption](recordOptPool)
+	defer put(recordOptPool, recordOpt)
+	*recordOpt = append(*recordOpt, t.inst.setOpt)
+
+	if err != nil {
+		attrs := get[attribute.KeyValue](measureAttrsPool)
+		defer put(measureAttrsPool, attrs)
+		*attrs = append(*attrs, t.inst.attrs...)
+		*attrs = append(*attrs, semconv.ErrorType(err))
+
+		set := attribute.NewSet(*attrs...)
+		*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
+	}
+
+	t.hist.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
+}
+
+// ExportMetrics starts the observation of a metric export operation.
+//
+// It returns an [ExportOp] that tracks the export operation. The
+// [ExportOp.End] method must be called when the export completes.
+func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportOp {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, i.setOpt)
 
 	i.inflightMetric.Add(ctx, n, *addOpt...)
 
-	return i.end(ctx, n)
+	return ExportOp{ctx: ctx, nMetrics: n, inst: i}
 }
 
-func (i *Instrumentation) end(ctx context.Context, n int64) ExportMetricsDone {
-	return func(success int64, err error) {
-		addOpt := get[metric.AddOption](addOptPool)
-		defer put(addOptPool, addOpt)
-		*addOpt = append(*addOpt, i.setOpt)
+// ExportOp tracks a metric export operation.
+type ExportOp struct {
+	ctx      context.Context
+	nMetrics int64
 
-		i.inflightMetric.Add(ctx, -n, *addOpt...)
-		i.exportedMetric.Add(ctx, success, *addOpt...)
+	inst *Instrumentation
+}
 
-		if err != nil {
-			attrs := get[attribute.KeyValue](measureAttrsPool)
-			defer put(measureAttrsPool, attrs)
-			*attrs = append(*attrs, i.attrs...)
-			*attrs = append(*attrs, semconv.ErrorType(err))
+// End ends the observation of a metric export operation.
+//
+// The success parameter is the number of metrics that were successfully
+// exported. If a non-nil error is provided, the number of failed metrics will
+// be recorded with the error type attribute.
+func (e ExportOp) End(success int64, err error) {
+	addOpt := get[metric.AddOption](addOptPool)
+	defer put(addOptPool, addOpt)
+	*addOpt = append(*addOpt, e.inst.setOpt)
 
-			set := attribute.NewSet(*attrs...)
+	e.inst.inflightMetric.Add(e.ctx, -e.nMetrics, *addOpt...)
+	e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
 
-			*addOpt = append((*addOpt)[:0], metric.WithAttributeSet(set))
-			i.exportedMetric.Add(ctx, n-success, *addOpt...)
-		}
+	if err != nil {
+		attrs := get[attribute.KeyValue](measureAttrsPool)
+		defer put(measureAttrsPool, attrs)
+		*attrs = append(*attrs, e.inst.attrs...)
+		*attrs = append(*attrs, semconv.ErrorType(err))
+
+		set := attribute.NewSet(*attrs...)
+
+		*addOpt = append((*addOpt)[:0], metric.WithAttributeSet(set))
+		e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
 	}
 }

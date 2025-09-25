@@ -166,8 +166,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	ctx := context.TODO()
 
 	if c.inst != nil {
-		endOp := c.inst.RecordOperationDuration(ctx)
-		defer func() { endOp(err) }()
+		timer := c.inst.RecordOperationDuration(ctx)
+		defer func() { timer.Stop(err) }()
 	}
 
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
@@ -175,7 +175,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	endCollection := func(error) {}
 	if c.inst != nil {
-		endCollection = c.inst.RecordCollectionDuration(ctx)
+		endCollection = c.inst.RecordCollectionDuration(ctx).Stop
 	}
 	err = c.reader.Collect(ctx, metrics)
 	endCollection(err)
@@ -366,8 +366,8 @@ func addExponentialHistogramMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
-		defer func() { end(success, err) }()
+		op := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
+		defer func() { op.End(success, err) }()
 	}
 
 	for j, dp := range histogram.DataPoints {
@@ -467,8 +467,8 @@ func addHistogramMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
-		defer func() { end(success, err) }()
+		op := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
+		defer func() { op.End(success, err) }()
 	}
 
 	for j, dp := range histogram.DataPoints {
@@ -515,8 +515,8 @@ func addSumMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.ExportMetrics(ctx, int64(len(sum.DataPoints)))
-		defer func() { end(success, err) }()
+		op := inst.ExportMetrics(ctx, int64(len(sum.DataPoints)))
+		defer func() { op.End(success, err) }()
 	}
 
 	valueType := prometheus.CounterValue
@@ -565,8 +565,8 @@ func addGaugeMetric[N int64 | float64](
 	var err error
 	var success int64
 	if inst != nil {
-		end := inst.ExportMetrics(ctx, int64(len(gauge.DataPoints)))
-		defer func() { end(success, err) }()
+		op := inst.ExportMetrics(ctx, int64(len(gauge.DataPoints)))
+		defer func() { op.End(success, err) }()
 	}
 
 	for i, dp := range gauge.DataPoints {

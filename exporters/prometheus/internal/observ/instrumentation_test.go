@@ -218,11 +218,9 @@ func TestInstrumentationExportMetricsSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	endOp := inst.RecordOperationDuration(t.Context())
-	end := inst.ExportMetrics(t.Context(), n)
-
-	end(n, nil)
-	endOp(nil)
+	timer := inst.RecordOperationDuration(t.Context())
+	inst.ExportMetrics(t.Context(), n).End(n, nil)
+	timer.Stop(nil)
 
 	assertExportMetricsMetrics(t, collect(), n, n, nil)
 }
@@ -233,12 +231,12 @@ func TestInstrumentationExportMetricsAllErrored(t *testing.T) {
 	const n = 10
 	err := assert.AnError
 
-	endOp := inst.RecordOperationDuration(t.Context())
-	end := inst.ExportMetrics(t.Context(), n)
+	timer := inst.RecordOperationDuration(t.Context())
+	op := inst.ExportMetrics(t.Context(), n)
 
 	const success = 0
-	end(success, err)
-	endOp(err)
+	op.End(success, err)
+	timer.Stop(err)
 
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
@@ -249,12 +247,12 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 	const n = 10
 	err := assert.AnError
 
-	endOp := inst.RecordOperationDuration(t.Context())
-	end := inst.ExportMetrics(t.Context(), n)
+	timer := inst.RecordOperationDuration(t.Context())
+	op := inst.ExportMetrics(t.Context(), n)
 
 	const success = 5
-	end(success, err)
-	endOp(err)
+	op.End(success, err)
+	timer.Stop(err)
 
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
@@ -262,8 +260,7 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 func TestRecordCollectionDurationSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
-	endCollection := inst.RecordCollectionDuration(t.Context())
-	endCollection(nil)
+	inst.RecordCollectionDuration(t.Context()).Stop(nil)
 
 	assertCollectionOnly(t, collect(), nil)
 }
@@ -272,62 +269,75 @@ func TestRecordCollectionDurationError(t *testing.T) {
 	inst, collect := setup(t)
 
 	wantErr := assert.AnError
-	endCollection := inst.RecordCollectionDuration(t.Context())
-	endCollection(wantErr)
+	inst.RecordCollectionDuration(t.Context()).Stop(wantErr)
 
 	assertCollectionOnly(t, collect(), wantErr)
 }
 
-func BenchmarkInstrumentationExportMetrics(b *testing.B) {
+func setupBench(b *testing.B) *observ.Instrumentation {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	inst, err := observ.NewInstrumentation(ID)
 	if err != nil {
 		b.Fatalf("failed to create instrumentation: %v", err)
 	}
-
-	benchErr := errors.New("benchmark error")
-	ctx := b.Context()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		end := inst.ExportMetrics(ctx, 10)
-		end(4, benchErr)
+	if inst == nil {
+		b.Fatal("expected instrumentation, got nil")
 	}
+	return inst
+}
+
+func BenchmarkInstrumentationExportMetrics(b *testing.B) {
+	const nSpans = 10
+	run := func(success int64, err error) func(*testing.B) {
+		inst := setupBench(b)
+		return func(b *testing.B) {
+			ctx := b.Context()
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.ExportMetrics(ctx, nSpans).End(success, err)
+			}
+		}
+	}
+
+	err := errors.New("benchmark error")
+	b.Run("NoError", run(nSpans, nil))
+	b.Run("AllError", run(0, err))
+	b.Run("PartialError", run(4, err))
 }
 
 func BenchmarkInstrumentationRecordOperationDuration(b *testing.B) {
-	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	inst, err := observ.NewInstrumentation(ID)
-	if err != nil {
-		b.Fatalf("failed to create instrumentation: %v", err)
+	run := func(err error) func(*testing.B) {
+		inst := setupBench(b)
+		return func(b *testing.B) {
+			ctx := b.Context()
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.RecordOperationDuration(ctx).Stop(err)
+			}
+		}
 	}
 
-	benchErr := errors.New("benchmark error")
-	ctx := b.Context()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		done := inst.RecordOperationDuration(ctx)
-		done(benchErr)
-	}
+	err := errors.New("benchmark error")
+	b.Run("NoError", run(nil))
+	b.Run("Error", run(err))
 }
 
 func BenchmarkInstrumentationRecordCollectionDuration(b *testing.B) {
-	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	inst, err := observ.NewInstrumentation(ID)
-	if err != nil {
-		b.Fatalf("failed to create instrumentation: %v", err)
+	run := func(err error) func(*testing.B) {
+		inst := setupBench(b)
+		return func(b *testing.B) {
+			ctx := b.Context()
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.RecordCollectionDuration(ctx).Stop(err)
+			}
+		}
 	}
 
-	benchErr := errors.New("benchmark error")
-	ctx := b.Context()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		endCollection := inst.RecordCollectionDuration(ctx)
-		endCollection(benchErr)
-	}
+	err := errors.New("benchmark error")
+	b.Run("NoError", run(nil))
+	b.Run("Error", run(err))
 }
