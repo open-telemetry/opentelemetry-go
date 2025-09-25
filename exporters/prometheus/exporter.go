@@ -231,20 +231,18 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		for _, m := range scopeMetrics.Metrics {
 			typ := c.metricType(m)
 			if typ == nil {
-				reportError(ch, nil, errors.New("invalid metric type"))
+				reportError(ch, nil, errInvalidMetricType)
 				continue
 			}
 			name, err := c.getName(m)
 			if err != nil {
-				// TODO(#7066): Handle this error better. It's not clear this can be
-				// reached, bad metric names should / will be caught at creation time.
 				reportError(ch, nil, err)
 				continue
 			}
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
-				reportError(ch, nil, errors.New("invalid metric"))
+				reportError(ch, nil, errInvalidMetric)
 				continue
 			}
 
@@ -353,10 +351,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			reportError(
 				ch,
 				desc,
-				fmt.Errorf(
-					"exponential histogram scale %d is below minimum supported scale -4, skipping data point",
-					scale,
-				),
+				fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale),
 			)
 			continue
 		}

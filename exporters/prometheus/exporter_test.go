@@ -1375,7 +1375,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		var dtoMetric dto.Metric
 		werr := pm.Write(&dtoMetric)
 		require.Error(t, werr)
-		assert.Contains(t, werr.Error(), "below minimum supported scale -4")
+		assert.ErrorIs(t, werr, errEHScaleBelowMin)
 		// The exporter reports via invalid metric, not the global otel error handler.
 		assert.NoError(t, capturedError)
 	})
@@ -1902,6 +1902,21 @@ func TestEscapingErrorHandling(t *testing.T) {
 			skipInstrument: true,
 			// Error message comes from normalization in the translator; match on a stable substring.
 			expectGatherErrContains: "normalization",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				// target_info should still be exported.
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name:        "good namespace, names should be escaped",
@@ -1937,6 +1952,21 @@ func TestEscapingErrorHandling(t *testing.T) {
 			// With improved error handling, invalid scope label names result in an invalid metric
 			// and Gather returns an error containing the normalization failure.
 			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				// target_info should still be exported; metric with bad scope label dropped.
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name:            "bad translated metric name",
@@ -1958,18 +1988,60 @@ func TestEscapingErrorHandling(t *testing.T) {
 			producer:                makeSummaryProducer(),
 			skipInstrument:          true,
 			expectGatherErrContains: "invalid metric type",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name:                    "bad exponential histogram label name via producer",
 			producer:                makeBadEHProducer(),
 			skipInstrument:          true,
 			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name:                    "exponential histogram constructor error via producer (count mismatch)",
 			producer:                makeBadEHCountProducer(),
 			skipInstrument:          true,
 			expectGatherErrContains: "count",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name: "sum constructor error via duplicate label name",
@@ -1983,6 +2055,20 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return nil
 			},
 			expectGatherErrContains: "duplicate label",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name: "gauge constructor error via duplicate label name",
@@ -1995,6 +2081,20 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return nil
 			},
 			expectGatherErrContains: "duplicate label",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name: "histogram constructor error via duplicate label name",
@@ -2007,6 +2107,20 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return nil
 			},
 			expectGatherErrContains: "duplicate label",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name: "bad gauge label name",
@@ -2019,6 +2133,20 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return nil
 			},
 			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 		{
 			name: "bad histogram label name",
@@ -2031,6 +2159,20 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return nil
 			},
 			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
 		},
 	}
 
