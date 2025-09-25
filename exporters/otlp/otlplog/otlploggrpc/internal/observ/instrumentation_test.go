@@ -322,8 +322,8 @@ func BenchmarkInstrumentationExportLogs(b *testing.B) {
 	run := func(err error) func(t *testing.B) {
 		return func(t *testing.B) {
 			inst := setup(b)
-			b.ReportAllocs()
-			b.ResetTimer()
+			t.ReportAllocs()
+			t.ResetTimer()
 			for b.Loop() {
 				inst.ExportLogs(t.Context(), 10).End(err)
 			}
