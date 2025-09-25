@@ -4,7 +4,6 @@
 package observ_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -13,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	observ "go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
+	"go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
 	mapi "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -101,7 +100,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 
 	return inst, func() metricdata.ScopeMetrics {
 		var rm metricdata.ResourceMetrics
-		require.NoError(t, r.Collect(context.Background(), &rm))
+		require.NoError(t, r.Collect(t.Context(), &rm))
 		require.Len(t, rm.ScopeMetrics, 1)
 		return rm.ScopeMetrics[0]
 	}
@@ -219,8 +218,8 @@ func TestInstrumentationExportMetricsSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	endOp := inst.RecordOperationDuration(context.Background())
-	end := inst.ExportMetrics(context.Background(), n)
+	endOp := inst.RecordOperationDuration(t.Context())
+	end := inst.ExportMetrics(t.Context(), n)
 
 	end(n, nil)
 	endOp(nil)
@@ -234,8 +233,8 @@ func TestInstrumentationExportMetricsAllErrored(t *testing.T) {
 	const n = 10
 	err := assert.AnError
 
-	endOp := inst.RecordOperationDuration(context.Background())
-	end := inst.ExportMetrics(context.Background(), n)
+	endOp := inst.RecordOperationDuration(t.Context())
+	end := inst.ExportMetrics(t.Context(), n)
 
 	const success = 0
 	end(success, err)
@@ -250,8 +249,8 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 	const n = 10
 	err := assert.AnError
 
-	endOp := inst.RecordOperationDuration(context.Background())
-	end := inst.ExportMetrics(context.Background(), n)
+	endOp := inst.RecordOperationDuration(t.Context())
+	end := inst.ExportMetrics(t.Context(), n)
 
 	const success = 5
 	end(success, err)
@@ -263,7 +262,7 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 func TestRecordCollectionDurationSuccess(t *testing.T) {
 	inst, collect := setup(t)
 
-	endCollection := inst.RecordCollectionDuration(context.Background())
+	endCollection := inst.RecordCollectionDuration(t.Context())
 	endCollection(nil)
 
 	assertCollectionOnly(t, collect(), nil)
@@ -273,7 +272,7 @@ func TestRecordCollectionDurationError(t *testing.T) {
 	inst, collect := setup(t)
 
 	wantErr := assert.AnError
-	endCollection := inst.RecordCollectionDuration(context.Background())
+	endCollection := inst.RecordCollectionDuration(t.Context())
 	endCollection(wantErr)
 
 	assertCollectionOnly(t, collect(), wantErr)
@@ -287,7 +286,7 @@ func BenchmarkInstrumentationExportMetrics(b *testing.B) {
 	}
 
 	benchErr := errors.New("benchmark error")
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -305,7 +304,7 @@ func BenchmarkInstrumentationRecordOperationDuration(b *testing.B) {
 	}
 
 	benchErr := errors.New("benchmark error")
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -323,7 +322,7 @@ func BenchmarkInstrumentationRecordCollectionDuration(b *testing.B) {
 	}
 
 	benchErr := errors.New("benchmark error")
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.ReportAllocs()
 	b.ResetTimer()

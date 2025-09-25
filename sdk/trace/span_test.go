@@ -5,7 +5,6 @@ package trace
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"testing"
 
@@ -378,7 +377,7 @@ func BenchmarkRecordingSpanSetAttributes(b *testing.B) {
 		attrs = append(attrs, attr)
 	}
 
-	ctx := context.Background()
+	ctx := b.Context()
 	for _, limit := range []bool{false, true} {
 		b.Run(fmt.Sprintf("WithLimit/%t", limit), func(b *testing.B) {
 			b.ReportAllocs()
@@ -415,7 +414,7 @@ func BenchmarkSpanEnd(b *testing.B) {
 		},
 	}
 
-	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+	ctx := trace.ContextWithSpanContext(b.Context(), trace.SpanContext{})
 
 	for _, c := range cases {
 		b.Run(c.name, func(b *testing.B) {

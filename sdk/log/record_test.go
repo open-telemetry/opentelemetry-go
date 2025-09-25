@@ -1060,72 +1060,667 @@ func BenchmarkWalkAttributes(b *testing.B) {
 	}
 }
 
-func BenchmarkSetAddAttributes(b *testing.B) {
-	kv := log.String("key", "value")
+func BenchmarkAddAttributes(b *testing.B) {
+	// Simple attribute (no deduplication or limits).
+	singleKV := log.String("key", "value")
 
-	b.Run("SetAttributes", func(b *testing.B) {
+	// Attributes with no duplicates.
+	uniqueAttrs := []log.KeyValue{
+		log.String("key1", "value1"),
+		log.String("key2", "value2"),
+		log.String("key3", "value3"),
+		log.String("key4", "value4"),
+		log.String("key5", "value5"),
+	}
+
+	// Attributes with duplicates that trigger deduplication.
+	dupAttrs := []log.KeyValue{
+		log.String("key1", "value1"),
+		log.String("key2", "value2"),
+		log.String("key1", "duplicate1"), // duplicate key
+		log.String("key3", "value3"),
+		log.String("key2", "duplicate2"), // duplicate key
+	}
+
+	// Large number of attributes to trigger count limits.
+	manyAttrs := make([]log.KeyValue, 20)
+	for i := range manyAttrs {
+		manyAttrs[i] = log.String(fmt.Sprintf("key%d", i), "value")
+	}
+
+	// Attributes with long values to trigger value length limits.
+	longValueAttrs := []log.KeyValue{
+		log.String("short", "short"),
+		log.String("long1", strings.Repeat("a", 50)),
+		log.String("long2", strings.Repeat("b", 100)),
+	}
+
+	// Attributes with nested maps that have duplicates (triggers recursive deduplication).
+	nestedDupAttrs := []log.KeyValue{
+		log.String("simple", "value"),
+		log.Map("map1",
+			log.String("inner1", "value1"),
+			log.String("inner2", "value2"),
+			log.String("inner1", "duplicate"), // duplicate in nested map
+		),
+		log.Map("map2",
+			log.String("key", "original"),
+			log.Map("deeply_nested",
+				log.String("deep1", "value1"),
+				log.String("deep2", "value2"),
+				log.String("deep1", "duplicate_deep"), // duplicate in deeply nested map
+			),
+			log.String("key", "overwrite"), // duplicate key at this level
+		),
+		log.Slice("slice_with_maps",
+			log.MapValue(
+				log.String("slice_key", "value1"),
+				log.String("slice_key", "duplicate"), // duplicate in slice element
+			),
+		),
+	}
+
+	// Adding a single attribute with no limits applied.
+	b.Run("Single/NoLimits", func(b *testing.B) {
 		records := make([]Record, b.N)
-
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
 		b.ResetTimer()
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			records[i].SetAttributes(kv)
+		for i := range b.N {
+			records[i].AddAttributes(singleKV)
 		}
 	})
 
-	b.Run("SetAttributes/AllowDuplicates", func(b *testing.B) {
+	// Adding a single attribute with duplicate keys allowed (faster path).
+	b.Run("Single/AllowDuplicates", func(b *testing.B) {
 		records := make([]Record, b.N)
 		for i := range records {
 			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
 		}
-
 		b.ResetTimer()
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			records[i].SetAttributes(kv)
+		for i := range b.N {
+			records[i].AddAttributes(singleKV)
 		}
 	})
 
-	b.Run("AddAttributes", func(b *testing.B) {
+	// Adding multiple unique attributes with no limits applied.
+	b.Run("Unique/NoLimits", func(b *testing.B) {
 		records := make([]Record, b.N)
-
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
 		b.ResetTimer()
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			records[i].AddAttributes(kv)
+		for i := range b.N {
+			records[i].AddAttributes(uniqueAttrs...)
 		}
 	})
 
-	b.Run("AddAttributes/AllowDuplicates", func(b *testing.B) {
+	// Adding multiple unique attributes with duplicate keys allowed (faster path).
+	b.Run("Unique/AllowDuplicates", func(b *testing.B) {
 		records := make([]Record, b.N)
 		for i := range records {
 			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
 		}
-
 		b.ResetTimer()
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			records[i].AddAttributes(kv)
+		for i := range b.N {
+			records[i].AddAttributes(uniqueAttrs...)
+		}
+	})
+
+	// Adding attributes with duplicates that trigger deduplication logic.
+	b.Run("Deduplication/Enabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(dupAttrs...)
+		}
+	})
+
+	// Adding nested maps with duplicates that trigger recursive deduplication.
+	b.Run("NestedDeduplication/Enabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(nestedDupAttrs...)
+		}
+	})
+
+	// Adding nested maps with duplicates with deduplication disabled.
+	b.Run("NestedDeduplication/Disabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(nestedDupAttrs...)
+		}
+	})
+
+	// Adding attributes with duplicates with deduplication disabled.
+	b.Run("Deduplication/Disabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(dupAttrs...)
+		}
+	})
+
+	// Adding more attributes than the count limit allows (triggers dropping).
+	b.Run("CountLimit/Hit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = 10 // Less than manyAttrs length.
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(manyAttrs...)
+		}
+	})
+
+	// Adding attributes within the count limit (no dropping).
+	b.Run("CountLimit/NotHit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = 100 // More than manyAttrs length.
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(manyAttrs...)
+		}
+	})
+
+	// Adding attributes with long values that trigger truncation.
+	b.Run("ValueLimit/Hit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 20 // Less than long values.
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(longValueAttrs...)
+		}
+	})
+
+	// Adding attributes with values within the length limit (no truncation).
+	b.Run("ValueLimit/NotHit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 200 // More than long values.
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].AddAttributes(longValueAttrs...)
+		}
+	})
+}
+
+func BenchmarkSetAttributes(b *testing.B) {
+	// Simple attribute (no deduplication or limits).
+	singleKV := log.String("key", "value")
+
+	// Attributes with no duplicates.
+	uniqueAttrs := []log.KeyValue{
+		log.String("key1", "value1"),
+		log.String("key2", "value2"),
+		log.String("key3", "value3"),
+		log.String("key4", "value4"),
+		log.String("key5", "value5"),
+	}
+
+	// Attributes with duplicates that trigger deduplication.
+	dupAttrs := []log.KeyValue{
+		log.String("key1", "value1"),
+		log.String("key2", "value2"),
+		log.String("key1", "duplicate1"), // duplicate key
+		log.String("key3", "value3"),
+		log.String("key2", "duplicate2"), // duplicate key
+	}
+
+	// Large number of attributes to trigger count limits.
+	manyAttrs := make([]log.KeyValue, 20)
+	for i := range manyAttrs {
+		manyAttrs[i] = log.String(fmt.Sprintf("key%d", i), "value")
+	}
+
+	// Attributes with long values to trigger value length limits.
+	longValueAttrs := []log.KeyValue{
+		log.String("short", "short"),
+		log.String("long1", strings.Repeat("a", 50)),
+		log.String("long2", strings.Repeat("b", 100)),
+	}
+
+	// Attributes with nested maps that have duplicates (triggers recursive deduplication).
+	nestedDupAttrs := []log.KeyValue{
+		log.String("simple", "value"),
+		log.Map("map1",
+			log.String("inner1", "value1"),
+			log.String("inner2", "value2"),
+			log.String("inner1", "duplicate"), // duplicate in nested map
+		),
+		log.Map("map2",
+			log.String("key", "original"),
+			log.Map("deeply_nested",
+				log.String("deep1", "value1"),
+				log.String("deep2", "value2"),
+				log.String("deep1", "duplicate_deep"), // duplicate in deeply nested map
+			),
+			log.String("key", "overwrite"), // duplicate key at this level
+		),
+		log.Slice("slice_with_maps",
+			log.MapValue(
+				log.String("slice_key", "value1"),
+				log.String("slice_key", "duplicate"), // duplicate in slice element
+			),
+		),
+	}
+
+	// Setting a single attribute with no limits applied.
+	b.Run("Single/NoLimits", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(singleKV)
+		}
+	})
+
+	// Setting a single attribute with duplicate keys allowed (faster path).
+	b.Run("Single/AllowDuplicates", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(singleKV)
+		}
+	})
+
+	// Setting multiple unique attributes with no limits applied.
+	b.Run("Unique/NoLimits", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(uniqueAttrs...)
+		}
+	})
+
+	// Setting multiple unique attributes with duplicate keys allowed (faster path).
+	b.Run("Unique/AllowDuplicates", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(uniqueAttrs...)
+		}
+	})
+
+	// Setting attributes with duplicates that trigger deduplication logic.
+	b.Run("Deduplication/Enabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(dupAttrs...)
+		}
+	})
+
+	// Setting attributes with duplicates with deduplication disabled.
+	b.Run("Deduplication/Disabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(dupAttrs...)
+		}
+	})
+
+	// Setting nested maps with duplicates that trigger recursive deduplication.
+	b.Run("NestedDeduplication/Enabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(nestedDupAttrs...)
+		}
+	})
+
+	// Setting nested maps with duplicates with deduplication disabled.
+	b.Run("NestedDeduplication/Disabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(nestedDupAttrs...)
+		}
+	})
+
+	// Setting more attributes than the count limit allows (triggers dropping).
+	b.Run("CountLimit/Hit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = 10 // Less than manyAttrs length.
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(manyAttrs...)
+		}
+	})
+
+	// Setting attributes within the count limit (no dropping).
+	b.Run("CountLimit/NotHit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = 100 // More than manyAttrs length.
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(manyAttrs...)
+		}
+	})
+
+	// Setting attributes with long values that trigger truncation.
+	b.Run("ValueLimit/Hit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 20 // Less than long values.
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(longValueAttrs...)
+		}
+	})
+
+	// Setting attributes with values within the length limit (no truncation).
+	b.Run("ValueLimit/NotHit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 200 // More than long values.
+			records[i].attributeCountLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(longValueAttrs...)
+		}
+	})
+
+	// Setting attributes on a record that already has existing attributes (tests overwrite behavior).
+	b.Run("Overwrite/Existing", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+			records[i].attributeCountLimit = -1
+			// Pre-populate with existing attributes
+			records[i].AddAttributes(
+				log.String("existing1", "value1"),
+				log.String("existing2", "value2"),
+			)
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetAttributes(uniqueAttrs...)
 		}
 	})
 }
 
 func BenchmarkSetBody(b *testing.B) {
-	b.Run("SetBody", func(b *testing.B) {
-		records := make([]Record, b.N)
+	// Simple value (no deduplication or limits).
+	simpleValue := log.StringValue("simple string value")
 
+	// Map with unique keys (no deduplication needed).
+	uniqueMapValue := log.MapValue(
+		log.Bool("bool_key", true),
+		log.Float64("float_key", 3.14),
+		log.String("string_key", "value"),
+		log.Slice("slice_key", log.Int64Value(1), log.Int64Value(2)),
+		log.Map("nested_key", log.Int("inner", 42)),
+		log.Bytes("bytes_key", []byte("data")),
+	)
+
+	// Map with duplicate keys (triggers deduplication).
+	dupMapValue := log.MapValue(
+		log.String("key1", "value1"),
+		log.String("key2", "value2"),
+		log.String("key1", "duplicate1"), // duplicate key
+		log.String("key3", "value3"),
+		log.String("key2", "duplicate2"), // duplicate key
+	)
+
+	// Nested map with duplicates.
+	nestedDupMapValue := log.MapValue(
+		log.String("outer1", "value1"),
+		log.Map("nested",
+			log.String("inner1", "value1"),
+			log.String("inner2", "value2"),
+			log.String("inner1", "duplicate"), // duplicate in nested map
+		),
+		log.Slice("slice_with_maps",
+			log.MapValue(
+				log.String("slice_key", "value1"),
+				log.String("slice_key", "duplicate"), // duplicate in slice element
+			),
+		),
+	)
+
+	// Map with long string values (triggers value length limits).
+	longValueMapValue := log.MapValue(
+		log.String("short", "short"),
+		log.String("long1", strings.Repeat("a", 50)),
+		log.String("long2", strings.Repeat("b", 100)),
+	)
+
+	// Setting a simple string value with no limits applied.
+	b.Run("Simple/NoLimits", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+		}
 		b.ResetTimer()
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			records[i].SetBody(log.MapValue(
-				log.Bool("0", true),
-				log.Float64("2", 3.0),
-				log.String("3", "forth"),
-				log.Slice("4", log.Int64Value(1)),
-				log.Map("5", log.Int("key", 2)),
-				log.Bytes("6", []byte("six")),
-				log.Int64("1", 3),
-			))
+		for i := range b.N {
+			records[i].SetBody(simpleValue)
+		}
+	})
+
+	// Setting a simple string value with limits applied.
+	b.Run("Simple/WithLimits", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 20
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(simpleValue)
+		}
+	})
+
+	// Setting a map value with unique keys and no limits applied.
+	b.Run("UniqueMap/NoLimits", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(uniqueMapValue)
+		}
+	})
+
+	// Setting a map value with duplicate keys allowed (faster path).
+	b.Run("UniqueMap/AllowDuplicates", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(uniqueMapValue)
+		}
+	})
+
+	// Setting a map with duplicate keys that triggers deduplication logic.
+	b.Run("Deduplication/Enabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(dupMapValue)
+		}
+	})
+
+	// Setting a map with duplicate keys with deduplication disabled.
+	b.Run("Deduplication/Disabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(dupMapValue)
+		}
+	})
+
+	// Setting nested maps with duplicates (tests recursive deduplication).
+	b.Run("NestedDeduplication/Enabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(nestedDupMapValue)
+		}
+	})
+
+	// Setting nested maps with duplicates with deduplication disabled.
+	b.Run("NestedDeduplication/Disabled", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].allowDupKeys = true
+			records[i].attributeValueLengthLimit = -1
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(nestedDupMapValue)
+		}
+	})
+
+	// Setting map with long string values that trigger truncation.
+	b.Run("ValueLimit/Hit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 30 // Less than long values.
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(longValueMapValue)
+		}
+	})
+
+	// Setting map with values within the length limit (no truncation).
+	b.Run("ValueLimit/NoHit", func(b *testing.B) {
+		records := make([]Record, b.N)
+		for i := range records {
+			records[i].attributeValueLengthLimit = 200 // More than long values.
+		}
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := range b.N {
+			records[i].SetBody(longValueMapValue)
 		}
 	})
 }

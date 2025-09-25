@@ -162,7 +162,7 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
 	// The synchronous measurement methods must ignore the context cancellation.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	alice := attribute.NewSet(
@@ -391,7 +391,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 
 				c, ok := ctr.(x.EnabledInstrument)
 				require.True(t, ok)
-				assert.True(t, c.Enabled(context.Background()))
+				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -413,7 +413,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 
 				c, ok := ctr.(x.EnabledInstrument)
 				require.True(t, ok)
-				assert.True(t, c.Enabled(context.Background()))
+				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -464,7 +464,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 
 				c, ok := ctr.(x.EnabledInstrument)
 				require.True(t, ok)
-				assert.True(t, c.Enabled(context.Background()))
+				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -486,7 +486,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 
 				c, ok := ctr.(x.EnabledInstrument)
 				require.True(t, ok)
-				assert.True(t, c.Enabled(context.Background()))
+				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -539,7 +539,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			tt.fn(t, m)
 
 			rm := metricdata.ResourceMetrics{}
-			err := rdr.Collect(context.Background(), &rm)
+			err := rdr.Collect(t.Context(), &rm)
 			assert.NoError(t, err)
 
 			require.Len(t, rm.ScopeMetrics, 1)
@@ -618,7 +618,7 @@ func TestMeterWithDropView(t *testing.T) {
 			require.NoError(t, err)
 			c, ok := got.(x.EnabledInstrument)
 			require.True(t, ok)
-			assert.False(t, c.Enabled(context.Background()))
+			assert.False(t, c.Enabled(t.Context()))
 		})
 	}
 }
@@ -1039,7 +1039,7 @@ func TestCallbackObserverNonRegistered(t *testing.T) {
 
 	var got metricdata.ResourceMetrics
 	assert.NotPanics(t, func() {
-		err = rdr.Collect(context.Background(), &got)
+		err = rdr.Collect(t.Context(), &got)
 	})
 
 	assert.NoError(t, err)
@@ -1131,7 +1131,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	assert.NoError(t, err)
 
 	got := metricdata.ResourceMetrics{}
-	err = rdr.Collect(context.Background(), &got)
+	err = rdr.Collect(t.Context(), &got)
 	assert.NoError(t, err)
 	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
@@ -1244,7 +1244,7 @@ func TestMetersProvideScope(t *testing.T) {
 	}
 
 	got := metricdata.ResourceMetrics{}
-	err = rdr.Collect(context.Background(), &got)
+	err = rdr.Collect(t.Context(), &got)
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }
@@ -1287,7 +1287,7 @@ func TestUnregisterUnregisters(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err = r.Collect(ctx, &metricdata.ResourceMetrics{})
 	require.NoError(t, err)
 	assert.True(t, called, "callback not called for registered callback")
@@ -1342,7 +1342,7 @@ func TestRegisterCallbackDropAggregations(t *testing.T) {
 	require.NoError(t, err)
 
 	data := metricdata.ResourceMetrics{}
-	err = r.Collect(context.Background(), &data)
+	err = r.Collect(t.Context(), &data)
 	require.NoError(t, err)
 
 	assert.False(t, called, "callback called for all drop instruments")
@@ -1521,14 +1521,14 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncFloat64Counter",
-			register: func(_ *testing.T, mtr metric.Meter) error {
+			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64Counter("sfcounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 1.0, withV1)
-				ctr.Add(context.Background(), 2.0, withV2)
+				ctr.Add(t.Context(), 1.0, withV1)
+				ctr.Add(t.Context(), 2.0, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1544,14 +1544,14 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncFloat64UpDownCounter",
-			register: func(_ *testing.T, mtr metric.Meter) error {
+			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64UpDownCounter("sfupdowncounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 1.0, withV1)
-				ctr.Add(context.Background(), 2.0, withV2)
+				ctr.Add(t.Context(), 1.0, withV1)
+				ctr.Add(t.Context(), 2.0, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1567,14 +1567,14 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncFloat64Histogram",
-			register: func(_ *testing.T, mtr metric.Meter) error {
+			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Float64Histogram("sfhistogram")
 				if err != nil {
 					return err
 				}
 
-				ctr.Record(context.Background(), 1.0, withV1)
-				ctr.Record(context.Background(), 2.0, withV2)
+				ctr.Record(t.Context(), 1.0, withV1)
+				ctr.Record(t.Context(), 2.0, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1600,14 +1600,14 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncInt64Counter",
-			register: func(_ *testing.T, mtr metric.Meter) error {
+			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64Counter("sicounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 10, withV1)
-				ctr.Add(context.Background(), 20, withV2)
+				ctr.Add(t.Context(), 10, withV1)
+				ctr.Add(t.Context(), 20, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1623,14 +1623,14 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncInt64UpDownCounter",
-			register: func(_ *testing.T, mtr metric.Meter) error {
+			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64UpDownCounter("siupdowncounter")
 				if err != nil {
 					return err
 				}
 
-				ctr.Add(context.Background(), 10, withV1)
-				ctr.Add(context.Background(), 20, withV2)
+				ctr.Add(t.Context(), 10, withV1)
+				ctr.Add(t.Context(), 20, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1646,14 +1646,14 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 		},
 		{
 			name: "SyncInt64Histogram",
-			register: func(_ *testing.T, mtr metric.Meter) error {
+			register: func(t *testing.T, mtr metric.Meter) error {
 				ctr, err := mtr.Int64Histogram("sihistogram")
 				if err != nil {
 					return err
 				}
 
-				ctr.Record(context.Background(), 1, withV1)
-				ctr.Record(context.Background(), 2, withV2)
+				ctr.Record(t.Context(), 1, withV1)
+				ctr.Record(t.Context(), 2, withV2)
 				return nil
 			},
 			wantMetric: metricdata.Metrics{
@@ -1695,7 +1695,7 @@ func testAttributeFilter(temporality metricdata.Temporality) func(*testing.T) {
 				require.NoError(t, tt.register(t, mtr))
 
 				m := metricdata.ResourceMetrics{}
-				err := rdr.Collect(context.Background(), &m)
+				err := rdr.Collect(t.Context(), &m)
 				assert.NoError(t, err)
 
 				require.Len(t, m.ScopeMetrics, 1)
@@ -1800,13 +1800,13 @@ func TestObservableExample(t *testing.T) {
 		collect := func(t *testing.T) {
 			t.Helper()
 			got := metricdata.ResourceMetrics{}
-			err := reader1.Collect(context.Background(), &got)
+			err := reader1.Collect(t.Context(), &got)
 			require.NoError(t, err)
 			require.Len(t, got.ScopeMetrics, 1)
 			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
 
 			got = metricdata.ResourceMetrics{}
-			err = reader2.Collect(context.Background(), &got)
+			err = reader2.Collect(t.Context(), &got)
 			require.NoError(t, err)
 			require.Len(t, got.ScopeMetrics, 1)
 			metricdatatest.AssertEqual(t, *want, got.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
@@ -2093,7 +2093,7 @@ func TestMalformedSelectors(t *testing.T) {
 			global.SetErrorHandler(noErrorHandler{t})
 
 			defer func() {
-				_ = tt.reader.Shutdown(context.Background())
+				_ = tt.reader.Shutdown(t.Context())
 			}()
 
 			meter := NewMeterProvider(WithReader(tt.reader)).Meter("TestNilAggregationSelector")
@@ -2147,15 +2147,15 @@ func TestMalformedSelectors(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			siCounter.Add(context.Background(), 1)
-			siUpDownCounter.Add(context.Background(), 1)
-			siHistogram.Record(context.Background(), 1)
-			sfCounter.Add(context.Background(), 1)
-			sfUpDownCounter.Add(context.Background(), 1)
-			sfHistogram.Record(context.Background(), 1)
+			siCounter.Add(t.Context(), 1)
+			siUpDownCounter.Add(t.Context(), 1)
+			siHistogram.Record(t.Context(), 1)
+			sfCounter.Add(t.Context(), 1)
+			sfUpDownCounter.Add(t.Context(), 1)
+			sfHistogram.Record(t.Context(), 1)
 
 			var rm metricdata.ResourceMetrics
-			err = tt.reader.Collect(context.Background(), &rm)
+			err = tt.reader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
 			require.Len(t, rm.ScopeMetrics, 1)
@@ -2213,9 +2213,9 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 			).Meter("TestHistogramBucketPrecedenceOrdering")
 			sfHistogram, err := meter.Float64Histogram("sync.float64.histogram", tt.histogramOpts...)
 			require.NoError(t, err)
-			sfHistogram.Record(context.Background(), 1)
+			sfHistogram.Record(t.Context(), 1)
 			var rm metricdata.ResourceMetrics
-			err = tt.reader.Collect(context.Background(), &rm)
+			err = tt.reader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
@@ -2414,7 +2414,7 @@ func TestObservableDropAggregation(t *testing.T) {
 			require.NoError(t, err)
 
 			var rm metricdata.ResourceMetrics
-			err = reader.Collect(context.Background(), &rm)
+			err = reader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
 			if len(tt.wantObservables) == 0 {
@@ -2526,7 +2526,7 @@ func TestDuplicateInstrumentCreation(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			reader := NewManualReader()
 			defer func() {
-				require.NoError(t, reader.Shutdown(context.Background()))
+				require.NoError(t, reader.Shutdown(t.Context()))
 			}()
 
 			m := NewMeterProvider(WithReader(reader)).Meter("TestDuplicateInstrumentCreation")
@@ -2597,7 +2597,7 @@ func TestExemplarFilter(t *testing.T) {
 	m1 := mp.Meter("scope")
 	ctr1, err := m1.Float64Counter("ctr")
 	assert.NoError(t, err)
-	ctr1.Add(context.Background(), 1.0)
+	ctr1.Add(t.Context(), 1.0)
 
 	want := metricdata.ResourceMetrics{
 		Resource: resource.Default(),
@@ -2630,7 +2630,7 @@ func TestExemplarFilter(t *testing.T) {
 	}
 
 	got := metricdata.ResourceMetrics{}
-	err = rdr.Collect(context.Background(), &got)
+	err = rdr.Collect(t.Context(), &got)
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
 }

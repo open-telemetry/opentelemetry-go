@@ -4,7 +4,6 @@
 package noop // import "go.opentelemetry.io/otel/log/noop"
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -44,7 +43,7 @@ func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func
 				numIn--
 			}
 			args := make([]reflect.Value, numIn)
-			ctx := context.Background()
+			ctx := t.Context()
 			for i := range args {
 				aType := mType.Type.In(i)
 				if aType.Name() == "Context" {

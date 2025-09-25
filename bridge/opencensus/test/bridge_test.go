@@ -4,7 +4,6 @@
 package test
 
 import (
-	"context"
 	"testing"
 
 	octrace "go.opencensus.io/trace"
@@ -25,7 +24,7 @@ func TestMixedAPIs(t *testing.T) {
 	ocbridge.InstallTraceBridge(ocbridge.WithTracerProvider(tp))
 
 	func() {
-		ctx := context.Background()
+		ctx := t.Context()
 		var ocspan1 *octrace.Span
 		ctx, ocspan1 = octrace.StartSpan(ctx, "OpenCensusSpan1")
 		defer ocspan1.End()
@@ -68,7 +67,7 @@ func TestStartOptions(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	ocbridge.InstallTraceBridge(ocbridge.WithTracerProvider(tp))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, span := octrace.StartSpan(ctx, "OpenCensusSpan", octrace.WithSpanKind(octrace.SpanKindClient))
 	span.End()
 
@@ -89,7 +88,7 @@ func TestStartSpanWithRemoteParent(t *testing.T) {
 	ocbridge.InstallTraceBridge(ocbridge.WithTracerProvider(tp))
 	tracer := tp.Tracer("remoteparent")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx, parent := tracer.Start(ctx, "OpenTelemetrySpan1")
 
 	_, span := octrace.StartSpanWithRemoteParent(
@@ -117,7 +116,7 @@ func TestToFromContext(t *testing.T) {
 	tracer := tp.Tracer("tofromcontext")
 
 	func() {
-		ctx := context.Background()
+		ctx := t.Context()
 
 		_, otSpan1 := tracer.Start(ctx, "OpenTelemetrySpan1")
 		defer otSpan1.End()
@@ -154,7 +153,7 @@ func TestIsRecordingEvents(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	ocbridge.InstallTraceBridge(ocbridge.WithTracerProvider(tp))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, ocspan := octrace.StartSpan(ctx, "OpenCensusSpan1")
 	if !ocspan.IsRecordingEvents() {
 		t.Errorf("Got %v, expected true", ocspan.IsRecordingEvents())
@@ -174,7 +173,7 @@ func TestSetThings(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	ocbridge.InstallTraceBridge(ocbridge.WithTracerProvider(tp))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, ocspan := octrace.StartSpan(ctx, "OpenCensusSpan1")
 	ocspan.SetName("span-foo")
 	ocspan.SetStatus(octrace.Status{Code: 1, Message: "foo"})

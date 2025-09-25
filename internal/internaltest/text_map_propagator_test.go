@@ -4,13 +4,12 @@
 package internaltest
 
 import (
-	"context"
 	"testing"
 )
 
 func TestTextMapPropagatorInjectExtract(t *testing.T) {
 	name := "testing"
-	ctx := context.Background()
+	ctx := t.Context()
 	carrier := NewTextMapCarrier(map[string]string{name: value})
 	propagator := NewTextMapPropagator(name)
 
