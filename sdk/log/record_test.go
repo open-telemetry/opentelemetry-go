@@ -1342,6 +1342,58 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+func TestRecordAddAttributesDoesNotMutateInput(t *testing.T) {
+	attrs := []log.KeyValue{
+		log.String("attr1", "very long value that will be truncated"),
+		log.String("attr2", "another very long value that will be truncated"),
+		log.String("attr3", "yet another very long value that will be truncated"),
+		log.String("attr4", "more very long value that will be truncated"),
+		log.String("attr5", "extra very long value that will be truncated"),
+		log.String("attr6", "additional very long value that will be truncated"),
+		log.String("attr7", "more additional very long value that will be truncated"),
+	}
+
+	originalValues := make([]string, len(attrs))
+	for i, kv := range attrs {
+		originalValues[i] = kv.Value.AsString()
+	}
+
+	r := &Record{
+		attributeValueLengthLimit: 20, // Short limit to trigger truncation.
+		attributeCountLimit:       -1, // No count limit.
+		allowDupKeys:              false,
+	}
+
+	r.AddAttributes(attrs...)
+
+	// Verify that the original shared slice was not mutated
+	for i, kv := range attrs {
+		if kv.Value.AsString() != originalValues[i] {
+			t.Errorf("Input slice was mutated! Attribute %d: original=%q, current=%q",
+				i, originalValues[i], kv.Value.AsString())
+		}
+	}
+
+	// Verify that the record has the truncated values
+	var gotAttrs []log.KeyValue
+	r.WalkAttributes(func(kv log.KeyValue) bool {
+		gotAttrs = append(gotAttrs, kv)
+		return true
+	})
+	wantAttr := []log.KeyValue{
+		log.String("attr1", "very long value that"),
+		log.String("attr2", "another very long va"),
+		log.String("attr3", "yet another very lon"),
+		log.String("attr4", "more very long value"),
+		log.String("attr5", "extra very long valu"),
+		log.String("attr6", "additional very long"),
+		log.String("attr7", "more additional very"),
+	}
+	if !slices.EqualFunc(gotAttrs, wantAttr, func(a, b log.KeyValue) bool { return a.Equal(b) }) {
+		t.Errorf("Attributes do not match.\ngot:\n%v\nwant:\n%v", printKVs(gotAttrs), printKVs(wantAttr))
+	}
+}
+
 func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 	nestedSlice := log.Slice("nested_slice",
 		log.SliceValue(log.StringValue("nested_inner1"), log.StringValue("nested_inner2")),
