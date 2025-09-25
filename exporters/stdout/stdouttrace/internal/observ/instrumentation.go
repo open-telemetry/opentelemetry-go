@@ -145,16 +145,9 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	return i, err
 }
 
-// ExportSpansDone is a function that is called when a call to an Exporter's
-// ExportSpans method completes.
-//
-// The number of successful exports is provided as success. Any error that is
-// encountered is provided as err.
-type ExportSpansDone func(success int64, err error)
-
 // ExportSpans instruments the ExportSpans method of the exporter. It returns a
 // function that needs to be deferred so it is called when the method returns.
-func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportSpansDone {
+func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp {
 	start := time.Now()
 
 	addOpt := get[metric.AddOption](addOptPool)
@@ -162,44 +155,60 @@ func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportSpa
 	*addOpt = append(*addOpt, i.setOpt)
 	i.inflightSpans.Add(ctx, int64(nSpans), *addOpt...)
 
-	return i.end(ctx, start, int64(nSpans))
+	return ExportOp{
+		ctx:    ctx,
+		start:  start,
+		nSpans: int64(nSpans),
+		inst:   i,
+	}
 }
 
-func (i *Instrumentation) end(ctx context.Context, start time.Time, n int64) ExportSpansDone {
-	return func(success int64, err error) {
-		addOpt := get[metric.AddOption](addOptPool)
-		defer put(addOptPool, addOpt)
-		*addOpt = append(*addOpt, i.setOpt)
+// ExportOp is an in-progress ExportSpans operation.
+type ExportOp struct {
+	ctx    context.Context
+	start  time.Time
+	nSpans int64
+	inst   *Instrumentation
+}
 
-		i.inflightSpans.Add(ctx, -n, *addOpt...)
+// End ends the ExportSpans operation, recording its success and duration.
+//
+// The success parameter indicates how many spans were successfully exported.
+// The err parameter indicates whether the operation failed. If err is not nil,
+// the number of failed spans (nSpans - success) is also recorded.
+func (e ExportOp) End(success int64, err error) {
+	addOpt := get[metric.AddOption](addOptPool)
+	defer put(addOptPool, addOpt)
+	*addOpt = append(*addOpt, e.inst.setOpt)
 
-		// Record the success and duration of the operation.
-		//
-		// Do not exclude 0 values, as they are valid and indicate no spans
-		// were exported which is meaningful for certain aggregations.
-		i.exportedSpans.Add(ctx, success, *addOpt...)
+	e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
 
-		mOpt := i.setOpt
-		if err != nil {
-			attrs := get[attribute.KeyValue](measureAttrsPool)
-			defer put(measureAttrsPool, attrs)
-			*attrs = append(*attrs, i.attrs...)
-			*attrs = append(*attrs, semconv.ErrorType(err))
+	// Record the success and duration of the operation.
+	//
+	// Do not exclude 0 values, as they are valid and indicate no spans
+	// were exported which is meaningful for certain aggregations.
+	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
 
-			// Do not inefficiently make a copy of attrs by using
-			// WithAttributes instead of WithAttributeSet.
-			set := attribute.NewSet(*attrs...)
-			mOpt = metric.WithAttributeSet(set)
+	mOpt := e.inst.setOpt
+	if err != nil {
+		attrs := get[attribute.KeyValue](measureAttrsPool)
+		defer put(measureAttrsPool, attrs)
+		*attrs = append(*attrs, e.inst.attrs...)
+		*attrs = append(*attrs, semconv.ErrorType(err))
 
-			// Reset addOpt with new attribute set.
-			*addOpt = append((*addOpt)[:0], mOpt)
+		// Do not inefficiently make a copy of attrs by using
+		// WithAttributes instead of WithAttributeSet.
+		set := attribute.NewSet(*attrs...)
+		mOpt = metric.WithAttributeSet(set)
 
-			i.exportedSpans.Add(ctx, n-success, *addOpt...)
-		}
+		// Reset addOpt with new attribute set.
+		*addOpt = append((*addOpt)[:0], mOpt)
 
-		recordOpt := get[metric.RecordOption](recordOptPool)
-		defer put(recordOptPool, recordOpt)
-		*recordOpt = append(*recordOpt, mOpt)
-		i.opDuration.Record(ctx, time.Since(start).Seconds(), *recordOpt...)
+		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
 	}
+
+	recordOpt := get[metric.RecordOption](recordOptPool)
+	defer put(recordOptPool, recordOpt)
+	*recordOpt = append(*recordOpt, mOpt)
+	e.inst.opDuration.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 }
