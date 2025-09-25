@@ -124,7 +124,7 @@ func benchSyncViews(sc trace.SpanContext, views ...View) func(*testing.B) {
 		b.Run("Int64Gauge", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { iGauge.Record(b.Context(), 1, o...) }
+				return func() { iGauge.Record(ctx, 1, o...) }
 			}
 		}()))
 
@@ -133,7 +133,7 @@ func benchSyncViews(sc trace.SpanContext, views ...View) func(*testing.B) {
 		b.Run("Float64Gauge", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func() {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { fGauge.Record(b.Context(), 1, o...) }
+				return func() { fGauge.Record(ctx, 1, o...) }
 			}
 		}()))
 
