@@ -190,8 +190,7 @@ func TestInstrumentationExportSpans(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(t.Context(), n)
-	end(n, nil)
+	inst.ExportSpans(t.Context(), n).End(n, nil)
 
 	assertMetrics(t, collect(), n, n, nil)
 }
@@ -200,9 +199,8 @@ func TestInstrumentationExportSpansAllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(t.Context(), n)
 	const success = 0
-	end(success, assert.AnError)
+	inst.ExportSpans(t.Context(), n).End(success, assert.AnError)
 
 	assertMetrics(t, collect(), n, success, assert.AnError)
 }
@@ -211,28 +209,37 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(t.Context(), n)
 	const success = 5
-	end(success, assert.AnError)
+	inst.ExportSpans(t.Context(), n).End(success, assert.AnError)
 
 	assertMetrics(t, collect(), n, success, assert.AnError)
 }
 
 func BenchmarkInstrumentationExportSpans(b *testing.B) {
-	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	inst, err := observ.NewInstrumentation(ID)
-	if err != nil {
-		b.Fatalf("failed to create instrumentation: %v", err)
+	setup := func(b *testing.B) *observ.Instrumentation {
+		b.Helper()
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		inst, err := observ.NewInstrumentation(ID)
+		if err != nil {
+			b.Fatalf("failed to create instrumentation: %v", err)
+		}
+		return inst
 	}
 
-	var end observ.ExportSpansDone
-	err = errors.New("benchmark error")
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		end = inst.ExportSpans(b.Context(), 10)
-		end(4, err)
+	const nSpans = 10
+	err := errors.New("benchmark error")
+	run := func(n int64, err error) func(*testing.B) {
+		return func(b *testing.B) {
+			inst := setup(b)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.ExportSpans(b.Context(), nSpans).End(n, err)
+			}
+		}
 	}
-	_ = end
+
+	b.Run("NoError", run(nSpans, nil))
+	b.Run("PartialError", run(4, err))
+	b.Run("FullError", run(0, err))
 }
