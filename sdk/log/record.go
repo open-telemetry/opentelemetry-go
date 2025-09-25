@@ -41,16 +41,16 @@ func putIndex(index map[string]int) {
 	indexPool.Put(index)
 }
 
-// seenPool is a pool of boolean maps used for duplicate checking.
+// seenPool is a pool of maps used for duplicate checking.
 var seenPool = sync.Pool{
-	New: func() any { return make(map[string]bool) },
+	New: func() any { return make(map[string]struct{}) },
 }
 
-func getSeen() map[string]bool {
-	return seenPool.Get().(map[string]bool)
+func getSeen() map[string]struct{} {
+	return seenPool.Get().(map[string]struct{})
 }
 
-func putSeen(seen map[string]bool) {
+func putSeen(seen map[string]struct{}) {
 	clear(seen)
 	seenPool.Put(seen)
 }
@@ -235,10 +235,10 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			seen := getSeen()
 			defer putSeen(seen)
 			for _, a := range attrs {
-				if seen[a.Key] || rIndex[a.Key] != 0 {
+				if _, ok := seen[a.Key]; ok || rIndex[a.Key] != 0 {
 					return true
 				}
-				seen[a.Key] = true
+				seen[a.Key] = struct{}{}
 			}
 			return false
 		}()
@@ -379,10 +379,10 @@ func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 		seen := getSeen()
 		defer putSeen(seen)
 		for _, kv := range kvs {
-			if seen[kv.Key] {
+			if _, ok := seen[kv.Key]; ok {
 				return true
 			}
-			seen[kv.Key] = true
+			seen[kv.Key] = struct{}{}
 		}
 		return false
 	}()
@@ -567,10 +567,10 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 				seen := getSeen()
 				defer putSeen(seen)
 				for _, kv := range kvs {
-					if seen[kv.Key] {
+					if _, ok := seen[kv.Key]; ok {
 						return true
 					}
-					seen[kv.Key] = true
+					seen[kv.Key] = struct{}{}
 				}
 				return false
 			}()
@@ -657,10 +657,10 @@ func (r *Record) needsBodyDedup(val log.Value) bool {
 				seen := getSeen()
 				defer putSeen(seen)
 				for _, kv := range kvs {
-					if seen[kv.Key] {
+					if _, ok := seen[kv.Key]; ok {
 						return true
 					}
-					seen[kv.Key] = true
+					seen[kv.Key] = struct{}{}
 				}
 				return false
 			}()
