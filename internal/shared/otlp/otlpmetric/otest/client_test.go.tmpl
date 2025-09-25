@@ -8,9 +8,9 @@ package otest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"go.opentelemetry.io/otel"
 	"{{ .internalImportPath }}"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -41,14 +41,15 @@ func (c *client) UploadMetrics(ctx context.Context, rm *mpb.ResourceMetrics) err
 	})
 	if c.rCh != nil {
 		r := <-c.rCh
+		err := r.Err
 		if r.Response != nil && r.Response.GetPartialSuccess() != nil {
 			msg := r.Response.GetPartialSuccess().GetErrorMessage()
 			n := r.Response.GetPartialSuccess().GetRejectedDataPoints()
 			if msg != "" || n > 0 {
-				otel.Handle(internal.MetricPartialSuccessError(n, msg))
+				err = errors.Join(err, internal.MetricPartialSuccessError(n, msg))
 			}
 		}
-		return r.Err
+		return err
 	}
 	return ctx.Err()
 }

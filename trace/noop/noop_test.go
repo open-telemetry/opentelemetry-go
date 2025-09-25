@@ -4,7 +4,6 @@
 package noop // import "go.opentelemetry.io/otel/trace/noop"
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -48,7 +47,7 @@ func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func
 				numIn--
 			}
 			args := make([]reflect.Value, numIn)
-			ctx := context.Background()
+			ctx := t.Context()
 			for i := range args {
 				aType := mType.Type.In(i)
 				if aType.Name() == "Context" {
@@ -77,7 +76,7 @@ func TestTracerStartPropagatesSpanContext(t *testing.T) {
 	tracer := NewTracerProvider().Tracer("")
 	spanCtx := trace.SpanContext{}
 
-	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
+	ctx := trace.ContextWithSpanContext(t.Context(), spanCtx)
 	ctx, span := tracer.Start(ctx, "test_span")
 	assert.Equal(t, spanCtx, trace.SpanContextFromContext(ctx), "empty span context not set in context")
 	assert.IsType(t, Span{}, span, "non-noop span returned")
@@ -86,14 +85,14 @@ func TestTracerStartPropagatesSpanContext(t *testing.T) {
 
 	spanCtx = spanCtx.WithTraceID(trace.TraceID([16]byte{1}))
 	spanCtx = spanCtx.WithSpanID(trace.SpanID([8]byte{1}))
-	ctx = trace.ContextWithSpanContext(context.Background(), spanCtx)
+	ctx = trace.ContextWithSpanContext(t.Context(), spanCtx)
 	ctx, span = tracer.Start(ctx, "test_span")
 	assert.Equal(t, spanCtx, trace.SpanContextFromContext(ctx), "non-empty span context not set in context")
 	assert.Equal(t, spanCtx, span.SpanContext(), "non-empty span context not returned from span")
 	assert.False(t, span.IsRecording(), "non-empty span context returned recording span")
 
 	rSpan := recordingSpan{Span: Span{sc: spanCtx}}
-	ctx = trace.ContextWithSpan(context.Background(), rSpan)
+	ctx = trace.ContextWithSpan(t.Context(), rSpan)
 	ctx, span = tracer.Start(ctx, "test_span")
 	assert.Equal(t, spanCtx, trace.SpanContextFromContext(ctx), "recording span's span context not set in context")
 	assert.IsType(t, Span{}, span, "non-noop span returned")
@@ -103,7 +102,7 @@ func TestTracerStartPropagatesSpanContext(t *testing.T) {
 
 func BenchmarkNoopInstance(b *testing.B) {
 	tracer := NewTracerProvider().Tracer("")
-	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+	ctx := trace.ContextWithSpanContext(b.Context(), trace.SpanContext{})
 
 	b.ReportAllocs()
 	b.ResetTimer()

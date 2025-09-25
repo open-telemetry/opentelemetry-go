@@ -17,7 +17,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
@@ -174,7 +173,7 @@ var errShutdown = errors.New("the client is shutdown")
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
-func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
 	// write lock acquire (i.e. Stop), meaning if the client is shutting down
@@ -197,16 +196,16 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedSpans()
 			if n != 0 || msg != "" {
-				err := internal.TracePartialSuccessError(n, msg)
-				otel.Handle(err)
+				e := internal.TracePartialSuccessError(n, msg)
+				uploadErr = errors.Join(uploadErr, e)
 			}
 		}
 		// nil is converted to OK.
 		if status.Code(err) == codes.OK {
 			// Success.
-			return nil
+			return uploadErr
 		}
-		return err
+		return errors.Join(uploadErr, err)
 	})
 }
 

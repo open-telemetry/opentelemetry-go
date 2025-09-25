@@ -22,7 +22,6 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
@@ -128,7 +127,7 @@ func (d *client) Stop(ctx context.Context) error {
 }
 
 // UploadTraces sends a batch of spans to the collector.
-func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
 	pbRequest := &coltracepb.ExportTraceServiceRequest{
 		ResourceSpans: protoSpans,
 	}
@@ -145,7 +144,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		return err
 	}
 
-	return d.requestFunc(ctx, func(ctx context.Context) error {
+	return errors.Join(uploadErr, d.requestFunc(ctx, func(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -165,7 +164,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		if resp != nil && resp.Body != nil {
 			defer func() {
 				if err := resp.Body.Close(); err != nil {
-					otel.Handle(err)
+					uploadErr = errors.Join(uploadErr, err)
 				}
 			}()
 		}
@@ -192,7 +191,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 					n := respProto.PartialSuccess.GetRejectedSpans()
 					if n != 0 || msg != "" {
 						err := internal.TracePartialSuccessError(n, msg)
-						otel.Handle(err)
+						uploadErr = errors.Join(uploadErr, err)
 					}
 				}
 			}
@@ -225,7 +224,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Non-retryable failure.
 			return fmt.Errorf("failed to send to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
-	})
+	}))
 }
 
 func (d *client) newRequest(body []byte) (request, error) {
