@@ -258,7 +258,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		for k, m := range scopeMetrics.Metrics {
 			typ := c.metricType(m)
 			if typ == nil {
-				reportError(ch, nil, errInvalidMetricType)
+				reportError(ch, nil, ErrInvalidMetricType)
 				continue
 			}
 			name, e := c.getName(m)
@@ -270,7 +270,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
-				reportError(ch, nil, errInvalidMetric)
+				reportError(ch, nil, ErrInvalidMetric)
 				continue
 			}
 
@@ -389,7 +389,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			reportError(
 				ch,
 				desc,
-				fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale),
+				fmt.Errorf("%w: %d (min -4)", ErrEHScaleBelowMin, scale),
 			)
 			err = errors.Join(err, e)
 			continue

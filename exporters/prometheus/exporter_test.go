@@ -1379,7 +1379,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		var dtoMetric dto.Metric
 		werr := pm.Write(&dtoMetric)
 		require.Error(t, werr)
-		assert.ErrorIs(t, werr, errEHScaleBelowMin)
+		assert.ErrorIs(t, werr, ErrEHScaleBelowMin)
 		// The exporter reports via invalid metric, not the global otel error handler.
 		assert.NoError(t, capturedError)
 	})
@@ -1886,6 +1886,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 		expectNewErr            string
 		expectMetricErr         string
 		expectGatherErrContains string
+		expectGatherErrIs       error
 		checkMetricFamilies     func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
 		{
@@ -1963,7 +1964,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 			},
 			// With improved error handling, invalid scope label names result in an invalid metric
 			// and Gather returns an error containing the normalization failure.
-			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				// target_info should still be exported; metric with bad scope label dropped.
 				require.NotEmpty(t, mfs)
@@ -1992,14 +1993,14 @@ func TestEscapingErrorHandling(t *testing.T) {
 			name:                    "bad translated label name",
 			counterName:             "foo",
 			labelName:               "$%^&",
-			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
 		},
 		{
 			name: "unsupported data type via producer",
 			// Use a producer to emit a Summary data point; no SDK instruments.
-			producer:                makeSummaryProducer(),
-			skipInstrument:          true,
-			expectGatherErrContains: "invalid metric type",
+			producer:          makeSummaryProducer(),
+			skipInstrument:    true,
+			expectGatherErrIs: ErrInvalidMetricType,
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				require.NotEmpty(t, mfs)
 				other := 0
@@ -2019,7 +2020,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 			name:                    "bad exponential histogram label name via producer",
 			producer:                makeBadEHProducer(),
 			skipInstrument:          true,
-			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				require.NotEmpty(t, mfs)
 				other := 0
@@ -2144,7 +2145,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 				g.Record(ctx, 1, otelmetric.WithAttributes(attribute.Key("$%^&").String("B")))
 				return nil
 			},
-			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				require.NotEmpty(t, mfs)
 				other := 0
@@ -2170,7 +2171,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 				h.Record(ctx, 1.23, otelmetric.WithAttributes(attribute.Key("$%^&").String("B")))
 				return nil
 			},
-			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "____"`,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				require.NotEmpty(t, mfs)
 				other := 0
@@ -2258,6 +2259,11 @@ func TestEscapingErrorHandling(t *testing.T) {
 			if tc.expectGatherErrContains != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.expectGatherErrContains)
+				return
+			}
+			if tc.expectGatherErrIs != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.expectGatherErrIs)
 				return
 			}
 			require.NoError(t, err)
