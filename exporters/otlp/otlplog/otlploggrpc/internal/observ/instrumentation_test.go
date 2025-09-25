@@ -310,22 +310,22 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 }
 
 func BenchmarkInstrumentationExportLogs(b *testing.B) {
-	setup := func(b *testing.B) *Instrumentation {
-		b.Helper()
-		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	setup := func(tb *testing.B) *Instrumentation {
+		tb.Helper()
+		tb.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 		inst, err := NewInstrumentation(ID, TARGET)
 		if err != nil {
-			b.Fatalf("failed to create instrumentation: %v", err)
+			tb.Fatalf("failed to create instrumentation: %v", err)
 		}
 		return inst
 	}
-	run := func(err error) func(t *testing.B) {
-		return func(t *testing.B) {
+	run := func(err error) func(*testing.B) {
+		return func(b *testing.B) {
 			inst := setup(b)
-			t.ReportAllocs()
-			t.ResetTimer()
+			b.ReportAllocs()
+			b.ResetTimer()
 			for b.Loop() {
-				inst.ExportLogs(t.Context(), 10).End(err)
+				inst.ExportLogs(b.Context(), 10).End(err)
 			}
 		}
 	}
