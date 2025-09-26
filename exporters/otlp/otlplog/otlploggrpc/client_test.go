@@ -1197,6 +1197,7 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 		exp, err := New(ctx, opts...)
 		require.NoError(b, err)
 		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 			assert.NoError(b, exp.Shutdown(context.Background()))
 		})
 
