@@ -6,7 +6,7 @@
 
 // Package envconfig provides functionality to parse configuration from
 // environment variables.
-package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/envconfig"
+package envconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
 
 import (
 	"crypto/tls"

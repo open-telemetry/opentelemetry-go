@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/internal/envconfig"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
