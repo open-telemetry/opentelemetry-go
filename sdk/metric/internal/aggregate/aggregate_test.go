@@ -139,7 +139,7 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 	}
 }
 
-func testConcurrentSafe[N int64 | float64](
+func testAggergationConcurrentSafe[N int64 | float64](
 	meas Measure[N],
 	comp ComputeAggregation,
 	validate func(t *testing.T, agg metricdata.Aggregation),

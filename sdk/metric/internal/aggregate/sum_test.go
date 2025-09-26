@@ -581,7 +581,7 @@ func testDeltaSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.Sum(mono)
-	return testConcurrentSafe[N](in, out, validateSum[N])
+	return testAggergationConcurrentSafe[N](in, out, validateSum[N])
 }
 
 func testCumulativeSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
@@ -591,7 +591,7 @@ func testCumulativeSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.Sum(mono)
-	return testConcurrentSafe[N](in, out, validateSum[N])
+	return testAggergationConcurrentSafe[N](in, out, validateSum[N])
 }
 
 func testDeltaPrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
@@ -601,7 +601,7 @@ func testDeltaPrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
-	return testConcurrentSafe[N](in, out, validateSum[N])
+	return testAggergationConcurrentSafe[N](in, out, validateSum[N])
 }
 
 func testCumulativePrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
@@ -611,7 +611,7 @@ func testCumulativePrecomputedSumConcurrentSafe[N int64 | float64]() func(t *tes
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
-	return testConcurrentSafe[N](in, out, validateSum[N])
+	return testAggergationConcurrentSafe[N](in, out, validateSum[N])
 }
 
 func BenchmarkSum(b *testing.B) {

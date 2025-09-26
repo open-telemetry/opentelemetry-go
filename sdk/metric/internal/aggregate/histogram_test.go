@@ -271,7 +271,7 @@ func testDeltaHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, false)
-	return testConcurrentSafe[N](in, out, validateHistogram[N])
+	return testAggergationConcurrentSafe[N](in, out, validateHistogram[N])
 }
 
 func testCumulativeHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
@@ -280,7 +280,7 @@ func testCumulativeHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, false)
-	return testConcurrentSafe[N](in, out, validateHistogram[N])
+	return testAggergationConcurrentSafe[N](in, out, validateHistogram[N])
 }
 
 // hPointSummed returns an HistogramDataPoint that started and ended now with

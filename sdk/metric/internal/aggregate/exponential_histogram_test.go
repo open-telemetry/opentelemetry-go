@@ -1053,7 +1053,7 @@ func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExponentialBucketHistogram(4, 20, false, false)
-	return testConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+	return testAggergationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
 }
 
 func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
@@ -1062,7 +1062,7 @@ func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExponentialBucketHistogram(4, 20, false, false)
-	return testConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+	return testAggergationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
 }
 
 func validateExponentialHistogram[N int64 | float64](t *testing.T, got metricdata.Aggregation) {

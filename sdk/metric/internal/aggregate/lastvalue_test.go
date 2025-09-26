@@ -510,7 +510,7 @@ func testCumulativeLastValueConcurrentSafe[N int64 | float64]() func(*testing.T)
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.LastValue()
-	return testConcurrentSafe[N](in, out, validateGauge[N])
+	return testAggergationConcurrentSafe[N](in, out, validateGauge[N])
 }
 
 func testDeltaLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
@@ -519,7 +519,7 @@ func testDeltaLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.LastValue()
-	return testConcurrentSafe[N](in, out, validateGauge[N])
+	return testAggergationConcurrentSafe[N](in, out, validateGauge[N])
 }
 
 func testDeltaPrecomputedLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
@@ -528,7 +528,7 @@ func testDeltaPrecomputedLastValueConcurrentSafe[N int64 | float64]() func(*test
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.PrecomputedLastValue()
-	return testConcurrentSafe[N](in, out, validateGauge[N])
+	return testAggergationConcurrentSafe[N](in, out, validateGauge[N])
 }
 
 func testCumulativePrecomputedLastValueConcurrentSafe[N int64 | float64]() func(*testing.T) {
@@ -537,7 +537,7 @@ func testCumulativePrecomputedLastValueConcurrentSafe[N int64 | float64]() func(
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.PrecomputedLastValue()
-	return testConcurrentSafe[N](in, out, validateGauge[N])
+	return testAggergationConcurrentSafe[N](in, out, validateGauge[N])
 }
 
 func BenchmarkLastValue(b *testing.B) {
