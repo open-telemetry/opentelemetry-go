@@ -16,8 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/status"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
@@ -25,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -68,6 +67,8 @@ func put[T any](p *sync.Pool, s *[]T) {
 	p.Put(s)
 }
 
+// GetComponentName returns the constant name for the exporter with the
+// Provided id
 func GetComponentName(id int64) string {
 	return fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 }
@@ -133,8 +134,9 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	return i, nil
 }
 
-// ExportLogs instruments the ExportLogs method of the exporter. It returns a
-// function that needs to be deferred so it is called when the method returns.
+// ExportLogs instruments the ExportLogs method of the exporter. It returns
+// an [ExportOp] that must have its [ExportOp.End] method called when the
+// ExportLogs method returns.
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 	addOpt := get[metric.AddOption](addOpPool)
@@ -226,7 +228,7 @@ func (e ExportOp) End(err error) {
 // n, 0 is returned.
 func successful(n int64, err error) int64 {
 	if err == nil {
-		return n // All log successfully exported.
+		return n // All logs successfully exported.
 	}
 	// Split rejection calculation so successful is inlineable.
 	return n - rejectedCount(n, err)

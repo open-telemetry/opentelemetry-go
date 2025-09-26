@@ -6,7 +6,6 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -620,11 +619,8 @@ func TestClientObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				ctx := t.Context()
 				client, coll := clientFactory(t, nil)
-				componentName := fmt.Sprintf(
-					"%s/%d",
-					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					0,
-				)
+
+				componentName := observ.GetComponentName(0)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -749,11 +745,7 @@ func TestClientObservability(t *testing.T) {
 				ctx := t.Context()
 				client, _ := clientFactory(t, rCh)
 
-				componentName := fmt.Sprintf(
-					"%s/%d",
-					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					0,
-				)
+				componentName := observ.GetComponentName(0)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				var wantErr error
 				wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
@@ -890,11 +882,8 @@ func TestClientObservability(t *testing.T) {
 				uploadErr := client.UploadLogs(ctx, resourceLogs)
 				assert.ErrorContains(t, uploadErr, "request contains invalid arguments")
 
-				componentName := fmt.Sprintf(
-					"%s/%d",
-					otelconv.ComponentTypeOtlpGRPCLogExporter,
-					0,
-				)
+				componentName := observ.GetComponentName(0)
+
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -1070,11 +1059,8 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 	ctx := t.Context()
 	client, _ := clientFactory(t, rCh)
 
-	componentName := fmt.Sprintf(
-		"%s/%d",
-		otelconv.ComponentTypeOtlpGRPCLogExporter,
-		0,
-	)
+	componentName := observ.GetComponentName(0)
+
 	serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
 	var wantErr error
 	wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
@@ -1193,13 +1179,9 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 }
 
 func BenchmarkExporterExportLogs(b *testing.B) {
-	run := func(b *testing.B, enableObservability bool) {
-		if enableObservability {
-			b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-		} else {
-			b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
-		}
+	const logRecordsCount = 100
 
+	run := func(b *testing.B) {
 		coll, err := newGRPCCollector("", nil)
 		require.NoError(b, err)
 		defer coll.srv.Stop()
@@ -1208,32 +1190,34 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 		opts := []Option{
 			WithEndpoint(coll.listener.Addr().String()),
 			WithInsecure(),
+			WithTimeout(5 * time.Second),
 		}
 		exp, err := New(ctx, opts...)
 		require.NoError(b, err)
-		defer func() {
-			assert.NoError(b, exp.Shutdown(ctx))
-		}()
 
-		logs := make([]log.Record, 1000)
+		logs := make([]log.Record, logRecordsCount)
+		now := time.Now()
 		for i := range logs {
-			logs[i] = log.Record{}
+			logs[i].SetTimestamp(now)
+			logs[i].SetObservedTimestamp(now)
 		}
 
 		b.ReportAllocs()
 		b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
-			err := exp.Export(ctx, logs)
+		for b.Loop() {
+			err := exp.Export(b.Context(), logs)
 			require.NoError(b, err)
 		}
 	}
 
 	b.Run("Observability", func(b *testing.B) {
-		run(b, false)
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
 	})
 
 	b.Run("NoObservability", func(b *testing.B) {
-		run(b, false)
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
 	})
 }

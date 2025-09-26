@@ -32,26 +32,6 @@ func (PartialSuccess) Is(err error) bool {
 	return ok
 }
 
-// TracePartialSuccessError returns an error describing a partial success
-// response for the trace signal.
-func TracePartialSuccessError(itemsRejected int64, errorMessage string) error {
-	return PartialSuccess{
-		ErrorMessage:  errorMessage,
-		RejectedItems: itemsRejected,
-		RejectedKind:  "spans",
-	}
-}
-
-// MetricPartialSuccessError returns an error describing a partial success
-// response for the metric signal.
-func MetricPartialSuccessError(itemsRejected int64, errorMessage string) error {
-	return PartialSuccess{
-		ErrorMessage:  errorMessage,
-		RejectedItems: itemsRejected,
-		RejectedKind:  "metric data points",
-	}
-}
-
 // LogPartialSuccessError returns an error describing a partial success
 // response for the log signal.
 func LogPartialSuccessError(itemsRejected int64, errorMessage string) error {

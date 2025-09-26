@@ -23,13 +23,12 @@ func requireErrorString(t *testing.T, expect string, err error) {
 }
 
 func TestPartialSuccessFormat(t *testing.T) {
-	requireErrorString(t, "empty message (0 metric data points rejected)", MetricPartialSuccessError(0, ""))
-	requireErrorString(t, "help help (0 metric data points rejected)", MetricPartialSuccessError(0, "help help"))
+	requireErrorString(t, "empty message (0 logs rejected)", LogPartialSuccessError(0, ""))
+	requireErrorString(t, "help help (0 logs rejected)", LogPartialSuccessError(0, "help help"))
 	requireErrorString(
 		t,
-		"what happened (10 metric data points rejected)",
-		MetricPartialSuccessError(10, "what happened"),
+		"what happened (10 logs rejected)",
+		LogPartialSuccessError(10, "what happened"),
 	)
-	requireErrorString(t, "what happened (15 spans rejected)", TracePartialSuccessError(15, "what happened"))
 	requireErrorString(t, "what happened (15 logs rejected)", LogPartialSuccessError(15, "what happened"))
 }
