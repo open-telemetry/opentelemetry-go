@@ -6,6 +6,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -135,6 +136,49 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 			assert.Equal(t, step.expect.n, comp(got), "incorrect data size")
 			metricdatatest.AssertAggregationsEqual(t, step.expect.agg, *got)
 		}
+	}
+}
+
+func testAggergationConcurrentSafe[N int64 | float64](
+	meas Measure[N],
+	comp ComputeAggregation,
+	validate func(t *testing.T, agg metricdata.Aggregation),
+) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+
+		got := new(metricdata.Aggregation)
+		ctx := t.Context()
+		var wg sync.WaitGroup
+		for _, args := range []arg[N]{
+			{ctx, 2, alice},
+			{ctx, 6, alice},
+			{ctx, 4, alice},
+			{ctx, 10, alice},
+			{ctx, 22, alice},
+			{ctx, -3, bob},
+			{ctx, -6, bob},
+			{ctx, 3, bob},
+			{ctx, 6, bob},
+		} {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				meas(args.ctx, args.value, args.attr)
+			}()
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 2 {
+				comp(got)
+				// We do not check expected output for each step because
+				// computeAggregation is run concurrently with steps. Instead,
+				// we validate that the output is a valid possible output.
+				validate(t, *got)
+			}
+		}()
+		wg.Wait()
 	}
 }
 
