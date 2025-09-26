@@ -4,6 +4,7 @@
 package observ_test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,13 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
-const ID = 0
+const (
+	ID         = 0
+	ServerAddr = "localhost"
+	ServerPort = 4317
+)
+
+var Target = "dns://" + ServerAddr + ":" + strconv.Itoa(ServerPort)
 
 var Scope = instrumentation.Scope{
 	Name:      observ.ScopeName,
@@ -66,7 +73,7 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	_, err := observ.NewInstrumentation(ID)
+	_, err := observ.NewInstrumentation(ID, Target)
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
 
 	assert.ErrorContains(t, err, "inflight metric")
@@ -76,7 +83,7 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 
 func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
 	// Do not set OTEL_GO_X_OBSERVABILITY.
-	got, err := observ.NewInstrumentation(ID)
+	got, err := observ.NewInstrumentation(ID, Target)
 	assert.NoError(t, err)
 	assert.Nil(t, got)
 }
@@ -93,7 +100,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 	mp := metric.NewMeterProvider(metric.WithReader(r))
 	otel.SetMeterProvider(mp)
 
-	inst, err := observ.NewInstrumentation(ID)
+	inst, err := observ.NewInstrumentation(ID, Target)
 	require.NoError(t, err)
 	require.NotNil(t, inst)
 
@@ -110,6 +117,8 @@ func set(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(observ.ComponentName(ID)),
 		semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+		semconv.ServerAddress(ServerAddr),
+		semconv.ServerPort(ServerPort),
 	}
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))
@@ -238,11 +247,70 @@ func TestInstrumentationExportSpansInvalidPartialErrored(t *testing.T) {
 	assertMetrics(t, collect(), n+n, success, err)
 }
 
+func TestBaseAttrs(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+		want   []attribute.KeyValue
+	}{
+		{
+			name:   "HostAndPort",
+			target: "dns://localhost:4317",
+			want: []attribute.KeyValue{
+				semconv.OTelComponentName(observ.ComponentName(ID)),
+				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+				semconv.ServerAddress("localhost"),
+				semconv.ServerPort(4317),
+			},
+		},
+		{
+			name:   "Host",
+			target: "dns://localhost",
+			want: []attribute.KeyValue{
+				semconv.OTelComponentName(observ.ComponentName(ID)),
+				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+				semconv.ServerAddress("localhost"),
+			},
+		},
+		{
+			name:   "Port",
+			target: "dns://:4317",
+			want: []attribute.KeyValue{
+				semconv.OTelComponentName(observ.ComponentName(ID)),
+				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+				semconv.ServerPort(4317),
+			},
+		},
+		{
+			name:   "Empty",
+			target: "",
+			want: []attribute.KeyValue{
+				semconv.OTelComponentName(observ.ComponentName(ID)),
+				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+			},
+		},
+		{
+			name:   "Invalid",
+			target: "dns:///:invalid",
+			want: []attribute.KeyValue{
+				semconv.OTelComponentName(observ.ComponentName(ID)),
+				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := observ.BaseAttrs(ID, tt.target)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func BenchmarkInstrumentationExportSpans(b *testing.B) {
 	setup := func(b *testing.B) *observ.Instrumentation {
 		b.Helper()
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-		inst, err := observ.NewInstrumentation(ID)
+		inst, err := observ.NewInstrumentation(ID, Target)
 		if err != nil {
 			b.Fatalf("failed to create instrumentation: %v", err)
 		}

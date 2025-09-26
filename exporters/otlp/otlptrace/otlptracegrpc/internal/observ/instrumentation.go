@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
@@ -38,8 +39,9 @@ const (
 var (
 	measureAttrsPool = &sync.Pool{
 		New: func() any {
-			// "component.name" + "component.type" + "error.type"
-			const n = 1 + 1 + 1
+			// "component.name" + "component.type" + "server.addr" +
+			// "server.port" + "error.type"
+			const n = 1 + 1 + 1 + 1 + 1
 			s := make([]attribute.KeyValue, 0, n)
 			// Return a pointer to a slice instead of a slice itself
 			// to avoid allocations on every call.
@@ -91,18 +93,18 @@ type Instrumentation struct {
 // NewInstrumentation returns instrumentation for an OTLP over gPRC trace
 // exporter with the provided ID using the global MeterProvider.
 //
+// The id should be the unique exporter instance ID. It is used
+// to set the "component.name" attribute.
+//
+// The target is the endpoint the exporter is exporting to.
+//
 // If the experimental observability is disabled, nil is returned.
-func NewInstrumentation(id int64) (*Instrumentation, error) {
+func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 
-	i := &Instrumentation{
-		attrs: []attribute.KeyValue{
-			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpGRPCSpanExporter,
-		},
-	}
+	i := &Instrumentation{attrs: BaseAttrs(id, target)}
 
 	s := attribute.NewSet(i.attrs...)
 	i.setOpt = metric.WithAttributeSet(s)
@@ -138,6 +140,52 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	i.opDuration = opDuration.Inst()
 
 	return i, err
+}
+
+// BaseAttrs returns the base attributes for the exporter with the provided ID
+// and target.
+//
+// The id should be the unique exporter instance ID. It is used
+// to set the "component.name" attribute.
+//
+// The target is the gRPC target the exporter is exporting to. It is expected
+// to be the output of the Client's CanonicalTarget method .
+func BaseAttrs(id int64, target string) []attribute.KeyValue {
+	host, port, err := ParseCanonicalTarget(target)
+	if err != nil || (host == "" && port < 0) {
+		if err != nil {
+			global.Debug("failed to parse target", "target", target, "error", err)
+		}
+		return []attribute.KeyValue{
+			semconv.OTelComponentName(ComponentName(id)),
+			semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+		}
+	}
+
+	// Do not use append so the slice is exactly allocated.
+
+	if port < 0 {
+		return []attribute.KeyValue{
+			semconv.OTelComponentName(ComponentName(id)),
+			semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+			semconv.ServerAddress(host),
+		}
+	}
+
+	if host == "" {
+		return []attribute.KeyValue{
+			semconv.OTelComponentName(ComponentName(id)),
+			semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+			semconv.ServerPort(port),
+		}
+	}
+
+	return []attribute.KeyValue{
+		semconv.OTelComponentName(ComponentName(id)),
+		semconv.OTelComponentTypeOtlpGRPCSpanExporter,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
+	}
 }
 
 // ExportSpans instruments the ExportSpans method of the exporter. It returns
