@@ -11,6 +11,7 @@ import (
 )
 
 // Reservoir holds the sampled exemplar of measurements made.
+// All methods must be safe to invoke concurrently.
 type Reservoir interface {
 	// Offer accepts the parameters associated with a measurement. The
 	// parameters will be stored as an exemplar if the Reservoir decides to

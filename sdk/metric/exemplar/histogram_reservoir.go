@@ -66,5 +66,5 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 	default:
 		panic("unknown value type")
 	}
-	r.store[sort.SearchFloat64s(r.bounds, x)] = newMeasurement(ctx, t, v, a)
+	r.store(sort.SearchFloat64s(r.bounds, x), newMeasurement(ctx, t, v, a))
 }
