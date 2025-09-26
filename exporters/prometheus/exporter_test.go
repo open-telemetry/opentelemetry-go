@@ -1414,7 +1414,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		}
 		var dtoMetric dto.Metric
 		werr := pm.Write(&dtoMetric)
-		require.ErrorIs(t, werr, ErrEHScaleBelowMin)
+		require.ErrorIs(t, werr, errEHScaleBelowMin)
 		// The exporter reports via invalid metric, not the global otel error handler.
 		assert.NoError(t, capturedError)
 	})
@@ -2035,7 +2035,7 @@ func TestEscapingErrorHandling(t *testing.T) {
 			// Use a producer to emit a Summary data point; no SDK instruments.
 			producer:          makeSummaryProducer(),
 			skipInstrument:    true,
-			expectGatherErrIs: ErrInvalidMetricType,
+			expectGatherErrIs: errInvalidMetricType,
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				require.NotEmpty(t, mfs)
 				other := 0

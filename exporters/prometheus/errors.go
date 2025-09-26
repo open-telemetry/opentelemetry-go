@@ -7,7 +7,7 @@ import "errors"
 
 // Sentinel errors for consistent error checks in tests.
 var (
-	ErrInvalidMetricType = errors.New("invalid metric type")
-	ErrInvalidMetric     = errors.New("invalid metric")
-	ErrEHScaleBelowMin   = errors.New("exponential histogram scale below minimum supported")
+	errInvalidMetricType = errors.New("invalid metric type")
+	errInvalidMetric     = errors.New("invalid metric")
+	errEHScaleBelowMin   = errors.New("exponential histogram scale below minimum supported")
 )
