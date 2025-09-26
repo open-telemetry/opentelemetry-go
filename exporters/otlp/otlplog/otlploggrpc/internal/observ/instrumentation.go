@@ -68,7 +68,7 @@ func put[T any](p *sync.Pool, s *[]T) {
 }
 
 // GetComponentName returns the constant name for the exporter with the
-// Provided id
+// provided id.
 func GetComponentName(id int64) string {
 	return fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 }

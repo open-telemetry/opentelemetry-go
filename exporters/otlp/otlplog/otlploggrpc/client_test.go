@@ -1184,7 +1184,9 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 	run := func(b *testing.B) {
 		coll, err := newGRPCCollector("", nil)
 		require.NoError(b, err)
-		defer coll.srv.Stop()
+		b.Cleanup(func() {
+			coll.srv.Stop()
+		})
 
 		ctx := b.Context()
 		opts := []Option{
@@ -1194,6 +1196,9 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 		}
 		exp, err := New(ctx, opts...)
 		require.NoError(b, err)
+		b.Cleanup(func() {
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
 
 		logs := make([]log.Record, logRecordsCount)
 		now := time.Now()
