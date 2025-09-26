@@ -338,13 +338,19 @@ func (e *expoHistogram[N]) measure(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	attr := e.limit.Attributes(fltrAttr, e.values)
+	attr := fltrAttr
 	v, ok := e.values[attr.Equivalent()]
 	if !ok {
-		v = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-		v.res = e.newRes(attr)
+		attr = e.limit.Attributes(fltrAttr, e.values)
+		// if we overflowed, make sure we add to the existing overflow series
+		// if it already exists.
+		v, ok = e.values[attr.Equivalent()]
+		if !ok {
+			v = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+			v.res = e.newRes(attr)
 
-		e.values[attr.Equivalent()] = v
+			e.values[attr.Equivalent()] = v
+		}
 	}
 	v.record(value)
 	v.res.Offer(ctx, value, droppedAttr)

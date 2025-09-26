@@ -38,9 +38,11 @@ func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 	s.Lock()
 	defer s.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
+	attr := fltrAttr
 	v, ok := s.values[attr.Equivalent()]
 	if !ok {
+		attr = s.limit.Attributes(fltrAttr, s.values)
+		v = s.values[attr.Equivalent()]
 		v.res = s.newRes(attr)
 	}
 

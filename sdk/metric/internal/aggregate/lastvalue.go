@@ -42,9 +42,11 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.
 	s.Lock()
 	defer s.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
+	attr := fltrAttr
 	d, ok := s.values[attr.Equivalent()]
 	if !ok {
+		attr = s.limit.Attributes(fltrAttr, s.values)
+		d = s.values[attr.Equivalent()]
 		d.res = s.newRes(attr)
 	}
 
