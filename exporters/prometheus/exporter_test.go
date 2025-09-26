@@ -8,12 +8,15 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/otlptranslator"
@@ -36,6 +39,22 @@ import (
 type producerFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
 
 func (f producerFunc) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) { return f(ctx) }
+
+// Helper: scrape with ContinueOnError and return body + status.
+func scrapeWithContinueOnError(reg *prometheus.Registry) (int, string) {
+	h := promhttp.HandlerFor(
+		reg,
+		promhttp.HandlerOpts{
+			ErrorHandling: promhttp.ContinueOnError,
+		},
+	)
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/metrics", http.NoBody)
+	h.ServeHTTP(rr, req)
+
+	return rr.Code, rr.Body.String()
+}
 
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
@@ -1021,6 +1040,23 @@ func TestDuplicateMetrics(t *testing.T) {
 				// Gathering should surface an error instead of silently dropping.
 				_, err := registry.Gather()
 				require.Error(t, err)
+
+				// 2) Also assert what users will see if they opt into ContinueOnError.
+				// Compare the HTTP body to an expected file that contains only the valid series
+				// (e.g., "target_info" and any non-conflicting families).
+				status, body := scrapeWithContinueOnError(registry)
+				require.Equal(t, http.StatusOK, status)
+
+				matched := false
+				for _, filename := range tc.possibleExpectedFiles {
+					want, ferr := os.ReadFile(filename)
+					require.NoError(t, ferr)
+					if body == string(want) {
+						matched = true
+						break
+					}
+				}
+				require.Truef(t, matched, "expected export not produced under ContinueOnError; got:\n%s", body)
 			} else {
 				match := false
 				for _, filename := range tc.possibleExpectedFiles {
@@ -1378,8 +1414,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		}
 		var dtoMetric dto.Metric
 		werr := pm.Write(&dtoMetric)
-		require.Error(t, werr)
-		assert.ErrorIs(t, werr, ErrEHScaleBelowMin)
+		require.ErrorIs(t, werr, ErrEHScaleBelowMin)
 		// The exporter reports via invalid metric, not the global otel error handler.
 		assert.NoError(t, capturedError)
 	})
@@ -2262,7 +2297,6 @@ func TestEscapingErrorHandling(t *testing.T) {
 				return
 			}
 			if tc.expectGatherErrIs != nil {
-				require.Error(t, err)
 				require.ErrorIs(t, err, tc.expectGatherErrIs)
 				return
 			}
