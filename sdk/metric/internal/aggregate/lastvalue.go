@@ -42,19 +42,18 @@ func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.
 	s.Lock()
 	defer s.Unlock()
 
-	attr := fltrAttr
-	d, ok := s.values[attr.Equivalent()]
+	d, ok := s.values[fltrAttr.Equivalent()]
 	if !ok {
-		attr = s.limit.Attributes(fltrAttr, s.values)
-		d = s.values[attr.Equivalent()]
-		d.res = s.newRes(attr)
+		fltrAttr = s.limit.Attributes(fltrAttr, s.values)
+		d = s.values[fltrAttr.Equivalent()]
+		d.res = s.newRes(fltrAttr)
+		d.attrs = fltrAttr
 	}
 
-	d.attrs = attr
 	d.value = value
 	d.res.Offer(ctx, value, droppedAttr)
 
-	s.values[attr.Equivalent()] = d
+	s.values[fltrAttr.Equivalent()] = d
 }
 
 func (s *lastValue[N]) delta(
