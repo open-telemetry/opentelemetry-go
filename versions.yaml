@@ -49,3 +49,6 @@ modules:
   go.opentelemetry.io/otel/exporters/prometheus:
     version-refs:
       - ./exporters/prometheus/internal/version.go
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc:
+    version-refs:
+      - ./exporters/otlp/otlptrace/otlptracegrpc/internal/version.go
