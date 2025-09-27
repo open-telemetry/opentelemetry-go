@@ -6,7 +6,6 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
@@ -21,6 +20,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
 
@@ -37,6 +39,8 @@ type client struct {
 	ourConn bool
 	conn    *grpc.ClientConn
 	lsc     collogpb.LogsServiceClient
+
+	instrumentation *observ.Instrumentation
 }
 
 // Used for testing.
@@ -71,7 +75,10 @@ func newClient(cfg config) (*client, error) {
 
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
 
-	return c, nil
+	var err error
+	id := counter.NextExporterID()
+	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
+	return c, err
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
@@ -131,6 +138,14 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
+	count := int64(len(rl))
+	if c.instrumentation != nil {
+		eo := c.instrumentation.ExportLogs(ctx, count)
+		defer func() {
+			eo.End(uploadErr)
+		}()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
 		resp, err := c.lsc.Export(ctx, &collogpb.ExportLogsServiceRequest{
 			ResourceLogs: rl,
@@ -139,7 +154,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
-				err := errPartial{msg: msg, n: n}
+				err := internal.LogPartialSuccessError(n, msg)
 				uploadErr = errors.Join(uploadErr, err)
 			}
 		}
@@ -150,23 +165,6 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 		}
 		return err
 	}))
-}
-
-type errPartial struct {
-	msg string
-	n   int64
-}
-
-var _ error = errPartial{}
-
-func (e errPartial) Error() string {
-	const form = "OTLP partial success: %s (%d log records rejected)"
-	return fmt.Sprintf(form, e.msg, e.n)
-}
-
-func (errPartial) Is(target error) bool {
-	_, ok := target.(errPartial)
-	return ok
 }
 
 // Shutdown shuts down the client, freeing all resources.
