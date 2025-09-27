@@ -4,13 +4,14 @@ package observ_test
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"testing"
 )
 
 const sspComponentId = 0
