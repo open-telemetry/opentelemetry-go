@@ -218,7 +218,7 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 
 	ctr, actr := testSetupAllInstrumentTypes(t, meter)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(t.Context(), 5)
 
 	testCollect(t, meter) // This is a hacky way to emulate a read from an exporter
 
@@ -267,7 +267,7 @@ func TestMeterDelegatesCalls(t *testing.T) {
 
 	ctr, actr := testSetupAllInstrumentTypes(t, m)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(t.Context(), 5)
 
 	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
 
@@ -310,7 +310,7 @@ func TestMeterDefersDelegations(t *testing.T) {
 
 	ctr, actr := testSetupAllInstrumentTypes(t, m)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(t.Context(), 5)
 
 	mp := &testMeterProvider{}
 

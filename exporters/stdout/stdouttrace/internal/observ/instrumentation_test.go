@@ -4,7 +4,6 @@
 package observ_test
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -59,7 +58,7 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 	return nil, m.err
 }
 
-func TestNewInstrumentationObservabiltyErrors(t *testing.T) {
+func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
 	mp := &errMeterProvider{err: assert.AnError}
@@ -75,7 +74,7 @@ func TestNewInstrumentationObservabiltyErrors(t *testing.T) {
 	assert.ErrorContains(t, err, "operation duration metric")
 }
 
-func TestNewInstrumentationObservabiltyDisabled(t *testing.T) {
+func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
 	// Do not set OTEL_GO_X_OBSERVABILITY.
 	got, err := observ.NewInstrumentation(ID)
 	assert.NoError(t, err)
@@ -100,7 +99,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 
 	return inst, func() metricdata.ScopeMetrics {
 		var rm metricdata.ResourceMetrics
-		require.NoError(t, r.Collect(context.Background(), &rm))
+		require.NoError(t, r.Collect(t.Context(), &rm))
 
 		require.Len(t, rm.ScopeMetrics, 1)
 		return rm.ScopeMetrics[0]
@@ -191,8 +190,7 @@ func TestInstrumentationExportSpans(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(context.Background(), n)
-	end(n, nil)
+	inst.ExportSpans(t.Context(), n).End(n, nil)
 
 	assertMetrics(t, collect(), n, n, nil)
 }
@@ -201,9 +199,8 @@ func TestInstrumentationExportSpansAllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(context.Background(), n)
 	const success = 0
-	end(success, assert.AnError)
+	inst.ExportSpans(t.Context(), n).End(success, assert.AnError)
 
 	assertMetrics(t, collect(), n, success, assert.AnError)
 }
@@ -212,28 +209,37 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	end := inst.ExportSpans(context.Background(), n)
 	const success = 5
-	end(success, assert.AnError)
+	inst.ExportSpans(t.Context(), n).End(success, assert.AnError)
 
 	assertMetrics(t, collect(), n, success, assert.AnError)
 }
 
 func BenchmarkInstrumentationExportSpans(b *testing.B) {
-	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	inst, err := observ.NewInstrumentation(ID)
-	if err != nil {
-		b.Fatalf("failed to create instrumentation: %v", err)
+	setup := func(b *testing.B) *observ.Instrumentation {
+		b.Helper()
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		inst, err := observ.NewInstrumentation(ID)
+		if err != nil {
+			b.Fatalf("failed to create instrumentation: %v", err)
+		}
+		return inst
 	}
 
-	var end observ.ExportSpansDone
-	err = errors.New("benchmark error")
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		end = inst.ExportSpans(context.Background(), 10)
-		end(4, err)
+	const nSpans = 10
+	err := errors.New("benchmark error")
+	run := func(n int64, err error) func(*testing.B) {
+		return func(b *testing.B) {
+			inst := setup(b)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.ExportSpans(b.Context(), nSpans).End(n, err)
+			}
+		}
 	}
-	_ = end
+
+	b.Run("NoError", run(nSpans, nil))
+	b.Run("PartialError", run(4, err))
+	b.Run("FullError", run(0, err))
 }

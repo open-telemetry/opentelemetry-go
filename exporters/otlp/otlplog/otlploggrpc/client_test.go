@@ -5,7 +5,6 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -28,7 +27,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
@@ -470,7 +468,7 @@ func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollect
 func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		t.Cleanup(cancel)
 
 		t.Run("DeadlineExceeded", func(t *testing.T) {
@@ -508,7 +506,7 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("UploadLogs", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		client, coll := clientFactory(t, nil)
 
 		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
@@ -545,24 +543,12 @@ func TestClient(t *testing.T) {
 			Response: &collogpb.ExportLogsServiceResponse{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		client, _ := clientFactory(t, rCh)
 
-		defer func(orig otel.ErrorHandler) {
-			otel.SetErrorHandler(orig)
-		}(otel.GetErrorHandler())
-
-		var errs []error
-		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-		otel.SetErrorHandler(eh)
-
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-		require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-
-		require.Len(t, errs, 1)
-		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-		assert.ErrorContains(t, errs[0], want)
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
 }
 
@@ -571,7 +557,7 @@ func TestConfig(t *testing.T) {
 		coll, err := newGRPCCollector("", rCh)
 		require.NoError(t, err)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		opts := append([]Option{
 			WithEndpoint(coll.listener.Addr().String()),
 			WithInsecure(),
@@ -587,7 +573,7 @@ func TestConfig(t *testing.T) {
 		exp, coll := factoryFunc(nil, WithHeaders(headers))
 		t.Cleanup(coll.srv.Stop)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		additionalKey := "additional-custom-header"
 		ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
 		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
