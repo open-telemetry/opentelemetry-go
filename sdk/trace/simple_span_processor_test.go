@@ -322,7 +322,7 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 			startSpan(tp, test.name).End()
 
 			var rm metricdata.ResourceMetrics
-			require.NoError(t, r.Collect(context.Background(), &rm))
+			require.NoError(t, r.Collect(t.Context(), &rm))
 			test.assertMetrics(t, rm)
 			simpleProcessorIDCounter.Store(0) // reset simpleProcessorIDCounter
 		})
