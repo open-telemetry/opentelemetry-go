@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkinstrumentation "go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -88,7 +88,7 @@ type recordJSON struct {
 	SpanID            trace.SpanID
 	TraceFlags        trace.TraceFlags
 	Resource          *resource.Resource
-	Scope             instrumentation.Scope
+	Scope             sdkinstrumentation.Scope
 	DroppedAttributes int
 }
 

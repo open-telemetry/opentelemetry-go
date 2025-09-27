@@ -7,62 +7,54 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestSelfObservabilityFeature(t *testing.T) {
-	testCases := []struct {
-		name     string
-		envValue string
-		enabled  bool
-	}{
-		{
-			name:     "enabled_lowercase",
-			envValue: "true",
-			enabled:  true,
-		},
-		{
-			name:     "enabled_uppercase",
-			envValue: "TRUE",
-			enabled:  true,
-		},
-		{
-			name:     "enabled_mixed_case",
-			envValue: "True",
-			enabled:  true,
-		},
-		{
-			name:     "disabled_false",
-			envValue: "false",
-			enabled:  false,
-		},
-		{
-			name:     "disabled_invalid",
-			envValue: "invalid",
-			enabled:  false,
-		},
-		{
-			name:     "disabled_empty",
-			envValue: "",
-			enabled:  false,
-		},
+func TestObservability(t *testing.T) {
+	const key = "OTEL_GO_X_SELF_OBSERVABILITY"
+	require.Equal(t, key, SelfObservability.Key())
+
+	t.Run("true", run(setenv(key, "true"), assertEnabled(SelfObservability, "true")))
+	t.Run("True", run(setenv(key, "True"), assertEnabled(SelfObservability, "True")))
+	t.Run("TRUE", run(setenv(key, "TRUE"), assertEnabled(SelfObservability, "TRUE")))
+	t.Run("false", run(setenv(key, "false"), assertDisabled(SelfObservability)))
+	t.Run("100", run(setenv(key, "100"), assertDisabled(SelfObservability)))
+	t.Run("empty", run(assertDisabled(SelfObservability)))
+}
+
+func run(steps ...func(*testing.T)) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		for _, step := range steps {
+			step(t)
+		}
 	}
+}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.envValue != "" {
-				t.Setenv(SelfObservability.Key(), tc.envValue)
-			}
+func setenv(k, v string) func(t *testing.T) { //nolint:unparam
+	return func(t *testing.T) { t.Setenv(k, v) }
+}
 
-			assert.Equal(t, tc.enabled, SelfObservability.Enabled())
+func assertEnabled[T any](f Feature[T], want T) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		assert.True(t, f.Enabled(), "not enabled")
 
-			value, ok := SelfObservability.Lookup()
-			if tc.enabled {
-				assert.True(t, ok)
-				assert.Equal(t, tc.envValue, value)
-			} else {
-				assert.False(t, ok)
-				assert.Empty(t, value)
-			}
-		})
+		v, ok := f.Lookup()
+		assert.True(t, ok, "Lookup state")
+		assert.Equal(t, want, v, "Lookup value")
+	}
+}
+
+func assertDisabled[T any](f Feature[T]) func(*testing.T) {
+	var zero T
+	return func(t *testing.T) {
+		t.Helper()
+
+		assert.False(t, f.Enabled(), "enabled")
+
+		v, ok := f.Lookup()
+		assert.False(t, ok, "Lookup state")
+		assert.Equal(t, zero, v, "Lookup value")
 	}
 }

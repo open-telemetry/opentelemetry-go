@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkinstrumentation "go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -327,7 +327,7 @@ func getRecord(now time.Time) sdklog.Record {
 			"https://example.com/custom-resource-schema",
 			attribute.String("foo", "bar"),
 		),
-		InstrumentationScope: &instrumentation.Scope{
+		InstrumentationScope: &sdkinstrumentation.Scope{
 			Name:      "name",
 			Version:   "version",
 			SchemaURL: "https://example.com/custom-schema",
@@ -785,7 +785,7 @@ func TestNewSelfObservability(t *testing.T) {
 				assert.NotEmpty(t, got.Scope.Version)
 				assert.NotEmpty(t, got.Metrics, "metrics should be recorded even for empty records")
 
-				assert.Len(t, got.Metrics, 3, "should have 3 metrics for self-observability")
+				assert.Len(t, got.Metrics, 3, "should have 3 metrics for observability")
 				metricNames := make(map[string]bool)
 				for _, metric := range got.Metrics {
 					metricNames[metric.Name] = true
@@ -920,20 +920,17 @@ func TestNewSelfObservability(t *testing.T) {
 				require.NoError(t, err)
 
 				got := scopeMetrics()
-				assert.Empty(t, got.Metrics, "no metrics should be recorded when self-observability is disabled")
+				assert.Empty(t, got.Metrics, "no metrics should be recorded when observability is disabled")
 			},
 		},
 	}
-	ranOnce := false
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Reset the global exporter ID counter for deterministic tests
+			counter.SetExporterID(0) // First call to NextExporterID() will return 0
+
 			if tc.enable {
 				t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
-			}
-
-			if ranOnce {
-				// Reset the global exporter ID counter for deterministic tests
-				counter.SetExporterID(0) // First call to NextExporterID() will return 0
 			}
 
 			prev := otel.GetMeterProvider()
@@ -953,6 +950,5 @@ func TestNewSelfObservability(t *testing.T) {
 			}
 			tc.test(t, scopeMetrics)
 		})
-		ranOnce = true
 	}
 }

@@ -10,10 +10,11 @@ import (
 )
 
 // SelfObservability is an experimental feature flag that determines if stdout
-// log exporter self-observability metrics are enabled.
+// log exporter observability metrics are enabled.
 //
-// To enable this feature set the OTEL_GO_X_SELF_OBSERVABILITY environment variable
-// to the case-insensitive string value.
+// To enable this feature set the OTEL_GO_X_SELF_OBSERVABILITY environment
+// variable to the case-insensitive string value of "true" (i.e. "True" and
+// "TRUE" will also enable this).
 var SelfObservability = newFeature("SELF_OBSERVABILITY", func(v string) (string, bool) {
 	if strings.EqualFold(v, "true") {
 		return v, true
