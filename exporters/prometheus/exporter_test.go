@@ -40,13 +40,11 @@ func TestPrometheusExporter(t *testing.T) {
 		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
 		options             []Option
 		expectedFile        string
-		strategy            otlptranslator.TranslationStrategyOption
 		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
 	}{
 		{
 			name:         "counter",
 			expectedFile: "testdata/counter.txt",
-			strategy:     otlptranslator.UnderscoreEscapingWithSuffixes,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -80,7 +78,6 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter that already has the unit suffix",
 			expectedFile: "testdata/counter_noutf8_with_unit_suffix.txt",
-			strategy:     otlptranslator.UnderscoreEscapingWithSuffixes,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -106,6 +103,7 @@ func TestPrometheusExporter(t *testing.T) {
 				)
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
 			},
+			options: []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)},
 		},
 		{
 			name:         "counter with custom unit not tracked by ucum standards",
@@ -135,6 +133,7 @@ func TestPrometheusExporter(t *testing.T) {
 				)
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
 			},
+			options: []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 		},
 		{
 			name:         "counter with bracketed unit",
@@ -164,11 +163,11 @@ func TestPrometheusExporter(t *testing.T) {
 				)
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
 			},
+			options: []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 		},
 		{
 			name:         "counter that already has a total suffix",
 			expectedFile: "testdata/counter.txt",
-			strategy:     otlptranslator.UnderscoreEscapingWithSuffixes,
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -202,7 +201,10 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter with suffixes disabled",
 			expectedFile: "testdata/counter_disabled_suffix.txt",
-			options:      []Option{WithoutCounterSuffixes()},
+			options: []Option{
+				WithoutCounterSuffixes(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -232,6 +234,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "gauge",
 			expectedFile: "testdata/gauge.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -249,6 +252,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "exponential histogram",
 			expectedFile: "testdata/exponential_histogram.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
 				var hist *dto.MetricFamily
 
@@ -293,6 +297,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "histogram",
 			expectedFile: "testdata/histogram.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -313,8 +318,10 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
-			strategy:     otlptranslator.UnderscoreEscapingWithSuffixes,
-			options:      []Option{WithoutUnits()},
+			options: []Option{
+				WithoutUnits(),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					// exact match, value should be overwritten
@@ -340,6 +347,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "invalid instruments are renamed",
 			expectedFile: "testdata/sanitized_names.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -378,6 +386,7 @@ func TestPrometheusExporter(t *testing.T) {
 			name:          "empty resource",
 			emptyResource: true,
 			expectedFile:  "testdata/empty_resource.txt",
+			options:       []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -399,6 +408,7 @@ func TestPrometheusExporter(t *testing.T) {
 				attribute.Key("C").String("D"),
 			},
 			expectedFile: "testdata/custom_resource.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -414,8 +424,11 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "without target_info",
-			options:      []Option{WithoutTargetInfo()},
+			name: "without target_info",
+			options: []Option{
+				WithoutTargetInfo(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
 			expectedFile: "testdata/without_target_info.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -432,8 +445,11 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "without scope_info",
-			options:      []Option{WithoutScopeInfo()},
+			name: "without scope_info",
+			options: []Option{
+				WithoutScopeInfo(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
 			expectedFile: "testdata/without_scope_info.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -450,8 +466,12 @@ func TestPrometheusExporter(t *testing.T) {
 			},
 		},
 		{
-			name:         "without scope_info and target_info",
-			options:      []Option{WithoutScopeInfo(), WithoutTargetInfo()},
+			name: "without scope_info and target_info",
+			options: []Option{
+				WithoutScopeInfo(),
+				WithoutTargetInfo(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
 			expectedFile: "testdata/without_scope_and_target_info.txt",
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -473,6 +493,7 @@ func TestPrometheusExporter(t *testing.T) {
 			expectedFile: "testdata/with_namespace.txt",
 			options: []Option{
 				WithNamespace("test"),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -493,6 +514,7 @@ func TestPrometheusExporter(t *testing.T) {
 			expectedFile: "testdata/with_resource_attributes_filter.txt",
 			options: []Option{
 				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -513,6 +535,7 @@ func TestPrometheusExporter(t *testing.T) {
 			expectedFile: "testdata/with_allow_resource_attributes_filter.txt",
 			options: []Option{
 				WithResourceAsConstantLabels(attribute.NewAllowKeysFilter("service.name")),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -564,9 +587,9 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "counter utf-8 notranslation",
 			expectedFile: "testdata/counter_utf8_notranslation.txt",
-			strategy:     otlptranslator.NoTranslation,
 			options: []Option{
 				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.NoTranslation),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -597,6 +620,7 @@ func TestPrometheusExporter(t *testing.T) {
 		{
 			name:         "non-monotonic sum does not add exemplars",
 			expectedFile: "testdata/non_monotonic_sum_does_not_add_exemplars.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				sc := trace.NewSpanContext(trace.SpanContextConfig{
 					SpanID:     trace.SpanID{0o1},
@@ -636,7 +660,7 @@ func TestPrometheusExporter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
 			registry := prometheus.NewRegistry()
-			opts := append(tc.options, WithRegisterer(registry), WithTranslationStrategy(tc.strategy))
+			opts := append(tc.options, WithRegisterer(registry))
 			exporter, err := New(opts...)
 			require.NoError(t, err)
 
