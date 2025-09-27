@@ -75,7 +75,7 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 			// Add the span to the context to ensure the metric is recorded
 			// with the correct span context.
 			ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
-			ssp.inst.Record(ctx, 1, err)
+			ssp.inst.SpanProcessed(ctx, 1, err)
 		}
 	}
 }

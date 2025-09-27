@@ -62,7 +62,7 @@ func NewSSP(id int64) (*SSP, error) {
 	}, err
 }
 
-func (ssp *SSP) Record(ctx context.Context, count int64, err error) {
+func (ssp *SSP) SpanProcessed(ctx context.Context, count int64, err error) {
 	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
 	defer func() {
 		*attrs = (*attrs)[:0] // reset the slice for reuse
