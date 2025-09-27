@@ -4,7 +4,6 @@
 package exemplar
 
 import (
-	"context"
 	"math"
 	"math/rand/v2"
 	"slices"
@@ -42,7 +41,7 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 
 	r := NewFixedSizeReservoir(sampleSize)
 	for _, value := range data {
-		r.Offer(context.Background(), staticTime, NewValue(value), nil)
+		r.Offer(t.Context(), staticTime, NewValue(value), nil)
 	}
 
 	var sum float64

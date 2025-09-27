@@ -44,7 +44,7 @@ func (b *concurrentBuffer) String() string {
 func TestEmptyBatchConfig(t *testing.T) {
 	assert.NotPanics(t, func() {
 		var bp BatchProcessor
-		ctx := context.Background()
+		ctx := t.Context()
 		record := new(Record)
 		assert.NoError(t, bp.OnEmit(ctx, record), "OnEmit")
 		assert.NoError(t, bp.ForceFlush(ctx), "ForceFlush")
@@ -191,7 +191,7 @@ func TestNewBatchConfig(t *testing.T) {
 }
 
 func TestBatchProcessor(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("NilExporter", func(t *testing.T) {
 		assert.NotPanics(t, func() { NewBatchProcessor(nil) })
@@ -326,7 +326,7 @@ func TestBatchProcessor(t *testing.T) {
 			t.Cleanup(func() { close(e.ExportTrigger) })
 			b := NewBatchProcessor(e)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			c, cancel := context.WithCancel(ctx)
 			cancel()
 
@@ -649,7 +649,7 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 	r.SetBody(body)
 
 	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
-	ctx := context.Background()
+	ctx := b.Context()
 	bp := NewBatchProcessor(
 		defaultNoopExporter,
 		WithMaxQueueSize(b.N+1),
