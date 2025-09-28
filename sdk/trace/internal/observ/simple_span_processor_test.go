@@ -16,7 +16,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
-const sspComponentId = 0
+const sspComponentID = 0
 
 func TestSSPComponentName(t *testing.T) {
 	got := observ.SSPComponentName(10)
@@ -33,13 +33,13 @@ func TestNewSSPError(t *testing.T) {
 	mp := &errMeterProvider{err: assert.AnError}
 	otel.SetMeterProvider(mp)
 
-	_, err := observ.NewSSP(sspComponentId)
+	_, err := observ.NewSSP(sspComponentID)
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
 	assert.ErrorContains(t, err, "create SSP processed spans metric")
 }
 
 func TestNewSSPDisabled(t *testing.T) {
-	ssp, err := observ.NewSSP(sspComponentId)
+	ssp, err := observ.NewSSP(sspComponentID)
 	assert.NoError(t, err)
 	assert.Nil(t, ssp)
 }
@@ -47,7 +47,7 @@ func TestNewSSPDisabled(t *testing.T) {
 func TestSSPSpanProcessed(t *testing.T) {
 	ctx := t.Context()
 	collect := setup(t)
-	ssp, err := observ.NewSSP(sspComponentId)
+	ssp, err := observ.NewSSP(sspComponentID)
 	assert.NoError(t, err)
 
 	ssp.SpanProcessed(ctx, 1, nil)
@@ -68,7 +68,7 @@ func BenchmarkSSP(b *testing.B) {
 
 	newSSP := func(b *testing.B) *observ.SSP {
 		b.Helper()
-		ssp, err := observ.NewSSP(sspComponentId)
+		ssp, err := observ.NewSSP(sspComponentID)
 		require.NoError(b, err)
 		require.NotNil(b, ssp)
 		return ssp
@@ -121,6 +121,6 @@ func BenchmarkSSP(b *testing.B) {
 func sspSet(attrs ...attribute.KeyValue) attribute.Set {
 	return attribute.NewSet(append([]attribute.KeyValue{
 		semconv.OTelComponentTypeSimpleSpanProcessor,
-		observ.SSPComponentName(sspComponentId),
+		observ.SSPComponentName(sspComponentID),
 	}, attrs...)...)
 }
