@@ -29,6 +29,7 @@ type FilteredExemplarReservoir[N int64 | float64] interface {
 
 // filteredExemplarReservoir handles the pre-sampled exemplar of measurements made.
 type filteredExemplarReservoir[N int64 | float64] struct {
+	mu        sync.Mutex
 	filter    exemplar.Filter
 	reservoir exemplar.Reservoir
 	// The exemplar.Reservoir is not required to be concurrent safe, but
@@ -54,12 +55,12 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 
 func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
 	if f.filter(ctx) {
+		// only record the current time if we are sampling this measurement.
 		ts := time.Now()
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
 		}
-		// only record the current time if we are sampling this measurement.
 		f.reservoir.Offer(ctx, ts, exemplar.NewValue(val), attr)
 	}
 }
