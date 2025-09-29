@@ -341,7 +341,7 @@ func (e *expoHistogram[N]) measure(
 	v, ok := e.values[fltrAttr.Equivalent()]
 	if !ok {
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
-		// if we overflowed, make sure we add to the existing overflow series
+		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
 		v, ok = e.values[fltrAttr.Equivalent()]
 		if !ok {

@@ -100,7 +100,7 @@ func (s *histValues[N]) measure(
 	b, ok := s.values[fltrAttr.Equivalent()]
 	if !ok {
 		fltrAttr = s.limit.Attributes(fltrAttr, s.values)
-		// if we overflowed, make sure we add to the existing overflow series
+		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
 		b, ok = s.values[fltrAttr.Equivalent()]
 		if !ok {
