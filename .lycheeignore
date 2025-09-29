@@ -8,3 +8,4 @@ https?:\/\/github\.com\/open-telemetry\/semantic-conventions\/archive\/refs\/tag
 file:///home/runner/work/opentelemetry-go/opentelemetry-go/libraries
 file:///home/runner/work/opentelemetry-go/opentelemetry-go/manual
 http://4.3.2.1:78/user/123
+file:///home/runner/work/opentelemetry-go/opentelemetry-go/exporters/otlp/otlptrace/otlptracegrpc/internal/observ/dns:/:4317
