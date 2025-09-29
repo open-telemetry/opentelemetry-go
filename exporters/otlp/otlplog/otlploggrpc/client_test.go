@@ -621,7 +621,7 @@ func TestClientObservability(t *testing.T) {
 				client, coll := clientFactory(t, nil)
 
 				componentName := observ.GetComponentName(0)
-				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.CanonicalTarget())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      observ.ScopeName,
@@ -746,7 +746,7 @@ func TestClientObservability(t *testing.T) {
 				client, _ := clientFactory(t, rCh)
 
 				componentName := observ.GetComponentName(0)
-				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.CanonicalTarget())
 				var wantErr error
 				wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
 				wantMetrics := metricdata.ScopeMetrics{
@@ -884,7 +884,7 @@ func TestClientObservability(t *testing.T) {
 
 				componentName := observ.GetComponentName(0)
 
-				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.CanonicalTarget())
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      observ.ScopeName,
@@ -1061,7 +1061,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 
 	componentName := observ.GetComponentName(0)
 
-	serverAddrAttrs := observ.ServerAddrAttrs(client.conn.Target())
+	serverAddrAttrs := observ.ServerAddrAttrs(client.conn.CanonicalTarget())
 	var wantErr error
 	wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
 

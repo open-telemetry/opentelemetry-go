@@ -60,13 +60,13 @@ func TestNewExporterMetrics(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	t.Run("No Error", func(t *testing.T) {
-		em, err := NewInstrumentation(ID, "localhost:8080")
+		em, err := NewInstrumentation(ID, "dns:///example.com:42")
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []attribute.KeyValue{
 			semconv.OTelComponentName(GetComponentName(ID)),
 			semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
-			semconv.ServerAddress("localhost"),
-			semconv.ServerPort(8080),
+			semconv.ServerAddress("example.com"),
+			semconv.ServerPort(42),
 		}, em.presetAttrs)
 
 		assert.NotNil(t, em.logInflightMetric, "logInflightMetric should be created")
@@ -80,7 +80,7 @@ func TestNewExporterMetrics(t *testing.T) {
 		mp := &errMeterProvider{err: assert.AnError}
 		otel.SetMeterProvider(mp)
 
-		_, err := NewInstrumentation(ID, "localhost:8080")
+		_, err := NewInstrumentation(ID, "dns:///:8080")
 		require.ErrorIs(t, err, assert.AnError, "new instrument errors")
 
 		assert.ErrorContains(t, err, "inflight metric")
@@ -109,11 +109,6 @@ func TestServerAddrAttrs(t *testing.T) {
 			name:   "Dns with endpoint host:port",
 			target: "dns://8.8.8.8/example.com:4",
 			want:   []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(4)},
-		},
-		{
-			name:   "Simple host port",
-			target: "localhost:10001",
-			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(10001)},
 		},
 		{
 			name:   "Host without port",

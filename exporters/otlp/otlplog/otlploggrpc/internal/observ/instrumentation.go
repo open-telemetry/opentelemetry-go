@@ -9,10 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -258,42 +254,16 @@ func rejectedCount(n int64, err error) int64 {
 // ServerAddrAttrs is a function that extracts server address and port attributes
 // from a target string.
 func ServerAddrAttrs(target string) []attribute.KeyValue {
-	if !strings.Contains(target, "://") {
-		return splitHostPortAttrs(target)
-	}
-
-	u, err := url.Parse(target)
-	if err != nil || u.Scheme == "" {
-		return splitHostPortAttrs(target)
-	}
-
-	switch u.Scheme {
-	case "unix":
-		// unix:///path/to/socket
-		return []attribute.KeyValue{semconv.ServerAddress(u.Path)}
-	case "dns":
-		// dns:///example.com:42 or dns://8.8.8.8/example.com:42
-		addr := u.Opaque
-		if addr == "" {
-			addr = strings.TrimPrefix(u.Path, "/")
-		}
-		return splitHostPortAttrs(addr)
-	default:
-		return splitHostPortAttrs(u.Host)
-	}
-}
-
-func splitHostPortAttrs(target string) []attribute.KeyValue {
-	host, pStr, err := net.SplitHostPort(target)
+	addr, port, err := ParseCanonicalTarget(target)
 	if err != nil {
 		return []attribute.KeyValue{semconv.ServerAddress(target)}
 	}
-	port, err := strconv.Atoi(pStr)
-	if err != nil {
-		return []attribute.KeyValue{semconv.ServerAddress(host)}
+	if port == -1 {
+		return []attribute.KeyValue{semconv.ServerAddress(addr)}
 	}
+
 	return []attribute.KeyValue{
-		semconv.ServerAddress(host),
+		semconv.ServerAddress(addr),
 		semconv.ServerPort(port),
 	}
 }
