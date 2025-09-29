@@ -97,22 +97,27 @@ func (s *histValues[N]) measure(
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
-	b, ok := s.values[attr.Equivalent()]
+	b, ok := s.values[fltrAttr.Equivalent()]
 	if !ok {
-		// N+1 buckets. For example:
-		//
-		//   bounds = [0, 5, 10]
-		//
-		// Then,
-		//
-		//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
-		b = newBuckets[N](attr, len(s.bounds)+1)
-		b.res = s.newRes(attr)
+		fltrAttr = s.limit.Attributes(fltrAttr, s.values)
+		// If we overflowed, make sure we add to the existing overflow series
+		// if it already exists.
+		b, ok = s.values[fltrAttr.Equivalent()]
+		if !ok {
+			// N+1 buckets. For example:
+			//
+			//   bounds = [0, 5, 10]
+			//
+			// Then,
+			//
+			//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
+			b = newBuckets[N](fltrAttr, len(s.bounds)+1)
+			b.res = s.newRes(fltrAttr)
 
-		// Ensure min and max are recorded values (not zero), for new buckets.
-		b.min, b.max = value, value
-		s.values[attr.Equivalent()] = b
+			// Ensure min and max are recorded values (not zero), for new buckets.
+			b.min, b.max = value, value
+			s.values[fltrAttr.Equivalent()] = b
+		}
 	}
 	b.bin(idx)
 	if !s.noMinMax {
