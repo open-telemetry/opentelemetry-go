@@ -12,7 +12,8 @@ import (
 )
 
 func TestLimiterAttributes(t *testing.T) {
-	m := map[attribute.Distinct]struct{}{alice.Equivalent(): {}}
+	var val struct{}
+	m := map[attribute.Distinct]*struct{}{alice.Equivalent(): &val}
 	t.Run("NoLimit", func(t *testing.T) {
 		l := newLimiter[struct{}](0)
 		assert.Equal(t, alice, l.Attributes(alice, m))
@@ -43,7 +44,8 @@ func TestLimiterAttributes(t *testing.T) {
 var limitedAttr attribute.Set
 
 func BenchmarkLimiterAttributes(b *testing.B) {
-	m := map[attribute.Distinct]struct{}{alice.Equivalent(): {}}
+	var val struct{}
+	m := map[attribute.Distinct]*struct{}{alice.Equivalent(): &val}
 	l := newLimiter[struct{}](2)
 
 	b.ReportAllocs()
