@@ -59,7 +59,7 @@ var (
 	}
 	recordOptPool = &sync.Pool{
 		New: func() any {
-			const n = 1 + 1 // WithAttributeSet
+			const n = 1 // WithAttributeSet
 			o := make([]metric.RecordOption, 0, n)
 			return &o
 		},
@@ -149,7 +149,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 
 	i.addOpt = metric.WithAttributeSet(attribute.NewSet(i.presetAttrs...))
 	i.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
-		// Default to OK status code (err == nil).
+		// Default to OK status code.
 		[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
 		i.presetAttrs...,
 	)...))
