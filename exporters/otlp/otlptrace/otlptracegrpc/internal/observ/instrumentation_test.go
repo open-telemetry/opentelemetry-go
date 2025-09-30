@@ -4,11 +4,14 @@
 package observ_test
 
 import (
+	"errors"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -113,7 +116,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 	}
 }
 
-func set(err error) attribute.Set {
+func baseAttrs(err error) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(observ.ComponentName(ID)),
 		semconv.OTelComponentTypeOtlpGRPCSpanExporter,
@@ -123,7 +126,11 @@ func set(err error) attribute.Set {
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))
 	}
-	return attribute.NewSet(attrs...)
+	return attrs
+}
+
+func set(err error) attribute.Set {
+	return attribute.NewSet(baseAttrs(err)...)
 }
 
 func spanInflight() metricdata.Metrics {
@@ -163,6 +170,15 @@ func spanExported(success, total int64, err error) metricdata.Metrics {
 }
 
 func operationDuration(err error) metricdata.Metrics {
+	rpcSet := func(err error) attribute.Set {
+		c := int64(status.Code(err))
+		return attribute.NewSet(append(
+			[]attribute.KeyValue{
+				semconv.RPCGRPCStatusCodeKey.Int64(c),
+			},
+			baseAttrs(err)...,
+		)...)
+	}
 	return metricdata.Metrics{
 		Name:        otelconv.SDKExporterOperationDuration{}.Name(),
 		Description: otelconv.SDKExporterOperationDuration{}.Description(),
@@ -170,7 +186,7 @@ func operationDuration(err error) metricdata.Metrics {
 		Data: metricdata.Histogram[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
-				{Attributes: set(err)},
+				{Attributes: rpcSet(err)},
 			},
 		},
 	}
@@ -208,10 +224,11 @@ func TestInstrumentationExportSpansAllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	inst.ExportSpans(t.Context(), n).End(assert.AnError)
+	err := status.Error(codes.PermissionDenied, "go away")
+	inst.ExportSpans(t.Context(), n).End(err)
 
 	const success = 0
-	assertMetrics(t, collect(), n, success, assert.AnError)
+	assertMetrics(t, collect(), n, success, err)
 }
 
 func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
@@ -220,7 +237,8 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 	const n = 10
 	const success = n - 5
 
-	err := internal.PartialSuccess{RejectedItems: success}
+	err := status.Error(codes.Unavailable, "temporary failure")
+	err = errors.Join(err, &internal.PartialSuccess{RejectedItems: 5})
 	inst.ExportSpans(t.Context(), n).End(err)
 
 	assertMetrics(t, collect(), n, success, err)

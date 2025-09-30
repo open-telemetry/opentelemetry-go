@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -37,9 +38,12 @@ const (
 var (
 	measureAttrsPool = &sync.Pool{
 		New: func() any {
-			// "component.name" + "component.type" + "server.addr" +
-			// "server.port" + "error.type"
-			const n = 1 + 1 + 1 + 1 + 1
+			const n = 1 /* component.name */ +
+				1 /* component.type */ +
+				1 /* server.addr */ +
+				1 /* server.port */ +
+				1 /* error.type */ +
+				1 /* rpc.grpc.status_code */
 			s := make([]attribute.KeyValue, 0, n)
 			// Return a pointer to a slice instead of a slice itself
 			// to avoid allocations on every call.
@@ -85,7 +89,8 @@ type Instrumentation struct {
 	opDuration    metric.Float64Histogram
 
 	attrs  []attribute.KeyValue
-	setOpt metric.MeasurementOption
+	addOpt metric.AddOption
+	recOpt metric.RecordOption
 }
 
 // NewInstrumentation returns instrumentation for an OTLP over gPRC trace
@@ -102,10 +107,18 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		return nil, nil
 	}
 
-	i := &Instrumentation{attrs: BaseAttrs(id, target)}
+	attrs := BaseAttrs(id, target)
+	i := &Instrumentation{
+		attrs:  attrs,
+		addOpt: metric.WithAttributeSet(attribute.NewSet(attrs...)),
 
-	s := attribute.NewSet(i.attrs...)
-	i.setOpt = metric.WithAttributeSet(s)
+		// Do not modify attrs (NewSet sorts in-place), make a new slice.
+		recOpt: metric.WithAttributeSet(attribute.NewSet(append(
+			// Default to OK status code (err == nil).
+			[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
+			attrs...,
+		)...)),
+	}
 
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -147,7 +160,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 // to set the "component.name" attribute.
 //
 // The target is the gRPC target the exporter is exporting to. It is expected
-// to be the output of the Client's CanonicalTarget method .
+// to be the output of the Client's CanonicalTarget method.
 func BaseAttrs(id int64, target string) []attribute.KeyValue {
 	host, port, err := ParseCanonicalTarget(target)
 	if err != nil || (host == "" && port < 0) {
@@ -194,7 +207,7 @@ func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp 
 
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.setOpt)
+	*addOpt = append(*addOpt, i.addOpt)
 	i.inflightSpans.Add(ctx, int64(nSpans), *addOpt...)
 
 	return ExportOp{
@@ -226,7 +239,7 @@ type ExportOp struct {
 func (e ExportOp) End(err error) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, e.inst.setOpt)
+	*addOpt = append(*addOpt, e.inst.addOpt)
 
 	e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
 
@@ -235,9 +248,7 @@ func (e ExportOp) End(err error) {
 	// meaningful to distribution aggregations.
 	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
 
-	mOpt := e.inst.setOpt
 	if err != nil {
-		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
@@ -245,19 +256,38 @@ func (e ExportOp) End(err error) {
 
 		// Do not inefficiently make a copy of attrs by using
 		// WithAttributes instead of WithAttributeSet.
-		set := attribute.NewSet(*attrs...)
-		mOpt = metric.WithAttributeSet(set)
-
+		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
 		// Reset addOpt with new attribute set.
-		*addOpt = append((*addOpt)[:0], mOpt)
+		*addOpt = append((*addOpt)[:0], o)
 
 		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
 	}
 
 	recordOpt := get[metric.RecordOption](recordOptPool)
 	defer put(recordOptPool, recordOpt)
-	*recordOpt = append(*recordOpt, mOpt)
-	e.inst.opDuration.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
+	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
+
+	d := time.Since(e.start).Seconds()
+	e.inst.opDuration.Record(e.ctx, d, *recordOpt...)
+}
+
+func (i *Instrumentation) recordOption(err error) metric.RecordOption {
+	if err == nil {
+		return i.recOpt
+	}
+
+	attrs := get[attribute.KeyValue](measureAttrsPool)
+	defer put(measureAttrsPool, attrs)
+	*attrs = append(*attrs, i.attrs...)
+
+	c := int64(status.Code(err)) // Code (i.e. uint32) to int64.
+	*attrs = append(*attrs, semconv.RPCGRPCStatusCodeKey.Int64(c))
+
+	*attrs = append(*attrs, semconv.ErrorType(err))
+
+	// Do not inefficiently make a copy of attrs by using WithAttributes
+	// instead of WithAttributeSet.
+	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 
 // successful returns the number of successfully exported spans out of the n
