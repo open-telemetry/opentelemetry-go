@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package oconf provides configuration for the otlpmetric exporters.
-package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+package oconf
 
 import (
 	"crypto/tls"
