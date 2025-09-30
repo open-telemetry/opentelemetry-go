@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -237,7 +237,7 @@ type ExportOp struct {
 // type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
-func (e ExportOp) End(err error) {
+func (e ExportOp) End(err error, code codes.Code) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
@@ -264,16 +264,16 @@ func (e ExportOp) End(err error) {
 		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
 	}
 
-	recordOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recordOpt)
-	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
+	recOpt := get[metric.RecordOption](recordOptPool)
+	defer put(recordOptPool, recOpt)
+	*recOpt = append(*recOpt, e.inst.recordOption(err, code))
 
 	d := time.Since(e.start).Seconds()
-	e.inst.opDuration.Record(e.ctx, d, *recordOpt...)
+	e.inst.opDuration.Record(e.ctx, d, *recOpt...)
 }
 
-func (i *Instrumentation) recordOption(err error) metric.RecordOption {
-	if err == nil {
+func (i *Instrumentation) recordOption(err error, code codes.Code) metric.RecordOption {
+	if err == nil && code == codes.OK {
 		return i.recOpt
 	}
 
@@ -281,12 +281,11 @@ func (i *Instrumentation) recordOption(err error) metric.RecordOption {
 	defer put(measureAttrsPool, attrs)
 	*attrs = append(*attrs, i.attrs...)
 
-	c := int64(status.Code(err)) // Code (i.e. uint32) to int64.
-	*attrs = append(
-		*attrs,
-		semconv.RPCGRPCStatusCodeKey.Int64(c),
-		semconv.ErrorType(err),
-	)
+	c := int64(code) // uint32 -> int64.
+	*attrs = append(*attrs, semconv.RPCGRPCStatusCodeKey.Int64(c))
+	if err != nil {
+		*attrs = append(*attrs, semconv.ErrorType(err))
+	}
 
 	// Do not inefficiently make a copy of attrs by using WithAttributes
 	// instead of WithAttributeSet.

@@ -215,7 +215,7 @@ func TestInstrumentationExportSpans(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	inst.ExportSpans(t.Context(), n).End(nil)
+	inst.ExportSpans(t.Context(), n).End(nil, codes.OK)
 
 	assertMetrics(t, collect(), n, n, nil)
 }
@@ -224,8 +224,9 @@ func TestInstrumentationExportSpansAllErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	err := status.Error(codes.PermissionDenied, "go away")
-	inst.ExportSpans(t.Context(), n).End(err)
+	c := codes.PermissionDenied
+	err := status.Error(c, "go away")
+	inst.ExportSpans(t.Context(), n).End(err, c)
 
 	const success = 0
 	assertMetrics(t, collect(), n, success, err)
@@ -237,9 +238,10 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 	const n = 10
 	const success = n - 5
 
-	err := status.Error(codes.Unavailable, "temporary failure")
+	c := codes.Unavailable
+	err := status.Error(c, "temporary failure")
 	err = errors.Join(err, &internal.PartialSuccess{RejectedItems: 5})
-	inst.ExportSpans(t.Context(), n).End(err)
+	inst.ExportSpans(t.Context(), n).End(err, c)
 
 	assertMetrics(t, collect(), n, success, err)
 }
@@ -248,8 +250,10 @@ func TestInstrumentationExportSpansInvalidPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	err := internal.PartialSuccess{RejectedItems: -5}
-	inst.ExportSpans(t.Context(), n).End(err)
+	pErr := &internal.PartialSuccess{RejectedItems: -5}
+	c := codes.Unavailable
+	err := errors.Join(status.Error(c, "temporary"), pErr)
+	inst.ExportSpans(t.Context(), n).End(err, c)
 
 	// Round -5 to 0.
 	success := int64(n) // (n - 0)
@@ -257,8 +261,8 @@ func TestInstrumentationExportSpansInvalidPartialErrored(t *testing.T) {
 
 	// Note: the metrics are cumulative, so account for the previous
 	// ExportSpans call.
-	err.RejectedItems = n + 5
-	inst.ExportSpans(t.Context(), n).End(err)
+	pErr.RejectedItems = n + 5
+	inst.ExportSpans(t.Context(), n).End(err, c)
 
 	// Round n+5 to n.
 	success += 0 // success + (n - n)
@@ -335,18 +339,19 @@ func BenchmarkInstrumentationExportSpans(b *testing.B) {
 		return inst
 	}
 
-	run := func(err error) func(*testing.B) {
+	run := func(err error, c codes.Code) func(*testing.B) {
 		return func(b *testing.B) {
 			inst := setup(b)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.ExportSpans(b.Context(), 10).End(err)
+				inst.ExportSpans(b.Context(), 10).End(err, c)
 			}
 		}
 	}
 
-	b.Run("NoError", run(nil))
-	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}))
-	b.Run("FullError", run(assert.AnError))
+	b.Run("NoError", run(nil, codes.OK))
+	err := &internal.PartialSuccess{RejectedItems: 6}
+	b.Run("PartialError", run(err, codes.Unavailable))
+	b.Run("FullError", run(assert.AnError, codes.Aborted))
 }
