@@ -200,7 +200,6 @@ func (e ExportOp) End(err error) {
 		*recordOpt,
 		mOpt,
 		metric.WithAttributes(
-			//todo: optimized given the RPC codes are all know.
 			semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 		),
 	)
