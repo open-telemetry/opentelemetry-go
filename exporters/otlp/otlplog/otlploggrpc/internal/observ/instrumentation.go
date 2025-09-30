@@ -203,8 +203,7 @@ func (e ExportOp) End(err error) {
 			semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 		),
 	)
-	duration := time.Since(e.start).Seconds()
-	e.inst.logExportedDurationMetric.Record(e.ctx, duration, *recordOpt...)
+	e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 }
 
 // successful returns the number of successfully exported logs out of the n

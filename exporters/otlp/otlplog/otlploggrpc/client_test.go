@@ -598,6 +598,15 @@ func TestConfig(t *testing.T) {
 	})
 }
 
+// SetExporterID sets the exporter ID counter to v and returns the previous
+// value.
+//
+// This function is useful for testing purposes, allowing you to reset the
+// counter. It should not be used in production code.
+func SetExporterID(v int64) int64 {
+	return exporterN.Swap(v)
+}
+
 func TestClientObservability(t *testing.T) {
 	testCases := []struct {
 		name    string

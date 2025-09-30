@@ -89,15 +89,6 @@ func NextExporterID() int64 {
 	return exporterN.Add(inc) - inc
 }
 
-// SetExporterID sets the exporter ID counter to v and returns the previous
-// value.
-//
-// This function is useful for testing purposes, allowing you to reset the
-// counter. It should not be used in production code.
-func SetExporterID(v int64) int64 {
-	return exporterN.Swap(v)
-}
-
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
 	userAgent := "OTel Go OTLP over gRPC logs exporter/" + Version()
 	dialOpts := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
