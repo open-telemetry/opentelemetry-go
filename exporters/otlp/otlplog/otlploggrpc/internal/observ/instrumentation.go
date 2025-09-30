@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/internal/global"
+
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
@@ -283,7 +285,10 @@ func rejectedCount(n int64, err error) int64 {
 // from a target string.
 func ServerAddrAttrs(target string) []attribute.KeyValue {
 	addr, port, err := ParseCanonicalTarget(target)
-	if err != nil || addr == "" {
+	if err != nil || (addr == "" && port < 0) {
+		if err != nil {
+			global.Debug("failed to parse target", "target", target, "error", err)
+		}
 		return nil
 	}
 
