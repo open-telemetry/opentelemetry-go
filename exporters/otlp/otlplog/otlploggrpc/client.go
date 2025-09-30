@@ -6,6 +6,7 @@ package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"time"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
@@ -21,7 +22,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 )
@@ -76,9 +76,26 @@ func newClient(cfg config) (*client, error) {
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
 
 	var err error
-	id := counter.NextExporterID()
+	id := NextExporterID()
 	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
 	return c, err
+}
+
+var exporterN atomic.Int64
+
+// NextExporterID returns the next unique ID for an exporter.
+func NextExporterID() int64 {
+	const inc = 1
+	return exporterN.Add(inc) - inc
+}
+
+// SetExporterID sets the exporter ID counter to v and returns the previous
+// value.
+//
+// This function is useful for testing purposes, allowing you to reset the
+// counter. It should not be used in production code.
+func SetExporterID(v int64) int64 {
+	return exporterN.Swap(v)
 }
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {

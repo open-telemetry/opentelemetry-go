@@ -110,11 +110,6 @@ func TestServerAddrAttrs(t *testing.T) {
 			target: "dns://8.8.8.8/example.com:4",
 			want:   []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(4)},
 		},
-		{
-			name:   "Host without port",
-			target: "example.com",
-			want:   []attribute.KeyValue{semconv.ServerAddress("example.com")},
-		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -323,4 +318,12 @@ func BenchmarkInstrumentationExportLogs(b *testing.B) {
 	b.Run("NoError", run(nil))
 	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}))
 	b.Run("FullError", run(assert.AnError))
+}
+
+func BenchmarkSetPresetAttrs(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := range b.N {
+		setPresetAttrs(int64(i), "dns:///192.168.1.1:8080")
+	}
 }

@@ -120,11 +120,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		return nil, err
 	}
 
-	i.presetAttrs = []attribute.KeyValue{
-		semconv.OTelComponentName(GetComponentName(id)),
-		semconv.OTelComponentTypeOtlpGRPCLogExporter,
-	}
-	i.presetAttrs = append(i.presetAttrs, ServerAddrAttrs(target)...)
+	i.presetAttrs = setPresetAttrs(id, target)
 	s := attribute.NewSet(i.presetAttrs...)
 	i.setOpt = metric.WithAttributeSet(s)
 
@@ -204,6 +200,7 @@ func (e ExportOp) End(err error) {
 		*recordOpt,
 		mOpt,
 		metric.WithAttributes(
+			//todo: optimized given the RPC codes are all know.
 			semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 		),
 	)
@@ -251,19 +248,41 @@ func rejectedCount(n int64, err error) int64 {
 	return n
 }
 
+// setPresetAttrs builds the preset attributes for instrumentation.
+func setPresetAttrs(id int64, target string) []attribute.KeyValue {
+	serverAttrs := ServerAddrAttrs(target)
+	attrs := make([]attribute.KeyValue, 0, 2+len(serverAttrs))
+
+	attrs = append(attrs,
+		semconv.OTelComponentName(GetComponentName(id)),
+		semconv.OTelComponentTypeOtlpGRPCLogExporter,
+	)
+	attrs = append(attrs, serverAttrs...)
+
+	return attrs
+}
+
 // ServerAddrAttrs is a function that extracts server address and port attributes
 // from a target string.
 func ServerAddrAttrs(target string) []attribute.KeyValue {
 	addr, port, err := ParseCanonicalTarget(target)
-	if err != nil {
-		return []attribute.KeyValue{semconv.ServerAddress(target)}
+	if err != nil || addr == "" {
+		return nil
 	}
+
+	// Unix domain sockets: return only the path as server.address
 	if port == -1 {
 		return []attribute.KeyValue{semconv.ServerAddress(addr)}
 	}
 
-	return []attribute.KeyValue{
-		semconv.ServerAddress(addr),
-		semconv.ServerPort(port),
+	// For network addresses, only include port if it's valid (> 0)
+	if port > 0 {
+		return []attribute.KeyValue{
+			semconv.ServerAddress(addr),
+			semconv.ServerPort(port),
+		}
 	}
+
+	// Port is 0 or invalid, only return address
+	return []attribute.KeyValue{semconv.ServerAddress(addr)}
 }

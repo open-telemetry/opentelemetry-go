@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -999,7 +998,7 @@ func TestClientObservability(t *testing.T) {
 				t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 				// Reset component name counter for each test.
-				_ = counter.SetExporterID(0)
+				_ = SetExporterID(0)
 			}
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() {
@@ -1024,7 +1023,7 @@ func TestClientObservability(t *testing.T) {
 func TestClientObservabilityWithRetry(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	_ = counter.SetExporterID(0)
+	_ = SetExporterID(0)
 	prev := otel.GetMeterProvider()
 	t.Cleanup(func() {
 		otel.SetMeterProvider(prev)
@@ -1226,4 +1225,57 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 		run(b)
 	})
+}
+
+func TestNextExporterID(t *testing.T) {
+	SetExporterID(0)
+
+	var expected int64
+	for range 10 {
+		id := NextExporterID()
+		if id != expected {
+			t.Errorf("NextExporterID() = %d; want %d", id, expected)
+		}
+		expected++
+	}
+}
+
+func TestSetExporterID(t *testing.T) {
+	SetExporterID(0)
+
+	prev := SetExporterID(42)
+	if prev != 0 {
+		t.Errorf("SetExporterID(42) returned %d; want 0", prev)
+	}
+
+	id := NextExporterID()
+	if id != 42 {
+		t.Errorf("NextExporterID() = %d; want 42", id)
+	}
+}
+
+func TestNextExporterIDConcurrentSafe(t *testing.T) {
+	SetExporterID(0)
+
+	const goroutines = 100
+	const increments = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			for range increments {
+				NextExporterID()
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	expected := int64(goroutines * increments)
+	if id := NextExporterID(); id != expected {
+		t.Errorf("NextExporterID() = %d; want %d", id, expected)
+	}
 }
