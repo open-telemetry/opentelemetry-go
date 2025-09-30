@@ -115,7 +115,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 
 		// Do not modify attrs (NewSet sorts in-place), make a new slice.
 		recOpt: metric.WithAttributeSet(attribute.NewSet(append(
-			// Default to OK status code (err == nil).
+			// Default to OK status code.
 			[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
 			attrs...,
 		)...)),
@@ -272,6 +272,16 @@ func (e ExportOp) End(err error, code codes.Code) {
 	e.inst.opDuration.Record(e.ctx, d, *recOpt...)
 }
 
+// recordOption returns a RecordOption with attributes representing the
+// outcome of the operation being recorded.
+//
+// If err is nil and code is codes.OK, the default recOpt of the
+// Instrumentation is returned.
+//
+// If err is not nil or code is not codes.OK, a new RecordOption is returned
+// with the base attributes of the Instrumentation plus the rpc.grpc.status_code
+// attribute set to the provided code, and if err is not nil, the error.type
+// attribute set to the type of the error.
 func (i *Instrumentation) recordOption(err error, code codes.Code) metric.RecordOption {
 	if err == nil && code == codes.OK {
 		return i.recOpt
