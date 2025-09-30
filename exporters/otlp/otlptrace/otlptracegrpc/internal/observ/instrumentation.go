@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/status"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
@@ -18,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -281,9 +282,11 @@ func (i *Instrumentation) recordOption(err error) metric.RecordOption {
 	*attrs = append(*attrs, i.attrs...)
 
 	c := int64(status.Code(err)) // Code (i.e. uint32) to int64.
-	*attrs = append(*attrs, semconv.RPCGRPCStatusCodeKey.Int64(c))
-
-	*attrs = append(*attrs, semconv.ErrorType(err))
+	*attrs = append(
+		*attrs,
+		semconv.RPCGRPCStatusCodeKey.Int64(c),
+		semconv.ErrorType(err),
+	)
 
 	// Do not inefficiently make a copy of attrs by using WithAttributes
 	// instead of WithAttributeSet.
