@@ -36,9 +36,15 @@ const (
 var (
 	attrsPool = &sync.Pool{
 		New: func() any {
-			// "component.name" + "component.type" + "error.type" + "server.address" + "server.port"
-			const n = 1 + 1 + 1 + 1 + 1
+			const n = 1 /* component.name */ +
+				1 /* component.type */ +
+				1 /* server.addr */ +
+				1 /* server.port */ +
+				1 /* error.type */ +
+				1 /* rpc.grpc.status_code */
 			s := make([]attribute.KeyValue, 0, n)
+			// Return a pointer to a slice instead of a slice itself
+			// to avoid allocations on every call.
 			return &s
 		},
 	}
@@ -51,7 +57,7 @@ var (
 	}
 	recordOptPool = &sync.Pool{
 		New: func() any {
-			const n = 1 + 1 // WithAttributeSet + "rpc.grpc.status_code"
+			const n = 1 + 1 // WithAttributeSet
 			o := make([]metric.RecordOption, 0, n)
 			return &o
 		},
@@ -70,13 +76,30 @@ func GetComponentName(id int64) string {
 	return fmt.Sprintf("%s/%d", otelconv.ComponentTypeOtlpGRPCLogExporter, id)
 }
 
+// getPresetAttrs builds the preset attributes for instrumentation.
+func getPresetAttrs(id int64, target string) []attribute.KeyValue {
+	serverAttrs := ServerAddrAttrs(target)
+	attrs := make([]attribute.KeyValue, 0, 2+len(serverAttrs))
+
+	attrs = append(
+		attrs,
+		semconv.OTelComponentName(GetComponentName(id)),
+		semconv.OTelComponentTypeOtlpGRPCLogExporter,
+	)
+	attrs = append(attrs, serverAttrs...)
+
+	return attrs
+}
+
 // Instrumentation is experimental instrumentation for the exporter.
 type Instrumentation struct {
 	logInflightMetric         metric.Int64UpDownCounter
 	logExportedMetric         metric.Int64Counter
 	logExportedDurationMetric metric.Float64Histogram
-	presetAttrs               []attribute.KeyValue
-	setOpt                    metric.MeasurementOption
+
+	presetAttrs []attribute.KeyValue
+	addOpt      metric.AddOption
+	recOpt      metric.RecordOption
 }
 
 // NewInstrumentation returns instrumentation for otlplog grpc exporter.
@@ -120,10 +143,14 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		return nil, err
 	}
 
-	i.presetAttrs = setPresetAttrs(id, target)
-	s := attribute.NewSet(i.presetAttrs...)
-	i.setOpt = metric.WithAttributeSet(s)
+	i.presetAttrs = getPresetAttrs(id, target)
 
+	i.addOpt = metric.WithAttributeSet(attribute.NewSet(i.presetAttrs...))
+	i.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
+		// Default to OK status code (err == nil).
+		[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
+		i.presetAttrs...,
+	)...))
 	return i, nil
 }
 
@@ -135,7 +162,7 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp 
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
 
-	*addOpt = append(*addOpt, i.setOpt)
+	*addOpt = append(*addOpt, i.addOpt)
 
 	i.logInflightMetric.Add(ctx, count, *addOpt...)
 
@@ -167,15 +194,12 @@ type ExportOp struct {
 func (e ExportOp) End(err error) {
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
-
-	*addOpt = append(*addOpt, e.inst.setOpt)
-
-	success := successful(e.nLogs, err)
+	*addOpt = append(*addOpt, e.inst.addOpt)
 
 	e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+	success := successful(e.nLogs, err)
 	e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
 
-	mOpt := e.inst.setOpt
 	if err != nil {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
@@ -183,27 +207,36 @@ func (e ExportOp) End(err error) {
 		*attrs = append(*attrs, e.inst.presetAttrs...)
 		*attrs = append(*attrs, semconv.ErrorType(err))
 
-		set := attribute.NewSet(*attrs...)
-		mOpt = metric.WithAttributeSet(set)
+		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
 
 		// Reset addOpt with new attribute set
-		*addOpt = append((*addOpt)[:0], mOpt)
+		*addOpt = append((*addOpt)[:0], o)
 
 		e.inst.logExportedMetric.Add(e.ctx, e.nLogs-success, *addOpt...)
 	}
 
-	code := status.Code(err)
-
 	recordOpt := get[metric.RecordOption](recordOptPool)
 	defer put(recordOptPool, recordOpt)
-	*recordOpt = append(
-		*recordOpt,
-		mOpt,
-		metric.WithAttributes(
-			semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
-		),
-	)
+	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
 	e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
+}
+
+func (i *Instrumentation) recordOption(err error) metric.RecordOption {
+	if err == nil {
+		return i.recOpt
+	}
+	attrs := get[attribute.KeyValue](attrsPool)
+	defer put(attrsPool, attrs)
+
+	*attrs = append(*attrs, i.presetAttrs...)
+	code := int64(status.Code(err))
+	*attrs = append(
+		*attrs,
+		semconv.RPCGRPCStatusCodeKey.Int64(code),
+		semconv.ErrorType(err),
+	)
+
+	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 
 // successful returns the number of successfully exported logs out of the n
@@ -244,20 +277,6 @@ func rejectedCount(n int64, err error) int64 {
 	}
 	// all logs exporter
 	return n
-}
-
-// setPresetAttrs builds the preset attributes for instrumentation.
-func setPresetAttrs(id int64, target string) []attribute.KeyValue {
-	serverAttrs := ServerAddrAttrs(target)
-	attrs := make([]attribute.KeyValue, 0, 2+len(serverAttrs))
-
-	attrs = append(attrs,
-		semconv.OTelComponentName(GetComponentName(id)),
-		semconv.OTelComponentTypeOtlpGRPCLogExporter,
-	)
-	attrs = append(attrs, serverAttrs...)
-
-	return attrs
 }
 
 // ServerAddrAttrs is a function that extracts server address and port attributes

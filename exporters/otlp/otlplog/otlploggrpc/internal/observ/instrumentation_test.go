@@ -324,6 +324,6 @@ func BenchmarkSetPresetAttrs(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := range b.N {
-		setPresetAttrs(int64(i), "dns:///192.168.1.1:8080")
+		getPresetAttrs(int64(i), "dns:///192.168.1.1:8080")
 	}
 }
