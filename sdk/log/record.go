@@ -37,9 +37,9 @@ func getUnique() *[]log.KeyValue {
 }
 
 func putUnique(v *[]log.KeyValue) {
-	// To reduce peak allocation, return only smaller buffers to the pool.
-	const maxBufferSize = 128
-	if cap(*v) <= maxBufferSize {
+	// To reduce peak allocation.
+	const maxUniqueSize = 1028
+	if cap(*v) <= maxUniqueSize {
 		*v = (*v)[:0]
 		uniquePool.Put(v)
 	}
