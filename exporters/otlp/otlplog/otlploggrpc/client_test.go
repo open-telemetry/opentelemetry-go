@@ -1241,9 +1241,9 @@ func TestNextExporterID(t *testing.T) {
 
 	var expected int64
 	for range 10 {
-		id := NextExporterID()
+		id := nextExporterID()
 		if id != expected {
-			t.Errorf("NextExporterID() = %d; want %d", id, expected)
+			t.Errorf("nextExporterID() = %d; want %d", id, expected)
 		}
 		expected++
 	}
@@ -1257,9 +1257,9 @@ func TestSetExporterID(t *testing.T) {
 		t.Errorf("SetExporterID(42) returned %d; want 0", prev)
 	}
 
-	id := NextExporterID()
+	id := nextExporterID()
 	if id != 42 {
-		t.Errorf("NextExporterID() = %d; want 42", id)
+		t.Errorf("nextExporterID() = %d; want 42", id)
 	}
 }
 
@@ -1276,7 +1276,7 @@ func TestNextExporterIDConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for range increments {
-				NextExporterID()
+				nextExporterID()
 			}
 		}()
 	}
@@ -1284,7 +1284,7 @@ func TestNextExporterIDConcurrentSafe(t *testing.T) {
 	wg.Wait()
 
 	expected := int64(goroutines * increments)
-	if id := NextExporterID(); id != expected {
-		t.Errorf("NextExporterID() = %d; want %d", id, expected)
+	if id := nextExporterID(); id != expected {
+		t.Errorf("nextExporterID() = %d; want %d", id, expected)
 	}
 }

@@ -76,15 +76,15 @@ func newClient(cfg config) (*client, error) {
 	c.lsc = collogpb.NewLogsServiceClient(c.conn)
 
 	var err error
-	id := NextExporterID()
+	id := nextExporterID()
 	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
 	return c, err
 }
 
 var exporterN atomic.Int64
 
-// NextExporterID returns the next unique ID for an exporter.
-func NextExporterID() int64 {
+// nextExporterID returns the next unique ID for an exporter.
+func nextExporterID() int64 {
 	const inc = 1
 	return exporterN.Add(inc) - inc
 }
