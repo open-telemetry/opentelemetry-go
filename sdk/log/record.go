@@ -27,6 +27,24 @@ var logAttrDropped = sync.OnceFunc(func() {
 	global.Warn("limit reached: dropping log Record attributes")
 })
 
+// uniquePool is a pool of unique key-values used during de-duplication.
+var uniquePool = sync.Pool{
+	New: func() any { return new([]log.KeyValue) },
+}
+
+func getUnique() *[]log.KeyValue {
+	return uniquePool.Get().(*[]log.KeyValue)
+}
+
+func putUnique(v *[]log.KeyValue) {
+	// To reduce peak allocation, return only smaller buffers to the pool.
+	const maxBufferSize = 128
+	if cap(*v) <= maxBufferSize {
+		*v = (*v)[:0]
+		uniquePool.Put(v)
+	}
+}
+
 // indexPool is a pool of index maps used for de-duplication.
 var indexPool = sync.Pool{
 	New: func() any { return make(map[string]int) },
@@ -374,38 +392,27 @@ func dedup(kvs []log.KeyValue) (unique []log.KeyValue, dropped int) {
 		return kvs, 0 // No deduplication needed.
 	}
 
-	// Check if deduplication is actually needed by looking for duplicate keys.
-	hasDuplicates := func() bool {
-		seen := getSeen()
-		defer putSeen(seen)
-		for _, kv := range kvs {
-			if _, ok := seen[kv.Key]; ok {
-				return true
-			}
-			seen[kv.Key] = struct{}{}
-		}
-		return false
-	}()
-
-	if !hasDuplicates {
-		return kvs, 0 // No deduplication needed.
-	}
-
-	// Deduplication is needed, create a new slice to avoid modifying the original.
 	index := getIndex()
 	defer putIndex(index)
-
-	unique = make([]log.KeyValue, 0, len(kvs))
+	u := getUnique()
+	defer putUnique(u)
 	for _, a := range kvs {
 		idx, found := index[a.Key]
 		if found {
 			dropped++
-			unique[idx] = a
+			(*u)[idx] = a
 		} else {
-			unique = append(unique, a)
-			index[a.Key] = len(unique) - 1
+			*u = append(*u, a)
+			index[a.Key] = len(*u) - 1
 		}
 	}
+
+	if dropped == 0 {
+		return kvs, 0
+	}
+
+	unique = make([]log.KeyValue, len(*u))
+	copy(unique, *u)
 	return unique, dropped
 }
 
