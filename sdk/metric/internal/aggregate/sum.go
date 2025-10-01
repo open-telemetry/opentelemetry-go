@@ -38,17 +38,18 @@ func (s *valueMap[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 	s.Lock()
 	defer s.Unlock()
 
-	attr := s.limit.Attributes(fltrAttr, s.values)
-	v, ok := s.values[attr.Equivalent()]
+	v, ok := s.values[fltrAttr.Equivalent()]
 	if !ok {
-		v.res = s.newRes(attr)
+		fltrAttr = s.limit.Attributes(fltrAttr, s.values)
+		v = s.values[fltrAttr.Equivalent()]
+		v.res = s.newRes(fltrAttr)
+		v.attrs = fltrAttr
 	}
 
-	v.attrs = attr
 	v.n += value
 	v.res.Offer(ctx, value, droppedAttr)
 
-	s.values[attr.Equivalent()] = v
+	s.values[fltrAttr.Equivalent()] = v
 }
 
 // newSum returns an aggregator that summarizes a set of measurements as their
