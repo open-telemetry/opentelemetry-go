@@ -27,7 +27,7 @@ var logAttrDropped = sync.OnceFunc(func() {
 	global.Warn("limit reached: dropping log Record attributes")
 })
 
-// uniquePool is a pool of unique key-values used during de-duplication.
+// uniquePool is a pool of unique attributes used for attributes de-duplication.
 var uniquePool = sync.Pool{
 	New: func() any { return new([]log.KeyValue) },
 }
@@ -45,7 +45,7 @@ func putUnique(v *[]log.KeyValue) {
 	}
 }
 
-// indexPool is a pool of index maps used for de-duplication.
+// indexPool is a pool of index maps used for attributes de-duplication.
 var indexPool = sync.Pool{
 	New: func() any { return make(map[string]int) },
 }
@@ -59,7 +59,7 @@ func putIndex(index map[string]int) {
 	indexPool.Put(index)
 }
 
-// seenPool is a pool of maps used for duplicate checking.
+// seenPool is a pool of seen keys used for maps de-duplication.
 var seenPool = sync.Pool{
 	New: func() any { return make(map[string]struct{}) },
 }
