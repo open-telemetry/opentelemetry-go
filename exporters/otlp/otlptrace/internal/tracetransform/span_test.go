@@ -207,7 +207,7 @@ func TestBuildSpanFlags(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantFlags, buildSpanFlagsWith(tt.spanContext.TraceFlags(), tt.spanContext.IsRemote()))
+			assert.Equal(t, tt.wantFlags, buildSpanFlagsWith(tt.spanContext.TraceFlags(), tt.spanContext))
 		})
 	}
 }
@@ -227,7 +227,8 @@ func TestSpanFlagsLower8BitsFromTraceFlags(t *testing.T) {
 		{name: "sampled remote parent", traceFlags: 0x01, parentRemote: true, wantLow8: 0x01, wantMask: 0x300},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := buildSpanFlagsWith(tc.traceFlags, tc.parentRemote)
+			parent := trace.NewSpanContext(trace.SpanContextConfig{Remote: tc.parentRemote})
+			got := buildSpanFlagsWith(tc.traceFlags, parent)
 			assert.Equal(t, tc.wantLow8, got&0xff)
 			assert.Equal(t, tc.wantMask, got&0x300)
 			// Ensure higher bits are not set beyond 0-9

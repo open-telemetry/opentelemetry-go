@@ -113,7 +113,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	if psid := sd.Parent().SpanID(); psid.IsValid() {
 		s.ParentSpanId = psid[:]
 	}
-	s.Flags = buildSpanFlagsWith(sd.SpanContext().TraceFlags(), sd.Parent().IsRemote())
+	s.Flags = buildSpanFlagsWith(sd.SpanContext().TraceFlags(), sd.Parent())
 
 	return s
 }
@@ -159,7 +159,7 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 		tid := otLink.SpanContext.TraceID()
 		sid := otLink.SpanContext.SpanID()
 
-		flags := buildSpanFlagsWith(otLink.SpanContext.TraceFlags(), otLink.SpanContext.IsRemote())
+		flags := buildSpanFlagsWith(otLink.SpanContext.TraceFlags(), otLink.SpanContext)
 
 		sl = append(sl, &tracepb.Span_Link{
 			TraceId:                tid[:],
@@ -172,13 +172,13 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 	return sl
 }
 
-func buildSpanFlagsWith(tf trace.TraceFlags, isRemote bool) uint32 {
+func buildSpanFlagsWith(tf trace.TraceFlags, parent trace.SpanContext) uint32 {
 	// Lower 8 bits are the W3C TraceFlags
 	flags := uint32(byte(tf) & 0xff)
 	// Always indicate that we know whether the parent is remote
 	flags |= uint32(tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK)
 	// Set the parent-is-remote bit when applicable
-	if isRemote {
+	if parent.IsRemote() {
 		flags |= uint32(tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK)
 	}
 
