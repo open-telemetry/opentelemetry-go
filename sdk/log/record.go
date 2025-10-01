@@ -244,57 +244,52 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 	}
 
 	if !r.allowDupKeys {
+		// Use a slice from the pool to avoid modifying the original.
+		// Note, do not iterate attrs twice by just calling dedup(attrs) here.
+		unique := getUnique()
+		defer putUnique(unique)
+
 		// Used to find duplicates between attrs and existing attributes in r.
 		rIndex := r.attrIndex()
 		defer putIndex(rIndex)
 
-		// Check if deduplication is actually needed.
-		needsDedup := func() bool {
-			seen := getSeen()
-			defer putSeen(seen)
-			for _, a := range attrs {
-				if _, ok := seen[a.Key]; ok || rIndex[a.Key] != 0 {
-					return true
-				}
-				seen[a.Key] = struct{}{}
+		// Used to find duplicates within attrs itself.
+		// The index value is the index of the element in unique.
+		uIndex := getIndex()
+		defer putIndex(uIndex)
+
+		dropped := 0
+
+		// Deduplicate attrs within the scope of all existing attributes.
+		for _, a := range attrs {
+			// Last-value-wins for any duplicates in attrs.
+			idx, found := uIndex[a.Key]
+			if found {
+				dropped++
+				(*unique)[idx] = a
+				continue
 			}
-			return false
-		}()
 
-		if needsDedup {
-			// Create a new slice to avoid modifying the original.
-			unique := make([]log.KeyValue, 0, len(attrs))
-			// Used to find duplicates within attrs itself.
-			// The index value is the index of the element in unique.
-			uIndex := getIndex()
-			defer putIndex(uIndex)
-
-			// Deduplicate attrs within the scope of all existing attributes.
-			for _, a := range attrs {
-				// Last-value-wins for any duplicates in attrs.
-				idx, found := uIndex[a.Key]
-				if found {
-					r.addDropped(1)
-					unique[idx] = a
-					continue
-				}
-
-				idx, found = rIndex[a.Key]
-				if found {
-					// New attrs overwrite any existing with the same key.
-					r.addDropped(1)
-					if idx < 0 {
-						r.front[-(idx + 1)] = a
-					} else {
-						r.back[idx] = a
-					}
+			idx, found = rIndex[a.Key]
+			if found {
+				// New attrs overwrite any existing with the same key.
+				dropped++
+				if idx < 0 {
+					r.front[-(idx + 1)] = a
 				} else {
-					// Unique attribute.
-					unique = append(unique, a)
-					uIndex[a.Key] = len(unique) - 1
+					r.back[idx] = a
 				}
+			} else {
+				// Unique attribute.
+				(*unique) = append(*unique, a)
+				uIndex[a.Key] = len(*unique) - 1
 			}
-			attrs = unique
+		}
+
+		if dropped > 0 {
+			attrs = make([]log.KeyValue, len(*unique))
+			copy(attrs, *unique)
+			r.addDropped(dropped)
 		}
 	}
 
