@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
-	"go.opentelemetry.io/otel/sdk/metric/internal/x"
+	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 )
 
 func TestConcurrentSafeFilteredReservoir(t *testing.T) {
@@ -82,7 +82,7 @@ func (r *notConcurrentSafeReservoir) Collect(dest *[]exemplar.Exemplar) {
 type concurrentSafeReservoir struct {
 	base notConcurrentSafeReservoir
 	sync.Mutex
-	x.ConcurrentSafeReservoir
+	reservoir.ConcurrentSafe
 }
 
 func (r *concurrentSafeReservoir) Offer(
