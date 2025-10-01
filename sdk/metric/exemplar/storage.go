@@ -14,7 +14,7 @@ import (
 
 // storage is an exemplar storage for [Reservoir] implementations.
 type storage struct {
-	sync.Mutex
+	mu sync.Mutex
 	// measurements are the measurements sampled.
 	//
 	// This does not use []metricdata.Exemplar because it potentially would
@@ -27,8 +27,8 @@ func newStorage(n int) *storage {
 }
 
 func (r *storage) store(idx int, m measurement) {
-	r.Lock()
-	defer r.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.measurements[idx] = m
 }
 
@@ -36,8 +36,8 @@ func (r *storage) store(idx int, m measurement) {
 //
 // The Reservoir state is preserved after this call.
 func (r *storage) Collect(dest *[]Exemplar) {
-	r.Lock()
-	defer r.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	*dest = reset(*dest, len(r.measurements), len(r.measurements))
 	var n int
 	for _, m := range r.measurements {
