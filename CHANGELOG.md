@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Greatly reduce the cost of recording metrics in `go.opentelemetry.io/otel/sdk/metric` using hashing for map keys. (#7175)
 - Add experimental observability for the prometheus exporter in `go.opentelemetry.io/otel/exporters/prometheus`.
   Check the `go.opentelemetry.io/otel/exporters/prometheus/internal/x` package documentation for more information. (#7345)
+- Add experimental observability for simple span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
+  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7374)
 
 ### Fixed
 
