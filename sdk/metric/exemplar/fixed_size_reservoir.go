@@ -7,6 +7,7 @@ import (
 	"context"
 	"math"
 	"math/rand/v2"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -26,6 +27,9 @@ func FixedSizeReservoirProvider(k int) ReservoirProvider {
 // sample each one. If there are more than k, the Reservoir will then randomly
 // sample all additional measurement with a decreasing probability.
 func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
+	if k < 0 {
+		k = 0
+	}
 	return &FixedSizeReservoir{
 		storage:     newStorage(k),
 		nextTracker: newNextTracker(k),
@@ -97,15 +101,16 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	// https://github.com/MrAlias/reservoir-sampling for a performance
 	// comparison of reservoir sampling algorithms.
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	count, next := r.incrementCount()
-	if int(count) < r.measurementsCap {
-		r.store(int(count), newMeasurement(ctx, t, n, a))
+	intCount := int(count) // nolint:gosec // count is at most 32 bits in length
+	if intCount < r.k {
+		r.store(intCount, newMeasurement(ctx, t, n, a))
 	} else if count == next {
 		// Overwrite a random existing measurement with the one offered.
-		idx := int(rand.Int64N(int64(cap(r.measurements))))
+		idx := rand.IntN(r.k)
 		r.store(idx, newMeasurement(ctx, t, n, a))
+		r.wMu.Lock()
+		defer r.wMu.Unlock()
 		r.advance()
 	}
 }
@@ -123,7 +128,7 @@ func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 }
 
 func newNextTracker(k int) *nextTracker {
-	nt := &nextTracker{measurementsCap: k}
+	nt := &nextTracker{k: k}
 	nt.reset()
 	return nt
 }
@@ -135,16 +140,19 @@ type nextTracker struct {
 	// w is the largest random number in a distribution that is used to compute
 	// the next next.
 	w float64
-	// measurementsCap is the number of measurements that can be stored in the
-	// reservoir.
-	measurementsCap int
+	// wMu ensures w is kept consistent with next during advance and reset.
+	wMu sync.Mutex
+	// k is the number of measurements that can be stored in the reservoir.
+	k int
 }
 
 // reset resets r to the initial state.
 func (r *nextTracker) reset() {
+	r.wMu.Lock()
+	defer r.wMu.Unlock()
 	// This resets the number of exemplars known.
 	// Random index inserts should only happen after the storage is full.
-	r.setCountAndNext(0, uint64(r.measurementsCap))
+	r.setCountAndNext(0, uint64(r.k)) // nolint:gosec // we ensure k is 1 or greater.
 
 	// Initial random number in the series used to generate r.next.
 	//
@@ -155,7 +163,7 @@ func (r *nextTracker) reset() {
 	// This maps the uniform random number in (0,1) to a geometric distribution
 	// over the same interval. The mean of the distribution is inversely
 	// proportional to the storage capacity.
-	r.w = math.Exp(math.Log(randomFloat64()) / float64(r.measurementsCap))
+	r.w = math.Exp(math.Log(randomFloat64()) / float64(r.k))
 
 	r.advance()
 }
@@ -172,7 +180,7 @@ func (r *nextTracker) incrementNext(inc uint64) {
 }
 
 // returns the count before the increment and next value.
-func (r *nextTracker) setCountAndNext(count uint64, next uint64) {
+func (r *nextTracker) setCountAndNext(count, next uint64) {
 	r.countAndNext.Store(next<<32 + count)
 }
 
@@ -191,7 +199,7 @@ func (r *nextTracker) advance() {
 	// therefore the next r.w will be based on the same distribution (i.e.
 	// `max(u_1,u_2,...,u_k)`). Therefore, we can sample the next r.w by
 	// computing the next random number `u` and take r.w as `w * u^(1/k)`.
-	r.w *= math.Exp(math.Log(randomFloat64()) / float64(r.measurementsCap))
+	r.w *= math.Exp(math.Log(randomFloat64()) / float64(r.k))
 	// Use the new random number in the series to calculate the count of the
 	// next measurement that will be stored.
 	//
