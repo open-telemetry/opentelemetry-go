@@ -45,8 +45,15 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	}
 
 	var sum float64
-	for _, m := range r.measurements {
-		sum += m.Value.Float64()
+	for _, val := range r.measurements {
+		loaded := val.Load()
+		if loaded == nil {
+			continue
+		}
+		m := loaded.(*measurement)
+		if m != nil {
+			sum += m.Value.Float64()
+		}
 	}
 	mean := sum / float64(sampleSize)
 
