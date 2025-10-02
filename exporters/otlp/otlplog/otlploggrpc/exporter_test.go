@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
@@ -214,7 +216,7 @@ func TestExporter(t *testing.T) {
 		c, _ := clientFactory(t, rCh)
 		e := newExporter(c)
 
-		assert.ErrorIs(t, e.Export(ctx, records), errPartial{})
+		assert.ErrorIs(t, e.Export(ctx, records), internal.PartialSuccess{})
 		assert.NoError(t, e.Export(ctx, records))
 		assert.NoError(t, e.Export(ctx, records))
 	})
