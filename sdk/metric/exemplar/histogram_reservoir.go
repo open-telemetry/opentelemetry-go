@@ -69,10 +69,5 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 		panic("unknown value type")
 	}
 
-	idx := sort.SearchFloat64s(r.bounds, n)
-	m := newMeasurement(ctx, t, v, a)
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.store(idx, m)
+	r.store(sort.SearchFloat64s(r.bounds, n), newMeasurement(ctx, t, v, a))
 }
