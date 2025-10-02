@@ -134,8 +134,8 @@ func newNextTracker(k int) *nextTracker {
 }
 
 type nextTracker struct {
-    // countAndNext holds the current counts in the lower 32 bits and the next
-    // value in the upper 32 bits.
+	// countAndNext holds the current counts in the lower 32 bits and the next
+	// value in the upper 32 bits.
 	countAndNext atomic.Uint64
 	// w is the largest random number in a distribution that is used to compute
 	// the next next.
