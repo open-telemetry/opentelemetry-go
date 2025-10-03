@@ -27,8 +27,6 @@ func newStorage(n int) *storage {
 }
 
 func (r *storage) store(idx int, m measurement) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.measurements[idx] = m
 }
 
