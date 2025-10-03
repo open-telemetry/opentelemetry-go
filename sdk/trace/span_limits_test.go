@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/env"
+	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/trace"
 )
 
