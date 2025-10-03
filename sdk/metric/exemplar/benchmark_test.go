@@ -18,7 +18,7 @@ func BenchmarkFixedSizeReservoirOffer(b *testing.B) {
 		i := 0
 		for pb.Next() {
 			reservoir.Offer(ctx, ts, val, nil)
-			// periodically trigger a reset because the algorithm for fixed-size
+			// Periodically trigger a reset, because the algorithm for fixed-size
 			// reservoirs records exemplars very infrequently after a large
 			// number of collect calls.
 			if i%100 == 99 {
