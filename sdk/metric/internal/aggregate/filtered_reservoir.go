@@ -54,12 +54,12 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 
 func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
 	if f.filter(ctx) {
+		// only record the current time if we are sampling this measurement.
 		ts := time.Now()
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
 		}
-		// only record the current time if we are sampling this measurement.
 		f.reservoir.Offer(ctx, ts, exemplar.NewValue(val), attr)
 	}
 }
