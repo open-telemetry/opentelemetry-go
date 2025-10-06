@@ -6,7 +6,10 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"math"
 	"runtime"
+	"sync"
 	"sync/atomic"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // atomicCounter is an efficient way of adding to a number which is either an
@@ -123,4 +126,59 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 	// reset the number of ended operations
 	l.endedCounts[hotIdx].Store(0)
 	return hotIdx
+}
+
+// limitedSyncMap is a sync.Map which enforces the aggregation limit on
+// attribute sets and provides a Len() function.
+type limitedSyncMap struct {
+	sync.Map
+	aggLimit int
+	len      int
+	lenMux   sync.Mutex
+}
+
+func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
+	actual, loaded := m.Load(fltrAttr.Equivalent())
+	if loaded {
+		return actual
+	}
+	// If the overflow set exists, assume we have already overflowed and don't
+	// bother with the slow path below.
+	actual, loaded = m.Load(overflowSet.Equivalent())
+	if loaded {
+		return actual
+	}
+	// Slow path: add a new attribute set.
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+
+	// re-fetch now that we hold the lock to ensure we don't use the overflow
+	// set unless we are sure the attribute set isn't being written
+	// concurrently.
+	actual, loaded = m.Load(fltrAttr.Equivalent())
+	if loaded {
+		return actual
+	}
+
+	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
+		fltrAttr = overflowSet
+	}
+	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
+	if !loaded {
+		m.len++
+	}
+	return actual
+}
+
+func (m *limitedSyncMap) Clear() {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	m.len = 0
+	m.Map.Clear()
+}
+
+func (m *limitedSyncMap) Len() int {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	return m.len
 }

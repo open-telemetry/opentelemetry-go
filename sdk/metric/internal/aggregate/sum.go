@@ -5,8 +5,6 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -20,8 +18,8 @@ type sumValue[N int64 | float64] struct {
 }
 
 type valueMap[N int64 | float64] struct {
-	values sync.Map
-	len    atomic.Int64
+	values limitedSyncMap
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
 func (s *valueMap[N]) measure(
@@ -29,27 +27,13 @@ func (s *valueMap[N]) measure(
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
-	newRes func(attribute.Set) FilteredExemplarReservoir[N],
-	aggLimit int,
 ) {
-	v, ok := s.values.Load(fltrAttr.Equivalent())
-	if !ok {
-		// It is possible to exceed the attribute limit if it races with other
-		// new attribute sets. This is an accepted tradeoff to avoid locking
-		// for writes.
-		if aggLimit > 0 && s.len.Load() >= int64(aggLimit-1) {
-			fltrAttr = overflowSet
+	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		return &sumValue[N]{
+			res:   s.newRes(attr),
+			attrs: attr,
 		}
-		var loaded bool
-		v, loaded = s.values.LoadOrStore(fltrAttr.Equivalent(), &sumValue[N]{
-			res:   newRes(fltrAttr),
-			attrs: fltrAttr,
-		})
-		if !loaded {
-			s.len.Add(1)
-		}
-	}
-	sv := v.(*sumValue[N])
+	}).(*sumValue[N])
 	sv.n.add(value)
 	// It is possible for collection to race with measurement and observe the
 	// exemplar in the batch of metrics after the add() for cumulative sums.
@@ -66,18 +50,23 @@ func newDeltaSum[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaSum[N] {
 	return &deltaSum[N]{
-		newRes:    r,
-		aggLimit:  limit,
 		monotonic: monotonic,
 		start:     now(),
+		hotColdValMap: [2]valueMap[N]{
+			{
+				values: limitedSyncMap{aggLimit: limit},
+				newRes: r,
+			},
+			{
+				values: limitedSyncMap{aggLimit: limit},
+				newRes: r,
+			},
+		},
 	}
 }
 
 // deltaSum is the storage for sums which resets every collection interval.
 type deltaSum[N int64 | float64] struct {
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	aggLimit int
-
 	monotonic bool
 	start     time.Time
 
@@ -88,7 +77,7 @@ type deltaSum[N int64 | float64] struct {
 func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr, s.newRes, s.aggLimit)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
 }
 
 func (s *deltaSum[N]) delta(
@@ -106,7 +95,7 @@ func (s *deltaSum[N]) delta(
 	readIdx := s.hcwg.swapHotAndWait()
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
-	n := int(s.hotColdValMap[readIdx].len.Load())
+	n := s.hotColdValMap[readIdx].values.Len()
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
@@ -121,7 +110,6 @@ func (s *deltaSum[N]) delta(
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
-	s.hotColdValMap[readIdx].len.Store(0)
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -140,31 +128,21 @@ func newCumulativeSum[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *cumulativeSum[N] {
 	return &cumulativeSum[N]{
-		newRes:    r,
-		aggLimit:  limit,
 		monotonic: monotonic,
 		start:     now(),
+		valueMap: valueMap[N]{
+			values: limitedSyncMap{aggLimit: limit},
+			newRes: r,
+		},
 	}
 }
 
 // deltaSum is the storage for sums which never reset.
 type cumulativeSum[N int64 | float64] struct {
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	aggLimit int
-
 	monotonic bool
 	start     time.Time
 
-	valMap valueMap[N]
-}
-
-func (s *cumulativeSum[N]) measure(
-	ctx context.Context,
-	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
-) {
-	s.valMap.measure(ctx, value, fltrAttr, droppedAttr, s.newRes, s.aggLimit)
+	valueMap[N]
 }
 
 func (s *cumulativeSum[N]) cumulative(
@@ -180,10 +158,10 @@ func (s *cumulativeSum[N]) cumulative(
 
 	// Values are being concurrently written while we iterate, so only use the
 	// current length for capacity.
-	dPts := reset(sData.DataPoints, 0, int(s.valMap.len.Load()))
+	dPts := reset(sData.DataPoints, 0, s.valueMap.values.Len())
 
 	var i int
-	s.valMap.values.Range(func(_, value any) bool {
+	s.values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
@@ -243,7 +221,7 @@ func (s *precomputedSum[N]) delta(
 	readIdx := s.hcwg.swapHotAndWait()
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
-	n := int(s.hotColdValMap[readIdx].len.Load())
+	n := s.hotColdValMap[readIdx].values.Len()
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
@@ -262,7 +240,6 @@ func (s *precomputedSum[N]) delta(
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
-	s.hotColdValMap[readIdx].len.Store(0)
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -288,7 +265,7 @@ func (s *precomputedSum[N]) cumulative(
 	readIdx := s.hcwg.swapHotAndWait()
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
-	n := int(s.hotColdValMap[readIdx].len.Load())
+	n := s.hotColdValMap[readIdx].values.Len()
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
@@ -303,7 +280,6 @@ func (s *precomputedSum[N]) cumulative(
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
-	s.hotColdValMap[readIdx].len.Store(0)
 
 	sData.DataPoints = dPts
 	*dest = sData
