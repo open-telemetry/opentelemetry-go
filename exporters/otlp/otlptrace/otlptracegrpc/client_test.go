@@ -124,7 +124,7 @@ func TestWithEndpointURL(t *testing.T) {
 }
 
 func newGRPCExporter(
-	t *testing.T,
+	tb testing.TB,
 	ctx context.Context,
 	endpoint string,
 	additionalOpts ...otlptracegrpc.Option,
@@ -139,7 +139,7 @@ func newGRPCExporter(
 	client := otlptracegrpc.NewClient(opts...)
 	exp, err := otlptrace.New(ctx, client)
 	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
+		tb.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 	return exp
 }
@@ -550,4 +550,50 @@ func canonical(t *testing.T, endpoint string) string {
 	_ = c.Close()
 
 	return out
+}
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		mc := runMockCollectorWithConfig(b, &mockConfig{
+			endpoint: "localhost:0",
+			partial: &coltracepb.ExportTracePartialSuccess{
+				RejectedSpans: 5,
+				ErrorMessage:  "partially successful",
+			},
+		})
+		b.Cleanup(func() { require.NoError(b, mc.stop()) })
+
+		exp := newGRPCExporter(b, b.Context(), mc.endpoint)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
+
+		stubs := make([]tracetest.SpanStub, n)
+		for i := range stubs {
+			stubs[i].Name = fmt.Sprintf("Span %d", i)
+		}
+		spans := tracetest.SpanStubs(stubs).Snapshots()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		var err error
+		for b.Loop() {
+			err = exp.ExportSpans(b.Context(), spans)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
+	})
 }
