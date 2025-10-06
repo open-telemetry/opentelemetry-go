@@ -69,7 +69,7 @@
 // synchronous measurements are made to the SDK is reflected in the collected
 // metric data. This means that even when a single goroutine makes sequential
 // synchronous measurements, it is possible for a later measurement to be
-// included in the collected metric data when the earlier measurement is not.
+// included in the collected metric data when an earlier measurement is not.
 // This applies to measurements made to different instruments, or to different
 // attribute sets on the same instrument.
 //
