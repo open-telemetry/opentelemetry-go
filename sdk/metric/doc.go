@@ -77,10 +77,7 @@
 //
 // Additionally, the SDK does not guarantee that exemplars are always included
 // in the same batch of metric data as the measurement they are associated
-// with. It is possible for the exemplar to be provided in a subsequent batch
-// for cumulative metrics. However, the SDK does guarantee that if an exemplar
-// is present in collected metric data, then its associated measurement is also
-// included in the aggregation.
+// with.
 //
 // See [go.opentelemetry.io/otel/metric] for more information about
 // the metric API.
