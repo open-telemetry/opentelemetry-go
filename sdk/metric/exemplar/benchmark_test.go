@@ -18,9 +18,9 @@ func BenchmarkFixedSizeReservoirOffer(b *testing.B) {
 		i := 0
 		for pb.Next() {
 			reservoir.Offer(ctx, ts, val, nil)
-			// Periodically trigger a reset, because the algorithm for fixed-size
-			// reservoirs records exemplars very infrequently after a large
-			// number of collect calls.
+			// Periodically trigger a reset, because the algorithm records
+			// exemplars very infrequently after a large number of collect
+			// calls.
 			if i%100 == 99 {
 				reservoir.mu.Lock()
 				reservoir.reset()
@@ -44,6 +44,14 @@ func BenchmarkHistogramReservoirOffer(b *testing.B) {
 		i := 0
 		for pb.Next() {
 			res.Offer(ctx, ts, values[i%len(values)], nil)
+			// Periodically trigger a reset, because the algorithm records
+			// exemplars very infrequently after a large number of collect
+			// calls.
+			if i%100 == 99 {
+				for i := range res.trackers {
+					res.trackers[i].reset()
+				}
+			}
 			i++
 		}
 	})

@@ -29,8 +29,9 @@ func HistogramReservoirProvider(bounds []float64) ReservoirProvider {
 // The passed bounds must be sorted before calling this function.
 func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 	return &HistogramReservoir{
-		bounds:  bounds,
-		storage: newStorage(len(bounds) + 1),
+		bounds:   bounds,
+		storage:  newStorage(len(bounds) + 1),
+		trackers: make([]nextTracker, len(bounds)+1),
 	}
 }
 
@@ -42,6 +43,8 @@ var _ Reservoir = &HistogramReservoir{}
 type HistogramReservoir struct {
 	reservoir.ConcurrentSafe
 	*storage
+
+	trackers []nextTracker
 
 	// bounds are bucket bounds in ascending order.
 	bounds []float64
@@ -68,6 +71,27 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 	default:
 		panic("unknown value type")
 	}
+	idx := sort.SearchFloat64s(r.bounds, n)
 
-	r.store(sort.SearchFloat64s(r.bounds, n), newMeasurement(ctx, t, v, a))
+	count, next := r.trackers[idx].incrementCount()
+	if count == 0 || count == next {
+		r.store(idx, newMeasurement(ctx, t, v, a))
+		r.trackers[idx].wMu.Lock()
+		defer r.trackers[idx].wMu.Unlock()
+		r.trackers[idx].advance()
+	}
+}
+
+// Collect returns all the held exemplars.
+//
+// The Reservoir state is preserved after this call.
+func (r *HistogramReservoir) Collect(dest *[]Exemplar) {
+	r.storage.Collect(dest)
+	// Call reset here even though it will reset r.count and restart the random
+	// number series. This will persist any old exemplars as long as no new
+	// measurements are offered, but it will also prioritize those new
+	// measurements that are made over the older collection cycle ones.
+	for i := range r.trackers {
+		r.trackers[i].reset()
+	}
 }
