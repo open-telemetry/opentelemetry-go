@@ -333,6 +333,64 @@ func TestDefaultTemporalitySelector(t *testing.T) {
 	}
 }
 
+func TestCumulativeTemporalitySelector(t *testing.T) {
+	var undefinedInstrument InstrumentKind
+	for _, ik := range []InstrumentKind{
+		undefinedInstrument,
+		InstrumentKindCounter,
+		InstrumentKindUpDownCounter,
+		InstrumentKindHistogram,
+		InstrumentKindGauge,
+		InstrumentKindObservableCounter,
+		InstrumentKindObservableUpDownCounter,
+		InstrumentKindObservableGauge,
+	} {
+		assert.Equal(t, metricdata.CumulativeTemporality, CumulativeTemporalitySelector(ik))
+	}
+}
+
+func TestDeltaTemporalitySelector(t *testing.T) {
+	var undefinedInstrument InstrumentKind
+	for _, ik := range []InstrumentKind{
+		InstrumentKindCounter,
+		InstrumentKindHistogram,
+		InstrumentKindObservableCounter,
+	} {
+		assert.Equal(t, metricdata.DeltaTemporality, DeltaTemporalitySelector(ik))
+	}
+
+	for _, ik := range []InstrumentKind{
+		undefinedInstrument,
+		InstrumentKindGauge,
+		InstrumentKindObservableGauge,
+		InstrumentKindObservableUpDownCounter,
+		InstrumentKindUpDownCounter,
+	} {
+		assert.Equal(t, metricdata.CumulativeTemporality, DeltaTemporalitySelector(ik))
+	}
+}
+
+func TestLowMemoryTemporalitySelector(t *testing.T) {
+	var undefinedInstrument InstrumentKind
+	for _, ik := range []InstrumentKind{
+		InstrumentKindCounter,
+		InstrumentKindHistogram,
+	} {
+		assert.Equal(t, metricdata.DeltaTemporality, LowMemoryTemporalitySelector(ik))
+	}
+
+	for _, ik := range []InstrumentKind{
+		undefinedInstrument,
+		InstrumentKindGauge,
+		InstrumentKindObservableCounter,
+		InstrumentKindObservableGauge,
+		InstrumentKindObservableUpDownCounter,
+		InstrumentKindUpDownCounter,
+	} {
+		assert.Equal(t, metricdata.CumulativeTemporality, LowMemoryTemporalitySelector(ik))
+	}
+}
+
 type notComparable [0]func() // nolint:unused  // non-comparable type itself is used.
 
 type noCompareReader struct {

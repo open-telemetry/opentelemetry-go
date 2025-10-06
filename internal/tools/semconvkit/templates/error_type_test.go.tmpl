@@ -5,55 +5,41 @@ package semconv // import "go.opentelemetry.io/otel/semconv/{{.TagVer}}"
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
 	"testing"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
-type CustomError struct{}
-
-func (CustomError) Error() string {
-	return "custom error"
-}
+const pkg = "go.opentelemetry.io/otel/semconv/{{.TagVer}}"
 
 func TestErrorType(t *testing.T) {
-	customErr := CustomError{}
-	builtinErr := errors.New("something went wrong")
-	var nilErr error
+	check(t, nil, ErrorTypeOther.Value.AsString())
+	check(t, errors.New("msg"), "*errors.errorString")
+	check(t, custom("aborted"), "aborted")
+	check(t, custom(""), pkg+".ErrCustomType") // empty ErrorType, use concrete type.
+}
 
-	wantCustomType := reflect.TypeOf(customErr)
-	wantCustomStr := fmt.Sprintf("%s.%s", wantCustomType.PkgPath(), wantCustomType.Name())
-
-	tests := []struct {
-		name string
-		err  error
-		want attribute.KeyValue
-	}{
-		{
-			name: "BuiltinError",
-			err:  builtinErr,
-			want: attribute.String("error.type", "*errors.errorString"),
-		},
-		{
-			name: "CustomError",
-			err:  customErr,
-			want: attribute.String("error.type", wantCustomStr),
-		},
-		{
-			name: "NilError",
-			err:  nilErr,
-			want: ErrorTypeOther,
-		},
+func check(t *testing.T, err error, want string) {
+	t.Helper()
+	got := ErrorType(err)
+	if got.Key != ErrorTypeKey {
+		t.Errorf("ErrorType(%v) key = %v, want %v", err, got.Key, ErrorTypeKey)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ErrorType(tt.err)
-			if got != tt.want {
-				t.Errorf("ErrorType(%v) = %v, want %v", tt.err, got, tt.want)
-			}
-		})
+	if got.Value.AsString() != want {
+		t.Errorf("ErrorType(%v) value = %v, want %v", err, got.Value.AsString(), want)
 	}
+}
+
+func custom(typ string) error {
+	return ErrCustomType{Type: typ}
+}
+
+type ErrCustomType struct {
+	Type string
+}
+
+func (e ErrCustomType) Error() string {
+	return "custom: " + e.Type
+}
+
+func (e ErrCustomType) ErrorType() string {
+	return e.Type
 }
