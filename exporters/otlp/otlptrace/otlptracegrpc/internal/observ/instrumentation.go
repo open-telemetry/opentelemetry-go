@@ -39,12 +39,12 @@ const (
 var (
 	measureAttrsPool = &sync.Pool{
 		New: func() any {
-			const n = 1 /* component.name */ +
-				1 /* component.type */ +
-				1 /* server.addr */ +
-				1 /* server.port */ +
-				1 /* error.type */ +
-				1 /* rpc.grpc.status_code */
+			const n = 1 + // component.name
+				1 + // component.type
+				1 + // server.addr
+				1 + // server.port
+				1 + // error.type
+				1 // rpc.grpc.status_code
 			s := make([]attribute.KeyValue, 0, n)
 			// Return a pointer to a slice instead of a slice itself
 			// to avoid allocations on every call.
