@@ -1956,8 +1956,8 @@ var _ IDGenerator = (*testIDGenerator)(nil)
 
 func TestWithIDGenerator(t *testing.T) {
 	const (
-		startHigh   uint64 = 0x1001_1001_1001_1001
-		startLow    uint64 = 0x2002_2002_2002_2002
+		startTraceIDHigh   uint64 = 0x1001_1001_1001_1001
+		startTraceIDLow    uint64 = 0x2002_2002_2002_2002
 		startSpanID uint64 = 0x3003_3003_3003_3003
 		numSpan            = 5
 	)
