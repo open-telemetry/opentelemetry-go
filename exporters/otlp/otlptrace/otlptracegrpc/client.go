@@ -19,6 +19,8 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
 )
@@ -44,6 +46,9 @@ type client struct {
 	conn    *grpc.ClientConn
 	tscMu   sync.RWMutex
 	tsc     coltracepb.TraceServiceClient
+
+	instID int64
+	inst   *observ.Instrumentation
 }
 
 // Compile time check *client implements otlptrace.Client.
@@ -67,6 +72,7 @@ func newClient(opts ...Option) *client {
 		stopCtx:       ctx,
 		stopFunc:      cancel,
 		conn:          cfg.GRPCConn,
+		instID:        counter.NextExporterID(),
 	}
 
 	if len(cfg.Traces.Headers) > 0 {
@@ -91,13 +97,24 @@ func (c *client) Start(context.Context) error {
 		c.conn = conn
 	}
 
+	// Initialize the instrumentation if not already done.
+	//
+	// Initialize here instead of NewClient to allow any errors to be passed
+	// back to the caller and so that any setup of the environment variables to
+	// enable instrumentation can be set via code.
+	var err error
+	if c.inst == nil {
+		target := c.conn.CanonicalTarget()
+		c.inst, err = observ.NewInstrumentation(c.instID, target)
+	}
+
 	// The otlptrace.Client interface states this method is called just once,
 	// so no need to check if already started.
 	c.tscMu.Lock()
 	c.tsc = coltracepb.NewTraceServiceClient(c.conn)
 	c.tscMu.Unlock()
 
-	return nil
+	return err
 }
 
 var errAlreadyStopped = errors.New("the client is already stopped")
@@ -188,6 +205,12 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
+	var code codes.Code
+	if c.inst != nil {
+		op := c.inst.ExportSpans(ctx, len(protoSpans))
+		defer func() { op.End(uploadErr, code) }()
+	}
+
 	return c.requestFunc(ctx, func(iCtx context.Context) error {
 		resp, err := c.tsc.Export(iCtx, &coltracepb.ExportTraceServiceRequest{
 			ResourceSpans: protoSpans,
@@ -201,7 +224,8 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}
 		}
 		// nil is converted to OK.
-		if status.Code(err) == codes.OK {
+		code = status.Code(err)
+		if code == codes.OK {
 			// Success.
 			return uploadErr
 		}
