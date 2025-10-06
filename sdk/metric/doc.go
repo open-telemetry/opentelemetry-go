@@ -71,7 +71,9 @@
 // synchronous measurements, it is possible for a later measurement to be
 // included in the collected metric data when an earlier measurement is not.
 // This applies to measurements made to different instruments, or to different
-// attribute sets on the same instrument.
+// attribute sets on the same instrument. Sequential measurements made to the
+// same instrument and with the same attributes are guaranteed to preserve
+// ordering with respect to collection.
 //
 // Additionally, the SDK does not guarantee that exemplars are always included
 // in the same batch of metric data as the measurement they are associated
