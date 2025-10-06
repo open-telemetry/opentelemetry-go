@@ -1931,8 +1931,8 @@ func TestSamplerTraceState(t *testing.T) {
 }
 
 type testIDGenerator struct {
-	high   uint64
-	low    uint64
+	traceIDHigh   uint64
+	traceIDLow    uint64
 	spanID uint64
 }
 
