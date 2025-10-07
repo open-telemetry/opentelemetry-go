@@ -7,6 +7,7 @@ import (
 	"context"
 	"math"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -37,6 +38,7 @@ var _ Reservoir = &FixedSizeReservoir{}
 type FixedSizeReservoir struct {
 	reservoir.ConcurrentSafe
 	*storage
+	mu sync.Mutex
 
 	// count is the number of measurement seen.
 	count int64
@@ -192,6 +194,8 @@ func (r *FixedSizeReservoir) advance() {
 //
 // The Reservoir state is preserved after this call.
 func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.storage.Collect(dest)
 	// Call reset here even though it will reset r.count and restart the random
 	// number series. This will persist any old exemplars as long as no new
