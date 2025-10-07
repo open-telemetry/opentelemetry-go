@@ -74,12 +74,13 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 
 // LastValue returns a last-value aggregate function input and output.
 func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
-	lv := newLastValue[N](b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(lv.measure), lv.delta
+		lv := newDeltaLastValue[N](b.AggregationLimit, b.resFunc())
+		return b.filter(lv.measure), lv.collect
 	default:
-		return b.filter(lv.measure), lv.cumulative
+		lv := newCumulativeLastValue[N](b.AggregationLimit, b.resFunc())
+		return b.filter(lv.measure), lv.collect
 	}
 }
 
