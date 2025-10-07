@@ -65,6 +65,15 @@ type atomicIntOrFloat[N int64 | float64] struct {
 	nInt atomic.Int64
 }
 
+func (n *atomicIntOrFloat[N]) store(value N) {
+	switch v := any(value).(type) {
+	case int64:
+		n.nInt.Store(v)
+	case float64:
+		n.nFloatBits.Store(math.Float64bits(v))
+	}
+}
+
 func (n *atomicIntOrFloat[N]) load() (value N) {
 	switch any(value).(type) {
 	case int64:
