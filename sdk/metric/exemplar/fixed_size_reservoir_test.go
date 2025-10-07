@@ -45,12 +45,35 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	}
 
 	var sum float64
-	for _, m := range r.measurements {
-		sum += m.Value.Float64()
+	for _, val := range r.measurements {
+		loaded := val.Load()
+		if loaded == nil {
+			continue
+		}
+		m := loaded.(*measurement)
+		if m != nil {
+			sum += m.Value.Float64()
+		}
 	}
 	mean := sum / float64(sampleSize)
 
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+}
+
+func TestNextTrackerAtomics(t *testing.T) {
+	capacity := 10
+	nt := newNextTracker(capacity)
+	nt.setCountAndNext(0, 11)
+	count, next := nt.incrementCount()
+	assert.Equal(t, uint64(0), count)
+	assert.Equal(t, uint64(11), next)
+	count, secondNext := nt.incrementCount()
+	assert.Equal(t, uint64(1), count)
+	assert.Equal(t, next, secondNext)
+	nt.setCountAndNext(50, 100)
+	count, next = nt.incrementCount()
+	assert.Equal(t, uint64(50), count)
+	assert.Equal(t, uint64(100), next)
 }
