@@ -158,7 +158,7 @@ func (s *cumulativeSum[N]) cumulative(
 
 	// Values are being concurrently written while we iterate, so only use the
 	// current length for capacity.
-	dPts := reset(sData.DataPoints, 0, s.valueMap.values.Len())
+	dPts := reset(sData.DataPoints, 0, s.values.Len())
 
 	var i int
 	s.values.Range(func(_, value any) bool {
