@@ -5,7 +5,6 @@ package exemplar // import "go.opentelemetry.io/otel/sdk/metric/exemplar"
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -14,7 +13,6 @@ import (
 
 // storage is an exemplar storage for [Reservoir] implementations.
 type storage struct {
-	mu sync.Mutex
 	// measurements are the measurements sampled.
 	//
 	// This does not use []metricdata.Exemplar because it potentially would
@@ -34,8 +32,6 @@ func (r *storage) store(idx int, m measurement) {
 //
 // The Reservoir state is preserved after this call.
 func (r *storage) Collect(dest *[]Exemplar) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	*dest = reset(*dest, len(r.measurements), len(r.measurements))
 	var n int
 	for _, m := range r.measurements {
