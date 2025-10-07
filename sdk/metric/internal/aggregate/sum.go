@@ -80,7 +80,7 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
 }
 
-func (s *deltaSum[N]) delta(
+func (s *deltaSum[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
@@ -145,7 +145,7 @@ type cumulativeSum[N int64 | float64] struct {
 	valueMap[N]
 }
 
-func (s *cumulativeSum[N]) cumulative(
+func (s *cumulativeSum[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
