@@ -66,17 +66,19 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	ssp.exporterMu.Lock()
 	defer ssp.exporterMu.Unlock()
 
+	var err error
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
-		err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s})
+		err = ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s})
 		if err != nil {
 			otel.Handle(err)
 		}
-		if ssp.inst != nil {
-			// Add the span to the context to ensure the metric is recorded
-			// with the correct span context.
-			ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
-			ssp.inst.SpanProcessed(ctx, 1, err)
-		}
+	}
+
+	if ssp.inst != nil {
+		// Add the span to the context to ensure the metric is recorded
+		// with the correct span context.
+		ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
+		ssp.inst.SpanProcessed(ctx, 1, err)
 	}
 }
 
