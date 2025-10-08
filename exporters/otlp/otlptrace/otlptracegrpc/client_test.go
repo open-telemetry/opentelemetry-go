@@ -20,17 +20,26 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -115,7 +124,7 @@ func TestWithEndpointURL(t *testing.T) {
 }
 
 func newGRPCExporter(
-	t *testing.T,
+	tb testing.TB,
 	ctx context.Context,
 	endpoint string,
 	additionalOpts ...otlptracegrpc.Option,
@@ -130,7 +139,7 @@ func newGRPCExporter(
 	client := otlptracegrpc.NewClient(opts...)
 	exp, err := otlptrace.New(ctx, client)
 	if err != nil {
-		t.Fatalf("failed to create a new collector exporter: %v", err)
+		tb.Fatalf("failed to create a new collector exporter: %v", err)
 	}
 	return exp
 }
@@ -429,4 +438,162 @@ func TestCustomUserAgent(t *testing.T) {
 
 	headers := mc.getHeaders()
 	require.Contains(t, headers.Get("user-agent")[0], customUserAgent)
+}
+
+func TestClientInstrumentation(t *testing.T) {
+	// Enable instrumentation for this test.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Reset client ID to be deterministic
+	const id = 0
+	counter.SetExporterID(id)
+
+	// Save original meter provider and restore at end of test.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Create a new meter provider to capture metrics.
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	const n, msg = 2, "partially successful"
+	mc := runMockCollectorWithConfig(t, &mockConfig{
+		endpoint: "localhost:0", // Determine canonical endpoint.
+		partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: n,
+			ErrorMessage:  msg,
+		},
+	})
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	exp := newGRPCExporter(t, t.Context(), mc.endpoint)
+	err := exp.ExportSpans(t.Context(), roSpans)
+	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
+	require.NoError(t, exp.Shutdown(t.Context()))
+
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	attrs := observ.BaseAttrs(id, canonical(t, mc.endpoint))
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
+			SchemaURL: observ.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+				Description: otelconv.SDKExporterSpanInflight{}.Description(),
+				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterSpanExported{}.Name(),
+				Description: otelconv.SDKExporterSpanExported{}.Description(),
+				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
+						)...)},
+					},
+					Temporality: 0x1,
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+								otelconv.RPCGRPCStatusCodeOk,
+							),
+						)...)},
+					},
+					Temporality: 0x1,
+				},
+			},
+		},
+	}
+	require.Len(t, got.ScopeMetrics, 1)
+	opt := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+		metricdatatest.IgnoreValue(),
+	}
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func canonical(t *testing.T, endpoint string) string {
+	t.Helper()
+
+	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
+	c, err := grpc.NewClient(endpoint, opt) // Used to normaliz endpoint.
+	if err != nil {
+		t.Fatalf("failed to create grpc client: %v", err)
+	}
+	out := c.CanonicalTarget()
+	_ = c.Close()
+
+	return out
+}
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		mc := runMockCollectorWithConfig(b, &mockConfig{
+			endpoint: "localhost:0",
+			partial: &coltracepb.ExportTracePartialSuccess{
+				RejectedSpans: 5,
+				ErrorMessage:  "partially successful",
+			},
+		})
+		b.Cleanup(func() { require.NoError(b, mc.stop()) })
+
+		exp := newGRPCExporter(b, b.Context(), mc.endpoint)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
+
+		stubs := make([]tracetest.SpanStub, n)
+		for i := range stubs {
+			stubs[i].Name = fmt.Sprintf("Span %d", i)
+		}
+		spans := tracetest.SpanStubs(stubs).Snapshots()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		var err error
+		for b.Loop() {
+			err = exp.ExportSpans(b.Context(), spans)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
+	})
 }
