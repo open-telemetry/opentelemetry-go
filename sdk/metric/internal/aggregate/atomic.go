@@ -51,6 +51,69 @@ func (n *atomicCounter[N]) add(value N) {
 	}
 }
 
+// reset resets the internal state, and is not safe to call concurrently.
+func (n *atomicCounter[N]) reset() {
+	n.nFloatBits.Store(0)
+	n.nInt.Store(0)
+}
+
+// atomicIntOrFloat is an atomic type that can be an int64 or float64.
+type atomicIntOrFloat[N int64 | float64] struct {
+	// nFloatBits contains the float bits if N is float64.
+	nFloatBits atomic.Uint64
+	// nInt contains the int64 if N is int64
+	nInt atomic.Int64
+}
+
+func (n *atomicIntOrFloat[N]) load() (value N) {
+	switch any(value).(type) {
+	case int64:
+		value = N(n.nInt.Load())
+	case float64:
+		value = N(math.Float64frombits(n.nFloatBits.Load()))
+	}
+	return value
+}
+
+func (n *atomicIntOrFloat[N]) compareAndSwap(oldVal, newVal N) bool {
+	switch any(oldVal).(type) {
+	case float64:
+		return n.nFloatBits.CompareAndSwap(math.Float64bits(float64(oldVal)), math.Float64bits(float64(newVal)))
+	default:
+		return n.nInt.CompareAndSwap(int64(oldVal), int64(newVal))
+	}
+}
+
+type atomicMinMax[N int64 | float64] struct {
+	minimum atomicIntOrFloat[N]
+	maximum atomicIntOrFloat[N]
+	isSet   atomic.Bool
+}
+
+func (n *atomicMinMax[N]) observe(value N) {
+	isSet := n.isSet.Load()
+	for {
+		minLoaded := n.minimum.load()
+		if ((!isSet && minLoaded == 0) || value < minLoaded) && !n.minimum.compareAndSwap(minLoaded, value) {
+			// We got a new min value, but lost the race. Try again.
+			continue
+		}
+		maxLoaded := n.maximum.load()
+		if ((!isSet && minLoaded == 0) || value > maxLoaded) && !n.maximum.compareAndSwap(maxLoaded, value) {
+			// We got a new max value, but lost the race. Try again.
+			continue
+		}
+		break
+	}
+	if !isSet {
+		n.isSet.Store(true)
+	}
+}
+
+func (n *atomicMinMax[N]) load() (minimum, maximum N, ok bool) {
+	return n.minimum.load(), n.maximum.load(), n.isSet.Load()
+}
+
 // hotColdWaitGroup is a synchronization primitive which enables lockless
 // writes for concurrent writers and enables a reader to acquire exclusive
 // access to a snapshot of state including only completed operations.
