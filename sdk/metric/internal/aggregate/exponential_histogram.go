@@ -75,6 +75,8 @@ func newExpoHistogramDataPoint[N int64 | float64](
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
+	p.Lock()
+	defer p.Unlock()
 	p.count++
 
 	if !p.noMinMax {
@@ -302,8 +304,10 @@ func newDeltaExponentialHistogram[N int64 | float64](
 		maxScale: maxScale,
 
 		newRes: r,
-		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
-		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		hotColdValMap: [2]limitedSyncMap{
+			{aggLimit: limit},
+			{aggLimit: limit},
+		},
 
 		start: now(),
 	}
@@ -317,10 +321,9 @@ type deltaExpoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int32
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[expoHistogramDataPoint[N]]
-	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
+	newRes        func(attribute.Set) FilteredExemplarReservoir[N]
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap
 
 	start time.Time
 }
@@ -336,22 +339,13 @@ func (e *deltaExpoHistogram[N]) measure(
 		return
 	}
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
-	v, ok := e.values[fltrAttr.Equivalent()]
-	if !ok {
-		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
-		// If we overflowed, make sure we add to the existing overflow series
-		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
-		if !ok {
-			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-			v.res = e.newRes(fltrAttr)
-
-			e.values[fltrAttr.Equivalent()] = v
-		}
-	}
+	hotIdx := e.hcwg.start()
+	defer e.hcwg.done(hotIdx)
+	v := e.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		hPt := newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		hPt.res = e.newRes(attr)
+		return hPt
+	}).(*expoHistogramDataPoint[N])
 	v.record(value)
 	v.res.Offer(ctx, value, droppedAttr)
 }
@@ -366,14 +360,19 @@ func (e *deltaExpoHistogram[N]) collect(
 	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
 	h.Temporality = metricdata.DeltaTemporality
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
+	// delta always clears values on collection
+	readIdx := e.hcwg.swapHotAndWait()
 
-	n := len(e.values)
+	// The len will not change while we iterate over values, since we waited
+	// for all writes to finish to the cold values and len.
+	n := e.hotColdValMap[readIdx].Len()
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range e.values {
+	e.hotColdValMap[readIdx].Range(func(_, value any) bool {
+		val := value.(*expoHistogramDataPoint[N])
+		val.Lock()
+		defer val.Unlock()
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
@@ -409,9 +408,10 @@ func (e *deltaExpoHistogram[N]) collect(
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 
 		i++
-	}
+		return true
+	})
 	// Unused attribute sets do not report.
-	clear(e.values)
+	e.hotColdValMap[readIdx].Clear()
 
 	e.start = t
 	h.DataPoints = hDPts
@@ -436,8 +436,7 @@ func newCumulativeExponentialHistogram[N int64 | float64](
 		maxScale: maxScale,
 
 		newRes: r,
-		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
-		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		values: limitedSyncMap{aggLimit: limit},
 
 		start: now(),
 	}
@@ -451,10 +450,8 @@ type cumulativeExpoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int32
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[expoHistogramDataPoint[N]]
-	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	values limitedSyncMap
 
 	start time.Time
 }
@@ -470,22 +467,11 @@ func (e *cumulativeExpoHistogram[N]) measure(
 		return
 	}
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
-	v, ok := e.values[fltrAttr.Equivalent()]
-	if !ok {
-		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
-		// If we overflowed, make sure we add to the existing overflow series
-		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
-		if !ok {
-			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-			v.res = e.newRes(fltrAttr)
-
-			e.values[fltrAttr.Equivalent()] = v
-		}
-	}
+	v := e.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		hPt := newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		hPt.res = e.newRes(attr)
+		return hPt
+	}).(*expoHistogramDataPoint[N])
 	v.record(value)
 	v.res.Offer(ctx, value, droppedAttr)
 }
@@ -500,56 +486,61 @@ func (e *cumulativeExpoHistogram[N]) collect(
 	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
 	h.Temporality = metricdata.CumulativeTemporality
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
-
-	n := len(e.values)
-	hDPts := reset(h.DataPoints, n, n)
+	// Values are being concurrently written while we iterate, so only use the
+	// current length for capacity.
+	hDPts := reset(h.DataPoints, 0, e.values.Len())
 
 	var i int
-	for _, val := range e.values {
-		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count
-		hDPts[i].Scale = val.scale
-		hDPts[i].ZeroCount = val.zeroCount
-		hDPts[i].ZeroThreshold = 0.0
+	e.values.Range(func(_, value any) bool {
+		val := value.(*expoHistogramDataPoint[N])
+		val.Lock()
+		defer val.Unlock()
+		newPt := metricdata.ExponentialHistogramDataPoint[N]{
+			Attributes:    val.attrs,
+			StartTime:     e.start,
+			Time:          t,
+			Count:         val.count,
+			Scale:         val.scale,
+			ZeroCount:     val.zeroCount,
+			ZeroThreshold: 0.0,
+		}
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
+		newPt.PositiveBucket.Offset = val.posBuckets.startBin
+		newPt.PositiveBucket.Counts = reset(
+			newPt.PositiveBucket.Counts,
 			len(val.posBuckets.counts),
 			len(val.posBuckets.counts),
 		)
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+		copy(newPt.PositiveBucket.Counts, val.posBuckets.counts)
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
+		newPt.NegativeBucket.Offset = val.negBuckets.startBin
+		newPt.NegativeBucket.Counts = reset(
+			newPt.NegativeBucket.Counts,
 			len(val.negBuckets.counts),
 			len(val.negBuckets.counts),
 		)
-		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
+		copy(newPt.NegativeBucket.Counts, val.negBuckets.counts)
 
 		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			newPt.Sum = val.sum
 		}
 		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			newPt.Min = metricdata.NewExtrema(val.min)
+			newPt.Max = metricdata.NewExtrema(val.max)
 		}
 
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		hDPts = append(hDPts, newPt)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
 		// sets that become "stale" need to be forgotten so this will not
 		// overload the system.
-	}
+		return true
+	})
 
 	h.DataPoints = hDPts
 	*dest = h
-	return n
+	return i
 }

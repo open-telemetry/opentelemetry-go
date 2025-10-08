@@ -176,8 +176,10 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			val, ok := h.values.Load(alice.Equivalent())
 
+			assert.True(t, ok)
+			dp := val.(*expoHistogramDataPoint[int64])
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
 			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
@@ -218,7 +220,11 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			readIdx := h.hcwg.swapHotAndWait()
+			val, ok := h.hotColdValMap[readIdx].Load(alice.Equivalent())
+
+			assert.True(t, ok)
+			dp := val.(*expoHistogramDataPoint[float64])
 
 			assert.Equal(t, tt.expected.max, dp.max)
 			assert.Equal(t, tt.expected.min, dp.min)
