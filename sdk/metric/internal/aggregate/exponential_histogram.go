@@ -29,6 +29,7 @@ const (
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
+	sync.Mutex
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
 
@@ -285,16 +286,16 @@ func (b *expoBuckets) downscale(delta int32) {
 	b.startBin >>= delta
 }
 
-// newExponentialHistogram returns an Aggregator that summarizes a set of
-// measurements as an exponential histogram. Each histogram is scoped by attributes
-// and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](
+// newDeltaExponentialHistogram returns an Aggregator that summarizes a set of
+// measurements as a delta exponential histogram. Each histogram is scoped by
+// attributes and the aggregation cycle the measurements were made in.
+func newDeltaExponentialHistogram[N int64 | float64](
 	maxSize, maxScale int32,
 	noMinMax, noSum bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
-) *expoHistogram[N] {
-	return &expoHistogram[N]{
+) *deltaExpoHistogram[N] {
+	return &deltaExpoHistogram[N]{
 		noSum:    noSum,
 		noMinMax: noMinMax,
 		maxSize:  int(maxSize),
@@ -308,9 +309,9 @@ func newExponentialHistogram[N int64 | float64](
 	}
 }
 
-// expoHistogram summarizes a set of measurements as an histogram with exponentially
+// deltaExpoHistogram summarizes a set of measurements as an histogram with exponentially
 // defined buckets.
-type expoHistogram[N int64 | float64] struct {
+type deltaExpoHistogram[N int64 | float64] struct {
 	noSum    bool
 	noMinMax bool
 	maxSize  int
@@ -324,7 +325,7 @@ type expoHistogram[N int64 | float64] struct {
 	start time.Time
 }
 
-func (e *expoHistogram[N]) measure(
+func (e *deltaExpoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
@@ -355,7 +356,7 @@ func (e *expoHistogram[N]) measure(
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
-func (e *expoHistogram[N]) delta(
+func (e *deltaExpoHistogram[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
@@ -418,7 +419,78 @@ func (e *expoHistogram[N]) delta(
 	return n
 }
 
-func (e *expoHistogram[N]) cumulative(
+// newCumulativeExponentialHistogram returns an Aggregator that summarizes a
+// set of measurements as a cumulative exponential histogram. Each histogram is
+// scoped by attributes and the aggregation cycle the measurements were made
+// in.
+func newCumulativeExponentialHistogram[N int64 | float64](
+	maxSize, maxScale int32,
+	noMinMax, noSum bool,
+	limit int,
+	r func(attribute.Set) FilteredExemplarReservoir[N],
+) *cumulativeExpoHistogram[N] {
+	return &cumulativeExpoHistogram[N]{
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		maxSize:  int(maxSize),
+		maxScale: maxScale,
+
+		newRes: r,
+		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
+		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+
+		start: now(),
+	}
+}
+
+// cumulativeExpoHistogram summarizes a set of measurements as an cumulative
+// histogram with exponentially defined buckets.
+type cumulativeExpoHistogram[N int64 | float64] struct {
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int32
+
+	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
+	limit    limiter[expoHistogramDataPoint[N]]
+	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
+	valuesMu sync.Mutex
+
+	start time.Time
+}
+
+func (e *cumulativeExpoHistogram[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+
+	v, ok := e.values[fltrAttr.Equivalent()]
+	if !ok {
+		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
+		// If we overflowed, make sure we add to the existing overflow series
+		// if it already exists.
+		v, ok = e.values[fltrAttr.Equivalent()]
+		if !ok {
+			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+			v.res = e.newRes(fltrAttr)
+
+			e.values[fltrAttr.Equivalent()] = v
+		}
+	}
+	v.record(value)
+	v.res.Offer(ctx, value, droppedAttr)
+}
+
+func (e *cumulativeExpoHistogram[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
