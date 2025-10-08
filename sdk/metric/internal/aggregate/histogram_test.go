@@ -6,6 +6,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"sort"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,7 +24,11 @@ var (
 )
 
 func newHistogramPoint[N int64 | float64](attrs attribute.Set, n int) *histogramPoint[N] {
-	return &histogramPoint[N]{attrs: attrs, counts: make([]uint64, n)}
+	hPt := &histogramPoint[N]{
+		attrs:                  attrs,
+		histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, n)},
+	}
+	return hPt
 }
 
 func TestHistogram(t *testing.T) {
@@ -342,20 +347,29 @@ func TestBucketsBin(t *testing.T) {
 func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		b := newHistogramPoint[N](alice, 3)
-		assertB := func(counts []uint64, count uint64, mi, ma N) {
+		assertB := func(expectedBucketCounts []uint64, expectedCount uint64, mi, ma N) {
 			t.Helper()
-			assert.Equal(t, counts, b.counts)
-			assert.Equal(t, count, b.count)
-			assert.Equal(t, mi, b.min)
-			assert.Equal(t, ma, b.max)
+			bucketCounts, count := b.loadCounts()
+			assert.Equal(t, expectedBucketCounts, bucketCounts)
+			assert.Equal(t, expectedCount, count)
+			minimum, maximum, ok := b.minMax.load()
+			if mi != 0 {
+				assert.True(t, ok)
+				assert.Equal(t, mi, minimum)
+			}
+			if ma != 0 {
+				assert.True(t, ok)
+				assert.Equal(t, ma, maximum)
+			}
 		}
 
+		bounds := []float64{0, 2, 4}
 		assertB([]uint64{0, 0, 0}, 0, 0, 0)
-		b.bin(1)
-		b.minMax(2)
+		b.bin(bounds, 1)
+		b.minMax.observe(2)
 		assertB([]uint64{0, 1, 0}, 1, 0, 2)
-		b.bin(0)
-		b.minMax(-1)
+		b.bin(bounds, -1)
+		b.minMax.observe(-1)
 		assertB([]uint64{1, 1, 0}, 2, -1, 2)
 	}
 }
@@ -370,15 +384,15 @@ func testBucketsSum[N int64 | float64]() func(t *testing.T) {
 		b := newHistogramPoint[N](alice, 3)
 
 		var want N
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.load())
 
 		b.sum(2)
 		want = 2
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.load())
 
 		b.sum(-1)
 		want = 1
-		assert.Equal(t, want, b.total)
+		assert.Equal(t, want, b.total.load())
 	}
 }
 
@@ -412,17 +426,25 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 
 	hPt, ok := h.values.Load(alice.Equivalent())
 	require.True(t, ok)
-	require.Equal(t, hdp.BucketCounts, hPt.(*histogramPoint[int64]).counts)
+	hcHistPt := hPt.(*hotColdHistogramPoint[int64])
+	readIdx := hcHistPt.hcwg.swapHotAndWait()
+	bucketCounts, _ := hcHistPt.hotColdPoint[readIdx].loadCounts()
+	require.Equal(t, hdp.BucketCounts, bucketCounts)
+	hotIdx := (readIdx + 1) % 2
+	hcHistPt.hotColdPoint[readIdx].mergeIntoAndReset(&hcHistPt.hotColdPoint[hotIdx], noMinMax, false)
 
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
 	hdp.BucketCounts[0] = 10
 	hPt, ok = h.values.Load(alice.Equivalent())
 	require.True(t, ok)
+	hcHistPt = hPt.(*hotColdHistogramPoint[int64])
+	readIdx = hcHistPt.hcwg.swapHotAndWait()
+	bucketCounts, _ = hcHistPt.hotColdPoint[readIdx].loadCounts()
 	assert.Equal(
 		t,
 		cpCounts,
-		hPt.(*histogramPoint[int64]).counts,
+		bucketCounts,
 		"modifying the Aggregator bucket counts should not change the Aggregator",
 	)
 }
