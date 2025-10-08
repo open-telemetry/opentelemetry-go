@@ -301,7 +301,7 @@ func newExponentialHistogram[N int64 | float64](
 		maxScale: maxScale,
 
 		newRes: r,
-		limit:  newLimiter[*expoHistogramDataPoint[N]](limit),
+		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
 		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
 
 		start: now(),
@@ -317,7 +317,7 @@ type expoHistogram[N int64 | float64] struct {
 	maxScale int32
 
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[*expoHistogramDataPoint[N]]
+	limit    limiter[expoHistogramDataPoint[N]]
 	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex
 
