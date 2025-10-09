@@ -213,12 +213,12 @@ func (c *mockCollectorConfig) fillInDefaults() {
 	}
 }
 
-func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
+func runMockCollector(tb testing.TB, cfg mockCollectorConfig) *mockCollector {
 	cfg.fillInDefaults()
 	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", cfg.Port))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	_, portStr, err := net.SplitHostPort(ln.Addr().String())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	m := &mockCollector{
 		endpoint:             fmt.Sprintf("localhost:%s", portStr),
 		spansStorage:         otlptracetest.NewSpansStorage(),
@@ -238,9 +238,9 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	}
 	if cfg.WithTLS {
 		pem, err := generateWeakCertificate()
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		tlsCertificate, err := tls.X509KeyPair(pem.Certificate, pem.PrivateKey)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		server.TLSConfig = &tls.Config{
 			Certificates: []tls.Certificate{tlsCertificate},
 		}

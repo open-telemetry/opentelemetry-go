@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
@@ -579,4 +580,53 @@ func TestClientInstrumentation(t *testing.T) {
 		metricdatatest.IgnoreValue(),
 	}
 	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		mc := runMockCollector(b, mockCollectorConfig{
+			Partial: &coltracepb.ExportTracePartialSuccess{
+				RejectedSpans: 5,
+				ErrorMessage:  "partially successful",
+			},
+		})
+		b.Cleanup(func() { require.NoError(b, mc.Stop()) })
+
+		c := otlptracehttp.NewClient(
+			otlptracehttp.WithEndpoint(mc.Endpoint()),
+			otlptracehttp.WithInsecure(),
+		)
+		exp, err := otlptrace.New(b.Context(), c)
+		require.NoError(b, err)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
+
+		stubs := make([]tracetest.SpanStub, n)
+		for i := range stubs {
+			stubs[i].Name = fmt.Sprintf("Span %d", i)
+		}
+		spans := tracetest.SpanStubs(stubs).Snapshots()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for b.Loop() {
+			err = exp.ExportSpans(b.Context(), spans)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
+	})
 }
