@@ -1931,14 +1931,15 @@ func TestSamplerTraceState(t *testing.T) {
 }
 
 type testIDGenerator struct {
-	traceID uint64
-	spanID  uint64
+	traceIDHigh uint64
+	traceIDLow  uint64
+	spanID      uint64
 }
 
 func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
-	traceIDHex := fmt.Sprintf("%032x", gen.traceID)
+	traceIDHex := fmt.Sprintf("%016x%016x", gen.traceIDHigh, gen.traceIDLow)
 	traceID, _ := trace.TraceIDFromHex(traceIDHex)
-	gen.traceID++
+	gen.traceIDLow++
 
 	spanID := gen.NewSpanID(ctx, traceID)
 	return traceID, spanID
@@ -1955,12 +1956,13 @@ var _ IDGenerator = (*testIDGenerator)(nil)
 
 func TestWithIDGenerator(t *testing.T) {
 	const (
-		startTraceID = 0x1001_1001_1001_1001
-		startSpanID  = 0x2001_2001_2001_2001
-		numSpan      = 5
+		startTraceIDHigh uint64 = 0x1001_1001_1001_1001
+		startTraceIDLow  uint64 = 0x2002_2002_2002_2002
+		startSpanID      uint64 = 0x3003_3003_3003_3003
+		numSpan                 = 5
 	)
 
-	gen := &testIDGenerator{traceID: startTraceID, spanID: startSpanID}
+	gen := &testIDGenerator{traceIDHigh: startTraceIDHigh, traceIDLow: startTraceIDLow, spanID: startSpanID}
 	te := NewTestExporter()
 	tp := NewTracerProvider(
 		WithSyncer(te),
@@ -1973,11 +1975,19 @@ func TestWithIDGenerator(t *testing.T) {
 
 			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startSpanID)+uint64(i), gotSpanID)
+			assert.Equal(t, startSpanID+uint64(i), gotSpanID)
 
-			gotTraceID, err := strconv.ParseUint(span.SpanContext().TraceID().String(), 16, 64)
-			require.NoError(t, err)
-			assert.Equal(t, uint64(startTraceID)+uint64(i), gotTraceID)
+			traceIdStr := span.SpanContext().TraceID().String()
+			highBitsStr := traceIdStr[:16]
+			lowBitsStr := traceIdStr[16:]
+
+			traceIdValidator := func(t *testing.T, id string, expected uint64) {
+				gotTraceID, err := strconv.ParseUint(id, 16, 64)
+				require.NoError(t, err)
+				assert.Equal(t, expected, gotTraceID)
+			}
+			traceIdValidator(t, highBitsStr, startTraceIDHigh)
+			traceIdValidator(t, lowBitsStr, startTraceIDLow+uint64(i))
 		}()
 	}
 }
