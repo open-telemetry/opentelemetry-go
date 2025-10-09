@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

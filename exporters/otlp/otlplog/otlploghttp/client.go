@@ -22,6 +22,7 @@ import (
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
