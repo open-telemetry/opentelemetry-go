@@ -38,7 +38,7 @@ const (
 	// Version is the current version of this instrumentation.
 	//
 	// This matches the version of the exporter.
-	Version = "1.38.0" // TODO: get from internal package (#7479)
+	Version = internal.Version
 )
 
 var (
