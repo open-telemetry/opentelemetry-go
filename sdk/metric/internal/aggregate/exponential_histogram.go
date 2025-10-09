@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -18,35 +19,26 @@ import (
 const (
 	expoMaxScale = 20
 	expoMinScale = -10
-
-	smallestNonZeroNormalFloat64 = 0x1p-1022
-
-	// These redefine the Math constants with a type, so the compiler won't coerce
-	// them into an int on 32 bit platforms.
-	maxInt64 int64 = math.MaxInt64
-	minInt64 int64 = math.MinInt64
 )
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
-	sync.Mutex
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
 
-	count uint64
-	min   N
-	max   N
-	sum   N
+	count     atomic.Uint64
+	minMax    atomicMinMax[N]
+	sum       atomicCounter[N]
+	zeroCount atomic.Uint64
 
 	maxSize  int
 	noMinMax bool
 	noSum    bool
 
-	scale int32
-
+	scaleMux   sync.Mutex
+	scale      int32
 	posBuckets expoBuckets
 	negBuckets expoBuckets
-	zeroCount  uint64
 }
 
 func newExpoHistogramDataPoint[N int64 | float64](
@@ -55,17 +47,8 @@ func newExpoHistogramDataPoint[N int64 | float64](
 	maxScale int32,
 	noMinMax, noSum bool,
 ) *expoHistogramDataPoint[N] { // nolint:revive // we need this control flag
-	f := math.MaxFloat64
-	ma := N(f) // if N is int64, max will overflow to -9223372036854775808
-	mi := N(-f)
-	if N(maxInt64) > N(f) {
-		ma = N(maxInt64)
-		mi = N(minInt64)
-	}
 	return &expoHistogramDataPoint[N]{
 		attrs:    attrs,
-		min:      ma,
-		max:      mi,
 		maxSize:  maxSize,
 		noMinMax: noMinMax,
 		noSum:    noSum,
@@ -75,29 +58,24 @@ func newExpoHistogramDataPoint[N int64 | float64](
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
-	p.Lock()
-	defer p.Unlock()
-	p.count++
+	p.count.Add(1)
 
 	if !p.noMinMax {
-		if v < p.min {
-			p.min = v
-		}
-		if v > p.max {
-			p.max = v
-		}
+		p.minMax.observe(v)
 	}
 	if !p.noSum {
-		p.sum += v
+		p.sum.add(v)
 	}
 
 	absV := math.Abs(float64(v))
 
 	if float64(absV) == 0.0 {
-		p.zeroCount++
+		p.zeroCount.Add(1)
 		return
 	}
 
+	p.scaleMux.Lock()
+	defer p.scaleMux.Unlock()
 	bin := p.getBin(absV)
 
 	bucket := &p.posBuckets
@@ -371,14 +349,12 @@ func (e *deltaExpoHistogram[N]) collect(
 	var i int
 	e.hotColdValMap[readIdx].Range(func(_, value any) bool {
 		val := value.(*expoHistogramDataPoint[N])
-		val.Lock()
-		defer val.Unlock()
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.count
+		hDPts[i].Count = val.count.Load()
 		hDPts[i].Scale = val.scale
-		hDPts[i].ZeroCount = val.zeroCount
+		hDPts[i].ZeroCount = val.zeroCount.Load()
 		hDPts[i].ZeroThreshold = 0.0
 
 		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
@@ -398,11 +374,13 @@ func (e *deltaExpoHistogram[N]) collect(
 		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
 
 		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			hDPts[i].Sum = val.sum.load()
 		}
 		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			if minimum, maximum, ok := val.minMax.load(); ok {
+				hDPts[i].Min = metricdata.NewExtrema(minimum)
+				hDPts[i].Max = metricdata.NewExtrema(maximum)
+			}
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
@@ -493,15 +471,13 @@ func (e *cumulativeExpoHistogram[N]) collect(
 	var i int
 	e.values.Range(func(_, value any) bool {
 		val := value.(*expoHistogramDataPoint[N])
-		val.Lock()
-		defer val.Unlock()
 		newPt := metricdata.ExponentialHistogramDataPoint[N]{
 			Attributes:    val.attrs,
 			StartTime:     e.start,
 			Time:          t,
-			Count:         val.count,
+			Count:         val.count.Load(),
 			Scale:         val.scale,
-			ZeroCount:     val.zeroCount,
+			ZeroCount:     val.zeroCount.Load(),
 			ZeroThreshold: 0.0,
 		}
 
@@ -522,11 +498,13 @@ func (e *cumulativeExpoHistogram[N]) collect(
 		copy(newPt.NegativeBucket.Counts, val.negBuckets.counts)
 
 		if !e.noSum {
-			newPt.Sum = val.sum
+			newPt.Sum = val.sum.load()
 		}
 		if !e.noMinMax {
-			newPt.Min = metricdata.NewExtrema(val.min)
-			newPt.Max = metricdata.NewExtrema(val.max)
+			if minimum, maximum, ok := val.minMax.load(); ok {
+				newPt.Min = metricdata.NewExtrema(minimum)
+				newPt.Max = metricdata.NewExtrema(maximum)
+			}
 		}
 
 		collectExemplars(&newPt.Exemplars, val.res.Collect)
