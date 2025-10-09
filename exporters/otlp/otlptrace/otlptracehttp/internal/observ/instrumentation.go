@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
@@ -110,9 +110,7 @@ type Instrumentation struct {
 //
 // If the experimental observability is disabled, nil is returned.
 func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
-	// TODO: Use internal/x when #7476 is merged.
-	envVal := strings.TrimSpace(os.Getenv("OTEL_GO_X_OBSERVABILITY"))
-	if !strings.EqualFold(envVal, "true") {
+	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 
