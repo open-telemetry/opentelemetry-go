@@ -180,7 +180,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 					msg := respProto.PartialSuccess.GetErrorMessage()
 					n := respProto.PartialSuccess.GetRejectedLogRecords()
 					if n != 0 || msg != "" {
-						err := errPartial{msg: msg, n: n}
+						err := internal.LogPartialSuccessError(n, msg)
 						uploadErr = errors.Join(uploadErr, err)
 					}
 				}
@@ -215,23 +215,6 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			return fmt.Errorf("failed to send logs to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	}))
-}
-
-type errPartial struct {
-	msg string
-	n   int64
-}
-
-var _ error = errPartial{}
-
-func (e errPartial) Error() string {
-	const form = "OTLP partial success: %s (%d log records rejected)"
-	return fmt.Sprintf(form, e.msg, e.n)
-}
-
-func (errPartial) Is(target error) bool {
-	_, ok := target.(errPartial)
-	return ok
 }
 
 var gzPool = sync.Pool{

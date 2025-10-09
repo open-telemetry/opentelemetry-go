@@ -548,7 +548,7 @@ func TestClient(t *testing.T) {
 		ctx := t.Context()
 		client, _ := factory(rCh)
 
-		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
