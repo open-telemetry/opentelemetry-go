@@ -104,8 +104,15 @@ func (s *deltaHistogram[N]) measure(
 	defer s.hcwg.done(hotIdx)
 	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		hPt := &histogramPoint[N]{
-			res:                    s.newRes(attr),
-			attrs:                  attr,
+			res:   s.newRes(attr),
+			attrs: attr,
+			// N+1 buckets. For example:
+			//
+			//   bounds = [0, 5, 10]
+			//
+			// Then,
+			//
+			//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
@@ -261,6 +268,13 @@ func (s *cumulativeHistogram[N]) measure(
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			// N+1 buckets. For example:
+			//
+			//   bounds = [0, 5, 10]
+			//
+			// Then,
+			//
+			//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 			hotColdPoint: [2]histogramPointCounters[N]{
 				{
 					counts: make([]atomic.Uint64, len(s.bounds)+1),
