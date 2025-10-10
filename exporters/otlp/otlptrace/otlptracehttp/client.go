@@ -24,6 +24,8 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/retry"
 )
@@ -62,6 +64,9 @@ type client struct {
 	client      *http.Client
 	stopCh      chan struct{}
 	stopOnce    sync.Once
+
+	instID int64
+	inst   *observ.Instrumentation
 }
 
 var _ otlptrace.Client = (*client)(nil)
@@ -99,18 +104,29 @@ func NewClient(opts ...Option) otlptrace.Client {
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		stopCh:      stopCh,
 		client:      httpClient,
+		instID:      counter.NextExporterID(),
 	}
 }
 
 // Start does nothing in a HTTP client.
-func (*client) Start(ctx context.Context) error {
+func (c *client) Start(ctx context.Context) error {
+	// Initialize the instrumentation if not already done.
+	//
+	// Initialize here instead of NewClient to allow any errors to be passed
+	// back to the caller and so that any setup of the environment variables to
+	// enable instrumentation can be set via code.
+	var err error
+	if c.inst == nil {
+		c.inst, err = observ.NewInstrumentation(c.instID, c.cfg.Endpoint)
+	}
+
 	// nothing to do
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		err = errors.Join(err, ctx.Err())
 	default:
 	}
-	return nil
+	return err
 }
 
 // Stop shuts down the client and interrupt any in-flight request.
@@ -144,6 +160,12 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		return err
 	}
 
+	var statusCode int
+	if d.inst != nil {
+		op := d.inst.ExportSpans(ctx, len(protoSpans))
+		defer func() { op.End(uploadErr, statusCode) }()
+	}
+
 	return errors.Join(uploadErr, d.requestFunc(ctx, func(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
@@ -169,7 +191,8 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}()
 		}
 
-		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
+		statusCode = resp.StatusCode
+		if statusCode >= 200 && statusCode <= 299 {
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
@@ -213,7 +236,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		}
 		bodyErr := fmt.Errorf("body: %s", respStr)
 
-		switch resp.StatusCode {
+		switch statusCode {
 		case http.StatusTooManyRequests,
 			http.StatusBadGateway,
 			http.StatusServiceUnavailable,
