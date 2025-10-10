@@ -14,10 +14,21 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+// histogramPoint is a single histogram point, used in delta aggregations.
 type histogramPoint[N int64 | float64] struct {
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
 	histogramPointCounters[N]
+}
+
+// hotColdHistogramPoint a hot and cold histogram points, used in cumulative
+// aggregations.
+type hotColdHistogramPoint[N int64 | float64] struct {
+	hcwg         hotColdWaitGroup
+	hotColdPoint [2]histogramPointCounters[N]
+
+	attrs attribute.Set
+	res   FilteredExemplarReservoir[N]
 }
 
 // histogramPointCounters contains only the atomic counter data, and is used by
@@ -40,17 +51,18 @@ func (b *histogramPointCounters[N]) bin(bounds []float64, value N) {
 	b.counts[idx].Add(1)
 }
 
-func (b *histogramPointCounters[N]) loadCounts() ([]uint64, uint64) {
+func (b *histogramPointCounters[N]) loadCountsInto(into *[]uint64) uint64 {
 	// TODO (#3047): Making copies for bounds and counts incurs a large
 	// memory allocation footprint. Alternatives should be explored.
-	counts := make([]uint64, len(b.counts))
+	counts := reset(*into, len(b.counts), len(b.counts))
 	count := uint64(0)
-	for i := range counts {
+	for i := range b.counts {
 		c := b.counts[i].Load()
 		counts[i] = c
 		count += c
 	}
-	return counts, count
+	*into = counts
+	return count
 }
 
 // mergeIntoAndReset merges this set of histogram counter data into another,
@@ -179,13 +191,13 @@ func (s *deltaHistogram[N]) collect(
 	var i int
 	s.hotColdValMap[readIdx].Range(func(_, value any) bool {
 		val := value.(*histogramPoint[N])
-		bucketCounts, count := val.loadCounts()
+
+		count := val.loadCountsInto(&hDPts[i].BucketCounts)
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
 		hDPts[i].Time = t
 		hDPts[i].Count = count
 		hDPts[i].Bounds = bounds
-		hDPts[i].BucketCounts = bucketCounts
 
 		if !s.noSum {
 			hDPts[i].Sum = val.total.load()
@@ -248,14 +260,6 @@ func newCumulativeHistogram[N int64 | float64](
 		newRes:   r,
 		values:   limitedSyncMap{aggLimit: limit},
 	}
-}
-
-type hotColdHistogramPoint[N int64 | float64] struct {
-	hcwg         hotColdWaitGroup
-	hotColdPoint [2]histogramPointCounters[N]
-
-	attrs attribute.Set
-	res   FilteredExemplarReservoir[N]
 }
 
 func (s *cumulativeHistogram[N]) measure(
@@ -322,7 +326,8 @@ func (s *cumulativeHistogram[N]) collect(
 		val := value.(*hotColdHistogramPoint[N])
 		// swap, observe, and clear the point
 		readIdx := val.hcwg.swapHotAndWait()
-		bucketCounts, count := val.hotColdPoint[readIdx].loadCounts()
+		var bucketCounts []uint64
+		count := val.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 		newPt := metricdata.HistogramDataPoint[N]{
 			Attributes: val.attrs,
 			StartTime:  s.start,
