@@ -76,3 +76,73 @@ func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestAtomicN(t *testing.T) {
+	t.Run("Int64", testAtomicN[int64])
+	t.Run("Float64", testAtomicN[float64])
+
+}
+
+func testAtomicN[N int64 | float64](t *testing.T) {
+	var v atomicN[N]
+	assert.Equal(t, N(0), v.Load())
+	assert.True(t, v.CompareAndSwap(0, 6))
+	assert.Equal(t, N(6), v.Load())
+	assert.False(t, v.CompareAndSwap(0, 6))
+	v.Store(22)
+	assert.Equal(t, N(22), v.Load())
+}
+
+func TestAtomicNConcurrentSafe(t *testing.T) {
+	t.Run("Int64", testAtomicNConcurrentSafe[int64])
+	t.Run("Float64", testAtomicNConcurrentSafe[float64])
+}
+
+func testAtomicNConcurrentSafe[N int64 | float64](t *testing.T) {
+	var wg sync.WaitGroup
+	var v atomicN[N]
+
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got := v.Load()
+			assert.Equal(t, int64(0), int64(got)%6)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			v.Store(12)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			v.CompareAndSwap(0, 6)
+		}()
+	}
+	wg.Wait()
+}
+
+func TestAtomicMinMaxConcurrentSafe(t *testing.T) {
+	t.Run("Int64", testAtomicMinMaxConcurrentSafe[int64])
+	t.Run("Float64", testAtomicMinMaxConcurrentSafe[float64])
+}
+
+func testAtomicMinMaxConcurrentSafe[N int64 | float64](t *testing.T) {
+	var wg sync.WaitGroup
+	var minMax atomicMinMax[N]
+
+	assert.False(t, minMax.set.Load())
+	for _, i := range []float64{2, 4, 6, 8, -3, 0, 8, 0} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			minMax.Update(N(i))
+		}()
+	}
+	wg.Wait()
+
+	assert.True(t, minMax.set.Load())
+	assert.Equal(t, N(-3), minMax.minimum.Load())
+	assert.Equal(t, N(8), minMax.maximum.Load())
+}

@@ -352,24 +352,23 @@ func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 			bucketCounts, count := b.loadCounts()
 			assert.Equal(t, expectedBucketCounts, bucketCounts)
 			assert.Equal(t, expectedCount, count)
-			minimum, maximum, ok := b.minMax.load()
 			if mi != 0 {
-				assert.True(t, ok)
-				assert.Equal(t, mi, minimum)
+				assert.True(t, b.minMax.set.Load())
+				assert.Equal(t, mi, b.minMax.minimum.Load())
 			}
 			if ma != 0 {
-				assert.True(t, ok)
-				assert.Equal(t, ma, maximum)
+				assert.True(t, b.minMax.set.Load())
+				assert.Equal(t, ma, b.minMax.maximum.Load())
 			}
 		}
 
 		bounds := []float64{0, 2, 4}
 		assertB([]uint64{0, 0, 0}, 0, 0, 0)
 		b.bin(bounds, 1)
-		b.minMax.observe(2)
+		b.minMax.Update(2)
 		assertB([]uint64{0, 1, 0}, 1, 0, 2)
 		b.bin(bounds, -1)
-		b.minMax.observe(-1)
+		b.minMax.Update(-1)
 		assertB([]uint64{1, 1, 0}, 2, -1, 2)
 	}
 }

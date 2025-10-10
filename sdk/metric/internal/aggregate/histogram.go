@@ -70,9 +70,9 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 		// Do not reset min or max because cumulative min and max only ever grow
 		// smaller or larger respectively.
 
-		if minimum, maximum, ok := b.minMax.load(); ok {
-			into.minMax.observe(minimum)
-			into.minMax.observe(maximum)
+		if b.minMax.set.Load() {
+			into.minMax.Update(b.minMax.minimum.Load())
+			into.minMax.Update(b.minMax.maximum.Load())
 		}
 	}
 	if !noSum {
@@ -113,7 +113,7 @@ func (s *deltaHistogram[N]) measure(
 
 	h.bin(s.bounds, value)
 	if !s.noMinMax {
-		h.minMax.observe(value)
+		h.minMax.Update(value)
 	}
 	if !s.noSum {
 		h.sum(value)
@@ -185,9 +185,9 @@ func (s *deltaHistogram[N]) collect(
 		}
 
 		if !s.noMinMax {
-			if minimum, maximum, ok := val.minMax.load(); ok {
-				hDPts[i].Min = metricdata.NewExtrema(minimum)
-				hDPts[i].Max = metricdata.NewExtrema(maximum)
+			if val.minMax.set.Load() {
+				hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+				hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
 			}
 		}
 
@@ -278,7 +278,7 @@ func (s *cumulativeHistogram[N]) measure(
 
 	h.hotColdPoint[hotIdx].bin(s.bounds, value)
 	if !s.noMinMax {
-		h.hotColdPoint[hotIdx].minMax.observe(value)
+		h.hotColdPoint[hotIdx].minMax.Update(value)
 	}
 	if !s.noSum {
 		h.hotColdPoint[hotIdx].sum(value)
@@ -324,9 +324,9 @@ func (s *cumulativeHistogram[N]) collect(
 			newPt.Sum = val.hotColdPoint[readIdx].total.load()
 		}
 		if !s.noMinMax {
-			if minimum, maximum, ok := val.hotColdPoint[readIdx].minMax.load(); ok {
-				newPt.Min = metricdata.NewExtrema(minimum)
-				newPt.Max = metricdata.NewExtrema(maximum)
+			if val.hotColdPoint[readIdx].minMax.set.Load() {
+				newPt.Min = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.minimum.Load())
+				newPt.Max = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.maximum.Load())
 			}
 		}
 		// Once we've read the point, merge it back into the hot histogram
