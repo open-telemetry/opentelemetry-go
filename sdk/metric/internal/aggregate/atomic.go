@@ -57,61 +57,89 @@ func (n *atomicCounter[N]) reset() {
 	n.nInt.Store(0)
 }
 
-// atomicIntOrFloat is an atomic type that can be an int64 or float64.
-type atomicIntOrFloat[N int64 | float64] struct {
-	// nFloatBits contains the float bits if N is float64.
-	nFloatBits atomic.Uint64
-	// nInt contains the int64 if N is int64
-	nInt atomic.Int64
+// atomicN is a generic atomic number value
+type atomicN[N int64 | float64] struct {
+	val atomic.Uint64
 }
 
-func (n *atomicIntOrFloat[N]) load() (value N) {
+func (a *atomicN[N]) Load() (value N) {
+	v := a.val.Load()
 	switch any(value).(type) {
 	case int64:
-		value = N(n.nInt.Load())
+		value = N(v)
 	case float64:
-		value = N(math.Float64frombits(n.nFloatBits.Load()))
+		value = N(math.Float64frombits(v))
+	default:
+		panic("unsupported type")
 	}
 	return value
 }
 
-func (n *atomicIntOrFloat[N]) compareAndSwap(oldVal, newVal N) bool {
-	switch any(oldVal).(type) {
+func (a *atomicN[N]) Store(v N) {
+	var val uint64
+	switch any(v).(type) {
+	case int64:
+		val = uint64(v)
 	case float64:
-		return n.nFloatBits.CompareAndSwap(math.Float64bits(float64(oldVal)), math.Float64bits(float64(newVal)))
+		val = math.Float64bits(float64(v))
 	default:
-		return n.nInt.CompareAndSwap(int64(oldVal), int64(newVal))
+		panic("unsupported type")
 	}
+	a.val.Store(val)
+}
+
+func (a *atomicN[N]) CompareAndSwap(old, new N) bool {
+	var o, n uint64
+	switch any(old).(type) {
+	case int64:
+		o, n = uint64(old), uint64(new)
+	case float64:
+		o, n = math.Float64bits(float64(old)), math.Float64bits(float64(new))
+	default:
+		panic("unsupported type")
+	}
+	return a.val.CompareAndSwap(o, n)
 }
 
 type atomicMinMax[N int64 | float64] struct {
-	minimum atomicIntOrFloat[N]
-	maximum atomicIntOrFloat[N]
-	isSet   atomic.Bool
+	minimum, maximum atomicN[N]
+	set              atomic.Bool
+	mu               sync.Mutex
 }
 
-func (n *atomicMinMax[N]) observe(value N) {
-	isSet := n.isSet.Load()
-	for {
-		minLoaded := n.minimum.load()
-		if ((!isSet && minLoaded == 0) || value < minLoaded) && !n.minimum.compareAndSwap(minLoaded, value) {
-			// We got a new min value, but lost the race. Try again.
-			continue
-		}
-		maxLoaded := n.maximum.load()
-		if ((!isSet && minLoaded == 0) || value > maxLoaded) && !n.maximum.compareAndSwap(maxLoaded, value) {
-			// We got a new max value, but lost the race. Try again.
-			continue
-		}
-		break
+// init returns true if the value was used to initialize min and max.
+func (s *atomicMinMax[N]) init(val N) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.set.Load() {
+		defer s.set.Store(true)
+		s.minimum.Store(val)
+		s.maximum.Store(val)
+		return true
 	}
-	if !isSet {
-		n.isSet.Store(true)
-	}
+	return false
 }
 
-func (n *atomicMinMax[N]) load() (minimum, maximum N, ok bool) {
-	return n.minimum.load(), n.maximum.load(), n.isSet.Load()
+func (s *atomicMinMax[N]) Update(val N) {
+	if !s.set.Load() && s.init(val) {
+		return
+	}
+
+	old := s.minimum.Load()
+	for val < old {
+		if s.minimum.CompareAndSwap(old, val) {
+			return
+		}
+		old = s.minimum.Load()
+	}
+
+	old = s.maximum.Load()
+	for old < val {
+		if s.maximum.CompareAndSwap(old, val) {
+			return
+		}
+		old = s.maximum.Load()
+	}
 }
 
 // hotColdWaitGroup is a synchronization primitive which enables lockless
