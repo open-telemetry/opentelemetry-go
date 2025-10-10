@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/sdk/internal/env"
+	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
 )
