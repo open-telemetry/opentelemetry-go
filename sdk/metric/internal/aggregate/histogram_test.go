@@ -349,7 +349,8 @@ func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 		b := newHistogramPoint[N](alice, 3)
 		assertB := func(expectedBucketCounts []uint64, expectedCount uint64, mi, ma N) {
 			t.Helper()
-			bucketCounts, count := b.loadCounts()
+			var bucketCounts []uint64
+			count := b.loadCountsInto(&bucketCounts)
 			assert.Equal(t, expectedBucketCounts, bucketCounts)
 			assert.Equal(t, expectedCount, count)
 			if mi != 0 {
@@ -427,7 +428,8 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	require.True(t, ok)
 	hcHistPt := hPt.(*hotColdHistogramPoint[int64])
 	readIdx := hcHistPt.hcwg.swapHotAndWait()
-	bucketCounts, _ := hcHistPt.hotColdPoint[readIdx].loadCounts()
+	var bucketCounts []uint64
+	hcHistPt.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 	require.Equal(t, hdp.BucketCounts, bucketCounts)
 	hotIdx := (readIdx + 1) % 2
 	hcHistPt.hotColdPoint[readIdx].mergeIntoAndReset(&hcHistPt.hotColdPoint[hotIdx], noMinMax, false)
@@ -439,7 +441,7 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	require.True(t, ok)
 	hcHistPt = hPt.(*hotColdHistogramPoint[int64])
 	readIdx = hcHistPt.hcwg.swapHotAndWait()
-	bucketCounts, _ = hcHistPt.hotColdPoint[readIdx].loadCounts()
+	hcHistPt.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 	assert.Equal(
 		t,
 		cpCounts,
