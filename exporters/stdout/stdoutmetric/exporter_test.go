@@ -215,7 +215,7 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 	}{
 		{
 			name:                     "Enabled",
-			ctx:                      context.Background(),
+			ctx:                      t.Context(),
 			exporterOpts:             []stdoutmetric.Option{testEncoderOption()},
 			selfObservabilityEnabled: true,
 			expectedExportedCount:    19,
@@ -224,14 +224,14 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 		},
 		{
 			name:                     "Disabled",
-			ctx:                      context.Background(),
+			ctx:                      t.Context(),
 			exporterOpts:             []stdoutmetric.Option{testEncoderOption()},
 			selfObservabilityEnabled: false,
 			expectedExportedCount:    0,
 		},
 		{
 			name:                     "EncodingError",
-			ctx:                      context.Background(),
+			ctx:                      t.Context(),
 			exporterOpts:             []stdoutmetric.Option{stdoutmetric.WithEncoder(failingEncoder{})},
 			selfObservabilityEnabled: true,
 			expectedExportedCount:    19,
@@ -438,7 +438,7 @@ func TestExporter_Export_EncodingErrorTracking(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	err = exp.Export(ctx, rm)
 	assert.EqualError(t, err, "encoding failed")
 

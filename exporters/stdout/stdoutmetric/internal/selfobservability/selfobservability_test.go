@@ -45,7 +45,7 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 	return &testSetup{
 		reader: reader,
 		mp:     mp,
-		ctx:    context.Background(),
+		ctx:    t.Context(),
 		em:     em,
 	}
 }
@@ -173,9 +173,9 @@ func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 	assert.Contains(t, em.attrs, componentName)
 	assert.Contains(t, em.attrs, componentType)
 
-	done := em.TrackExport(context.Background(), 1)
+	done := em.TrackExport(t.Context(), 1)
 	done(errors.New("test error"))
-	done = em.TrackExport(context.Background(), 1)
+	done = em.TrackExport(t.Context(), 1)
 	done(nil)
 
 	assert.Len(t, em.attrs, 2)

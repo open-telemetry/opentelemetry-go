@@ -77,7 +77,7 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	defer func() { trackExportFunc(err) }()
 	err = ctx.Err()
 	if err != nil {
-		return
+		return err
 	}
 	if e.redactTimestamps {
 		redactTimestamps(data)
