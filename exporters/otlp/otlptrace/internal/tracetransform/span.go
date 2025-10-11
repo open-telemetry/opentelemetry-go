@@ -173,10 +173,8 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 }
 
 func buildSpanFlagsWith(tf trace.TraceFlags, parent trace.SpanContext) uint32 {
-	// Lower 8 bits are the W3C TraceFlags
-	flags := uint32(byte(tf) & 0xff)
-	// Always indicate that we know whether the parent is remote
-	flags |= uint32(tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK)
+	// Lower 8 bits are the W3C TraceFlags; always indicate that we know whether the parent is remote
+	flags := uint32(tf) | uint32(tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK)
 	// Set the parent-is-remote bit when applicable
 	if parent.IsRemote() {
 		flags |= uint32(tracepb.SpanFlags_SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK)
