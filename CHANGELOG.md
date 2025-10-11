@@ -19,8 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#7353)
 - Add experimental observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#7459)
 - Add experimental observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7486)
-- Add experimental observability for simple span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
-  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7374)
+- Add experimental observability metrics for simple span processor in `go.opentelemetry.io/otel/sdk/trace`. (#7374)
 
 ### Fixed
 
