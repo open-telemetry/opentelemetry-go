@@ -45,7 +45,7 @@ func (failingEncoder) Encode(any) error {
 func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx := context.Background()
+		ctx := t.Context()
 
 		t.Run("DeadlineExceeded", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithTimeout(ctx, time.Nanosecond)
@@ -74,7 +74,7 @@ func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) fun
 func testCtxErrIgnored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx := context.Background()
+		ctx := t.Context()
 
 		t.Run("Canceled Ignored", func(t *testing.T) {
 			innerCtx, innerCancel := context.WithCancel(ctx)
@@ -121,7 +121,7 @@ func TestExporterShutdownIgnoresContextErrors(t *testing.T) {
 func TestShutdownExporterReturnsShutdownErrorOnExport(t *testing.T) {
 	var (
 		data     = new(metricdata.ResourceMetrics)
-		ctx      = context.Background()
+		ctx      = t.Context()
 		exp, err = stdoutmetric.New(testEncoderOption())
 	)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func deltaSelector(metric.InstrumentKind) metricdata.Temporality {
 func TestExportWithOptions(t *testing.T) {
 	var (
 		data = new(metricdata.ResourceMetrics)
-		ctx  = context.Background()
+		ctx  = t.Context()
 	)
 
 	for _, tt := range []struct {

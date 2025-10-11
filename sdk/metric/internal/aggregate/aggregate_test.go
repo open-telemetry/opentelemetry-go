@@ -6,6 +6,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
 					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
 				})
-				meas(context.Background(), value, attr)
+				meas(t.Context(), value, attr)
 			}
 		}
 
@@ -138,6 +139,49 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 	}
 }
 
+func testAggergationConcurrentSafe[N int64 | float64](
+	meas Measure[N],
+	comp ComputeAggregation,
+	validate func(t *testing.T, agg metricdata.Aggregation),
+) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+
+		got := new(metricdata.Aggregation)
+		ctx := t.Context()
+		var wg sync.WaitGroup
+		for _, args := range []arg[N]{
+			{ctx, 2, alice},
+			{ctx, 6, alice},
+			{ctx, 4, alice},
+			{ctx, 10, alice},
+			{ctx, 22, alice},
+			{ctx, -3, bob},
+			{ctx, -6, bob},
+			{ctx, 3, bob},
+			{ctx, 6, bob},
+		} {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				meas(args.ctx, args.value, args.attr)
+			}()
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range 2 {
+				comp(got)
+				// We do not check expected output for each step because
+				// computeAggregation is run concurrently with steps. Instead,
+				// we validate that the output is a valid possible output.
+				validate(t, *got)
+			}
+		}()
+		wg.Wait()
+	}
+}
+
 func benchmarkAggregate[N int64 | float64](factory func() (Measure[N], ComputeAggregation)) func(*testing.B) {
 	counts := []int{1, 10, 100}
 	return func(b *testing.B) {
@@ -152,7 +196,7 @@ func benchmarkAggregate[N int64 | float64](factory func() (Measure[N], ComputeAg
 var bmarkRes metricdata.Aggregation
 
 func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measure[N], ComputeAggregation), count int) {
-	ctx := context.Background()
+	ctx := b.Context()
 	attrs := make([]attribute.Set, count)
 	for i := range attrs {
 		attrs[i] = attribute.NewSet(attribute.Int("value", i))

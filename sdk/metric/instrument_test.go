@@ -4,7 +4,6 @@
 package metric
 
 import (
-	"context"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -42,7 +41,7 @@ func BenchmarkInstrument(b *testing.B) {
 		meas = append(meas, in)
 
 		inst := int64Inst{measures: meas}
-		ctx := context.Background()
+		ctx := b.Context()
 
 		b.ReportAllocs()
 		b.ResetTimer()

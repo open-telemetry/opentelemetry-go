@@ -73,7 +73,7 @@ func TestLoggerEmit(t *testing.T) {
 	))
 
 	contextWithSpanContext := trace.ContextWithSpanContext(
-		context.Background(),
+		t.Context(),
 		trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID:    trace.TraceID{0o1},
 			SpanID:     trace.SpanID{0o2},
@@ -91,7 +91,7 @@ func TestLoggerEmit(t *testing.T) {
 		{
 			name:   "NoProcessors",
 			logger: newLogger(NewLoggerProvider(), instrumentation.Scope{}),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			record: r,
 		},
 		{
@@ -103,7 +103,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithAttributeCountLimit(2),
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			record: r,
 			expectedRecords: []Record{
 				{
@@ -133,7 +133,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithAttributeCountLimit(2),
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx: context.Background(),
+			ctx: t.Context(),
 		},
 		{
 			name: "WithTraceSpanInContext",
@@ -178,7 +178,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithAttributeCountLimit(2),
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			record: r,
 			expectedRecords: []Record{
 				{
@@ -209,7 +209,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithAttributeCountLimit(2),
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			record: rWithNoObservedTimestamp,
 			expectedRecords: []Record{
 				{
@@ -241,7 +241,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 				WithAllowKeyDuplication(),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			record: rWithAllowKeyDuplication,
 			expectedRecords: []Record{
 				{
@@ -274,7 +274,7 @@ func TestLoggerEmit(t *testing.T) {
 				WithAttributeCountLimit(5),
 				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			record: rWithDuplicatesInBody,
 			expectedRecords: []Record{
 				{
@@ -332,7 +332,7 @@ func TestLoggerEnabled(t *testing.T) {
 		{
 			name:     "NoProcessors",
 			logger:   newLogger(NewLoggerProvider(), instrumentation.Scope{}),
-			ctx:      context.Background(),
+			ctx:      t.Context(),
 			expected: false,
 		},
 		{
@@ -341,7 +341,7 @@ func TestLoggerEnabled(t *testing.T) {
 				WithProcessor(p0),
 				WithProcessor(p1),
 			), instrumentation.Scope{Name: "scope"}),
-			ctx: context.Background(),
+			ctx: t.Context(),
 			param: log.EnabledParameters{
 				Severity:  log.SeverityInfo,
 				EventName: "test_event",
@@ -359,7 +359,7 @@ func TestLoggerEnabled(t *testing.T) {
 			logger: newLogger(NewLoggerProvider(
 				WithProcessor(p2WithDisabled),
 			), instrumentation.Scope{}),
-			ctx:              context.Background(),
+			ctx:              t.Context(),
 			expected:         false,
 			expectedP2Params: []EnabledParameters{{}},
 		},
@@ -369,7 +369,7 @@ func TestLoggerEnabled(t *testing.T) {
 				WithProcessor(p2WithDisabled),
 				WithProcessor(p0),
 			), instrumentation.Scope{}),
-			ctx:              context.Background(),
+			ctx:              t.Context(),
 			expected:         true,
 			expectedP2Params: []EnabledParameters{{}},
 			expectedP0Params: []EnabledParameters{{}},
@@ -402,30 +402,30 @@ func TestLoggerEnabled(t *testing.T) {
 	}
 }
 
-func TestLoggerSelfObservability(t *testing.T) {
+func TestLoggerObservability(t *testing.T) {
 	testCases := []struct {
-		name                     string
-		selfObservabilityEnabled bool
-		records                  []log.Record
-		wantLogRecordCount       int64
+		name               string
+		enabled            bool
+		records            []log.Record
+		wantLogRecordCount int64
 	}{
 		{
-			name:                     "Disabled",
-			selfObservabilityEnabled: false,
-			records:                  []log.Record{{}, {}},
-			wantLogRecordCount:       0,
+			name:               "Disabled",
+			enabled:            false,
+			records:            []log.Record{{}, {}},
+			wantLogRecordCount: 0,
 		},
 		{
-			name:                     "Enabled",
-			selfObservabilityEnabled: true,
-			records:                  []log.Record{{}, {}, {}, {}, {}},
-			wantLogRecordCount:       5,
+			name:               "Enabled",
+			enabled:            true,
+			records:            []log.Record{{}, {}, {}, {}, {}},
+			wantLogRecordCount: 5,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tc.selfObservabilityEnabled))
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tc.enabled))
 			prev := otel.GetMeterProvider()
 			t.Cleanup(func() {
 				otel.SetMeterProvider(prev)
@@ -436,11 +436,11 @@ func TestLoggerSelfObservability(t *testing.T) {
 			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
 			for _, record := range tc.records {
-				l.Emit(context.Background(), record)
+				l.Emit(t.Context(), record)
 			}
 
 			gotMetrics := new(metricdata.ResourceMetrics)
-			assert.NoError(t, r.Collect(context.Background(), gotMetrics))
+			assert.NoError(t, r.Collect(t.Context(), gotMetrics))
 			if tc.wantLogRecordCount == 0 {
 				assert.Empty(t, gotMetrics.ScopeMetrics)
 				return
@@ -469,7 +469,7 @@ func TestLoggerSelfObservability(t *testing.T) {
 	}
 }
 
-func TestNewLoggerSelfObservabilityErrorHandled(t *testing.T) {
+func TestNewLoggerObservabilityErrorHandled(t *testing.T) {
 	errHandler := otel.GetErrorHandler()
 	t.Cleanup(func() {
 		otel.SetErrorHandler(errHandler)
@@ -483,7 +483,7 @@ func TestNewLoggerSelfObservabilityErrorHandled(t *testing.T) {
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
 	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError})
 
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 	_ = l
 	require.Len(t, errs, 1)

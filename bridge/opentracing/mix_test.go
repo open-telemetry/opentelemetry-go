@@ -100,7 +100,7 @@ func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
 		t.Logf("Running test case %d: %s", idx, tc.desc)
 		mockOtelTracer := newMockTracer()
-		ctx, otTracer, otelProvider := NewTracerPairWithContext(context.Background(), mockOtelTracer)
+		ctx, otTracer, otelProvider := NewTracerPairWithContext(t.Context(), mockOtelTracer)
 		otTracer.SetWarningHandler(func(msg string) {
 			t.Log(msg)
 		})
@@ -568,9 +568,8 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	return ctx
 }
 
-func generateBaggageKeys(key string) (otKey, otelKey string) {
-	otKey, otelKey = key+"-Ot", key+"-Otel"
-	return
+func generateBaggageKeys(key string) (string, string) {
+	return key + "-Ot", key + "-Otel"
 }
 
 // helpers

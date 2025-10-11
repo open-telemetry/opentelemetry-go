@@ -76,7 +76,7 @@ func TestSimpleSpanProcessorShutdown(t *testing.T) {
 		t.Error("failed to verify span export")
 	}
 
-	if err := ssp.Shutdown(context.Background()); err != nil {
+	if err := ssp.Shutdown(t.Context()); err != nil {
 		t.Errorf("shutting the SimpleSpanProcessor down: %v", err)
 	}
 	if !exporter.shutdown {
@@ -111,7 +111,7 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrentSafe(t *testing.T) {
 		}
 	}()
 
-	if err := ssp.Shutdown(context.Background()); err != nil {
+	if err := ssp.Shutdown(t.Context()); err != nil {
 		t.Errorf("shutting the SimpleSpanProcessor down: %v", err)
 	}
 	if !exporter.shutdown {
@@ -134,7 +134,7 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrentSafe2(t *testing.T) {
 	span := func(spanName string) {
 		assert.NotPanics(t, func() {
 			defer wg.Done()
-			_, span := tp.Tracer("test").Start(context.Background(), spanName)
+			_, span := tp.Tracer("test").Start(t.Context(), spanName)
 			span.End()
 		})
 	}
@@ -144,12 +144,12 @@ func TestSimpleSpanProcessorShutdownOnEndConcurrentSafe2(t *testing.T) {
 
 	wg.Wait()
 
-	assert.NoError(t, ssp.Shutdown(context.Background()))
+	assert.NoError(t, ssp.Shutdown(t.Context()))
 	assert.True(t, exporter.shutdown, "exporter shutdown")
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Nanosecond)
 	defer cancel()
 	<-ctx.Done()
 
@@ -160,7 +160,7 @@ func TestSimpleSpanProcessorShutdownHonorsContextDeadline(t *testing.T) {
 }
 
 func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	ssp := NewSimpleSpanProcessor(&simpleTestExporter{})

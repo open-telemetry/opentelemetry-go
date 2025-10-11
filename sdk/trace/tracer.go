@@ -7,9 +7,8 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -20,9 +19,7 @@ type tracer struct {
 	provider             *TracerProvider
 	instrumentationScope instrumentation.Scope
 
-	selfObservabilityEnabled bool
-	spanLiveMetric           otelconv.SDKSpanLive
-	spanStartedMetric        otelconv.SDKSpanStarted
+	inst observ.Tracer
 }
 
 var _ trace.Tracer = &tracer{}
@@ -53,33 +50,17 @@ func (tr *tracer) Start(
 
 	s := tr.newSpan(ctx, name, &config)
 	newCtx := trace.ContextWithSpan(ctx, s)
-	if tr.selfObservabilityEnabled {
-		// Check if the span has a parent span and set the origin attribute accordingly.
-		var attrParentOrigin attribute.KeyValue
-		if psc := trace.SpanContextFromContext(ctx); psc.IsValid() {
-			if psc.IsRemote() {
-				attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginRemote)
-			} else {
-				attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginLocal)
-			}
-		} else {
-			attrParentOrigin = tr.spanStartedMetric.AttrSpanParentOrigin(otelconv.SpanParentOriginNone)
+	if tr.inst.Enabled() {
+		if o, ok := s.(interface{ setOrigCtx(context.Context) }); ok {
+			// If this is a recording span, store the original context.
+			// This allows later retrieval of baggage and other information
+			// that may have been stored in the context at span start time and
+			// to avoid the allocation of repeatedly calling
+			// trace.ContextWithSpan.
+			o.setOrigCtx(newCtx)
 		}
-
-		// Determine the sampling result and create the corresponding attribute.
-		var attrSamplingResult attribute.KeyValue
-		switch {
-		case s.SpanContext().IsSampled() && s.IsRecording():
-			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(
-				otelconv.SpanSamplingResultRecordAndSample,
-			)
-		case s.IsRecording():
-			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
-		default:
-			attrSamplingResult = tr.spanStartedMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultDrop)
-		}
-
-		tr.spanStartedMetric.Add(newCtx, 1, attrParentOrigin, attrSamplingResult)
+		psc := trace.SpanContextFromContext(ctx)
+		tr.inst.SpanStarted(newCtx, psc, s)
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
@@ -191,21 +172,11 @@ func (tr *tracer) newRecordingSpan(
 	s.SetAttributes(sr.Attributes...)
 	s.SetAttributes(config.Attributes()...)
 
-	if tr.selfObservabilityEnabled {
-		// Determine the sampling result and create the corresponding attribute.
-		var attrSamplingResult attribute.KeyValue
-		if s.spanContext.IsSampled() {
-			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(
-				otelconv.SpanSamplingResultRecordAndSample,
-			)
-		} else {
-			attrSamplingResult = tr.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
-		}
-
+	if tr.inst.Enabled() {
 		// Propagate any existing values from the context with the new span to
 		// the measurement context.
 		ctx = trace.ContextWithSpan(ctx, s)
-		tr.spanLiveMetric.Add(ctx, 1, attrSamplingResult)
+		tr.inst.SpanLive(ctx, s)
 	}
 
 	return s

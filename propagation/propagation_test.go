@@ -71,7 +71,7 @@ func TestCompositeTextMapPropagatorInject(t *testing.T) {
 	a, b := propagator{"a"}, propagator{"b"}
 
 	c := make(carrier, 0, 2)
-	propagation.NewCompositeTextMapPropagator(a, b).Inject(context.Background(), &c)
+	propagation.NewCompositeTextMapPropagator(a, b).Inject(t.Context(), &c)
 
 	if got := strings.Join([]string(c), ","); got != "a,b" {
 		t.Errorf("invalid inject order: %s", got)
@@ -81,7 +81,7 @@ func TestCompositeTextMapPropagatorInject(t *testing.T) {
 func TestCompositeTextMapPropagatorExtract(t *testing.T) {
 	a, b := propagator{"a"}, propagator{"b"}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = propagation.NewCompositeTextMapPropagator(a, b).Extract(ctx, nil)
 
 	v := ctx.Value(ctxKey)

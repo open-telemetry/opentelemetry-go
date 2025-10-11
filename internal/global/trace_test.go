@@ -52,7 +52,7 @@ func TestTraceProviderDelegation(t *testing.T) {
 		"fromSpan": {"span4"},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	gtp := TracerProvider()
 	tracer1 := gtp.Tracer("pre")
 	// This is started before an SDK was registered and should be dropped.
@@ -173,7 +173,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 		for {
 			select {
 			case <-time.After(1 * time.Millisecond):
-				tracer.Start(context.Background(), "name")
+				tracer.Start(t.Context(), "name")
 			case <-quit:
 				return
 			}
@@ -235,7 +235,7 @@ func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
 		TraceFlags: trace.FlagsSampled,
 		Remote:     true,
 	})
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 	_, span := TracerProvider().Tracer("test").Start(ctx, "test")
 
 	assert.Equal(t, sc, span.SpanContext())
@@ -282,7 +282,7 @@ func TestTracerIdentity(t *testing.T) {
 
 func TestNewSpanType(t *testing.T) {
 	tracer := new(tracer)
-	ctx := context.Background()
+	ctx := t.Context()
 	_, got := tracer.newSpan(ctx, autoInstEnabled, "", nil)
 	assert.IsType(t, nonRecordingSpan{}, got, "default span type")
 

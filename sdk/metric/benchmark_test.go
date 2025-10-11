@@ -39,18 +39,50 @@ var viewBenchmarks = []struct {
 	},
 }
 
+var (
+	sampledSpanContext = trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	notSampledSpanContext = trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:  trace.SpanID{0o1},
+		TraceID: trace.TraceID{0o1},
+	})
+)
+
+var exemplarBenchmarks = []struct {
+	Name        string
+	SpanContext trace.SpanContext
+}{
+	{"ExemplarsDisabled", notSampledSpanContext},
+	{"ExemplarsEnabled", sampledSpanContext},
+}
+
 func BenchmarkSyncMeasure(b *testing.B) {
 	for _, bc := range viewBenchmarks {
-		b.Run(bc.Name, benchSyncViews(bc.Views...))
+		for _, eb := range exemplarBenchmarks {
+			b.Run(fmt.Sprintf("%s/%s", bc.Name, eb.Name), benchSyncViews(eb.SpanContext, bc.Views...))
+		}
 	}
 }
 
-func benchSyncViews(views ...View) func(*testing.B) {
-	ctx := context.Background()
+func exponentialAggregationSelector(ik InstrumentKind) Aggregation {
+	if ik == InstrumentKindHistogram {
+		return AggregationBase2ExponentialHistogram{MaxScale: 20, MaxSize: 160}
+	}
+	return AggregationDefault{}
+}
+
+func benchSyncViews(sc trace.SpanContext, views ...View) func(*testing.B) {
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
 	meter := provider.Meter("benchSyncViews")
+	expRdr := NewManualReader(WithAggregationSelector(exponentialAggregationSelector))
+	expProvider := NewMeterProvider(WithReader(expRdr), WithView(views...))
+	expMeter := expProvider.Meter("benchSyncViews")
 	return func(b *testing.B) {
+		ctx := trace.ContextWithSpanContext(b.Context(), sc)
 		iCtr, err := meter.Int64Counter("int64-counter")
 		assert.NoError(b, err)
 		b.Run("Int64Counter", benchMeasAttrs(func() measF {
@@ -87,6 +119,24 @@ func benchSyncViews(views ...View) func(*testing.B) {
 			}
 		}()))
 
+		iGauge, err := meter.Int64Gauge("int64-gauge")
+		assert.NoError(b, err)
+		b.Run("Int64Gauge", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { iGauge.Record(ctx, 1, o...) }
+			}
+		}()))
+
+		fGauge, err := meter.Float64Gauge("float64-gauge")
+		assert.NoError(b, err)
+		b.Run("Float64Gauge", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { fGauge.Record(ctx, 1, o...) }
+			}
+		}()))
+
 		iHist, err := meter.Int64Histogram("int64-histogram")
 		assert.NoError(b, err)
 		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
@@ -102,6 +152,24 @@ func benchSyncViews(views ...View) func(*testing.B) {
 			return func(s attribute.Set) func() {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
 				return func() { fHist.Record(ctx, 1, o...) }
+			}
+		}()))
+
+		expIHist, err := expMeter.Int64Histogram("exponential-int64-histogram")
+		assert.NoError(b, err)
+		b.Run("ExponentialInt64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { expIHist.Record(ctx, 1, o...) }
+			}
+		}()))
+
+		expFHist, err := expMeter.Float64Histogram("exponential-float64-histogram")
+		assert.NoError(b, err)
+		b.Run("ExponentialFloat64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func() {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func() { expFHist.Record(ctx, 1, o...) }
 			}
 		}()))
 	}
@@ -156,13 +224,12 @@ func benchCollectViews(views ...View) func(*testing.B) {
 		mp := NewMeterProvider(WithReader(r), WithView(views...))
 		return mp.Meter(name), r
 	}
-	ctx := context.Background()
 	return func(b *testing.B) {
 		b.Run("Int64Counter/1", benchCollectAttrs(func(s attribute.Set) Reader {
 			m, r := setup("benchCollectViews/Int64Counter")
 			i, err := m.Int64Counter("int64-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, metric.WithAttributeSet(s))
+			i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			return r
 		}))
 		b.Run("Int64Counter/10", benchCollectAttrs(func(s attribute.Set) Reader {
@@ -170,7 +237,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			i, err := m.Int64Counter("int64-counter")
 			assert.NoError(b, err)
 			for range 10 {
-				i.Add(ctx, 1, metric.WithAttributeSet(s))
+				i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			}
 			return r
 		}))
@@ -179,7 +246,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Float64Counter")
 			i, err := m.Float64Counter("float64-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, metric.WithAttributeSet(s))
+			i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			return r
 		}))
 		b.Run("Float64Counter/10", benchCollectAttrs(func(s attribute.Set) Reader {
@@ -187,7 +254,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			i, err := m.Float64Counter("float64-counter")
 			assert.NoError(b, err)
 			for range 10 {
-				i.Add(ctx, 1, metric.WithAttributeSet(s))
+				i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			}
 			return r
 		}))
@@ -196,7 +263,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Int64UpDownCounter")
 			i, err := m.Int64UpDownCounter("int64-up-down-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, metric.WithAttributeSet(s))
+			i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			return r
 		}))
 		b.Run("Int64UpDownCounter/10", benchCollectAttrs(func(s attribute.Set) Reader {
@@ -204,7 +271,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			i, err := m.Int64UpDownCounter("int64-up-down-counter")
 			assert.NoError(b, err)
 			for range 10 {
-				i.Add(ctx, 1, metric.WithAttributeSet(s))
+				i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			}
 			return r
 		}))
@@ -213,7 +280,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Float64UpDownCounter")
 			i, err := m.Float64UpDownCounter("float64-up-down-counter")
 			assert.NoError(b, err)
-			i.Add(ctx, 1, metric.WithAttributeSet(s))
+			i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			return r
 		}))
 		b.Run("Float64UpDownCounter/10", benchCollectAttrs(func(s attribute.Set) Reader {
@@ -221,7 +288,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			i, err := m.Float64UpDownCounter("float64-up-down-counter")
 			assert.NoError(b, err)
 			for range 10 {
-				i.Add(ctx, 1, metric.WithAttributeSet(s))
+				i.Add(b.Context(), 1, metric.WithAttributeSet(s))
 			}
 			return r
 		}))
@@ -230,7 +297,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Int64Histogram")
 			i, err := m.Int64Histogram("int64-histogram")
 			assert.NoError(b, err)
-			i.Record(ctx, 1, metric.WithAttributeSet(s))
+			i.Record(b.Context(), 1, metric.WithAttributeSet(s))
 			return r
 		}))
 		b.Run("Int64Histogram/10", benchCollectAttrs(func(s attribute.Set) Reader {
@@ -238,7 +305,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			i, err := m.Int64Histogram("int64-histogram")
 			assert.NoError(b, err)
 			for range 10 {
-				i.Record(ctx, 1, metric.WithAttributeSet(s))
+				i.Record(b.Context(), 1, metric.WithAttributeSet(s))
 			}
 			return r
 		}))
@@ -247,7 +314,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			m, r := setup("benchCollectViews/Float64Histogram")
 			i, err := m.Float64Histogram("float64-histogram")
 			assert.NoError(b, err)
-			i.Record(ctx, 1, metric.WithAttributeSet(s))
+			i.Record(b.Context(), 1, metric.WithAttributeSet(s))
 			return r
 		}))
 		b.Run("Float64Histogram/10", benchCollectAttrs(func(s attribute.Set) Reader {
@@ -255,7 +322,7 @@ func benchCollectViews(views ...View) func(*testing.B) {
 			i, err := m.Float64Histogram("float64-histogram")
 			assert.NoError(b, err)
 			for range 10 {
-				i.Record(ctx, 1, metric.WithAttributeSet(s))
+				i.Record(b.Context(), 1, metric.WithAttributeSet(s))
 			}
 			return r
 		}))
@@ -339,13 +406,12 @@ func float64Cback(s attribute.Set) metric.Float64Callback {
 }
 
 func benchCollectAttrs(setup func(attribute.Set) Reader) func(*testing.B) {
-	ctx := context.Background()
 	out := new(metricdata.ResourceMetrics)
 	run := func(reader Reader) func(b *testing.B) {
 		return func(b *testing.B) {
 			b.ReportAllocs()
 			for n := 0; n < b.N; n++ {
-				_ = reader.Collect(ctx, out)
+				_ = reader.Collect(b.Context(), out)
 			}
 		}
 	}
@@ -363,12 +429,7 @@ func benchCollectAttrs(setup func(attribute.Set) Reader) func(*testing.B) {
 }
 
 func BenchmarkExemplars(b *testing.B) {
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		SpanID:     trace.SpanID{0o1},
-		TraceID:    trace.TraceID{0o1},
-		TraceFlags: trace.FlagsSampled,
-	})
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(b.Context(), sampledSpanContext)
 
 	attr := attribute.NewSet(
 		attribute.String("user", "Alice"),

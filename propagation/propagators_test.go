@@ -24,22 +24,20 @@ var (
 	spanID  = mustSpanIDFromHex(spanIDStr)
 )
 
-func mustTraceIDFromHex(s string) (t trace.TraceID) {
-	var err error
-	t, err = trace.TraceIDFromHex(s)
+func mustTraceIDFromHex(s string) trace.TraceID {
+	t, err := trace.TraceIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
-	return
+	return t
 }
 
-func mustSpanIDFromHex(s string) (t trace.SpanID) {
-	var err error
-	t, err = trace.SpanIDFromHex(s)
+func mustSpanIDFromHex(s string) trace.SpanID {
+	t, err := trace.SpanIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
-	return
+	return t
 }
 
 type outOfThinAirPropagator struct {
@@ -84,7 +82,7 @@ func TestMultiplePropagators(t *testing.T) {
 	testProps := []propagation.TextMapPropagator{
 		propagation.TraceContext{},
 	}
-	bg := context.Background()
+	bg := t.Context()
 	// sanity check of oota propagator, ensuring that it really
 	// generates the valid span context out of thin air
 	{

@@ -95,6 +95,11 @@ type ClientConsumedMessages struct {
 	metric.Int64Counter
 }
 
+var newClientConsumedMessagesOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Number of messages that were delivered to the application."),
+	metric.WithUnit("{message}"),
+}
+
 // NewClientConsumedMessages returns a new ClientConsumedMessages instrument.
 func NewClientConsumedMessages(
 	m metric.Meter,
@@ -105,12 +110,15 @@ func NewClientConsumedMessages(
 		return ClientConsumedMessages{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientConsumedMessagesOpts
+	} else {
+		opt = append(opt, newClientConsumedMessagesOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"messaging.client.consumed.messages",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Number of messages that were delivered to the application."),
-			metric.WithUnit("{message}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientConsumedMessages{noop.Int64Counter{}}, err
@@ -273,6 +281,11 @@ type ClientOperationDuration struct {
 	metric.Float64Histogram
 }
 
+var newClientOperationDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Duration of messaging operation initiated by a producer or consumer client."),
+	metric.WithUnit("s"),
+}
+
 // NewClientOperationDuration returns a new ClientOperationDuration instrument.
 func NewClientOperationDuration(
 	m metric.Meter,
@@ -283,12 +296,15 @@ func NewClientOperationDuration(
 		return ClientOperationDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientOperationDurationOpts
+	} else {
+		opt = append(opt, newClientOperationDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"messaging.client.operation.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Duration of messaging operation initiated by a producer or consumer client."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientOperationDuration{noop.Float64Histogram{}}, err
@@ -448,6 +464,11 @@ type ClientSentMessages struct {
 	metric.Int64Counter
 }
 
+var newClientSentMessagesOpts = []metric.Int64CounterOption{
+	metric.WithDescription("Number of messages producer attempted to send to the broker."),
+	metric.WithUnit("{message}"),
+}
+
 // NewClientSentMessages returns a new ClientSentMessages instrument.
 func NewClientSentMessages(
 	m metric.Meter,
@@ -458,12 +479,15 @@ func NewClientSentMessages(
 		return ClientSentMessages{noop.Int64Counter{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newClientSentMessagesOpts
+	} else {
+		opt = append(opt, newClientSentMessagesOpts...)
+	}
+
 	i, err := m.Int64Counter(
 		"messaging.client.sent.messages",
-		append([]metric.Int64CounterOption{
-			metric.WithDescription("Number of messages producer attempted to send to the broker."),
-			metric.WithUnit("{message}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ClientSentMessages{noop.Int64Counter{}}, err
@@ -603,6 +627,11 @@ type ProcessDuration struct {
 	metric.Float64Histogram
 }
 
+var newProcessDurationOpts = []metric.Float64HistogramOption{
+	metric.WithDescription("Duration of processing operation."),
+	metric.WithUnit("s"),
+}
+
 // NewProcessDuration returns a new ProcessDuration instrument.
 func NewProcessDuration(
 	m metric.Meter,
@@ -613,12 +642,15 @@ func NewProcessDuration(
 		return ProcessDuration{noop.Float64Histogram{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = newProcessDurationOpts
+	} else {
+		opt = append(opt, newProcessDurationOpts...)
+	}
+
 	i, err := m.Float64Histogram(
 		"messaging.process.duration",
-		append([]metric.Float64HistogramOption{
-			metric.WithDescription("Duration of processing operation."),
-			metric.WithUnit("s"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return ProcessDuration{noop.Float64Histogram{}}, err
