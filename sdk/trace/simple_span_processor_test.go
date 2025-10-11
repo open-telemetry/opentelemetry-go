@@ -192,7 +192,7 @@ func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
 	}
 }
 
-func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
+func TestSimpleSpanProcessorObservability(t *testing.T) {
 	tests := []struct {
 		name          string
 		enabled       bool
@@ -304,7 +304,7 @@ func TestSimpleSpanProcessorSelfObservability(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(test.enabled))
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(test.enabled))
 
 			original := otel.GetMeterProvider()
 			t.Cleanup(func() { otel.SetMeterProvider(original) })
