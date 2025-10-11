@@ -357,7 +357,10 @@ func TestClientInstrumentation(t *testing.T) {
 
 	coll, err := otest.NewHTTPCollector("", rCh)
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, coll.Shutdown(t.Context())) })
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, coll.Shutdown(context.Background()))
+	})
 	t.Cleanup(func() { close(rCh) })
 
 	addr := coll.Addr().String()
@@ -386,7 +389,8 @@ func TestClientInstrumentation(t *testing.T) {
 	wantErr := internal.MetricPartialSuccessError(n, msg)
 	require.ErrorIs(t, err, wantErr, "Expected partial success error")
 
-	require.NoError(t, exp.Shutdown(ctx))
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	require.NoError(t, exp.Shutdown(context.Background()))
 	var got metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(ctx, &got))
 
@@ -458,14 +462,18 @@ func BenchmarkExporterExportMetrics(b *testing.B) {
 	run := func(b *testing.B) {
 		coll, err := otest.NewHTTPCollector("", nil)
 		require.NoError(b, err)
-		b.Cleanup(func() { require.NoError(b, coll.Shutdown(b.Context())) })
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			require.NoError(b, coll.Shutdown(context.Background()))
+		})
 
 		opts := []Option{WithEndpoint(coll.Addr().String()), WithInsecure()}
 		ctx := b.Context()
 		exp, err := New(ctx, opts...)
 		require.NoError(b, err)
 		b.Cleanup(func() {
-			assert.NoError(b, exp.Shutdown(b.Context()))
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
 		})
 
 		// Generate realistic test metric data with multiple metrics.
