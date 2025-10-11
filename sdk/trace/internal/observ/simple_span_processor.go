@@ -31,7 +31,7 @@ var measureAttrsPool = sync.Pool{
 // SSP is the instrumentation for an OTel SDK SimpleSpanProcessor.
 type SSP struct {
 	spansProcessedCounter metric.Int64Counter
-	addOpt                metric.AddOption
+	addOpts               []metric.AddOption
 	attrs                 []attribute.KeyValue
 }
 
@@ -65,22 +65,22 @@ func NewSSP(id int64) (*SSP, error) {
 	componentName := SSPComponentName(id)
 	componentType := spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeSimpleSpanProcessor)
 	attrs := []attribute.KeyValue{componentName, componentType}
-	addOpt := metric.WithAttributeSet(attribute.NewSet(attrs...))
+	addOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(attrs...))}
 
 	return &SSP{
 		spansProcessedCounter: spansProcessedCounter.Int64Counter,
-		addOpt:                addOpt,
+		addOpts:               addOpts,
 		attrs:                 attrs,
 	}, err
 }
 
 func (ssp *SSP) SpanProcessed(ctx context.Context, count int64, err error) {
-	ssp.spansProcessedCounter.Add(ctx, count, ssp.addOption(err))
+	ssp.spansProcessedCounter.Add(ctx, count, ssp.addOption(err)...)
 }
 
-func (ssp *SSP) addOption(err error) metric.AddOption {
+func (ssp *SSP) addOption(err error) []metric.AddOption {
 	if err == nil {
-		return ssp.addOpt
+		return ssp.addOpts
 	}
 	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
 	defer func() {
@@ -91,5 +91,5 @@ func (ssp *SSP) addOption(err error) metric.AddOption {
 	*attrs = append(*attrs, semconv.ErrorType(err))
 	// Do not inefficiently make a copy of attrs by using
 	// WithAttributes instead of WithAttributeSet.
-	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
+	return []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(*attrs...))}
 }
