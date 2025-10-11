@@ -49,7 +49,7 @@ func New(options ...Option) (metric.Exporter, error) {
 		temporalitySelector:      cfg.temporalitySelector,
 		aggregationSelector:      cfg.aggregationSelector,
 		redactTimestamps:         cfg.redactTimestamps,
-		selfObservabilityEnabled: x.SelfObservability.Enabled(),
+		selfObservabilityEnabled: x.Observability.Enabled(),
 	}
 	exp.encVal.Store(*cfg.encoder)
 	var err error

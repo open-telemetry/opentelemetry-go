@@ -246,7 +246,7 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", strconv.FormatBool(tt.selfObservabilityEnabled))
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tt.selfObservabilityEnabled))
 			reader := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(reader))
 			origMp := otel.GetMeterProvider()
@@ -413,7 +413,7 @@ func scopeMetrics() []metricdata.ScopeMetrics {
 }
 
 func TestExporter_Export_EncodingErrorTracking(t *testing.T) {
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
 	origMp := otel.GetMeterProvider()
