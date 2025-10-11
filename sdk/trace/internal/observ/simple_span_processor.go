@@ -28,9 +28,11 @@ var measureAttrsPool = sync.Pool{
 	},
 }
 
+// SSP is the instrumentation for an OTel SDK SimpleSpanProcessor.
 type SSP struct {
-	componentNameAttr     attribute.KeyValue
-	spansProcessedCounter otelconv.SDKProcessorSpanProcessed
+	spansProcessedCounter metric.Int64Counter
+	addOpt                metric.AddOption
+	attrs                 []attribute.KeyValue
 }
 
 // SSPComponentName returns the component name attribute for a
@@ -41,6 +43,10 @@ func SSPComponentName(id int64) attribute.KeyValue {
 	return semconv.OTelComponentName(name)
 }
 
+// NewSSP returns instrumentation for an OTel SDK SimpleSpanProcessor with the
+// provided ID.
+//
+// If the experimental observability is disabled, nil is returned.
 func NewSSP(id int64) (*SSP, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
@@ -51,28 +57,39 @@ func NewSSP(id int64) (*SSP, error) {
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(SchemaURL),
 	)
-	componentName := SSPComponentName(id)
 	spansProcessedCounter, err := otelconv.NewSDKProcessorSpanProcessed(meter)
 	if err != nil {
 		err = fmt.Errorf("failed to create SSP processed spans metric: %w", err)
 	}
+
+	componentName := SSPComponentName(id)
+	componentType := spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeSimpleSpanProcessor)
+	attrs := []attribute.KeyValue{componentName, componentType}
+	addOpt := metric.WithAttributeSet(attribute.NewSet(attrs...))
+
 	return &SSP{
-		componentNameAttr:     componentName,
-		spansProcessedCounter: spansProcessedCounter,
+		spansProcessedCounter: spansProcessedCounter.Int64Counter,
+		addOpt:                addOpt,
+		attrs:                 attrs,
 	}, err
 }
 
 func (ssp *SSP) SpanProcessed(ctx context.Context, count int64, err error) {
+	ssp.spansProcessedCounter.Add(ctx, count, ssp.addOption(err))
+}
+
+func (ssp *SSP) addOption(err error) metric.AddOption {
+	if err == nil {
+		return ssp.addOpt
+	}
 	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
 	defer func() {
 		*attrs = (*attrs)[:0] // reset the slice for reuse
 		measureAttrsPool.Put(attrs)
 	}()
-	if err != nil {
-		*attrs = append(*attrs, semconv.ErrorType(err))
-	}
-	*attrs = append(*attrs,
-		ssp.componentNameAttr,
-		ssp.spansProcessedCounter.AttrComponentType(otelconv.ComponentTypeSimpleSpanProcessor))
-	ssp.spansProcessedCounter.Add(ctx, count, *attrs...)
+	*attrs = append(*attrs, ssp.attrs...)
+	*attrs = append(*attrs, semconv.ErrorType(err))
+	// Do not inefficiently make a copy of attrs by using
+	// WithAttributes instead of WithAttributeSet.
+	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
