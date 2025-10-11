@@ -95,6 +95,14 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 
 // deltaHistogram is a histogram whose internal storage is reset when it is
 // collected.
+//
+// deltaHistogram's measure is implemented without locking, even when called
+// concurrently with collect. This is done by maintaining two separate maps:
+// one "hot" which is concurrently updated by measure(), and one "cold", which
+// is read and reset by collect(). The [hotcoldWaitGroup] allows collect() to
+// swap the hot and cold maps, and wait for updates to the cold map to complete
+// prior to reading. deltaHistogram swaps ald clears complete maps so that
+// unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
 	hotColdValMap [2]limitedSyncMap
@@ -228,6 +236,15 @@ func (s *deltaHistogram[N]) collect(
 
 // cumulativeHistogram summarizes a set of measurements as an histogram with explicitly
 // defined histogramPoint.
+//
+// cumulativeHistogram's measure is implemented without locking, even when
+// called concurrently with collect. This is done by maintaining two separate
+// histogramPointCounters for each attribute set: one "hot" which is
+// concurrently updated by measure(), and one "cold", which is read and reset
+// by collect(). The [hotcoldWaitGroup] allows collect() to swap the hot and
+// cold counters, and wait for updates to the cold counters to complete prior
+// to reading. Unlike deltaHistogram, this maintains a single map so that the
+// preserved attribute sets do not change when collect() is called.
 type cumulativeHistogram[N int64 | float64] struct {
 	values limitedSyncMap
 
