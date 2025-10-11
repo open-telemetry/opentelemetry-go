@@ -57,7 +57,7 @@ func (n *atomicCounter[N]) reset() {
 	n.nInt.Store(0)
 }
 
-// atomicN is a generic atomic number value
+// atomicN is a generic atomic number value.
 type atomicN[N int64 | float64] struct {
 	val atomic.Uint64
 }
@@ -88,13 +88,13 @@ func (a *atomicN[N]) Store(v N) {
 	a.val.Store(val)
 }
 
-func (a *atomicN[N]) CompareAndSwap(old, new N) bool {
+func (a *atomicN[N]) CompareAndSwap(oldN, newN N) bool {
 	var o, n uint64
-	switch any(old).(type) {
+	switch any(oldN).(type) {
 	case int64:
-		o, n = uint64(old), uint64(new)
+		o, n = uint64(oldN), uint64(newN)
 	case float64:
-		o, n = math.Float64bits(float64(old)), math.Float64bits(float64(new))
+		o, n = math.Float64bits(float64(oldN)), math.Float64bits(float64(newN))
 	default:
 		panic("unsupported type")
 	}

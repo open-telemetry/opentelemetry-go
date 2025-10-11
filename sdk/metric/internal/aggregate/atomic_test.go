@@ -107,7 +107,6 @@ func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 func TestAtomicN(t *testing.T) {
 	t.Run("Int64", testAtomicN[int64])
 	t.Run("Float64", testAtomicN[float64])
-
 }
 
 func testAtomicN[N int64 | float64](t *testing.T) {
