@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/metric/noop"
 
 	"go.opentelemetry.io/otel"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -181,4 +183,54 @@ func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 	assert.Len(t, em.attrs, 2)
 	assert.Contains(t, em.attrs, componentName)
 	assert.Contains(t, em.attrs, componentType)
+}
+
+func BenchmarkTrackExport(b *testing.B) {
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	orig := otel.GetMeterProvider()
+	b.Cleanup(func() {
+		otel.SetMeterProvider(orig)
+	})
+
+	// Ensure deterministic benchmark by using noop meter.
+	otel.SetMeterProvider(noop.NewMeterProvider())
+
+	newExp := func(b *testing.B) *ExporterMetrics {
+		b.Helper()
+		componentName := semconv.OTelComponentName("benchmark")
+		componentType := semconv.OTelComponentTypeKey.String("exporter")
+		em, err := NewExporterMetrics(
+			"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
+			componentName,
+			componentType,
+		)
+		require.NoError(b, err)
+		require.NotNil(b, em)
+		return em
+	}
+
+	b.Run("Success", func(b *testing.B) {
+		em := newExp(b)
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				done := em.TrackExport(b.Context(), 10)
+				done(nil)
+			}
+		})
+	})
+
+	b.Run("WithError", func(b *testing.B) {
+		em := newExp(b)
+		testErr := errors.New("export failed")
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				done := em.TrackExport(b.Context(), 10)
+				done(testErr)
+			}
+		})
+	})
 }
