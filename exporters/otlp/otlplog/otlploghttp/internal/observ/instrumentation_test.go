@@ -7,19 +7,20 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
-	mapi "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
+	"go.opentelemetry.io/otel/internal/global"
+	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
@@ -263,4 +264,97 @@ func TestInstrumentation(t *testing.T) {
 
 	success += 0
 	assertMetrics(t, collect(), n+n, int64(success), err, http.StatusPartialContent)
+}
+
+func TestSetPresetAttrs(t *testing.T) {
+	tests := []struct {
+		endpoint string
+		host     string
+		port     int
+	}{
+		// Empty.
+		{endpoint: "", host: "", port: -1},
+
+		// Only a port.
+		{endpoint: ":4318", host: "", port: 4318},
+
+		// Hostname.
+		{endpoint: "localhost:4318", host: "localhost", port: 4318},
+		{endpoint: "localhost", host: "localhost", port: -1},
+
+		// IPv4 address.
+		{endpoint: "127.0.0.1:4318", host: "127.0.0.1", port: 4318},
+		{endpoint: "127.0.0.1", host: "127.0.0.1", port: -1},
+
+		// IPv6 address.
+		{endpoint: "2001:0db8:85a3:0000:0000:8a2e:0370:7334", host: "2001:db8:85a3::8a2e:370:7334", port: -1},
+		{endpoint: "2001:db8:85a3:0:0:8a2e:370:7334", host: "2001:db8:85a3::8a2e:370:7334", port: -1},
+		{endpoint: "2001:db8:85a3::8a2e:370:7334", host: "2001:db8:85a3::8a2e:370:7334", port: -1},
+		{endpoint: "[2001:db8:85a3::8a2e:370:7334]", host: "2001:db8:85a3::8a2e:370:7334", port: -1},
+		{endpoint: "[::1]:9090", host: "::1", port: 9090},
+
+		// Port edge cases.
+		{endpoint: "example.com:0", host: "example.com", port: 0},
+		{endpoint: "example.com:65535", host: "example.com", port: 65535},
+
+		// Case insensitive.
+		{endpoint: "ExAmPlE.COM:8080", host: "ExAmPlE.COM", port: 8080},
+	}
+	for _, tt := range tests {
+		got := setPresetAttrs(GetComponentName(ID), tt.endpoint)
+		want := []attribute.KeyValue{
+			semconv.OTelComponentName(GetComponentName(ID)),
+			semconv.OTelComponentTypeOtlpHTTPLogExporter,
+		}
+
+		if tt.host != "" {
+			want = append(want, semconv.ServerAddress(tt.host))
+		}
+		if tt.port != -1 {
+			want = append(want, semconv.ServerPort(tt.port))
+		}
+		assert.Equal(t, want, got)
+	}
+}
+
+type logSink struct {
+	logr.LogSink
+
+	level         int
+	msg           string
+	keysAndValues []any
+}
+
+func (*logSink) Enabled(int) bool { return true }
+
+func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
+	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues
+	l.LogSink.Info(level, msg, keysAndValues...)
+}
+
+func TestSetPresetAttrsError(t *testing.T) {
+	endpoints := []string{
+		"example.com:invalid",   // Non-numeric port.
+		"example.com:8080:9090", // Multiple colons in port.
+		"example.com:99999",     // Port out of range.
+		"example.com:-1",        // Port out of range.
+	}
+	for _, endpoint := range endpoints {
+		l := &logSink{LogSink: testr.New(t).GetSink()}
+		t.Cleanup(func(orig logr.Logger) func() {
+			global.SetLogger(logr.New(l))
+			return func() { global.SetLogger(orig) }
+		}(global.GetLogger()))
+
+		// Set the logger as global so BaseAttrs can log the error.
+		got := setPresetAttrs(GetComponentName(ID), endpoint)
+		want := []attribute.KeyValue{
+			semconv.OTelComponentName(GetComponentName(ID)),
+			semconv.OTelComponentTypeOtlpHTTPLogExporter,
+		}
+		assert.Equal(t, want, got)
+
+		assert.Equal(t, 8, l.level, "expected Debug log level")
+		assert.Equal(t, "failed to parse target", l.msg)
+	}
 }

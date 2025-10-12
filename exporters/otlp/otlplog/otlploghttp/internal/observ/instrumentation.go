@@ -7,16 +7,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/netip"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
-
-	"go.opentelemetry.io/otel/internal/global"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/x"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
@@ -35,7 +38,12 @@ const (
 var (
 	attrsPool = &sync.Pool{
 		New: func() any {
-			const n = 1 + 1 + 1 + 1 + 1 + 1
+			const n = 1 + // component.name
+				1 + // component.type
+				1 + // server.addr
+				1 + // server.port
+				1 + // error.port
+				1 // http.response.status.code
 			s := make([]attribute.KeyValue, 0, n)
 			return &s
 		},
@@ -150,25 +158,27 @@ func setPresetAttrs(name, target string) []attribute.KeyValue {
 // ServerAddrAttrs is a function that extracts server address and port attributes
 // from a target string.
 func ServerAddrAttrs(target string) []attribute.KeyValue {
-	host, port, err := ParseTarget(target)
+	host, port, err := parseTarget(target)
 	if err != nil || (host == "" && port < 0) {
 		if err != nil {
-			global.Debug("failed to parse the target", "target", target, "error", err)
+			global.Debug("failed to parse target", "target", target, "error", err)
 		}
 		return nil
 	}
 
-	if port == -1 {
+	if port < 0 {
 		return []attribute.KeyValue{semconv.ServerAddress(host)}
 	}
 
-	if port > 0 {
+	if host == "" {
 		return []attribute.KeyValue{
-			semconv.ServerAddress(host),
 			semconv.ServerPort(port),
 		}
 	}
-	return []attribute.KeyValue{semconv.ServerAddress(host)}
+	return []attribute.KeyValue{
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
+	}
 }
 
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
@@ -286,4 +296,52 @@ func rejected(n int64, err error) int64 {
 	}
 	// all logs exported
 	return n
+}
+
+// parseEndpoint parses the host and port from target that has the form
+// "host[:port]", or it returns an error if the target is not parsable.
+//
+// If no port is specified, -1 is returned.
+//
+// If no host is specified, an empty string is returned.
+func parseTarget(endpoint string) (string, int, error) {
+	if ip := parseIP(endpoint); ip != "" {
+		return ip, -1, nil
+	}
+
+	// If there's no colon, there is no port (IPv6 with no port checked above).
+	if !strings.Contains(endpoint, ":") {
+		return endpoint, -1, nil
+	}
+
+	// Otherwise, parse as host:port.
+	host, portStr, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return "", -1, fmt.Errorf("invalid host:port %q: %w", endpoint, err)
+	}
+
+	const base, bitSize = 10, 16
+	port16, err := strconv.ParseUint(portStr, base, bitSize)
+	if err != nil {
+		return "", -1, fmt.Errorf("invalid port %q: %w", portStr, err)
+	}
+	port := int(port16)
+
+	return host, port, nil
+}
+
+// parseIP attempts to parse the entire target as an IP address.
+// It returns the normalized string form of the IP if successful,
+// or an empty string if parsing fails.
+func parseIP(ip string) string {
+	// Strip leading and trailing brackets for IPv6 addresses.
+	if len(ip) >= 2 && ip[0] == '[' && ip[len(ip)-1] == ']' {
+		ip = ip[1 : len(ip)-1]
+	}
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return ""
+	}
+	// Return the normalized string form of the IP.
+	return addr.String()
 }
