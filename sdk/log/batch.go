@@ -134,6 +134,13 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		otel.Handle(err)
 	}
 
+	// Wrap exporter with metrics recording if observability is enabled.
+	// This must be the innermost wrapper (closest to user exporter) to record
+	// metrics just before calling the actual exporter.
+	if b.inst != nil {
+		exporter = newMetricsExporter(exporter, b.inst)
+	}
+
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
 	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
@@ -192,9 +199,6 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
 					ok := b.exporter.EnqueueExport(r)
 					if ok {
-						if b.inst != nil {
-							b.inst.Processed(ctx, int64(len(r)))
-						}
 						buf = slices.Clone(buf)
 					}
 					return ok
