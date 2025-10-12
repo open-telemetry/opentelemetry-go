@@ -11,18 +11,11 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/counter"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/selfobservability"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 )
-
-// otelComponentType is a name identifying the type of the OpenTelemetry
-// component. It is not a standardized OTel component type, so it uses the
-// Go package prefixed type name to ensure uniqueness and identity.
-const otelComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
 
 // exporter is an OpenTelemetry metric exporter.
 type exporter struct {
@@ -35,8 +28,7 @@ type exporter struct {
 
 	redactTimestamps bool
 
-	selfObservabilityEnabled bool
-	exporterMetric           *selfobservability.ExporterMetrics
+	exporterMetric *observ.StdoutMetricExporter
 }
 
 // New returns a configured metric exporter.
@@ -46,21 +38,13 @@ type exporter struct {
 func New(options ...Option) (metric.Exporter, error) {
 	cfg := newConfig(options...)
 	exp := &exporter{
-		temporalitySelector:      cfg.temporalitySelector,
-		aggregationSelector:      cfg.aggregationSelector,
-		redactTimestamps:         cfg.redactTimestamps,
-		selfObservabilityEnabled: x.Observability.Enabled(),
+		temporalitySelector: cfg.temporalitySelector,
+		aggregationSelector: cfg.aggregationSelector,
+		redactTimestamps:    cfg.redactTimestamps,
 	}
 	exp.encVal.Store(*cfg.encoder)
 	var err error
-	if exp.selfObservabilityEnabled {
-		componentName := fmt.Sprintf("%s/%d", otelComponentType, counter.NextExporterID())
-		exp.exporterMetric, err = selfobservability.NewExporterMetrics(
-			"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
-			semconv.OTelComponentName(componentName),
-			semconv.OTelComponentTypeKey.String(otelComponentType),
-		)
-	}
+	exp.exporterMetric, err = observ.NewStdoutMetricExporter(counter.NextExporterID())
 	return exp, err
 }
 
@@ -89,7 +73,7 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 }
 
 func (e *exporter) trackExport(ctx context.Context, count int64) func(err error) {
-	if !e.selfObservabilityEnabled {
+	if e.exporterMetric == nil {
 		return func(error) {}
 	}
 	return e.exporterMetric.TrackExport(ctx, count)

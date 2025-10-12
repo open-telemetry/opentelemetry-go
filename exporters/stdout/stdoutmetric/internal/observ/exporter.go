@@ -1,9 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package selfobservability provides self-observability metrics for stdout metric exporter.
+// Package observ provides self-observability metrics for stdout metric exporter.
 // This is an experimental feature controlled by the x.SelfObservability feature flag.
-package selfobservability // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/selfobservability"
+package observ // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 
 import (
 	"context"
@@ -14,10 +14,21 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+)
+
+const (
+	// ScopeName is the unique name of the meter used for instrumentation.
+	ScopeName = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+
+	// ComponentType is a name identifying the type of the OpenTelemetry
+	// component. It is not a standardized OTel component type, so it uses the
+	// Go package prefixed type name to ensure uniqueness and identity.
+	ComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
 )
 
 var measureAttrsPool = sync.Pool{
@@ -31,7 +42,7 @@ var measureAttrsPool = sync.Pool{
 	},
 }
 
-type ExporterMetrics struct {
+type StdoutMetricExporter struct {
 	inflight   metric.Int64UpDownCounter
 	addOpts    []metric.AddOption
 	exported   otelconv.SDKExporterMetricDataPointExported
@@ -40,22 +51,28 @@ type ExporterMetrics struct {
 	attrs      []attribute.KeyValue
 }
 
-func NewExporterMetrics(
-	name string,
-	componentName, componentType attribute.KeyValue,
-) (*ExporterMetrics, error) {
-	attrs := []attribute.KeyValue{componentName, componentType}
+// NewStdoutMetricExporter returns a new StdoutMetricExporter for the stdout metric exporter.
+// The id parameter is used to create a unique component name for the exporter instance.
+func NewStdoutMetricExporter(id int64) (*StdoutMetricExporter, error) {
+	if !x.Observability.Enabled() {
+		return nil, nil
+	}
+	componentName := fmt.Sprintf("%s/%d", ComponentType, id)
+	attrs := []attribute.KeyValue{
+		semconv.OTelComponentName(componentName),
+		semconv.OTelComponentTypeKey.String(ComponentType),
+	}
 	attrOpts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 	addOpts := []metric.AddOption{attrOpts}
 	recordOpts := []metric.RecordOption{attrOpts}
-	em := &ExporterMetrics{
+	em := &StdoutMetricExporter{
 		attrs:      attrs,
 		addOpts:    addOpts,
 		recordOpts: recordOpts,
 	}
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
-		name,
+		ScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL))
 
@@ -77,7 +94,7 @@ func NewExporterMetrics(
 	return em, err
 }
 
-func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error) {
+func (em *StdoutMetricExporter) TrackExport(ctx context.Context, count int64) func(err error) {
 	begin := time.Now()
 	em.inflight.Add(ctx, count, em.addOpts...)
 	return func(err error) {

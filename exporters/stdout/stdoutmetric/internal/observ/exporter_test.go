@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package selfobservability
+package observ
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type testSetup struct {
 	reader *sdkmetric.ManualReader
 	mp     *sdkmetric.MeterProvider
 	ctx    context.Context
-	em     *ExporterMetrics
+	em     *StdoutMetricExporter
 }
 
 func setupTestMeterProvider(t *testing.T) *testSetup {
@@ -35,13 +35,7 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 	otel.SetMeterProvider(mp)
 	t.Cleanup(func() { otel.SetMeterProvider(originalMP) })
 
-	componentName := semconv.OTelComponentName("test")
-	componentType := semconv.OTelComponentTypeKey.String("exporter")
-	em, err := NewExporterMetrics(
-		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
-		componentName,
-		componentType,
-	)
+	em, err := NewStdoutMetricExporter(0)
 	assert.NoError(t, err)
 
 	return &testSetup{
@@ -166,23 +160,25 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 }
 
 func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
-	componentName := semconv.OTelComponentName("test-component")
-	componentType := semconv.OTelComponentTypeKey.String("test-exporter")
-	em, err := NewExporterMetrics("test", componentName, componentType)
+	em, err := NewStdoutMetricExporter(42)
 	assert.NoError(t, err)
 
+	// Should have component.name and component.type attributes
 	assert.Len(t, em.attrs, 2)
-	assert.Contains(t, em.attrs, componentName)
-	assert.Contains(t, em.attrs, componentType)
+	expectedComponentName := semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/42")
+	expectedComponentType := semconv.OTelComponentTypeKey.String(ComponentType)
+	assert.Contains(t, em.attrs, expectedComponentName)
+	assert.Contains(t, em.attrs, expectedComponentType)
 
 	done := em.TrackExport(t.Context(), 1)
 	done(errors.New("test error"))
 	done = em.TrackExport(t.Context(), 1)
 	done(nil)
 
+	// Attributes should not be modified after tracking exports
 	assert.Len(t, em.attrs, 2)
-	assert.Contains(t, em.attrs, componentName)
-	assert.Contains(t, em.attrs, componentType)
+	assert.Contains(t, em.attrs, expectedComponentName)
+	assert.Contains(t, em.attrs, expectedComponentType)
 }
 
 func BenchmarkTrackExport(b *testing.B) {
@@ -195,15 +191,9 @@ func BenchmarkTrackExport(b *testing.B) {
 	// Ensure deterministic benchmark by using noop meter.
 	otel.SetMeterProvider(noop.NewMeterProvider())
 
-	newExp := func(b *testing.B) *ExporterMetrics {
+	newExp := func(b *testing.B) *StdoutMetricExporter {
 		b.Helper()
-		componentName := semconv.OTelComponentName("benchmark")
-		componentType := semconv.OTelComponentTypeKey.String("exporter")
-		em, err := NewExporterMetrics(
-			"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
-			componentName,
-			componentType,
-		)
+		em, err := NewStdoutMetricExporter(0)
 		require.NoError(b, err)
 		require.NotNil(b, em)
 		return em
