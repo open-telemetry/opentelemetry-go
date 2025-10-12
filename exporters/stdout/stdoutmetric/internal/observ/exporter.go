@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package observ provides self-observability metrics for stdout metric exporter.
+// Package observ provides observability for stdout metric exporter.
 // This is an experimental feature controlled by the x.Observability feature flag.
 package observ // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 
@@ -22,7 +22,6 @@ import (
 )
 
 const (
-	// scope is the unique name of the meter used for instrumentation.
 	scope = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
 	// componentType is a name identifying the type of the OpenTelemetry
@@ -107,7 +106,7 @@ func (em *Instrumentation) TrackExport(ctx context.Context, count int64) func(er
 	return func(err error) {
 		durationSeconds := time.Since(begin).Seconds()
 		em.inflight.Add(ctx, -count, em.addOpts...)
-		if err == nil {
+		if err == nil { // short circuit in case of success to avoid allocations
 			em.exported.Int64Counter.Add(ctx, count, em.addOpts...)
 			em.duration.Float64Histogram.Record(ctx, durationSeconds, em.recordOpts...)
 			return
