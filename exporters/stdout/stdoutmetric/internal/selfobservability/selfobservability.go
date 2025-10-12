@@ -36,14 +36,17 @@ type ExporterMetrics struct {
 	exported otelconv.SDKExporterMetricDataPointExported
 	duration otelconv.SDKExporterOperationDuration
 	attrs    []attribute.KeyValue
+	set      attribute.Set
 }
 
 func NewExporterMetrics(
 	name string,
 	componentName, componentType attribute.KeyValue,
 ) (*ExporterMetrics, error) {
+	attrs := []attribute.KeyValue{componentName, componentType}
 	em := &ExporterMetrics{
-		attrs: []attribute.KeyValue{componentName, componentType},
+		attrs: attrs,
+		set:   attribute.NewSet(attrs...),
 	}
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -69,20 +72,28 @@ func NewExporterMetrics(
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error) {
 	begin := time.Now()
-	em.inflight.Add(ctx, count, em.attrs...)
+	em.inflight.AddSet(ctx, count, em.set)
 	return func(err error) {
 		durationSeconds := time.Since(begin).Seconds()
-		attrs := &em.attrs
-		em.inflight.Add(ctx, -count, *attrs...)
-		if err != nil {
-			attrs = measureAttrsPool.Get().(*[]attribute.KeyValue)
-			defer func() {
-				*attrs = (*attrs)[:0] // reset the slice for reuse
-				measureAttrsPool.Put(attrs)
-			}()
-			*attrs = append(*attrs, em.attrs[0], em.attrs[1], semconv.ErrorType(err))
+		em.inflight.AddSet(ctx, -count, em.set)
+		if err == nil {
+			em.exported.AddSet(ctx, count, em.set)
+			em.duration.RecordSet(ctx, durationSeconds, em.set)
+			return
 		}
-		em.exported.Add(ctx, count, *attrs...)
-		em.duration.Record(ctx, durationSeconds, *attrs...)
+
+		attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
+		defer func() {
+			*attrs = (*attrs)[:0] // reset the slice for reuse
+			measureAttrsPool.Put(attrs)
+		}()
+		*attrs = append(*attrs, em.attrs...)
+		*attrs = append(*attrs, semconv.ErrorType(err))
+
+		// Do not inefficiently make a copy of attrs by using
+		// WithAttributes instead of WithAttributeSet.
+		set := attribute.NewSet(*attrs...)
+		em.exported.AddSet(ctx, count, set)
+		em.duration.RecordSet(ctx, durationSeconds, set)
 	}
 }
