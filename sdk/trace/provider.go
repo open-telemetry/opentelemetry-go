@@ -13,15 +13,13 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-const (
-	defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
-	selfObsScopeName  = "go.opentelemetry.io/otel/sdk/trace"
-)
+const defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
 
 // tracerProviderConfig.
 type tracerProviderConfig struct {
@@ -160,7 +158,13 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 				provider:             p,
 				instrumentationScope: is,
 			}
-			t.initSelfObservability()
+
+			var err error
+			t.inst, err = observ.NewTracer()
+			if err != nil {
+				otel.Handle(err)
+			}
+
 			p.namedTracer[is] = t
 		}
 		return t, ok

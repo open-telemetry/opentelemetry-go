@@ -4,7 +4,6 @@
 package baggage
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,7 @@ import (
 )
 
 func TestContext(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.Equal(t, Baggage{}, FromContext(ctx))
 
 	b := Baggage{list: baggage.List{"key": baggage.Item{Value: "val"}}}

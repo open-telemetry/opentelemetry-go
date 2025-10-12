@@ -102,25 +102,25 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 	t.Run("Float64", func(*testing.T) {
 		t.Run("Counter", func(*testing.T) {
 			delegate := &sfCounter{}
-			f := func(v float64) { delegate.Add(context.Background(), v) }
+			f := func(v float64) { delegate.Add(t.Context(), v) }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(*testing.T) {
 			delegate := &sfUpDownCounter{}
-			f := func(v float64) { delegate.Add(context.Background(), v) }
+			f := func(v float64) { delegate.Add(t.Context(), v) }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(*testing.T) {
 			delegate := &sfHistogram{}
-			f := func(v float64) { delegate.Record(context.Background(), v) }
+			f := func(v float64) { delegate.Record(t.Context(), v) }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(*testing.T) {
 			delegate := &sfGauge{}
-			f := func(v float64) { delegate.Record(context.Background(), v) }
+			f := func(v float64) { delegate.Record(t.Context(), v) }
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 	})
@@ -130,25 +130,25 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 	t.Run("Int64", func(*testing.T) {
 		t.Run("Counter", func(*testing.T) {
 			delegate := &siCounter{}
-			f := func(v int64) { delegate.Add(context.Background(), v) }
+			f := func(v int64) { delegate.Add(t.Context(), v) }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(*testing.T) {
 			delegate := &siUpDownCounter{}
-			f := func(v int64) { delegate.Add(context.Background(), v) }
+			f := func(v int64) { delegate.Add(t.Context(), v) }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(*testing.T) {
 			delegate := &siHistogram{}
-			f := func(v int64) { delegate.Record(context.Background(), v) }
+			f := func(v int64) { delegate.Record(t.Context(), v) }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(*testing.T) {
 			delegate := &siGauge{}
-			f := func(v int64) { delegate.Record(context.Background(), v) }
+			f := func(v int64) { delegate.Record(t.Context(), v) }
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 	})

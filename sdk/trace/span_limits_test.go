@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/env"
+	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -139,7 +139,7 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
 	tracer := tp.Tracer("testSpanLimits")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	a := []attribute.KeyValue{attribute.Bool("one", true), attribute.Bool("two", true)}
 	l := trace.Link{
 		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{

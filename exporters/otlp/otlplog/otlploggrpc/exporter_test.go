@@ -6,18 +6,18 @@ package otlploggrpc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
@@ -87,7 +87,7 @@ func TestExporterExport(t *testing.T) {
 
 			e := newExporter(&mockCli)
 
-			err := e.Export(context.Background(), tc.logs)
+			err := e.Export(t.Context(), tc.logs)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.logs, got)
 			assert.Equal(t, 1, mockCli.uploads)
@@ -96,7 +96,7 @@ func TestExporterExport(t *testing.T) {
 }
 
 func TestExporterShutdown(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "New")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
@@ -110,20 +110,20 @@ func TestExporterShutdown(t *testing.T) {
 }
 
 func TestExporterForceFlush(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "New")
 
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
 }
 
-func TestExporterConcurrentSafe(*testing.T) {
+func TestExporterConcurrentSafe(t *testing.T) {
 	e := newExporter(&mockClient{})
 
 	const goroutines = 10
 
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	runs := new(uint64)
 	for range goroutines {
 		wg.Add(1)
@@ -172,7 +172,7 @@ func TestExporter(t *testing.T) {
 	})
 
 	t.Run("Export", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		c, coll := clientFactory(t, nil)
 		e := newExporter(c)
 
@@ -212,24 +212,12 @@ func TestExporter(t *testing.T) {
 			Response: &collogpb.ExportLogsServiceResponse{},
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		c, _ := clientFactory(t, rCh)
 		e := newExporter(c)
 
-		defer func(orig otel.ErrorHandler) {
-			otel.SetErrorHandler(orig)
-		}(otel.GetErrorHandler())
-
-		var errs []error
-		eh := otel.ErrorHandlerFunc(func(e error) { errs = append(errs, e) })
-		otel.SetErrorHandler(eh)
-
-		require.NoError(t, e.Export(ctx, records))
-		require.NoError(t, e.Export(ctx, records))
-		require.NoError(t, e.Export(ctx, records))
-
-		require.Len(t, errs, 1)
-		want := fmt.Sprintf("%s (%d log records rejected)", msg, n)
-		assert.ErrorContains(t, errs[0], want)
+		assert.ErrorIs(t, e.Export(ctx, records), internal.PartialSuccess{})
+		assert.NoError(t, e.Export(ctx, records))
+		assert.NoError(t, e.Export(ctx, records))
 	})
 }

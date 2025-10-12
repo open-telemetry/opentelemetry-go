@@ -4,7 +4,6 @@
 package logtest_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -26,7 +25,7 @@ func Example() {
 	r.SetBody(log.StringValue("Hello there"))
 	r.AddAttributes(log.String("foo", "bar"))
 	r.AddAttributes(log.Int("n", 1))
-	l.Emit(context.Background(), r)
+	l.Emit(t.Context(), r)
 
 	// Verify that the expected and actual log records match.
 	want := logtest.Recording{

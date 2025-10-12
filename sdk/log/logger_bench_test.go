@@ -4,13 +4,16 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func BenchmarkLoggerEmit(b *testing.B) {
@@ -47,7 +50,7 @@ func BenchmarkLoggerEmit(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				logger.Emit(context.Background(), r)
+				logger.Emit(b.Context(), r)
 			}
 		})
 	})
@@ -56,15 +59,53 @@ func BenchmarkLoggerEmit(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				logger.Emit(context.Background(), r10)
+				logger.Emit(b.Context(), r10)
 			}
 		})
 	})
 }
 
+func BenchmarkLoggerEmitObservability(b *testing.B) {
+	r := log.Record{}
+
+	orig := otel.GetMeterProvider()
+	b.Cleanup(func() { otel.SetMeterProvider(orig) })
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	run := func(logger *logger) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					logger.Emit(b.Context(), r)
+				}
+			})
+		}
+	}
+
+	lp := NewLoggerProvider()
+	scope := instrumentation.Scope{}
+
+	b.Run("Disabled", run(newLogger(lp, scope)))
+
+	b.Run("Enabled", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+		run(newLogger(lp, scope))(b)
+	})
+
+	var rm metricdata.ResourceMetrics
+	err := reader.Collect(b.Context(), &rm)
+	require.NoError(b, err)
+	require.Len(b, rm.ScopeMetrics, 1)
+}
+
 func BenchmarkLoggerEnabled(b *testing.B) {
 	logger := newTestLogger(b)
-	ctx := context.Background()
+	ctx := b.Context()
 	param := log.EnabledParameters{Severity: log.SeverityDebug}
 	var enabled bool
 

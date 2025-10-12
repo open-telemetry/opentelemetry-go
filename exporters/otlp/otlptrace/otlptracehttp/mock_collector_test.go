@@ -48,7 +48,7 @@ func (c *mockCollector) Stop() error {
 }
 
 func (c *mockCollector) MustStop(t *testing.T) {
-	assert.NoError(t, c.server.Shutdown(context.Background()))
+	assert.NoError(t, c.server.Shutdown(t.Context()))
 }
 
 func (c *mockCollector) GetSpans() []*tracepb.Span {
@@ -145,15 +145,16 @@ func (c *mockCollector) getInjectHTTPStatus() int {
 	return status
 }
 
-func (c *mockCollector) getInjectResponseHeader() (h map[string]string) {
+func (c *mockCollector) getInjectResponseHeader() map[string]string {
+	var h map[string]string
 	if len(c.injectResponseHeader) == 0 {
-		return
+		return h
 	}
 	h, c.injectResponseHeader = c.injectResponseHeader[0], c.injectResponseHeader[1:]
 	if len(c.injectResponseHeader) == 0 {
 		c.injectResponseHeader = nil
 	}
-	return
+	return h
 }
 
 func readRequest(r *http.Request) ([]byte, error) {
@@ -212,12 +213,12 @@ func (c *mockCollectorConfig) fillInDefaults() {
 	}
 }
 
-func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
+func runMockCollector(tb testing.TB, cfg mockCollectorConfig) *mockCollector {
 	cfg.fillInDefaults()
 	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", cfg.Port))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	_, portStr, err := net.SplitHostPort(ln.Addr().String())
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	m := &mockCollector{
 		endpoint:             fmt.Sprintf("localhost:%s", portStr),
 		spansStorage:         otlptracetest.NewSpansStorage(),
@@ -237,9 +238,9 @@ func runMockCollector(t *testing.T, cfg mockCollectorConfig) *mockCollector {
 	}
 	if cfg.WithTLS {
 		pem, err := generateWeakCertificate()
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		tlsCertificate, err := tls.X509KeyPair(pem.Certificate, pem.PrivateKey)
-		require.NoError(t, err)
+		require.NoError(tb, err)
 		server.TLSConfig = &tls.Config{
 			Certificates: []tls.Certificate{tlsCertificate},
 		}

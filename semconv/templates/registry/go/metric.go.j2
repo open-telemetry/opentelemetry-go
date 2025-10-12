@@ -2,6 +2,9 @@
 {% import 'instrument.j2' as i -%}
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "{{ ctx.root_namespace }}" namespace.
 package {{ ctx.root_namespace | camel_case | lower }}conv
@@ -55,6 +58,11 @@ type {{ metric_name }} struct {
 	metric.{{ metric_inst }}
 }
 
+var new{{ metric_name }}Opts = []metric.{{ metric_inst }}Option{
+	metric.WithDescription("{{ i.desc(metric) }}"),
+	metric.WithUnit("{{metric.unit}}"),
+}
+
 {{ ["New" ~ metric_name ~ " returns a new " ~ metric_name ~ " instrument."] | comment }}
 func New{{ metric_name }}(
 	m metric.Meter,
@@ -65,12 +73,15 @@ func New{{ metric_name }}(
 		return {{metric_name}}{noop.{{ metric_inst }}{}}, nil
 	}
 
+	if len(opt) == 0 {
+		opt = new{{ metric_name }}Opts
+	} else {
+		opt = append(opt, new{{ metric_name }}Opts...)
+	}
+
 	i, err := m.{{ metric_inst }}(
 		"{{metric.metric_name}}",
-		append([]metric.{{ metric_inst }}Option{
-			metric.WithDescription("{{ i.desc(metric) }}"),
-			metric.WithUnit("{{metric.unit}}"),
-		}, opt...)...,
+		opt...,
 	)
 	if err != nil {
 	    return {{metric_name}}{noop.{{ metric_inst }}{}}, err
@@ -103,9 +114,13 @@ func ({{ metric_name }}) Description() string {
 {%- elif metric.instrument == "counter" or metric.instrument == "updowncounter" %}
 
 {{ i.add_method(metric, metric_inst, ctx.root_namespace) }}
+
+{{ i.add_set_method(metric, metric_inst, ctx.root_namespace) }}
 {%- elif metric.instrument == "histogram" or metric.instrument == "gauge" %}
 
 {{ i.record_method(metric, metric_inst, ctx.root_namespace) }}
+
+{{ i.record_set_method(metric, metric_inst, ctx.root_namespace) }}
 {%- endif %}
 {%- for attr in metric.attributes | not_required | attribute_sort %}
 {%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}

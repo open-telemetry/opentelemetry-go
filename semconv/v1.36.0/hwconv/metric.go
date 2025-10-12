@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "hw" namespace.
 package hwconv
@@ -126,7 +129,7 @@ func (Energy) Description() string {
 	return "Energy consumed by the component"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -141,6 +144,11 @@ func (m Energy) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -158,6 +166,23 @@ func (m Energy) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m Energy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -224,7 +249,7 @@ func (Errors) Description() string {
 	return "Number of errors encountered by the component"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -239,6 +264,11 @@ func (m Errors) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -256,6 +286,23 @@ func (m Errors) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -328,7 +375,7 @@ func (HostAmbientTemperature) Description() string {
 	return "Ambient (external) temperature of the physical host"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -340,6 +387,11 @@ func (m HostAmbientTemperature) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -356,6 +408,22 @@ func (m HostAmbientTemperature) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -422,7 +490,7 @@ func (HostEnergy) Description() string {
 	return "Total energy consumed by the entire physical host, in joules"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -439,6 +507,11 @@ func (m HostEnergy) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -455,6 +528,28 @@ func (m HostEnergy) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// The overall energy usage of a host MUST be reported using the specific
+// `hw.host.energy` and `hw.host.power` metrics **only**, instead of the generic
+// `hw.energy` and `hw.power` described in the previous section, to prevent
+// summing up overlapping values.
+func (m HostEnergy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -522,7 +617,7 @@ func (HostHeatingMargin) Description() string {
 	return "By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -534,6 +629,11 @@ func (m HostHeatingMargin) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -550,6 +650,22 @@ func (m HostHeatingMargin) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -616,7 +732,7 @@ func (HostPower) Description() string {
 	return "Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -633,6 +749,11 @@ func (m HostPower) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -649,6 +770,27 @@ func (m HostPower) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// The overall energy usage of a host MUST be reported using the specific
+// `hw.host.energy` and `hw.host.power` metrics **only**, instead of the generic
+// `hw.energy` and `hw.power` described in the previous section, to prevent
+// summing up overlapping values.
+func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -715,7 +857,7 @@ func (Power) Description() string {
 	return "Instantaneous power consumed by the component"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -732,6 +874,11 @@ func (m Power) Record(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -749,6 +896,24 @@ func (m Power) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// It is recommended to report `hw.energy` instead of `hw.power` when possible.
+func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -815,7 +980,7 @@ func (Status) Description() string {
 	return "Operational status: `1` (true) or `0` (false) for each of the possible states"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
@@ -841,6 +1006,11 @@ func (m Status) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -859,6 +1029,31 @@ func (m Status) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// `hw.status` is currently specified as an *UpDownCounter* but would ideally be
+// represented using a [*StateSet* as defined in OpenMetrics]. This semantic
+// convention will be updated once *StateSet* is specified in OpenTelemetry. This
+// planned change is not expected to have any consequence on the way users query
+// their timeseries backend to retrieve the values of `hw.status` over time.
+//
+// [ [*StateSet* as defined in OpenMetrics]: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#stateset
+func (m Status) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 

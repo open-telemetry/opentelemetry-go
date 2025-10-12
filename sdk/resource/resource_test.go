@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 var (
@@ -438,7 +438,7 @@ func TestNew(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(envVar, tt.envars)
-			ctx := context.Background()
+			ctx := t.Context()
 			res, err := resource.New(ctx, tt.options...)
 
 			if tt.wantErr != nil {
@@ -461,7 +461,7 @@ func TestNew(t *testing.T) {
 func TestNewWrappedError(t *testing.T) {
 	localErr := errors.New("local error")
 	_, err := resource.New(
-		context.Background(),
+		t.Context(),
 		resource.WithDetectors(
 			resource.StringDetector("", "", func() (string, error) {
 				return "", localErr
@@ -481,7 +481,7 @@ func TestWithHostID(t *testing.T) {
 	mockHostIDProvider()
 	t.Cleanup(restoreHostIDProvider)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithHostID(),
@@ -497,7 +497,7 @@ func TestWithHostIDError(t *testing.T) {
 	mockHostIDProviderWithError()
 	t.Cleanup(restoreHostIDProvider)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithHostID(),
@@ -511,7 +511,7 @@ func TestWithOSType(t *testing.T) {
 	mockRuntimeProviders()
 	t.Cleanup(restoreAttributesProviders)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithOSType(),
@@ -527,7 +527,7 @@ func TestWithOSDescription(t *testing.T) {
 	mockRuntimeProviders()
 	t.Cleanup(restoreAttributesProviders)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithOSDescription(),
@@ -543,7 +543,7 @@ func TestWithOS(t *testing.T) {
 	mockRuntimeProviders()
 	t.Cleanup(restoreAttributesProviders)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithOS(),
@@ -558,7 +558,7 @@ func TestWithOS(t *testing.T) {
 
 func TestWithProcessPID(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessPID(),
@@ -572,7 +572,7 @@ func TestWithProcessPID(t *testing.T) {
 
 func TestWithProcessExecutableName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessExecutableName(),
@@ -586,7 +586,7 @@ func TestWithProcessExecutableName(t *testing.T) {
 
 func TestWithProcessExecutablePath(t *testing.T) {
 	mockProcessAttributesProviders()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessExecutablePath(),
@@ -600,7 +600,7 @@ func TestWithProcessExecutablePath(t *testing.T) {
 
 func TestWithProcessCommandArgs(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessCommandArgs(),
@@ -615,7 +615,7 @@ func TestWithProcessCommandArgs(t *testing.T) {
 
 func TestWithProcessOwner(t *testing.T) {
 	mockProcessAttributesProviders()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessOwner(),
@@ -629,7 +629,7 @@ func TestWithProcessOwner(t *testing.T) {
 
 func TestWithProcessRuntimeName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessRuntimeName(),
@@ -643,7 +643,7 @@ func TestWithProcessRuntimeName(t *testing.T) {
 
 func TestWithProcessRuntimeVersion(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessRuntimeVersion(),
@@ -657,7 +657,7 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 
 func TestWithProcessRuntimeDescription(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcessRuntimeDescription(),
@@ -671,7 +671,7 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 
 func TestWithProcess(t *testing.T) {
 	mockProcessAttributesProviders()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	res, err := resource.New(ctx,
 		resource.WithProcess(),
@@ -748,7 +748,7 @@ func TestWithContainerID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			resource.SetContainerProviders(tc.containerIDProvider)
 
-			res, err := resource.New(context.Background(),
+			res, err := resource.New(t.Context(),
 				resource.WithContainerID(),
 			)
 
@@ -768,7 +768,7 @@ func TestWithContainer(t *testing.T) {
 		return fakeContainerID, nil
 	})
 
-	res, err := resource.New(context.Background(),
+	res, err := resource.New(t.Context(),
 		resource.WithContainer(),
 	)
 
@@ -787,7 +787,7 @@ func TestResourceConcurrentSafe(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			d := &fakeDetector{}
-			_, err := resource.Detect(context.Background(), d)
+			_, err := resource.Detect(t.Context(), d)
 			assert.NoError(t, err)
 		}()
 	}

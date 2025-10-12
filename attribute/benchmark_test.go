@@ -272,6 +272,59 @@ func BenchmarkStringSlice(b *testing.B) {
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
+func BenchmarkSetEquals(b *testing.B) {
+	b.Run("Empty", func(b *testing.B) {
+		benchmarkSetEquals(b, attribute.EmptySet())
+	})
+	b.Run("1 string attribute", func(b *testing.B) {
+		set := attribute.NewSet(attribute.String("string", "42"))
+		benchmarkSetEquals(b, &set)
+	})
+	b.Run("10 string attributes", func(b *testing.B) {
+		set := attribute.NewSet(
+			attribute.String("a", "42"),
+			attribute.String("b", "42"),
+			attribute.String("c", "42"),
+			attribute.String("d", "42"),
+			attribute.String("e", "42"),
+			attribute.String("f", "42"),
+			attribute.String("g", "42"),
+			attribute.String("h", "42"),
+			attribute.String("i", "42"),
+			attribute.String("j", "42"),
+		)
+		benchmarkSetEquals(b, &set)
+	})
+	b.Run("1 int attribute", func(b *testing.B) {
+		set := attribute.NewSet(attribute.Int("string", 42))
+		benchmarkSetEquals(b, &set)
+	})
+	b.Run("10 int attributes", func(b *testing.B) {
+		set := attribute.NewSet(
+			attribute.Int("a", 42),
+			attribute.Int("b", 42),
+			attribute.Int("c", 42),
+			attribute.Int("d", 42),
+			attribute.Int("e", 42),
+			attribute.Int("f", 42),
+			attribute.Int("g", 42),
+			attribute.Int("h", 42),
+			attribute.Int("i", 42),
+			attribute.Int("j", 42),
+		)
+		benchmarkSetEquals(b, &set)
+	})
+}
+
+func benchmarkSetEquals(b *testing.B, set *attribute.Set) {
+	b.ResetTimer()
+	for range b.N {
+		if !set.Equals(set) {
+			b.Fatal("not equal")
+		}
+	}
+}
+
 // BenchmarkEquivalentMapAccess measures how expensive it is to use
 // Equivalent() as a map key. This is on the hot path for making synchronous
 // measurements on the metrics API/SDK. It will likely be on the hot path for

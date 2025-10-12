@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "container" namespace.
 package containerconv
@@ -118,7 +121,7 @@ func (CPUTime) Description() string {
 	return "Total CPU time consumed"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -128,6 +131,11 @@ func (m CPUTime) Add(
 	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -141,6 +149,25 @@ func (m CPUTime) Add(
 		),
 	)
 
+	m.Float64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Total CPU time consumed by the specific container on all available CPU cores
+func (m CPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
@@ -202,7 +229,7 @@ func (CPUUsage) Description() string {
 	return "Container's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -213,6 +240,11 @@ func (m CPUUsage) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Gauge.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -226,6 +258,25 @@ func (m CPUUsage) Record(
 		),
 	)
 
+	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// CPU usage of the specific container on all available CPU cores, averaged over
+// the sample window
+func (m CPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
@@ -287,7 +338,7 @@ func (DiskIO) Description() string {
 	return "Disk bytes for the container."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -298,6 +349,11 @@ func (m DiskIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -311,6 +367,26 @@ func (m DiskIO) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// The total number of bytes read/written successfully (aggregated from all
+// disks).
+func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -376,7 +452,7 @@ func (MemoryUsage) Description() string {
 	return "Memory usage of the container."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // Memory usage of the container.
 func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
@@ -392,6 +468,25 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// Memory usage of the container.
+func (m MemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -445,7 +540,7 @@ func (NetworkIO) Description() string {
 	return "Network bytes for the container."
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -455,6 +550,11 @@ func (m NetworkIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -468,6 +568,25 @@ func (m NetworkIO) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+//
+// The number of bytes sent/received on all network interfaces by the container.
+func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -535,7 +654,7 @@ func (Uptime) Description() string {
 	return "The time the container has been running"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // Instrumentations SHOULD use a gauge with type `double` and measure uptime in
 // seconds as a floating point number with the highest precision available.
@@ -543,6 +662,7 @@ func (Uptime) Description() string {
 func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -552,5 +672,25 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 	}()
 
 	*o = append(*o, metric.WithAttributes(attrs...))
+	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+//
+// Instrumentations SHOULD use a gauge with type `double` and measure uptime in
+// seconds as a floating point number with the highest precision available.
+// The actual accuracy would depend on the instrumentation and operating system.
+func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Gauge.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
 }

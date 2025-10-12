@@ -223,6 +223,66 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 	})
 }
 
+func TestHistogramConcurrentSafe(t *testing.T) {
+	t.Run("Int64/Delta", testDeltaHistConcurrentSafe[int64]())
+	t.Run("Float64/Delta", testDeltaHistConcurrentSafe[float64]())
+	t.Run("Int64/Cumulative", testCumulativeHistConcurrentSafe[int64]())
+	t.Run("Float64/Cumulative", testCumulativeHistConcurrentSafe[float64]())
+}
+
+func validateHistogram[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
+	s, ok := got.(metricdata.Histogram[N])
+	if !ok {
+		t.Fatalf("wrong aggregation type: %+v", got)
+	}
+	for _, dp := range s.DataPoints {
+		assert.False(t,
+			dp.Time.Before(dp.StartTime),
+			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+		)
+		switch dp.Attributes {
+		case fltrAlice:
+			// alice observations are always a multiple of 2
+			assert.Equal(t, int64(0), int64(dp.Sum)%2)
+		case fltrBob:
+			// bob observations are always a multiple of 3
+			assert.Equal(t, int64(0), int64(dp.Sum)%3)
+		default:
+			t.Fatalf("wrong attributes %+v", dp.Attributes)
+		}
+		avg := float64(dp.Sum) / float64(dp.Count)
+		if minVal, ok := dp.Min.Value(); ok {
+			assert.GreaterOrEqual(t, avg, float64(minVal))
+		}
+		if maxVal, ok := dp.Max.Value(); ok {
+			assert.LessOrEqual(t, avg, float64(maxVal))
+		}
+		var totalCount uint64
+		for _, bc := range dp.BucketCounts {
+			totalCount += bc
+		}
+		assert.Equal(t, totalCount, dp.Count)
+	}
+}
+
+func testDeltaHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExplicitBucketHistogram(bounds, noMinMax, false)
+	return testAggergationConcurrentSafe[N](in, out, validateHistogram[N])
+}
+
+func testCumulativeHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExplicitBucketHistogram(bounds, noMinMax, false)
+	return testAggergationConcurrentSafe[N](in, out, validateHistogram[N])
+}
+
 // hPointSummed returns an HistogramDataPoint that started and ended now with
 // multi number of measurements values v. It includes a min and max (set to v).
 func hPointSummed[N int64 | float64](
@@ -287,9 +347,11 @@ func testBucketsBin[N int64 | float64]() func(t *testing.T) {
 		}
 
 		assertB([]uint64{0, 0, 0}, 0, 0, 0)
-		b.bin(1, 2)
+		b.bin(1)
+		b.minMax(2)
 		assertB([]uint64{0, 1, 0}, 1, 0, 2)
-		b.bin(0, -1)
+		b.bin(0)
+		b.minMax(-1)
 		assertB([]uint64{1, 1, 0}, 2, -1, 2)
 	}
 }
@@ -327,7 +389,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	b[0] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the bounds argument should not change the bounds")
 
-	h.measure(context.Background(), 5, alice, nil)
+	h.measure(t.Context(), 5, alice, nil)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.cumulative(&data)
@@ -338,7 +400,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 
 func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h := newHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
-	h.measure(context.Background(), 5, alice, nil)
+	h.measure(t.Context(), 5, alice, nil)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.cumulative(&data)
@@ -368,7 +430,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	require.Equal(t, 0, h.delta(&data))
 	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
-	h.measure(context.Background(), 1, alice, nil)
+	h.measure(t.Context(), 1, alice, nil)
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1, now(), now())}
@@ -381,7 +443,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
-	h.measure(context.Background(), 1, bob, nil)
+	h.measure(t.Context(), 1, bob, nil)
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1, now(), now())}
 	h.delta(&data)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)

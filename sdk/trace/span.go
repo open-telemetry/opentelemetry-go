@@ -20,8 +20,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -152,12 +151,22 @@ type recordingSpan struct {
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
+
+	// origCtx is the context used when starting this span that has the
+	// recordingSpan instance set as the active span. If not nil, it is used
+	// when ending the span to ensure any metrics are recorded with a context
+	// containing this span without requiring an additional allocation.
+	origCtx context.Context
 }
 
 var (
 	_ ReadWriteSpan = (*recordingSpan)(nil)
 	_ runtimeTracer = (*recordingSpan)(nil)
 )
+
+func (s *recordingSpan) setOrigCtx(ctx context.Context) {
+	s.origCtx = ctx
+}
 
 // SpanContext returns the SpanContext of this span.
 func (s *recordingSpan) SpanContext() trace.SpanContext {
@@ -497,21 +506,16 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
-	defer func() {
-		if s.tracer.selfObservabilityEnabled {
-			// Determine the sampling result and create the corresponding attribute.
-			var attrSamplingResult attribute.KeyValue
-			if s.spanContext.IsSampled() {
-				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(
-					otelconv.SpanSamplingResultRecordAndSample,
-				)
-			} else {
-				attrSamplingResult = s.tracer.spanLiveMetric.AttrSpanSamplingResult(otelconv.SpanSamplingResultRecordOnly)
-			}
-
-			s.tracer.spanLiveMetric.Add(context.Background(), -1, attrSamplingResult)
+	if s.tracer.inst.Enabled() {
+		ctx := s.origCtx
+		if ctx == nil {
+			// This should not happen as the origCtx should be set, but
+			// ensure trace information is propagated in the case of an
+			// error.
+			ctx = trace.ContextWithSpan(context.Background(), s)
 		}
-	}()
+		defer s.tracer.inst.SpanEnded(ctx, s)
+	}
 
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {

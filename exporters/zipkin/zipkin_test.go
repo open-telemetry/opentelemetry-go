@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -147,7 +147,7 @@ func (c *mockZipkinCollector) Close() {
 	c.closing = true
 	server := c.server
 	c.server = nil
-	require.NoError(c.t, server.Shutdown(context.Background()))
+	require.NoError(c.t, server.Shutdown(c.t.Context()))
 	c.wg.Wait()
 }
 
@@ -309,7 +309,7 @@ func TestExportSpans(t *testing.T) {
 	logger := logStoreLogger(ls)
 	exporter, err := New(collector.url, WithLogger(logger))
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := t.Context()
 	require.Empty(t, ls.Messages)
 	require.NoError(t, exporter.ExportSpans(ctx, spans[0:1]))
 	require.Len(t, ls.Messages, 1)
@@ -329,7 +329,7 @@ func TestExportSpans(t *testing.T) {
 }
 
 func TestExporterShutdownHonorsTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Minute)
 	defer cancel()
 
 	exp, err := New("")
@@ -342,7 +342,7 @@ func TestExporterShutdownHonorsTimeout(t *testing.T) {
 }
 
 func TestExporterShutdownHonorsCancel(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Minute)
 	defer cancel()
 
 	exp, err := New("")
@@ -356,8 +356,8 @@ func TestExporterShutdownHonorsCancel(t *testing.T) {
 func TestErrorOnExportShutdownExporter(t *testing.T) {
 	exp, err := New("")
 	require.NoError(t, err)
-	assert.NoError(t, exp.Shutdown(context.Background()))
-	assert.NoError(t, exp.ExportSpans(context.Background(), nil))
+	assert.NoError(t, exp.Shutdown(t.Context()))
+	assert.NoError(t, exp.ExportSpans(t.Context(), nil))
 }
 
 func TestLogrFormatting(t *testing.T) {
@@ -419,7 +419,7 @@ func TestWithHeaders(t *testing.T) {
 		headers: headers,
 	}
 
-	_ = e.ExportSpans(context.Background(), spans)
+	_ = e.ExportSpans(t.Context(), spans)
 
 	assert.Equal(t, headers["host"], req.Host)
 	assert.Equal(t, headers["name1"], req.Header.Get("name1"))

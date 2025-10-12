@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "faas" namespace.
 package faasconv
@@ -88,7 +91,7 @@ func (Coldstarts) Description() string {
 	return "Number of invocation cold starts"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m Coldstarts) Add(
@@ -96,6 +99,11 @@ func (m Coldstarts) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -109,6 +117,23 @@ func (m Coldstarts) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m Coldstarts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -169,7 +194,7 @@ func (CPUUsage) Description() string {
 	return "Distribution of CPU usage per invocation"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m CPUUsage) Record(
@@ -177,6 +202,11 @@ func (m CPUUsage) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -190,6 +220,22 @@ func (m CPUUsage) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m CPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -250,7 +296,7 @@ func (Errors) Description() string {
 	return "Number of invocation errors"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m Errors) Add(
@@ -258,6 +304,11 @@ func (m Errors) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -271,6 +322,23 @@ func (m Errors) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -331,7 +399,7 @@ func (InitDuration) Description() string {
 	return "Measures the duration of the function's initialization, such as a cold start"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m InitDuration) Record(
@@ -339,6 +407,11 @@ func (m InitDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -352,6 +425,22 @@ func (m InitDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m InitDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -412,7 +501,7 @@ func (Invocations) Description() string {
 	return "Number of successful invocations"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m Invocations) Add(
@@ -420,6 +509,11 @@ func (m Invocations) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -433,6 +527,23 @@ func (m Invocations) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m Invocations) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
@@ -493,7 +604,7 @@ func (InvokeDuration) Description() string {
 	return "Measures the duration of the function's logic execution"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m InvokeDuration) Record(
@@ -501,6 +612,11 @@ func (m InvokeDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Float64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -514,6 +630,22 @@ func (m InvokeDuration) Record(
 		),
 	)
 
+	m.Float64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m InvokeDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Float64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
@@ -574,7 +706,7 @@ func (MemUsage) Description() string {
 	return "Distribution of max memory usage per invocation"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m MemUsage) Record(
@@ -582,6 +714,11 @@ func (m MemUsage) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -595,6 +732,22 @@ func (m MemUsage) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m MemUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -655,7 +808,7 @@ func (NetIO) Description() string {
 	return "Distribution of net I/O usage per invocation"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m NetIO) Record(
@@ -663,6 +816,11 @@ func (m NetIO) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -676,6 +834,22 @@ func (m NetIO) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m NetIO) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 
@@ -736,7 +910,7 @@ func (Timeouts) Description() string {
 	return "Number of invocation timeouts"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m Timeouts) Add(
@@ -744,6 +918,11 @@ func (m Timeouts) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -757,6 +936,23 @@ func (m Timeouts) Add(
 		),
 	)
 
+	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m Timeouts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Counter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
