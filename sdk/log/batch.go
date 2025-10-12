@@ -108,10 +108,10 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
-	selfObservabilityEnabled bool
-	logProcessedCounter      otelconv.SDKProcessorLogProcessed
-	callbackRegistration     metric.Registration
-	componentNameAttr        attribute.KeyValue
+	observabilityEnabled bool
+	logProcessedCounter  otelconv.SDKProcessorLogProcessed
+	callbackRegistration metric.Registration
+	componentNameAttr    attribute.KeyValue
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -128,16 +128,16 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	}
 
 	b := &BatchProcessor{
-		q:                        newQueue(cfg.maxQSize.Value),
-		batchSize:                cfg.expMaxBatchSize.Value,
-		pollTrigger:              make(chan struct{}, 1),
-		pollKill:                 make(chan struct{}),
-		selfObservabilityEnabled: x.SelfObservability.Enabled(),
+		q:                    newQueue(cfg.maxQSize.Value),
+		batchSize:            cfg.expMaxBatchSize.Value,
+		pollTrigger:          make(chan struct{}, 1),
+		pollKill:             make(chan struct{}),
+		observabilityEnabled: x.Observability.Enabled(),
 	}
 
-	// When self observability is enabled, wrap the exporter in metricsExporter
+	// When observability is enabled, wrap the exporter in metricsExporter
 	// to record the log processing metrics before forwarding logs to exporter
-	if b.selfObservabilityEnabled {
+	if b.observabilityEnabled {
 		exporter = newMetricsExporter(exporter, b)
 	}
 
@@ -152,13 +152,13 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	b.exporter = newBufferExporter(exporter, cfg.expBufferSize.Value)
 	b.pollDone = b.poll(cfg.expInterval.Value)
 
-	if b.selfObservabilityEnabled {
+	if b.observabilityEnabled {
 		b.componentNameAttr = semconv.OTelComponentName(
 			fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingLogProcessor, nextProcessorID()))
 		var err error
-		b.logProcessedCounter, b.callbackRegistration, err = b.configureSelfObservability()
+		b.logProcessedCounter, b.callbackRegistration, err = b.configureObservability()
 		if err != nil {
-			err = fmt.Errorf("failed to configure self observability: %w", err)
+			err = fmt.Errorf("failed to configure observability: %w", err)
 			otel.Handle(err)
 		}
 	}
@@ -174,7 +174,7 @@ func nextProcessorID() int64 {
 	return processorIDCounter.Add(1) - 1
 }
 
-func (b *BatchProcessor) configureSelfObservability() (otelconv.SDKProcessorLogProcessed, metric.Registration, error) {
+func (b *BatchProcessor) configureObservability() (otelconv.SDKProcessorLogProcessed, metric.Registration, error) {
 	meter := otel.GetMeterProvider().Meter(
 		selfObsScopeName,
 		metric.WithInstrumentationVersion(sdk.Version()),
@@ -237,7 +237,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 			if d := b.q.Dropped(); d > 0 {
 				global.Warn("dropped log records", "dropped", d)
-				if b.selfObservabilityEnabled {
+				if b.observabilityEnabled {
 					attrs := []attribute.KeyValue{
 						b.componentNameAttr,
 						b.logProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingLogProcessor),
@@ -312,7 +312,7 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	// Flush remaining queued before exporter shutdown.
 	err := b.exporter.Export(ctx, b.q.Flush())
 	// TODO: what's the impact of return from case <-ctx.Done() block above
-	if b.selfObservabilityEnabled {
+	if b.observabilityEnabled {
 		err = errors.Join(err, b.callbackRegistration.Unregister())
 	}
 	return errors.Join(err, b.exporter.Shutdown(ctx))

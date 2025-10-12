@@ -345,7 +345,7 @@ func newMetricsExporter(exporter Exporter, processor *BatchProcessor) Exporter {
 // Export records the number of log records as a metric then forwards
 // them to the wrapped Exporter. Metrics are recorded regardless of export success.
 func (e *metricsExporter) Export(ctx context.Context, records []Record) error {
-	if e.processor.selfObservabilityEnabled {
+	if e.processor.observabilityEnabled {
 		e.processor.logProcessedCounter.Add(
 			ctx,
 			int64(len(records)),
