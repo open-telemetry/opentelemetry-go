@@ -22,13 +22,13 @@ import (
 )
 
 const (
-	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	// scope is the unique name of the meter used for instrumentation.
+	scope = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 
-	// ComponentType is a name identifying the type of the OpenTelemetry
+	// componentType is a name identifying the type of the OpenTelemetry
 	// component. It is not a standardized OTel component type, so it uses the
 	// Go package prefixed type name to ensure uniqueness and identity.
-	ComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
+	componentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
 )
 
 var measureAttrsPool = sync.Pool{
@@ -57,10 +57,10 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
-	componentName := fmt.Sprintf("%s/%d", ComponentType, id)
+	componentName := fmt.Sprintf("%s/%d", componentType, id)
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(componentName),
-		semconv.OTelComponentTypeKey.String(ComponentType),
+		semconv.OTelComponentTypeKey.String(componentType),
 	}
 	attrOpts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 	addOpts := []metric.AddOption{attrOpts}
@@ -72,7 +72,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	}
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
-		ScopeName,
+		scope,
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL))
 
