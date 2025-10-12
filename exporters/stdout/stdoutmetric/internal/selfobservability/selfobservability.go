@@ -32,14 +32,12 @@ var measureAttrsPool = sync.Pool{
 }
 
 type ExporterMetrics struct {
-	inflight        otelconv.SDKExporterMetricDataPointInflight
-	inflightCounter metric.Int64UpDownCounter
-	addOpts         []metric.AddOption
-	exported        otelconv.SDKExporterMetricDataPointExported
-	duration        otelconv.SDKExporterOperationDuration
-	recordOpts      []metric.RecordOption
-	attrs           []attribute.KeyValue
-	set             attribute.Set
+	inflight   metric.Int64UpDownCounter
+	addOpts    []metric.AddOption
+	exported   otelconv.SDKExporterMetricDataPointExported
+	duration   otelconv.SDKExporterOperationDuration
+	recordOpts []metric.RecordOption
+	attrs      []attribute.KeyValue
 }
 
 func NewExporterMetrics(
@@ -47,14 +45,12 @@ func NewExporterMetrics(
 	componentName, componentType attribute.KeyValue,
 ) (*ExporterMetrics, error) {
 	attrs := []attribute.KeyValue{componentName, componentType}
-	attrSet := attribute.NewSet(attrs...)
-	attrOpts := metric.WithAttributeSet(attrSet)
+	attrOpts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 	addOpts := []metric.AddOption{attrOpts}
 	recordOpts := []metric.RecordOption{attrOpts}
 	em := &ExporterMetrics{
 		attrs:      attrs,
 		addOpts:    addOpts,
-		set:        attrSet,
 		recordOpts: recordOpts,
 	}
 	mp := otel.GetMeterProvider()
@@ -63,12 +59,13 @@ func NewExporterMetrics(
 		metric.WithInstrumentationVersion(sdk.Version()),
 		metric.WithSchemaURL(semconv.SchemaURL))
 
-	var err, e error
-	if em.inflight, e = otelconv.NewSDKExporterMetricDataPointInflight(m); e != nil {
+	var err error
+	inflightMetric, e := otelconv.NewSDKExporterMetricDataPointInflight(m)
+	if e != nil {
 		e = fmt.Errorf("failed to create metric_data_point inflight metric: %w", e)
 		err = errors.Join(err, e)
 	}
-	em.inflightCounter = em.inflight.Int64UpDownCounter
+	em.inflight = inflightMetric.Int64UpDownCounter
 	if em.exported, e = otelconv.NewSDKExporterMetricDataPointExported(m); e != nil {
 		e = fmt.Errorf("failed to create metric_data_point exported metric: %w", e)
 		err = errors.Join(err, e)
@@ -82,10 +79,10 @@ func NewExporterMetrics(
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error) {
 	begin := time.Now()
-	em.inflightCounter.Add(ctx, count, em.addOpts...)
+	em.inflight.Add(ctx, count, em.addOpts...)
 	return func(err error) {
 		durationSeconds := time.Since(begin).Seconds()
-		em.inflightCounter.Add(ctx, -count, em.addOpts...)
+		em.inflight.Add(ctx, -count, em.addOpts...)
 		if err == nil {
 			em.exported.Int64Counter.Add(ctx, count, em.addOpts...)
 			em.duration.Float64Histogram.Record(ctx, durationSeconds, em.recordOpts...)
