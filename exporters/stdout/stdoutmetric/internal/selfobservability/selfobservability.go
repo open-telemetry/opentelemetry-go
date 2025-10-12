@@ -32,11 +32,14 @@ var measureAttrsPool = sync.Pool{
 }
 
 type ExporterMetrics struct {
-	inflight otelconv.SDKExporterMetricDataPointInflight
-	exported otelconv.SDKExporterMetricDataPointExported
-	duration otelconv.SDKExporterOperationDuration
-	attrs    []attribute.KeyValue
-	set      attribute.Set
+	inflight        otelconv.SDKExporterMetricDataPointInflight
+	inflightCounter metric.Int64UpDownCounter
+	addOpts         []metric.AddOption
+	exported        otelconv.SDKExporterMetricDataPointExported
+	duration        otelconv.SDKExporterOperationDuration
+	recordOpts      []metric.RecordOption
+	attrs           []attribute.KeyValue
+	set             attribute.Set
 }
 
 func NewExporterMetrics(
@@ -44,9 +47,15 @@ func NewExporterMetrics(
 	componentName, componentType attribute.KeyValue,
 ) (*ExporterMetrics, error) {
 	attrs := []attribute.KeyValue{componentName, componentType}
+	attrSet := attribute.NewSet(attrs...)
+	attrOpts := metric.WithAttributeSet(attrSet)
+	addOpts := []metric.AddOption{attrOpts}
+	recordOpts := []metric.RecordOption{attrOpts}
 	em := &ExporterMetrics{
-		attrs: attrs,
-		set:   attribute.NewSet(attrs...),
+		attrs:      attrs,
+		addOpts:    addOpts,
+		set:        attrSet,
+		recordOpts: recordOpts,
 	}
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
@@ -59,6 +68,7 @@ func NewExporterMetrics(
 		e = fmt.Errorf("failed to create metric_data_point inflight metric: %w", e)
 		err = errors.Join(err, e)
 	}
+	em.inflightCounter = em.inflight.Int64UpDownCounter
 	if em.exported, e = otelconv.NewSDKExporterMetricDataPointExported(m); e != nil {
 		e = fmt.Errorf("failed to create metric_data_point exported metric: %w", e)
 		err = errors.Join(err, e)
@@ -72,13 +82,13 @@ func NewExporterMetrics(
 
 func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(err error) {
 	begin := time.Now()
-	em.inflight.AddSet(ctx, count, em.set)
+	em.inflightCounter.Add(ctx, count, em.addOpts...)
 	return func(err error) {
 		durationSeconds := time.Since(begin).Seconds()
-		em.inflight.AddSet(ctx, -count, em.set)
+		em.inflightCounter.Add(ctx, -count, em.addOpts...)
 		if err == nil {
-			em.exported.AddSet(ctx, count, em.set)
-			em.duration.RecordSet(ctx, durationSeconds, em.set)
+			em.exported.Int64Counter.Add(ctx, count, em.addOpts...)
+			em.duration.Float64Histogram.Record(ctx, durationSeconds, em.recordOpts...)
 			return
 		}
 
@@ -90,8 +100,6 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, count int64) func(er
 		*attrs = append(*attrs, em.attrs...)
 		*attrs = append(*attrs, semconv.ErrorType(err))
 
-		// Do not inefficiently make a copy of attrs by using
-		// WithAttributes instead of WithAttributeSet.
 		set := attribute.NewSet(*attrs...)
 		em.exported.AddSet(ctx, count, set)
 		em.duration.RecordSet(ctx, durationSeconds, set)
