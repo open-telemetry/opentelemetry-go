@@ -36,8 +36,7 @@ type client struct {
 	requestFunc retry.RequestFunc
 	httpClient  *http.Client
 
-	instID int64
-	inst   *observ.Instrumentation
+	inst *observ.Instrumentation
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -103,16 +102,14 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
-	// Initialize the instrumentation
-	instID := counter.NextExporterID()
-	inst, err := observ.NewInstrumentation(instID, cfg.Metrics.Endpoint)
+	// Initialize the instrumentation.
+	inst, err := observ.NewInstrumentation(counter.NextExporterID(), cfg.Metrics.Endpoint)
 
 	return &client{
 		compression: Compression(cfg.Metrics.Compression),
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,
-		instID:      instID,
 		inst:        inst,
 	}, err
 }
