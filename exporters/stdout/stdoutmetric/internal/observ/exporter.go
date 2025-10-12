@@ -41,7 +41,7 @@ var measureAttrsPool = sync.Pool{
 	},
 }
 
-// Instrumentation is the instrumentation for stdout metric exporter
+// Instrumentation is the instrumentation for stdout metric exporter.
 type Instrumentation struct {
 	inflight   metric.Int64UpDownCounter
 	addOpts    []metric.AddOption
