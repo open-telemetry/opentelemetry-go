@@ -42,6 +42,7 @@ var measureAttrsPool = sync.Pool{
 	},
 }
 
+// Instrumentation is the instrumentation for stdout metric exporter
 type Instrumentation struct {
 	inflight   metric.Int64UpDownCounter
 	addOpts    []metric.AddOption
@@ -51,15 +52,21 @@ type Instrumentation struct {
 	attrs      []attribute.KeyValue
 }
 
-// NewInstrumentation returns a new Instrumentation for the stdout metric exporter.
-// The id parameter is used to create a unique component name for the exporter instance.
+func exporterComponentName(id int64) attribute.KeyValue {
+	componentName := fmt.Sprintf("%s/%d", componentType, id)
+	return semconv.OTelComponentName(componentName)
+}
+
+// NewInstrumentation returns a new Instrumentation for the stdout metric exporter
+// with the provided ID.
+//
+// If the experimental observability is disabled, nil is returned.
 func NewInstrumentation(id int64) (*Instrumentation, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
-	componentName := fmt.Sprintf("%s/%d", componentType, id)
 	attrs := []attribute.KeyValue{
-		semconv.OTelComponentName(componentName),
+		exporterComponentName(id),
 		semconv.OTelComponentTypeKey.String(componentType),
 	}
 	attrOpts := metric.WithAttributeSet(attribute.NewSet(attrs...))
