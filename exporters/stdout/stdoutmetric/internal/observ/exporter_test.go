@@ -24,7 +24,7 @@ type testSetup struct {
 	reader *sdkmetric.ManualReader
 	mp     *sdkmetric.MeterProvider
 	ctx    context.Context
-	em     *StdoutMetricExporter
+	em     *Instrumentation
 }
 
 func setupTestMeterProvider(t *testing.T) *testSetup {
@@ -37,7 +37,7 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 	otel.SetMeterProvider(mp)
 	t.Cleanup(func() { otel.SetMeterProvider(originalMP) })
 
-	em, err := NewStdoutMetricExporter(0)
+	em, err := NewInstrumentation(0)
 	assert.NoError(t, err)
 
 	return &testSetup{
@@ -164,7 +164,7 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	em, err := NewStdoutMetricExporter(42)
+	em, err := NewInstrumentation(42)
 	assert.NoError(t, err)
 
 	// Should have component.name and component.type attributes
@@ -197,9 +197,9 @@ func BenchmarkTrackExport(b *testing.B) {
 	// Ensure deterministic benchmark by using noop meter.
 	otel.SetMeterProvider(noop.NewMeterProvider())
 
-	newExp := func(b *testing.B) *StdoutMetricExporter {
+	newExp := func(b *testing.B) *Instrumentation {
 		b.Helper()
-		em, err := NewStdoutMetricExporter(0)
+		em, err := NewInstrumentation(0)
 		require.NoError(b, err)
 		require.NotNil(b, em)
 		return em

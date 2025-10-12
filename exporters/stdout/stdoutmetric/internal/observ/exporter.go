@@ -42,7 +42,7 @@ var measureAttrsPool = sync.Pool{
 	},
 }
 
-type StdoutMetricExporter struct {
+type Instrumentation struct {
 	inflight   metric.Int64UpDownCounter
 	addOpts    []metric.AddOption
 	exported   otelconv.SDKExporterMetricDataPointExported
@@ -51,9 +51,9 @@ type StdoutMetricExporter struct {
 	attrs      []attribute.KeyValue
 }
 
-// NewStdoutMetricExporter returns a new StdoutMetricExporter for the stdout metric exporter.
+// NewInstrumentation returns a new Instrumentation for the stdout metric exporter.
 // The id parameter is used to create a unique component name for the exporter instance.
-func NewStdoutMetricExporter(id int64) (*StdoutMetricExporter, error) {
+func NewInstrumentation(id int64) (*Instrumentation, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
@@ -65,7 +65,7 @@ func NewStdoutMetricExporter(id int64) (*StdoutMetricExporter, error) {
 	attrOpts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 	addOpts := []metric.AddOption{attrOpts}
 	recordOpts := []metric.RecordOption{attrOpts}
-	em := &StdoutMetricExporter{
+	em := &Instrumentation{
 		attrs:      attrs,
 		addOpts:    addOpts,
 		recordOpts: recordOpts,
@@ -94,7 +94,7 @@ func NewStdoutMetricExporter(id int64) (*StdoutMetricExporter, error) {
 	return em, err
 }
 
-func (em *StdoutMetricExporter) TrackExport(ctx context.Context, count int64) func(err error) {
+func (em *Instrumentation) TrackExport(ctx context.Context, count int64) func(err error) {
 	begin := time.Now()
 	em.inflight.Add(ctx, count, em.addOpts...)
 	return func(err error) {

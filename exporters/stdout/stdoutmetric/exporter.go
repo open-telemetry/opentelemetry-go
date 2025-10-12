@@ -28,7 +28,7 @@ type exporter struct {
 
 	redactTimestamps bool
 
-	exporterMetric *observ.StdoutMetricExporter
+	inst *observ.Instrumentation
 }
 
 // New returns a configured metric exporter.
@@ -44,7 +44,7 @@ func New(options ...Option) (metric.Exporter, error) {
 	}
 	exp.encVal.Store(*cfg.encoder)
 	var err error
-	exp.exporterMetric, err = observ.NewStdoutMetricExporter(counter.NextExporterID())
+	exp.inst, err = observ.NewInstrumentation(counter.NextExporterID())
 	return exp, err
 }
 
@@ -73,10 +73,10 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 }
 
 func (e *exporter) trackExport(ctx context.Context, count int64) func(err error) {
-	if e.exporterMetric == nil {
+	if e.inst == nil {
 		return func(error) {}
 	}
-	return e.exporterMetric.TrackExport(ctx, count)
+	return e.inst.TrackExport(ctx, count)
 }
 
 func (*exporter) ForceFlush(context.Context) error {
