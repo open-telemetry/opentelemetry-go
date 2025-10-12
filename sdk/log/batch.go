@@ -6,20 +6,14 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
 const (
@@ -34,8 +28,6 @@ const (
 	envarExpTimeout      = "OTEL_BLRP_EXPORT_TIMEOUT"
 	envarExpMaxBatchSize = "OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"
 )
-
-var queueFull = otelconv.ErrorTypeAttr("queue_full")
 
 // Compile-time check BatchProcessor implements Processor.
 var _ Processor = (*BatchProcessor)(nil)
@@ -108,10 +100,8 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
-	observabilityEnabled bool
-	logProcessedCounter  otelconv.SDKProcessorLogProcessed
-	callbackRegistration metric.Registration
-	componentNameAttr    attribute.KeyValue
+	// inst is the instrumentation for observability (nil when disabled).
+	inst *observ.BLP
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -128,17 +118,20 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	}
 
 	b := &BatchProcessor{
-		q:                    newQueue(cfg.maxQSize.Value),
-		batchSize:            cfg.expMaxBatchSize.Value,
-		pollTrigger:          make(chan struct{}, 1),
-		pollKill:             make(chan struct{}),
-		observabilityEnabled: x.Observability.Enabled(),
+		q:           newQueue(cfg.maxQSize.Value),
+		batchSize:   cfg.expMaxBatchSize.Value,
+		pollTrigger: make(chan struct{}, 1),
+		pollKill:    make(chan struct{}),
 	}
 
-	// When observability is enabled, wrap the exporter in metricsExporter
-	// to record the log processing metrics before forwarding logs to exporter
-	if b.observabilityEnabled {
-		exporter = newMetricsExporter(exporter, b)
+	var err error
+	b.inst, err = observ.NewBLP(
+		nextProcessorID(),
+		func() int64 { return int64(b.q.Len()) },
+		int64(cfg.maxQSize.Value),
+	)
+	if err != nil {
+		otel.Handle(err)
 	}
 
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
@@ -152,66 +145,15 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	b.exporter = newBufferExporter(exporter, cfg.expBufferSize.Value)
 	b.pollDone = b.poll(cfg.expInterval.Value)
 
-	if b.observabilityEnabled {
-		b.componentNameAttr = semconv.OTelComponentName(
-			fmt.Sprintf("%s/%d", otelconv.ComponentTypeBatchingLogProcessor, nextProcessorID()))
-		var err error
-		b.logProcessedCounter, b.callbackRegistration, err = b.configureObservability()
-		if err != nil {
-			err = fmt.Errorf("failed to configure observability: %w", err)
-			otel.Handle(err)
-		}
-	}
-
 	return b
 }
 
 var processorIDCounter atomic.Int64
 
-// nextProcessorID returns an identifier for this batch span processor,
+// nextProcessorID returns an identifier for this batch log processor,
 // starting with 0 and incrementing by 1 each time it is called.
 func nextProcessorID() int64 {
 	return processorIDCounter.Add(1) - 1
-}
-
-func (b *BatchProcessor) configureObservability() (otelconv.SDKProcessorLogProcessed, metric.Registration, error) {
-	meter := otel.GetMeterProvider().Meter(
-		selfObsScopeName,
-		metric.WithInstrumentationVersion(sdk.Version()),
-		metric.WithSchemaURL(semconv.SchemaURL),
-	)
-
-	var err error
-	queueCapacityUpDownCounter, e := otelconv.NewSDKProcessorLogQueueCapacity(meter)
-	if e != nil {
-		e = fmt.Errorf("failed to create log queue capacity metric: %w", e)
-		err = errors.Join(err, e)
-	}
-
-	queueSizeUpDownCounter, e := otelconv.NewSDKProcessorLogQueueSize(meter)
-	if e != nil {
-		e = fmt.Errorf("failed to create log queue size metric: %w", e)
-		err = errors.Join(err, e)
-	}
-
-	logProcessedCounter, e := otelconv.NewSDKProcessorLogProcessed(meter)
-	if e != nil {
-		e = fmt.Errorf("failed to create log processed metric: %w", e)
-		err = errors.Join(err, e)
-	}
-
-	callbackAttributesOpt := metric.WithAttributes(b.componentNameAttr,
-		semconv.OTelComponentTypeBatchingLogProcessor)
-	callbackRegistration, e := meter.RegisterCallback(func(_ context.Context, observer metric.Observer) error {
-		observer.ObserveInt64(queueCapacityUpDownCounter.Inst(), int64(b.q.cap), callbackAttributesOpt)
-		observer.ObserveInt64(queueSizeUpDownCounter.Inst(), int64(b.q.Len()), callbackAttributesOpt)
-		return nil
-	})
-	if e != nil {
-		e = fmt.Errorf("failed to register measurement callback for log queue capacity and size: %w", e)
-		err = errors.Join(err, e)
-	}
-	return logProcessedCounter, callbackRegistration, err
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
@@ -226,6 +168,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 		defer close(done)
 		defer ticker.Stop()
 
+		ctx := context.Background()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -237,13 +181,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 			if d := b.q.Dropped(); d > 0 {
 				global.Warn("dropped log records", "dropped", d)
-				if b.observabilityEnabled {
-					attrs := []attribute.KeyValue{
-						b.componentNameAttr,
-						b.logProcessedCounter.AttrComponentType(otelconv.ComponentTypeBatchingLogProcessor),
-						b.logProcessedCounter.AttrErrorType(queueFull),
-					}
-					b.logProcessedCounter.Add(context.Background(), int64(d), attrs...)
+				if b.inst != nil {
+					b.inst.ProcessedQueueFull(ctx, int64(d))
 				}
 			}
 
@@ -253,6 +192,9 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
 					ok := b.exporter.EnqueueExport(r)
 					if ok {
+						if b.inst != nil {
+							b.inst.Processed(ctx, int64(len(r)))
+						}
 						buf = slices.Clone(buf)
 					}
 					return ok
@@ -311,9 +253,8 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 
 	// Flush remaining queued before exporter shutdown.
 	err := b.exporter.Export(ctx, b.q.Flush())
-	// TODO: what's the impact of return from case <-ctx.Done() block above
-	if b.observabilityEnabled {
-		err = errors.Join(err, b.callbackRegistration.Unregister())
+	if b.inst != nil {
+		err = errors.Join(err, b.inst.Shutdown())
 	}
 	return errors.Join(err, b.exporter.Shutdown(ctx))
 }
