@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -550,7 +548,7 @@ func TestClient(t *testing.T) {
 		ctx := t.Context()
 		client, _ := factory(rCh)
 
-		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
