@@ -196,7 +196,7 @@ func TestAggregationSelector(t *testing.T) {
 	assert.Equal(t, metric.AggregationDrop{}, exp.Aggregation(unknownKind))
 }
 
-func TestExporter_Export_SelfObservability(t *testing.T) {
+func TestExporter_Export_Observability(t *testing.T) {
 	componentNameAttr := semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0")
 	componentTypeAttr := semconv.OTelComponentTypeKey.String(
 		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter",
@@ -204,38 +204,38 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 	wantErr := errors.New("encoding failed")
 
 	tests := []struct {
-		name                     string
-		ctx                      context.Context
-		exporterOpts             []stdoutmetric.Option
-		selfObservabilityEnabled bool
-		expectedExportedCount    int64
-		inflightAttrs            attribute.Set
-		attributes               attribute.Set
-		wantErr                  error
+		name                  string
+		ctx                   context.Context
+		exporterOpts          []stdoutmetric.Option
+		observabilityEnabled  bool
+		expectedExportedCount int64
+		inflightAttrs         attribute.Set
+		attributes            attribute.Set
+		wantErr               error
 	}{
 		{
-			name:                     "Enabled",
-			ctx:                      t.Context(),
-			exporterOpts:             []stdoutmetric.Option{testEncoderOption()},
-			selfObservabilityEnabled: true,
-			expectedExportedCount:    19,
-			inflightAttrs:            attribute.NewSet(componentNameAttr, componentTypeAttr),
-			attributes:               attribute.NewSet(componentNameAttr, componentTypeAttr),
+			name:                  "Enabled",
+			ctx:                   t.Context(),
+			exporterOpts:          []stdoutmetric.Option{testEncoderOption()},
+			observabilityEnabled:  true,
+			expectedExportedCount: 19,
+			inflightAttrs:         attribute.NewSet(componentNameAttr, componentTypeAttr),
+			attributes:            attribute.NewSet(componentNameAttr, componentTypeAttr),
 		},
 		{
-			name:                     "Disabled",
-			ctx:                      t.Context(),
-			exporterOpts:             []stdoutmetric.Option{testEncoderOption()},
-			selfObservabilityEnabled: false,
-			expectedExportedCount:    0,
+			name:                  "Disabled",
+			ctx:                   t.Context(),
+			exporterOpts:          []stdoutmetric.Option{testEncoderOption()},
+			observabilityEnabled:  false,
+			expectedExportedCount: 0,
 		},
 		{
-			name:                     "EncodingError",
-			ctx:                      t.Context(),
-			exporterOpts:             []stdoutmetric.Option{stdoutmetric.WithEncoder(failingEncoder{})},
-			selfObservabilityEnabled: true,
-			expectedExportedCount:    19,
-			inflightAttrs:            attribute.NewSet(componentNameAttr, componentTypeAttr),
+			name:                  "EncodingError",
+			ctx:                   t.Context(),
+			exporterOpts:          []stdoutmetric.Option{stdoutmetric.WithEncoder(failingEncoder{})},
+			observabilityEnabled:  true,
+			expectedExportedCount: 19,
+			inflightAttrs:         attribute.NewSet(componentNameAttr, componentTypeAttr),
 			attributes: attribute.NewSet(
 				componentNameAttr,
 				componentTypeAttr,
@@ -246,7 +246,7 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tt.selfObservabilityEnabled))
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tt.observabilityEnabled))
 
 			// Reset the exporter ID counter to ensure consistent component names
 			_ = counter.SetExporterID(0)
@@ -272,7 +272,7 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 			err = reader.Collect(tt.ctx, &metrics)
 			require.NoError(t, err)
 
-			if !tt.selfObservabilityEnabled {
+			if !tt.observabilityEnabled {
 				assert.Empty(t, metrics.ScopeMetrics)
 			} else {
 				assert.Len(t, metrics.ScopeMetrics, 1)

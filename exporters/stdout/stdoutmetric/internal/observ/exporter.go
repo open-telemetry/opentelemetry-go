@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package observ provides self-observability metrics for stdout metric exporter.
-// This is an experimental feature controlled by the x.SelfObservability feature flag.
+// This is an experimental feature controlled by the x.Observability feature flag.
 package observ // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 
 import (
