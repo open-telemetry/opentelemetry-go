@@ -358,3 +358,31 @@ func TestSetPresetAttrsError(t *testing.T) {
 		assert.Equal(t, "failed to parse target", l.msg)
 	}
 }
+
+func BenchmarkInstrumentationExportLogs(b *testing.B) {
+	setup := func(b *testing.B) *Instrumentation {
+		b.Helper()
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		inst, err := NewInstrumentation(ID, TARGET)
+		if err != nil {
+			b.Fatalf("failed to create instrumentation: %v", err)
+		}
+		return inst
+	}
+
+	run := func(err error, statusCode int) func(*testing.B) {
+		return func(b *testing.B) {
+			inst := setup(b)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.ExportLogs(b.Context(), 10).End(err, statusCode)
+			}
+		}
+	}
+
+	b.Run("NoError", run(nil, http.StatusOK))
+	err := &internal.PartialSuccess{RejectedItems: 6}
+	b.Run("PartialError", run(err, http.StatusOK))
+	b.Run("FullError", run(assert.AnError, http.StatusInternalServerError))
+}
