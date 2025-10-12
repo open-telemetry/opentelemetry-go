@@ -28,6 +28,8 @@ type testSetup struct {
 }
 
 func setupTestMeterProvider(t *testing.T) *testSetup {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
 	reader := sdkmetric.NewManualReader()
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -160,6 +162,8 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 }
 
 func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
 	em, err := NewStdoutMetricExporter(42)
 	assert.NoError(t, err)
 

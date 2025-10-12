@@ -247,6 +247,10 @@ func TestExporter_Export_SelfObservability(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tt.selfObservabilityEnabled))
+
+			// Reset the exporter ID counter to ensure consistent component names
+			_ = counter.SetExporterID(0)
+
 			reader := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(reader))
 			origMp := otel.GetMeterProvider()
