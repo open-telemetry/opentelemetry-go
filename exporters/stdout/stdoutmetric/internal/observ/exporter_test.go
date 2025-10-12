@@ -169,7 +169,9 @@ func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 
 	// Should have component.name and component.type attributes
 	assert.Len(t, em.attrs, 2)
-	expectedComponentName := semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/42")
+	expectedComponentName := semconv.OTelComponentName(
+		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/42",
+	)
 	expectedComponentType := semconv.OTelComponentTypeKey.String(ComponentType)
 	assert.Contains(t, em.attrs, expectedComponentName)
 	assert.Contains(t, em.attrs, expectedComponentType)
