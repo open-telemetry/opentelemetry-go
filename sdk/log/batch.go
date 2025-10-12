@@ -13,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
@@ -126,7 +127,7 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 
 	var err error
 	b.inst, err = observ.NewBLP(
-		nextProcessorID(),
+		counter.NextExporterID(),
 		func() int64 { return int64(b.q.Len()) },
 		int64(cfg.maxQSize.Value),
 	)
@@ -153,14 +154,6 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	b.pollDone = b.poll(cfg.expInterval.Value)
 
 	return b
-}
-
-var processorIDCounter atomic.Int64
-
-// nextProcessorID returns an identifier for this batch log processor,
-// starting with 0 and incrementing by 1 each time it is called.
-func nextProcessorID() int64 {
-	return processorIDCounter.Add(1) - 1
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
