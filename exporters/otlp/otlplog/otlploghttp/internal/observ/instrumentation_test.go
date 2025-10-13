@@ -233,7 +233,7 @@ func TestInstrumentationExportLogsPartialErrors(t *testing.T) {
 	const n = 10
 	const success = 5
 
-	err := internal.PartialSuccess{RejectedItems: success}
+	err := internal.PartialSuccess{RejectedItems: n - success}
 	inst.ExportLogs(t.Context(), n).End(err, http.StatusPartialContent)
 
 	assertMetrics(t, collect(), n, success, err, http.StatusPartialContent)
@@ -249,7 +249,7 @@ func TestInstrumentationExportLogAllErrors(t *testing.T) {
 	assertMetrics(t, collect(), n, success, assert.AnError, http.StatusUnauthorized)
 }
 
-func TestInstrumentation(t *testing.T) {
+func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
 
