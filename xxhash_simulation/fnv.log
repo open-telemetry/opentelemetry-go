@@ -1,0 +1,119 @@
+FNV-1a Collision Rate Simulation
+=================================
+
+NOTE: We only count TRUE collisions (different inputs → same hash)
+Duplicate inputs (same input → same hash) are NOT collisions!
+
+
+========== FNV-1a 32-bit Tests ==========
+
+=== Random Strings (10K, length=20) [FNV-1a 32-bit] ===
+Number of inputs:      10000
+Unique hashes:         10000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0116403680 (1.1640e-02)
+Duration:              7.167041ms
+✓ No true collisions detected
+
+=== Random Strings (100K, length=20) [FNV-1a 32-bit] ===
+Number of inputs:      100000
+Unique hashes:         99997
+TRUE collisions:       3 (different inputs, same hash)
+Collision rate:        0.0000300000 (3.0000e-05)
+Expected collisions:   1.1641415767 (1.1641e+00)
+Duration:              77.920439ms
+⚠️  WARNING: TRUE COLLISIONS DETECTED!
+
+=== Sequential Inputs (100K) [FNV-1a 32-bit] ===
+Number of inputs:      100000
+Unique hashes:         100000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   1.1641415767 (1.1641e+00)
+Duration:              50.019091ms
+✓ No true collisions detected
+
+=== With Duplicate Inputs (50K, 20% duplicates) [FNV-1a 32-bit] ===
+Number of inputs:      50000
+Unique hashes:         48895
+TRUE collisions:       0 (different inputs, same hash)
+Duplicate inputs:      1105 (same input, same hash - NOT collisions)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.2910324838 (2.9103e-01)
+Duration:              44.62614ms
+✓ No true collisions detected
+
+=== Random Strings (10M, length=20) [FNV-1a 32-bit] ===
+Number of inputs:      10000000
+Unique hashes:         9988181
+TRUE collisions:       11819 (different inputs, same hash)
+Collision rate:        0.0011819000 (1.1819e-03)
+Expected collisions:   11641.5310185403 (1.1642e+04)
+Duration:              12.749422404s
+⚠️  WARNING: TRUE COLLISIONS DETECTED!
+
+========== FNV-1a 64-bit Tests ==========
+
+=== Random Strings (100K, length=20) [FNV-1a 64-bit] ===
+Number of inputs:      100000
+Unique hashes:         100000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000003 (2.7105e-10)
+Duration:              50.356156ms
+✓ No true collisions detected
+
+=== Random Strings (1M, length=20) [FNV-1a 64-bit] ===
+Number of inputs:      1000000
+Unique hashes:         1000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000271 (2.7105e-08)
+Duration:              786.467599ms
+✓ No true collisions detected
+
+=== Sequential Inputs (1M) [FNV-1a 64-bit] ===
+Number of inputs:      1000000
+Unique hashes:         1000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000271 (2.7105e-08)
+Duration:              738.625184ms
+✓ No true collisions detected
+
+=== Random Strings (10M, length=20) [FNV-1a 64-bit] ===
+Number of inputs:      10000000
+Unique hashes:         10000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000027105 (2.7105e-06)
+Duration:              10.981820092s
+✓ No true collisions detected
+
+=== Rangom Strings (100M, length=20) [FNV-1a 64-bit] ===
+Number of inputs:      100000000
+Unique hashes:         100000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0002710505 (2.7105e-04)
+Duration:              2m10.32865214s
+✓ No true collisions detected
+
+=== Summary ===
+
+FNV-1a 32-bit (32-bit output):
+- Hash space size: 2^32 = 4,294,967,296
+- Expected first collision after ~77,000 inputs (birthday paradox)
+- Collision probability for 100K inputs: ~0.001 (0.1%)
+- You WILL see collisions with 100K+ inputs
+
+FNV-1a 64-bit (64-bit output):
+- Hash space size: 2^64 = 18,446,744,073,709,551,616
+- Expected first collision after ~5 billion inputs (birthday paradox)
+- Collision probability for 1M inputs: ~0.00000000000005
+- You should NOT see collisions with < 100M inputs
+
+Key Distinction:
+✓ TRUE COLLISION: Different inputs produce the same hash (BAD)
+✓ DUPLICATE INPUT: Same input produces the same hash (EXPECTED)

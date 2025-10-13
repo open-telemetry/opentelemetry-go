@@ -1,0 +1,91 @@
+xxHash64 Collision Rate Simulation
+===================================
+
+NOTE: We only count TRUE collisions (different inputs → same hash)
+Duplicate inputs (same input → same hash) are NOT collisions!
+
+
+=== Random Strings (100K, length=20) ===
+Number of inputs:      100000
+Unique hashes:         100000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000003 (2.7105e-10)
+Duration:              61.093329ms
+✓ No true collisions detected
+
+=== Random Strings (1M, length=20) ===
+Number of inputs:      1000000
+Unique hashes:         1000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000271 (2.7105e-08)
+Duration:              811.683204ms
+✓ No true collisions detected
+
+=== Random Strings (10M, length=20) ===
+Number of inputs:      10000000
+Unique hashes:         10000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000027105 (2.7105e-06)
+Duration:              9.192752766s
+✓ No true collisions detected
+
+=== Sequential Inputs (1M) ===
+Number of inputs:      1000000
+Unique hashes:         1000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000271 (2.7105e-08)
+Duration:              622.331864ms
+✓ No true collisions detected
+
+=== Similar Strings (1M) ===
+Number of inputs:      1000000
+Unique hashes:         1000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000271 (2.7105e-08)
+Duration:              683.829445ms
+✓ No true collisions detected
+Note: 588 duplicate inputs were generated (not counted as collisions)
+
+=== Short Random Strings (1M, length=5) ===
+Number of inputs:      1000000
+Unique hashes:         999412
+TRUE collisions:       0 (different inputs, same hash)
+Duplicate inputs:      588 (same input, same hash - NOT collisions)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000271 (2.7105e-08)
+Duration:              518.838767ms
+✓ No true collisions detected
+
+=== With Duplicate Inputs (100K, 20% duplicates) ===
+Number of inputs:      100000
+Unique hashes:         97748
+TRUE collisions:       0 (different inputs, same hash)
+Duplicate inputs:      2252 (same input, same hash - NOT collisions)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0000000003 (2.7105e-10)
+Duration:              74.503253ms
+✓ No true collisions detected
+
+=== Random String (100M, length=20) ===
+Number of inputs:      100000000
+Unique hashes:         100000000
+TRUE collisions:       0 (different inputs, same hash)
+Collision rate:        0.0000000000 (0.0000e+00)
+Expected collisions:   0.0002710505 (2.7105e-04)
+Duration:              2m7.181218892s
+✓ No true collisions detected
+
+=== Summary ===
+For xxHash64 (64-bit output):
+- Expected first collision after ~5 billion inputs (birthday paradox)
+- Collision probability for 1M inputs: ~0.00000000000005
+- Hash space size: 2^64 = 18,446,744,073,709,551,616
+
+Key Distinction:
+✓ TRUE COLLISION: Different inputs produce the same hash (BAD)
+✓ DUPLICATE INPUT: Same input produces the same hash (EXPECTED)
