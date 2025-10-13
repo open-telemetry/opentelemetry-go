@@ -65,8 +65,7 @@ git clone https://github.com/open-telemetry/opentelemetry-go
 that name is a kind of a redirector to GitHub that `go get` can
 understand, but `git` does not.)
 
-This would put the project in the `opentelemetry-go` directory in the
-current working directory.
+This will add the project as `opentelemetry-go` within the current directory.
 
 Enter the newly created directory and add your fork as a new remote:
 
