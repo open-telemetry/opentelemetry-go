@@ -169,7 +169,7 @@ OpenTelemetry is an evolving specification, one where the desires and
 use cases are clear, but the methods to satisfy those use cases are
 not.
 
-As such, contributions should provide functionality and behavior that
+As such, Contributions should provide functionality and behavior that
 conforms to the specification, but the interface and structure are
 flexible.
 
@@ -677,7 +677,7 @@ should be canceled.
 
 ### Observability
 
-OpenTelemetry Go SDK components should be instrumented to enable user observability for the health and performance of the telemetry pipeline itself.
+OpenTelemetry Go SDK components should be instrumented to enable users observability for the health and performance of the telemetry pipeline itself.
 This allows operators to understand how well their observability infrastructure is functioning and to identify potential issues before they impact their applications.
 
 This section outlines the best practices for building instrumentation in OpenTelemetry Go SDK components.
