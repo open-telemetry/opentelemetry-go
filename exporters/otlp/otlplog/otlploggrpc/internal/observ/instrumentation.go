@@ -12,14 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/internal/global"
-
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
@@ -38,12 +37,12 @@ const (
 var (
 	attrsPool = &sync.Pool{
 		New: func() any {
-			const n = 1 /* component.name */ +
-				1 /* component.type */ +
-				1 /* server.addr */ +
-				1 /* server.port */ +
-				1 /* error.type */ +
-				1 /* rpc.grpc.status_code */
+			const n = 1 + // component.name
+				1 + // component.type
+				1 + // server.addr
+				1 + // server.port
+				1 + // error.type
+				1 // rpc.grpc.status_code
 			s := make([]attribute.KeyValue, 0, n)
 			// Return a pointer to a slice instead of a slice itself
 			// to avoid allocations on every call.
