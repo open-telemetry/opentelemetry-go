@@ -24,7 +24,7 @@ Ensure things look correct before submitting a pull request to include the addit
 
 ## Breaking changes validation
 
-You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) to ensure that there are no unwanted changes done in the public API.
+You can run `make gorelease` which runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) to ensure that there are no unwanted changes made in the public API.
 
 You can check/report problems with `gorelease` [here](https://golang.org/issues/26420).
 
@@ -62,7 +62,7 @@ Update go.mod for submodules to depend on the new release which will happen in t
     ```
 
 3. Update the [Changelog](./CHANGELOG.md).
-   - Make sure all relevant changes for this release are included and are in language that non-contributors to the project can understand.
+   - Make sure all relevant changes for this release are included and are written in language that non-contributors to the project can understand.
        To verify this, you can look directly at the commits since the `<last tag>`.
 
        ```
