@@ -58,3 +58,6 @@ modules:
   go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp:
     version-refs:
       - ./exporters/otlp/otlptrace/otlptracehttp/internal/version.go
+  go.opentelemetry.io/otel/sdk/metric:
+    version-refs:
+      - ./sdk/metric/internal/version.go

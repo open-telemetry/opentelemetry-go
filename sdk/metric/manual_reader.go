@@ -10,8 +10,17 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/metric/internal/counter"
+	"go.opentelemetry.io/otel/sdk/metric/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+)
+
+const (
+	// ManualReaderType uniquely identifies the OpenTelemetry Metric Reader component
+	// being instrumented.
+	manualReaderType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
 )
 
 // ManualReader is a simple Reader that allows an application to
@@ -26,6 +35,8 @@ type ManualReader struct {
 
 	temporalitySelector TemporalitySelector
 	aggregationSelector AggregationSelector
+
+	inst *observ.Instrumentation
 }
 
 // Compile time check the manualReader implements Reader and is comparable.
@@ -39,6 +50,12 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 		aggregationSelector: cfg.aggregationSelector,
 	}
 	r.externalProducers.Store(cfg.producers)
+
+	var err error
+	if r.inst, err = observ.NewInstrumentation(counter.NextExporterID(), manualReaderType); err != nil {
+		otel.Handle(err)
+	}
+
 	return r
 }
 
@@ -93,12 +110,20 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 //
 // This method is safe to call concurrently.
 func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	var err error
+	if mr.inst != nil {
+		cp := mr.inst.CollectMetrics(ctx)
+		defer func() { cp.End(err) }()
+	}
+
 	if rm == nil {
-		return errors.New("manual reader: *metricdata.ResourceMetrics is nil")
+		err = errors.New("manual reader: *metricdata.ResourceMetrics is nil")
+		return err
 	}
 	p := mr.sdkProducer.Load()
 	if p == nil {
-		return ErrReaderNotRegistered
+		err = ErrReaderNotRegistered
+		return err
 	}
 
 	ph, ok := p.(produceHolder)
@@ -107,11 +132,11 @@ func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 		// this should never happen. In the unforeseen case that this does
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
-		err := fmt.Errorf("manual reader: invalid producer: %T", p)
+		err = fmt.Errorf("manual reader: invalid producer: %T", p)
 		return err
 	}
 
-	err := ph.produce(ctx, rm)
+	err = ph.produce(ctx, rm)
 	if err != nil {
 		return err
 	}
