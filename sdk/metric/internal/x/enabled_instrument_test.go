@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package x
 
 import (
@@ -9,14 +12,14 @@ import (
 
 type testInstrument struct{}
 
-func (t *testInstrument) Enabled(ctx context.Context) bool {
+func (*testInstrument) Enabled(_ context.Context) bool {
 	return true
 }
 
 func TestEnabledInstrument(t *testing.T) {
 	var ei EnabledInstrument = &testInstrument{}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	enabled := ei.Enabled(ctx)
 
 	require.True(t, enabled, "Enabled() should return true")
