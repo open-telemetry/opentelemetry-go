@@ -50,13 +50,14 @@ func TestSSPSpanProcessed(t *testing.T) {
 	ssp, err := observ.NewSSP(sspComponentID)
 	assert.NoError(t, err)
 
-	ssp.SpanProcessed(ctx, 1, nil)
+	ssp.SpanProcessed(ctx, nil)
 	check(t, collect(), processed(dPt(sspSet(), 1)))
-	ssp.SpanProcessed(ctx, 2, nil)
+	ssp.SpanProcessed(ctx, nil)
+	ssp.SpanProcessed(ctx, nil)
 	check(t, collect(), processed(dPt(sspSet(), 3)))
 
 	processErr := errors.New("error processing span")
-	ssp.SpanProcessed(ctx, 1, processErr)
+	ssp.SpanProcessed(ctx, processErr)
 	check(t, collect(), processed(
 		dPt(sspSet(), 3),
 		dPt(sspSet(semconv.ErrorType(processErr)), 1),
@@ -90,7 +91,7 @@ func BenchmarkSSP(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				ssp.SpanProcessed(ctx, 10, nil)
+				ssp.SpanProcessed(ctx, nil)
 			}
 		})
 	})
@@ -112,7 +113,7 @@ func BenchmarkSSP(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				ssp.SpanProcessed(ctx, 10, processErr)
+				ssp.SpanProcessed(ctx, processErr)
 			}
 		})
 	})

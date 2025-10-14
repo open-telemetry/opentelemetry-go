@@ -68,14 +68,16 @@ func NewSSP(id int64) (*SSP, error) {
 	addOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(attrs...))}
 
 	return &SSP{
-		spansProcessedCounter: spansProcessedCounter.Int64Counter,
+		spansProcessedCounter: spansProcessedCounter.Inst(),
 		addOpts:               addOpts,
 		attrs:                 attrs,
 	}, err
 }
 
-func (ssp *SSP) SpanProcessed(ctx context.Context, count int64, err error) {
-	ssp.spansProcessedCounter.Add(ctx, count, ssp.addOption(err)...)
+// SpanProcessed records that a span has been processed by the SimpleSpanProcessor.
+// If err is non-nil, it records the processing error as an attribute.
+func (ssp *SSP) SpanProcessed(ctx context.Context, err error) {
+	ssp.spansProcessedCounter.Add(ctx, 1, ssp.addOption(err)...)
 }
 
 func (ssp *SSP) addOption(err error) []metric.AddOption {
