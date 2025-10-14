@@ -98,7 +98,7 @@ The next release will require at least [Go 1.24].
 - Add `WithCardinalityLimit` option to configure the cardinality limit in `go.opentelemetry.io/otel/sdk/metric`. (#6996, #7065, #7081, #7164, #7165, #7179)
 - Add `Clone` method to `Record` in `go.opentelemetry.io/otel/log` that returns a copy of the record with no shared state. (#7001)
 - Add experimental self-observability span and batch span processor metrics in `go.opentelemetry.io/otel/sdk/trace`.
-  Check the `go.opentelemetry.io/otel/sdk/internal/x` package documentation for more information. (#7027, #6393, #7209)
+  Check the `go.opentelemetry.io/otel/sdk/trace/internal/x` package documentation for more information. (#7027, #6393, #7209)
 - The `go.opentelemetry.io/otel/semconv/v1.36.0` package.
   The package contains semantic conventions from the `v1.36.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.36.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.34.0.`(#7032, #7041)
