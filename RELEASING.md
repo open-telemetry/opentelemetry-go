@@ -164,7 +164,6 @@ Once all related issues and PRs have been added to the milestone, close the mile
 
 Bump the dependencies in the following Go services:
 
-- [`accounting`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/accounting)
 - [`checkoutservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/checkout)
 - [`productcatalogservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/product-catalog)
 
