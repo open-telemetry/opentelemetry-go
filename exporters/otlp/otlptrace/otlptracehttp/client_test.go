@@ -17,10 +17,19 @@ import (
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 const (
@@ -468,4 +477,156 @@ func TestCollectorRespondingNonProtobufContent(t *testing.T) {
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.NoError(t, err)
 	assert.Len(t, mc.GetSpans(), 1)
+}
+
+func TestClientInstrumentation(t *testing.T) {
+	// Enable instrumentation for this test.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Reset client ID to be deterministic
+	const id = 0
+	counter.SetExporterID(id)
+
+	// Save original meter provider and restore at end of test.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Create a new meter provider to capture metrics.
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	const n, msg = 2, "partially successful"
+	mc := runMockCollector(t, mockCollectorConfig{
+		InjectHTTPStatus: []int{400},
+		Partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: n,
+			ErrorMessage:  msg,
+		},
+	})
+	t.Cleanup(func() { require.NoError(t, mc.Stop()) })
+
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	exporter, err := otlptrace.New(t.Context(), driver)
+	require.NoError(t, err)
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.Error(t, err)
+
+	require.NoError(t, exporter.Shutdown(t.Context()))
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	attrs := observ.BaseAttrs(id, mc.endpoint)
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
+			SchemaURL: observ.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+				Description: otelconv.SDKExporterSpanInflight{}.Description(),
+				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterSpanExported{}.Name(),
+				Description: otelconv.SDKExporterSpanExported{}.Description(),
+				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
+						)...)},
+					},
+					Temporality: 0x1,
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(400),
+						)...)},
+					},
+					Temporality: 0x1,
+				},
+			},
+		},
+	}
+	require.Len(t, got.ScopeMetrics, 1)
+	opt := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+		metricdatatest.IgnoreValue(),
+	}
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		mc := runMockCollector(b, mockCollectorConfig{
+			Partial: &coltracepb.ExportTracePartialSuccess{
+				RejectedSpans: 5,
+				ErrorMessage:  "partially successful",
+			},
+		})
+		b.Cleanup(func() { require.NoError(b, mc.Stop()) })
+
+		c := otlptracehttp.NewClient(
+			otlptracehttp.WithEndpoint(mc.Endpoint()),
+			otlptracehttp.WithInsecure(),
+		)
+		exp, err := otlptrace.New(b.Context(), c)
+		require.NoError(b, err)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
+
+		stubs := make([]tracetest.SpanStub, n)
+		for i := range stubs {
+			stubs[i].Name = fmt.Sprintf("Span %d", i)
+		}
+		spans := tracetest.SpanStubs(stubs).Snapshots()
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for b.Loop() {
+			err = exp.ExportSpans(b.Context(), spans)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
+	})
 }
