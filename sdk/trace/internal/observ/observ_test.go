@@ -93,6 +93,10 @@ func (m *errMeter) Int64ObservableUpDownCounter(
 	return nil, m.err
 }
 
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	return nil, m.err
+}
+
 func (m *errMeter) RegisterCallback(mapi.Callback, ...mapi.Observable) (mapi.Registration, error) {
 	return nil, m.err
 }

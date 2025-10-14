@@ -10,6 +10,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 - [Exemplars](#exemplars)
 - [Instrument Enabled](#instrument-enabled)
+- [Observability](#observability)
 
 ### Exemplars
 
@@ -89,6 +90,20 @@ if !ok || c.Enabled(context.Background()) {
     c.Add(expensiveComputation())
 }
 ```
+
+### Observability
+
+The `sdk/metric` periodic/manual metric reader can be configured to provide observability about itself using OpenTelemetry metrics.
+
+To opt-in, set the environment variable `OTEL_GO_X_OBSERVABILITY` to `true`.
+
+When enabled, the SDK will create the following metrics using the global `MeterProvider`:
+
+- `otel.sdk.metric_reader.collection.duration`
+
+Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
+
+[Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.36.0/docs/otel/sdk-metrics.md
 
 ## Compatibility and Stability
 
