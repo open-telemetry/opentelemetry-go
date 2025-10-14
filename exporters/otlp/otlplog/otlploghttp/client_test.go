@@ -35,6 +35,8 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
+
 	"go.opentelemetry.io/otel/sdk/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
@@ -548,7 +550,7 @@ func TestClient(t *testing.T) {
 		ctx := t.Context()
 		client, _ := factory(rCh)
 
-		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
