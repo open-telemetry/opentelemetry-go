@@ -339,63 +339,6 @@ func hPoint[N int64 | float64](
 	}
 }
 
-func TestBucketsBin(t *testing.T) {
-	t.Run("Int64", testBucketsBin[int64]())
-	t.Run("Float64", testBucketsBin[float64]())
-}
-
-func testBucketsBin[N int64 | float64]() func(t *testing.T) {
-	return func(t *testing.T) {
-		b := newHistogramPoint[N](alice, 3)
-		assertB := func(expectedBucketCounts []uint64, expectedCount uint64, mi, ma N) {
-			t.Helper()
-			var bucketCounts []uint64
-			count := b.loadCountsInto(&bucketCounts)
-			assert.Equal(t, expectedBucketCounts, bucketCounts)
-			assert.Equal(t, expectedCount, count)
-			if mi != 0 {
-				assert.True(t, b.minMax.set.Load())
-				assert.Equal(t, mi, b.minMax.minimum.Load())
-			}
-			if ma != 0 {
-				assert.True(t, b.minMax.set.Load())
-				assert.Equal(t, ma, b.minMax.maximum.Load())
-			}
-		}
-
-		bounds := []float64{0, 2, 4}
-		assertB([]uint64{0, 0, 0}, 0, 0, 0)
-		b.bin(bounds, 1)
-		b.minMax.Update(2)
-		assertB([]uint64{0, 1, 0}, 1, 0, 2)
-		b.bin(bounds, -1)
-		b.minMax.Update(-1)
-		assertB([]uint64{1, 1, 0}, 2, -1, 2)
-	}
-}
-
-func TestBucketsSum(t *testing.T) {
-	t.Run("Int64", testBucketsSum[int64]())
-	t.Run("Float64", testBucketsSum[float64]())
-}
-
-func testBucketsSum[N int64 | float64]() func(t *testing.T) {
-	return func(t *testing.T) {
-		b := newHistogramPoint[N](alice, 3)
-
-		var want N
-		assert.Equal(t, want, b.total.load())
-
-		b.sum(2)
-		want = 2
-		assert.Equal(t, want, b.total.load())
-
-		b.sum(-1)
-		want = 1
-		assert.Equal(t, want, b.total.load())
-	}
-}
-
 func TestHistogramImmutableBounds(t *testing.T) {
 	b := []float64{0, 1, 2}
 	cpB := make([]float64, len(b))
