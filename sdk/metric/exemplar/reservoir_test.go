@@ -176,7 +176,10 @@ func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) 
 	}
 }
 
-func generateOfferInputs[N int64 | float64](t *testing.T, i int) (context.Context, time.Time, Value, []attribute.KeyValue) {
+func generateOfferInputs[N int64 | float64](
+	t *testing.T,
+	i int,
+) (context.Context, time.Time, Value, []attribute.KeyValue) {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID([16]byte{byte(i)}),
 		SpanID:     trace.SpanID([8]byte{byte(i)}),
