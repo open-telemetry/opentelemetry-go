@@ -279,12 +279,12 @@ func TestRecordClone(t *testing.T) {
 }
 
 func TestRecordDroppedAttributes(t *testing.T) {
-	orig := logAttrDropped
-	t.Cleanup(func() { logAttrDropped = orig })
+	orig := logKeyValuePairDropped
+	t.Cleanup(func() { logKeyValuePairDropped = orig })
 
 	for i := 1; i < attributesInlineCount*5; i++ {
 		var called bool
-		logAttrDropped = func() { called = true }
+		logKeyValuePairDropped = func() { called = true }
 
 		r := new(Record)
 		r.attributeCountLimit = 1
