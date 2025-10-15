@@ -6,7 +6,6 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"sort"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,14 +21,6 @@ var (
 	bounds   = []float64{1, 5}
 	noMinMax = false
 )
-
-func newHistogramPoint[N int64 | float64](attrs attribute.Set, n int) *histogramPoint[N] {
-	hPt := &histogramPoint[N]{
-		attrs:                  attrs,
-		histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, n)},
-	}
-	return hPt
-}
 
 func TestHistogram(t *testing.T) {
 	c := new(clock)
