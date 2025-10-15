@@ -4,6 +4,8 @@
 package exemplar
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -143,4 +145,64 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 			assert.Empty(t, dest, "no exemplars should be collected")
 		})
 	}
+}
+
+func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		rp, n := f(1)
+		if n < 1 {
+			t.Skip("skipping, reservoir capacity less than 1:", n)
+		}
+		r := rp(*attribute.EmptySet())
+
+		var wg sync.WaitGroup
+
+		// Call Offer concurrently with another Offer, and with Collect.
+		for i := range 2 {
+			wg.Add(1)
+			go func() {
+				ctx, ts, val, attrs := generateOfferInputs[N](t, i+1)
+				r.Offer(ctx, ts, val, attrs)
+				wg.Done()
+			}()
+		}
+		var dest []Exemplar
+		r.Collect(&dest)
+		for _, e := range dest {
+			validateExemplar[N](t, e)
+		}
+		wg.Wait()
+	}
+}
+
+func generateOfferInputs[N int64 | float64](t *testing.T, i int) (context.Context, time.Time, Value, []attribute.KeyValue) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID([16]byte{byte(i)}),
+		SpanID:     trace.SpanID([8]byte{byte(i)}),
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
+	ts := time.Unix(int64(i), int64(i))
+	val := NewValue(N(i))
+	attrs := []attribute.KeyValue{attribute.Int("i", i)}
+	return ctx, ts, val, attrs
+}
+
+func validateExemplar[N int64 | float64](t *testing.T, e Exemplar) {
+	i := 0
+	switch e.Value.Type() {
+	case Int64ValueType:
+		i = int(e.Value.Int64())
+	case Float64ValueType:
+		i = int(e.Value.Float64())
+	}
+	ctx, ts, _, attrs := generateOfferInputs[N](t, i)
+	sc := trace.SpanContextFromContext(ctx)
+	tID := sc.TraceID()
+	sID := sc.SpanID()
+	assert.Equal(t, tID[:], e.TraceID)
+	assert.Equal(t, sID[:], e.SpanID)
+	assert.Equal(t, ts, e.Time)
+	assert.Equal(t, attrs, e.FilteredAttributes)
 }
