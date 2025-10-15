@@ -159,34 +159,34 @@ func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) 
 		var wg sync.WaitGroup
 
 		const goroutines = 2
-		
+
 		// Call Offer concurrently with another Offer, and with Collect.
 		for i := range goroutines {
 			wg.Add(1)
 			go func(interation int) {
-				ctx, ts, val, attrs := generateOfferInputs[N](t, iteration+1)
+				ctx, ts, val, attrs := generateOfferInputs[N](t, i+1)
 				r.Offer(ctx, ts, val, attrs)
 				wg.Done()
 			}(i)
 		}
- 
-        // Also test concurrent Collect calls
-        wg.Add(1)
-        go func() {
-            var dest []Exemplar
-            r.Collect(&dest)
-            wg.Done()
-        }()
-        
-        wg.Wait()
-        
-        // Final collect to validate state
-        var dest []Exemplar
-        r.Collect(&dest)
-        assert.NotEmpty(t, dest)
-        for _, e := range dest {
-            validateExemplar[N](t, e)
-        }
+
+		// Also test concurrent Collect calls
+		wg.Add(1)
+		go func() {
+			var dest []Exemplar
+			r.Collect(&dest)
+			wg.Done()
+		}()
+
+		wg.Wait()
+
+		// Final collect to validate state
+		var dest []Exemplar
+		r.Collect(&dest)
+		assert.NotEmpty(t, dest)
+		for _, e := range dest {
+			validateExemplar[N](t, e)
+		}
 	}
 }
 
