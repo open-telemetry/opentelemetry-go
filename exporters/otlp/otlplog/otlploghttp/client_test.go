@@ -876,7 +876,10 @@ func TestClientInstrumenation(t *testing.T) {
 		},
 	}
 
-	client, _, addr := factory(rCh)
+	client, coll, addr := factory(rCh)
+	t.Cleanup(func() {
+		assert.NoError(t, coll.Shutdown(context.Background()))
+	})
 	assert.ErrorIs(t, client.UploadLogs(t.Context(), resourceLogs), internal.PartialSuccess{})
 
 	var got metricdata.ResourceMetrics
