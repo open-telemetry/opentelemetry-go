@@ -16,12 +16,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 type clientShim struct {
@@ -312,5 +323,212 @@ func TestConfig(t *testing.T) {
 		assert.ErrorContains(t, err, exporterErr.Error())
 
 		assert.NoError(t, exCtx.Err())
+	})
+}
+
+func TestClientInstrumentation(t *testing.T) {
+	// Enable instrumentation for this test.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Reset client ID to be deterministic.
+	const id = 0
+	counter.SetExporterID(id)
+
+	// Save original meter provider and restore at end of test.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Create a new meter provider to capture metrics.
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	const n, msg = 2, "partially successful"
+	rCh := make(chan otest.ExportResult, 1)
+	// Test partial success - return HTTP 200 with partial success info
+	rCh <- otest.ExportResult{
+		Response: &colmetricpb.ExportMetricsServiceResponse{
+			PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+				RejectedDataPoints: n,
+				ErrorMessage:       msg,
+			},
+		},
+	}
+
+	coll, err := otest.NewHTTPCollector("", rCh)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, coll.Shutdown(context.Background()))
+	})
+	t.Cleanup(func() { close(rCh) })
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure()}
+	ctx := t.Context()
+	exp, err := New(ctx, opts...)
+	require.NoError(t, err)
+
+	// Export some test data
+	err = exp.Export(ctx, &metricdata.ResourceMetrics{
+		Resource: resource.NewWithAttributes(semconv.SchemaURL, attribute.String("service.name", "test")),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{Name: "test"},
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "test-metric",
+						Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Value: 42}}},
+					},
+				},
+			},
+		},
+	})
+
+	// Should get partial success error
+	wantErr := internal.MetricPartialSuccessError(n, msg)
+	require.ErrorIs(t, err, wantErr, "Expected partial success error")
+
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	require.NoError(t, exp.Shutdown(context.Background()))
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &got))
+
+	attrs := observ.BaseAttrs(id, addr)
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
+			SchemaURL: observ.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterMetricDataPointExported{}.AttrErrorType("*errors.joinError"),
+						)...)},
+					},
+					Temporality: 0x1,
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
+						)...)},
+					},
+					Temporality: 0x1,
+				},
+			},
+		},
+	}
+	require.Len(t, got.ScopeMetrics, 1)
+	opt := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+		metricdatatest.IgnoreValue(),
+	}
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func BenchmarkExporterExportMetrics(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		coll, err := otest.NewHTTPCollector("", nil)
+		require.NoError(b, err)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			require.NoError(b, coll.Shutdown(context.Background()))
+		})
+
+		opts := []Option{WithEndpoint(coll.Addr().String()), WithInsecure()}
+		ctx := b.Context()
+		exp, err := New(ctx, opts...)
+		require.NoError(b, err)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
+
+		// Generate realistic test metric data with multiple metrics.
+		now := time.Now()
+		rm := &metricdata.ResourceMetrics{
+			ScopeMetrics: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:    "test",
+						Version: "v1.0.0",
+					},
+					Metrics: make([]metricdata.Metrics, n),
+				},
+			},
+		}
+
+		for i := range rm.ScopeMetrics[0].Metrics {
+			rm.ScopeMetrics[0].Metrics[i] = metricdata.Metrics{
+				Name:        fmt.Sprintf("test_counter_%d", i),
+				Description: fmt.Sprintf("A test counter %d", i),
+				Unit:        "1",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								attribute.String("test", "value"),
+								attribute.Int("counter", i),
+							),
+							StartTime: now,
+							Time:      now,
+							Value:     int64(i * 10),
+						},
+					},
+				},
+			}
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for b.Loop() {
+			err = exp.Export(b.Context(), rm)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
 	})
 }
