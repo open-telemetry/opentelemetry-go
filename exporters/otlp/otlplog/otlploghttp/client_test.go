@@ -29,12 +29,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/protobuf/proto"
+
+	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
@@ -845,7 +846,7 @@ func newFactory(t testing.TB) func(rCh <-chan exportResult) (*client, *httpColle
 	}
 }
 
-func TestClientInstrumenation(t *testing.T) {
+func TestClientInstrumentation(t *testing.T) {
 	// Enable instrumentation for this test.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -878,7 +879,7 @@ func TestClientInstrumenation(t *testing.T) {
 
 	client, coll, addr := factory(rCh)
 	t.Cleanup(func() {
-		assert.NoError(t, coll.Shutdown(context.Background()))
+		assert.NoError(t, coll.Shutdown(t.Context()))
 	})
 	assert.ErrorIs(t, client.UploadLogs(t.Context(), resourceLogs), internal.PartialSuccess{})
 
