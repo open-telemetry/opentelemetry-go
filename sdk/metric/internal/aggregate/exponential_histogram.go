@@ -106,13 +106,23 @@ func newHotColdExpoHistogramDataPoint[N int64 | float64](
 // expoHistogramPointCounters contains only the atomic counter data, and is
 // used by both expoHistogramDataPoint and hotColdExpoHistogramPoint.
 type expoHistogramPointCounters[N int64 | float64] struct {
-	count     atomic.Uint64
 	minMax    atomicMinMax[N]
 	sum       atomicCounter[N]
 	zeroCount atomic.Uint64
 
 	posBuckets expoBuckets
 	negBuckets expoBuckets
+}
+
+func (e *expoHistogramPointCounters[N]) count() uint64 {
+	count := e.zeroCount.Load()
+	for i := range e.posBuckets.counts {
+		count += e.posBuckets.counts[i]
+	}
+	for i := range e.negBuckets.counts {
+		count += e.negBuckets.counts[i]
+	}
+	return count
 }
 
 // mergeIntoAndReset merges this set of histogram counter data into another,
@@ -135,15 +145,12 @@ func (p *expoHistogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // I
 		into.sum.add(p.sum.load())
 		p.sum.reset()
 	}
-	into.count.Add(p.count.Load())
-	p.count.Store(0)
 	p.posBuckets.mergeIntoAndReset(&into.posBuckets)
 	p.negBuckets.mergeIntoAndReset(&into.negBuckets)
 }
 
 // recordCount adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramPointCounters[N]) recordCount(v N) {
-	p.count.Add(1)
 	absV := math.Abs(float64(v))
 
 	if float64(absV) == 0.0 {
@@ -480,7 +487,7 @@ func (e *deltaExpoHistogram[N]) collect(
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.count.Load()
+		hDPts[i].Count = val.count()
 		hDPts[i].ZeroCount = val.zeroCount.Load()
 		hDPts[i].ZeroThreshold = 0.0
 
@@ -626,7 +633,7 @@ func (e *cumulativeExpoHistogram[N]) collect(
 			Attributes:    val.attrs,
 			StartTime:     e.start,
 			Time:          t,
-			Count:         val.hotColdPoint[readIdx].count.Load(),
+			Count:         val.hotColdPoint[readIdx].count(),
 			ZeroCount:     val.hotColdPoint[readIdx].zeroCount.Load(),
 			ZeroThreshold: 0.0,
 		}

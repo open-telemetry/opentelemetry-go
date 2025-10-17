@@ -750,7 +750,7 @@ func TestSubNormal(t *testing.T) {
 	ehdp.recordCount(math.SmallestNonzeroFloat64)
 
 	assert.Equal(t, alice, ehdp.attrs)
-	assert.Equal(t, uint64(3), ehdp.count.Load())
+	assert.Equal(t, uint64(3), ehdp.count())
 	assert.True(t, ehdp.minMax.set.Load())
 	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.minMax.maximum.Load())
 	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.minMax.minimum.Load())
