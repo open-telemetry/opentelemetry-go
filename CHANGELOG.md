@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7372)
 - Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#7372)
 - Return partial OTLP export errors to the caller in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7372)
+- Fix `AddAttributes`, `SetAttributes`, `SetBody` on `Record` in `go.opentelemetry.io/otel/sdk/log` to not mutate input. (#7403)
 
 ### Removed
 
@@ -49,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Now, when translation would drop data (e.g., invalid label/value), the exporter emits a `NewInvalidMetric`, and Prometheus scrapes **fail with HTTP 500** by default.
   To preserve the prior behavior (scrapes succeed while errors are logged), configure your Prometheus HTTP handler with: `promhttp.HandlerOpts{ ErrorHandling: promhttp.ContinueOnError }`. (#7363)
 - The default `TranslationStrategy` in `go.opentelemetry.io/exporters/prometheus` is changed from `otlptranslator.NoUTF8EscapingWithSuffixes` to `otlptranslator.UnderscoreEscapingWithSuffixes`. (#7421)
+- Include W3C TraceFlags (bits 0–7) in the OTLP `Span.Flags` field in `go.opentelemetry.io/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/exporters/otlp/otlptrace/otlptracegrpc`. (#7438)
 - The `ErrorType` function in `go.opentelemetry.io/otel/semconv/v1.37.0` now handles custom error types.
   If an error implements an `ErrorType() string` method, the return value of that method will be used as the error type. (#7442)
 - Improve performance of concurrent measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7427)
