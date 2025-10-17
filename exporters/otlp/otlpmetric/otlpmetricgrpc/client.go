@@ -6,6 +6,7 @@ package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"time"
 
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
@@ -17,6 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/retry"
 )
@@ -33,6 +35,8 @@ type client struct {
 	ourConn bool
 	conn    *grpc.ClientConn
 	msc     colmetricpb.MetricsServiceClient
+
+	instrumentation *observ.Instrumentation
 }
 
 // newClient creates a new gRPC metric client.
@@ -66,7 +70,18 @@ func newClient(_ context.Context, cfg oconf.Config) (*client, error) {
 
 	c.msc = colmetricpb.NewMetricsServiceClient(c.conn)
 
-	return c, nil
+	id := nextExporterID()
+	var err error
+	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
+	return c, err
+}
+
+var exporterN atomic.Int64
+
+// nextExporterID returns the next unique ID for an exporter.
+func nextExporterID() int64 {
+	const inc = 1
+	return exporterN.Add(inc) - inc
 }
 
 // Shutdown shuts down the client, freeing all resource.

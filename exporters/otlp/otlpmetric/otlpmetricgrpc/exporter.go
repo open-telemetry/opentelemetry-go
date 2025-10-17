@@ -11,6 +11,7 @@ import (
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
@@ -31,6 +32,8 @@ type Exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	shutdownOnce sync.Once
+
+	instrumentation *observ.Instrumentation
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
@@ -51,6 +54,8 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 
 		temporalitySelector: ts,
 		aggregationSelector: as,
+
+		instrumentation: c.instrumentation,
 	}, nil
 }
 
@@ -68,8 +73,16 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 //
 // This method returns an error if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
-func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (exportErr error) {
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
+
+	// Track export operation for observability
+	if e.instrumentation != nil {
+		eo := e.instrumentation.ExportMetrics(ctx, rm)
+		defer func() {
+			eo.End(exportErr)
+		}()
+	}
 
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.
