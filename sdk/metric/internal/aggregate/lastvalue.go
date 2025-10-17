@@ -14,7 +14,7 @@ import (
 // lastValuePoint is timestamped measurement data.
 type lastValuePoint[N int64 | float64] struct {
 	attrs attribute.Set
-	value atomicIntOrFloat[N]
+	value atomicN[N]
 	res   FilteredExemplarReservoir[N]
 }
 
@@ -32,7 +32,7 @@ func (s *lastValueMap[N]) measure(ctx context.Context, value N, fltrAttr attribu
 		}
 	}).(*lastValuePoint[N])
 
-	lv.value.store(value)
+	lv.value.Store(value)
 	lv.res.Offer(ctx, value, droppedAttr)
 }
 
@@ -97,7 +97,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(dest *metricdata.Aggregation, t tim
 		dPts[i].Attributes = v.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
-		dPts[i].Value = v.value.load()
+		dPts[i].Value = v.value.Load()
 		collectExemplars[N](&dPts[i].Exemplars, v.res.Collect)
 		i++
 		return true
@@ -144,7 +144,7 @@ func (s *cumulativeLastValue[N]) collect(
 			Attributes: v.attrs,
 			StartTime:  s.start,
 			Time:       t,
-			Value:      v.value.load(),
+			Value:      v.value.Load(),
 		}
 		collectExemplars[N](&newPt.Exemplars, v.res.Collect)
 		dPts = append(dPts, newPt)
