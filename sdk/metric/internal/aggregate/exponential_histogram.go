@@ -212,21 +212,21 @@ var scaleFactors = [21]float64{
 
 // scaleChange returns the magnitude of the scale change needed to fit bin in
 // the bucket. If no scale change is needed 0 is returned.
-func scaleChange(bin, startBin int32, length, maxSize int) int32 {
-	if length == 0 {
+func (b *expoBuckets) scaleChange(bin int32) int32 {
+	if len(b.counts) == 0 {
 		// No need to rescale if there are no buckets.
 		return 0
 	}
 
-	low := int(startBin)
+	low := int(b.startBin)
 	high := int(bin)
-	if startBin >= bin {
+	if b.startBin >= bin {
 		low = int(bin)
-		high = int(startBin) + length - 1
+		high = int(b.startBin) + len(b.counts) - 1
 	}
 
 	var count int32
-	for high-low >= maxSize {
+	for high-low >= b.maxSize {
 		low >>= 1
 		high >>= 1
 		count++
@@ -255,7 +255,7 @@ func (b *expoBuckets) record(absV float64) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if scaleDelta := scaleChange(bin, b.startBin, len(b.counts), b.maxSize); scaleDelta > 0 {
+	if scaleDelta := b.scaleChange(bin); scaleDelta > 0 {
 		if b.scale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
 			// This can only happen if there is a max size of 1.
@@ -377,7 +377,7 @@ func (b *expoBuckets) mergeIntoAndReset(into *expoBuckets) {
 
 	into.resizeToInclude(b.startBin)
 	into.resizeToInclude(b.endBin())
-	scaleDelta = scaleChange(into.endBin(), into.startBin, len(into.counts), b.maxSize)
+	scaleDelta = into.scaleChange(into.endBin())
 	if scaleDelta > 0 {
 		// Merging buckets required a scale change to the positive buckets to
 		// fit within the max scale. Update scale and scale down the negative

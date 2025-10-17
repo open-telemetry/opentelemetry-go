@@ -599,24 +599,18 @@ func TestExpoBucketRecord(t *testing.T) {
 }
 
 func TestScaleChange(t *testing.T) {
-	type args struct {
-		bin      int32
-		startBin int32
-		length   int
-		maxSize  int
-	}
 	tests := []struct {
-		name string
-		args args
-		want int32
+		name   string
+		bin    int32
+		bucket *expoBuckets
+		want   int32
 	}{
 		{
 			name: "if length is 0, no rescale is needed",
 			// [] -> [5] Length 1
-			args: args{
-				bin:      5,
+			bin: 5,
+			bucket: &expoBuckets{
 				startBin: 0,
-				length:   0,
 				maxSize:  4,
 			},
 			want: 0,
@@ -624,10 +618,10 @@ func TestScaleChange(t *testing.T) {
 		{
 			name: "if bin is between start, and the end, no rescale needed",
 			// [-1, ..., 8] Length 10 -> [-1, ..., 5, ..., 8] Length 10
-			args: args{
-				bin:      5,
+			bin: 5,
+			bucket: &expoBuckets{
 				startBin: -1,
-				length:   10,
+				counts:   []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 				maxSize:  20,
 			},
 			want: 0,
@@ -635,10 +629,10 @@ func TestScaleChange(t *testing.T) {
 		{
 			name: "if len([bin,... end]) > maxSize, rescale needed",
 			// [8,9,10] Length 3 -> [5, ..., 10] Length 6
-			args: args{
-				bin:      5,
+			bin: 5,
+			bucket: &expoBuckets{
 				startBin: 8,
-				length:   3,
+				counts:   []uint64{0, 1, 2},
 				maxSize:  5,
 			},
 			want: 1,
@@ -646,10 +640,10 @@ func TestScaleChange(t *testing.T) {
 		{
 			name: "if len([start, ..., bin]) > maxSize, rescale needed",
 			// [2,3,4] Length 3 -> [2, ..., 7] Length 6
-			args: args{
-				bin:      7,
+			bin: 7,
+			bucket: &expoBuckets{
 				startBin: 2,
-				length:   3,
+				counts:   []uint64{0, 1, 2},
 				maxSize:  5,
 			},
 			want: 1,
@@ -657,20 +651,20 @@ func TestScaleChange(t *testing.T) {
 		{
 			name: "if len([start, ..., bin]) > maxSize, rescale needed",
 			// [2,3,4] Length 3 -> [2, ..., 7] Length 12
-			args: args{
-				bin:      13,
+			bin: 13,
+			bucket: &expoBuckets{
 				startBin: 2,
-				length:   3,
+				counts:   []uint64{0, 1, 2},
 				maxSize:  5,
 			},
 			want: 2,
 		},
 		{
 			name: "It should not hang if it will never be able to rescale",
-			args: args{
-				bin:      1,
+			bin:  1,
+			bucket: &expoBuckets{
 				startBin: -1,
-				length:   1,
+				counts:   []uint64{0},
 				maxSize:  1,
 			},
 			want: 31,
@@ -678,7 +672,7 @@ func TestScaleChange(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := scaleChange(tt.args.bin, tt.args.startBin, tt.args.length, tt.args.maxSize)
+			got := tt.bucket.scaleChange(tt.bin)
 			if got != tt.want {
 				t.Errorf("scaleChange() = %v, want %v", got, tt.want)
 			}
