@@ -6,6 +6,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -44,12 +45,12 @@ func newExpoHistogramDataPoint[N int64 | float64](
 		noSum:    noSum,
 		expoHistogramPointCounters: expoHistogramPointCounters[N]{
 			posBuckets: expoBuckets{
-				scale:   maxScale,
-				maxSize: maxSize,
+				scale:  maxScale,
+				counts: make([]uint64, maxSize),
 			},
 			negBuckets: expoBuckets{
-				scale:   maxScale,
-				maxSize: maxSize,
+				scale:  maxScale,
+				counts: make([]uint64, maxSize),
 			},
 		},
 	}
@@ -81,22 +82,22 @@ func newHotColdExpoHistogramDataPoint[N int64 | float64](
 		hotColdPoint: [2]expoHistogramPointCounters[N]{
 			{
 				posBuckets: expoBuckets{
-					scale:   maxScale,
-					maxSize: maxSize,
+					scale:  maxScale,
+					counts: make([]uint64, maxSize),
 				},
 				negBuckets: expoBuckets{
-					scale:   maxScale,
-					maxSize: maxSize,
+					scale:  maxScale,
+					counts: make([]uint64, maxSize),
 				},
 			},
 			{
 				posBuckets: expoBuckets{
-					scale:   maxScale,
-					maxSize: maxSize,
+					scale:  maxScale,
+					counts: make([]uint64, maxSize),
 				},
 				negBuckets: expoBuckets{
-					scale:   maxScale,
-					maxSize: maxSize,
+					scale:  maxScale,
+					counts: make([]uint64, maxSize),
 				},
 			},
 		},
@@ -166,6 +167,34 @@ func (p *expoHistogramPointCounters[N]) recordCount(v N) {
 	bucket.record(absV)
 }
 
+// expoBuckets is a set of buckets in an exponential histogram.
+type expoBuckets struct {
+	scaleMux    sync.Mutex
+	scale       int32
+	startAndEnd atomicLimitedRange
+	counts      []uint64
+}
+
+// getIdx returns the index into counts for the provided bin.
+func (e *expoBuckets) getIdx(bin int32) int {
+	newBin := int(bin) % len(e.counts)
+	return (newBin + len(e.counts)) % len(e.counts)
+}
+
+func (e *expoBuckets) loadCountsInto(into *[]uint64) {
+	// TODO (#3047): Making copies for bounds and counts incurs a large
+	// memory allocation footprint. Alternatives should be explored.
+	start, end := e.startAndEnd.Load()
+	length := int(end - start)
+	counts := reset(*into, length, length)
+	eIdx := start
+	for i := range length {
+		counts[i] = e.counts[e.getIdx(eIdx)]
+		eIdx++
+	}
+	*into = counts
+}
+
 // getBin returns the bin v should be recorded into.
 func (p *expoBuckets) getBin(v float64) int32 {
 	frac, expInt := math.Frexp(v)
@@ -213,22 +242,23 @@ var scaleFactors = [21]float64{
 // scaleChange returns the magnitude of the scale change needed to fit bin in
 // the bucket. If no scale change is needed 0 is returned.
 func (b *expoBuckets) scaleChange(bin int32) int32 {
-	if len(b.counts) == 0 {
+	startBin, endBin := b.startAndEnd.Load()
+	if startBin == endBin {
 		// No need to rescale if there are no buckets.
 		return 0
 	}
 
-	low := int(b.startBin)
-	high := int(bin)
-	if b.startBin >= bin {
-		low = int(bin)
-		high = int(b.startBin) + len(b.counts) - 1
+	lastBin := endBin - 1
+	if bin < startBin {
+		startBin = bin
+	} else if bin > lastBin {
+		lastBin = bin
 	}
 
 	var count int32
-	for high-low >= b.maxSize {
-		low >>= 1
-		high >>= 1
+	for lastBin-startBin >= int32(len(b.counts)) {
+		startBin >>= 1
+		lastBin >>= 1
 		count++
 		if count > expoMaxScale-expoMinScale {
 			return count
@@ -237,21 +267,13 @@ func (b *expoBuckets) scaleChange(bin int32) int32 {
 	return count
 }
 
-// expoBuckets is a set of buckets in an exponential histogram.
-type expoBuckets struct {
-	scaleMux sync.Mutex
-	scale    int32
-	startBin int32
-	counts   []uint64
-	maxSize  int
-}
-
 // record increments the count for the given bin, and expands the buckets if needed.
 // Size changes must be done before calling this function.
 func (b *expoBuckets) record(absV float64) {
 	b.scaleMux.Lock()
 	defer b.scaleMux.Unlock()
 	bin := b.getBin(absV)
+	fmt.Printf("record() Bin %v for val %v, with scale %v\n", bin, absV, b.scale)
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
@@ -266,13 +288,25 @@ func (b *expoBuckets) record(absV float64) {
 		b.downscale(scaleDelta)
 
 		bin = b.getBin(absV)
+		fmt.Printf("record() After downscale Bin %v for val %v\n", bin, absV)
+	} else {
+		fmt.Printf("scale change was 0\n")
 	}
 	b.recordBucket(bin)
 }
 
 func (b *expoBuckets) recordBucket(bin int32) {
 	b.resizeToInclude(bin)
-	b.counts[bin-b.startBin]++
+	b.counts[b.getIdx(bin)]++
+	startBin, endBin := b.startAndEnd.Load()
+	fmt.Printf("incremented bin %v idx %v, startBin %v, endBin %v, counts %+v\n", bin, b.getIdx(bin), startBin, endBin, b.counts)
+}
+
+func (b *expoBuckets) validate() {
+	startBin, endBin := b.startAndEnd.Load()
+	if endBin-startBin > int32(len(b.counts)) {
+		fmt.Printf("inconsistent start %v end %v len %v\n", startBin, endBin, len(b.counts))
+	}
 }
 
 // downscale shrinks a bucket by a factor of 2*s. It will sum counts into the
@@ -288,74 +322,83 @@ func (b *expoBuckets) downscale(delta int32) {
 	// new Offset: -2
 	// new Counts: [4, 14, 30, 10]
 
-	if len(b.counts) <= 1 || delta < 1 {
-		b.startBin >>= delta
+	startBin, endBin := b.startAndEnd.Load()
+	length := endBin - startBin
+	if length <= 1 || delta < 1 {
+		newStartBin := startBin >> delta
+		newEndBin := newStartBin + length
+		b.startAndEnd.Store(newStartBin, newEndBin)
+		b.validate()
+		// Shift all elements left by the change in start position
+		startShift := b.getIdx(startBin - newStartBin)
+		b.counts = append(b.counts[startShift:], b.counts[:startShift]...)
+
+		// Clear all elements that are outside of our start to end range
+		for i := newEndBin; i < newStartBin+int32(len(b.counts)); i++ {
+			b.counts[b.getIdx(i)] = 0
+		}
+		fmt.Printf("downscale SHORT downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 		return
 	}
 
 	steps := int32(1) << delta
-	offset := b.startBin % steps
+	offset := startBin % steps
 	offset = (offset + steps) % steps // to make offset positive
-	for i := 1; i < len(b.counts); i++ {
-		idx := i + int(offset)
-		if idx%int(steps) == 0 {
-			b.counts[idx/int(steps)] = b.counts[i]
+	newLen := (length-1+offset)/steps + 1
+	newStartBin := startBin >> delta
+	newEndBin := newStartBin + newLen
+	startShift := b.getIdx(startBin - newStartBin)
+
+	fmt.Printf("downscale START downsize %v startBin %v, newStartBin %v, shift %v, endBin %v, newEndBin %v, steps %v, offset %v, counts %v\n", delta, startBin, newStartBin, startShift, endBin, newEndBin, steps, offset, b.counts)
+	for i := startBin + 1; i < endBin; i++ {
+		newIdx := b.getIdx(int32(math.Floor(float64(i)/float64(steps))) + int32(startShift))
+		if i%steps == 0 {
+			b.counts[newIdx] = b.counts[b.getIdx(i)]
+			fmt.Printf("downscale SET idx %v counts %+v\n", b.getIdx(i/steps+int32(startShift)), b.counts)
 			continue
 		}
-		b.counts[idx/int(steps)] += b.counts[i]
+		b.counts[newIdx] += b.counts[b.getIdx(i)]
+		fmt.Printf("downscale ADD i %v i/steps %v idx %v, getIdx %v counts %+v\n", i, i/steps, i/steps+int32(startShift), b.getIdx(i/steps+int32(startShift)), b.counts)
 	}
+	fmt.Printf("downscale END Merge downsize %v startBin %v, endBin %v, counts %v\n", delta, startBin, endBin, b.counts)
 
-	lastIdx := (len(b.counts) - 1 + int(offset)) / int(steps)
-	b.counts = b.counts[:lastIdx+1]
-	b.startBin >>= delta
+	fmt.Printf("downscale LONG downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
+	b.startAndEnd.Store(newStartBin, newEndBin)
+	b.validate()
+	// Shift all elements left by the change in start position
+	fmt.Printf("downscale SHIFT startBin %v newStartBin %v shift %v\n", startBin, newStartBin, startShift)
+	b.counts = append(b.counts[startShift:], b.counts[:startShift]...)
+
+	fmt.Printf("downscale AfterShiFT downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
+	// Clear all elements that are outside of our start to end range
+	for i := newEndBin; i < newStartBin+int32(len(b.counts)); i++ {
+		b.counts[b.getIdx(i)] = 0
+	}
+	fmt.Printf("downscale FINAL downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 }
 
-func (b *expoBuckets) endBin() int32 {
-	return b.startBin + int32(len(b.counts)-1)
+func shiftLeft(in []uint64, shift int) []uint64 {
+	return append(in[shift:], in[:shift]...)
 }
 
 func (b *expoBuckets) resizeToInclude(bin int32) {
-	if len(b.counts) == 0 {
-		b.counts = []uint64{0}
-		b.startBin = bin
-		return
-	}
-	endBin := b.endBin()
-
-	// if the new bin is inside the current range
-	if bin >= b.startBin && bin <= endBin {
-		return
-	}
-	// if the new bin is before the current start add spaces to the counts
-	if bin < b.startBin {
-		origLen := len(b.counts)
-		newLength := int(endBin - bin + 1)
-		shift := b.startBin - bin
-
-		if newLength > cap(b.counts) {
-			b.counts = append(b.counts, make([]uint64, newLength-len(b.counts))...)
-		}
-
-		copy(b.counts[shift:origLen+int(shift)], b.counts)
-		b.counts = b.counts[:newLength]
-		for i := 0; i < int(shift); i++ {
-			b.counts[i] = 0
-		}
-		b.startBin = bin
-		return
-	}
-	// if the new is after the end add spaces to the end
-	if bin > endBin {
-		if int(bin-b.startBin) < cap(b.counts) {
-			b.counts = b.counts[:bin-b.startBin+1]
-			for i := int(endBin + 1 - b.startBin); i < len(b.counts); i++ {
-				b.counts[i] = 0
-			}
-			return
-		}
-
-		end := make([]uint64, int(bin-b.startBin)-len(b.counts)+1)
-		b.counts = append(b.counts, end...)
+	startBin, endBin := b.startAndEnd.Load()
+	if startBin == endBin {
+		startBin = bin
+		endBin = bin + 1
+		b.startAndEnd.Store(startBin, endBin)
+		b.validate()
+		fmt.Printf("resizeToInclude AAAAA bin %v start %v , end %v\n", bin, startBin, endBin)
+	} else if bin < startBin {
+		b.startAndEnd.Store(bin, endBin)
+		b.validate()
+		fmt.Printf("resizeToInclude CCCCC bin %v start %v , end %v\n", bin, startBin, endBin)
+	} else if bin >= endBin {
+		b.startAndEnd.Store(startBin, bin+1)
+		b.validate()
+		fmt.Printf("resizeToInclude DDDDDD bin %v start %v , end %v\n", bin, startBin, endBin)
+	} else {
+		fmt.Printf("resizeToInclude BBBBBB bin %v start %v , end %v\n", bin, startBin, endBin)
 	}
 }
 
@@ -375,9 +418,10 @@ func (b *expoBuckets) mergeIntoAndReset(into *expoBuckets) {
 		b.downscale(-scaleDelta)
 	}
 
-	into.resizeToInclude(b.startBin)
-	into.resizeToInclude(b.endBin())
-	scaleDelta = into.scaleChange(into.endBin())
+	startBin, endBin := b.startAndEnd.Load()
+	into.resizeToInclude(startBin)
+	into.resizeToInclude(endBin - 1)
+	scaleDelta = into.scaleChange(endBin - 1)
 	if scaleDelta > 0 {
 		// Merging buckets required a scale change to the positive buckets to
 		// fit within the max scale. Update scale and scale down the negative
@@ -387,12 +431,15 @@ func (b *expoBuckets) mergeIntoAndReset(into *expoBuckets) {
 	}
 	// At this point, into as been expanded to be a superset of b.
 	// Now we finally increment buckets.
-	startBinDelta := b.startBin - into.startBin
+	bStartBin, _ := b.startAndEnd.Load()
+	intoStartBin, _ := b.startAndEnd.Load()
+	startBinDelta := bStartBin - intoStartBin
 	for i := range b.counts {
 		into.counts[i+int(startBinDelta)] += b.counts[i]
 		b.counts[i] = 0
 	}
-	b.counts = b.counts[0:0]
+	b.startAndEnd.Store(0, 0)
+	b.validate()
 }
 
 // newDeltaExponentialHistogram returns an Aggregator that summarizes a set of
@@ -506,21 +553,13 @@ func (e *deltaExpoHistogram[N]) collect(
 			val.negBuckets.downscale(scaleDelta)
 		}
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+		offset, _ := val.posBuckets.startAndEnd.Load()
+		hDPts[i].PositiveBucket.Offset = offset
+		val.posBuckets.loadCountsInto(&hDPts[i].PositiveBucket.Counts)
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
+		offset, _ = val.negBuckets.startAndEnd.Load()
+		hDPts[i].NegativeBucket.Offset = offset
+		val.negBuckets.loadCountsInto(&hDPts[i].NegativeBucket.Counts)
 
 		if !e.noSum {
 			hDPts[i].Sum = val.sum.load()
@@ -653,21 +692,13 @@ func (e *cumulativeExpoHistogram[N]) collect(
 			val.hotColdPoint[readIdx].negBuckets.downscale(scaleDelta)
 		}
 
-		newPt.PositiveBucket.Offset = val.hotColdPoint[readIdx].posBuckets.startBin
-		newPt.PositiveBucket.Counts = reset(
-			newPt.PositiveBucket.Counts,
-			len(val.hotColdPoint[readIdx].posBuckets.counts),
-			len(val.hotColdPoint[readIdx].posBuckets.counts),
-		)
-		copy(newPt.PositiveBucket.Counts, val.hotColdPoint[readIdx].posBuckets.counts)
+		offset, _ := val.hotColdPoint[readIdx].posBuckets.startAndEnd.Load()
+		newPt.PositiveBucket.Offset = offset
+		val.hotColdPoint[readIdx].posBuckets.loadCountsInto(&newPt.PositiveBucket.Counts)
 
-		newPt.NegativeBucket.Offset = val.hotColdPoint[readIdx].negBuckets.startBin
-		newPt.NegativeBucket.Counts = reset(
-			newPt.NegativeBucket.Counts,
-			len(val.hotColdPoint[readIdx].negBuckets.counts),
-			len(val.hotColdPoint[readIdx].negBuckets.counts),
-		)
-		copy(newPt.NegativeBucket.Counts, val.hotColdPoint[readIdx].negBuckets.counts)
+		offset, _ = val.hotColdPoint[readIdx].negBuckets.startAndEnd.Load()
+		newPt.NegativeBucket.Offset = offset
+		val.hotColdPoint[readIdx].negBuckets.loadCountsInto(&newPt.NegativeBucket.Counts)
 
 		if !e.noSum {
 			newPt.Sum = val.hotColdPoint[readIdx].sum.load()

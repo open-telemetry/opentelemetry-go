@@ -76,3 +76,35 @@ func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestAtomicLimitedRange(t *testing.T) {
+	a := &atomicLimitedRange{maxSize: 20}
+	start, end := a.Load()
+	assert.Equal(t, int32(0), start)
+	assert.Equal(t, int32(0), end)
+	a.Store(-20, -1)
+	start, end = a.Load()
+	assert.Equal(t, int32(-20), start)
+	assert.Equal(t, int32(-1), end)
+	a.Store(0, 0)
+	start, end = a.Load()
+	assert.Equal(t, int32(0), start)
+	assert.Equal(t, int32(0), end)
+	assert.True(t, a.Add(10))
+	start, end = a.Load()
+	assert.Equal(t, int32(10), start)
+	assert.Equal(t, int32(11), end)
+	assert.True(t, a.Add(20))
+	start, end = a.Load()
+	assert.Equal(t, int32(10), start)
+	assert.Equal(t, int32(21), end)
+	// Exceeds maxSize by 1.
+	assert.False(t, a.Add(0))
+	start, end = a.Load()
+	assert.Equal(t, int32(1), start)
+	assert.Equal(t, int32(21), end)
+	a.Store(-3, -2)
+	start, end = a.Load()
+	assert.Equal(t, int32(-3), start)
+	assert.Equal(t, int32(-2), end)
+}
