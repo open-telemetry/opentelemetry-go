@@ -996,8 +996,5 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 		run(b)
 	})
 
-	b.Run("NoObservability", func(b *testing.B) {
-		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
-		run(b)
-	})
+	b.Run("NoObservability", run)
 }
