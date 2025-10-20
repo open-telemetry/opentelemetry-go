@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 )
 
-func TestLoggerProviderConcurrentSafe(t *testing.T) {
+func TestLoggerProviderConcurrentSafe(*testing.T) {
 	p := &loggerProvider{}
 
 	done := make(chan struct{})
@@ -50,7 +50,7 @@ func TestLoggerConcurrentSafe(t *testing.T) {
 	go func() {
 		defer close(done)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		var r log.Record
 		var param log.EnabledParameters
 

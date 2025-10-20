@@ -24,13 +24,24 @@ type logger struct {
 
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope
+
+	// recCntIncr increments the count of log records created. It will be nil
+	// if observability is disabled.
+	recCntIncr func(context.Context)
 }
 
 func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
-	return &logger{
+	l := &logger{
 		provider:             p,
 		instrumentationScope: scope,
 	}
+
+	var err error
+	l.recCntIncr, err = newRecordCounterIncr()
+	if err != nil {
+		otel.Handle(err)
+	}
+	return l
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
@@ -84,7 +95,6 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),
 		severityText:      r.SeverityText(),
-		body:              r.Body(),
 
 		traceID:    sc.TraceID(),
 		spanID:     sc.SpanID(),
@@ -96,6 +106,12 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeCountLimit:       l.provider.attributeCountLimit,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
+	if l.recCntIncr != nil {
+		l.recCntIncr(ctx)
+	}
+
+	// This ensures we deduplicate key-value collections in the log body
+	newRecord.SetBody(r.Body())
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
 	if newRecord.observedTimestamp.IsZero() {

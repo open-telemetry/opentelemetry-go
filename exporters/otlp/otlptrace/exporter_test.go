@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 type client struct {
@@ -21,20 +21,20 @@ type client struct {
 
 var _ otlptrace.Client = &client{}
 
-func (c *client) Start(ctx context.Context) error {
+func (*client) Start(context.Context) error {
 	return nil
 }
 
-func (c *client) Stop(ctx context.Context) error {
+func (*client) Stop(context.Context) error {
 	return nil
 }
 
-func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error {
+func (c *client) UploadTraces(context.Context, []*tracepb.ResourceSpans) error {
 	return c.uploadErr
 }
 
 func TestExporterClientError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	exp, err := otlptrace.New(ctx, &client{
 		uploadErr: context.Canceled,
 	})

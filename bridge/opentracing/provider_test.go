@@ -21,7 +21,7 @@ type namedMockTracerProvider struct{ embedded.TracerProvider }
 var _ trace.TracerProvider = (*namedMockTracerProvider)(nil)
 
 // Tracer returns the WrapperTracer associated with the WrapperTracerProvider.
-func (p *namedMockTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+func (*namedMockTracerProvider) Tracer(name string, _ ...trace.TracerOption) trace.Tracer {
 	return &namedMockTracer{
 		name:       name,
 		mockTracer: newMockTracer(),

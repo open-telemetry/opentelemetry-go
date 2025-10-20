@@ -13,7 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -33,8 +35,8 @@ func (t *basicSpanProcessor) Shutdown(context.Context) error {
 	return t.injectShutdownError
 }
 
-func (t *basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
-func (t *basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
+func (*basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (*basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (t *basicSpanProcessor) ForceFlush(context.Context) error {
 	t.flushed = true
 	return nil
@@ -48,29 +50,29 @@ func (t *shutdownSpanProcessor) Shutdown(ctx context.Context) error {
 	return t.shutdown(ctx)
 }
 
-func (t *shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
-func (t *shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
-func (t *shutdownSpanProcessor) ForceFlush(context.Context) error {
+func (*shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
+func (*shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
+func (*shutdownSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
 func TestShutdownCallsTracerMethod(t *testing.T) {
 	stp := NewTracerProvider()
 	sp := &shutdownSpanProcessor{
-		shutdown: func(ctx context.Context) error {
+		shutdown: func(context.Context) error {
 			_ = stp.Tracer("abc") // must not deadlock
 			return nil
 		},
 	}
 	stp.RegisterSpanProcessor(sp)
-	assert.NoError(t, stp.Shutdown(context.Background()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
 	assert.True(t, stp.isShutdown.Load())
 }
 
 func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
 	stp := NewTracerProvider()
-	assert.NoError(t, stp.ForceFlush(context.Background()))
-	assert.NoError(t, stp.Shutdown(context.Background()))
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
 	assert.True(t, stp.isShutdown.Load())
 }
 
@@ -130,9 +132,9 @@ func TestShutdownTraceProvider(t *testing.T) {
 	sp := &basicSpanProcessor{}
 	stp.RegisterSpanProcessor(sp)
 
-	assert.NoError(t, stp.ForceFlush(context.Background()))
+	assert.NoError(t, stp.ForceFlush(t.Context()))
 	assert.True(t, sp.flushed, "error ForceFlush basicSpanProcessor")
-	assert.NoError(t, stp.Shutdown(context.Background()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
 	assert.True(t, stp.isShutdown.Load())
 	assert.True(t, sp.closed, "error Shutdown basicSpanProcessor")
 }
@@ -145,7 +147,7 @@ func TestFailedProcessorShutdown(t *testing.T) {
 	}
 	stp.RegisterSpanProcessor(sp)
 
-	err := stp.Shutdown(context.Background())
+	err := stp.Shutdown(t.Context())
 	assert.Error(t, err)
 	assert.Equal(t, err, spErr)
 	assert.True(t, stp.isShutdown.Load())
@@ -164,7 +166,7 @@ func TestFailedProcessorsShutdown(t *testing.T) {
 	stp.RegisterSpanProcessor(sp1)
 	stp.RegisterSpanProcessor(sp2)
 
-	err := stp.Shutdown(context.Background())
+	err := stp.Shutdown(t.Context())
 	assert.Error(t, err)
 	assert.EqualError(t, err, "basic span processor shutdown failure1; basic span processor shutdown failure2")
 	assert.True(t, sp1.closed)
@@ -184,7 +186,7 @@ func TestFailedProcessorShutdownInUnregister(t *testing.T) {
 
 	assert.Contains(t, handler.errs, spErr)
 
-	err := stp.Shutdown(context.Background())
+	err := stp.Shutdown(t.Context())
 	assert.NoError(t, err)
 	assert.True(t, stp.isShutdown.Load())
 }
@@ -201,7 +203,7 @@ func TestSchemaURL(t *testing.T) {
 
 func TestRegisterAfterShutdownWithoutProcessors(t *testing.T) {
 	stp := NewTracerProvider()
-	err := stp.Shutdown(context.Background())
+	err := stp.Shutdown(t.Context())
 	assert.NoError(t, err)
 	assert.True(t, stp.isShutdown.Load())
 
@@ -215,7 +217,7 @@ func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
 	sp1 := &basicSpanProcessor{}
 
 	stp.RegisterSpanProcessor(sp1)
-	err := stp.Shutdown(context.Background())
+	err := stp.Shutdown(t.Context())
 	assert.NoError(t, err)
 	assert.True(t, stp.isShutdown.Load())
 	assert.Empty(t, stp.getSpanProcessors())
@@ -232,7 +234,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 		argOptional         bool
 		description         string
 		errorType           error
-		invalidArgErrorType interface{}
+		invalidArgErrorType any
 	}
 
 	randFloat := rand.Float64()
@@ -338,6 +340,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 
 					stp := NewTracerProvider(WithSyncer(NewTestExporter()))
 					t.Cleanup(func() {
+						//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 						require.NoError(t, stp.Shutdown(context.Background()))
 					})
 					assert.Equal(t, test.description, stp.sampler.Description())
@@ -353,7 +356,7 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 	}
 }
 
-func testStoredError(t *testing.T, target interface{}) {
+func testStoredError(t *testing.T, target any) {
 	t.Helper()
 
 	if assert.Len(t, handler.errs, 1) && assert.Error(t, handler.errs[0]) {
@@ -397,4 +400,66 @@ func TestTracerProviderReturnsSameTracer(t *testing.T) {
 	assert.Same(t, t0, t3)
 	assert.Same(t, t1, t4)
 	assert.Same(t, t2, t5)
+}
+
+func TestTracerProviderObservability(t *testing.T) {
+	handler.Reset()
+	p := NewTracerProvider()
+
+	// Enable observability
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	tr := p.Tracer("test-tracer")
+	require.IsType(t, &tracer{}, tr)
+
+	tStruct := tr.(*tracer)
+	assert.True(t, tStruct.inst.Enabled(), "observability should be enabled")
+
+	// Verify errors are passed to the otel handler
+	handlerErrs := handler.errs
+	assert.Empty(t, handlerErrs, "No errors should occur during instrument creation")
+}
+
+func TestTracerProviderObservabilityErrorsHandled(t *testing.T) {
+	handler.Reset()
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError})
+
+	p := NewTracerProvider()
+
+	// Enable observability
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Create a tracer to trigger instrument creation.
+	tr := p.Tracer("test-tracer")
+	_ = tr
+
+	require.Len(t, handler.errs, 1)
+	assert.ErrorIs(t, handler.errs[0], assert.AnError)
+}
+
+type errMeterProvider struct {
+	metric.MeterProvider
+
+	err error
+}
+
+func (mp *errMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	return &errMeter{err: mp.err}
+}
+
+type errMeter struct {
+	metric.Meter
+
+	err error
+}
+
+func (m *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
+	return nil, m.err
 }

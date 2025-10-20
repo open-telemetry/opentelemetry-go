@@ -15,9 +15,9 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func verifyRing(t *testing.T, r *ring, N int, sum int) {
+func verifyRing(t *testing.T, r *ring, num, sum int) {
 	// Length.
-	assert.Equal(t, N, r.Len(), "r.Len()")
+	assert.Equal(t, num, r.Len(), "r.Len()")
 
 	// Iteration.
 	var n, s int
@@ -28,7 +28,7 @@ func verifyRing(t *testing.T, r *ring, N int, sum int) {
 			s += int(body.AsInt64())
 		}
 	})
-	assert.Equal(t, N, n, "number of forward iterations")
+	assert.Equal(t, num, n, "number of forward iterations")
 	if sum >= 0 {
 		assert.Equal(t, sum, s, "forward ring sum")
 	}
@@ -55,13 +55,13 @@ func verifyRing(t *testing.T, r *ring, N int, sum int) {
 }
 
 func TestNewRing(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		// Empty value.
 		r := newRing(i)
 		verifyRing(t, r, i, -1)
 	}
 
-	for n := 0; n < 10; n++ {
+	for n := range 10 {
 		r := newRing(n)
 		for i := 1; i <= n; i++ {
 			var rec Record

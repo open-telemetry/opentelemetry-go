@@ -18,7 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
@@ -125,7 +125,7 @@ func TestTracerProviderConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < goroutines; i++ {
+			for i := range goroutines {
 				wg.Add(1)
 				go func(name, version string) {
 					defer wg.Done()
@@ -171,7 +171,7 @@ func TestTracerStartPropagatesOrigCtx(t *testing.T) {
 	var key ctxKey
 	val := "value"
 
-	ctx := context.WithValue(context.Background(), key, val)
+	ctx := context.WithValue(t.Context(), key, val)
 	ctx, _ = newAutoTracerProvider().Tracer(tName).Start(ctx, "span.name")
 
 	assert.Equal(t, val, ctx.Value(key))
@@ -181,7 +181,7 @@ func TestTracerStartReturnsNonNilSpan(t *testing.T) {
 	t.Parallel()
 
 	tr := newAutoTracerProvider().Tracer(tName)
-	_, s := tr.Start(context.Background(), "span.name")
+	_, s := tr.Start(t.Context(), "span.name")
 	assert.NotNil(t, s)
 }
 
@@ -189,7 +189,7 @@ func TestTracerStartAddsSpanToCtx(t *testing.T) {
 	t.Parallel()
 
 	tr := newAutoTracerProvider().Tracer(tName)
-	ctx, s := tr.Start(context.Background(), "span.name")
+	ctx, s := tr.Start(t.Context(), "span.name")
 
 	assert.Same(t, s, SpanFromContext(ctx))
 }
@@ -199,7 +199,7 @@ func TestTracerConcurrentSafe(t *testing.T) {
 
 	const goroutines = 10
 
-	ctx := context.Background()
+	ctx := t.Context()
 	run := func(tracer Tracer) <-chan struct{} {
 		done := make(chan struct{})
 
@@ -207,7 +207,7 @@ func TestTracerConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < goroutines; i++ {
+			for i := range goroutines {
 				wg.Add(1)
 				go func(name string) {
 					defer wg.Done()
@@ -377,7 +377,7 @@ func TestSpanCreation(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	for _, tc := range testcases {
 		t.Run(tc.TestName, func(t *testing.T) {
 			if tc.Setup != nil {
@@ -1041,7 +1041,7 @@ func TestSpanConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < nGoroutine; i++ {
+			for i := range nGoroutine {
 				wg.Add(1)
 				go func(n int) {
 					defer wg.Done()
@@ -1071,10 +1071,10 @@ func TestSpanConcurrentSafe(t *testing.T) {
 		go func(tracer Tracer) {
 			defer close(done)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			var wg sync.WaitGroup
-			for i := 0; i < nSpans; i++ {
+			for i := range nSpans {
 				wg.Add(1)
 				go func(n int) {
 					defer wg.Done()
@@ -1094,7 +1094,7 @@ func TestSpanConcurrentSafe(t *testing.T) {
 			defer close(done)
 
 			var wg sync.WaitGroup
-			for i := 0; i < nTracers; i++ {
+			for i := range nTracers {
 				wg.Add(1)
 				go func(n int) {
 					defer wg.Done()

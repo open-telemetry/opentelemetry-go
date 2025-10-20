@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
+func makeMockCollector(t testing.TB, mockConfig *mockConfig) *mockCollector {
 	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
@@ -91,7 +91,7 @@ func (mts *mockTraceService) Export(
 }
 
 type mockCollector struct {
-	t *testing.T
+	t testing.TB
 
 	traceSvc *mockTraceService
 
@@ -150,23 +150,23 @@ func (mc *mockCollector) getHeaders() metadata.MD {
 }
 
 // runMockCollector is a helper function to create a mock Collector.
-func runMockCollector(t *testing.T) *mockCollector {
-	t.Helper()
-	return runMockCollectorAtEndpoint(t, "localhost:0")
+func runMockCollector(tb testing.TB) *mockCollector {
+	tb.Helper()
+	return runMockCollectorAtEndpoint(tb, "localhost:0")
 }
 
-func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
-	t.Helper()
-	return runMockCollectorWithConfig(t, &mockConfig{endpoint: endpoint})
+func runMockCollectorAtEndpoint(tb testing.TB, endpoint string) *mockCollector {
+	tb.Helper()
+	return runMockCollectorWithConfig(tb, &mockConfig{endpoint: endpoint})
 }
 
-func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockCollector {
-	t.Helper()
+func runMockCollectorWithConfig(tb testing.TB, mockConfig *mockConfig) *mockCollector {
+	tb.Helper()
 	ln, err := net.Listen("tcp", mockConfig.endpoint)
-	require.NoError(t, err, "net.Listen")
+	require.NoError(tb, err, "net.Listen")
 
 	srv := grpc.NewServer()
-	mc := makeMockCollector(t, mockConfig)
+	mc := makeMockCollector(tb, mockConfig)
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	go func() {
 		_ = srv.Serve(ln)

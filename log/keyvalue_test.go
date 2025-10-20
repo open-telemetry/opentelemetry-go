@@ -439,10 +439,10 @@ type logSink struct {
 
 	err           error
 	msg           string
-	keysAndValues []interface{}
+	keysAndValues []any
 }
 
-func (l *logSink) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *logSink) Error(err error, msg string, keysAndValues ...any) {
 	l.err, l.msg, l.keysAndValues = err, msg, keysAndValues
 	l.LogSink.Error(err, msg, keysAndValues...)
 }

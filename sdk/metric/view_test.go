@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	schemaURL  = "https://opentelemetry.io/schemas/1.0.0"
+	schemaURL  = "https://opentelemetry.io/schemas/1.37.0"
 	completeIP = Instrument{
 		Name:        "foo",
 		Description: "foo desc",
@@ -400,7 +400,7 @@ func TestNewViewReplace(t *testing.T) {
 				Unit:        "1",
 				Aggregation: AggregationLastValue{},
 			},
-			want: func(i Instrument) Stream {
+			want: func(Instrument) Stream {
 				return Stream{
 					Name:        alt,
 					Description: alt,

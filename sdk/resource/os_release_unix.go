@@ -68,7 +68,7 @@ func parseOSReleaseFile(file io.Reader) map[string]string {
 func skip(line string) bool {
 	line = strings.TrimSpace(line)
 
-	return len(line) == 0 || strings.HasPrefix(line, "#")
+	return line == "" || strings.HasPrefix(line, "#")
 }
 
 // parse attempts to split the provided line on the first '=' character, and then
@@ -76,7 +76,7 @@ func skip(line string) bool {
 func parse(line string) (string, string, bool) {
 	k, v, found := strings.Cut(line, "=")
 
-	if !found || len(k) == 0 {
+	if !found || k == "" {
 		return "", "", false
 	}
 

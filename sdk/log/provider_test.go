@@ -40,7 +40,7 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name}
 }
 
-func (p *processor) OnEmit(ctx context.Context, r *Record) error {
+func (p *processor) OnEmit(_ context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
 	}
@@ -239,7 +239,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := newProviderConfig(tc.options).resource
 			if diff := cmp.Diff(got, tc.want); diff != "" {
@@ -257,8 +256,8 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 
 	p := NewLoggerProvider(WithProcessor(newProcessor("0")))
 	const name = "testLogger"
-	ctx := context.Background()
-	for i := 0; i < goRoutineN; i++ {
+	ctx := t.Context()
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 
@@ -276,10 +275,10 @@ type logSink struct {
 
 	level         int
 	msg           string
-	keysAndValues []interface{}
+	keysAndValues []any
 }
 
-func (l *logSink) Enabled(int) bool { return true }
+func (*logSink) Enabled(int) bool { return true }
 
 func (l *logSink) Info(level int, msg string, keysAndValues ...any) {
 	l.level, l.msg, l.keysAndValues = level, msg, keysAndValues
@@ -302,7 +301,7 @@ func TestLoggerProviderLogger(t *testing.T) {
 	})
 
 	t.Run("Stopped", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		p := NewLoggerProvider()
 		_ = p.Shutdown(ctx)
 		l := p.Logger("testing")
@@ -345,7 +344,7 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		proc := newProcessor("")
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, p.Shutdown(ctx))
 		require.Equal(t, 1, proc.shutdownCalls, "processor Shutdown not called")
 
@@ -358,7 +357,7 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		proc.Err = assert.AnError
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
 }
@@ -368,7 +367,7 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		proc := newProcessor("")
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, p.ForceFlush(ctx))
 		require.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush not called")
 
@@ -382,7 +381,7 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		proc := newProcessor("")
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		require.NoError(t, p.ForceFlush(ctx))
 		require.Equal(t, 1, proc.forceFlushCalls, "processor ForceFlush not called")
 
@@ -395,7 +394,7 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		proc.Err = assert.AnError
 		p := NewLoggerProvider(WithProcessor(proc))
 
-		ctx := context.Background()
+		ctx := t.Context()
 		assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError, "processor error not returned")
 	})
 }
@@ -416,5 +415,5 @@ func BenchmarkLoggerProviderLogger(b *testing.B) {
 	}
 
 	b.StopTimer()
-	loggers[0].Enabled(context.Background(), log.EnabledParameters{})
+	loggers[0].Enabled(b.Context(), log.EnabledParameters{})
 }

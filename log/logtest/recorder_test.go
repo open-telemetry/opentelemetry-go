@@ -73,7 +73,7 @@ func TestLoggerEnabled(t *testing.T) {
 	}{
 		{
 			name: "the default option enables every log entry",
-			ctx:  context.Background(),
+			ctx:  t.Context(),
 			want: true,
 		},
 		{
@@ -83,7 +83,7 @@ func TestLoggerEnabled(t *testing.T) {
 					return false
 				}),
 			},
-			ctx:  context.Background(),
+			ctx:  t.Context(),
 			want: false,
 		},
 	} {
@@ -96,7 +96,7 @@ func TestLoggerEnabled(t *testing.T) {
 
 func TestLoggerEnabledFnUnset(t *testing.T) {
 	r := &logger{}
-	assert.True(t, r.Enabled(context.Background(), log.EnabledParameters{}))
+	assert.True(t, r.Enabled(t.Context(), log.EnabledParameters{}))
 }
 
 func TestRecorderLoggerEmitAndReset(t *testing.T) {
@@ -104,7 +104,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	ts := time.Now()
 
 	l := rec.Logger(t.Name())
-	ctx := context.Background()
+	ctx := t.Context()
 	r := log.Record{}
 	r.SetTimestamp(ts)
 	r.SetSeverity(log.SeverityInfo)
@@ -157,13 +157,13 @@ func TestRecorderConcurrentSafe(t *testing.T) {
 
 	r := &Recorder{}
 
-	for i := 0; i < goRoutineN; i++ {
+	for range goRoutineN {
 		go func() {
 			defer wg.Done()
 
 			nr := r.Logger("test")
-			nr.Enabled(context.Background(), log.EnabledParameters{})
-			nr.Emit(context.Background(), log.Record{})
+			nr.Enabled(t.Context(), log.EnabledParameters{})
+			nr.Emit(t.Context(), log.Record{})
 
 			r.Result()
 			r.Reset()

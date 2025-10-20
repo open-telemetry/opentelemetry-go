@@ -13,9 +13,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
 	"go.opentelemetry.io/otel/sdk/log"
-	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 func TestExporterExportErrors(t *testing.T) {
@@ -29,7 +29,7 @@ func TestExporterExportErrors(t *testing.T) {
 	e, err := newExporter(c, config{})
 	require.NoError(t, err, "New")
 
-	err = e.Export(context.Background(), make([]log.Record, 1))
+	err = e.Export(t.Context(), make([]log.Record, 1))
 	assert.ErrorIs(t, err, errUpload)
 }
 
@@ -53,7 +53,7 @@ func TestExporterExport(t *testing.T) {
 	e, err := newExporter(c, config{})
 	require.NoError(t, err, "New")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	want := make([]log.Record, 1)
 	assert.NoError(t, e.Export(ctx, want))
 
@@ -62,7 +62,7 @@ func TestExporterExport(t *testing.T) {
 }
 
 func TestExporterShutdown(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "New")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
@@ -76,7 +76,7 @@ func TestExporterShutdown(t *testing.T) {
 }
 
 func TestExporterForceFlush(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "New")
 
@@ -84,16 +84,16 @@ func TestExporterForceFlush(t *testing.T) {
 }
 
 func TestExporterConcurrentSafe(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	e, err := New(ctx)
 	require.NoError(t, err, "newExporter")
 
 	const goroutines = 10
 
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	runs := new(uint64)
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -12,7 +12,7 @@ import (
 )
 
 func TestContextWithList(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	l := List{"foo": {Value: "1"}}
 
 	nCtx := ContextWithList(ctx, l)
@@ -23,7 +23,7 @@ func TestContextWithList(t *testing.T) {
 func TestClearContextOfList(t *testing.T) {
 	l := List{"foo": {Value: "1"}}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = context.WithValue(ctx, baggageKey, l)
 
 	nCtx := ContextWithList(ctx, nil)
@@ -34,7 +34,7 @@ func TestClearContextOfList(t *testing.T) {
 }
 
 func TestListFromContext(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.Nil(t, ListFromContext(ctx))
 
 	l := List{"foo": {Value: "1"}}
@@ -44,12 +44,12 @@ func TestListFromContext(t *testing.T) {
 
 func TestContextWithSetHook(t *testing.T) {
 	var called bool
-	f := func(ctx context.Context, list List) context.Context {
+	f := func(ctx context.Context, _ List) context.Context {
 		called = true
 		return ctx
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = ContextWithSetHook(ctx, f)
 	assert.False(t, called, "SetHookFunc called when setting hook")
 	ctx = ContextWithList(ctx, nil)
@@ -65,12 +65,12 @@ func TestContextWithSetHook(t *testing.T) {
 
 func TestContextWithGetHook(t *testing.T) {
 	var called bool
-	f := func(ctx context.Context, list List) List {
+	f := func(_ context.Context, list List) List {
 		called = true
 		return list
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = ContextWithGetHook(ctx, f)
 	assert.False(t, called, "GetHookFunc called when setting hook")
 	_ = ListFromContext(ctx)

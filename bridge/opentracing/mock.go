@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -28,8 +28,8 @@ var (
 )
 
 type mockContextKeyValue struct {
-	Key   interface{}
-	Value interface{}
+	Key   any
+	Value any
 }
 
 type mockTracer struct {
@@ -66,7 +66,7 @@ func newMockTracer() *mockTracer {
 // Start returns a new trace span with the given name and options.
 func (t *mockTracer) Start(
 	ctx context.Context,
-	name string,
+	_ string,
 	opts ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
 	config := trace.NewSpanStartConfig(opts...)
@@ -132,7 +132,7 @@ func (t *mockTracer) getParentSpanID(ctx context.Context, config *trace.SpanConf
 	return trace.SpanID{}
 }
 
-func (t *mockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
+func (*mockTracer) getParentSpanContext(ctx context.Context, config *trace.SpanConfig) trace.SpanContext {
 	if !config.NewRoot() {
 		return trace.SpanContextFromContext(ctx)
 	}
@@ -172,7 +172,7 @@ func (t *mockTracer) getRandTraceID() trace.TraceID {
 }
 
 // DeferredContextSetupHook implements the DeferredContextSetupTracerExtension interface.
-func (t *mockTracer) DeferredContextSetupHook(ctx context.Context, span trace.Span) context.Context {
+func (t *mockTracer) DeferredContextSetupHook(ctx context.Context, _ trace.Span) context.Context {
 	return t.addSpareContextValue(ctx)
 }
 
@@ -309,4 +309,4 @@ func (s *mockSpan) OverrideTracer(tracer trace.Tracer) {
 	s.officialTracer = tracer
 }
 
-func (s *mockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }
+func (*mockSpan) TracerProvider() trace.TracerProvider { return noop.NewTracerProvider() }

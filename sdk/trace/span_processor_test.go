@@ -52,7 +52,7 @@ func (t *testSpanProcessor) OnEnd(s ReadOnlySpan) {
 	t.spansEnded = append(t.spansEnded, s)
 }
 
-func (t *testSpanProcessor) Shutdown(_ context.Context) error {
+func (t *testSpanProcessor) Shutdown(context.Context) error {
 	if t == nil {
 		return nil
 	}
@@ -83,7 +83,7 @@ func TestRegisterSpanProcessor(t *testing.T) {
 		TraceID: tid,
 		SpanID:  sid,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), parent)
 
 	tr := tp.Tracer("SpanProcessor")
 	_, span := tr.Start(ctx, "OnStart")
@@ -152,14 +152,14 @@ func TestUnregisterSpanProcessor(t *testing.T) {
 	}
 
 	tr := tp.Tracer("SpanProcessor")
-	_, span := tr.Start(context.Background(), "OnStart")
+	_, span := tr.Start(t.Context(), "OnStart")
 	span.End()
 	for _, sp := range sps {
 		tp.UnregisterSpanProcessor(sp)
 	}
 
 	// start another span after unregistering span processor.
-	_, span = tr.Start(context.Background(), "Start span after unregister")
+	_, span = tr.Start(t.Context(), "Start span after unregister")
 	span.End()
 
 	for _, sp := range sps {
@@ -183,7 +183,7 @@ func TestUnregisterSpanProcessorWhileSpanIsActive(t *testing.T) {
 	tp.RegisterSpanProcessor(sp)
 
 	tr := tp.Tracer("SpanProcessor")
-	_, span := tr.Start(context.Background(), "OnStart")
+	_, span := tr.Start(t.Context(), "OnStart")
 	tp.UnregisterSpanProcessor(sp)
 
 	span.End()
@@ -208,7 +208,7 @@ func TestSpanProcessorShutdown(t *testing.T) {
 	tp.RegisterSpanProcessor(sp)
 
 	wantCount := 1
-	err := sp.Shutdown(context.Background())
+	err := sp.Shutdown(t.Context())
 	if err != nil {
 		t.Error("Error shutting the testSpanProcessor down\n")
 	}

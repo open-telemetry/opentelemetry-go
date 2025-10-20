@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/log"
-
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/log"
 )
 
 type mockDelayExporter struct{}
@@ -104,7 +104,10 @@ func BenchmarkProcessor(b *testing.B) {
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			provider := NewLoggerProvider(tc.f()...)
-			b.Cleanup(func() { assert.NoError(b, provider.Shutdown(context.Background())) })
+			b.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(b, provider.Shutdown(context.Background()))
+			})
 			logger := provider.Logger(b.Name())
 
 			b.ReportAllocs()
@@ -119,7 +122,7 @@ func BenchmarkProcessor(b *testing.B) {
 						log.Int("int", 123),
 						log.Bool("bool", true),
 					)
-					logger.Emit(context.Background(), r)
+					logger.Emit(b.Context(), r)
 				}
 			})
 		})
@@ -128,57 +131,57 @@ func BenchmarkProcessor(b *testing.B) {
 
 type timestampProcessor struct{}
 
-func (p timestampProcessor) OnEmit(ctx context.Context, r *Record) error {
+func (timestampProcessor) OnEmit(_ context.Context, r *Record) error {
 	r.SetObservedTimestamp(time.Date(1988, time.November, 17, 0, 0, 0, 0, time.UTC))
 	return nil
 }
 
-func (p timestampProcessor) Enabled(context.Context, Record) bool {
+func (timestampProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 
-func (p timestampProcessor) Shutdown(ctx context.Context) error {
+func (timestampProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-func (p timestampProcessor) ForceFlush(ctx context.Context) error {
+func (timestampProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
 type attrAddProcessor struct{}
 
-func (p attrAddProcessor) OnEmit(ctx context.Context, r *Record) error {
+func (attrAddProcessor) OnEmit(_ context.Context, r *Record) error {
 	r.AddAttributes(log.String("add", "me"))
 	return nil
 }
 
-func (p attrAddProcessor) Enabled(context.Context, Record) bool {
+func (attrAddProcessor) Enabled(context.Context, Record) bool {
 	return true
 }
 
-func (p attrAddProcessor) Shutdown(ctx context.Context) error {
+func (attrAddProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-func (p attrAddProcessor) ForceFlush(ctx context.Context) error {
+func (attrAddProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
 type attrSetDecorator struct{}
 
-func (p attrSetDecorator) OnEmit(ctx context.Context, r *Record) error {
+func (attrSetDecorator) OnEmit(_ context.Context, r *Record) error {
 	r.SetAttributes(log.String("replace", "me"))
 	return nil
 }
 
-func (p attrSetDecorator) Enabled(context.Context, Record) bool {
+func (attrSetDecorator) Enabled(context.Context, Record) bool {
 	return true
 }
 
-func (p attrSetDecorator) Shutdown(ctx context.Context) error {
+func (attrSetDecorator) Shutdown(context.Context) error {
 	return nil
 }
 
-func (p attrSetDecorator) ForceFlush(ctx context.Context) error {
+func (attrSetDecorator) ForceFlush(context.Context) error {
 	return nil
 }

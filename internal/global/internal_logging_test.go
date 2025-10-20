@@ -12,11 +12,9 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/stdr"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoggerConcurrentSafe(t *testing.T) {
@@ -90,8 +88,8 @@ func TestLogLevel(t *testing.T) {
 }
 
 func newBuffLogger(buf *bytes.Buffer, verbosity int) logr.Logger {
-	return funcr.New(func(prefix, args string) {
-		_, _ = buf.Write([]byte(args))
+	return funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
 	}, funcr.Options{
 		Verbosity: verbosity,
 	})

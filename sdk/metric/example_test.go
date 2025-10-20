@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // To enable metrics in your application using the SDK,
@@ -45,6 +45,7 @@ func Example() {
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(reader),
+		metric.WithCardinalityLimit(2000),
 	)
 
 	// Handle shutdown properly so that nothing leaks.
@@ -144,7 +145,7 @@ func ExampleNewView() {
 		Scope: instrumentation.Scope{
 			Name:      "http",
 			Version:   "0.34.0",
-			SchemaURL: "https://opentelemetry.io/schemas/1.0.0",
+			SchemaURL: "https://opentelemetry.io/schemas/1.37.0",
 		},
 	})
 	fmt.Println("name:", stream.Name)

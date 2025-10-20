@@ -4,7 +4,6 @@
 package tracetest
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -16,22 +15,22 @@ import (
 func TestNoop(t *testing.T) {
 	nsb := NewNoopExporter()
 
-	require.NoError(t, nsb.ExportSpans(context.Background(), nil))
-	require.NoError(t, nsb.ExportSpans(context.Background(), make(SpanStubs, 10).Snapshots()))
-	require.NoError(t, nsb.ExportSpans(context.Background(), make(SpanStubs, 0, 10).Snapshots()))
+	require.NoError(t, nsb.ExportSpans(t.Context(), nil))
+	require.NoError(t, nsb.ExportSpans(t.Context(), make(SpanStubs, 10).Snapshots()))
+	require.NoError(t, nsb.ExportSpans(t.Context(), make(SpanStubs, 0, 10).Snapshots()))
 }
 
 func TestNewInMemoryExporter(t *testing.T) {
 	imsb := NewInMemoryExporter()
 
-	require.NoError(t, imsb.ExportSpans(context.Background(), nil))
+	require.NoError(t, imsb.ExportSpans(t.Context(), nil))
 	assert.Empty(t, imsb.GetSpans())
 
 	input := make(SpanStubs, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		input[i] = SpanStub{Name: fmt.Sprintf("span %d", i)}
 	}
-	require.NoError(t, imsb.ExportSpans(context.Background(), input.Snapshots()))
+	require.NoError(t, imsb.ExportSpans(t.Context(), input.Snapshots()))
 	sds := imsb.GetSpans()
 	assert.Len(t, sds, 10)
 	for i, sd := range sds {
@@ -42,7 +41,7 @@ func TestNewInMemoryExporter(t *testing.T) {
 	assert.Len(t, sds, 10)
 	assert.Empty(t, imsb.GetSpans())
 
-	require.NoError(t, imsb.ExportSpans(context.Background(), input.Snapshots()[0:1]))
+	require.NoError(t, imsb.ExportSpans(t.Context(), input.Snapshots()[0:1]))
 	sds = imsb.GetSpans()
 	assert.Len(t, sds, 1)
 	assert.Equal(t, input[0], sds[0])

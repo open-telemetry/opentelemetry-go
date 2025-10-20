@@ -107,7 +107,7 @@ func testClientStopManyTimes(t *testing.T, client otlptrace.Client) {
 	const num int = 20
 	wg.Add(num)
 	errs := make([]error, num)
-	for i := 0; i < num; i++ {
+	for i := range num {
 		go func(idx int) {
 			defer wg.Done()
 			<-ch

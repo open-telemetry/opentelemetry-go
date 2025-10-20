@@ -45,27 +45,27 @@ func TestSpanFromContext(t *testing.T) {
 		},
 		{
 			name:         "background context",
-			context:      context.Background(),
+			context:      t.Context(),
 			expectedSpan: emptySpan,
 		},
 		{
 			name:         "local span",
-			context:      ContextWithSpan(context.Background(), localSpan),
+			context:      ContextWithSpan(t.Context(), localSpan),
 			expectedSpan: localSpan,
 		},
 		{
 			name:         "remote span",
-			context:      ContextWithSpan(context.Background(), remoteSpan),
+			context:      ContextWithSpan(t.Context(), remoteSpan),
 			expectedSpan: remoteSpan,
 		},
 		{
 			name:         "wrapped remote span",
-			context:      ContextWithRemoteSpanContext(context.Background(), remoteSpan.SpanContext()),
+			context:      ContextWithRemoteSpanContext(t.Context(), remoteSpan.SpanContext()),
 			expectedSpan: wrappedSpan,
 		},
 		{
 			name:         "wrapped local span becomes remote",
-			context:      ContextWithRemoteSpanContext(context.Background(), localSpan.SpanContext()),
+			context:      ContextWithRemoteSpanContext(t.Context(), localSpan.SpanContext()),
 			expectedSpan: wrappedSpan,
 		},
 	}

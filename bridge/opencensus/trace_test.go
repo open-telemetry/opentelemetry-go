@@ -4,13 +4,11 @@
 package opencensus // import "go.opentelemetry.io/otel/bridge/opencensus"
 
 import (
-	"context"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -22,7 +20,7 @@ func TestNewTraceBridge(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
 	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
 	bridge := newTraceBridge([]TraceOption{WithTracerProvider(tp)})
-	_, span := bridge.StartSpan(context.Background(), "foo")
+	_, span := bridge.StartSpan(t.Context(), "foo")
 	span.End()
 	gotSpans := exporter.GetSpans()
 	require.Len(t, gotSpans, 1)
@@ -134,12 +132,10 @@ func TestOTelSpanContextToOC(t *testing.T) {
 					gotTraceState = strings.Join(gotTraceStateEntries, ",")
 				}
 				assert.Equal(t, expectedTraceState, gotTraceState, "Tracestate should preserve entries")
-			} else {
+			} else if got.Tracestate != nil {
 				// For empty tracestate cases, ensure the field is properly handled
-				if got.Tracestate != nil {
-					entries := got.Tracestate.Entries()
-					assert.Empty(t, entries, "Empty tracestate should result in empty entries")
-				}
+				entries := got.Tracestate.Entries()
+				assert.Empty(t, entries, "Empty tracestate should result in empty entries")
 			}
 		})
 	}
@@ -200,7 +196,7 @@ func TestInstallTraceBridge(t *testing.T) {
 			)
 
 			ctx, span := octrace.DefaultTracer.StartSpan(
-				context.Background(),
+				t.Context(),
 				"test-span",
 			)
 			assert.NotNil(

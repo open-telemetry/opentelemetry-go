@@ -73,7 +73,7 @@ func TestManualReaderTemporality(t *testing.T) {
 }
 
 func TestManualReaderCollect(t *testing.T) {
-	expiredCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1))
+	expiredCtx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-1))
 	defer cancel()
 
 	tests := []struct {
@@ -83,7 +83,7 @@ func TestManualReaderCollect(t *testing.T) {
 	}{
 		{
 			name:        "with a valid context",
-			ctx:         context.Background(),
+			ctx:         t.Context(),
 			expectedErr: nil,
 		},
 		{
@@ -102,7 +102,7 @@ func TestManualReaderCollect(t *testing.T) {
 			// Ensure the pipeline has a callback setup
 			testM, err := meter.Int64ObservableCounter("test")
 			assert.NoError(t, err)
-			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+			_, err = meter.RegisterCallback(func(context.Context, metric.Observer) error {
 				return nil
 			}, testM)
 			assert.NoError(t, err)

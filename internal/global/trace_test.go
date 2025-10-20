@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/auto/sdk"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
@@ -52,18 +52,18 @@ func TestTraceProviderDelegation(t *testing.T) {
 		"fromSpan": {"span4"},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	gtp := TracerProvider()
 	tracer1 := gtp.Tracer("pre")
 	// This is started before an SDK was registered and should be dropped.
 	_, span1 := tracer1.Start(ctx, "span1")
 
 	SetTracerProvider(fnTracerProvider{
-		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+		tracer: func(name string, _ ...trace.TracerOption) trace.Tracer {
 			spans, ok := expected[name]
 			assert.Truef(t, ok, "invalid tracer: %s", name)
 			return fnTracer{
-				start: func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+				start: func(ctx context.Context, spanName string, _ ...trace.SpanStartOption) (context.Context, trace.Span) {
 					if ok {
 						if len(spans) == 0 {
 							t.Errorf("unexpected span: %s", spanName)
@@ -105,7 +105,7 @@ func TestTraceProviderDelegates(t *testing.T) {
 	// Configure it with a spy.
 	called := false
 	SetTracerProvider(fnTracerProvider{
-		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+		tracer: func(name string, _ ...trace.TracerOption) trace.Tracer {
 			called = true
 			assert.Equal(t, "abc", name)
 			return noop.NewTracerProvider().Tracer("")
@@ -142,7 +142,7 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	// Configure it with a spy.
 	called := int32(0)
 	SetTracerProvider(fnTracerProvider{
-		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+		tracer: func(name string, _ ...trace.TracerOption) trace.Tracer {
 			newVal := atomic.AddInt32(&called, 1)
 			assert.Equal(t, "abc", name)
 			if newVal == 10 {
@@ -173,7 +173,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 		for {
 			select {
 			case <-time.After(1 * time.Millisecond):
-				tracer.Start(context.Background(), "name")
+				tracer.Start(t.Context(), "name")
 			case <-quit:
 				return
 			}
@@ -186,10 +186,10 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 	// Configure it with a spy.
 	called := int32(0)
 	SetTracerProvider(fnTracerProvider{
-		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+		tracer: func(name string, _ ...trace.TracerOption) trace.Tracer {
 			assert.Equal(t, "abc", name)
 			return fnTracer{
-				start: func(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+				start: func(ctx context.Context, spanName string, _ ...trace.SpanStartOption) (context.Context, trace.Span) {
 					newVal := atomic.AddInt32(&called, 1)
 					assert.Equal(t, "name", spanName)
 					if newVal == 10 {
@@ -218,7 +218,7 @@ func TestTraceProviderDelegatesSameInstance(t *testing.T) {
 	assert.Same(t, tracer, gtp.Tracer("abc", trace.WithInstrumentationVersion("xyz")))
 
 	SetTracerProvider(fnTracerProvider{
-		tracer: func(name string, opts ...trace.TracerOption) trace.Tracer {
+		tracer: func(string, ...trace.TracerOption) trace.Tracer {
 			return noop.NewTracerProvider().Tracer("")
 		},
 	})
@@ -235,7 +235,7 @@ func TestSpanContextPropagatedWithNonRecordingSpan(t *testing.T) {
 		TraceFlags: trace.FlagsSampled,
 		Remote:     true,
 	})
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 	_, span := TracerProvider().Tracer("test").Start(ctx, "test")
 
 	assert.Equal(t, sc, span.SpanContext())
@@ -282,7 +282,7 @@ func TestTracerIdentity(t *testing.T) {
 
 func TestNewSpanType(t *testing.T) {
 	tracer := new(tracer)
-	ctx := context.Background()
+	ctx := t.Context()
 	_, got := tracer.newSpan(ctx, autoInstEnabled, "", nil)
 	assert.IsType(t, nonRecordingSpan{}, got, "default span type")
 

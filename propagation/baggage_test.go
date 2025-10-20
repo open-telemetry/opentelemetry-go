@@ -4,7 +4,6 @@
 package propagation_test
 
 import (
-	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -124,16 +123,16 @@ func TestExtractValidBaggage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mapCarr := propagation.MapCarrier{}
 			mapCarr["baggage"] = tt.header
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
 			req.Header.Set("baggage", tt.header)
 
 			// test with http header carrier (which implements ValuesGetter)
-			ctx := prop.Extract(context.Background(), propagation.HeaderCarrier(req.Header))
+			ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 			expected := tt.want.Baggage(t)
 			assert.Equal(t, expected, baggage.FromContext(ctx), "should extract baggage for HeaderCarrier")
 
 			// test with map carrier (which does not implement ValuesGetter)
-			ctx = prop.Extract(context.Background(), mapCarr)
+			ctx = prop.Extract(t.Context(), mapCarr)
 			expected = tt.want.Baggage(t)
 			assert.Equal(t, expected, baggage.FromContext(ctx), "should extract baggage for MapCarrier")
 		})
@@ -183,10 +182,10 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
 			req.Header["Baggage"] = tt.headers
 
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			expected := tt.want.Baggage(t)
 			assert.Equal(t, expected, baggage.FromContext(ctx))
@@ -239,11 +238,11 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
 			req.Header.Set("baggage", tt.header)
 
 			expected := tt.has.Baggage(t)
-			ctx := baggage.ContextWithBaggage(context.Background(), expected)
+			ctx := baggage.ContextWithBaggage(t.Context(), expected)
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			assert.Equal(t, expected, baggage.FromContext(ctx))
 		})
@@ -292,8 +291,8 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
-			ctx := baggage.ContextWithBaggage(context.Background(), tt.mems.Baggage(t))
+			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			ctx := baggage.ContextWithBaggage(t.Context(), tt.mems.Baggage(t))
 			propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 			got := strings.Split(req.Header.Get("baggage"), ",")
@@ -339,11 +338,11 @@ func TestBaggageInjectExtractRoundtrip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := tt.mems.Baggage(t)
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
-			ctx := baggage.ContextWithBaggage(context.Background(), b)
+			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			ctx := baggage.ContextWithBaggage(t.Context(), b)
 			propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
-			ctx = propagator.Extract(context.Background(), propagation.HeaderCarrier(req.Header))
+			ctx = propagator.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 			got := baggage.FromContext(ctx)
 
 			assert.Equal(t, b, got)

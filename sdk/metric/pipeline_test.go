@@ -32,7 +32,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func testSumAggregateOutput(dest *metricdata.Aggregation) int {
+func testSumAggregateOutput(
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+) int {
 	*dest = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		IsMonotonic: false,
@@ -42,10 +44,10 @@ func testSumAggregateOutput(dest *metricdata.Aggregation) int {
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
 
 	output := metricdata.ResourceMetrics{}
-	err := pipe.produce(context.Background(), &output)
+	err := pipe.produce(t.Context(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Empty(t, output.ScopeMetrics)
@@ -59,7 +61,7 @@ func TestNewPipeline(t *testing.T) {
 		pipe.addMultiCallback(func(context.Context) error { return nil })
 	})
 
-	err = pipe.produce(context.Background(), &output)
+	err = pipe.produce(t.Context(), &output)
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), output.Resource)
 	require.Len(t, output.ScopeMetrics, 1)
@@ -68,22 +70,22 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0)
 
 	output := metricdata.ResourceMetrics{}
-	err := pipe.produce(context.Background(), &output)
+	err := pipe.produce(t.Context(), &output)
 	assert.NoError(t, err)
 	assert.Equal(t, res, output.Resource)
 }
 
 func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter)
-	ctx := context.Background()
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
+	ctx := t.Context()
 	var output metricdata.ResourceMetrics
 
 	var wg sync.WaitGroup
 	const threads = 2
-	for i := 0; i < threads; i++ {
+	for i := range threads {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -142,13 +144,13 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter),
+				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter, 0),
 			},
 			{
 				name: "NoMatchingView",
 				pipe: newPipeline(nil, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
-				}, exemplar.AlwaysOffFilter),
+				}, exemplar.AlwaysOffFilter, 0),
 			},
 		}
 
@@ -161,11 +163,11 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
-					in(context.Background(), 1, *attribute.EmptySet())
+					in(t.Context(), 1, *attribute.EmptySet())
 				}
 
 				out := metricdata.ResourceMetrics{}
-				err = test.pipe.produce(context.Background(), &out)
+				err = test.pipe.produce(t.Context(), &out)
 				require.NoError(t, err)
 				require.Len(t, out.ScopeMetrics, 1, "Aggregator not registered with pipeline")
 				sm := out.ScopeMetrics[0]
@@ -233,7 +235,7 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
+		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
@@ -275,7 +277,7 @@ func TestLogConflictSuggestView(t *testing.T) {
 	var vc cache[string, instID]
 	name := strings.ToLower(orig.Name)
 	_ = vc.Lookup(name, func() instID { return orig })
-	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter), &vc)
+	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
 
 	viewSuggestion := func(inst instID, stream string) string {
 		return `"NewView(Instrument{` +
@@ -380,7 +382,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	}
 
 	var vc cache[string, instID]
-	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0)
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
@@ -439,7 +441,7 @@ func TestExemplars(t *testing.T) {
 		t.Helper()
 
 		rm := new(metricdata.ResourceMetrics)
-		require.NoError(t, r.Collect(context.Background(), rm))
+		require.NoError(t, r.Collect(t.Context(), rm))
 
 		require.Len(t, rm.ScopeMetrics, 1, "ScopeMetrics")
 		sm := rm.ScopeMetrics[0]
@@ -458,13 +460,13 @@ func TestExemplars(t *testing.T) {
 		assert.Len(t, expo.DataPoints[0].Exemplars, nExpo)
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		SpanID:     trace.SpanID{0o1},
 		TraceID:    trace.TraceID{0o1},
 		TraceFlags: trace.FlagsSampled,
 	})
-	sampled := trace.ContextWithSpanContext(context.Background(), sc)
+	sampled := trace.ContextWithSpanContext(t.Context(), sc)
 
 	t.Run("Default", func(t *testing.T) {
 		m, r := setup("default")
@@ -511,7 +513,7 @@ func TestExemplars(t *testing.T) {
 
 	t.Run("Custom reservoir", func(t *testing.T) {
 		r := NewManualReader()
-		reservoirProviderSelector := func(agg Aggregation) exemplar.ReservoirProvider {
+		reservoirProviderSelector := func(Aggregation) exemplar.ReservoirProvider {
 			return exemplar.FixedSizeReservoirProvider(2)
 		}
 		v1 := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
@@ -568,13 +570,13 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_ = mp.pipes[0].produce(context.Background(), &metricdata.ResourceMetrics{})
+		_ = mp.pipes[0].produce(t.Context(), &metricdata.ResourceMetrics{})
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_ = mp.pipes[1].produce(context.Background(), &metricdata.ResourceMetrics{})
+		_ = mp.pipes[1].produce(t.Context(), &metricdata.ResourceMetrics{})
 	}()
 
 	wg.Wait()
@@ -596,7 +598,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 		}, oc)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
-	ctx := context.Background()
+	ctx := t.Context()
 	rm := new(metricdata.ResourceMetrics)
 	val.Add(1)
 	err = r1.Collect(ctx, rm)
@@ -621,7 +623,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 func TestPipelineProduceErrors(t *testing.T) {
 	// Create a test pipeline with aggregations
 	pipeReader := NewManualReader()
-	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter)
+	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter, 0)
 
 	// Set up an observable with callbacks
 	var testObsID observableID[int64]
@@ -648,37 +650,36 @@ func TestPipelineProduceErrors(t *testing.T) {
 	}
 	pipe.addSync(instrumentation.Scope{Name: "test"}, inst)
 
-	ctx, cancelCtx := context.WithCancel(context.Background())
+	ctx, cancelCtx := context.WithCancel(t.Context())
 	var shouldCancelContext bool // When true, the second callback cancels ctx
 	var shouldReturnError bool   // When true, the third callback returns an error
 	var callbackCounts [3]int
 
-	// Callback 1: cancels the context during execution but continues to populate data
-	pipe.callbacks = append(pipe.callbacks, func(ctx context.Context) error {
-		callbackCounts[0]++
-		for _, m := range pipe.int64Measures[testObsID] {
-			m(ctx, 123, *attribute.EmptySet())
-		}
-		return nil
-	})
-
-	// Callback 2: populates int64 observable data
-	pipe.callbacks = append(pipe.callbacks, func(ctx context.Context) error {
-		callbackCounts[1]++
-		if shouldCancelContext {
-			cancelCtx()
-		}
-		return nil
-	})
-
-	// Callback 3: return an error
-	pipe.callbacks = append(pipe.callbacks, func(ctx context.Context) error {
-		callbackCounts[2]++
-		if shouldReturnError {
-			return fmt.Errorf("test callback error")
-		}
-		return nil
-	})
+	pipe.callbacks = append(pipe.callbacks,
+		// Callback 1: cancels the context during execution but continues to populate data
+		func(ctx context.Context) error {
+			callbackCounts[0]++
+			for _, m := range pipe.int64Measures[testObsID] {
+				m(ctx, 123, *attribute.EmptySet())
+			}
+			return nil
+		},
+		// Callback 2: populates int64 observable data
+		func(context.Context) error {
+			callbackCounts[1]++
+			if shouldCancelContext {
+				cancelCtx()
+			}
+			return nil
+		},
+		// Callback 3: return an error
+		func(context.Context) error {
+			callbackCounts[2]++
+			if shouldReturnError {
+				return fmt.Errorf("test callback error")
+			}
+			return nil
+		})
 
 	assertMetrics := func(rm *metricdata.ResourceMetrics, expectVal int64) {
 		require.Len(t, rm.ScopeMetrics, 1)

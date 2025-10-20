@@ -57,7 +57,7 @@ func TestConfigReaderSignalsEmpty(t *testing.T) {
 	require.NotNil(t, f)
 	require.NotNil(t, s)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, s(ctx))
 	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
@@ -66,11 +66,11 @@ func TestConfigReaderSignalsEmpty(t *testing.T) {
 func TestConfigReaderSignalsForwarded(t *testing.T) {
 	var flush, sdown int
 	r := &reader{
-		forceFlushFunc: func(ctx context.Context) error {
+		forceFlushFunc: func(context.Context) error {
 			flush++
 			return nil
 		},
-		shutdownFunc: func(ctx context.Context) error {
+		shutdownFunc: func(context.Context) error {
 			sdown++
 			return nil
 		},
@@ -81,7 +81,7 @@ func TestConfigReaderSignalsForwarded(t *testing.T) {
 	require.NotNil(t, f)
 	require.NotNil(t, s)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, f(ctx))
 	assert.NoError(t, s(ctx))
@@ -93,8 +93,8 @@ func TestConfigReaderSignalsForwarded(t *testing.T) {
 
 func TestConfigReaderSignalsForwardedErrors(t *testing.T) {
 	r := &reader{
-		forceFlushFunc: func(ctx context.Context) error { return assert.AnError },
-		shutdownFunc:   func(ctx context.Context) error { return assert.AnError },
+		forceFlushFunc: func(context.Context) error { return assert.AnError },
+		shutdownFunc:   func(context.Context) error { return assert.AnError },
 	}
 	c := newConfig([]Option{WithReader(r)})
 	f, s := c.readerSignals()
@@ -102,7 +102,7 @@ func TestConfigReaderSignalsForwardedErrors(t *testing.T) {
 	require.NotNil(t, f)
 	require.NotNil(t, s)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.ErrorIs(t, f(ctx), assert.AnError)
 	assert.ErrorIs(t, s(ctx), assert.AnError)
 	assert.ErrorIs(t, s(ctx), ErrReaderShutdown)
@@ -115,10 +115,10 @@ func TestUnifyMultiError(t *testing.T) {
 		e2 = errors.New("2")
 	)
 	err := unify([]func(context.Context) error{
-		func(ctx context.Context) error { return e0 },
-		func(ctx context.Context) error { return e1 },
-		func(ctx context.Context) error { return e2 },
-	})(context.Background())
+		func(context.Context) error { return e0 },
+		func(context.Context) error { return e1 },
+		func(context.Context) error { return e2 },
+	})(t.Context())
 	assert.ErrorIs(t, err, e0)
 	assert.ErrorIs(t, err, e1)
 	assert.ErrorIs(t, err, e2)
@@ -185,7 +185,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := newConfig(tc.options).res
 			if diff := cmp.Diff(got, tc.want); diff != "" {
@@ -300,8 +299,8 @@ func TestWithExemplarFilterOff(t *testing.T) {
 			}
 			c := newConfig(tc.opts)
 			assert.NotNil(t, c.exemplarFilter)
-			assert.Equal(t, tc.expectFilterNotSampled, c.exemplarFilter(context.Background()))
-			assert.Equal(t, tc.expectFilterSampled, c.exemplarFilter(sample(context.Background())))
+			assert.Equal(t, tc.expectFilterNotSampled, c.exemplarFilter(t.Context()))
+			assert.Equal(t, tc.expectFilterSampled, c.exemplarFilter(sample(t.Context())))
 		})
 	}
 }

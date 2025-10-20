@@ -11,16 +11,15 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/logtest"
-	"go.opentelemetry.io/otel/sdk/resource"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/log/logtest"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -75,22 +74,22 @@ func TestExporter(t *testing.T) {
 			record := getRecord(now)
 
 			// Export a record
-			err = exporter.Export(context.Background(), []sdklog.Record{record})
+			err = exporter.Export(t.Context(), []sdklog.Record{record})
 			assert.NoError(t, err)
 
 			// Check the writer
 			assert.Equal(t, tc.want, buf.String())
 
 			// Flush the exporter
-			err = exporter.ForceFlush(context.Background())
+			err = exporter.ForceFlush(t.Context())
 			assert.NoError(t, err)
 
 			// Shutdown the exporter
-			err = exporter.Shutdown(context.Background())
+			err = exporter.Shutdown(t.Context())
 			assert.NoError(t, err)
 
 			// Export a record after shutdown, this should not be written
-			err = exporter.Export(context.Background(), []sdklog.Record{record})
+			err = exporter.Export(t.Context(), []sdklog.Record{record})
 			assert.NoError(t, err)
 
 			// Check the writer
@@ -116,42 +115,42 @@ func TestExporterExport(t *testing.T) {
 		{
 			name:       "default",
 			options:    []Option{},
-			ctx:        context.Background(),
+			ctx:        t.Context(),
 			records:    records,
 			wantResult: getJSONs(&now),
 		},
 		{
 			name:       "NoRecords",
 			options:    []Option{},
-			ctx:        context.Background(),
+			ctx:        t.Context(),
 			records:    nil,
 			wantResult: "",
 		},
 		{
 			name:       "WithPrettyPrint",
 			options:    []Option{WithPrettyPrint()},
-			ctx:        context.Background(),
+			ctx:        t.Context(),
 			records:    records,
 			wantResult: getPrettyJSONs(&now),
 		},
 		{
 			name:       "WithoutTimestamps",
 			options:    []Option{WithoutTimestamps()},
-			ctx:        context.Background(),
+			ctx:        t.Context(),
 			records:    records,
 			wantResult: getJSONs(nil),
 		},
 		{
 			name:       "WithoutTimestamps and WithPrettyPrint",
 			options:    []Option{WithoutTimestamps(), WithPrettyPrint()},
-			ctx:        context.Background(),
+			ctx:        t.Context(),
 			records:    records,
 			wantResult: getPrettyJSONs(nil),
 		},
 		{
 			name: "WithCanceledContext",
 			ctx: func() context.Context {
-				ctx, cancel := context.WithCancel(context.Background())
+				ctx, cancel := context.WithCancel(t.Context())
 				cancel()
 				return ctx
 			}(),
@@ -284,14 +283,14 @@ func TestExporterShutdown(t *testing.T) {
 	exporter, err := New()
 	assert.NoError(t, err)
 
-	assert.NoError(t, exporter.Shutdown(context.Background()))
+	assert.NoError(t, exporter.Shutdown(t.Context()))
 }
 
 func TestExporterForceFlush(t *testing.T) {
 	exporter, err := New()
 	assert.NoError(t, err)
 
-	assert.NoError(t, exporter.ForceFlush(context.Background()))
+	assert.NoError(t, exporter.ForceFlush(t.Context()))
 }
 
 func getRecord(now time.Time) sdklog.Record {
@@ -361,14 +360,14 @@ func TestExporterConcurrentSafe(t *testing.T) {
 			const goroutines = 10
 			var wg sync.WaitGroup
 			wg.Add(goroutines)
-			for i := 0; i < goroutines; i++ {
+			for range goroutines {
 				go func() {
 					defer wg.Done()
-					err := exporter.Export(context.Background(), []sdklog.Record{{}})
+					err := exporter.Export(t.Context(), []sdklog.Record{{}})
 					assert.NoError(t, err)
-					err = exporter.ForceFlush(context.Background())
+					err = exporter.ForceFlush(t.Context())
 					assert.NoError(t, err)
-					err = exporter.Shutdown(context.Background())
+					err = exporter.Shutdown(t.Context())
 					assert.NoError(t, err)
 				}()
 			}

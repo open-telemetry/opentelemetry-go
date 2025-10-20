@@ -174,7 +174,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(context.Background(), v, alice, nil)
+				h.measure(t.Context(), v, alice, nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -216,7 +216,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(context.Background(), v, alice, nil)
+				h.measure(t.Context(), v, alice, nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -654,9 +654,9 @@ func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
 		n := math.MaxFloat64
-		for j := 0; j < 1024; j++ {
+		for range 1024 {
 			agg.record(n)
-			n = n / 2
+			n /= 2
 		}
 	}
 }
@@ -665,9 +665,9 @@ func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
 		n := smallestNonZeroNormalFloat64
-		for j := 0; j < 1024; j++ {
+		for range 1024 {
 			agg.record(n)
-			n = n * 2
+			n *= 2
 		}
 	}
 }
@@ -1040,6 +1040,69 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 	})
 }
 
+func TestExponentialHistogramAggregationConcurrentSafe(t *testing.T) {
+	t.Run("Int64/Delta", testDeltaExpoHistConcurrentSafe[int64]())
+	t.Run("Float64/Delta", testDeltaExpoHistConcurrentSafe[float64]())
+	t.Run("Int64/Cumulative", testCumulativeExpoHistConcurrentSafe[int64]())
+	t.Run("Float64/Cumulative", testCumulativeExpoHistConcurrentSafe[float64]())
+}
+
+func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	return testAggergationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+}
+
+func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	return testAggergationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+}
+
+func validateExponentialHistogram[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
+	s, ok := got.(metricdata.ExponentialHistogram[N])
+	if !ok {
+		t.Fatalf("wrong aggregation type: %+v", got)
+	}
+	for _, dp := range s.DataPoints {
+		assert.False(t,
+			dp.Time.Before(dp.StartTime),
+			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+		)
+		switch dp.Attributes {
+		case fltrAlice:
+			// alice observations are always a multiple of 2
+			assert.Equal(t, int64(0), int64(dp.Sum)%2)
+		case fltrBob:
+			// bob observations are always a multiple of 3
+			assert.Equal(t, int64(0), int64(dp.Sum)%3)
+		default:
+			t.Fatalf("wrong attributes %+v", dp.Attributes)
+		}
+		avg := float64(dp.Sum) / float64(dp.Count)
+		if minVal, ok := dp.Min.Value(); ok {
+			assert.GreaterOrEqual(t, avg, float64(minVal))
+		}
+		if maxVal, ok := dp.Max.Value(); ok {
+			assert.LessOrEqual(t, avg, float64(maxVal))
+		}
+		var totalCount uint64
+		for _, bc := range dp.PositiveBucket.Counts {
+			totalCount += bc
+		}
+		for _, bc := range dp.NegativeBucket.Counts {
+			totalCount += bc
+		}
+		assert.Equal(t, totalCount, dp.Count)
+	}
+}
+
 func FuzzGetBin(f *testing.F) {
 	values := []float64{
 		2.0,
@@ -1061,7 +1124,7 @@ func FuzzGetBin(f *testing.F) {
 	f.Fuzz(func(t *testing.T, v float64, scale int32) {
 		// GetBin only works on positive values.
 		if math.Signbit(v) {
-			v = v * -1
+			v *= -1
 		}
 		// GetBin Doesn't work on zero.
 		if v == 0.0 {

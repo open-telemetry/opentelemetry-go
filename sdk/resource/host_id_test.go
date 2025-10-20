@@ -13,11 +13,11 @@ import (
 var (
 	expectedHostID = "f2c668b579780554f70f72a063dc0864"
 
-	readFileNoError = func(filename string) (string, error) {
+	readFileNoError = func(string) (string, error) {
 		return expectedHostID + "\n", nil
 	}
 
-	readFileError = func(filename string) (string, error) {
+	readFileError = func(string) (string, error) {
 		return "", errors.New("not found")
 	}
 
@@ -70,8 +70,6 @@ func TestHostIDReaderBSD(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderBSD{
 				readFile:    tc.fileReader,
@@ -119,8 +117,6 @@ func TestHostIDReaderLinux(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderLinux{
 				readFile: tc.fileReader,
@@ -198,7 +194,6 @@ func TestHostIDReaderDarwin(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			reader := hostIDReaderDarwin{
 				execCommand: tc.commandExecutor,

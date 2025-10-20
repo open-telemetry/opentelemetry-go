@@ -45,7 +45,7 @@ func TestDropCount(t *testing.T) {
 	t.Cleanup(func(l logr.Logger) func() {
 		return func() { global.SetLogger(l) }
 	}(global.GetLogger()))
-	global.SetLogger(funcr.New(func(prefix, args string) {
+	global.SetLogger(funcr.New(func(string, string) {
 		called++
 	}, funcr.Options{Verbosity: 1}))
 

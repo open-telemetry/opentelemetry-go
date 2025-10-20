@@ -30,7 +30,7 @@ func newTestOnlyTextMapReader() *testOnlyTextMapReader {
 	return &testOnlyTextMapReader{}
 }
 
-func (t *testOnlyTextMapReader) ForeachKey(handler func(key string, val string) error) error {
+func (*testOnlyTextMapReader) ForeachKey(handler func(key, val string) error) error {
 	_ = handler("key1", "val1")
 	_ = handler("key2", "val2")
 
@@ -134,15 +134,15 @@ var (
 
 type testTextMapPropagator struct{}
 
-func (t testTextMapPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
-	carrier.Set(testHeader, strings.Join([]string{traceID.String(), spanID.String()}, ":"))
+func (testTextMapPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
+	carrier.Set(testHeader, traceID.String()+":"+spanID.String())
 
 	// Test for panic
 	_ = carrier.Get("test")
 	_ = carrier.Keys()
 }
 
-func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (testTextMapPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	traces := carrier.Get(testHeader)
 
 	str := strings.Split(traces, ":")
@@ -179,7 +179,7 @@ func (t testTextMapPropagator) Extract(ctx context.Context, carrier propagation.
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (t testTextMapPropagator) Fields() []string {
+func (testTextMapPropagator) Fields() []string {
 	return []string{"test"}
 }
 
@@ -198,7 +198,7 @@ func (t *textMapCarrier) Get(key string) string {
 	return t.m[key]
 }
 
-func (t *textMapCarrier) Set(key string, value string) {
+func (t *textMapCarrier) Set(key, value string) {
 	t.m[key] = value
 }
 
@@ -214,15 +214,15 @@ func (t *textMapCarrier) Keys() []string {
 
 // testTextMapReader only implemented opentracing.TextMapReader interface.
 type testTextMapReader struct {
-	m *map[string]string
+	m map[string]string
 }
 
-func newTestTextMapReader(m *map[string]string) *testTextMapReader {
+func newTestTextMapReader(m map[string]string) *testTextMapReader {
 	return &testTextMapReader{m: m}
 }
 
-func (t *testTextMapReader) ForeachKey(handler func(key string, val string) error) error {
-	for key, val := range *t.m {
+func (t *testTextMapReader) ForeachKey(handler func(key, val string) error) error {
+	for key, val := range t.m {
 		if err := handler(key, val); err != nil {
 			return err
 		}
@@ -233,15 +233,15 @@ func (t *testTextMapReader) ForeachKey(handler func(key string, val string) erro
 
 // testTextMapWriter only implemented opentracing.TextMapWriter interface.
 type testTextMapWriter struct {
-	m *map[string]string
+	m map[string]string
 }
 
-func newTestTextMapWriter(m *map[string]string) *testTextMapWriter {
+func newTestTextMapWriter(m map[string]string) *testTextMapWriter {
 	return &testTextMapWriter{m: m}
 }
 
 func (t *testTextMapWriter) Set(key, val string) {
-	(*t.m)[key] = val
+	t.m[key] = val
 }
 
 type samplable interface {
@@ -261,8 +261,8 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 		name               string
 		injectCarrierType  ot.BuiltinFormat
 		extractCarrierType ot.BuiltinFormat
-		extractCarrier     interface{}
-		injectCarrier      interface{}
+		extractCarrier     any
+		injectCarrier      any
 		extractErr         error
 		injectErr          error
 	}{
@@ -290,9 +290,9 @@ func TestBridgeTracer_ExtractAndInject(t *testing.T) {
 		{
 			name:               "support for opentracing.TextMapReader and opentracing.TextMapWriter,non-same instance",
 			injectCarrierType:  ot.TextMap,
-			injectCarrier:      newTestTextMapWriter(&shareMap),
+			injectCarrier:      newTestTextMapWriter(shareMap),
 			extractCarrierType: ot.TextMap,
-			extractCarrier:     newTestTextMapReader(&shareMap),
+			extractCarrier:     newTestTextMapReader(shareMap),
 		},
 		{
 			name:              "inject: format type is HTTPHeaders, but carrier is not HTTPHeadersCarrier",
@@ -370,7 +370,7 @@ type nonDeferWrapperTracer struct {
 }
 
 func (t *nonDeferWrapperTracer) Start(
-	ctx context.Context,
+	_ context.Context,
 	name string,
 	opts ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
@@ -393,7 +393,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with wrapper tracer set",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := NewWrapperTracer(bridge, otel.Tracer("test"))
 				bridge.SetOpenTelemetryTracer(wTracer)
 			},
@@ -401,7 +401,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 		},
 		{
 			name: "with a non-deferred wrapper tracer",
-			before: func(t *testing.T, bridge *BridgeTracer) {
+			before: func(_ *testing.T, bridge *BridgeTracer) {
 				wTracer := &nonDeferWrapperTracer{
 					NewWrapperTracer(bridge, otel.Tracer("test")),
 				}
@@ -436,7 +436,7 @@ func TestBridgeTracer_StartSpan(t *testing.T) {
 func Test_otTagToOTelAttr(t *testing.T) {
 	key := attribute.Key("test")
 	testCases := []struct {
-		value    interface{}
+		value    any
 		expected attribute.KeyValue
 	}{
 		{
@@ -628,17 +628,17 @@ func TestBridgeSpanContextPromotedMethods(t *testing.T) {
 func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 	carriers := []struct {
 		name    string
-		factory func() interface{}
+		factory func() any
 		format  ot.BuiltinFormat
 	}{
 		{
 			name:    "TextMapCarrier",
-			factory: func() interface{} { return ot.TextMapCarrier{} },
+			factory: func() any { return ot.TextMapCarrier{} },
 			format:  ot.TextMap,
 		},
 		{
 			name:    "HTTPHeadersCarrier",
-			factory: func() interface{} { return ot.HTTPHeadersCarrier{} },
+			factory: func() any { return ot.HTTPHeadersCarrier{} },
 			format:  ot.HTTPHeaders,
 		},
 	}
@@ -895,87 +895,87 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 func TestBridgeSpan_LogKV(t *testing.T) {
 	testCases := []struct {
 		name     string
-		kv       [2]interface{}
+		kv       [2]any
 		expected attribute.KeyValue
 	}{
 		{
 			name:     "string",
-			kv:       [2]interface{}{"string", "value"},
+			kv:       [2]any{"string", "value"},
 			expected: attribute.String("string", "value"),
 		},
 		{
 			name:     "bool",
-			kv:       [2]interface{}{"boolKey", true},
+			kv:       [2]any{"boolKey", true},
 			expected: attribute.Bool("boolKey", true),
 		},
 		{
 			name:     "int",
-			kv:       [2]interface{}{"intKey", int(12)},
+			kv:       [2]any{"intKey", int(12)},
 			expected: attribute.Int("intKey", 12),
 		},
 		{
 			name:     "int8",
-			kv:       [2]interface{}{"int8Key", int8(12)},
+			kv:       [2]any{"int8Key", int8(12)},
 			expected: attribute.Int64("int8Key", 12),
 		},
 		{
 			name:     "int16",
-			kv:       [2]interface{}{"int16Key", int16(12)},
+			kv:       [2]any{"int16Key", int16(12)},
 			expected: attribute.Int64("int16Key", 12),
 		},
 		{
 			name:     "int32",
-			kv:       [2]interface{}{"int32", int32(12)},
+			kv:       [2]any{"int32", int32(12)},
 			expected: attribute.Int64("int32", 12),
 		},
 		{
 			name:     "int64",
-			kv:       [2]interface{}{"int64Key", int64(12)},
+			kv:       [2]any{"int64Key", int64(12)},
 			expected: attribute.Int64("int64Key", 12),
 		},
 		{
 			name:     "uint",
-			kv:       [2]interface{}{"uintKey", uint(12)},
+			kv:       [2]any{"uintKey", uint(12)},
 			expected: attribute.String("uintKey", strconv.FormatUint(12, 10)),
 		},
 		{
 			name:     "uint8",
-			kv:       [2]interface{}{"uint8Key", uint8(12)},
+			kv:       [2]any{"uint8Key", uint8(12)},
 			expected: attribute.Int64("uint8Key", 12),
 		},
 		{
 			name:     "uint16",
-			kv:       [2]interface{}{"uint16Key", uint16(12)},
+			kv:       [2]any{"uint16Key", uint16(12)},
 			expected: attribute.Int64("uint16Key", 12),
 		},
 		{
 			name:     "uint32",
-			kv:       [2]interface{}{"uint32Key", uint32(12)},
+			kv:       [2]any{"uint32Key", uint32(12)},
 			expected: attribute.Int64("uint32Key", 12),
 		},
 		{
 			name:     "uint64",
-			kv:       [2]interface{}{"uint64Key", uint64(12)},
+			kv:       [2]any{"uint64Key", uint64(12)},
 			expected: attribute.String("uint64Key", strconv.FormatUint(12, 10)),
 		},
 		{
 			name:     "float32",
-			kv:       [2]interface{}{"float32Key", float32(12)},
+			kv:       [2]any{"float32Key", float32(12)},
 			expected: attribute.Float64("float32Key", float64(12)),
 		},
 		{
 			name:     "float64",
-			kv:       [2]interface{}{"float64Key", 1.1},
+			kv:       [2]any{"float64Key", 1.1},
 			expected: attribute.Float64("float64Key", 1.1),
 		},
 		{
 			name:     "error",
-			kv:       [2]interface{}{"errorKey", fmt.Errorf("error")},
+			kv:       [2]any{"errorKey", fmt.Errorf("error")},
 			expected: attribute.String("errorKey", "error"),
 		},
 		{
 			name:     "objectKey",
-			kv:       [2]interface{}{"objectKey", struct{}{}},
+			kv:       [2]any{"objectKey", struct{}{}},
 			expected: attribute.String("objectKey", "{}"),
 		},
 	}

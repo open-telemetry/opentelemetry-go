@@ -75,12 +75,12 @@ func (s *Span) Annotate(attributes []octrace.Attribute, str string) {
 }
 
 // Annotatef adds a formatted annotation with attributes to this span.
-func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...interface{}) {
+func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...any) {
 	s.Annotate(attributes, fmt.Sprintf(format, a...))
 }
 
 // AddMessageSendEvent adds a message send event to this span.
-func (s *Span) AddMessageSendEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
+func (s *Span) AddMessageSendEvent(_, uncompressedByteSize, compressedByteSize int64) {
 	s.otelSpan.AddEvent(MessageSendEvent,
 		trace.WithAttributes(
 			attribute.KeyValue{
@@ -95,7 +95,7 @@ func (s *Span) AddMessageSendEvent(messageID, uncompressedByteSize, compressedBy
 }
 
 // AddMessageReceiveEvent adds a message receive event to this span.
-func (s *Span) AddMessageReceiveEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
+func (s *Span) AddMessageReceiveEvent(_, uncompressedByteSize, compressedByteSize int64) {
 	s.otelSpan.AddEvent(MessageReceiveEvent,
 		trace.WithAttributes(
 			attribute.KeyValue{

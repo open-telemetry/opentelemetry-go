@@ -53,12 +53,12 @@ func (o *Tracer) StartSpanWithRemoteParent(
 }
 
 // FromContext returns the Span stored in a context.
-func (o *Tracer) FromContext(ctx context.Context) *octrace.Span {
+func (*Tracer) FromContext(ctx context.Context) *octrace.Span {
 	return NewSpan(trace.SpanFromContext(ctx))
 }
 
 // NewContext returns a new context with the given Span attached.
-func (o *Tracer) NewContext(parent context.Context, s *octrace.Span) context.Context {
+func (*Tracer) NewContext(parent context.Context, s *octrace.Span) context.Context {
 	if otSpan, ok := s.Internal().(*Span); ok {
 		return trace.ContextWithSpan(parent, otSpan.otelSpan)
 	}

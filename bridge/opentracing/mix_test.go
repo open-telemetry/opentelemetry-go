@@ -6,6 +6,7 @@ package opentracing
 import (
 	"context"
 	"fmt"
+	"maps"
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -99,7 +100,7 @@ func TestMixedAPIs(t *testing.T) {
 	for idx, tc := range getMixedAPIsTestCases() {
 		t.Logf("Running test case %d: %s", idx, tc.desc)
 		mockOtelTracer := newMockTracer()
-		ctx, otTracer, otelProvider := NewTracerPairWithContext(context.Background(), mockOtelTracer)
+		ctx, otTracer, otelProvider := NewTracerPairWithContext(t.Context(), mockOtelTracer)
 		otTracer.SetWarningHandler(func(msg string) {
 			t.Log(msg)
 		})
@@ -127,7 +128,7 @@ func newSimpleTest() *simpleTest {
 	}
 }
 
-func (st *simpleTest) setup(t *testing.T, tracer *mockTracer) {
+func (st *simpleTest) setup(_ *testing.T, tracer *mockTracer) {
 	tracer.SpareTraceIDs = append(tracer.SpareTraceIDs, st.traceID)
 	tracer.SpareSpanIDs = append(tracer.SpareSpanIDs, st.spanIDs...)
 }
@@ -144,7 +145,7 @@ func (st *simpleTest) runOTOtelOT(t *testing.T, ctx context.Context) {
 	runOTOtelOT(t, ctx, "simple", st.noop)
 }
 
-func (st *simpleTest) noop(t *testing.T, ctx context.Context) context.Context {
+func (*simpleTest) noop(_ *testing.T, ctx context.Context) context.Context {
 	return ctx
 }
 
@@ -165,7 +166,7 @@ func newCurrentActiveSpanTest() *currentActiveSpanTest {
 	}
 }
 
-func (cast *currentActiveSpanTest) setup(t *testing.T, tracer *mockTracer) {
+func (cast *currentActiveSpanTest) setup(_ *testing.T, tracer *mockTracer) {
 	tracer.SpareTraceIDs = append(tracer.SpareTraceIDs, cast.traceID)
 	tracer.SpareSpanIDs = append(tracer.SpareSpanIDs, cast.spanIDs...)
 
@@ -220,7 +221,7 @@ func (cast *currentActiveSpanTest) runOTOtelOT(t *testing.T, ctx context.Context
 	runOTOtelOT(t, ctx, "cast", cast.recordSpans)
 }
 
-func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context) context.Context {
+func (cast *currentActiveSpanTest) recordSpans(_ *testing.T, ctx context.Context) context.Context {
 	spanID := trace.SpanContextFromContext(ctx).SpanID()
 	cast.recordedCurrentOtelSpanIDs = append(cast.recordedCurrentOtelSpanIDs, spanID)
 
@@ -237,7 +238,7 @@ func (cast *currentActiveSpanTest) recordSpans(t *testing.T, ctx context.Context
 type contextIntactTest struct {
 	contextKeyValues []mockContextKeyValue
 
-	recordedContextValues []interface{}
+	recordedContextValues []any
 	recordIdx             int
 }
 
@@ -272,14 +273,14 @@ func newContextIntactTest() *contextIntactTest {
 	}
 }
 
-func (coin *contextIntactTest) setup(t *testing.T, tracer *mockTracer) {
+func (coin *contextIntactTest) setup(_ *testing.T, tracer *mockTracer) {
 	tracer.SpareContextKeyValues = append(tracer.SpareContextKeyValues, coin.contextKeyValues...)
 
 	coin.recordedContextValues = nil
 	coin.recordIdx = 0
 }
 
-func (coin *contextIntactTest) check(t *testing.T, tracer *mockTracer) {
+func (coin *contextIntactTest) check(t *testing.T, _ *mockTracer) {
 	if len(coin.recordedContextValues) != len(coin.contextKeyValues) {
 		t.Errorf(
 			"Expected to have %d recorded context values, got %d",
@@ -289,7 +290,7 @@ func (coin *contextIntactTest) check(t *testing.T, tracer *mockTracer) {
 	}
 
 	minLen := min(len(coin.recordedContextValues), len(coin.contextKeyValues))
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		key := coin.contextKeyValues[i].Key
 		value := coin.contextKeyValues[i].Value
 		gotValue := coin.recordedContextValues[i]
@@ -351,18 +352,18 @@ func newBaggageItemsPreservationTest() *baggageItemsPreservationTest {
 	}
 }
 
-func (bip *baggageItemsPreservationTest) setup(t *testing.T, tracer *mockTracer) {
+func (bip *baggageItemsPreservationTest) setup(*testing.T, *mockTracer) {
 	bip.step = 0
 	bip.recordedBaggage = nil
 }
 
-func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *mockTracer) {
+func (bip *baggageItemsPreservationTest) check(t *testing.T, _ *mockTracer) {
 	if len(bip.recordedBaggage) != len(bip.baggageItems) {
 		t.Errorf("Expected %d recordings, got %d", len(bip.baggageItems), len(bip.recordedBaggage))
 	}
 	minLen := min(len(bip.recordedBaggage), len(bip.baggageItems))
 
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		recordedItems := bip.recordedBaggage[i]
 		if len(recordedItems) != i+1 {
 			t.Errorf(
@@ -373,7 +374,7 @@ func (bip *baggageItemsPreservationTest) check(t *testing.T, tracer *mockTracer)
 			)
 		}
 		minItemLen := min(len(bip.baggageItems), i+1)
-		for j := 0; j < minItemLen; j++ {
+		for j := range minItemLen {
 			expectedItem := bip.baggageItems[j]
 			if gotValue, ok := recordedItems[expectedItem.key]; !ok {
 				t.Errorf("Missing baggage item %q in recording %d", expectedItem.key, i+1)
@@ -449,13 +450,13 @@ func newBaggageInteroperationTest() *baggageInteroperationTest {
 	}
 }
 
-func (bio *baggageInteroperationTest) setup(t *testing.T, tracer *mockTracer) {
+func (bio *baggageInteroperationTest) setup(*testing.T, *mockTracer) {
 	bio.step = 0
 	bio.recordedOTBaggage = nil
 	bio.recordedOtelBaggage = nil
 }
 
-func (bio *baggageInteroperationTest) check(t *testing.T, tracer *mockTracer) {
+func (bio *baggageInteroperationTest) check(t *testing.T, _ *mockTracer) {
 	checkBIORecording(t, "OT", bio.baggageItems, bio.recordedOTBaggage)
 	checkBIORecording(t, "Otel", bio.baggageItems, bio.recordedOtelBaggage)
 }
@@ -474,7 +475,7 @@ func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, 
 		t.Errorf("Expected %d recordings from %s, got %d", len(initialItems), apiDesc, len(recordings))
 	}
 	minRecLen := min(len(initialItems), len(recordings))
-	for i := 0; i < minRecLen; i++ {
+	for i := range minRecLen {
 		recordedItems := recordings[i]
 		expectedItemsInStep := (i + 1) * 2
 		if expectedItemsInStep != len(recordedItems) {
@@ -487,9 +488,7 @@ func checkBIORecording(t *testing.T, apiDesc string, initialItems []bipBaggage, 
 			)
 		}
 		recordedItemsCopy := make(map[string]string, len(recordedItems))
-		for k, v := range recordedItems {
-			recordedItemsCopy[k] = v
-		}
+		maps.Copy(recordedItemsCopy, recordedItems)
 		for j := 0; j < i+1; j++ {
 			otKey, otelKey := generateBaggageKeys(initialItems[j].key)
 			value := initialItems[j].value
@@ -569,9 +568,8 @@ func (bio *baggageInteroperationTest) addAndRecordBaggage(t *testing.T, ctx cont
 	return ctx
 }
 
-func generateBaggageKeys(key string) (otKey, otelKey string) {
-	otKey, otelKey = key+"-Ot", key+"-Otel"
-	return
+func generateBaggageKeys(key string) (string, string) {
+	return key + "-Ot", key + "-Otel"
 }
 
 // helpers
@@ -721,7 +719,7 @@ func runOTOtelOT(
 func TestOtTagToOTelAttrCheckTypeConversions(t *testing.T) {
 	tableTest := []struct {
 		key               string
-		value             interface{}
+		value             any
 		expectedValueType attribute.Type
 	}{
 		{

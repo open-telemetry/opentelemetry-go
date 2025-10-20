@@ -28,8 +28,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -161,7 +162,7 @@ func (ts *testSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	}
 }
 
-func (ts testSampler) Description() string {
+func (testSampler) Description() string {
 	return "testSampler"
 }
 
@@ -220,7 +221,7 @@ func TestSpanIsRecording(t *testing.T) {
 			"Never sample recording off":  {sampler: NeverSample(), want: false},
 		} {
 			tp := NewTracerProvider(WithSampler(tc.sampler))
-			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			_, span := tp.Tracer(name).Start(t.Context(), "StartSpan")
 			got := span.IsRecording()
 			span.End()
 			assert.Equal(t, tc.want, got, name)
@@ -233,7 +234,7 @@ func TestSpanIsRecording(t *testing.T) {
 			"Never Sample":  NeverSample(),
 		} {
 			tp := NewTracerProvider(WithSampler(tc))
-			_, span := tp.Tracer(name).Start(context.Background(), "StartSpan")
+			_, span := tp.Tracer(name).Start(t.Context(), "StartSpan")
 			span.End()
 			got := span.IsRecording()
 			assert.False(t, got, name)
@@ -283,14 +284,13 @@ func TestSampling(t *testing.T) {
 		"SampledParentSpanWithParentTraceIdRatioBased_.50":   {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: 1, parent: true, sampledParent: true},
 		"UnsampledParentSpanWithParentTraceIdRatioBased_.50": {sampler: ParentBased(TraceIDRatioBased(0.50)), expect: 0, parent: true, sampledParent: false},
 	} {
-		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			p := NewTracerProvider(WithSampler(tc.sampler))
 			tr := p.Tracer("test")
 			var sampled int
-			for i := 0; i < total; i++ {
-				ctx := context.Background()
+			for range total {
+				ctx := t.Context()
 				if tc.parent {
 					tid, sid := idg.NewIDs(ctx)
 					psc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -327,7 +327,7 @@ func TestSampling(t *testing.T) {
 func TestStartSpanWithParent(t *testing.T) {
 	tp := NewTracerProvider()
 	tr := tp.Tracer("SpanWithParent")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, s1 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span1-unsampled-parent1")
 	if err := checkChild(t, sc, s1); err != nil {
@@ -372,7 +372,7 @@ func TestStartSpanNewRootNotSampled(t *testing.T) {
 	sampledTr := alwaysSampleTp.Tracer("AlwaysSampled")
 	neverSampleTp := NewTracerProvider(WithSampler(ParentBased(NeverSample())))
 	neverSampledTr := neverSampleTp.Tracer("ParentBasedNeverSample")
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ctx, s1 := sampledTr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "span1-sampled")
 	if err := checkChild(t, sc, s1); err != nil {
@@ -436,7 +436,7 @@ func TestSamplerAttributesLocalChildSpan(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSampler(sampler), WithSyncer(te), WithResource(resource.Empty()))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx, span := startLocalSpan(ctx, tp, "SpanOne", "span0")
 	_, spanTwo := startLocalSpan(ctx, tp, "SpanTwo", "span1")
 
@@ -619,7 +619,7 @@ func TestSpanSetAttributes(t *testing.T) {
 			sl := NewSpanLimits()
 			sl.AttributeCountLimit = capacity
 			tp := NewTracerProvider(WithSyncer(te), WithSpanLimits(sl))
-			_, span := tp.Tracer(instName).Start(context.Background(), spanName)
+			_, span := tp.Tracer(instName).Start(t.Context(), spanName)
 			for _, a := range test.input {
 				span.SetAttributes(a...)
 			}
@@ -845,7 +845,7 @@ func TestLinksOverLimit(t *testing.T) {
 func TestSetSpanName(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
-	ctx := context.Background()
+	ctx := t.Context()
 
 	want := "SpanName-1"
 	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
@@ -920,7 +920,7 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 	}
 }
 
-func cmpDiff(x, y interface{}) string {
+func cmpDiff(x, y any) string {
 	return cmp.Diff(x, y,
 		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),
@@ -1058,7 +1058,7 @@ func TestEndSpanTwice(t *testing.T) {
 func TestStartSpanAfterEnd(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSyncer(te))
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tr := tp.Tracer("SpanAfterEnd")
 	ctx, span0 := tr.Start(trace.ContextWithRemoteSpanContext(ctx, sc), "parent")
@@ -1105,7 +1105,7 @@ func TestChildSpanCount(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(AlwaysSample()), WithSyncer(te))
 
 	tr := tp.Tracer("ChidSpanCount")
-	ctx, span0 := tr.Start(context.Background(), "parent")
+	ctx, span0 := tr.Start(t.Context(), "parent")
 	ctx1, span1 := tr.Start(ctx, "span-1")
 	_, span2 := tr.Start(ctx1, "span-2")
 	span2.End()
@@ -1149,7 +1149,7 @@ func TestChildSpanCount(t *testing.T) {
 	}
 }
 
-func TestNilSpanEnd(t *testing.T) {
+func TestNilSpanEnd(*testing.T) {
 	var span *recordingSpan
 	span.End()
 }
@@ -1158,7 +1158,7 @@ func TestSpanWithCanceledContext(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	_, span := tp.Tracer(t.Name()).Start(ctx, "span")
 	span.End()
@@ -1170,7 +1170,7 @@ func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(NeverSample()))
 	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
 
-	_, apiSpan := tr.Start(context.Background(), "foo")
+	_, apiSpan := tr.Start(t.Context(), "foo")
 	if _, ok := apiSpan.(runtimeTracer); ok {
 		t.Fatalf("non recording span implements runtime trace task tracking")
 	}
@@ -1184,7 +1184,7 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 	executionTracerTaskEnd := func() {
 		atomic.AddUint64(&n, 1)
 	}
-	_, apiSpan := tr.Start(context.Background(), "foo")
+	_, apiSpan := tr.Start(t.Context(), "foo")
 	s, ok := apiSpan.(*recordingSpan)
 	if !ok {
 		t.Fatal("recording span not returned from always sampled Tracer")
@@ -1205,7 +1205,7 @@ func TestCustomStartEndTime(t *testing.T) {
 	startTime := time.Date(2019, time.August, 27, 14, 42, 0, 0, time.UTC)
 	endTime := startTime.Add(time.Second * 20)
 	_, span := tp.Tracer("Custom Start and End time").Start(
-		context.Background(),
+		t.Context(),
 		"testspan",
 		trace.WithTimestamp(startTime),
 	)
@@ -1382,7 +1382,7 @@ func TestWithSpanKind(t *testing.T) {
 	tp := NewTracerProvider(WithSyncer(te), WithSampler(AlwaysSample()), WithResource(resource.Empty()))
 	tr := tp.Tracer("withSpanKind")
 
-	_, span := tr.Start(context.Background(), "WithoutSpanKind")
+	_, span := tr.Start(t.Context(), "WithoutSpanKind")
 	spanData, err := endSpan(te, span)
 	if err != nil {
 		t.Error(err.Error())
@@ -1407,7 +1407,7 @@ func TestWithSpanKind(t *testing.T) {
 	for _, sk := range sks {
 		te.Reset()
 
-		_, span := tr.Start(context.Background(), fmt.Sprintf("SpanKind-%v", sk), trace.WithSpanKind(sk))
+		_, span := tr.Start(t.Context(), fmt.Sprintf("SpanKind-%v", sk), trace.WithSpanKind(sk))
 		spanData, err := endSpan(te, span)
 		if err != nil {
 			t.Error(err.Error())
@@ -1479,7 +1479,6 @@ func TestWithResource(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			te := NewTestExporter()
 			defaultOptions := []TracerProviderOption{WithSyncer(te), WithSampler(AlwaysSample())}
@@ -1515,7 +1514,7 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 	_, span := tp.Tracer(
 		"WithInstrumentationVersion",
@@ -1550,7 +1549,7 @@ func TestSpanCapturesPanic(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	_, span := tp.Tracer("CatchPanic").Start(
-		context.Background(),
+		t.Context(),
 		"span",
 	)
 
@@ -1573,7 +1572,7 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
 	_, span := tp.Tracer("CatchPanic").Start(
-		context.Background(),
+		t.Context(),
 		"span",
 	)
 
@@ -1611,17 +1610,17 @@ func TestReadOnlySpan(t *testing.T) {
 	tr := tp.Tracer("ReadOnlySpan", trace.WithInstrumentationVersion("3"))
 
 	// Initialize parent context.
-	tID, sID := tp.idGenerator.NewIDs(context.Background())
+	tID, sID := tp.idGenerator.NewIDs(t.Context())
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
 		Remote:     true,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), parent)
 
 	// Initialize linked context.
-	tID, sID = tp.idGenerator.NewIDs(context.Background())
+	tID, sID = tp.idGenerator.NewIDs(t.Context())
 	linked := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
@@ -1693,13 +1692,13 @@ func TestReadWriteSpan(t *testing.T) {
 	tr := tp.Tracer("ReadWriteSpan")
 
 	// Initialize parent context.
-	tID, sID := tp.idGenerator.NewIDs(context.Background())
+	tID, sID := tp.idGenerator.NewIDs(t.Context())
 	parent := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    tID,
 		SpanID:     sID,
 		TraceFlags: 0x1,
 	})
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), parent)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), parent)
 
 	_, span := tr.Start(ctx, "foo")
 	defer span.End()
@@ -1801,7 +1800,7 @@ func (s *stateSampler) ShouldSample(p SamplingParameters) SamplingResult {
 	return SamplingResult{Decision: decision, Tracestate: ts}
 }
 
-func (s stateSampler) Description() string {
+func (stateSampler) Description() string {
 	return "stateSampler"
 }
 
@@ -1826,7 +1825,7 @@ func TestSamplerTraceState(t *testing.T) {
 	clearer := func(prefix string) Sampler {
 		return &stateSampler{
 			prefix: prefix,
-			f:      func(t trace.TraceState) trace.TraceState { return trace.TraceState{} },
+			f:      func(trace.TraceState) trace.TraceState { return trace.TraceState{} },
 		}
 	}
 
@@ -1895,7 +1894,6 @@ func TestSamplerTraceState(t *testing.T) {
 	}
 
 	for _, ts := range tests {
-		ts := ts
 		t.Run(ts.name, func(t *testing.T) {
 			te := NewTestExporter()
 			tp := NewTracerProvider(WithSampler(ts.sampler), WithSyncer(te), WithResource(resource.Empty()))
@@ -1907,7 +1905,7 @@ func TestSamplerTraceState(t *testing.T) {
 				TraceFlags: trace.FlagsSampled,
 				TraceState: ts.input,
 			})
-			ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc1)
+			ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc1)
 			_, span := tr.Start(ctx, ts.spanName)
 
 			// span's TraceState should be set regardless of Sampled/NonSampled state.
@@ -1933,20 +1931,21 @@ func TestSamplerTraceState(t *testing.T) {
 }
 
 type testIDGenerator struct {
-	traceID int
-	spanID  int
+	traceIDHigh uint64
+	traceIDLow  uint64
+	spanID      uint64
 }
 
 func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
-	traceIDHex := fmt.Sprintf("%032x", gen.traceID)
+	traceIDHex := fmt.Sprintf("%016x%016x", gen.traceIDHigh, gen.traceIDLow)
 	traceID, _ := trace.TraceIDFromHex(traceIDHex)
-	gen.traceID++
+	gen.traceIDLow++
 
 	spanID := gen.NewSpanID(ctx, traceID)
 	return traceID, spanID
 }
 
-func (gen *testIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
+func (gen *testIDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 	spanIDHex := fmt.Sprintf("%016x", gen.spanID)
 	spanID, _ := trace.SpanIDFromHex(spanIDHex)
 	gen.spanID++
@@ -1957,30 +1956,106 @@ var _ IDGenerator = (*testIDGenerator)(nil)
 
 func TestWithIDGenerator(t *testing.T) {
 	const (
-		startTraceID = 1
-		startSpanID  = 10
-		numSpan      = 5
+		startTraceIDHigh uint64 = 0x1001_1001_1001_1001
+		startTraceIDLow  uint64 = 0x2002_2002_2002_2002
+		startSpanID      uint64 = 0x3003_3003_3003_3003
+		numSpan                 = 5
 	)
 
-	gen := &testIDGenerator{traceID: startTraceID, spanID: startSpanID}
+	gen := &testIDGenerator{traceIDHigh: startTraceIDHigh, traceIDLow: startTraceIDLow, spanID: startSpanID}
 	te := NewTestExporter()
 	tp := NewTracerProvider(
 		WithSyncer(te),
 		WithIDGenerator(gen),
 	)
-	for i := 0; i < numSpan; i++ {
+	for i := range numSpan {
 		func() {
-			_, span := tp.Tracer(t.Name()).Start(context.Background(), strconv.Itoa(i))
+			_, span := tp.Tracer(t.Name()).Start(t.Context(), strconv.Itoa(i))
 			defer span.End()
 
 			gotSpanID, err := strconv.ParseUint(span.SpanContext().SpanID().String(), 16, 64)
 			require.NoError(t, err)
-			assert.Equal(t, uint64(startSpanID+i), gotSpanID)
+			assert.Equal(t, startSpanID+uint64(i), gotSpanID)
 
-			gotTraceID, err := strconv.ParseUint(span.SpanContext().TraceID().String(), 16, 64)
-			require.NoError(t, err)
-			assert.Equal(t, uint64(startTraceID+i), gotTraceID)
+			traceIdStr := span.SpanContext().TraceID().String()
+			highBitsStr := traceIdStr[:16]
+			lowBitsStr := traceIdStr[16:]
+
+			traceIdValidator := func(t *testing.T, id string, expected uint64) {
+				gotTraceID, err := strconv.ParseUint(id, 16, 64)
+				require.NoError(t, err)
+				assert.Equal(t, expected, gotTraceID)
+			}
+			traceIdValidator(t, highBitsStr, startTraceIDHigh)
+			traceIdValidator(t, lowBitsStr, startTraceIDLow+uint64(i))
 		}()
+	}
+}
+
+func TestIDsRoundTrip(t *testing.T) {
+	gen := defaultIDGenerator()
+
+	for range 1000 {
+		traceID, spanID := gen.NewIDs(t.Context())
+		gotTraceID, err := trace.TraceIDFromHex(traceID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, traceID, gotTraceID)
+		gotSpanID, err := trace.SpanIDFromHex(spanID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, spanID, gotSpanID)
+	}
+}
+
+func TestIDConversionErrors(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		spanIDStr    string
+		traceIDStr   string
+		spanIDError  string
+		traceIDError string
+	}{
+		{
+			name:         "slightly too long",
+			spanIDStr:    sid.String() + "0",
+			spanIDError:  "hex encoded span-id must have length equals to 16",
+			traceIDStr:   tid.String() + "0",
+			traceIDError: "hex encoded trace-id must have length equals to 32",
+		},
+		{
+			name:         "blank input",
+			spanIDStr:    "",
+			spanIDError:  "hex encoded span-id must have length equals to 16",
+			traceIDStr:   "",
+			traceIDError: "hex encoded trace-id must have length equals to 32",
+		},
+		{
+			name:         "not hex",
+			spanIDStr:    "unacceptablechar",
+			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+			traceIDStr:   "completely unacceptablecharacter",
+			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+		},
+		{
+			name:         "upper-case hex",
+			spanIDStr:    "DEADBEEFBAD0CAFE",
+			spanIDError:  "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+			traceIDStr:   "DEADBEEFBAD0CAFEDEADBEEFBAD0CAFE",
+			traceIDError: "trace-id and span-id can only contain [0-9a-f] characters, all lowercase",
+		},
+		{
+			name:         "all zero",
+			spanIDStr:    "0000000000000000",
+			spanIDError:  "span-id can't be all zero",
+			traceIDStr:   "00000000000000000000000000000000",
+			traceIDError: "trace-id can't be all zero",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := trace.SpanIDFromHex(tt.spanIDStr)
+			assert.ErrorContains(t, err, tt.spanIDError)
+			_, err = trace.TraceIDFromHex(tt.traceIDStr)
+			assert.ErrorContains(t, err, tt.traceIDError)
+		})
 	}
 }
 
@@ -2182,7 +2257,7 @@ func TestAddLinkToNonRecordingSpan(t *testing.T) {
 	}
 }
 
-func TestSelfObservability(t *testing.T) {
+func TestObservability(t *testing.T) {
 	testCases := []struct {
 		name string
 		test func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics)
@@ -2191,13 +2266,13 @@ func TestSelfObservability(t *testing.T) {
 			name: "SampledSpan",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
-				_, span := tp.Tracer("").Start(context.Background(), "StartSpan")
+				_, span := tp.Tracer("").Start(t.Context(), "StartSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2242,16 +2317,23 @@ func TestSelfObservability(t *testing.T) {
 						},
 					},
 				}
+
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 
 				span.End()
 
 				want = metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2297,7 +2379,13 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 				got = scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2305,13 +2393,13 @@ func TestSelfObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(NeverSample()))
-				tp.Tracer("").Start(context.Background(), "NonRecordingSpan")
+				tp.Tracer("").Start(t.Context(), "NonRecordingSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2340,7 +2428,13 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2348,13 +2442,13 @@ func TestSelfObservability(t *testing.T) {
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				// Create a tracer provider with NeverSample sampler to get non-recording spans.
 				tp := NewTracerProvider(WithSampler(RecordingOnly()))
-				tp.Tracer("").Start(context.Background(), "OnlyRecordingSpan")
+				tp.Tracer("").Start(t.Context(), "OnlyRecordingSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2401,7 +2495,13 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
@@ -2410,7 +2510,7 @@ func TestSelfObservability(t *testing.T) {
 				// Create a remote parent context
 				tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
 				sid, _ := trace.SpanIDFromHex("0102040810203040")
-				remoteCtx := trace.ContextWithRemoteSpanContext(context.Background(),
+				remoteCtx := trace.ContextWithRemoteSpanContext(t.Context(),
 					trace.NewSpanContext(trace.SpanContextConfig{
 						TraceID:    tid,
 						SpanID:     sid,
@@ -2423,9 +2523,9 @@ func TestSelfObservability(t *testing.T) {
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2471,21 +2571,27 @@ func TestSelfObservability(t *testing.T) {
 					},
 				}
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 		{
 			name: "LocalParentSpan",
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				tp := NewTracerProvider()
-				ctx, parentSpan := tp.Tracer("").Start(context.Background(), "ParentSpan")
+				ctx, parentSpan := tp.Tracer("").Start(t.Context(), "ParentSpan")
 				_, childSpan := tp.Tracer("").Start(ctx, "ChildSpan")
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2543,16 +2649,22 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got := scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 
 				childSpan.End()
 				parentSpan.End()
 
 				want = metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/sdk/trace",
+						Name:      observ.ScopeName,
 						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
+						SchemaURL: observ.SchemaURL,
 					},
 					Metrics: []metricdata.Metrics{
 						{
@@ -2610,28 +2722,120 @@ func TestSelfObservability(t *testing.T) {
 				}
 
 				got = scopeMetrics()
-				metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "True")
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
 			prev := otel.GetMeterProvider()
-			defer otel.SetMeterProvider(prev)
+			t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
 			r := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
 
 			scopeMetrics := func() metricdata.ScopeMetrics {
 				var got metricdata.ResourceMetrics
-				err := r.Collect(context.Background(), &got)
+				err := r.Collect(t.Context(), &got)
 				require.NoError(t, err)
 				require.Len(t, got.ScopeMetrics, 1)
 				return got.ScopeMetrics[0]
 			}
 			tc.test(t, scopeMetrics)
 		})
+	}
+}
+
+// ctxKeyT is a custom context value type used for testing context propagation.
+type ctxKeyT string
+
+// ctxKey is a context key used to store and retrieve values in the context.
+var ctxKey = ctxKeyT("testKey")
+
+func TestObservabilityContextPropagation(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "True")
+	prev := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(prev) })
+
+	// Approximate number of expected measuresments. This is not a strict
+	// requirement, but it should be enough to ensure no backpressure.
+	const count = 3 * 2 // 3 measurements per span, 2 spans (parent and child).
+	ctxCh, fltr := filterFn(count)
+
+	const want = "testValue"
+	n := make(chan int)
+	go func() {
+		// Validate the span context is propagated to all measurements by
+		// testing the context passed to the registered exemplar filter. This
+		// filter receives the measurement context in the standard metric SDK
+		// that we have registered.
+
+		// Count of how many contexts were received.
+		var count int
+
+		for ctx := range ctxCh {
+			count++
+
+			s := trace.SpanFromContext(ctx)
+
+			// All spans should have a valid span context. This should be
+			// passed to the measurements in all cases.
+			isValid := s.SpanContext().IsValid()
+			assert.True(t, isValid, "Context should have a valid span")
+
+			got := ctx.Value(ctxKey)
+			assert.Equal(t, want, got, "Context value not propagated")
+		}
+		n <- count
+	}()
+
+	// At least one reader is required to not get a no-op MeterProvider and
+	// short-circuit any instrumentation measurements.
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(
+		metric.WithExemplarFilter(fltr),
+		metric.WithReader(r),
+	)
+	otel.SetMeterProvider(mp)
+
+	tp := NewTracerProvider()
+
+	wrap := func(parentCtx context.Context, name string, fn func(context.Context)) {
+		const tracer = "TestObservabilityContextPropagation"
+		ctx, s := tp.Tracer(tracer).Start(parentCtx, name)
+		defer s.End()
+		fn(ctx)
+	}
+
+	ctx := context.WithValue(t.Context(), ctxKey, want)
+	wrap(ctx, "parent", func(ctx context.Context) {
+		wrap(ctx, "child", func(context.Context) {})
+	})
+
+	require.NoError(t, tp.Shutdown(t.Context()))
+
+	// The TracerProvider shutdown returned, no more measurements will be sent
+	// to the exemplar filter.
+	close(ctxCh)
+
+	assert.Positive(t, <-n, "Expected at least 1 context propagations")
+}
+
+// filterFn returns a channel that receives contexts passed to the returned
+// exemplar filter function.
+func filterFn(n int) (chan context.Context, func(ctx context.Context) bool) {
+	out := make(chan context.Context, n)
+	return out, func(ctx context.Context) bool {
+		out <- ctx
+		return true
 	}
 }
 
@@ -2644,7 +2848,7 @@ func RecordingOnly() Sampler {
 type recordOnlySampler struct{}
 
 // ShouldSample implements Sampler interface. It always returns Record but not Sample.
-func (s recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
+func (recordOnlySampler) ShouldSample(p SamplingParameters) SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	return SamplingResult{
 		Decision:   RecordOnly,
@@ -2661,7 +2865,7 @@ func TestRecordOnlySampler(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithSampler(RecordingOnly()))
 
-	_, span := tp.Tracer("RecordOnly").Start(context.Background(), "test-span")
+	_, span := tp.Tracer("RecordOnly").Start(t.Context(), "test-span")
 
 	assert.True(t, span.IsRecording(), "span should be recording")
 	assert.False(t, span.SpanContext().IsSampled(), "span should not be sampled")
@@ -2672,8 +2876,7 @@ func TestRecordOnlySampler(t *testing.T) {
 }
 
 func BenchmarkTraceStart(b *testing.B) {
-	tracer := NewTracerProvider().Tracer("")
-	ctx := trace.ContextWithSpanContext(context.Background(), trace.SpanContext{})
+	ctx := trace.ContextWithSpanContext(b.Context(), trace.SpanContext{})
 
 	l1 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
 	l2 := trace.Link{SpanContext: trace.SpanContext{}, Attributes: []attribute.KeyValue{}}
@@ -2682,6 +2885,7 @@ func BenchmarkTraceStart(b *testing.B) {
 
 	for _, tt := range []struct {
 		name    string
+		env     map[string]string
 		options []trace.SpanStartOption
 	}{
 		{
@@ -2702,8 +2906,20 @@ func BenchmarkTraceStart(b *testing.B) {
 				),
 			},
 		},
+		{
+			name: "ObservabilityEnabled",
+			env: map[string]string{
+				"OTEL_GO_X_OBSERVABILITY": "True",
+			},
+		},
 	} {
 		b.Run(tt.name, func(b *testing.B) {
+			for k, v := range tt.env {
+				b.Setenv(k, v)
+			}
+
+			tracer := NewTracerProvider().Tracer("")
+
 			spans := make([]trace.Span, b.N)
 			b.ReportAllocs()
 			b.ResetTimer()

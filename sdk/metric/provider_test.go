@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-func TestMeterConcurrentSafe(t *testing.T) {
+func TestMeterConcurrentSafe(*testing.T) {
 	const name = "TestMeterConcurrentSafe meter"
 	mp := NewMeterProvider()
 
@@ -41,10 +41,10 @@ func TestForceFlushConcurrentSafe(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.ForceFlush(context.Background())
+		_ = mp.ForceFlush(t.Context())
 	}()
 
-	_ = mp.ForceFlush(context.Background())
+	_ = mp.ForceFlush(t.Context())
 	<-done
 }
 
@@ -54,10 +54,10 @@ func TestShutdownConcurrentSafe(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.Shutdown(context.Background())
+		_ = mp.Shutdown(t.Context())
 	}()
 
-	_ = mp.Shutdown(context.Background())
+	_ = mp.Shutdown(t.Context())
 	<-done
 }
 
@@ -68,7 +68,7 @@ func TestMeterAndShutdownConcurrentSafe(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = mp.Shutdown(context.Background())
+		_ = mp.Shutdown(t.Context())
 	}()
 
 	_ = mp.Meter(name)
@@ -82,12 +82,12 @@ func TestMeterDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 
 func TestForceFlushDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	mp := MeterProvider{}
-	assert.NotPanics(t, func() { _ = mp.ForceFlush(context.Background()) })
+	assert.NotPanics(t, func() { _ = mp.ForceFlush(t.Context()) })
 }
 
 func TestShutdownDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	mp := MeterProvider{}
-	assert.NotPanics(t, func() { _ = mp.Shutdown(context.Background()) })
+	assert.NotPanics(t, func() { _ = mp.Shutdown(t.Context()) })
 }
 
 func TestMeterProviderReturnsSameMeter(t *testing.T) {
@@ -120,7 +120,7 @@ func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
 	_, ok := m.(noop.Meter)
 	assert.False(t, ok, "Meter from running MeterProvider is NoOp")
 
-	require.NoError(t, mp.Shutdown(context.Background()))
+	require.NoError(t, mp.Shutdown(t.Context()))
 
 	m = mp.Meter("")
 	_, ok = m.(noop.Meter)
@@ -163,14 +163,84 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 	)
 
 	var data metricdata.ResourceMetrics
-	_ = rdr0.Collect(context.Background(), &data)
+	_ = rdr0.Collect(t.Context(), &data)
 	// Only the metrics from mp0 should be produced.
 	assert.Len(t, data.ScopeMetrics, 1)
 
-	err = rdr1.Collect(context.Background(), &data)
+	err = rdr1.Collect(t.Context(), &data)
 	assert.NoError(t, err, "Errored when collect should be a noop")
 	assert.Empty(
 		t, data.ScopeMetrics,
 		"Metrics produced for instrument collected by different MeterProvider",
 	)
+}
+
+func TestMeterProviderCardinalityLimit(t *testing.T) {
+	const uniqueAttributesCount = 10
+
+	tests := []struct {
+		name           string
+		options        []Option
+		wantDataPoints int
+	}{
+		{
+			name:           "no limit (default)",
+			options:        nil,
+			wantDataPoints: uniqueAttributesCount,
+		},
+		{
+			name:           "no limit (limit=0)",
+			options:        []Option{WithCardinalityLimit(0)},
+			wantDataPoints: uniqueAttributesCount,
+		},
+		{
+			name:           "no limit (negative)",
+			options:        []Option{WithCardinalityLimit(-5)},
+			wantDataPoints: uniqueAttributesCount,
+		},
+		{
+			name:           "limit=5",
+			options:        []Option{WithCardinalityLimit(5)},
+			wantDataPoints: 5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := NewManualReader()
+
+			opts := append(tt.options, WithReader(reader))
+			mp := NewMeterProvider(opts...)
+
+			meter := mp.Meter("test-meter")
+			counter, err := meter.Int64Counter("metric")
+			require.NoError(t, err, "failed to create counter")
+
+			for i := range uniqueAttributesCount {
+				counter.Add(
+					t.Context(),
+					1,
+					api.WithAttributes(attribute.Int("key", i)),
+				)
+			}
+
+			var rm metricdata.ResourceMetrics
+			err = reader.Collect(t.Context(), &rm)
+			require.NoError(t, err, "failed to collect metrics")
+
+			require.Len(t, rm.ScopeMetrics, 1, "expected 1 ScopeMetrics")
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1, "expected 1 Metric")
+
+			data := rm.ScopeMetrics[0].Metrics[0].Data
+			require.IsType(t, metricdata.Sum[int64]{}, data, "expected metricdata.Sum[int64]")
+
+			sumData := data.(metricdata.Sum[int64])
+			assert.Len(
+				t,
+				sumData.DataPoints,
+				tt.wantDataPoints,
+				"unexpected number of data points",
+			)
+		})
+	}
 }

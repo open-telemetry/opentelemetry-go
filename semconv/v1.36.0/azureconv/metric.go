@@ -1,5 +1,8 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "azure" namespace.
 package azureconv
@@ -26,15 +29,20 @@ var (
 type CosmosDBConsistencyLevelAttr string
 
 var (
-	// CosmosDBConsistencyLevelStrong is the none.
+	// CosmosDBConsistencyLevelStrong is the standardized value "Strong" of
+	// CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelStrong CosmosDBConsistencyLevelAttr = "Strong"
-	// CosmosDBConsistencyLevelBoundedStaleness is the none.
+	// CosmosDBConsistencyLevelBoundedStaleness is the standardized value
+	// "BoundedStaleness" of CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelBoundedStaleness CosmosDBConsistencyLevelAttr = "BoundedStaleness"
-	// CosmosDBConsistencyLevelSession is the none.
+	// CosmosDBConsistencyLevelSession is the standardized value "Session" of
+	// CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelSession CosmosDBConsistencyLevelAttr = "Session"
-	// CosmosDBConsistencyLevelEventual is the none.
+	// CosmosDBConsistencyLevelEventual is the standardized value "Eventual" of
+	// CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelEventual CosmosDBConsistencyLevelAttr = "Eventual"
-	// CosmosDBConsistencyLevelConsistentPrefix is the none.
+	// CosmosDBConsistencyLevelConsistentPrefix is the standardized value
+	// "ConsistentPrefix" of CosmosDBConsistencyLevelAttr.
 	CosmosDBConsistencyLevelConsistentPrefix CosmosDBConsistencyLevelAttr = "ConsistentPrefix"
 )
 
@@ -100,7 +108,7 @@ func (CosmosDBClientActiveInstanceCount) Description() string {
 	return "Number of active client instances"
 }
 
-// Add adds incr to the existing count.
+// Add adds incr to the existing count for attrs.
 //
 // All additional attrs passed are included in the recorded value.
 func (m CosmosDBClientActiveInstanceCount) Add(
@@ -108,6 +116,11 @@ func (m CosmosDBClientActiveInstanceCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -121,6 +134,23 @@ func (m CosmosDBClientActiveInstanceCount) Add(
 		),
 	)
 
+	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// AddSet adds incr to the existing count for set.
+func (m CosmosDBClientActiveInstanceCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64UpDownCounter.Add(ctx, incr)
+		return
+	}
+
+	o := addOptPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*o = (*o)[:0]
+		addOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
@@ -190,7 +220,7 @@ func (CosmosDBClientOperationRequestCharge) Description() string {
 	return "[Request units](https://learn.microsoft.com/azure/cosmos-db/request-units) consumed by the operation"
 }
 
-// Record records val to the current distribution.
+// Record records val to the current distribution for attrs.
 //
 // The dbOperationName is the the name of the operation or command being
 // executed.
@@ -202,6 +232,11 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 	dbOperationName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if len(attrs) == 0 {
+		m.Int64Histogram.Record(ctx, val)
+		return
+	}
+
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
 		*o = (*o)[:0]
@@ -218,6 +253,22 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 		),
 	)
 
+	m.Int64Histogram.Record(ctx, val, *o...)
+}
+
+// RecordSet records val to the current distribution for set.
+func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if set.Len() == 0 {
+		m.Int64Histogram.Record(ctx, val)
+	}
+
+	o := recOptPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*o = (*o)[:0]
+		recOptPool.Put(o)
+	}()
+
+	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
 }
 

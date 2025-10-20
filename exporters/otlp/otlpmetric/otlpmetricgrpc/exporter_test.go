@@ -4,7 +4,6 @@
 package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 	coll, err := otest.NewGRPCCollector("", nil)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	addr := coll.Addr().String()
 	opts := []Option{WithEndpoint(addr), WithInsecure()}
 	cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
@@ -37,7 +36,7 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 
 	done := make(chan struct{})
 	var wg, someWork sync.WaitGroup
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		wg.Add(1)
 		someWork.Add(1)
 		go func() {
@@ -74,7 +73,7 @@ func TestExporterDoesNotBlockTemporalityAndAggregation(t *testing.T) {
 	coll, err := otest.NewGRPCCollector("", rCh)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	addr := coll.Addr().String()
 	opts := []Option{WithEndpoint(addr), WithInsecure()}
 	cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)

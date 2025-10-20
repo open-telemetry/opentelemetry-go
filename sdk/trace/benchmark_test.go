@@ -22,7 +22,7 @@ import (
 func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanLimits(limits))
 	tracer := tp.Tracer(b.Name())
-	ctx := context.Background()
+	ctx := b.Context()
 
 	const count = 8
 
@@ -120,7 +120,7 @@ func BenchmarkSpanSetAttributesOverCapacity(b *testing.B) {
 	limits.AttributeCountLimit = 1
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanLimits(limits))
 	tracer := tp.Tracer("BenchmarkSpanSetAttributesOverCapacity")
-	ctx := context.Background()
+	ctx := b.Context()
 	attrs := make([]attribute.KeyValue, 128)
 	for i := range attrs {
 		key := fmt.Sprintf("key-%d", i)
@@ -139,7 +139,7 @@ func BenchmarkSpanSetAttributesOverCapacity(b *testing.B) {
 
 func BenchmarkStartEndSpan(b *testing.B) {
 	traceBenchmark(b, "Benchmark StartEndSpan", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, span := t.Start(ctx, "/foo")
@@ -150,7 +150,7 @@ func BenchmarkStartEndSpan(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_4(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -168,7 +168,7 @@ func BenchmarkSpanWithAttributes_4(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_8(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 8 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -190,7 +190,7 @@ func BenchmarkSpanWithAttributes_8(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_all(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With all Attribute types", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -209,7 +209,7 @@ func BenchmarkSpanWithAttributes_all(b *testing.B) {
 
 func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With all Attributes types twice", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -233,7 +233,7 @@ func BenchmarkSpanWithAttributes_all_2x(b *testing.B) {
 
 func BenchmarkSpanWithEvents_4(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -249,7 +249,7 @@ func BenchmarkSpanWithEvents_4(b *testing.B) {
 
 func BenchmarkSpanWithEvents_8(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Events", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -269,7 +269,7 @@ func BenchmarkSpanWithEvents_8(b *testing.B) {
 
 func BenchmarkSpanWithEvents_WithStackTrace(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -282,7 +282,7 @@ func BenchmarkSpanWithEvents_WithStackTrace(b *testing.B) {
 
 func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
 	traceBenchmark(b, "Benchmark Start With 4 Attributes", func(b *testing.B, t trace.Tracer) {
-		ctx := context.Background()
+		ctx := b.Context()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -291,6 +291,45 @@ func BenchmarkSpanWithEvents_WithTimestamp(b *testing.B) {
 			span.End()
 		}
 	})
+}
+
+func BenchmarkTraceIDFromHex(b *testing.B) {
+	want := trace.TraceID{
+		0xde,
+		0xad,
+		0xbe,
+		0xef,
+		0x01,
+		0x23,
+		0x45,
+		0x67,
+		0x89,
+		0xab,
+		0xcd,
+		0xef,
+		0x01,
+		0x23,
+		0x45,
+		0x67,
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		got, _ := trace.TraceIDFromHex("deadbeef0123456789abcdef01234567")
+		if got != want {
+			b.Fatalf("got = %q want = %q", got.String(), want)
+		}
+	}
+}
+
+func BenchmarkSpanIDFromHex(b *testing.B) {
+	want := trace.SpanID{0xde, 0xad, 0xbe, 0xef, 0x01, 0x23, 0x45, 0x67}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		got, _ := trace.SpanIDFromHex("deadbeef01234567")
+		if got != want {
+			b.Fatalf("got = %q want = %q", got.String(), want)
+		}
+	}
 }
 
 func BenchmarkTraceID_DotString(b *testing.B) {
@@ -347,6 +386,7 @@ func BenchmarkSpanProcessorOnEnd(b *testing.B) {
 				sdktrace.WithMaxExportBatchSize(bb.batchSize),
 			)
 			b.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				_ = bsp.Shutdown(context.Background())
 			})
 			snap := tracetest.SpanStub{}.Snapshot()
@@ -367,23 +407,24 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 	b.Cleanup(func(l logr.Logger) func() {
 		return func() { global.SetLogger(l) }
 	}(global.GetLogger()))
-	global.SetLogger(funcr.New(func(prefix, args string) {}, funcr.Options{Verbosity: 5}))
+	global.SetLogger(funcr.New(func(string, string) {}, funcr.Options{Verbosity: 5}))
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(
 			tracetest.NewNoopExporter(),
 			sdktrace.WithMaxExportBatchSize(10),
 		))
 	b.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		_ = tp.Shutdown(context.Background())
 	})
 	tracer := tp.Tracer("bench")
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			_, span := tracer.Start(ctx, "bench")
 			span.End()
 		}

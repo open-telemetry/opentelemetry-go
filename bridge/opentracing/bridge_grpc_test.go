@@ -22,7 +22,7 @@ import (
 
 type testGRPCServer struct{}
 
-func (*testGRPCServer) UnaryCall(ctx context.Context, r *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
+func (*testGRPCServer) UnaryCall(_ context.Context, r *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
 	return &testpb.SimpleResponse{Payload: r.Payload * 2}, nil
 }
 
@@ -70,7 +70,7 @@ func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
 	require.NoError(t, err)
 	cli := testpb.NewTestServiceClient(conn)
 
-	ctx, cx := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cx := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cx()
 	res, err := cli.UnaryCall(ctx, &testpb.SimpleRequest{Payload: 42})
 	require.NoError(t, err)

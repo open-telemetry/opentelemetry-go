@@ -4,7 +4,6 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
-	"context"
 	"sync/atomic"
 	"testing"
 
@@ -57,10 +56,10 @@ func assertSum[N int64 | float64](
 		t.Helper()
 		requireN[N](t, n, meas, comps, err)
 
-		for m := 0; m < n; m++ {
+		for m := range n {
 			t.Logf("input/output number: %d", m)
 			in, out := meas[m], comps[m]
-			in(context.Background(), 1, *attribute.EmptySet())
+			in(t.Context(), 1, *attribute.EmptySet())
 
 			var got metricdata.Aggregation
 			assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -70,7 +69,7 @@ func assertSum[N int64 | float64](
 				DataPoints:  []metricdata.DataPoint[N]{{Value: v[0]}},
 			}, got, metricdatatest.IgnoreTimestamp())
 
-			in(context.Background(), 3, *attribute.EmptySet())
+			in(t.Context(), 3, *attribute.EmptySet())
 
 			assert.Equal(t, 1, out(&got), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
@@ -90,7 +89,7 @@ func assertHist[N int64 | float64](
 		requireN[N](t, 1, meas, comps, err)
 
 		in, out := meas[0], comps[0]
-		in(context.Background(), 1, *attribute.EmptySet())
+		in(t.Context(), 1, *attribute.EmptySet())
 
 		var got metricdata.Aggregation
 		assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -108,7 +107,7 @@ func assertHist[N int64 | float64](
 			}},
 		}, got, metricdatatest.IgnoreTimestamp())
 
-		in(context.Background(), 1, *attribute.EmptySet())
+		in(t.Context(), 1, *attribute.EmptySet())
 
 		if temp == metricdata.CumulativeTemporality {
 			buckets[1] = 2
@@ -139,8 +138,8 @@ func assertLastValue[N int64 | float64](
 	requireN[N](t, 1, meas, comps, err)
 
 	in, out := meas[0], comps[0]
-	in(context.Background(), 10, *attribute.EmptySet())
-	in(context.Background(), 1, *attribute.EmptySet())
+	in(t.Context(), 10, *attribute.EmptySet())
+	in(t.Context(), 1, *attribute.EmptySet())
 
 	var got metricdata.Aggregation
 	assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -184,7 +183,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Default/Drop",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDrop{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
 			),
 			inst: instruments[InstrumentKindCounter],
 			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
@@ -288,7 +287,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 				requireN[N](t, 1, meas, comps, err)
 
 				in, out := meas[0], comps[0]
-				in(context.Background(), 1, *attribute.EmptySet())
+				in(t.Context(), 1, *attribute.EmptySet())
 
 				var got metricdata.Aggregation
 				assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -302,7 +301,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 					}},
 				}, got, metricdatatest.IgnoreTimestamp())
 
-				in(context.Background(), 1, *attribute.EmptySet())
+				in(t.Context(), 1, *attribute.EmptySet())
 
 				assert.Equal(t, 1, out(&got), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
@@ -326,7 +325,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/Sum/Monotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
@@ -334,7 +333,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/Sum/NonMonotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindUpDownCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 4}),
@@ -342,7 +341,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/ExplicitBucketHistogram",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindHistogram],
 			validate: assertHist[N](metricdata.CumulativeTemporality),
@@ -350,7 +349,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/Gauge",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindGauge],
 			validate: assertLastValue[N],
@@ -358,7 +357,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/PrecomputedSum/Monotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindObservableCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 3}),
@@ -366,7 +365,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Cumulative/PrecomputedSum/NonMonotonic",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindObservableUpDownCounter],
 			validate: assertSum[N](1, metricdata.CumulativeTemporality, false, [2]N{1, 3}),
@@ -374,7 +373,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		{
 			name: "Reader/Default/Gauge",
 			reader: NewManualReader(
-				WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationDefault{} }),
+				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
 			),
 			inst:     instruments[InstrumentKindObservableGauge],
 			validate: assertLastValue[N],
@@ -392,7 +391,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			var c cache[string, instID]
-			p := newPipeline(nil, tt.reader, tt.views, exemplar.AlwaysOffFilter)
+			p := newPipeline(nil, tt.reader, tt.views, exemplar.AlwaysOffFilter, 0)
 			i := newInserter[N](p, &c)
 			readerAggregation := i.readerDefaultAggregation(tt.inst.Kind)
 			input, err := i.Instrument(tt.inst, readerAggregation)
@@ -414,7 +413,7 @@ func TestCreateAggregators(t *testing.T) {
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 	var c cache[string, instID]
-	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}, exemplar.AlwaysOffFilter), &c)
+	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}, exemplar.AlwaysOffFilter, 0), &c)
 	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),
@@ -430,7 +429,7 @@ func TestInvalidInstrumentShouldPanic(t *testing.T) {
 
 func TestPipelinesAggregatorForEachReader(t *testing.T) {
 	r0, r1 := NewManualReader(), NewManualReader()
-	pipes := newPipelines(resource.Empty(), []Reader{r0, r1}, nil, exemplar.AlwaysOffFilter)
+	pipes := newPipelines(resource.Empty(), []Reader{r0, r1}, nil, exemplar.AlwaysOffFilter, 0)
 	require.Len(t, pipes, 2, "created pipelines")
 
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
@@ -453,7 +452,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 	renameView := NewView(Instrument{Name: "foo"}, Stream{Name: "bar"})
 	testRdr := NewManualReader()
 	testRdrHistogram := NewManualReader(
-		WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationExplicitBucketHistogram{} }),
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationExplicitBucketHistogram{} }),
 	)
 
 	testCases := []struct {
@@ -504,7 +503,7 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newPipelines(resource.Empty(), tt.readers, tt.views, exemplar.AlwaysOffFilter)
+			p := newPipelines(resource.Empty(), tt.readers, tt.views, exemplar.AlwaysOffFilter, 0)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveIntHistogramAggregators(t, p, tt.wantCount)
@@ -558,7 +557,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 	readers := []Reader{NewManualReader()}
 	views := []View{defaultView, v}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	pipes := newPipelines(res, readers, views, exemplar.AlwaysOffFilter)
+	pipes := newPipelines(res, readers, views, exemplar.AlwaysOffFilter, 0)
 	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
@@ -566,12 +565,12 @@ func TestPipelineRegistryResource(t *testing.T) {
 
 func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 	testRdrHistogram := NewManualReader(
-		WithAggregationSelector(func(ik InstrumentKind) Aggregation { return AggregationSum{} }),
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationSum{} }),
 	)
 
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
-	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter)
+	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter, 0)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
 	var vc cache[string, instID]
@@ -601,7 +600,7 @@ type logCounter struct {
 	infoN uint32
 }
 
-func (l *logCounter) Info(level int, msg string, keysAndValues ...interface{}) {
+func (l *logCounter) Info(level int, msg string, keysAndValues ...any) {
 	atomic.AddUint32(&l.infoN, 1)
 	l.LogSink.Info(level, msg, keysAndValues...)
 }
@@ -610,7 +609,7 @@ func (l *logCounter) InfoN() int {
 	return int(atomic.SwapUint32(&l.infoN, 0))
 }
 
-func (l *logCounter) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *logCounter) Error(err error, msg string, keysAndValues ...any) {
 	atomic.AddUint32(&l.errN, 1)
 	l.LogSink.Error(err, msg, keysAndValues...)
 }
@@ -631,7 +630,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	barInst := Instrument{Name: "bar", Kind: InstrumentKindCounter}
 
-	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter)
+	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter, 0)
 
 	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)

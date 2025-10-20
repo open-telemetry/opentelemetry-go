@@ -29,13 +29,13 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 			cBacks := got.Callbacks()
 			require.Len(t, cBacks, 1, "callbacks")
 			o := &int64Observer{}
-			err := cBacks[0](context.Background(), o)
+			err := cBacks[0](t.Context(), o)
 			require.NoError(t, err)
 			assert.Equal(t, token, o.got, "callback not set")
 		}
 	}
 
-	cback := func(ctx context.Context, obsrv Int64Observer) error {
+	cback := func(_ context.Context, obsrv Int64Observer) error {
 		obsrv.Observe(token)
 		return nil
 	}
