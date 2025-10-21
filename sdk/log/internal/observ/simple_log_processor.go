@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package observ
+package observ // import "go.opentelemetry.io/otel/sdk/log/internal/observ"
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	// ScopeName is the name of the instrumentation scope.
 	ScopeName = "go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
@@ -45,7 +46,7 @@ type SLP struct {
 	addOpts   []metric.AddOption
 }
 
-// NewSlP returns instrumentation for an OTel SDK SimpleLogProcessor with the
+// NewSLP returns instrumentation for an OTel SDK SimpleLogProcessor with the
 // provided ID.
 //
 // If the experimental observability is disabled, nil is returned.
@@ -63,7 +64,7 @@ func NewSLP(id int64) (*SLP, error) {
 
 	p, err := otelconv.NewSDKProcessorLogProcessed(mt)
 	if err != nil {
-		err = fmt.Errorf("failed to created a processed metrics %w", err)
+		err = fmt.Errorf("failed to create a processed log metric: %w", err)
 		return nil, err
 	}
 
@@ -86,7 +87,7 @@ func (slp *SLP) LogProcessed(ctx context.Context, err error) {
 }
 
 func (slp *SLP) addOption(err error) []metric.AddOption {
-	if err != nil {
+	if err == nil {
 		return slp.addOpts
 	}
 	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
