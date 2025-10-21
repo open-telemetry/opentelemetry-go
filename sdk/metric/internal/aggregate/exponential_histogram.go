@@ -46,11 +46,11 @@ func newExpoHistogramDataPoint[N int64 | float64](
 		expoHistogramPointCounters: expoHistogramPointCounters[N]{
 			posBuckets: expoBuckets{
 				scale:  maxScale,
-				counts: make([]uint64, maxSize),
+				counts: make([]atomic.Uint64, maxSize),
 			},
 			negBuckets: expoBuckets{
 				scale:  maxScale,
-				counts: make([]uint64, maxSize),
+				counts: make([]atomic.Uint64, maxSize),
 			},
 		},
 	}
@@ -83,21 +83,21 @@ func newHotColdExpoHistogramDataPoint[N int64 | float64](
 			{
 				posBuckets: expoBuckets{
 					scale:  maxScale,
-					counts: make([]uint64, maxSize),
+					counts: make([]atomic.Uint64, maxSize),
 				},
 				negBuckets: expoBuckets{
 					scale:  maxScale,
-					counts: make([]uint64, maxSize),
+					counts: make([]atomic.Uint64, maxSize),
 				},
 			},
 			{
 				posBuckets: expoBuckets{
 					scale:  maxScale,
-					counts: make([]uint64, maxSize),
+					counts: make([]atomic.Uint64, maxSize),
 				},
 				negBuckets: expoBuckets{
 					scale:  maxScale,
-					counts: make([]uint64, maxSize),
+					counts: make([]atomic.Uint64, maxSize),
 				},
 			},
 		},
@@ -118,10 +118,10 @@ type expoHistogramPointCounters[N int64 | float64] struct {
 func (e *expoHistogramPointCounters[N]) count() uint64 {
 	count := e.zeroCount.Load()
 	for i := range e.posBuckets.counts {
-		count += e.posBuckets.counts[i]
+		count += e.posBuckets.counts[i].Load()
 	}
 	for i := range e.negBuckets.counts {
-		count += e.negBuckets.counts[i]
+		count += e.negBuckets.counts[i].Load()
 	}
 	return count
 }
@@ -172,7 +172,7 @@ type expoBuckets struct {
 	scaleMux    sync.Mutex
 	scale       int32
 	startAndEnd atomicLimitedRange
-	counts      []uint64
+	counts      []atomic.Uint64
 }
 
 // getIdx returns the index into counts for the provided bin.
@@ -189,7 +189,7 @@ func (e *expoBuckets) loadCountsInto(into *[]uint64) {
 	counts := reset(*into, length, length)
 	eIdx := start
 	for i := range length {
-		counts[i] = e.counts[e.getIdx(eIdx)]
+		counts[i] = e.counts[e.getIdx(eIdx)].Load()
 		eIdx++
 	}
 	*into = counts
@@ -297,7 +297,7 @@ func (b *expoBuckets) record(absV float64) {
 
 func (b *expoBuckets) recordBucket(bin int32) {
 	b.resizeToInclude(bin)
-	b.counts[b.getIdx(bin)]++
+	b.counts[b.getIdx(bin)].Add(1)
 	startBin, endBin := b.startAndEnd.Load()
 	fmt.Printf("incremented bin %v idx %v, startBin %v, endBin %v, counts %+v\n", bin, b.getIdx(bin), startBin, endBin, b.counts)
 }
@@ -335,7 +335,7 @@ func (b *expoBuckets) downscale(delta int32) {
 
 		// Clear all elements that are outside of our start to end range
 		for i := newEndBin; i < newStartBin+int32(len(b.counts)); i++ {
-			b.counts[b.getIdx(i)] = 0
+			b.counts[b.getIdx(i)].Store(0)
 		}
 		fmt.Printf("downscale SHORT downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 		return
@@ -353,11 +353,11 @@ func (b *expoBuckets) downscale(delta int32) {
 	for i := startBin + 1; i < endBin; i++ {
 		newIdx := b.getIdx(int32(math.Floor(float64(i)/float64(steps))) + int32(startShift))
 		if i%steps == 0 {
-			b.counts[newIdx] = b.counts[b.getIdx(i)]
+			b.counts[newIdx].Store(b.counts[b.getIdx(i)].Load())
 			fmt.Printf("downscale SET idx %v counts %+v\n", b.getIdx(i/steps+int32(startShift)), b.counts)
 			continue
 		}
-		b.counts[newIdx] += b.counts[b.getIdx(i)]
+		b.counts[newIdx].Add(b.counts[b.getIdx(i)].Load())
 		fmt.Printf("downscale ADD i %v i/steps %v idx %v, getIdx %v counts %+v\n", i, i/steps, i/steps+int32(startShift), b.getIdx(i/steps+int32(startShift)), b.counts)
 	}
 	fmt.Printf("downscale END Merge downsize %v startBin %v, endBin %v, counts %v\n", delta, startBin, endBin, b.counts)
@@ -372,7 +372,7 @@ func (b *expoBuckets) downscale(delta int32) {
 	fmt.Printf("downscale AfterShiFT downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 	// Clear all elements that are outside of our start to end range
 	for i := newEndBin; i < newStartBin+int32(len(b.counts)); i++ {
-		b.counts[b.getIdx(i)] = 0
+		b.counts[b.getIdx(i)].Store(0)
 	}
 	fmt.Printf("downscale FINAL downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 }
@@ -435,8 +435,8 @@ func (b *expoBuckets) mergeIntoAndReset(into *expoBuckets) {
 	intoStartBin, _ := b.startAndEnd.Load()
 	startBinDelta := bStartBin - intoStartBin
 	for i := range b.counts {
-		into.counts[i+int(startBinDelta)] += b.counts[i]
-		b.counts[i] = 0
+		into.counts[i+int(startBinDelta)].Add(b.counts[i].Load())
+		b.counts[i].Store(0)
 	}
 	b.startAndEnd.Store(0, 0)
 	b.validate()

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,6 +18,8 @@ import (
 )
 
 const smallestNonZeroNormalFloat64 = 0x1p-1022
+
+const defaultMaxSize = 20
 
 type noErrorHandler struct{ t *testing.T }
 
@@ -32,13 +35,13 @@ func withHandler(t *testing.T) func() {
 	return func() { global.SetErrorHandler(original) }
 }
 
-func newExpoBuckets(startBin, scale int32, counts []uint64) *expoBuckets {
+func newTestExpoBuckets(startBin, scale, maxSize int32, counts []uint64) *expoBuckets {
 	e := &expoBuckets{
 		scale:  scale,
-		counts: make([]uint64, 20),
+		counts: make([]atomic.Uint64, maxSize),
 	}
 	for i := range counts {
-		e.counts[e.getIdx(startBin+int32(i))] = counts[i]
+		e.counts[e.getIdx(startBin+int32(i))].Store(counts[i])
 	}
 	e.startAndEnd.Store(startBin, startBin+int32(len(counts)))
 	return e
@@ -412,7 +415,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 	}{
 		{
 			name:   "Empty bucket",
-			bucket: newExpoBuckets(0, 0, nil),
+			bucket: newTestExpoBuckets(0, 0, defaultMaxSize, nil),
 			scale:  3,
 			want: &expectedExpoBuckets{
 				scale: -3,
@@ -420,7 +423,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "1 size bucket",
-			bucket: newExpoBuckets(50, 0, []uint64{7}),
+			bucket: newTestExpoBuckets(50, 0, defaultMaxSize, []uint64{7}),
 			scale:  4,
 			want: &expectedExpoBuckets{
 				startBin: 3,
@@ -430,7 +433,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "zero scale",
-			bucket: newExpoBuckets(50, 0, []uint64{7, 5}),
+			bucket: newTestExpoBuckets(50, 0, defaultMaxSize, []uint64{7, 5}),
 			scale:  0,
 			want: &expectedExpoBuckets{
 				startBin: 50,
@@ -439,7 +442,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "aligned bucket scale 1",
-			bucket: newExpoBuckets(0, 0, []uint64{1, 2, 3, 4, 5, 6}),
+			bucket: newTestExpoBuckets(0, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}),
 			scale:  1,
 			want: &expectedExpoBuckets{
 				startBin: 0,
@@ -449,7 +452,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "aligned bucket scale 2",
-			bucket: newExpoBuckets(0, 0, []uint64{1, 2, 3, 4, 5, 6}),
+			bucket: newTestExpoBuckets(0, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}),
 			scale:  2,
 			want: &expectedExpoBuckets{
 				startBin: 0,
@@ -459,7 +462,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "aligned bucket scale 3",
-			bucket: newExpoBuckets(0, 0, []uint64{1, 2, 3, 4, 5, 6}),
+			bucket: newTestExpoBuckets(0, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}),
 			scale:  3,
 			want: &expectedExpoBuckets{
 				startBin: 0,
@@ -469,7 +472,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "unaligned bucket scale 1 A",
-			bucket: newExpoBuckets(5, 0, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
+			bucket: newTestExpoBuckets(5, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
 			scale:  1,
 			want: &expectedExpoBuckets{
 				startBin: 2,
@@ -479,7 +482,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "unaligned bucket scale 2",
-			bucket: newExpoBuckets(7, 0, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,0,0,1,2,3,4,5,6]
+			bucket: newTestExpoBuckets(7, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,0,0,1,2,3,4,5,6]
 			scale:  2,
 			want: &expectedExpoBuckets{
 				startBin: 1,
@@ -489,7 +492,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "unaligned bucket scale 3",
-			bucket: newExpoBuckets(3, 0, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,1,2,3,4,5,6]
+			bucket: newTestExpoBuckets(3, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,1,2,3,4,5,6]
 			scale:  3,
 			want: &expectedExpoBuckets{
 				startBin: 0,
@@ -499,7 +502,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "unaligned bucket scale 1 B",
-			bucket: newExpoBuckets(2, 0, []uint64{1, 0, 1}),
+			bucket: newTestExpoBuckets(2, 0, defaultMaxSize, []uint64{1, 0, 1}),
 			scale:  1,
 			want: &expectedExpoBuckets{
 				startBin: 1,
@@ -509,7 +512,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "negative startBin",
-			bucket: newExpoBuckets(-1, 0, []uint64{1, 0, 3}),
+			bucket: newTestExpoBuckets(-1, 0, defaultMaxSize, []uint64{1, 0, 3}),
 			scale:  1,
 			want: &expectedExpoBuckets{
 				startBin: -1,
@@ -519,7 +522,7 @@ func TestExpoBucketDownscale(t *testing.T) { // TODO FIX!!!!!!!!!!!
 		},
 		{
 			name:   "negative startBin 2",
-			bucket: newExpoBuckets(-4, 0, []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+			bucket: newTestExpoBuckets(-4, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
 			scale:  1,
 			want: &expectedExpoBuckets{
 				startBin: -2,
@@ -546,7 +549,7 @@ func TestExpoBucketRecord(t *testing.T) {
 	}{
 		{
 			name:   "Empty Bucket creates first count",
-			bucket: newExpoBuckets(0, 0, nil),
+			bucket: newTestExpoBuckets(0, 0, defaultMaxSize, nil),
 			bin:    -5,
 			want: &expectedExpoBuckets{
 				startBin: -5,
@@ -555,7 +558,7 @@ func TestExpoBucketRecord(t *testing.T) {
 		},
 		{
 			name:   "Bin is in the bucket",
-			bucket: newExpoBuckets(3, 0, []uint64{1, 2, 3, 4, 5, 6}),
+			bucket: newTestExpoBuckets(3, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}),
 			bin:    5,
 			want: &expectedExpoBuckets{
 				startBin: 3,
@@ -564,7 +567,7 @@ func TestExpoBucketRecord(t *testing.T) {
 		},
 		{
 			name:   "Bin is before the start of the bucket",
-			bucket: newExpoBuckets(1, 0, []uint64{1, 2, 3, 4, 5, 6}),
+			bucket: newTestExpoBuckets(1, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}),
 			bin:    -2,
 			want: &expectedExpoBuckets{
 				startBin: -2,
@@ -573,7 +576,7 @@ func TestExpoBucketRecord(t *testing.T) {
 		},
 		{
 			name:   "Bin is after the end of the bucket",
-			bucket: newExpoBuckets(-2, 0, []uint64{1, 2, 3, 4, 5, 6}),
+			bucket: newTestExpoBuckets(-2, 0, defaultMaxSize, []uint64{1, 2, 3, 4, 5, 6}),
 			bin:    4,
 			want: &expectedExpoBuckets{
 				startBin: -2,
@@ -592,87 +595,55 @@ func TestExpoBucketRecord(t *testing.T) {
 
 func TestScaleChange(t *testing.T) {
 	tests := []struct {
-		name     string
-		bin      int32
-		startBin int32
-		endBin   int32
-		bucket   *expoBuckets
-		want     int32
+		name   string
+		bin    int32
+		bucket *expoBuckets
+		want   int32
 	}{
 		{
 			name: "if length is 0, no rescale is needed",
 			// [] -> [5] Length 1
-			bin:      5,
-			startBin: 0,
-			endBin:   0,
-			bucket: &expoBuckets{
-				// max size is 4
-				counts: []uint64{0, 0, 0, 0},
-			},
-			want: 0,
+			bin:    5,
+			bucket: newTestExpoBuckets(0, 0, 4, nil),
+			want:   0,
 		},
 		{
 			name: "if bin is between start, and the end, no rescale needed",
 			// [-1, ..., 8] Length 10 -> [-1, ..., 5, ..., 8] Length 10
-			bin:      5,
-			startBin: -1,
-			endBin:   9,
-			bucket: &expoBuckets{
-				// [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-				counts: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-			want: 0,
+			bin:    5,
+			bucket: newTestExpoBuckets(-1, 0, defaultMaxSize, []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}),
+			want:   0,
 		},
 		{
 			name: "if len([bin,... end]) > maxSize, rescale needed",
 			// [8,9,10] Length 3 -> [5, ..., 10] Length 6
-			bin:      5,
-			startBin: 8,
-			endBin:   11,
-			bucket: &expoBuckets{
-				// [0, 1, 2]
-				counts: []uint64{2, 0, 0, 0, 1},
-			},
-			want: 1,
+			bin:    5,
+			bucket: newTestExpoBuckets(8, 0, 5, []uint64{0, 1, 2}),
+			want:   1,
 		},
 		{
 			name: "if len([start, ..., bin]) > maxSize, rescale needed",
 			// [2,3,4] Length 3 -> [2, ..., 7] Length 6
-			bin:      7,
-			startBin: 2,
-			endBin:   5,
-			bucket: &expoBuckets{
-				// [0, 1, 2]
-				counts: []uint64{0, 0, 0, 1, 2},
-			},
-			want: 1,
+			bin:    7,
+			bucket: newTestExpoBuckets(2, 0, 5, []uint64{0, 1, 2}),
+			want:   1,
 		},
 		{
 			name: "if len([start, ..., bin]) > maxSize, rescale needed",
 			// [2,3,4] Length 3 -> [2, ..., 7] Length 12
-			bin:      13,
-			startBin: 2,
-			bucket: &expoBuckets{
-				// [0, 1, 2]
-				counts: []uint64{0, 0, 0, 1, 2},
-			},
-			want: 2,
+			bin:    13,
+			bucket: newTestExpoBuckets(2, 0, 5, []uint64{0, 1, 2}),
+			want:   2,
 		},
 		{
-			name:     "It should not hang if it will never be able to rescale",
-			bin:      1,
-			startBin: -1,
-			endBin:   0,
-			bucket: &expoBuckets{
-				// max size is 1
-				counts: []uint64{0},
-			},
-			want: 31,
+			name:   "It should not hang if it will never be able to rescale",
+			bin:    1,
+			bucket: newTestExpoBuckets(-1, 0, 1, []uint64{0}),
+			want:   31,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.bucket.startAndEnd.Store(tt.startBin, tt.endBin)
 			got := tt.bucket.scaleChange(tt.bin)
 			if got != tt.want {
 				t.Errorf("scaleChange() = %v, want %v", got, tt.want)
