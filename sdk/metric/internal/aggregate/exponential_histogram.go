@@ -55,6 +55,34 @@ func newHotColdExpoHistogramDataPoint[N int64 | float64](
 	}
 }
 
+// record adds a new measurement to the histogram. It will rescale the buckets if needed.
+func (p *hotColdExpoHistogramPoint[N]) record(v N) {
+	hotIdx := p.hcwg.start()
+	defer p.hcwg.done(hotIdx)
+	p.rescaleMux.Lock()
+	defer p.rescaleMux.Unlock()
+	if !p.noMinMax {
+		p.hotColdPoint[hotIdx].minMax.Update(v)
+	}
+	if !p.noSum {
+		p.hotColdPoint[hotIdx].sum.add(v)
+	}
+
+	absV := math.Abs(float64(v))
+
+	if float64(absV) == 0.0 {
+		p.hotColdPoint[hotIdx].zeroCount.Add(1)
+		return
+	}
+
+	bucket := &p.hotColdPoint[hotIdx].posBuckets
+	if v < 0 {
+		bucket = &p.hotColdPoint[hotIdx].negBuckets
+	}
+
+	bucket.record(absV)
+}
+
 // expoHistogramPointCounters contains only the atomic counter data, and is
 // used by both expoHistogramDataPoint and hotColdExpoHistogramPoint.
 type expoHistogramPointCounters[N int64 | float64] struct {
@@ -118,23 +146,6 @@ func (p *expoHistogramPointCounters[N]) mergeInto( // nolint:revive // Intention
 	}
 	p.posBuckets.mergeInto(&into.posBuckets)
 	p.negBuckets.mergeInto(&into.negBuckets)
-}
-
-// recordCount adds a new measurement to the histogram. It will rescale the buckets if needed.
-func (p *expoHistogramPointCounters[N]) recordCount(v N) {
-	absV := math.Abs(float64(v))
-
-	if float64(absV) == 0.0 {
-		p.zeroCount.Add(1)
-		return
-	}
-
-	bucket := &p.posBuckets
-	if v < 0 {
-		bucket = &p.negBuckets
-	}
-
-	bucket.record(absV)
 }
 
 // expoBuckets is a set of buckets in an exponential histogram.
@@ -466,17 +477,7 @@ func (e *deltaExpoHistogram[N]) measure(
 		hPt.res = e.newRes(attr)
 		return hPt
 	}).(*hotColdExpoHistogramPoint[N])
-	ptHotIdx := v.hcwg.start()
-	defer v.hcwg.done(ptHotIdx)
-	if !v.noMinMax {
-		v.hotColdPoint[ptHotIdx].minMax.Update(value)
-	}
-	if !v.noSum {
-		v.hotColdPoint[ptHotIdx].sum.add(value)
-	}
-	v.rescaleMux.Lock()
-	v.hotColdPoint[ptHotIdx].recordCount(value)
-	v.rescaleMux.Unlock()
+	v.record(value)
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
@@ -608,17 +609,7 @@ func (e *cumulativeExpoHistogram[N]) measure(
 		hPt.res = e.newRes(attr)
 		return hPt
 	}).(*hotColdExpoHistogramPoint[N])
-	hotIdx := v.hcwg.start()
-	defer v.hcwg.done(hotIdx)
-	if !v.noMinMax {
-		v.hotColdPoint[hotIdx].minMax.Update(value)
-	}
-	if !v.noSum {
-		v.hotColdPoint[hotIdx].sum.add(value)
-	}
-	v.rescaleMux.Lock()
-	v.hotColdPoint[hotIdx].recordCount(value)
-	v.rescaleMux.Unlock()
+	v.record(value)
 	v.res.Offer(ctx, value, droppedAttr)
 }
 

@@ -24,7 +24,6 @@ const defaultMaxSize = 20
 type noErrorHandler struct{ t *testing.T }
 
 func (h *noErrorHandler) Handle(e error) {
-	panic(e)
 	require.NoError(h.t, e)
 }
 
@@ -165,14 +164,15 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramPointCounters[N](tt.maxSize, 20)
+			dp := newHotColdExpoHistogramDataPoint[N](alice, tt.maxSize, 20, false, false)
 			for _, v := range tt.values {
-				dp.recordCount(v)
-				dp.recordCount(-v)
+				dp.record(v)
+				dp.record(-v)
 			}
 
-			tt.expectedBuckets.AssertEqual(t, &dp.posBuckets)
-			tt.expectedBuckets.AssertEqual(t, &dp.negBuckets)
+			readIdx := dp.hcwg.swapHotAndWait()
+			tt.expectedBuckets.AssertEqual(t, &dp.hotColdPoint[readIdx].posBuckets)
+			tt.expectedBuckets.AssertEqual(t, &dp.hotColdPoint[readIdx].negBuckets)
 		})
 	}
 }
@@ -350,14 +350,15 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			dp := newExpoHistogramPointCounters[float64](tt.maxSize, 20)
+			dp := newHotColdExpoHistogramDataPoint[float64](alice, tt.maxSize, 20, false, false)
 			for _, v := range tt.values {
-				dp.recordCount(v)
-				dp.recordCount(-v)
+				dp.record(v)
+				dp.record(-v)
 			}
 
-			tt.expectedBuckets.AssertEqual(t, &dp.posBuckets)
-			tt.expectedBuckets.AssertEqual(t, &dp.negBuckets)
+			readIdx := dp.hcwg.swapHotAndWait()
+			tt.expectedBuckets.AssertEqual(t, &dp.hotColdPoint[readIdx].posBuckets)
+			tt.expectedBuckets.AssertEqual(t, &dp.hotColdPoint[readIdx].negBuckets)
 		})
 	}
 }
@@ -366,26 +367,29 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 	// These bins are calculated from the following formula:
 	// floor( log2( value) * 2^20 ) using an arbitrary precision calculator.
 
-	fdp := newExpoHistogramPointCounters[float64](4, 20)
-	fdp.recordCount(math.MaxFloat64)
+	fdp := newHotColdExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
+	fdp.record(math.MaxFloat64)
 
-	startBin, _ := fdp.posBuckets.startAndEnd.Load()
+	readIdx := fdp.hcwg.swapHotAndWait()
+	startBin, _ := fdp.hotColdPoint[readIdx].posBuckets.startAndEnd.Load()
 	if startBin != 1073741823 {
 		t.Errorf("Expected startBin to be 1073741823, got %d", startBin)
 	}
 
-	fdp = newExpoHistogramPointCounters[float64](4, 20)
-	fdp.recordCount(math.SmallestNonzeroFloat64)
+	fdp = newHotColdExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
+	fdp.record(math.SmallestNonzeroFloat64)
 
-	startBin, _ = fdp.posBuckets.startAndEnd.Load()
+	readIdx = fdp.hcwg.swapHotAndWait()
+	startBin, _ = fdp.hotColdPoint[readIdx].posBuckets.startAndEnd.Load()
 	if startBin != -1126170625 {
 		t.Errorf("Expected startBin to be -1126170625, got %d", startBin)
 	}
 
-	idp := newExpoHistogramPointCounters[int64](4, 20)
-	idp.recordCount(math.MaxInt64)
+	idp := newHotColdExpoHistogramDataPoint[int64](alice, 4, 20, false, false)
+	idp.record(math.MaxInt64)
 
-	startBin, _ = idp.posBuckets.startAndEnd.Load()
+	readIdx = idp.hcwg.swapHotAndWait()
+	startBin, _ = idp.hotColdPoint[readIdx].posBuckets.startAndEnd.Load()
 	if startBin != 66060287 {
 		t.Errorf("Expected startBin to be 66060287, got %d", startBin)
 	}
@@ -639,10 +643,10 @@ func TestScaleChange(t *testing.T) {
 
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramPointCounters[float64](1024, 20)
+		agg := newHotColdExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
 		n := math.MaxFloat64
 		for range 1024 {
-			agg.recordCount(n)
+			agg.record(n)
 			n /= 2
 		}
 	}
@@ -650,10 +654,10 @@ func BenchmarkPrepend(b *testing.B) {
 
 func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramPointCounters[float64](1024, 20)
+		agg := newHotColdExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
 		n := smallestNonZeroNormalFloat64
 		for range 1024 {
-			agg.recordCount(n)
+			agg.record(n)
 			n *= 2
 		}
 	}
@@ -691,26 +695,23 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 
 func TestSubNormal(t *testing.T) {
 
-	ehdp := newExpoHistogramPointCounters[float64](4, 20)
-	ehdp.minMax.Update(math.SmallestNonzeroFloat64)
-	ehdp.sum.add(math.SmallestNonzeroFloat64)
-	ehdp.recordCount(math.SmallestNonzeroFloat64)
-	ehdp.sum.add(math.SmallestNonzeroFloat64)
-	ehdp.recordCount(math.SmallestNonzeroFloat64)
-	ehdp.sum.add(math.SmallestNonzeroFloat64)
-	ehdp.recordCount(math.SmallestNonzeroFloat64)
+	ehdp := newHotColdExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
+	ehdp.record(math.SmallestNonzeroFloat64)
+	ehdp.record(math.SmallestNonzeroFloat64)
+	ehdp.record(math.SmallestNonzeroFloat64)
 
-	assert.Equal(t, uint64(3), ehdp.count())
-	assert.True(t, ehdp.minMax.set.Load())
-	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.minMax.maximum.Load())
-	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.minMax.minimum.Load())
-	assert.Equal(t, 3*math.SmallestNonzeroFloat64, ehdp.sum.load())
+	readIdx := ehdp.hcwg.swapHotAndWait()
+	assert.Equal(t, uint64(3), ehdp.hotColdPoint[readIdx].count())
+	assert.True(t, ehdp.hotColdPoint[readIdx].minMax.set.Load())
+	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.hotColdPoint[readIdx].minMax.maximum.Load())
+	assert.Equal(t, math.SmallestNonzeroFloat64, ehdp.hotColdPoint[readIdx].minMax.minimum.Load())
+	assert.Equal(t, 3*math.SmallestNonzeroFloat64, ehdp.hotColdPoint[readIdx].sum.load())
 	expected := &expectedExpoBuckets{
 		startBin: -1126170625,
 		counts:   []uint64{3},
 		scale:    20,
 	}
-	expected.AssertEqual(t, &ehdp.posBuckets)
+	expected.AssertEqual(t, &ehdp.hotColdPoint[readIdx].posBuckets)
 }
 
 func TestExponentialHistogramAggregation(t *testing.T) { // TODO FIX!!!!!!!!!
