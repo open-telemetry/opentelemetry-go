@@ -546,3 +546,82 @@ func BenchmarkNewSet(b *testing.B) {
 		sinkSet = attribute.NewSet(attrs...)
 	}
 }
+
+// generateStringAttrsWithSize creates 7 string attributes with specified key and value lengths
+func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
+	// Generate base strings of specified lengths
+	keyBase := ""
+	valueBase := ""
+
+	// Build key base string
+	for i := 0; i < keyLen; i++ {
+		keyBase += string(rune('a' + i%26))
+	}
+
+	// Build value base string
+	for i := 0; i < valueLen; i++ {
+		valueBase += string(rune('0' + i%10))
+	}
+
+	// Create 7 attributes with different suffixes to ensure uniqueness
+	attrs := []attribute.KeyValue{
+		attribute.String(keyBase+"1", valueBase+"x"),
+		attribute.String(keyBase+"2", valueBase+"y"),
+		attribute.String(keyBase+"3", valueBase+"z"),
+		attribute.String(keyBase+"4", valueBase+"w"),
+		attribute.String(keyBase+"5", valueBase+"v"),
+		attribute.String(keyBase+"6", valueBase+"u"),
+		attribute.String(keyBase+"7", valueBase+"t"),
+	}
+	return attrs
+}
+
+func BenchmarkNewSetSmallStrings(b *testing.B) {
+	// Key length: 2, Value length: 1 (like original B1="2")
+	attrs := generateStringAttrsWithSize(2, 1)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sinkSet = attribute.NewSet(attrs...)
+	}
+}
+
+func BenchmarkNewSetMediumStrings(b *testing.B) {
+	// Key length: 10, Value length: 10 (realistic service names, etc.)
+	attrs := generateStringAttrsWithSize(10, 10)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sinkSet = attribute.NewSet(attrs...)
+	}
+}
+
+func BenchmarkNewSetLargeStrings(b *testing.B) {
+	// Key length: 25, Value length: 25 (longer service names, URLs, etc.)
+	attrs := generateStringAttrsWithSize(25, 25)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sinkSet = attribute.NewSet(attrs...)
+	}
+}
+
+func BenchmarkNewSetVeryLargeStrings(b *testing.B) {
+	// Key length: 50, Value length: 100 (very long values like URLs, descriptions)
+	attrs := generateStringAttrsWithSize(50, 100)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sinkSet = attribute.NewSet(attrs...)
+	}
+}
+
+func BenchmarkNewSetHugeStrings(b *testing.B) {
+	// Key length: 100, Value length: 500 (extremely large like full URLs, JSON, etc.)
+	attrs := generateStringAttrsWithSize(100, 500)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sinkSet = attribute.NewSet(attrs...)
+	}
+}
