@@ -93,7 +93,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 		e = fmt.Errorf("failed to create metric_data_point inflight metric: %w", e)
 		err = errors.Join(err, e)
 	}
-	em.inflight = inflightMetric.Int64UpDownCounter
+	em.inflight = inflightMetric.Inst()
 	if em.exported, e = otelconv.NewSDKExporterMetricDataPointExported(m); e != nil {
 		e = fmt.Errorf("failed to create metric_data_point exported metric: %w", e)
 		err = errors.Join(err, e)
