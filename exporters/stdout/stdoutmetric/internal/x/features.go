@@ -12,7 +12,7 @@ import "strings"
 // to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
 // will also enable this).
 var Observability = newFeature(
-	[]string{"OBSERVABILITY", "SELF_OBSERVABILITY"},
+	[]string{"OBSERVABILITY"},
 	func(v string) (string, bool) {
 		if strings.EqualFold(v, "true") {
 			return v, true

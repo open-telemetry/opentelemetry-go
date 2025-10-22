@@ -14,9 +14,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk"
 	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
 )
@@ -28,6 +28,11 @@ const (
 	// component. It is not a standardized OTel component type, so it uses the
 	// Go package prefixed type name to ensure uniqueness and identity.
 	componentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
+
+	// Version is the current version of this instrumentation.
+	//
+	// This matches the version of the exporter.
+	Version = internal.Version
 )
 
 var measureAttrsPool = sync.Pool{
@@ -79,7 +84,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	mp := otel.GetMeterProvider()
 	m := mp.Meter(
 		scope,
-		metric.WithInstrumentationVersion(sdk.Version()),
+		metric.WithInstrumentationVersion(Version),
 		metric.WithSchemaURL(semconv.SchemaURL))
 
 	var err error
@@ -100,28 +105,49 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	return em, err
 }
 
-func (em *Instrumentation) TrackExport(ctx context.Context, count int64) func(err error) {
-	begin := time.Now()
-	em.inflight.Add(ctx, count, em.addOpts...)
-	return func(err error) {
-		durationSeconds := time.Since(begin).Seconds()
-		em.inflight.Add(ctx, -count, em.addOpts...)
-		if err == nil { // short circuit in case of success to avoid allocations
-			em.exported.Int64Counter.Add(ctx, count, em.addOpts...)
-			em.duration.Float64Histogram.Record(ctx, durationSeconds, em.recordOpts...)
-			return
-		}
-
-		attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
-		defer func() {
-			*attrs = (*attrs)[:0] // reset the slice for reuse
-			measureAttrsPool.Put(attrs)
-		}()
-		*attrs = append(*attrs, em.attrs...)
-		*attrs = append(*attrs, semconv.ErrorType(err))
-
-		set := attribute.NewSet(*attrs...)
-		em.exported.AddSet(ctx, count, set)
-		em.duration.RecordSet(ctx, durationSeconds, set)
+// ExportMetrics instruments the Export method of the exporter. It returns a
+// function that needs to be deferred so it is called when the method returns.
+func (i *Instrumentation) ExportMetrics(ctx context.Context, count int64) ExportOp {
+	start := time.Now()
+	i.inflight.Add(ctx, count, i.addOpts...)
+	return ExportOp{
+		ctx:     ctx,
+		start:   start,
+		nTraces: count,
+		inst:    i,
 	}
+}
+
+// ExportOp is an in-progress ExportMetrics operation.
+type ExportOp struct {
+	ctx     context.Context
+	start   time.Time
+	nTraces int64
+	inst    *Instrumentation
+}
+
+// End ends the ExportMetrics operation, recording its duration.
+//
+// The err parameter indicates whether the operation failed. If err is not nil,
+// it is added to metrics as attribute.
+func (e ExportOp) End(err error) {
+	durationSeconds := time.Since(e.start).Seconds()
+	e.inst.inflight.Add(e.ctx, -e.nTraces, e.inst.addOpts...)
+	if err == nil { // short circuit in case of success to avoid allocations
+		e.inst.exported.Inst().Add(e.ctx, e.nTraces, e.inst.addOpts...)
+		e.inst.duration.Inst().Record(e.ctx, durationSeconds, e.inst.recordOpts...)
+		return
+	}
+
+	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
+	defer func() {
+		*attrs = (*attrs)[:0] // reset the slice for reuse
+		measureAttrsPool.Put(attrs)
+	}()
+	*attrs = append(*attrs, e.inst.attrs...)
+	*attrs = append(*attrs, semconv.ErrorType(err))
+
+	set := attribute.NewSet(*attrs...)
+	e.inst.exported.AddSet(e.ctx, e.nTraces, set)
+	e.inst.duration.RecordSet(e.ctx, durationSeconds, set)
 }

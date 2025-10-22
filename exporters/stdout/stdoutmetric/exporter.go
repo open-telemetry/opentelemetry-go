@@ -57,8 +57,10 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 }
 
 func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) (err error) {
-	trackExportFunc := e.trackExport(ctx, countDataPoints(data))
-	defer func() { trackExportFunc(err) }()
+	if e.inst != nil {
+		op := e.inst.ExportMetrics(ctx, countDataPoints(data))
+		defer func() { op.End(err) }()
+	}
 	err = ctx.Err()
 	if err != nil {
 		return err
@@ -70,13 +72,6 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	global.Debug("STDOUT exporter export", "Data", data)
 
 	return e.encVal.Load().(encoderHolder).Encode(data)
-}
-
-func (e *exporter) trackExport(ctx context.Context, count int64) func(err error) {
-	if e.inst == nil {
-		return func(error) {}
-	}
-	return e.inst.TrackExport(ctx, count)
 }
 
 func (*exporter) ForceFlush(context.Context) error {

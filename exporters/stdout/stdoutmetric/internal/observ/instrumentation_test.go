@@ -69,13 +69,13 @@ func findMetric(rm metricdata.ResourceMetrics, name string) (metricdata.Metrics,
 func TestExporterMetrics_TrackExport(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 
-	done1 := setup.em.TrackExport(setup.ctx, 2)
-	done2 := setup.em.TrackExport(setup.ctx, 3)
-	done3 := setup.em.TrackExport(setup.ctx, 1)
+	op1 := setup.em.ExportMetrics(setup.ctx, 2)
+	op2 := setup.em.ExportMetrics(setup.ctx, 3)
+	op3 := setup.em.ExportMetrics(setup.ctx, 1)
 	time.Sleep(5 * time.Millisecond)
-	done2(nil)
-	done1(errors.New("failed"))
-	done3(nil)
+	op2.End(nil)
+	op1.End(errors.New("failed"))
+	op3.End(nil)
 
 	rm := collectMetrics(t, setup)
 	assert.NotEmpty(t, rm.ScopeMetrics)
@@ -118,8 +118,8 @@ func TestExporterMetrics_TrackExport_WithError(t *testing.T) {
 	count := int64(3)
 	testErr := errors.New("export failed")
 
-	done := setup.em.TrackExport(setup.ctx, count)
-	done(testErr)
+	op := setup.em.ExportMetrics(setup.ctx, count)
+	op.End(testErr)
 
 	rm := collectMetrics(t, setup)
 	assert.NotEmpty(t, rm.ScopeMetrics)
@@ -137,7 +137,7 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 	count := int64(10)
 
-	done := setup.em.TrackExport(setup.ctx, count)
+	op := setup.em.ExportMetrics(setup.ctx, count)
 	rm := collectMetrics(t, setup)
 	inflight, found := findMetric(rm, otelconv.SDKExporterMetricDataPointInflight{}.Name())
 	assert.True(t, found)
@@ -150,7 +150,7 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 	}
 	assert.Equal(t, count, inflightValue)
 
-	done(nil)
+	op.End(nil)
 	rm = collectMetrics(t, setup)
 	inflight, found = findMetric(rm, otelconv.SDKExporterMetricDataPointInflight{}.Name())
 	assert.True(t, found)
@@ -176,10 +176,10 @@ func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 	assert.Contains(t, em.attrs, expectedComponentName)
 	assert.Contains(t, em.attrs, expectedComponentType)
 
-	done := em.TrackExport(t.Context(), 1)
-	done(errors.New("test error"))
-	done = em.TrackExport(t.Context(), 1)
-	done(nil)
+	op := em.ExportMetrics(t.Context(), 1)
+	op.End(errors.New("test error"))
+	op = em.ExportMetrics(t.Context(), 1)
+	op.End(nil)
 
 	// Attributes should not be modified after tracking exports
 	assert.Len(t, em.attrs, 2)
@@ -211,8 +211,8 @@ func BenchmarkTrackExport(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				done := em.TrackExport(b.Context(), 10)
-				done(nil)
+				op := em.ExportMetrics(b.Context(), 10)
+				op.End(nil)
 			}
 		})
 	})
@@ -224,8 +224,8 @@ func BenchmarkTrackExport(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				done := em.TrackExport(b.Context(), 10)
-				done(testErr)
+				op := em.ExportMetrics(b.Context(), 10)
+				op.End(testErr)
 			}
 		})
 	})
