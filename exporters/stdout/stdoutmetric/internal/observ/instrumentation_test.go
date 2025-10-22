@@ -66,7 +66,7 @@ func findMetric(rm metricdata.ResourceMetrics, name string) (metricdata.Metrics,
 	return metricdata.Metrics{}, false
 }
 
-func TestExporterMetrics_TrackExport(t *testing.T) {
+func TestInstrumentationExportMetrics(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 
 	op1 := setup.em.ExportMetrics(setup.ctx, 2)
@@ -113,7 +113,7 @@ func TestExporterMetrics_TrackExport(t *testing.T) {
 	assert.Equal(t, int64(0), totalInflightValue)
 }
 
-func TestExporterMetrics_TrackExport_WithError(t *testing.T) {
+func TestInstrumentationExportMetricsWithError(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 	count := int64(3)
 	testErr := errors.New("export failed")
@@ -133,7 +133,7 @@ func TestExporterMetrics_TrackExport_WithError(t *testing.T) {
 	}
 }
 
-func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
+func TestInstrumentationExportMetricsInflightTracking(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 	count := int64(10)
 
@@ -161,7 +161,7 @@ func TestExporterMetrics_TrackExport_InflightTracking(t *testing.T) {
 	}
 }
 
-func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
+func TestInstrumentationExportMetricsAttributesNotPermanentlyModified(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	em, err := NewInstrumentation(42)
@@ -187,7 +187,7 @@ func TestExporterMetrics_AttributesNotPermanentlyModified(t *testing.T) {
 	assert.Contains(t, em.attrs, expectedComponentType)
 }
 
-func BenchmarkTrackExport(b *testing.B) {
+func BenchmarkExportMetrics(b *testing.B) {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	orig := otel.GetMeterProvider()
 	b.Cleanup(func() {
