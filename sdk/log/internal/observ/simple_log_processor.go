@@ -69,7 +69,7 @@ func NewSLP(id int64) (*SLP, error) {
 	}
 
 	name := GetComponentName(id)
-	componentType := p.AttrComponentType(otelconv.ComponentTypeBatchingLogProcessor)
+	componentType := p.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor)
 	attrs := []attribute.KeyValue{name, componentType}
 	addOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(attrs...))}
 
