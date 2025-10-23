@@ -39,7 +39,7 @@ func GetComponentName(id int64) attribute.KeyValue {
 	return semconv.OTelComponentName(name)
 }
 
-// SLP is the instrumentation fot an OTel SDK SimpleLogProcessor.
+// SLP is the instrumentation for an OTel SDK SimpleLogProcessor.
 type SLP struct {
 	processed metric.Int64Counter
 	attrs     []attribute.KeyValue
