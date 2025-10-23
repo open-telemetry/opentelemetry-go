@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -140,5 +141,57 @@ func TestSLP(t *testing.T) {
 		slp, collect := setup(t)
 		slp.LogProcessed(t.Context(), processErr)
 		assertMetric(t, collect(), processErr)
+	})
+}
+
+func BenchmarkSLP(b *testing.B) {
+	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	newSLP := func(b *testing.B) *SLP {
+		b.Helper()
+		slp, err := NewSLP(slpComponentID)
+		require.NoError(b, err)
+		require.NotNil(b, slp)
+		return slp
+	}
+
+	b.Run("LogProcessed", func(b *testing.B) {
+		orig := otel.GetMeterProvider()
+		b.Cleanup(func() {
+			otel.SetMeterProvider(orig)
+		})
+
+		otel.SetMeterProvider(noop.NewMeterProvider())
+
+		ssp := newSLP(b)
+		ctx := b.Context()
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				ssp.LogProcessed(ctx, nil)
+			}
+		})
+	})
+
+	b.Run("LogProcessedWithError", func(b *testing.B) {
+		orig := otel.GetMeterProvider()
+		b.Cleanup(func() {
+			otel.SetMeterProvider(orig)
+		})
+		otel.SetMeterProvider(noop.NewMeterProvider())
+		slp := newSLP(b)
+		ctx := b.Context()
+
+		processErr := errors.New("error processing log")
+
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				slp.LogProcessed(ctx, processErr)
+			}
+		})
 	})
 }
