@@ -33,7 +33,9 @@ var measureAttrsPool = sync.Pool{
 	},
 }
 
-func GetComponentName(id int64) attribute.KeyValue {
+// GetSLPComponentName returns the component name attribute for a
+// SimpleLogProcessor with the given ID.
+func GetSLPComponentName(id int64) attribute.KeyValue {
 	t := otelconv.ComponentTypeSimpleLogProcessor
 	name := fmt.Sprintf("%s/%d", t, id)
 	return semconv.OTelComponentName(name)
@@ -68,7 +70,7 @@ func NewSLP(id int64) (*SLP, error) {
 		return nil, err
 	}
 
-	name := GetComponentName(id)
+	name := GetSLPComponentName(id)
 	componentType := p.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor)
 	attrs := []attribute.KeyValue{name, componentType}
 	addOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(attrs...))}

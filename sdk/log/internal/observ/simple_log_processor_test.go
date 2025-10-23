@@ -91,7 +91,7 @@ func processedMetric(err error) metricdata.Metrics {
 	processed := &otelconv.SDKProcessorLogProcessed{}
 
 	attrs := []attribute.KeyValue{
-		GetComponentName(slpComponentID),
+		GetSLPComponentName(slpComponentID),
 		processed.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
 	}
 
