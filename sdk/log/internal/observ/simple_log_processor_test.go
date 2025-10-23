@@ -56,6 +56,13 @@ func TestNewSLPError(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to create a processed log metric")
 }
 
+func TestNewSLPDisabled(t *testing.T) {
+	// Do not set OTEL_GO_X_OBSERVABILITY
+	bsp, err := NewSLP(slpComponentID)
+	assert.NoError(t, err)
+	assert.Nil(t, bsp)
+}
+
 func setup(t *testing.T) (*SLP, func() metricdata.ScopeMetrics) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
