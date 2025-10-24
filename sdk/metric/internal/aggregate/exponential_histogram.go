@@ -22,6 +22,26 @@ const (
 	expoMinScale = -10
 )
 
+// expoHistogramDataPoint is a single data point in an exponential histogram.
+type expoHistogramDataPoint[N int64 | float64] struct {
+	rescaleMux sync.Mutex
+	expoHistogramPointCounters[N]
+
+	attrs attribute.Set
+	res   FilteredExemplarReservoir[N]
+}
+
+func newExpoHistogramDataPoint[N int64 | float64](
+	attrs attribute.Set,
+	maxSize int,
+	maxScale int32,
+) *expoHistogramDataPoint[N] { // nolint:revive // we need this control flag
+	return &expoHistogramDataPoint[N]{
+		attrs:                      attrs,
+		expoHistogramPointCounters: newExpoHistogramPointCounters[N](maxSize, maxScale),
+	}
+}
+
 // hotColdExpoHistogramPoint a hot and cold exponential histogram points, used
 // in cumulative aggregations.
 type hotColdExpoHistogramPoint[N int64 | float64] struct {
@@ -32,8 +52,6 @@ type hotColdExpoHistogramPoint[N int64 | float64] struct {
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
 
-	noMinMax bool
-	noSum    bool
 	maxScale int32
 }
 
@@ -41,12 +59,9 @@ func newHotColdExpoHistogramDataPoint[N int64 | float64](
 	attrs attribute.Set,
 	maxSize int,
 	maxScale int32,
-	noMinMax, noSum bool,
 ) *hotColdExpoHistogramPoint[N] { // nolint:revive // we need this control flag
 	return &hotColdExpoHistogramPoint[N]{
 		attrs:    attrs,
-		noMinMax: noMinMax,
-		noSum:    noSum,
 		maxScale: maxScale,
 		hotColdPoint: [2]expoHistogramPointCounters[N]{
 			newExpoHistogramPointCounters[N](maxSize, maxScale),
@@ -55,32 +70,46 @@ func newHotColdExpoHistogramDataPoint[N int64 | float64](
 	}
 }
 
-// record adds a new measurement to the histogram. It will rescale the buckets if needed.
-func (p *hotColdExpoHistogramPoint[N]) record(v N) {
-	hotIdx := p.hcwg.start()
-	defer p.hcwg.done(hotIdx)
-	p.rescaleMux.Lock()
-	defer p.rescaleMux.Unlock()
-	if !p.noMinMax {
-		p.hotColdPoint[hotIdx].minMax.Update(v)
-	}
-	if !p.noSum {
-		p.hotColdPoint[hotIdx].sum.add(v)
-	}
-
+func (p *expoHistogramPointCounters[N]) tryFastRecord(v N, noMinMax, noSum bool) bool { // nolint:revive // we need this control flag
 	absV := math.Abs(float64(v))
-
 	if float64(absV) == 0.0 {
-		p.hotColdPoint[hotIdx].zeroCount.Add(1)
+		p.zeroCount.Add(1)
+		return true
+	}
+	bucket := &p.posBuckets
+	if v < 0 {
+		bucket = &p.negBuckets
+	}
+	if !bucket.tryFastRecord(absV) {
+		return false
+	}
+	if !noMinMax {
+		p.minMax.Update(v)
+	}
+	if !noSum {
+		p.sum.add(v)
+	}
+	return true
+}
+
+// record adds a new measurement to the histogram. It will rescale the buckets if needed.
+// The caller must hold the rescaleMux lock
+func (p *expoHistogramPointCounters[N]) record(v N, noMinMax, noSum bool) { // nolint:revive // we need this control flag
+	absV := math.Abs(float64(v))
+	bucket := &p.posBuckets
+	if v < 0 {
+		bucket = &p.negBuckets
+	}
+	if !bucket.record(absV) {
+		// We failed to record for an unrecoverable reason.
 		return
 	}
-
-	bucket := &p.hotColdPoint[hotIdx].posBuckets
-	if v < 0 {
-		bucket = &p.hotColdPoint[hotIdx].negBuckets
+	if !noMinMax {
+		p.minMax.Update(v)
 	}
-
-	bucket.record(absV)
+	if !noSum {
+		p.sum.add(v)
+	}
 }
 
 // expoHistogramPointCounters contains only the atomic counter data, and is
@@ -90,69 +119,259 @@ type expoHistogramPointCounters[N int64 | float64] struct {
 	sum       atomicCounter[N]
 	zeroCount atomic.Uint64
 
-	posBuckets expoBuckets
-	negBuckets expoBuckets
+	posBuckets hotColdExpoBuckets
+	negBuckets hotColdExpoBuckets
 }
 
-func newExpoHistogramPointCounters[N int64 | float64](maxSize int, maxScale int32) expoHistogramPointCounters[N] {
+func newExpoHistogramPointCounters[N int64 | float64](
+	maxSize int,
+	maxScale int32) expoHistogramPointCounters[N] {
 	return expoHistogramPointCounters[N]{
-		posBuckets: expoBuckets{
-			scale:  maxScale,
-			counts: make([]atomic.Uint64, maxSize),
-		},
-		negBuckets: expoBuckets{
-			scale:  maxScale,
-			counts: make([]atomic.Uint64, maxSize),
-		},
+		posBuckets: newHotColdExpoBuckets(maxSize, maxScale),
+		negBuckets: newHotColdExpoBuckets(maxSize, maxScale),
 	}
 }
 
-func (e *expoHistogramPointCounters[N]) reset(maxScale int32) {
-	e.sum.reset()
-	e.zeroCount.Store(0)
-	e.posBuckets.reset(maxScale)
-	e.negBuckets.reset(maxScale)
-}
+// loadInto writes the values of the counters into the datapoint.
+// It is safe to call concurrently, but callers need to use a hot/cold
+// waitgroup to ensure consistent results.
+func (e *expoHistogramPointCounters[N]) loadInto(into *metricdata.ExponentialHistogramDataPoint[N], noMinMax, noSum bool) {
+	into.ZeroCount = e.zeroCount.Load()
+	if !noSum {
+		into.Sum = e.sum.load()
+	}
+	if !noMinMax && e.minMax.set.Load() {
+		into.Min = metricdata.NewExtrema(e.minMax.minimum.Load())
+		into.Max = metricdata.NewExtrema(e.minMax.maximum.Load())
+	}
+	into.Scale = e.posBuckets.unifyScale(&e.negBuckets)
 
-func (e *expoHistogramPointCounters[N]) count() uint64 {
-	count := e.zeroCount.Load()
-	for i := range e.posBuckets.counts {
-		count += e.posBuckets.counts[i].Load()
-	}
-	for i := range e.negBuckets.counts {
-		count += e.negBuckets.counts[i].Load()
-	}
-	return count
+	posCount, posOffset := e.posBuckets.loadCountsAndOffset(&into.PositiveBucket.Counts)
+	into.PositiveBucket.Offset = posOffset
+
+	negCount, negOffset := e.negBuckets.loadCountsAndOffset(&into.NegativeBucket.Counts)
+	into.NegativeBucket.Offset = negOffset
+
+	into.Count = posCount + negCount + into.ZeroCount
+
 }
 
 // mergeInto merges this set of histogram counter data into another,
 // and resets the state of this set of counters. This is used by
 // hotColdHistogramPoint to ensure that the cumulative counters continue to
 // accumulate after being read.
-func (p *expoHistogramPointCounters[N]) mergeInto( // nolint:revive // Intentional internal control flag
+func (p *expoHistogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Intentional internal control flag
 	into *expoHistogramPointCounters[N],
 	noMinMax, noSum bool,
 ) {
-	if !noMinMax {
-		// Do not reset min or max because cumulative min and max only ever grow
-		// smaller or larger respectively.
-		if p.minMax.set.Load() {
-			into.minMax.Update(p.minMax.minimum.Load())
-			into.minMax.Update(p.minMax.maximum.Load())
-		}
+	// Swap in 0 to reset the zero count.
+	into.zeroCount.Add(p.zeroCount.Swap(0))
+	// Do not reset min or max because cumulative min and max only ever grow
+	// smaller or larger respectively.
+	if !noMinMax && p.minMax.set.Load() {
+		into.minMax.Update(p.minMax.minimum.Load())
+		into.minMax.Update(p.minMax.maximum.Load())
 	}
 	if !noSum {
 		into.sum.add(p.sum.load())
+		p.sum.reset()
 	}
-	p.posBuckets.mergeInto(&into.posBuckets)
-	p.negBuckets.mergeInto(&into.negBuckets)
+	p.posBuckets.mergeIntoAndReset(&into.posBuckets)
+	p.negBuckets.mergeIntoAndReset(&into.negBuckets)
+}
+
+type hotColdExpoBuckets struct {
+	hcwg           hotColdWaitGroup
+	hotColdBuckets [2]expoBuckets
+
+	maxScale int32
+}
+
+func newHotColdExpoBuckets(maxSize int, maxScale int32) hotColdExpoBuckets {
+	return hotColdExpoBuckets{
+		hotColdBuckets: [2]expoBuckets{
+			newExpoBuckets(maxSize, maxScale),
+			newExpoBuckets(maxSize, maxScale),
+		},
+		maxScale: maxScale,
+	}
+}
+
+// tryFastRecord is the fast-path for exponential histogram measurements. It
+// succeeds if the value can be written without downscaling the buckets.
+// If it fails, it returns false, and also expands the range of the buckets as
+// far towards the required bin as possible to prevent the range from changing
+// while we downscale.
+func (b *hotColdExpoBuckets) tryFastRecord(v float64) bool {
+	hotIdx := b.hcwg.start()
+	defer b.hcwg.done(hotIdx)
+	return b.hotColdBuckets[hotIdx].recordBucket(b.hotColdBuckets[hotIdx].getBin(v))
+}
+
+// record is the slow path, and is invoked when the tryFastRecord fails.
+// It locks to prevent concurrent scale changes. It downscales buckets to fit
+// the measurement, and then records it.
+func (b *hotColdExpoBuckets) record(v float64) bool {
+	// Hot may have been swapped while we were waiting for the lock.
+	// We don't use p.hcwg.start() because we already hold the lock, and would
+	// deadlock when waiting for writes to complete.
+	hotIdx := b.hcwg.loadHot()
+	hotBucket := &b.hotColdBuckets[hotIdx]
+
+	// Try recording again in-case it was resized while we were waiting, and to
+	// ensure the bucket range doesn't change.
+	bin := hotBucket.getBin(v)
+	if hotBucket.recordBucket(hotBucket.getBin(v)) {
+		return true
+	}
+
+	hotBucket.startEndMux.Lock()
+	defer hotBucket.startEndMux.Unlock()
+
+	// Since recordBucket failed above, we know we need a scale change.
+	scaleDelta := hotBucket.scaleChange(bin)
+	if hotBucket.scale-scaleDelta < expoMinScale {
+		// With a scale of -10 there is only two buckets for the whole range of float64 values.
+		// This can only happen if there is a max size of 1.
+		otel.Handle(errors.New("exponential histogram scale underflow"))
+		return false
+	}
+	// Copy scale and min/max to cold
+	coldIdx := (hotIdx + 1) % 2
+	coldBucket := &b.hotColdBuckets[coldIdx]
+	coldBucket.scale = hotBucket.scale
+	startBin, endBin := hotBucket.startAndEnd.Load()
+	coldBucket.startAndEnd.Store(startBin, endBin)
+	// Downscale cold to the new scale
+	coldBucket.downscale(scaleDelta)
+	// Expand the cold prior to swapping to hot to ensure our measurement fits.
+	bin = coldBucket.getBin(v)
+	coldBucket.resizeToInclude(bin)
+
+	coldBucket.startEndMux.Lock()
+	defer coldBucket.startEndMux.Unlock()
+
+	b.hcwg.swapHotAndWait()
+	// Now that hot has become cold, downscale it, and merge it into the new hot buckets.
+	hotBucket.downscale(scaleDelta)
+	hotBucket.mergeIntoAndReset(coldBucket, b.maxScale)
+
+	return coldBucket.recordBucket(bin)
+}
+
+// func (b *hotColdExpoBuckets) expandToInclude(bin int32) {
+// 	hotIdx := b.hcwg.loadHot()
+// 	hotBucket := &b.hotColdBuckets[hotIdx]
+// 	// Since recordBucket failed above, we know we need a scale change.
+// 	scaleDelta := hotBucket.scaleChange(bin)
+// 	if hotBucket.scale-scaleDelta < expoMinScale {
+// 		// With a scale of -10 there is only two buckets for the whole range of float64 values.
+// 		// This can only happen if there is a max size of 1.
+// 		otel.Handle(errors.New("exponential histogram scale underflow"))
+// 		return
+// 	}
+// 	// Copy scale and min/max to cold
+// 	coldIdx := (hotIdx + 1) % 2
+// 	coldBucket := &b.hotColdBuckets[coldIdx]
+// 	coldBucket.scale = hotBucket.scale
+// 	startBin, endBin := hotBucket.startAndEnd.Load()
+// 	coldBucket.startAndEnd.Store(startBin, endBin)
+// 	// Downscale cold to the new scale
+// 	coldBucket.downscale(scaleDelta)
+// 	// Expand the cold prior to swapping to hot to ensure our measurement fits.
+// 	bin = coldBucket.getBin(v)
+// 	coldBucket.resizeToInclude(bin)
+
+// 	b.hcwg.swapHotAndWait()
+// 	// Now that hot has become cold, downscale it, and merge it into the new hot buckets.
+// 	hotBucket.downscale(scaleDelta)
+// 	hotBucket.mergeInto(coldBucket)
+// 	hotBucket.reset(b.maxScale)
+// }
+
+// mergeInto merges the values of one hotColdExpoBuckets into another.
+// The caller must already have exclusive access to b, and into can accept
+// measurements concurrently with mergeInto.
+func (b *hotColdExpoBuckets) mergeIntoAndReset(into *hotColdExpoBuckets) {
+	// unifyScale is what is racing with writes
+	b.unifyScale(into)
+	bHotIdx := b.hcwg.loadHot()
+	bBuckets := &b.hotColdBuckets[bHotIdx]
+	intoHotIdx := into.hcwg.loadHot()
+	intoBuckets := &into.hotColdBuckets[intoHotIdx]
+
+	startBin, endBin := bBuckets.startAndEnd.Load()
+	if startBin != endBin {
+		intoBuckets.resizeToInclude(startBin)
+		intoBuckets.resizeToInclude(endBin - 1)
+	}
+	scaleDelta := intoBuckets.scaleChange(endBin - 1)
+	if scaleDelta > 0 {
+		// Merging buckets required a scale change to the positive buckets to
+		// fit within the max scale. Update scale and scale down the negative
+		// buckets to match.
+		b.downscale(scaleDelta, bHotIdx)
+		into.downscale(scaleDelta, intoHotIdx)
+	}
+	b.hotColdBuckets[b.hcwg.loadHot()].mergeIntoAndReset(&into.hotColdBuckets[into.hcwg.loadHot()], b.maxScale)
+}
+
+// unifyScale downscales buckets as needed to make the scale of b and other
+// the same. It returns the resulting scale. The caller must have exclusive
+// access to both hotColdExpoBuckets.
+func (b *hotColdExpoBuckets) unifyScale(other *hotColdExpoBuckets) int32 {
+	bHotIdx := b.hcwg.loadHot()
+	bScale := b.hotColdBuckets[bHotIdx].scale
+	otherHotIdx := other.hcwg.loadHot()
+	otherScale := other.hotColdBuckets[otherHotIdx].scale
+	if bScale < otherScale {
+		other.downscale(otherScale-bScale, otherHotIdx)
+	} else if bScale > otherScale {
+		b.downscale(bScale-otherScale, bHotIdx)
+	}
+	return min(bScale, otherScale)
+}
+
+// downscale force-downscales the bucket. It is assumed that the new scale is valid.
+// The caller must hold the rescale mux.
+func (b *hotColdExpoBuckets) downscale(delta int32, hotIdx uint64) {
+	// Copy scale and min/max to cold
+	coldIdx := (hotIdx + 1) % 2
+	coldBucket := &b.hotColdBuckets[coldIdx]
+	hotBucket := &b.hotColdBuckets[hotIdx]
+	coldBucket.scale = hotBucket.scale
+	startBin, endBin := hotBucket.startAndEnd.Load()
+
+	coldBucket.startAndEnd.Store(startBin, endBin)
+	// Downscale cold to the new scale
+	coldBucket.downscale(delta)
+
+	b.hcwg.swapHotAndWait()
+
+	// Now that hot has become cold, downscale it, and merge it into the new hot buckets.
+	hotBucket.downscale(delta)
+	hotBucket.mergeIntoAndReset(coldBucket, b.maxScale)
+}
+
+// loadCountsAndOffset returns the buckets counts, the count, and the offset.
+// It is not safe to call concurrently.
+func (b *hotColdExpoBuckets) loadCountsAndOffset(buckets *[]uint64) (uint64, int32) {
+	return b.hotColdBuckets[b.hcwg.loadHot()].loadCountsAndOffset(buckets)
 }
 
 // expoBuckets is a set of buckets in an exponential histogram.
 type expoBuckets struct {
 	scale       int32
+	startEndMux sync.Mutex
 	startAndEnd atomicLimitedRange
 	counts      []atomic.Uint64
+}
+
+func newExpoBuckets(maxSize int, maxScale int32) expoBuckets {
+	return expoBuckets{
+		scale:  maxScale,
+		counts: make([]atomic.Uint64, maxSize),
+	}
 }
 
 // getIdx returns the index into counts for the provided bin.
@@ -161,26 +380,24 @@ func (e *expoBuckets) getIdx(bin int32) int {
 	return (newBin + len(e.counts)) % len(e.counts)
 }
 
-func (e *expoBuckets) reset(maxScale int32) {
-	e.scale = maxScale
-	e.startAndEnd.Store(0, 0)
-	for i := range e.counts {
-		e.counts[i].Store(0)
-	}
-}
-
-func (e *expoBuckets) loadCountsInto(into *[]uint64) {
+// loadCountsAndOffset returns the buckets counts, the count, and the offset.
+// It is not safe to call concurrently.
+func (e *expoBuckets) loadCountsAndOffset(into *[]uint64) (uint64, int32) {
 	// TODO (#3047): Making copies for bounds and counts incurs a large
 	// memory allocation footprint. Alternatives should be explored.
 	start, end := e.startAndEnd.Load()
 	length := int(end - start)
 	counts := reset(*into, length, length)
+	count := uint64(0)
 	eIdx := start
 	for i := range length {
-		counts[i] = e.counts[e.getIdx(eIdx)].Load()
+		val := e.counts[e.getIdx(eIdx)].Load()
+		counts[i] = val
+		count += val
 		eIdx++
 	}
 	*into = counts
+	return count, start
 }
 
 // getBin returns the bin v should be recorded into.
@@ -255,48 +472,18 @@ func (b *expoBuckets) scaleChange(bin int32) int32 {
 	return count
 }
 
-// record increments the count for the given bin, and expands the buckets if needed.
-// Size changes must be done before calling this function.
-func (b *expoBuckets) record(absV float64) {
-	bin := b.getBin(absV)
-	fmt.Printf("record() Bin %v for val %v, with scale %v\n", bin, absV, b.scale)
-
-	// If the new bin would make the counts larger than maxScale, we need to
-	// downscale current measurements.
-	if scaleDelta := b.scaleChange(bin); scaleDelta > 0 {
-		if b.scale-scaleDelta < expoMinScale {
-			// With a scale of -10 there is only two buckets for the whole range of float64 values.
-			// This can only happen if there is a max size of 1.
-			otel.Handle(errors.New("exponential histogram scale underflow"))
-			return
-		}
-		// Downscale
-		b.downscale(scaleDelta)
-
-		bin = b.getBin(absV)
-		fmt.Printf("record() After downscale Bin %v for val %v\n", bin, absV)
-	} else {
-		fmt.Printf("scale change was 0\n")
-	}
-	b.recordBucket(bin)
-}
-
-func (b *expoBuckets) recordBucket(bin int32) {
-	b.resizeToInclude(bin)
-	b.counts[b.getIdx(bin)].Add(1)
+// recordBucket returns true if the bucket was incremented, or false if a downscale is required to
+func (b *expoBuckets) recordBucket(bin int32) bool {
 	startBin, endBin := b.startAndEnd.Load()
-	fmt.Printf("incremented bin %v idx %v, startBin %v, endBin %v, counts %+v\n", bin, b.getIdx(bin), startBin, endBin, b.counts)
-}
-
-func (b *expoBuckets) validate() {
-	startBin, endBin := b.startAndEnd.Load()
-	if endBin-startBin > int32(len(b.counts)) {
-		fmt.Printf("inconsistent start %v end %v len %v\n", startBin, endBin, len(b.counts))
+	if bin >= startBin && bin < endBin {
+		b.counts[b.getIdx(bin)].Add(1)
+		return true
 	}
+	return false
 }
 
 // downscale shrinks a bucket by a factor of 2*s. It will sum counts into the
-// correct lower resolution bucket.
+// correct lower resolution bucket. downscale is not concurrent safe.
 func (b *expoBuckets) downscale(delta int32) {
 	b.scale -= delta
 	// Example
@@ -314,7 +501,6 @@ func (b *expoBuckets) downscale(delta int32) {
 		newStartBin := startBin >> delta
 		newEndBin := newStartBin + length
 		b.startAndEnd.Store(newStartBin, newEndBin)
-		b.validate()
 		// Shift all elements left by the change in start position
 		startShift := b.getIdx(startBin - newStartBin)
 		b.counts = append(b.counts[startShift:], b.counts[:startShift]...)
@@ -323,7 +509,6 @@ func (b *expoBuckets) downscale(delta int32) {
 		for i := newEndBin; i < newStartBin+int32(len(b.counts)); i++ {
 			b.counts[b.getIdx(i)].Store(0)
 		}
-		fmt.Printf("downscale SHORT downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 		return
 	}
 
@@ -335,88 +520,61 @@ func (b *expoBuckets) downscale(delta int32) {
 	newEndBin := newStartBin + newLen
 	startShift := b.getIdx(startBin - newStartBin)
 
-	fmt.Printf("downscale START downsize %v startBin %v, newStartBin %v, shift %v, endBin %v, newEndBin %v, steps %v, offset %v, counts %v\n", delta, startBin, newStartBin, startShift, endBin, newEndBin, steps, offset, b.counts)
 	for i := startBin + 1; i < endBin; i++ {
 		newIdx := b.getIdx(int32(math.Floor(float64(i)/float64(steps))) + int32(startShift))
 		if i%steps == 0 {
 			b.counts[newIdx].Store(b.counts[b.getIdx(i)].Load())
-			fmt.Printf("downscale SET idx %v counts %+v\n", b.getIdx(i/steps+int32(startShift)), b.counts)
 			continue
 		}
 		b.counts[newIdx].Add(b.counts[b.getIdx(i)].Load())
-		fmt.Printf("downscale ADD i %v i/steps %v idx %v, getIdx %v counts %+v\n", i, i/steps, i/steps+int32(startShift), b.getIdx(i/steps+int32(startShift)), b.counts)
 	}
-	fmt.Printf("downscale END Merge downsize %v startBin %v, endBin %v, counts %v\n", delta, startBin, endBin, b.counts)
-
-	fmt.Printf("downscale LONG downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 	b.startAndEnd.Store(newStartBin, newEndBin)
-	b.validate()
 	// Shift all elements left by the change in start position
-	fmt.Printf("downscale SHIFT startBin %v newStartBin %v shift %v\n", startBin, newStartBin, startShift)
 	b.counts = append(b.counts[startShift:], b.counts[:startShift]...)
 
-	fmt.Printf("downscale AfterShiFT downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 	// Clear all elements that are outside of our start to end range
 	for i := newEndBin; i < newStartBin+int32(len(b.counts)); i++ {
 		b.counts[b.getIdx(i)].Store(0)
 	}
-	fmt.Printf("downscale FINAL downsize %v startBin %v, endBin %v, counts %v\n", delta, newStartBin, newEndBin, b.counts)
 }
 
+// resizeToInclude force-expands the range of b to include the bin.
+// resizeToInclude is not safe to call concurrently.
 func (b *expoBuckets) resizeToInclude(bin int32) {
+	b.startEndMux.Lock()
+	defer b.startEndMux.Unlock()
 	startBin, endBin := b.startAndEnd.Load()
 	if startBin == endBin {
 		startBin = bin
 		endBin = bin + 1
 		b.startAndEnd.Store(startBin, endBin)
-		b.validate()
-		fmt.Printf("resizeToInclude AAAAA bin %v start %v , end %v\n", bin, startBin, endBin)
 	} else if bin < startBin {
 		b.startAndEnd.Store(bin, endBin)
-		b.validate()
-		fmt.Printf("resizeToInclude CCCCC bin %v start %v , end %v\n", bin, startBin, endBin)
 	} else if bin >= endBin {
 		b.startAndEnd.Store(startBin, bin+1)
-		b.validate()
-		fmt.Printf("resizeToInclude DDDDDD bin %v start %v , end %v\n", bin, startBin, endBin)
-	} else {
-		fmt.Printf("resizeToInclude BBBBBB bin %v start %v , end %v\n", bin, startBin, endBin)
 	}
 }
 
 // mergeInto merges this expoBuckets into another, and resets the state
 // of the expoBuckets. This is used to ensure that the cumulative counters
-// continue to accumulate after being read. It returns the scale change that
-// was applied to the input buckets.
-func (b *expoBuckets) mergeInto(into *expoBuckets) {
-	// Rescale both to the same scale
-	scaleDelta := into.scale - b.scale
-	if scaleDelta > 0 {
-		into.downscale(scaleDelta)
-	} else if scaleDelta < 0 {
-		b.downscale(-scaleDelta)
+// continue to accumulate after being read.
+// mergeInto requires that scales are equal.
+func (b *expoBuckets) mergeIntoAndReset(into *expoBuckets, maxScale int32) {
+	if b.scale != into.scale {
+		panic("scales not equal")
 	}
-
-	startBin, endBin := b.startAndEnd.Load()
-	into.resizeToInclude(startBin)
-	into.resizeToInclude(endBin - 1)
-	scaleDelta = into.scaleChange(endBin - 1)
-	if scaleDelta > 0 {
-		// Merging buckets required a scale change to the positive buckets to
-		// fit within the max scale. Update scale and scale down the negative
-		// buckets to match.
-		b.downscale(scaleDelta)
-		into.downscale(scaleDelta)
+	intoStartBin, intoEndBin := into.startAndEnd.Load()
+	bStartBin, bEndBin := b.startAndEnd.Load()
+	b.startAndEnd.Store(0, 0)
+	if bStartBin != bEndBin && (intoStartBin > bStartBin || intoEndBin < bEndBin) {
+		panic(fmt.Sprintf("into is not a superset of b.  intoStartBin %v, bStartBin %v, intoEndBin %v, bEndBin %v", intoStartBin, bStartBin, intoEndBin, bEndBin))
 	}
-	// At this point, into as been expanded to be a superset of b.
-	// Now we finally increment buckets.
-	bStartBin, _ := b.startAndEnd.Load()
-	intoStartBin, _ := b.startAndEnd.Load()
-	startBinDelta := bStartBin - intoStartBin
-	for i := range b.counts {
-		into.counts[i+int(startBinDelta)].Add(b.counts[i].Load())
+	for i := bStartBin; i < bEndBin; i++ {
+		// Swap in 0 to reset
+		val := b.counts[b.getIdx(int32(i))].Swap(0)
+		into.counts[into.getIdx(int32(i))].Add(val)
 	}
-	b.validate()
+	b.scale = maxScale
 }
 
 // newDeltaExponentialHistogram returns an Aggregator that summarizes a set of
@@ -473,11 +631,15 @@ func (e *deltaExpoHistogram[N]) measure(
 	hotIdx := e.hcwg.start()
 	defer e.hcwg.done(hotIdx)
 	v := e.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		hPt := newHotColdExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		hPt := newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale)
 		hPt.res = e.newRes(attr)
 		return hPt
-	}).(*hotColdExpoHistogramPoint[N])
-	v.record(value)
+	}).(*expoHistogramDataPoint[N])
+	if !v.tryFastRecord(value, e.noMinMax, e.noSum) {
+		v.rescaleMux.Lock()
+		v.record(value, e.noMinMax, e.noSum)
+		v.rescaleMux.Unlock()
+	}
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
@@ -501,47 +663,15 @@ func (e *deltaExpoHistogram[N]) collect(
 
 	var i int
 	e.hotColdValMap[readIdx].Range(func(_, value any) bool {
-		val := value.(*hotColdExpoHistogramPoint[N])
-		val.rescaleMux.Lock()
-		defer val.rescaleMux.Unlock()
-		readIdx := val.hcwg.swapHotAndWait()
-		defer val.hotColdPoint[readIdx].reset(e.maxScale)
+		val := value.(*expoHistogramDataPoint[N])
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
-		hDPts[i].Count = val.hotColdPoint[readIdx].count()
-		hDPts[i].ZeroCount = val.hotColdPoint[readIdx].zeroCount.Load()
 		hDPts[i].ZeroThreshold = 0.0
 
-		// Unify the positive and negative scales by downscaling the higher
-		// scale to the lower one.
-		scale := min(val.hotColdPoint[readIdx].posBuckets.scale, val.hotColdPoint[readIdx].negBuckets.scale)
-		hDPts[i].Scale = scale
-		if scaleDelta := val.hotColdPoint[readIdx].posBuckets.scale - scale; scaleDelta > 0 {
-			val.hotColdPoint[readIdx].posBuckets.downscale(scaleDelta)
-		}
-		if scaleDelta := val.hotColdPoint[readIdx].negBuckets.scale - scale; scaleDelta > 0 {
-			val.hotColdPoint[readIdx].negBuckets.downscale(scaleDelta)
-		}
-
-		offset, _ := val.hotColdPoint[readIdx].posBuckets.startAndEnd.Load()
-		hDPts[i].PositiveBucket.Offset = offset
-		val.hotColdPoint[readIdx].posBuckets.loadCountsInto(&hDPts[i].PositiveBucket.Counts)
-
-		offset, _ = val.hotColdPoint[readIdx].negBuckets.startAndEnd.Load()
-		hDPts[i].NegativeBucket.Offset = offset
-		val.hotColdPoint[readIdx].negBuckets.loadCountsInto(&hDPts[i].NegativeBucket.Counts)
-
-		if !e.noSum {
-			hDPts[i].Sum = val.hotColdPoint[readIdx].sum.load()
-		}
-		if !e.noMinMax {
-			if val.hotColdPoint[readIdx].minMax.set.Load() {
-				hDPts[i].Min = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.minimum.Load())
-				hDPts[i].Max = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.maximum.Load())
-			}
-		}
-
+		val.rescaleMux.Lock()
+		defer val.rescaleMux.Unlock()
+		val.loadInto(&hDPts[i], e.noMinMax, e.noSum)
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 
 		i++
@@ -605,11 +735,20 @@ func (e *cumulativeExpoHistogram[N]) measure(
 	}
 
 	v := e.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		hPt := newHotColdExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		hPt := newHotColdExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale)
 		hPt.res = e.newRes(attr)
 		return hPt
 	}).(*hotColdExpoHistogramPoint[N])
-	v.record(value)
+
+	hotIdx := v.hcwg.start()
+	fastRecordSuccess := v.hotColdPoint[hotIdx].tryFastRecord(value, e.noMinMax, e.noSum)
+	v.hcwg.done(hotIdx)
+	if !fastRecordSuccess {
+		v.rescaleMux.Lock()
+		// we hold the lock, so no need to use start/end from hcwg
+		v.hotColdPoint[v.hcwg.loadHot()].record(value, e.noMinMax, e.noSum)
+		v.rescaleMux.Unlock()
+	}
 	v.res.Offer(ctx, value, droppedAttr)
 }
 
@@ -630,51 +769,45 @@ func (e *cumulativeExpoHistogram[N]) collect(
 	var i int
 	e.values.Range(func(_, value any) bool {
 		val := value.(*hotColdExpoHistogramPoint[N])
-		val.rescaleMux.Lock()
-		defer val.rescaleMux.Unlock()
-		readIdx := val.hcwg.swapHotAndWait()
 		newPt := metricdata.ExponentialHistogramDataPoint[N]{
 			Attributes:    val.attrs,
 			StartTime:     e.start,
 			Time:          t,
-			Count:         val.hotColdPoint[readIdx].count(),
-			ZeroCount:     val.hotColdPoint[readIdx].zeroCount.Load(),
 			ZeroThreshold: 0.0,
 		}
+		val.rescaleMux.Lock()
+		defer val.rescaleMux.Unlock()
+		// Prevent buckets from changing start or end ranges during collection
+		// so mergeInto below succeeds.
+		hotIdx := val.hcwg.loadHot()
+		val.hotColdPoint[hotIdx].posBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].posBuckets.hcwg.loadHot()].startEndMux.Lock()
+		defer val.hotColdPoint[hotIdx].posBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].posBuckets.hcwg.loadHot()].startEndMux.Unlock()
+		val.hotColdPoint[hotIdx].negBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].negBuckets.hcwg.loadHot()].startEndMux.Lock()
+		defer val.hotColdPoint[hotIdx].negBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].negBuckets.hcwg.loadHot()].startEndMux.Unlock()
 
-		// Unify the positive and negative scales by downscaling the higher
-		// scale to the lower one.
-		scale := min(val.hotColdPoint[readIdx].posBuckets.scale, val.hotColdPoint[readIdx].negBuckets.scale)
-		newPt.Scale = scale
-		if scaleDelta := val.hotColdPoint[readIdx].posBuckets.scale - scale; scaleDelta > 0 {
-			val.hotColdPoint[readIdx].posBuckets.downscale(scaleDelta)
-		}
-		if scaleDelta := val.hotColdPoint[readIdx].negBuckets.scale - scale; scaleDelta > 0 {
-			val.hotColdPoint[readIdx].negBuckets.downscale(scaleDelta)
-		}
+		// Set the range of the cold point to the hot range to ensure we don't
+		// accept measurements that would have resulted in an underflow, and
+		// would block mergeInto below.
+		coldIdx := (hotIdx + 1) % 2
+		start, end := val.hotColdPoint[hotIdx].posBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].posBuckets.hcwg.loadHot()].startAndEnd.Load()
+		val.hotColdPoint[coldIdx].posBuckets.hotColdBuckets[val.hotColdPoint[coldIdx].posBuckets.hcwg.loadHot()].startAndEnd.Store(start, end)
+		start, end = val.hotColdPoint[hotIdx].negBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].negBuckets.hcwg.loadHot()].startAndEnd.Load()
+		val.hotColdPoint[coldIdx].negBuckets.hotColdBuckets[val.hotColdPoint[coldIdx].negBuckets.hcwg.loadHot()].startAndEnd.Store(start, end)
 
-		offset, _ := val.hotColdPoint[readIdx].posBuckets.startAndEnd.Load()
-		newPt.PositiveBucket.Offset = offset
-		val.hotColdPoint[readIdx].posBuckets.loadCountsInto(&newPt.PositiveBucket.Counts)
+		// Set the scale to the minimum of the pos and negative bucket scale.
+		posScale := val.hotColdPoint[hotIdx].posBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].posBuckets.hcwg.loadHot()].scale
+		negScale := val.hotColdPoint[hotIdx].negBuckets.hotColdBuckets[val.hotColdPoint[hotIdx].negBuckets.hcwg.loadHot()].scale
+		newScale := min(posScale, negScale)
+		val.hotColdPoint[coldIdx].posBuckets.hotColdBuckets[val.hotColdPoint[coldIdx].posBuckets.hcwg.loadHot()].scale = newScale
+		val.hotColdPoint[coldIdx].negBuckets.hotColdBuckets[val.hotColdPoint[coldIdx].negBuckets.hcwg.loadHot()].scale = newScale
 
-		offset, _ = val.hotColdPoint[readIdx].negBuckets.startAndEnd.Load()
-		newPt.NegativeBucket.Offset = offset
-		val.hotColdPoint[readIdx].negBuckets.loadCountsInto(&newPt.NegativeBucket.Counts)
-
-		if !e.noSum {
-			newPt.Sum = val.hotColdPoint[readIdx].sum.load()
-		}
-		if !e.noMinMax {
-			if val.hotColdPoint[readIdx].minMax.set.Load() {
-				newPt.Min = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.minimum.Load())
-				newPt.Max = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.maximum.Load())
-			}
-		}
-		// Once we've read the point, merge it back into the hot histogram
+		// Swap so we can read from hot
+		readIdx := val.hcwg.swapHotAndWait()
+		readPt := &val.hotColdPoint[readIdx]
+		readPt.loadInto(&newPt, e.noMinMax, e.noSum)
+		// Once we've read the point, merge it back into the now-hot histogram
 		// point since it is cumulative.
-		hotIdx := (readIdx + 1) % 2
-		val.hotColdPoint[readIdx].mergeInto(&val.hotColdPoint[hotIdx], e.noMinMax, e.noSum)
-		val.hotColdPoint[readIdx].reset(val.maxScale)
+		readPt.mergeIntoAndReset(&val.hotColdPoint[(readIdx+1)%2], e.noMinMax, e.noSum)
 
 		collectExemplars(&newPt.Exemplars, val.res.Collect)
 		hDPts = append(hDPts, newPt)
@@ -691,3 +824,6 @@ func (e *cumulativeExpoHistogram[N]) collect(
 	*dest = h
 	return i
 }
+
+// Aquire lock first, then use HCWG for read
+// Aquire lock first, then use HCWG for write

@@ -193,6 +193,10 @@ func (l *hotColdWaitGroup) start() uint64 {
 	return l.startedCountAndHotIdx.Add(1) >> 63
 }
 
+func (l *hotColdWaitGroup) loadHot() uint64 {
+	return l.startedCountAndHotIdx.Load() >> 63
+}
+
 // done signals to the reader that an operation has fully completed.
 // done is safe to call concurrently.
 func (l *hotColdWaitGroup) done(hotIdx uint64) {
