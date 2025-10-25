@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.opentelemetry.io/otel/attribute/internal/fnv"
+	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
 
 // Type identifiers. These identifiers are hashed before the value of the
@@ -17,7 +17,7 @@ import (
 //
 // These are all 8 byte length strings converted to a uint64 representation. A
 // uint64 is used instead of the string directly as an optimization, it avoids
-// the for loop in [fnv] which adds minor overhead.
+// the for loop in [xxhash] which adds minor overhead.
 const (
 	boolID         uint64 = 7953749933313450591 // "_boolean" (little endian)
 	int64ID        uint64 = 7592915492740740150 // "64_bit_i" (little endian)
@@ -29,17 +29,17 @@ const (
 	stringSliceID  uint64 = 7453010373645655387 // "[]string" (little endian)
 )
 
-// hashKVs returns a new FNV-1a hash of kvs.
-func hashKVs(kvs []KeyValue) fnv.Hash {
-	h := fnv.New()
+// hashKVs returns a new xxHash64 hash of kvs.
+func hashKVs(kvs []KeyValue) uint64 {
+	h := xxhash.New()
 	for _, kv := range kvs {
 		h = hashKV(h, kv)
 	}
-	return h
+	return h.Sum64()
 }
 
-// hashKV returns the FNV-1a hash of kv with h as the base.
-func hashKV(h fnv.Hash, kv KeyValue) fnv.Hash {
+// hashKV returns the xxHash64 hash of kv with h as the base.
+func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 	h = h.String(string(kv.Key))
 
 	switch kv.Value.Type() {

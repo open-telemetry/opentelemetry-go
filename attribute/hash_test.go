@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/attribute/internal/fnv"
 )
 
 // keyVals is all the KeyValue generators that are used for testing. This is
@@ -42,7 +41,7 @@ var keyVals = []func(string) KeyValue{
 
 func TestHashKVsEquality(t *testing.T) {
 	type testcase struct {
-		hash fnv.Hash
+		hash uint64
 		kvs  []KeyValue
 	}
 
@@ -105,7 +104,7 @@ func TestHashKVsEquality(t *testing.T) {
 type msg struct {
 	cmp      string
 	i, j     int
-	hI, hJ   fnv.Hash
+	hI, hJ   uint64
 	kvI, kvJ []KeyValue
 }
 
