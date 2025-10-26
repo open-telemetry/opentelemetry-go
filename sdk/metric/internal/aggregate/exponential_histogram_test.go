@@ -174,7 +174,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice, nil, false)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -216,7 +216,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice, nil, false)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -762,13 +762,13 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 2, alice},
-				{ctx, 16, alice},
-				{ctx, 1, alice},
-				{ctx, -1, alice},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 16, alice, false},
+				{ctx, 1, alice, false},
+				{ctx, -1, alice, false},
 			},
 			expect: output{
 				n: 1,
@@ -810,20 +810,20 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 2, alice},
-				{ctx, 16, alice},
-				{ctx, 1, alice},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 16, alice, false},
+				{ctx, 1, alice, false},
 				// These will exceed the cardinality limit.
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 2, carol},
-				{ctx, 16, carol},
-				{ctx, 1, dave},
-				{ctx, -1, alice},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 2, carol, false},
+				{ctx, 16, carol, false},
+				{ctx, 1, dave, false},
+				{ctx, -1, alice, false},
 			},
 			expect: output{
 				n: 2,
@@ -889,13 +889,15 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 2, alice},
-				{ctx, 16, alice},
-				{ctx, 1, alice},
-				{ctx, -1, alice},
+				{ctx, 4, carol, false},
+				{ctx, 0, carol, true},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 16, alice, false},
+				{ctx, 1, alice, false},
+				{ctx, -1, alice, false},
 			},
 			expect: output{
 				n: 1,
@@ -926,9 +928,9 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 3, alice},
-				{ctx, 8, alice},
+				{ctx, 2, alice, false},
+				{ctx, 3, alice, false},
+				{ctx, 8, alice, false},
 			},
 			expect: output{
 				n: 1,
@@ -989,12 +991,12 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		{
 			input: []arg[N]{
 				// These will exceed the cardinality limit.
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 2, carol},
-				{ctx, 16, carol},
-				{ctx, 1, dave},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 2, carol, false},
+				{ctx, 16, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 2,

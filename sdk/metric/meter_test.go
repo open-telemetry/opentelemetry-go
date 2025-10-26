@@ -551,6 +551,208 @@ func TestMeterCreatesInstruments(t *testing.T) {
 	}
 }
 
+func TestRemoveInstruments(t *testing.T) {
+	// The synchronous measurement methods must ignore the context cancellation.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	alice := attribute.NewSet(
+		attribute.String("name", "Alice"),
+		attribute.Bool("admin", true),
+	)
+	optAlice := metric.WithAttributeSet(alice)
+
+	bob := attribute.NewSet(
+		attribute.String("name", "Bob"),
+		attribute.Bool("admin", false),
+	)
+	optBob := metric.WithAttributeSet(bob)
+
+	testCases := []struct {
+		name string
+		fn   func(*testing.T, metric.Meter)
+		want metricdata.Metrics
+	}{
+		{
+			name: "SyncInt64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 3, optAlice)
+				ctr.Add(ctx, 5, optBob)
+				ctr.Remove(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sint",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 3, Attributes: alice},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64UpDownCounter("sint")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 3, optAlice)
+				ctr.Add(ctx, 5, optBob)
+				ctr.Remove(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sint",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 3, Attributes: alice},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				histo, err := m.Int64Histogram("histogram")
+				assert.NoError(t, err)
+
+				histo.Record(ctx, 7, optAlice)
+				histo.Record(ctx, 5, optBob)
+				histo.Remove(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: alice,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[int64](7),
+							Max:          metricdata.NewExtrema[int64](7),
+							Sum:          7,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Float64Counter("sfloat")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 3, optAlice)
+				ctr.Add(ctx, 5, optBob)
+				ctr.Remove(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sfloat",
+				Data: metricdata.Sum[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[float64]{
+						{Value: 3, Attributes: alice},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Float64UpDownCounter("sfloat")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(x.EnabledInstrument)
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 11, optAlice)
+				ctr.Add(ctx, 12, optBob)
+				ctr.Remove(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sfloat",
+				Data: metricdata.Sum[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[float64]{
+						{Value: 11, Attributes: alice},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				histo, err := m.Float64Histogram("histogram")
+				assert.NoError(t, err)
+
+				histo.Record(ctx, 7, optAlice)
+				histo.Record(ctx, 5, optBob)
+				histo.Remove(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: alice,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[float64](7.),
+							Max:          metricdata.NewExtrema[float64](7.),
+							Sum:          7.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewManualReader()
+			m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+
+			tt.fn(t, m)
+
+			rm := metricdata.ResourceMetrics{}
+			err := rdr.Collect(t.Context(), &rm)
+			assert.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+			require.Len(t, sm.Metrics, 1)
+			got := sm.Metrics[0]
+			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
 func TestMeterWithDropView(t *testing.T) {
 	dropView := NewView(
 		Instrument{Name: "*"},
