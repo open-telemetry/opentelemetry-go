@@ -20,13 +20,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/counter"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 func testEncoderOption() stdoutmetric.Option {
@@ -35,11 +36,13 @@ func testEncoderOption() stdoutmetric.Option {
 	return stdoutmetric.WithEncoder(enc)
 }
 
+var errEnc = errors.New("encoding failed")
+
 // failingEncoder always returns an error when Encode is called.
 type failingEncoder struct{}
 
 func (failingEncoder) Encode(any) error {
-	return errors.New("encoding failed")
+	return errEnc
 }
 
 func testCtxErrHonored(factory func(*testing.T) func(context.Context) error) func(t *testing.T) {
@@ -196,16 +199,12 @@ func TestAggregationSelector(t *testing.T) {
 	assert.Equal(t, metric.AggregationDrop{}, exp.Aggregation(unknownKind))
 }
 
-func TestExporter_Export_Observability(t *testing.T) {
-	componentNameAttr := semconv.OTelComponentName("go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/0")
-	componentTypeAttr := semconv.OTelComponentTypeKey.String(
-		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter",
-	)
-	wantErr := errors.New("encoding failed")
+func TestExporterExportObservability(t *testing.T) {
+	componentNameAttr := observ.ExporterComponentName(0)
+	componentTypeAttr := semconv.OTelComponentTypeKey.String(observ.ComponentType)
 
 	tests := []struct {
 		name                  string
-		ctx                   context.Context
 		exporterOpts          []stdoutmetric.Option
 		observabilityEnabled  bool
 		expectedExportedCount int64
@@ -215,33 +214,30 @@ func TestExporter_Export_Observability(t *testing.T) {
 	}{
 		{
 			name:                  "Enabled",
-			ctx:                   t.Context(),
 			exporterOpts:          []stdoutmetric.Option{testEncoderOption()},
 			observabilityEnabled:  true,
-			expectedExportedCount: 19,
+			expectedExportedCount: expectedDataPointCount,
 			inflightAttrs:         attribute.NewSet(componentNameAttr, componentTypeAttr),
 			attributes:            attribute.NewSet(componentNameAttr, componentTypeAttr),
 		},
 		{
 			name:                  "Disabled",
-			ctx:                   t.Context(),
 			exporterOpts:          []stdoutmetric.Option{testEncoderOption()},
 			observabilityEnabled:  false,
 			expectedExportedCount: 0,
 		},
 		{
 			name:                  "EncodingError",
-			ctx:                   t.Context(),
 			exporterOpts:          []stdoutmetric.Option{stdoutmetric.WithEncoder(failingEncoder{})},
 			observabilityEnabled:  true,
-			expectedExportedCount: 19,
+			expectedExportedCount: expectedDataPointCount,
 			inflightAttrs:         attribute.NewSet(componentNameAttr, componentTypeAttr),
 			attributes: attribute.NewSet(
 				componentNameAttr,
 				componentTypeAttr,
-				semconv.ErrorType(wantErr),
+				semconv.ErrorType(errEnc),
 			),
-			wantErr: wantErr,
+			wantErr: errEnc,
 		},
 	}
 	for _, tt := range tests {
@@ -261,81 +257,101 @@ func TestExporter_Export_Observability(t *testing.T) {
 			require.NoError(t, err)
 			rm := &metricdata.ResourceMetrics{ScopeMetrics: scopeMetrics()}
 
-			err = exp.Export(tt.ctx, rm)
+			ctx := t.Context()
+			err = exp.Export(ctx, rm)
 			if tt.wantErr != nil {
-				assert.EqualError(t, err, tt.wantErr.Error())
+				assert.ErrorIs(t, err, tt.wantErr)
 			} else {
 				assert.NoError(t, err)
 			}
 
 			var metrics metricdata.ResourceMetrics
-			err = reader.Collect(tt.ctx, &metrics)
+			err = reader.Collect(ctx, &metrics)
 			require.NoError(t, err)
 
 			if !tt.observabilityEnabled {
 				assert.Empty(t, metrics.ScopeMetrics)
-			} else {
-				assert.Len(t, metrics.ScopeMetrics, 1)
-				expectedMetrics := metricdata.ScopeMetrics{
-					Scope: instrumentation.Scope{
-						Name:      "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric",
-						Version:   sdk.Version(),
-						SchemaURL: semconv.SchemaURL,
-					},
-					Metrics: []metricdata.Metrics{
-						{
-							Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
-							Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
-							Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
-							Data: metricdata.Sum[int64]{
-								DataPoints: []metricdata.DataPoint[int64]{
-									{
-										Value:      0,
-										Attributes: tt.inflightAttrs,
-									},
-								},
-								Temporality: metricdata.CumulativeTemporality,
-							},
-						},
-						{
-							Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
-							Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
-							Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
-							Data: metricdata.Sum[int64]{
-								DataPoints: []metricdata.DataPoint[int64]{
-									{
-										Value:      tt.expectedExportedCount,
-										Attributes: tt.attributes,
-									},
-								},
-								Temporality: metricdata.CumulativeTemporality,
-								IsMonotonic: true,
-							},
-						},
-						{
-							Name:        otelconv.SDKExporterOperationDuration{}.Name(),
-							Description: otelconv.SDKExporterOperationDuration{}.Description(),
-							Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
-							Data: metricdata.Histogram[float64]{
-								DataPoints: []metricdata.HistogramDataPoint[float64]{
-									{
-										Attributes: tt.attributes,
-									},
-								},
-								Temporality: metricdata.CumulativeTemporality,
-							},
-						},
-					},
-				}
-				assert.Equal(t, expectedMetrics.Scope, metrics.ScopeMetrics[0].Scope)
-				metricdatatest.AssertEqual(t, expectedMetrics.Metrics[0], metrics.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-				metricdatatest.AssertEqual(t, expectedMetrics.Metrics[1], metrics.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp())
-				metricdatatest.AssertEqual(t, expectedMetrics.Metrics[2], metrics.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				return
 			}
-			_ = counter.SetExporterID(0)
+
+			expectedMetrics := metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Value:      0,
+									Attributes: tt.inflightAttrs,
+								},
+							},
+							Temporality: metricdata.CumulativeTemporality,
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Value:      tt.expectedExportedCount,
+									Attributes: tt.attributes,
+								},
+							},
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+						Description: otelconv.SDKExporterOperationDuration{}.Description(),
+						Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+						Data: metricdata.Histogram[float64]{
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: tt.attributes,
+								},
+							},
+							Temporality: metricdata.CumulativeTemporality,
+						},
+					},
+				},
+			}
+			require.Len(t, metrics.ScopeMetrics, 1)
+			assert.Equal(t, expectedMetrics.Scope, metrics.ScopeMetrics[0].Scope)
+			require.Len(t, expectedMetrics.Metrics, 3)
+			metricdatatest.AssertEqual(
+				t,
+				expectedMetrics.Metrics[0],
+				metrics.ScopeMetrics[0].Metrics[0],
+				metricdatatest.IgnoreTimestamp(),
+			)
+			metricdatatest.AssertEqual(
+				t,
+				expectedMetrics.Metrics[1],
+				metrics.ScopeMetrics[0].Metrics[1],
+				metricdatatest.IgnoreTimestamp(),
+			)
+			metricdatatest.AssertEqual(
+				t,
+				expectedMetrics.Metrics[2],
+				metrics.ScopeMetrics[0].Metrics[2],
+				metricdatatest.IgnoreTimestamp(),
+				metricdatatest.IgnoreValue(),
+			)
 		})
 	}
 }
+
+const expectedDataPointCount = 19
 
 func scopeMetrics() []metricdata.ScopeMetrics {
 	return []metricdata.ScopeMetrics{
@@ -416,7 +432,7 @@ func scopeMetrics() []metricdata.ScopeMetrics {
 	}
 }
 
-func TestExporter_Export_EncodingErrorTracking(t *testing.T) {
+func TestExporterExportEncodingErrorTracking(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
@@ -444,7 +460,7 @@ func TestExporter_Export_EncodingErrorTracking(t *testing.T) {
 
 	ctx := t.Context()
 	err = exp.Export(ctx, rm)
-	assert.EqualError(t, err, "encoding failed")
+	assert.ErrorIs(t, err, errEnc)
 
 	var metrics metricdata.ResourceMetrics
 	err = reader.Collect(ctx, &metrics)

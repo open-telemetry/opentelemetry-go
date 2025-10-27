@@ -17,17 +17,17 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 const (
-	scope = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	scope = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 
-	// componentType is a name identifying the type of the OpenTelemetry
+	// ComponentType is a name identifying the type of the OpenTelemetry
 	// component. It is not a standardized OTel component type, so it uses the
 	// Go package prefixed type name to ensure uniqueness and identity.
-	componentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
+	ComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter"
 
 	// Version is the current version of this instrumentation.
 	//
@@ -35,29 +35,57 @@ const (
 	Version = internal.Version
 )
 
-var measureAttrsPool = sync.Pool{
-	New: func() any {
-		// "component.name" + "component.type" + "error.type"
-		const n = 1 + 1 + 1
-		s := make([]attribute.KeyValue, 0, n)
-		// Return a pointer to a slice instead of a slice itself
-		// to avoid allocations on every call.
-		return &s
-	},
+var (
+	measureAttrsPool = &sync.Pool{
+		New: func() any {
+			// "component.name" + "component.type" + "error.type"
+			const n = 1 + 1 + 1
+			s := make([]attribute.KeyValue, 0, n)
+			// Return a pointer to a slice instead of a slice itself
+			// to avoid allocations on every call.
+			return &s
+		},
+	}
+
+	addOptsPool = &sync.Pool{
+		New: func() any {
+			const n = 1 // WithAttributeSet
+			s := make([]metric.AddOption, 0, n)
+			return &s
+		},
+	}
+
+	recordOptsPool = &sync.Pool{
+		New: func() any {
+			const n = 1 // WithAttributeSet
+			s := make([]metric.RecordOption, 0, n)
+			return &s
+		},
+	}
+)
+
+func get[T any](p *sync.Pool) *[]T { return p.Get().(*[]T) }
+
+func put[T any](p *sync.Pool, s *[]T) {
+	*s = (*s)[:0] // Reset.
+	p.Put(s)
 }
 
 // Instrumentation is the instrumentation for stdout metric exporter.
 type Instrumentation struct {
-	inflight   metric.Int64UpDownCounter
-	addOpts    []metric.AddOption
-	exported   otelconv.SDKExporterMetricDataPointExported
-	duration   otelconv.SDKExporterOperationDuration
-	recordOpts []metric.RecordOption
+	inflight metric.Int64UpDownCounter
+	exported otelconv.SDKExporterMetricDataPointExported
+	duration otelconv.SDKExporterOperationDuration
+
 	attrs      []attribute.KeyValue
+	addOpts    []metric.AddOption
+	recordOpts []metric.RecordOption
 }
 
-func exporterComponentName(id int64) attribute.KeyValue {
-	componentName := fmt.Sprintf("%s/%d", componentType, id)
+// ExporterComponentName returns the component name attribute for the exporter
+// with the provided ID.
+func ExporterComponentName(id int64) attribute.KeyValue {
+	componentName := fmt.Sprintf("%s/%d", ComponentType, id)
 	return semconv.OTelComponentName(componentName)
 }
 
@@ -70,8 +98,8 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 		return nil, nil
 	}
 	attrs := []attribute.KeyValue{
-		exporterComponentName(id),
-		semconv.OTelComponentTypeKey.String(componentType),
+		ExporterComponentName(id),
+		semconv.OTelComponentTypeKey.String(ComponentType),
 	}
 	attrOpts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 	addOpts := []metric.AddOption{attrOpts}
@@ -85,7 +113,8 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	m := mp.Meter(
 		scope,
 		metric.WithInstrumentationVersion(Version),
-		metric.WithSchemaURL(semconv.SchemaURL))
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
 
 	var err error
 	inflightMetric, e := otelconv.NewSDKExporterMetricDataPointInflight(m)
@@ -105,8 +134,8 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	return em, err
 }
 
-// ExportMetrics instruments the Export method of the exporter. It returns a
-// function that needs to be deferred so it is called when the method returns.
+// ExportMetrics instruments the Export method of the exporter. It returns an
+// ExportOp that needs to be ended with End() when the export operation completes.
 func (i *Instrumentation) ExportMetrics(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 	i.inflight.Add(ctx, count, i.addOpts...)
@@ -139,15 +168,22 @@ func (e ExportOp) End(err error) {
 		return
 	}
 
-	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
+	attrs := get[attribute.KeyValue](measureAttrsPool)
+	addOpts := get[metric.AddOption](addOptsPool)
+	recordOpts := get[metric.RecordOption](recordOptsPool)
 	defer func() {
-		*attrs = (*attrs)[:0] // reset the slice for reuse
-		measureAttrsPool.Put(attrs)
+		put(measureAttrsPool, attrs)
+		put(addOptsPool, addOpts)
+		put(recordOptsPool, recordOpts)
 	}()
 	*attrs = append(*attrs, e.inst.attrs...)
 	*attrs = append(*attrs, semconv.ErrorType(err))
 
 	set := attribute.NewSet(*attrs...)
-	e.inst.exported.AddSet(e.ctx, e.nTraces, set)
-	e.inst.duration.RecordSet(e.ctx, durationSeconds, set)
+	attrOpt := metric.WithAttributeSet(set)
+	*addOpts = append(*addOpts, attrOpt)
+	*recordOpts = append(*recordOpts, attrOpt)
+
+	e.inst.exported.Inst().Add(e.ctx, e.nTraces, *addOpts...)
+	e.inst.duration.Inst().Record(e.ctx, durationSeconds, *recordOpts...)
 }

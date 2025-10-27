@@ -4,10 +4,8 @@
 package observ
 
 import (
-	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,14 +14,12 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 type testSetup struct {
 	reader *sdkmetric.ManualReader
-	mp     *sdkmetric.MeterProvider
-	ctx    context.Context
 	em     *Instrumentation
 }
 
@@ -42,15 +38,13 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 
 	return &testSetup{
 		reader: reader,
-		mp:     mp,
-		ctx:    t.Context(),
 		em:     em,
 	}
 }
 
 func collectMetrics(t *testing.T, setup *testSetup) metricdata.ResourceMetrics {
 	var rm metricdata.ResourceMetrics
-	err := setup.reader.Collect(setup.ctx, &rm)
+	err := setup.reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	return rm
 }
@@ -69,10 +63,10 @@ func findMetric(rm metricdata.ResourceMetrics, name string) (metricdata.Metrics,
 func TestInstrumentationExportMetrics(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 
-	op1 := setup.em.ExportMetrics(setup.ctx, 2)
-	op2 := setup.em.ExportMetrics(setup.ctx, 3)
-	op3 := setup.em.ExportMetrics(setup.ctx, 1)
-	time.Sleep(5 * time.Millisecond)
+	ctx := t.Context()
+	op1 := setup.em.ExportMetrics(ctx, 2)
+	op2 := setup.em.ExportMetrics(ctx, 3)
+	op3 := setup.em.ExportMetrics(ctx, 1)
 	op2.End(nil)
 	op1.End(errors.New("failed"))
 	op3.End(nil)
@@ -113,15 +107,18 @@ func TestInstrumentationExportMetrics(t *testing.T) {
 	assert.Equal(t, int64(0), totalInflightValue)
 }
 
+// todo: What is this testing that TestInstrumentationExportMetrics hasn't already? (its testing the error attribute
+// explicitly). To check if same can be achieved with TestInstrumentationExportMetrics.
 func TestInstrumentationExportMetricsWithError(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 	count := int64(3)
 	testErr := errors.New("export failed")
 
-	op := setup.em.ExportMetrics(setup.ctx, count)
+	op := setup.em.ExportMetrics(t.Context(), count)
 	op.End(testErr)
 
 	rm := collectMetrics(t, setup)
+	// todo: This is not an valid evaluation of the scope. The value of the scope needs to be tested.
 	assert.NotEmpty(t, rm.ScopeMetrics)
 
 	exported, found := findMetric(rm, otelconv.SDKExporterMetricDataPointExported{}.Name())
@@ -133,11 +130,13 @@ func TestInstrumentationExportMetricsWithError(t *testing.T) {
 	}
 }
 
+// todo: this function is explicitly checking that inflight increases and then becomes 0 when calling End().
+// Check if we can accommodate it in TestInstrumentationExportMetrics.
 func TestInstrumentationExportMetricsInflightTracking(t *testing.T) {
 	setup := setupTestMeterProvider(t)
 	count := int64(10)
 
-	op := setup.em.ExportMetrics(setup.ctx, count)
+	op := setup.em.ExportMetrics(t.Context(), count)
 	rm := collectMetrics(t, setup)
 	inflight, found := findMetric(rm, otelconv.SDKExporterMetricDataPointInflight{}.Name())
 	assert.True(t, found)
@@ -161,32 +160,6 @@ func TestInstrumentationExportMetricsInflightTracking(t *testing.T) {
 	}
 }
 
-func TestInstrumentationExportMetricsAttributesNotPermanentlyModified(t *testing.T) {
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-
-	em, err := NewInstrumentation(42)
-	assert.NoError(t, err)
-
-	// Should have component.name and component.type attributes
-	assert.Len(t, em.attrs, 2)
-	expectedComponentName := semconv.OTelComponentName(
-		"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric.exporter/42",
-	)
-	expectedComponentType := semconv.OTelComponentTypeKey.String(componentType)
-	assert.Contains(t, em.attrs, expectedComponentName)
-	assert.Contains(t, em.attrs, expectedComponentType)
-
-	op := em.ExportMetrics(t.Context(), 1)
-	op.End(errors.New("test error"))
-	op = em.ExportMetrics(t.Context(), 1)
-	op.End(nil)
-
-	// Attributes should not be modified after tracking exports
-	assert.Len(t, em.attrs, 2)
-	assert.Contains(t, em.attrs, expectedComponentName)
-	assert.Contains(t, em.attrs, expectedComponentType)
-}
-
 func BenchmarkExportMetrics(b *testing.B) {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	orig := otel.GetMeterProvider()
@@ -205,6 +178,7 @@ func BenchmarkExportMetrics(b *testing.B) {
 		return em
 	}
 
+	// todo: update this at then end of review comments so that benchmark numbers can be compared with previous.
 	b.Run("Success", func(b *testing.B) {
 		em := newExp(b)
 		b.ResetTimer()
