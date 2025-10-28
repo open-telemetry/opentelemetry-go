@@ -6,6 +6,7 @@ package log_test
 import (
 	"context"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -13,7 +14,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 type exporter struct {
@@ -137,4 +148,93 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 
 		_ = out
 	})
+}
+
+func TestSimpleLogProcessorObsevability(t *testing.T) {
+	testcases := []struct {
+		name          string
+		enabled       bool
+		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:    "diabled",
+			enabled: false,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:    "enabled",
+			enabled: true,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+				sm := rm.ScopeMetrics[0]
+
+				p := otelconv.SDKProcessorLogProcessed{}
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      observ.ScopeName,
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        p.Name(),
+							Description: p.Description(),
+							Unit:        p.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 1,
+										Attributes: attribute.NewSet(
+											observ.GetSLPComponentName(0),
+											semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeSimpleLogProcessor)),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					sm,
+					metricdatatest.IgnoreExemplars(),
+					metricdatatest.IgnoreTimestamp(),
+				)
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tc.enabled))
+
+			original := otel.GetMeterProvider()
+			t.Cleanup(func() {
+				otel.SetMeterProvider(original)
+			})
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			e := new(exporter)
+			slp := log.NewSimpleProcessor(e)
+			record := new(log.Record)
+			record.SetSeverityText("test")
+			err := slp.OnEmit(t.Context(), record)
+			require.NoError(t, err)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(t.Context(), &rm))
+			tc.assertMetrics(t, rm)
+			//todo: set the counter to zero.
+		})
+	}
 }
