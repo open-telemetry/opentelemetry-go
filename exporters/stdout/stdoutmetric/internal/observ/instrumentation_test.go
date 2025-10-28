@@ -27,6 +27,7 @@ type testSetup struct {
 }
 
 func setupTestMeterProvider(t *testing.T) *testSetup {
+	t.Helper()
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	reader := sdkmetric.NewManualReader()
@@ -53,6 +54,8 @@ func collectMetrics(t *testing.T, setup *testSetup) metricdata.ResourceMetrics {
 }
 
 const exporterComponentID = 0
+
+var errExport = errors.New("export failed")
 
 func exporterSet(attrs ...attribute.KeyValue) attribute.Set {
 	return attribute.NewSet(append([]attribute.KeyValue{
@@ -161,21 +164,23 @@ func TestInstrumentationExportMetrics(t *testing.T) {
 	checkInflight(t, collectMetrics(t, setup), inflight(dPt(exporterSet(), 6)))
 
 	op2.End(nil)
-	op1.End(errors.New("failed"))
+	op1.End(errExport)
 	op3.End(nil)
 
 	rm := collectMetrics(t, setup)
 	assert.NotEmpty(t, rm.ScopeMetrics)
 
+	successExported := int64(4)
+	erroredExported := int64(2)
 	checkMetrics(t, rm,
 		inflight(dPt(exporterSet(), 0)),
 		exported(
-			dPt(exporterSet(), 4),
-			dPt(exporterSet(semconv.ErrorType(errors.New("failed"))), 2),
+			dPt(exporterSet(), successExported),
+			dPt(exporterSet(semconv.ErrorType(errExport)), erroredExported),
 		),
 		duration(
 			histDPt(exporterSet()),
-			histDPt(exporterSet(semconv.ErrorType(errors.New("failed")))),
+			histDPt(exporterSet(semconv.ErrorType(errExport))),
 		),
 	)
 }
@@ -213,13 +218,12 @@ func BenchmarkExportMetrics(b *testing.B) {
 
 	b.Run("WithError", func(b *testing.B) {
 		em := newExp(b)
-		testErr := errors.New("export failed")
 		b.ResetTimer()
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				op := em.ExportMetrics(b.Context(), 10)
-				op.End(testErr)
+				op.End(errExport)
 			}
 		})
 	})
