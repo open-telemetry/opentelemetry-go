@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package xxhash provides a wrapper around the xxhash library for attribute hashing.
 package xxhash // import "go.opentelemetry.io/otel/attribute/internal/xxhash"
 
