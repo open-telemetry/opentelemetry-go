@@ -160,19 +160,18 @@ func TestInstrumentationExportMetrics(t *testing.T) {
 	op1 := setup.em.ExportMetrics(ctx, 2)
 	op2 := setup.em.ExportMetrics(ctx, 3)
 	op3 := setup.em.ExportMetrics(ctx, 1)
-
-	checkInflight(t, collectMetrics(t, setup), inflight(dPt(exporterSet(), 6)))
+	totalMetrics := int64(6)
+	checkInflight(t, collectMetrics(t, setup), inflight(dPt(exporterSet(), totalMetrics)))
 
 	op2.End(nil)
 	op1.End(errExport)
 	op3.End(nil)
 
-	rm := collectMetrics(t, setup)
-	assert.NotEmpty(t, rm.ScopeMetrics)
-
 	successExported := int64(4)
 	erroredExported := int64(2)
-	checkMetrics(t, rm,
+	checkMetrics(
+		t,
+		collectMetrics(t, setup),
 		inflight(dPt(exporterSet(), 0)),
 		exported(
 			dPt(exporterSet(), successExported),
