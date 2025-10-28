@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package observ
+package observ_test
 
 import (
 	"errors"
@@ -11,16 +11,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 type testSetup struct {
 	reader *sdkmetric.ManualReader
-	em     *Instrumentation
+	em     *observ.Instrumentation
 }
 
 func setupTestMeterProvider(t *testing.T) *testSetup {
@@ -33,7 +36,7 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 	otel.SetMeterProvider(mp)
 	t.Cleanup(func() { otel.SetMeterProvider(originalMP) })
 
-	em, err := NewInstrumentation(0)
+	em, err := observ.NewInstrumentation(0)
 	assert.NoError(t, err)
 
 	return &testSetup{
@@ -49,15 +52,102 @@ func collectMetrics(t *testing.T, setup *testSetup) metricdata.ResourceMetrics {
 	return rm
 }
 
-func findMetric(rm metricdata.ResourceMetrics, name string) (metricdata.Metrics, bool) {
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name == name {
-				return m, true
-			}
+const exporterComponentID = 0
+
+func exporterSet(attrs ...attribute.KeyValue) attribute.Set {
+	return attribute.NewSet(append([]attribute.KeyValue{
+		observ.ExporterComponentName(exporterComponentID),
+		semconv.OTelComponentTypeKey.String(observ.ComponentType),
+	}, attrs...)...)
+}
+
+func dPt(set attribute.Set, value int64) metricdata.DataPoint[int64] {
+	return metricdata.DataPoint[int64]{Attributes: set, Value: value}
+}
+
+func exported(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+		Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+		Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  dPts,
+		},
+	}
+}
+
+func inflight(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+		Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+		Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: false,
+			DataPoints:  dPts,
+		},
+	}
+}
+
+func duration(dPts ...metricdata.HistogramDataPoint[float64]) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+		Description: otelconv.SDKExporterOperationDuration{}.Description(),
+		Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+		Data: metricdata.Histogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  dPts,
+		},
+	}
+}
+
+func histDPt(set attribute.Set) metricdata.HistogramDataPoint[float64] {
+	return metricdata.HistogramDataPoint[float64]{
+		Attributes: set,
+	}
+}
+
+func checkMetrics(
+	t *testing.T,
+	rm metricdata.ResourceMetrics,
+	wantInflight, wantExported, wantDuration metricdata.Metrics,
+) {
+	t.Helper()
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	m := rm.ScopeMetrics[0].Metrics
+	require.Len(t, m, 3)
+
+	opts := metricdatatest.IgnoreTimestamp()
+
+	metricdatatest.AssertEqual(t, wantInflight, m[0], opts)
+	metricdatatest.AssertEqual(t, wantExported, m[1], opts)
+	// ignoring values for histogram since duration is not deterministic
+	metricdatatest.AssertEqual(t, wantDuration, m[2], opts, metricdatatest.IgnoreValue())
+}
+
+func checkInflight(t *testing.T, rm metricdata.ResourceMetrics, wantInflight metricdata.Metrics) {
+	t.Helper()
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	m := rm.ScopeMetrics[0].Metrics
+	require.NotEmpty(t, m)
+
+	inflightName := otelconv.SDKExporterMetricDataPointInflight{}.Name()
+	var inflightMetric metricdata.Metrics
+	found := false
+	for _, metric := range m {
+		if metric.Name == inflightName {
+			inflightMetric = metric
+			found = true
+			break
 		}
 	}
-	return metricdata.Metrics{}, false
+	require.True(t, found)
+
+	metricdatatest.AssertEqual(t, wantInflight, inflightMetric, metricdatatest.IgnoreTimestamp())
 }
 
 func TestInstrumentationExportMetrics(t *testing.T) {
@@ -67,6 +157,9 @@ func TestInstrumentationExportMetrics(t *testing.T) {
 	op1 := setup.em.ExportMetrics(ctx, 2)
 	op2 := setup.em.ExportMetrics(ctx, 3)
 	op3 := setup.em.ExportMetrics(ctx, 1)
+
+	checkInflight(t, collectMetrics(t, setup), inflight(dPt(exporterSet(), 6)))
+
 	op2.End(nil)
 	op1.End(errors.New("failed"))
 	op3.End(nil)
@@ -74,90 +167,17 @@ func TestInstrumentationExportMetrics(t *testing.T) {
 	rm := collectMetrics(t, setup)
 	assert.NotEmpty(t, rm.ScopeMetrics)
 
-	inflight, found := findMetric(rm, otelconv.SDKExporterMetricDataPointInflight{}.Name())
-	assert.True(t, found)
-	var totalInflightValue int64
-	if sum, ok := inflight.Data.(metricdata.Sum[int64]); ok {
-		for _, dp := range sum.DataPoints {
-			totalInflightValue += dp.Value
-		}
-	}
-
-	exported, found := findMetric(rm, otelconv.SDKExporterMetricDataPointExported{}.Name())
-	assert.True(t, found)
-	var totalExported int64
-	if sum, ok := exported.Data.(metricdata.Sum[int64]); ok {
-		for _, dp := range sum.DataPoints {
-			totalExported += dp.Value
-		}
-	}
-
-	duration, found := findMetric(rm, otelconv.SDKExporterOperationDuration{}.Name())
-	assert.True(t, found)
-	var operationCount uint64
-	if hist, ok := duration.Data.(metricdata.Histogram[float64]); ok {
-		for _, dp := range hist.DataPoints {
-			operationCount += dp.Count
-			assert.Positive(t, dp.Sum)
-		}
-	}
-
-	assert.Equal(t, int64(6), totalExported)
-	assert.Equal(t, uint64(3), operationCount)
-	assert.Equal(t, int64(0), totalInflightValue)
-}
-
-// todo: What is this testing that TestInstrumentationExportMetrics hasn't already? (its testing the error attribute
-// explicitly). To check if same can be achieved with TestInstrumentationExportMetrics.
-func TestInstrumentationExportMetricsWithError(t *testing.T) {
-	setup := setupTestMeterProvider(t)
-	count := int64(3)
-	testErr := errors.New("export failed")
-
-	op := setup.em.ExportMetrics(t.Context(), count)
-	op.End(testErr)
-
-	rm := collectMetrics(t, setup)
-	// todo: This is not an valid evaluation of the scope. The value of the scope needs to be tested.
-	assert.NotEmpty(t, rm.ScopeMetrics)
-
-	exported, found := findMetric(rm, otelconv.SDKExporterMetricDataPointExported{}.Name())
-	assert.True(t, found)
-	if sum, ok := exported.Data.(metricdata.Sum[int64]); ok {
-		attr, hasErrorAttr := sum.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
-		assert.True(t, hasErrorAttr)
-		assert.Equal(t, "*errors.errorString", attr.AsString())
-	}
-}
-
-// todo: this function is explicitly checking that inflight increases and then becomes 0 when calling End().
-// Check if we can accommodate it in TestInstrumentationExportMetrics.
-func TestInstrumentationExportMetricsInflightTracking(t *testing.T) {
-	setup := setupTestMeterProvider(t)
-	count := int64(10)
-
-	op := setup.em.ExportMetrics(t.Context(), count)
-	rm := collectMetrics(t, setup)
-	inflight, found := findMetric(rm, otelconv.SDKExporterMetricDataPointInflight{}.Name())
-	assert.True(t, found)
-
-	var inflightValue int64
-	if sum, ok := inflight.Data.(metricdata.Sum[int64]); ok {
-		for _, dp := range sum.DataPoints {
-			inflightValue = dp.Value
-		}
-	}
-	assert.Equal(t, count, inflightValue)
-
-	op.End(nil)
-	rm = collectMetrics(t, setup)
-	inflight, found = findMetric(rm, otelconv.SDKExporterMetricDataPointInflight{}.Name())
-	assert.True(t, found)
-	if sum, ok := inflight.Data.(metricdata.Sum[int64]); ok {
-		for _, dp := range sum.DataPoints {
-			assert.Equal(t, int64(0), dp.Value)
-		}
-	}
+	checkMetrics(t, rm,
+		inflight(dPt(exporterSet(), 0)),
+		exported(
+			dPt(exporterSet(), 4),
+			dPt(exporterSet(semconv.ErrorType(errors.New("failed"))), 2),
+		),
+		duration(
+			histDPt(exporterSet()),
+			histDPt(exporterSet(semconv.ErrorType(errors.New("failed")))),
+		),
+	)
 }
 
 func BenchmarkExportMetrics(b *testing.B) {
@@ -170,9 +190,9 @@ func BenchmarkExportMetrics(b *testing.B) {
 	// Ensure deterministic benchmark by using noop meter.
 	otel.SetMeterProvider(noop.NewMeterProvider())
 
-	newExp := func(b *testing.B) *Instrumentation {
+	newExp := func(b *testing.B) *observ.Instrumentation {
 		b.Helper()
-		em, err := NewInstrumentation(0)
+		em, err := observ.NewInstrumentation(0)
 		require.NoError(b, err)
 		require.NotNil(b, em)
 		return em
