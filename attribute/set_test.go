@@ -547,7 +547,7 @@ func BenchmarkNewSet(b *testing.B) {
 	}
 }
 
-// generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths
+// generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths.
 func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	// Generate base strings of specified lengths
 	keyBase := ""

@@ -155,7 +155,6 @@ func TestChaining(t *testing.T) {
 
 var result Hash
 
-// Benchmarks matching FNV test structure
 func BenchmarkStringKB(b *testing.B) {
 	b.SetBytes(1024)
 	data := make([]byte, 1024)
@@ -184,7 +183,6 @@ func BenchmarkUint64KB(b *testing.B) {
 	}
 }
 
-// Additional benchmarks for comprehensive coverage
 func BenchmarkUint64(b *testing.B) {
 	h := New()
 	b.ResetTimer()

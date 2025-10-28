@@ -1,3 +1,4 @@
+// Package xxhash provides a wrapper around the xxhash library for attribute hashing.
 package xxhash // import "go.opentelemetry.io/otel/attribute/internal/xxhash"
 
 import (
@@ -20,7 +21,8 @@ func New() Hash {
 func (h Hash) Uint64(val uint64) Hash {
 	var buf [8]byte
 	binary.LittleEndian.PutUint64(buf[:], val)
-	h.d.Write(buf[:])
+	// errors from Write are always nil for xxhash
+	_, _ = h.d.Write(buf[:])
 	return h
 }
 
@@ -40,7 +42,8 @@ func (h Hash) Int64(val int64) Hash {
 }
 
 func (h Hash) String(val string) Hash {
-	h.d.WriteString(val)
+	// errors from WriteString are always nil for xxhash
+	_, _ = h.d.WriteString(val)
 	return h
 }
 
@@ -48,4 +51,3 @@ func (h Hash) String(val string) Hash {
 func (h Hash) Sum64() uint64 {
 	return h.d.Sum64()
 }
-
