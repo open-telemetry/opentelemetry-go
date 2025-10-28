@@ -264,7 +264,7 @@ func TestInstrumentationExportLogPartialErrors(t *testing.T) {
 	const n = 10
 	const success = 5
 
-	err := internal.PartialSuccess{RejectedItems: success}
+	err := internal.PartialSuccess{RejectedItems: n - success}
 	inst.ExportLogs(t.Context(), n).End(err)
 
 	assertMetrics(t, collect(), n, success, err, status.Code(err))
