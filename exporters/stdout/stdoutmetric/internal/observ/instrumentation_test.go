@@ -203,8 +203,7 @@ func BenchmarkExportMetrics(b *testing.B) {
 		return em
 	}
 
-	// todo: update this at then end of review comments so that benchmark numbers can be compared with previous.
-	b.Run("Success", func(b *testing.B) {
+	b.Run("NoError", func(b *testing.B) {
 		em := newExp(b)
 		b.ResetTimer()
 		b.ReportAllocs()
