@@ -67,7 +67,7 @@ type Span interface {
 	// already exists for an attribute of the Span it will be overwritten with
 	// the value contained in kv.
 	//
-	// Adding attributes at span creation using [WithAttributes] is preferred
+	// Note that adding attributes at span creation using [WithAttributes] is preferred
 	// to calling SetAttribute later, as samplers can only consider information
 	// already present during span creation.
 	SetAttributes(kv ...attribute.KeyValue)
