@@ -5,6 +5,7 @@ package log_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -49,6 +50,17 @@ func (e *exporter) Shutdown(context.Context) error {
 func (e *exporter) ForceFlush(context.Context) error {
 	e.forceFlushCalled = true
 	return nil
+}
+
+var _ log.Exporter = (*failingTestExporter)(nil)
+
+type failingTestExporter struct {
+	exporter
+}
+
+func (f *failingTestExporter) Export(ctx context.Context, r []log.Record) error {
+	_ = f.Export(ctx, r)
+	return errors.New("failed to export logs")
 }
 
 func TestSimpleProcessorOnEmit(t *testing.T) {
