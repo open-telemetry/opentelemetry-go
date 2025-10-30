@@ -6,9 +6,9 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
@@ -38,19 +38,11 @@ func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimplePr
 		exporter: exporter,
 	}
 	var err error
-	slp.inst, err = observ.NewSLP(nextSimpleProcessorID())
+	slp.inst, err = observ.NewSLP(counter.NextExporterID())
 	if err != nil {
 		otel.Handle(err)
 	}
 	return slp
-}
-
-var simpleProcessorIDCounter atomic.Int64
-
-// nextSimpleProcessorID returns an id for this simple log processor,
-// starting with 0 and incrementing by 1 each time it is called.
-func nextSimpleProcessorID() int64 {
-	return simpleProcessorIDCounter.Add(1) - 1
 }
 
 var simpleProcRecordsPool = sync.Pool{

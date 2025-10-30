@@ -5,12 +5,13 @@ package log_test
 
 import (
 	"context"
-	"errors"
 	"io"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,17 +51,6 @@ func (e *exporter) Shutdown(context.Context) error {
 func (e *exporter) ForceFlush(context.Context) error {
 	e.forceFlushCalled = true
 	return nil
-}
-
-var _ log.Exporter = (*failingTestExporter)(nil)
-
-type failingTestExporter struct {
-	exporter
-}
-
-func (f *failingTestExporter) Export(ctx context.Context, r []log.Record) error {
-	_ = f.Export(ctx, r)
-	return errors.New("failed to export logs")
 }
 
 func TestSimpleProcessorOnEmit(t *testing.T) {
@@ -162,14 +152,14 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 	})
 }
 
-func TestSimpleLogProcessorObsevability(t *testing.T) {
+func TestSimpleLogProcessorObservability(t *testing.T) {
 	testcases := []struct {
 		name          string
 		enabled       bool
 		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
-			name:    "diabled",
+			name:    "disabled",
 			enabled: false,
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
@@ -201,7 +191,9 @@ func TestSimpleLogProcessorObsevability(t *testing.T) {
 										Value: 1,
 										Attributes: attribute.NewSet(
 											observ.GetSLPComponentName(0),
-											semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeSimpleLogProcessor)),
+											semconv.OTelComponentTypeKey.String(
+												string(otelconv.ComponentTypeSimpleLogProcessor),
+											),
 										),
 									},
 								},
@@ -218,6 +210,53 @@ func TestSimpleLogProcessorObsevability(t *testing.T) {
 					sm,
 					metricdatatest.IgnoreExemplars(),
 					metricdatatest.IgnoreTimestamp(),
+				)
+			},
+		},
+		{
+			name:    "Enable Exporter error",
+			enabled: true,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+				sm := rm.ScopeMetrics[0]
+				p := otelconv.SDKProcessorLogProcessed{}
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/log/internal/observ",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        p.Name(),
+							Description: p.Description(),
+							Unit:        p.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 1,
+										Attributes: attribute.NewSet(
+											observ.GetSLPComponentName(0),
+											semconv.OTelComponentTypeKey.String(
+												string(otelconv.ComponentTypeSimpleLogProcessor),
+											),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					sm,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
 				)
 			},
 		},
@@ -246,7 +285,7 @@ func TestSimpleLogProcessorObsevability(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, r.Collect(t.Context(), &rm))
 			tc.assertMetrics(t, rm)
-			//todo: set the counter to zero.
+			counter.SetExporterID(0)
 		})
 	}
 }
