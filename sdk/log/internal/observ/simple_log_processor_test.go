@@ -33,7 +33,7 @@ func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
 }
 
 type errMeter struct {
-	mapi.Meter
+	noop.Meter
 	err error
 }
 
