@@ -114,6 +114,8 @@ The next release will require at least [Go 1.24].
 - The `go.opentelemetry.io/otel/semconv/v1.37.0` package.
   The package contains semantic conventions from the `v1.37.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.37.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.36.0.`(#7254)
+- Add experimental self-observability metrics for the simple log processor in `go.opentelemetry.io/otel/sdk/log`.
+  Adds `otel.sdk.processor.log.processed` metric when `OTEL_GO_X_SELF_OBSERVABILITY` environment variable is set to `true`. (#7127)
 
 ### Changed
 
