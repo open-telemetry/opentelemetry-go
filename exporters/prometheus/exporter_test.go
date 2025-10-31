@@ -2497,10 +2497,15 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 					var rm metricdata.ResourceMetrics
 					err := observReader.Collect(t.Context(), &rm)
 					require.NoError(t, err)
-					if len(rm.ScopeMetrics) == 0 {
-						return metricdata.ScopeMetrics{}
+
+					// Find the Prometheus exporter observability scope specifically.
+					for _, sm := range rm.ScopeMetrics {
+						if sm.Scope.Name == observ.ScopeName {
+							return sm
+						}
 					}
-					return rm.ScopeMetrics[0]
+					// Exporter scope not found (e.g., if disabled or no scrape yet).
+					return metricdata.ScopeMetrics{}
 				}
 			}
 
@@ -2811,14 +2816,25 @@ func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	if len(observMetrics.ScopeMetrics) > 0 {
-		scopeMetrics := observMetrics.ScopeMetrics[0]
+		expectedMetrics := map[string]bool{
+			"otel.sdk.exporter.metric_data_point.inflight": false,
+			"otel.sdk.exporter.metric_data_point.exported": false,
+			"otel.sdk.exporter.operation.duration":         false,
+			"otel.sdk.metric_reader.collection.duration":   false,
+		}
+
+		// Check all scope metrics, not just the first one
+		for _, scopeMetrics := range observMetrics.ScopeMetrics {
+			for _, m := range scopeMetrics.Metrics {
+				if _, exists := expectedMetrics[m.Name]; exists {
+					expectedMetrics[m.Name] = true
+				}
+			}
+		}
+
 		foundObservabilityMetrics := 0
-		for _, m := range scopeMetrics.Metrics {
-			switch m.Name {
-			case "otel.sdk.exporter.metric_data_point.inflight",
-				"otel.sdk.exporter.metric_data_point.exported",
-				"otel.sdk.exporter.operation.duration",
-				"otel.sdk.metric_reader.collection.duration":
+		for _, found := range expectedMetrics {
+			if found {
 				foundObservabilityMetrics++
 			}
 		}

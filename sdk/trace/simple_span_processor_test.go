@@ -6,11 +6,23 @@ package trace
 import (
 	"context"
 	"errors"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 type simpleTestExporter struct {
@@ -32,6 +44,17 @@ func (t *simpleTestExporter) Shutdown(ctx context.Context) error {
 	default:
 		return nil
 	}
+}
+
+var _ SpanExporter = (*failingTestExporter)(nil)
+
+type failingTestExporter struct {
+	simpleTestExporter
+}
+
+func (f *failingTestExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
+	_ = f.simpleTestExporter.ExportSpans(ctx, spans)
+	return errors.New("failed to export spans")
 }
 
 var _ SpanExporter = (*simpleTestExporter)(nil)
@@ -166,5 +189,142 @@ func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
 	ssp := NewSimpleSpanProcessor(&simpleTestExporter{})
 	if got, want := ssp.Shutdown(ctx), context.Canceled; !errors.Is(got, want) {
 		t.Errorf("SimpleSpanProcessor.Shutdown did not return %v, got %v", want, got)
+	}
+}
+
+func TestSimpleSpanProcessorObservability(t *testing.T) {
+	tests := []struct {
+		name          string
+		enabled       bool
+		exporter      SpanExporter
+		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:     "Disabled",
+			enabled:  false,
+			exporter: &simpleTestExporter{},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:     "Enabled",
+			enabled:  true,
+			exporter: &simpleTestExporter{},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+				sm := rm.ScopeMetrics[0]
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/trace/internal/observ",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
+							Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
+							Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 1,
+										Attributes: attribute.NewSet(
+											semconv.OTelComponentName("simple_span_processor/0"),
+											semconv.OTelComponentTypeKey.String("simple_span_processor"),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					sm,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+			},
+		},
+		{
+			name:    "Enabled, Exporter error",
+			enabled: true,
+			exporter: &failingTestExporter{
+				simpleTestExporter: simpleTestExporter{},
+			},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+				sm := rm.ScopeMetrics[0]
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/trace/internal/observ",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
+							Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
+							Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 1,
+										Attributes: attribute.NewSet(
+											semconv.OTelComponentName("simple_span_processor/0"),
+											semconv.OTelComponentTypeKey.String("simple_span_processor"),
+											semconv.ErrorTypeKey.String("*errors.errorString"),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					sm,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(test.enabled))
+
+			original := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(original) })
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(
+				metric.WithReader(r),
+				metric.WithView(dropSpanMetricsView),
+			)
+			otel.SetMeterProvider(mp)
+
+			ssp := NewSimpleSpanProcessor(test.exporter)
+			tp := basicTracerProvider(t)
+			tp.RegisterSpanProcessor(ssp)
+			startSpan(tp, test.name).End()
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(t.Context(), &rm))
+			test.assertMetrics(t, rm)
+			simpleProcessorIDCounter.Store(0) // reset simpleProcessorIDCounter
+		})
 	}
 }
