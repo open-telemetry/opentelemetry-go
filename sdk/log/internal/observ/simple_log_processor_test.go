@@ -33,11 +33,15 @@ func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
 }
 
 type errMeter struct {
-	noop.Meter
+	mapi.Meter
 	err error
 }
 
 func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
 	return nil, m.err
 }
 
