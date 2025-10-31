@@ -51,6 +51,97 @@ func (n *atomicCounter[N]) add(value N) {
 	}
 }
 
+// reset resets the internal state, and is not safe to call concurrently.
+func (n *atomicCounter[N]) reset() {
+	n.nFloatBits.Store(0)
+	n.nInt.Store(0)
+}
+
+// atomicN is a generic atomic number value.
+type atomicN[N int64 | float64] struct {
+	val atomic.Uint64
+}
+
+func (a *atomicN[N]) Load() (value N) {
+	v := a.val.Load()
+	switch any(value).(type) {
+	case int64:
+		value = N(v)
+	case float64:
+		value = N(math.Float64frombits(v))
+	default:
+		panic("unsupported type")
+	}
+	return value
+}
+
+func (a *atomicN[N]) Store(v N) {
+	var val uint64
+	switch any(v).(type) {
+	case int64:
+		val = uint64(v)
+	case float64:
+		val = math.Float64bits(float64(v))
+	default:
+		panic("unsupported type")
+	}
+	a.val.Store(val)
+}
+
+func (a *atomicN[N]) CompareAndSwap(oldN, newN N) bool {
+	var o, n uint64
+	switch any(oldN).(type) {
+	case int64:
+		o, n = uint64(oldN), uint64(newN)
+	case float64:
+		o, n = math.Float64bits(float64(oldN)), math.Float64bits(float64(newN))
+	default:
+		panic("unsupported type")
+	}
+	return a.val.CompareAndSwap(o, n)
+}
+
+type atomicMinMax[N int64 | float64] struct {
+	minimum, maximum atomicN[N]
+	set              atomic.Bool
+	mu               sync.Mutex
+}
+
+// init returns true if the value was used to initialize min and max.
+func (s *atomicMinMax[N]) init(val N) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.set.Load() {
+		defer s.set.Store(true)
+		s.minimum.Store(val)
+		s.maximum.Store(val)
+		return true
+	}
+	return false
+}
+
+func (s *atomicMinMax[N]) Update(val N) {
+	if !s.set.Load() && s.init(val) {
+		return
+	}
+
+	old := s.minimum.Load()
+	for val < old {
+		if s.minimum.CompareAndSwap(old, val) {
+			return
+		}
+		old = s.minimum.Load()
+	}
+
+	old = s.maximum.Load()
+	for old < val {
+		if s.maximum.CompareAndSwap(old, val) {
+			return
+		}
+		old = s.maximum.Load()
+	}
+}
+
 // hotColdWaitGroup is a synchronization primitive which enables lockless
 // writes for concurrent writers and enables a reader to acquire exclusive
 // access to a snapshot of state including only completed operations.
@@ -100,6 +191,10 @@ func (l *hotColdWaitGroup) start() uint64 {
 	// 63 bits gets incremented. At the same time, we get the new value
 	// back, which we can use to return the currently-hot index.
 	return l.startedCountAndHotIdx.Add(1) >> 63
+}
+
+func (l *hotColdWaitGroup) loadHot() uint64 {
+	return l.startedCountAndHotIdx.Load() >> 63
 }
 
 // done signals to the reader that an operation has fully completed.
@@ -181,4 +276,59 @@ func (m *limitedSyncMap) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	return m.len
+}
+
+// atomicLimitedRange is a range which can grow to at most maxSize. It is used
+// to emulate a slice which is bounded in size, but can grow in either
+// direction from any starting index.
+type atomicLimitedRange struct {
+	startAndEnd atomic.Uint64
+	maxSize     int32
+}
+
+func (r *atomicLimitedRange) Load() (start, end int32) {
+	n := r.startAndEnd.Load()
+	return int32(n >> 32), int32(n & ((1 << 32) - 1))
+}
+
+func (r *atomicLimitedRange) Store(start, end int32) {
+	// end must be cast to a uint32 first to avoid sign extension.
+	r.startAndEnd.Store(uint64(start)<<32 | uint64(uint32(end)))
+}
+
+func (r *atomicLimitedRange) Add(idx int32) bool {
+	for {
+		n := r.startAndEnd.Load()
+		start, end := int32(n>>32), int32(n&((1<<32)-1))
+		if idx >= start && idx < end {
+			// no expansion needed
+			return true
+		}
+
+		// If idx doesn't fit, still expand as far as possible in that
+		// direction to prevent the range from growing in the opposite
+		// direction. This ensures the following scale change is able to fit
+		// our point after the change.
+		partialExpansion := false
+		if start == end {
+			start = idx
+			end = idx + 1
+		} else if idx < start {
+			start = idx
+			if end-start > r.maxSize {
+				start = end - r.maxSize
+				partialExpansion = true
+			}
+		} else if idx >= end {
+			end = idx + 1
+			if end-start > r.maxSize {
+				end = start + r.maxSize
+				partialExpansion = true
+			}
+		}
+		if !r.startAndEnd.CompareAndSwap(n, uint64(start)<<32|uint64(uint32(end))) {
+			continue
+		}
+		return !partialExpansion
+	}
 }
