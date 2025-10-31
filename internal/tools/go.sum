@@ -524,8 +524,8 @@ go.augendre.info/arangolint v0.3.1 h1:n2E6p8f+zfXSFLa2e2WqFPp4bfvcuRdd50y6cT65pS
 go.augendre.info/arangolint v0.3.1/go.mod h1:6ZKzEzIZuBQwoSvlKT+qpUfIbBfFCE5gbAoTg0/117g=
 go.augendre.info/fatcontext v0.9.0 h1:Gt5jGD4Zcj8CDMVzjOJITlSb9cEch54hjRRlN3qDojE=
 go.augendre.info/fatcontext v0.9.0/go.mod h1:L94brOAT1OOUNue6ph/2HnwxoNlds9aXDF2FcUntbNw=
-go.opentelemetry.io/build-tools v0.28.1 h1:kqUxg8kpeOZ0wHXLmX2WmpqbeIVLkufZLcjTexi8cak=
-go.opentelemetry.io/build-tools v0.28.1/go.mod h1:3hSt/hRgbNM6phYzQ/CeGsTbfSKBkvXg8WtSZLNkxeQ=
+go.opentelemetry.io/build-tools v0.29.0 h1:dG1zmHKYTMsP0zGT34+32/U+YR+lcJ8kka7Lc4RAoT4=
+go.opentelemetry.io/build-tools v0.29.0/go.mod h1:jTzBit47RqVApCwStu9qw2TfGqR2Fhu5jinLHqfhghQ=
 go.opentelemetry.io/build-tools/crosslink v0.28.1 h1:9J8UFw8Py610SWLKRHyX1Lqfkman98xCxF8tEp9iKqc=
 go.opentelemetry.io/build-tools/crosslink v0.28.1/go.mod h1:yi6HtVnoKb4iCzFxqgjv3El/MU9AXbiUljQwxYYcfbU=
 go.opentelemetry.io/build-tools/gotmpl v0.28.1 h1:cTJ9Vm+BmPqU6oBvL9jk89WLrRfH7+WhivCWdteYsRg=
