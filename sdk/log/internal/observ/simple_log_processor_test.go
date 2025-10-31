@@ -41,6 +41,10 @@ func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64C
 	return nil, m.err
 }
 
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	return nil, m.err
+}
+
 const slpComponentID = 0
 
 func TestNewSLPError(t *testing.T) {
