@@ -38,9 +38,21 @@ type lastValue[N int64 | float64] struct {
 	start  time.Time
 }
 
-func (s *lastValue[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+// revive:disable-next-line:flag-parameter
+func (s *lastValue[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+	remove bool,
+) {
 	s.Lock()
 	defer s.Unlock()
+
+	if remove {
+		delete(s.values, fltrAttr.Equivalent())
+		return
+	}
 
 	d, ok := s.values[fltrAttr.Equivalent()]
 	if !ok {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -98,29 +99,50 @@ func TestAsyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 }
 
 func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("name", "alice"))
+	bob := attribute.NewSet(attribute.String("name", "bob"))
+	aliceOpt := metric.WithAttributeSet(alice)
+	bobOpt := metric.WithAttributeSet(bob)
+
 	// Float64 Instruments
 	t.Run("Float64", func(*testing.T) {
 		t.Run("Counter", func(*testing.T) {
 			delegate := &sfCounter{}
-			f := func(v float64) { delegate.Add(t.Context(), v) }
+			f := func(v float64) {
+				delegate.Add(t.Context(), v, bobOpt)
+				delegate.Add(t.Context(), v, aliceOpt)
+				delegate.Remove(t.Context(), bobOpt)
+			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(*testing.T) {
 			delegate := &sfUpDownCounter{}
-			f := func(v float64) { delegate.Add(t.Context(), v) }
+			f := func(v float64) {
+				delegate.Add(t.Context(), v, aliceOpt)
+				delegate.Add(t.Context(), v, bobOpt)
+				delegate.Remove(t.Context(), aliceOpt)
+			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(*testing.T) {
 			delegate := &sfHistogram{}
-			f := func(v float64) { delegate.Record(t.Context(), v) }
+			f := func(v float64) {
+				delegate.Record(t.Context(), v, aliceOpt)
+				delegate.Record(t.Context(), v, bobOpt)
+				delegate.Remove(t.Context(), aliceOpt)
+			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(*testing.T) {
 			delegate := &sfGauge{}
-			f := func(v float64) { delegate.Record(t.Context(), v) }
+			f := func(v float64) {
+				delegate.Record(t.Context(), v, bobOpt)
+				delegate.Record(t.Context(), v, aliceOpt)
+				delegate.Remove(t.Context(), bobOpt)
+			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
 	})
@@ -130,25 +152,41 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 	t.Run("Int64", func(*testing.T) {
 		t.Run("Counter", func(*testing.T) {
 			delegate := &siCounter{}
-			f := func(v int64) { delegate.Add(t.Context(), v) }
+			f := func(v int64) {
+				delegate.Add(t.Context(), v, aliceOpt)
+				delegate.Add(t.Context(), v, bobOpt)
+				delegate.Remove(t.Context(), aliceOpt)
+			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("UpDownCounter", func(*testing.T) {
 			delegate := &siUpDownCounter{}
-			f := func(v int64) { delegate.Add(t.Context(), v) }
+			f := func(v int64) {
+				delegate.Add(t.Context(), v, aliceOpt)
+				delegate.Add(t.Context(), v, bobOpt)
+				delegate.Remove(t.Context(), aliceOpt)
+			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Histogram", func(*testing.T) {
 			delegate := &siHistogram{}
-			f := func(v int64) { delegate.Record(t.Context(), v) }
+			f := func(v int64) {
+				delegate.Record(t.Context(), v, aliceOpt)
+				delegate.Record(t.Context(), v, bobOpt)
+				delegate.Remove(t.Context(), aliceOpt)
+			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 
 		t.Run("Gauge", func(*testing.T) {
 			delegate := &siGauge{}
-			f := func(v int64) { delegate.Record(t.Context(), v) }
+			f := func(v int64) {
+				delegate.Record(t.Context(), v, aliceOpt)
+				delegate.Record(t.Context(), v, bobOpt)
+				delegate.Remove(t.Context(), aliceOpt)
+			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
 	})
@@ -158,24 +196,27 @@ type testCountingFloatInstrument struct {
 	count int
 
 	metric.Float64Observable
-	embedded.Float64Counter
 	embedded.Float64UpDownCounter
 	embedded.Float64Histogram
 	embedded.Float64Gauge
-	embedded.Float64ObservableCounter
 	embedded.Float64ObservableUpDownCounter
 	embedded.Float64ObservableGauge
+	embedded.Float64Counter
+	embedded.Float64ObservableCounter
 }
 
 func (i *testCountingFloatInstrument) observe() {
 	i.count++
 }
 
-func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
+func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric.RecordOption) {
 	i.count++
 }
 
-func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric.RecordOption) {
+func (*testCountingFloatInstrument) Remove(context.Context, ...metric.MeasurementOption) {
+}
+
+func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
 	i.count++
 }
 
@@ -192,11 +233,14 @@ type testCountingIntInstrument struct {
 	embedded.Int64ObservableGauge
 }
 
-func (i *testCountingIntInstrument) observe() {
+func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOption) {
 	i.count++
 }
 
-func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOption) {
+func (*testCountingIntInstrument) Remove(context.Context, ...metric.MeasurementOption) {
+}
+
+func (i *testCountingIntInstrument) observe() {
 	i.count++
 }
 

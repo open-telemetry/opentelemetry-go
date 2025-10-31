@@ -62,11 +62,11 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, alice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -92,8 +92,8 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -131,11 +131,11 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -190,11 +190,11 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, alice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -220,8 +220,8 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -248,8 +248,8 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		{
 			input: []arg[N]{
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -304,11 +304,11 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -334,9 +334,9 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, fltrAlice},
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -374,11 +374,11 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -433,11 +433,11 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -463,9 +463,9 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, fltrAlice},
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -503,11 +503,11 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,

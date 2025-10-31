@@ -324,11 +324,13 @@ type expoHistogram[N int64 | float64] struct {
 	start time.Time
 }
 
+// revive:disable-next-line:flag-parameter
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
@@ -337,6 +339,11 @@ func (e *expoHistogram[N]) measure(
 
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
+
+	if remove {
+		delete(e.values, fltrAttr.Equivalent())
+		return
+	}
 
 	v, ok := e.values[fltrAttr.Equivalent()]
 	if !ok {

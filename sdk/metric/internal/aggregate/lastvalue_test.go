@@ -50,11 +50,11 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -81,8 +81,8 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -105,11 +105,11 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -154,11 +154,13 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, carol, false},
+				{ctx, 1, carol, true},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -203,8 +205,8 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -227,11 +229,11 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -276,11 +278,11 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -307,8 +309,8 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -331,11 +333,11 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -380,11 +382,11 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -411,8 +413,8 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -435,11 +437,11 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,

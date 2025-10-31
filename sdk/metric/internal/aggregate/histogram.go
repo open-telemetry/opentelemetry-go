@@ -81,11 +81,13 @@ func newHistValues[N int64 | float64](
 
 // Aggregate records the measurement value, scoped by attr, and aggregates it
 // into a histogram.
+// revive:disable-next-line:flag-parameter
 func (s *histValues[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -96,6 +98,11 @@ func (s *histValues[N]) measure(
 
 	s.valuesMu.Lock()
 	defer s.valuesMu.Unlock()
+
+	if remove {
+		delete(s.values, fltrAttr.Equivalent())
+		return
+	}
 
 	b, ok := s.values[fltrAttr.Equivalent()]
 	if !ok {
