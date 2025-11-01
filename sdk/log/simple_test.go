@@ -163,7 +163,7 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 	})
 }
 
-func BenchmarkSimpleProcessorInst(b *testing.B) {
+func BenchmarkSimpleProcessorObservability(b *testing.B) {
 	run := func(b *testing.B) {
 		slp := log.NewSimpleProcessor(new(exporter))
 		record := new(log.Record)
@@ -198,7 +198,6 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 		{
 			name:     "disabled",
 			enabled:  false,
-			wantErr:  nil,
 			exporter: new(exporter),
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
@@ -207,7 +206,6 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 		{
 			name:     "enabled",
 			enabled:  true,
-			wantErr:  nil,
 			exporter: new(exporter),
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Len(t, rm.ScopeMetrics, 1)
