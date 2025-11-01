@@ -53,6 +53,17 @@ func (e *exporter) ForceFlush(context.Context) error {
 	return nil
 }
 
+var _ log.Exporter = (*failingTestExporter)(nil)
+
+type failingTestExporter struct {
+	exporter
+}
+
+func (f *failingTestExporter) Export(ctx context.Context, r []log.Record) error {
+	_ = f.exporter.Export(ctx, r)
+	return assert.AnError
+}
+
 func TestSimpleProcessorOnEmit(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
@@ -152,22 +163,52 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 	})
 }
 
+func BenchmarkSimpleProcessorInst(b *testing.B) {
+	run := func(b *testing.B) {
+		slp := log.NewSimpleProcessor(new(exporter))
+		record := new(log.Record)
+		record.SetSeverityText("test")
+
+		ctx := b.Context()
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		var err error
+		for b.Loop() {
+			err = slp.OnEmit(ctx, record)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+	b.Run("NoObservability", run)
+}
+
 func TestSimpleLogProcessorObservability(t *testing.T) {
 	testcases := []struct {
 		name          string
 		enabled       bool
+		exporter      log.Exporter
+		wantErr       error
 		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
-			name:    "disabled",
-			enabled: false,
+			name:     "disabled",
+			enabled:  false,
+			wantErr:  nil,
+			exporter: new(exporter),
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
 			},
 		},
 		{
-			name:    "enabled",
-			enabled: true,
+			name:     "enabled",
+			enabled:  true,
+			wantErr:  nil,
+			exporter: new(exporter),
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Len(t, rm.ScopeMetrics, 1)
 				sm := rm.ScopeMetrics[0]
@@ -216,6 +257,10 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 		{
 			name:    "Enable Exporter error",
 			enabled: true,
+			wantErr: assert.AnError,
+			exporter: &failingTestExporter{
+				exporter: exporter{},
+			},
 			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Len(t, rm.ScopeMetrics, 1)
 				sm := rm.ScopeMetrics[0]
@@ -241,6 +286,7 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 											semconv.OTelComponentTypeKey.String(
 												string(otelconv.ComponentTypeSimpleLogProcessor),
 											),
+											semconv.ErrorTypeKey.String("*errors.errorString"),
 										),
 									},
 								},
@@ -275,13 +321,11 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 			mp := metric.NewMeterProvider(metric.WithReader(r))
 			otel.SetMeterProvider(mp)
 
-			e := new(exporter)
-			slp := log.NewSimpleProcessor(e)
+			slp := log.NewSimpleProcessor(tc.exporter)
 			record := new(log.Record)
 			record.SetSeverityText("test")
 			err := slp.OnEmit(t.Context(), record)
-			require.NoError(t, err)
-
+			require.ErrorIs(t, err, tc.wantErr)
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, r.Collect(t.Context(), &rm))
 			tc.assertMetrics(t, rm)
