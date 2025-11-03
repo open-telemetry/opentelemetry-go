@@ -11,8 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/log/internal/counter"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -165,7 +164,7 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 
 func BenchmarkSimpleProcessorObservability(b *testing.B) {
 	run := func(b *testing.B) {
-		slp := log.NewSimpleProcessor(new(exporter))
+		slp := log.NewSimpleProcessor(&failingTestExporter{exporter: exporter{}})
 		record := new(log.Record)
 		record.SetSeverityText("test")
 
