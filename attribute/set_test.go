@@ -563,7 +563,7 @@ func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 		valueBase += string(rune('0' + i%10))
 	}
 
-	// Create 7 attributes with different suffixes to ensure uniqueness
+	// Create 5 attributes with different suffixes to ensure uniqueness
 	attrs := []attribute.KeyValue{
 		attribute.String(keyBase+"1", valueBase+"x"),
 		attribute.String(keyBase+"2", valueBase+"y"),

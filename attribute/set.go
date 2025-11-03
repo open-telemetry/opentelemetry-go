@@ -60,18 +60,21 @@ var (
 	// keyValueType is used in computeDistinctReflect.
 	keyValueType = reflect.TypeOf(KeyValue{})
 
+	// emptyHash is the hash of an empty set.
+	emptyHash = xxhash.New().Sum64()
+
 	// userDefinedEmptySet is an empty set. It was mistakenly exposed to users
 	// as something they can assign to, so it must remain addressable and
 	// mutable.
 	//
 	// This is kept for backwards compatibility, but should not be used in new code.
 	userDefinedEmptySet = &Set{
-		hash: xxhash.New().Sum64(),
+		hash: emptyHash,
 		data: [0]KeyValue{},
 	}
 
 	emptySet = Set{
-		hash: xxhash.New().Sum64(),
+		hash: emptyHash,
 		data: [0]KeyValue{},
 	}
 )
