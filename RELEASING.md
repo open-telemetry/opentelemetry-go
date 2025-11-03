@@ -107,33 +107,47 @@ It is critical you make sure the version you push upstream is correct.
     ...
     ```
 
+## Sign artifacts
+
+To ensure we comply with CNCF best practices, we need to sign the release artifacts.
+
+Download the `.tar.gz` and `.zip` archives from the [tags page](https://github.com/open-telemetry/opentelemetry-go/tags) for the new release tag. Both archives need to be signed with your GPG key.
+
+You can use [this script] to verify the contents of the archives before signing them.
+
+To find your GPG key ID, run:
+
+```terminal
+gpg --list-secret-keys --keyid-format=long
+```
+
+The key ID is the 16-character string after `sec rsa4096/` (or similar).
+
+Set environment variables and sign both artifacts:
+
+```terminal
+export VERSION="<version>"  # e.g., v1.32.0
+export KEY_ID="<your-gpg-key-id>"
+
+gpg --local-user $KEY_ID --armor --detach-sign opentelemetry-go-$VERSION.tar.gz
+gpg --local-user $KEY_ID --armor --detach-sign opentelemetry-go-$VERSION.zip
+```
+
+You can verify the signatures with:
+
+```terminal
+gpg --verify opentelemetry-go-$VERSION.tar.gz.asc opentelemetry-go-$VERSION.tar.gz
+gpg --verify opentelemetry-go-$VERSION.zip.asc opentelemetry-go-$VERSION.zip
+```
+
+[this script]: https://github.com/MrAlias/attest-sh
+
 ## Release
 
 Finally create a Release for the new `<new tag>` on GitHub.
 The release body should include all the release notes from the Changelog for this release.
 
-### Sign the Release Artifact
-
-To ensure we comply with CNCF best practices, we need to sign the release artifact.
-The tarball attached to the GitHub release needs to be signed with your GPG key.
-
-Follow [these steps] to sign the release artifact and upload it to GitHub.
-You can use [this script] to verify the contents of the tarball before signing it.
-
-Be sure to use the correct GPG key when signing the release artifact.
-
-```terminal
-gpg --local-user <key-id> --armor --detach-sign opentelemetry-go-<version>.tar.gz
-```
-
-You can verify the signature with:
-
-```terminal
-gpg --verify opentelemetry-go-<version>.tar.gz.asc opentelemetry-go-<version>.tar.gz
-```
-
-[these steps]: https://wiki.debian.org/Creating%20signed%20GitHub%20releases
-[this script]: https://github.com/MrAlias/attest-sh
+**IMPORTANT**: GitHub releases are immutable once created. You must upload the signed artifacts (`.tar.gz`, `.tar.gz.asc`, `.zip`, and `.zip.asc`) when creating the release, as they cannot be added or modified later.
 
 ## Post-Release
 
