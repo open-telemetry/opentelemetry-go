@@ -111,7 +111,8 @@ It is critical you make sure the version you push upstream is correct.
 
 To ensure we comply with CNCF best practices, we need to sign the release artifacts.
 
-Download the `.tar.gz` and `.zip` archives from the [tags page](https://github.com/open-telemetry/opentelemetry-go/tags) for the new release tag. Both archives need to be signed with your GPG key.
+Download the `.tar.gz` and `.zip` archives from the [tags page](https://github.com/open-telemetry/opentelemetry-go/tags) for the new release tag.
+Both archives need to be signed with your GPG key.
 
 You can use [this script] to verify the contents of the archives before signing them.
 
@@ -147,7 +148,8 @@ gpg --verify opentelemetry-go-$VERSION.zip.asc opentelemetry-go-$VERSION.zip
 Finally create a Release for the new `<new tag>` on GitHub.
 The release body should include all the release notes from the Changelog for this release.
 
-**IMPORTANT**: GitHub releases are immutable once created. You must upload the signed artifacts (`.tar.gz`, `.tar.gz.asc`, `.zip`, and `.zip.asc`) when creating the release, as they cannot be added or modified later.
+***IMPORTANT***: GitHub releases are immutable once created.
+You must upload the signed artifacts (`.tar.gz`, `.tar.gz.asc`, `.zip`, and `.zip.asc`) when creating the release, as they cannot be added or modified later.
 
 ## Post-Release
 
