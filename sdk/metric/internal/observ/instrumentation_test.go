@@ -136,9 +136,8 @@ func assertCollectionMetrics(t *testing.T, got metricdata.ScopeMetrics, err erro
 	m := got.Metrics
 	require.Len(t, m, 1, "expected 1 metric (collection duration)")
 
-	o := metricdatatest.IgnoreTimestamp()
 	want := collectionDuration(err)
-	metricdatatest.AssertEqual(t, want, m[0], o, metricdatatest.IgnoreValue())
+	metricdatatest.AssertEqual(t, want, m[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
 func TestInstrumentationCollectMetricsSuccess(t *testing.T) {
