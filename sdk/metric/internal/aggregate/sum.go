@@ -22,12 +22,18 @@ type valueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
+// revive:disable-next-line:flag-parameter
 func (s *valueMap[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
+	if remove {
+		s.values.Delete(fltrAttr.Equivalent())
+		return
+	}
 	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &sumValue[N]{
 			res:   s.newRes(attr),
@@ -74,10 +80,16 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]valueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+func (s *deltaSum[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+	remove bool,
+) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr, remove)
 }
 
 func (s *deltaSum[N]) collect(
