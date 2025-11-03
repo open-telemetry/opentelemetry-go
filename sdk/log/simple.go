@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/log/internal/counter"
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
@@ -38,7 +37,7 @@ func NewSimpleProcessor(exporter Exporter, _ ...SimpleProcessorOption) *SimplePr
 		exporter: exporter,
 	}
 	var err error
-	slp.inst, err = observ.NewSLP(counter.NextExporterID())
+	slp.inst, err = observ.NewSLP(observ.NextSimpleProcessorID())
 	if err != nil {
 		otel.Handle(err)
 	}

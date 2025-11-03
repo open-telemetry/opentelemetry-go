@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/log/internal/counter"
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -326,7 +325,7 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, r.Collect(t.Context(), &rm))
 			tc.assertMetrics(t, rm)
-			counter.SetExporterID(0)
+			observ.SetSimpleProcessorID(0)
 		})
 	}
 }
