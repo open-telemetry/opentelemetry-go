@@ -148,7 +148,7 @@ gpg --verify opentelemetry-go-$VERSION.zip.asc opentelemetry-go-$VERSION.zip
 Finally create a Release for the new `<new tag>` on GitHub.
 The release body should include all the release notes from the Changelog for this release.
 
-***IMPORTANT***: GitHub releases are immutable once created.
+***IMPORTANT***: GitHub Releases are immutable once created.
 You must upload the signed artifacts (`.tar.gz`, `.tar.gz.asc`, `.zip`, and `.zip.asc`) when creating the release, as they cannot be added or modified later.
 
 ## Post-Release
