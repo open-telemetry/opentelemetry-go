@@ -512,6 +512,16 @@ func TestPeriodicReaderInstrumentation(t *testing.T) {
 	// Enable SDK observability.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
+	// Set up a global MeterProvider to collect the instrumentation metrics.
+	// The PeriodicReader's instrumentation emits metrics to the global MeterProvider.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	instrumentationReader := NewManualReader()
+	instrumentationMP := NewMeterProvider(WithReader(instrumentationReader))
+	otel.SetMeterProvider(instrumentationMP)
+	t.Cleanup(func() { _ = instrumentationMP.Shutdown(t.Context()) })
+
 	// Create a periodic reader with an exporter that returns an error on export but not shutdown
 	exp := &fnExporter{
 		exportFunc: func(context.Context, *metricdata.ResourceMetrics) error {
@@ -534,24 +544,17 @@ func TestPeriodicReaderInstrumentation(t *testing.T) {
 	err := periodicReader.ForceFlush(t.Context())
 	assert.Error(t, err, "expected error from exporter")
 
-	// Collect again so we have something to scan through.
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, periodicReader.Collect(t.Context(), &rm))
-	require.NotEmpty(t, rm.ScopeMetrics)
+	// Collect the instrumentation metrics from the global MeterProvider
+	var instrumentationMetrics metricdata.ResourceMetrics
+	require.NoError(t, instrumentationReader.Collect(t.Context(), &instrumentationMetrics))
 
 	targetName := otelconv.SDKMetricReaderCollectionDuration{}.Name()
 	targetDesc := otelconv.SDKMetricReaderCollectionDuration{}.Description()
 	targetUnit := otelconv.SDKMetricReaderCollectionDuration{}.Unit()
 
-	// Find the SDK reader self-metric anywhere in the collected data.
-	foundMetric := findMetricByName(&rm, targetName)
-
-	// If not found, explain and skip (this metric is emitted via the *global* MP).
-	if foundMetric == nil {
-		t.Skipf("SDK reader self-metric %q not found. It is emitted via the global MeterProvider; "+
-			"this test does not install a global MP.", targetName)
-		return
-	}
+	// Find the SDK reader self-metric in the instrumentation metrics.
+	foundMetric := findMetricByName(&instrumentationMetrics, targetName)
+	require.NotNil(t, foundMetric, "SDK reader self-metric %q should be found in instrumentation metrics", targetName)
 
 	// Basic identity checks (don't assert scope name/version; that can vary).
 	assert.Equal(t, targetName, foundMetric.Name)
@@ -569,7 +572,7 @@ func TestPeriodicReaderInstrumentation(t *testing.T) {
 	attrs := dp.Attributes.ToSlice()
 	t.Logf("observability attrs: %v", attrs)
 
-	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.PeriodicReader"
+	const expectedComponentType = "periodic_metric_reader"
 
 	var hasName, hasType bool
 	for _, a := range attrs {
@@ -586,6 +589,63 @@ func TestPeriodicReaderInstrumentation(t *testing.T) {
 	}
 	assert.True(t, hasName, "expected non-empty otel.component.name containing 'metric_reader'")
 	assert.True(t, hasType, "expected otel.component.type == %q", expectedComponentType)
+}
+
+func TestPeriodicReaderInstrumentationError(t *testing.T) {
+	// Enable SDK observability.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Set up a MeterProvider that returns errors when creating instruments.
+	// This simulates the error path in NewPeriodicReader where observ.NewInstrumentation fails.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetErrorHandler(otel.GetErrorHandler()) })
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Create an error handler to capture the error from otel.Handle()
+	eh := newChErrorHandler()
+	otel.SetErrorHandler(eh)
+
+	// Set up a MeterProvider that returns errors
+	mp := &errMeterProvider{err: assert.AnError}
+	otel.SetMeterProvider(mp)
+
+	// Create a periodic reader - this should trigger the error path
+	exp := &fnExporter{}
+	periodicReader := NewPeriodicReader(exp)
+	t.Cleanup(func() { _ = periodicReader.Shutdown(t.Context()) })
+
+	// Verify that the error was handled via otel.Handle()
+	select {
+	case err := <-eh.Err:
+		assert.Error(t, err, "expected error to be handled")
+		assert.ErrorIs(t, err, assert.AnError, "expected the error from NewInstrumentation")
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for error to be handled")
+	}
+
+	// Verify the reader is still functional despite the instrumentation error
+	periodicReader.register(testSDKProducer{})
+	var rm metricdata.ResourceMetrics
+	assert.NoError(t, periodicReader.Collect(t.Context(), &rm), "reader should still work without instrumentation")
+}
+
+// errMeterProvider is a test helper that returns errors when creating instruments.
+type errMeterProvider struct {
+	metric.MeterProvider
+	err error
+}
+
+func (m *errMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	return &errMeter{err: m.err}
+}
+
+type errMeter struct {
+	metric.Meter
+	err error
+}
+
+func (m *errMeter) Float64Histogram(string, ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
+	return nil, m.err
 }
 
 // createMetricDataTestProducer creates a producer using patterns from metricdatatest.
