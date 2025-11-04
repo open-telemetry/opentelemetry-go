@@ -23,7 +23,7 @@ func FuzzTraceIDFromHex(f *testing.F) {
 		id, err := TraceIDFromHex(s)
 
 		// OTel-valid TraceIDs: 32 lowercase hex chars, not all zeros.
-		validTraceID := validTraceIDRe.MatchString(s) && !strings.EqualFold(s, "00000000000000000000000000000000")
+		validTraceID := validTraceIDRe.MatchString(s) && s != "00000000000000000000000000000000"
 		if validTraceID && err != nil {
 			t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
 		}
