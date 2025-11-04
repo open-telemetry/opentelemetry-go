@@ -24,24 +24,19 @@ func FuzzTraceIDFromHex(f *testing.F) {
 		id, err := TraceIDFromHex(s)
 
 		// OTel-valid TraceIDs: 32 lowercase hex chars, not all zeros.
-		isValidTraceID := validTraceIDRe.MatchString(s) && !strings.EqualFold(s, "00000000000000000000000000000000")
-
-		if isValidTraceID && err != nil {
+		validTraceID := validTraceIDRe.MatchString(s) && !strings.EqualFold(s, "00000000000000000000000000000000")
+		if validTraceID && err != nil {
 			t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
 		}
-
-		if !isValidTraceID && err == nil {
-			t.Errorf("expected error for invalid input: %q", s)
-			return
+		if !validTraceID && err == nil {
+			t.Fatalf("expected error for invalid input: %q", s)
 		}
-
 		if err != nil {
 			return
 		}
 
 		got := id.String()
 
-		// TraceIDFromHex normalizes input to lowercase.
 		if got != s {
 			t.Errorf("roundtrip mismatch: in=%q out=%q", s, got)
 		}
@@ -63,24 +58,20 @@ func FuzzSpanIDFromHex(f *testing.F) {
 		id, err := SpanIDFromHex(s)
 
 		// OTel-valid SpanIDs: 16 lowercase hex chars, not all zeros.
-		isValidSpanID := validSpanIDRe.MatchString(s) && !strings.EqualFold(s, "0000000000000000")
-
-		if isValidSpanID && err != nil {
+		validSpanID := validSpanIDRe.MatchString(s) && !strings.EqualFold(s, "0000000000000000")
+		if validSpanID && err != nil {
 			t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
 		}
-
-		if !isValidSpanID && err == nil {
-			t.Errorf("expected error for invalid input: %q", s)
+		if !validSpanID && err == nil {
+			t.Fatalf("expected error for invalid input: %q", s)
 			return
 		}
-
 		if err != nil {
 			return
 		}
 
 		got := id.String()
 
-		// SpanIDFromHex normalizes input to lowercase.
 		if got != s {
 			t.Errorf("roundtrip mismatch: in=%q out=%q", s, got)
 		}
