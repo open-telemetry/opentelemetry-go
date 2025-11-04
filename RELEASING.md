@@ -176,13 +176,6 @@ This helps track what changes were included in each release.
 
 Once all related issues and PRs have been added to the milestone, close the milestone.
 
-### Demo Repository
-
-Bump the dependencies in the following Go services:
-
-- [`checkoutservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/checkout)
-- [`productcatalogservice`](https://github.com/open-telemetry/opentelemetry-demo/tree/main/src/product-catalog)
-
 ### Close the `Version Release` issue
 
 Once the todo list in the `Version Release` issue is complete, close the issue.
