@@ -56,7 +56,7 @@ func FuzzSpanIDFromHex(f *testing.F) {
 		id, err := SpanIDFromHex(s)
 
 		// OTel-valid SpanIDs: 16 lowercase hex chars, not all zeros.
-		validSpanID := validSpanIDRe.MatchString(s) && !strings.EqualFold(s, "0000000000000000")
+		validSpanID := validSpanIDRe.MatchString(s) && s != "0000000000000000"
 		if validSpanID && err != nil {
 			t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
 		}
