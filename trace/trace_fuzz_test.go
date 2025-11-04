@@ -5,7 +5,6 @@ package trace
 
 import (
 	"regexp"
-	"strings"
 	"testing"
 )
 
