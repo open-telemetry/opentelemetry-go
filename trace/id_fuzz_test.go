@@ -17,7 +17,6 @@ func FuzzTraceIDFromHex(f *testing.F) {
 	f.Add("0123456789abcdefabcdefabcdefabcd")
 	f.Add("invalidhexstringnot32chars") // Invalid.
 
-	// Precompile regex for efficiency.
 	validTraceIDRe := regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 	f.Fuzz(func(t *testing.T, s string) {
@@ -51,7 +50,6 @@ func FuzzSpanIDFromHex(f *testing.F) {
 	f.Add("abcdefabcdefabcd")
 	f.Add("invalidhex") // Invalid.
 
-	// Precompile regex for efficiency.
 	validSpanIDRe := regexp.MustCompile(`^[0-9a-f]{16}$`)
 
 	f.Fuzz(func(t *testing.T, s string) {
