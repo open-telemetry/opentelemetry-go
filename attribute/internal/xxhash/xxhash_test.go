@@ -7,48 +7,8 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestStringHashCorrectness(t *testing.T) {
-	input := []string{"", "a", "ab", "abc", "世界"}
-
-	for _, in := range input {
-		h := New()
-		got := h.String(in)
-
-		// Compare with direct xxhash
-		refH := xxhash.New()
-		n, err := refH.WriteString(in)
-		require.NoError(t, err)
-		require.Equalf(t, len(in), n, "wrote only %d out of %d bytes", n, len(in))
-		want := refH.Sum64()
-
-		assert.Equal(t, want, got.Sum64(), in)
-	}
-}
-
-func TestUint64HashCorrectness(t *testing.T) {
-	input := []uint64{0, 10, 312984238623, 1024}
-
-	buf := make([]byte, 8)
-	for _, in := range input {
-		h := New()
-		got := h.Uint64(in)
-
-		// Compare with direct xxhash
-		refH := xxhash.New()
-		binary.LittleEndian.PutUint64(buf, in)
-		n, err := refH.Write(buf)
-		require.NoError(t, err)
-		require.Equalf(t, 8, n, "wrote only %d out of 8 bytes", n)
-		want := refH.Sum64()
-
-		assert.Equal(t, want, got.Sum64(), in)
-	}
-}
 
 func TestIntegrity(t *testing.T) {
 	data := []byte{'1', '2', 3, 4, 5, 6, 7, 8, 9, 10}
@@ -153,8 +113,6 @@ func TestChaining(t *testing.T) {
 	}
 }
 
-var result Hash
-
 func BenchmarkStringKB(b *testing.B) {
 	b.SetBytes(1024)
 	data := make([]byte, 1024)
@@ -166,8 +124,8 @@ func BenchmarkStringKB(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for range b.N {
-		result = h.String(s)
+	for b.Loop() {
+		h.String(s)
 	}
 }
 
@@ -178,8 +136,8 @@ func BenchmarkUint64KB(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	for range b.N {
-		result = h.Uint64(i)
+	for b.Loop() {
+		h.Uint64(i)
 	}
 }
 

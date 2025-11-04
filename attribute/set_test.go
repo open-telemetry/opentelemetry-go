@@ -528,8 +528,6 @@ func BenchmarkFiltering(b *testing.B) {
 	b.Run("AllDropped", benchFn(func(attribute.KeyValue) bool { return false }))
 }
 
-var sinkSet attribute.Set
-
 func BenchmarkNewSet(b *testing.B) {
 	attrs := []attribute.KeyValue{
 		attribute.String("B1", "2"),
@@ -542,8 +540,8 @@ func BenchmarkNewSet(b *testing.B) {
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
+	for b.Loop() {
+		attribute.NewSet(attrs...)
 	}
 }
 
@@ -574,52 +572,27 @@ func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	return attrs
 }
 
-func BenchmarkNewSetSmallStrings(b *testing.B) {
-	// Key length: 2, Value length: 1 (like original B1="2")
-	attrs := generateStringAttrsWithSize(2, 1)
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
+func BenchmarkNewSetStringAttrs(b *testing.B) {
+	testCases := []struct {
+		name     string
+		keyLen   int
+		valueLen int
+	}{
+		{"SmallStrings", 2, 1},     // like original B1="2"
+		{"MediumStrings", 10, 10},  // realistic service names, etc.
+		{"LargeStrings", 25, 25},   // longer service names, URLs, etc.
+		{"VeryLargeStrings", 50, 100}, // very long values like URLs, descriptions
+		{"HugeStrings", 100, 500},  // extremely large like full URLs, JSON, etc.
 	}
-}
 
-func BenchmarkNewSetMediumStrings(b *testing.B) {
-	// Key length: 10, Value length: 10 (realistic service names, etc.)
-	attrs := generateStringAttrsWithSize(10, 10)
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
-	}
-}
-
-func BenchmarkNewSetLargeStrings(b *testing.B) {
-	// Key length: 25, Value length: 25 (longer service names, URLs, etc.)
-	attrs := generateStringAttrsWithSize(25, 25)
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
-	}
-}
-
-func BenchmarkNewSetVeryLargeStrings(b *testing.B) {
-	// Key length: 50, Value length: 100 (very long values like URLs, descriptions)
-	attrs := generateStringAttrsWithSize(50, 100)
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
-	}
-}
-
-func BenchmarkNewSetHugeStrings(b *testing.B) {
-	// Key length: 100, Value length: 500 (extremely large like full URLs, JSON, etc.)
-	attrs := generateStringAttrsWithSize(100, 500)
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			attrs := generateStringAttrsWithSize(tc.keyLen, tc.valueLen)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				attribute.NewSet(attrs...)
+			}
+		})
 	}
 }
