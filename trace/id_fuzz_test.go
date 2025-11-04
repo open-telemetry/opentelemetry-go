@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package trace
 
 import (
@@ -23,12 +26,8 @@ func FuzzTraceIDFromHex(f *testing.F) {
 		// OTel-valid TraceIDs: 32 lowercase hex chars, not all zeros.
 		isValidTraceID := validTraceIDRe.MatchString(s) && !strings.EqualFold(s, "00000000000000000000000000000000")
 
-		if isValidTraceID {
-			if err != nil {
-				t.Errorf("expected no error for valid hex input: %q, got err: %v", s, err)
-				t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
-				return
-			}
+		if isValidTraceID && err != nil {
+			t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
 		}
 
 		if !isValidTraceID && err == nil {
@@ -66,12 +65,8 @@ func FuzzSpanIDFromHex(f *testing.F) {
 		// OTel-valid SpanIDs: 16 lowercase hex chars, not all zeros.
 		isValidSpanID := validSpanIDRe.MatchString(s) && !strings.EqualFold(s, "0000000000000000")
 
-		if isValidSpanID {
-			if err != nil {
-				t.Errorf("expected no error for valid hex input: %q, got err: %v", s, err)
-				t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
-				return
-			}
+		if isValidSpanID && err != nil {
+			t.Fatalf("expected no error for valid hex input: %q, got err: %v", s, err)
 		}
 
 		if !isValidSpanID && err == nil {
