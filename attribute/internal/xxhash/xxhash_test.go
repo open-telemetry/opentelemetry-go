@@ -57,7 +57,7 @@ func TestIntegrity(t *testing.T) {
 
 	h1 := New()
 	got := h1.String(string(data[:2]))
-	num := binary.LittleEndian.Uint64(append(data[2:], 0, 0)) // Pad to 8 bytes
+	num := binary.LittleEndian.Uint64(data[2:])
 	got = got.Uint64(num)
 
 	assert.Equal(t, want.Sum64(), got.Sum64())
