@@ -67,7 +67,7 @@ func TestNew(t *testing.T) {
 	h1 := New()
 	h2 := New()
 
-	// Test that the underlying digest is properly initialized
+	// Test that the underlying digest is properly initialized.
 	if h1.Sum64() != h2.Sum64() {
 		t.Errorf("New() should return consistent initial value: %d != %d", h1.Sum64(), h2.Sum64())
 	}

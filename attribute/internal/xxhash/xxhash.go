@@ -11,7 +11,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 )
 
-// Hash wraps xxhash.Digest to provide the same interface as the FNV implementation.
+// Hash wraps xxhash.Digest to provide an API friendly for hashing attribute values.
 type Hash struct {
 	d *xxhash.Digest
 }
@@ -29,7 +29,7 @@ func (h Hash) Uint64(val uint64) Hash {
 	return h
 }
 
-func (h Hash) Bool(val bool) Hash { // nolint:revive  // val is not a flag.
+func (h Hash) Bool(val bool) Hash { // nolint:revive // This is a hashing function.
 	if val {
 		return h.Uint64(1)
 	}
@@ -41,7 +41,7 @@ func (h Hash) Float64(val float64) Hash {
 }
 
 func (h Hash) Int64(val int64) Hash {
-	return h.Uint64(uint64(val)) // nolint:gosec // overflow doesn't matter since we are hashing.
+	return h.Uint64(uint64(val)) // nolint:gosec // Overflow doesn't matter since we are hashing.
 }
 
 func (h Hash) String(val string) Hash {
