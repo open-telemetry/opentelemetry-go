@@ -578,11 +578,11 @@ func BenchmarkNewSetStringAttrs(b *testing.B) {
 		keyLen   int
 		valueLen int
 	}{
-		{"SmallStrings", 2, 1},     // like original B1="2"
-		{"MediumStrings", 10, 10},  // realistic service names, etc.
-		{"LargeStrings", 25, 25},   // longer service names, URLs, etc.
+		{"SmallStrings", 2, 1},        // B1="2"
+		{"MediumStrings", 10, 10},     // realistic service names, etc.
+		{"LargeStrings", 25, 25},      // longer service names, URLs, etc.
 		{"VeryLargeStrings", 50, 100}, // very long values like URLs, descriptions
-		{"HugeStrings", 100, 500},  // extremely large like full URLs, JSON, etc.
+		{"HugeStrings", 100, 500},     // extremely large like full URLs, JSON, etc.
 	}
 
 	for _, tc := range testCases {
