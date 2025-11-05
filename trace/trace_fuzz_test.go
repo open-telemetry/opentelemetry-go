@@ -61,7 +61,6 @@ func FuzzSpanIDFromHex(f *testing.F) {
 		}
 		if !validSpanID && err == nil {
 			t.Fatalf("expected error for invalid input: %q", s)
-			return
 		}
 		if err != nil {
 			return
