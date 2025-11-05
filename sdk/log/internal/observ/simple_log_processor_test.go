@@ -30,9 +30,7 @@ func TestNextExporterID(t *testing.T) {
 	var expected int64
 	for range 10 {
 		id := NextSimpleProcessorID()
-		if id != expected {
-			t.Errorf("NextExporterID() = %d; want %d", id, expected)
-		}
+		assert.Equal(t, expected, id)
 		expected++
 	}
 }
@@ -41,14 +39,10 @@ func TestSetExporterID(t *testing.T) {
 	SetSimpleProcessorID(0)
 
 	prev := SetSimpleProcessorID(42)
-	if prev != 0 {
-		t.Errorf("SetExporterID(42) returned %d; want 0", prev)
-	}
+	assert.Equal(t, int64(0), prev)
 
 	id := NextSimpleProcessorID()
-	if id != 42 {
-		t.Errorf("NextExporterID() = %d; want 42", id)
-	}
+	assert.Equal(t, int64(42), id)
 }
 
 func TestNextExporterIDConcurrentSafe(t *testing.T) {
@@ -72,9 +66,8 @@ func TestNextExporterIDConcurrentSafe(t *testing.T) {
 	wg.Wait()
 
 	expected := int64(goroutines * increments)
-	if id := NextSimpleProcessorID(); id != expected {
-		t.Errorf("NextExporterID() = %d; want %d", id, expected)
-	}
+	id := NextSimpleProcessorID()
+	assert.Equal(t, expected, id)
 }
 
 type errMeterProvider struct {
