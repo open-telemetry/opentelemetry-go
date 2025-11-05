@@ -34,7 +34,6 @@ func FuzzTraceIDFromHex(f *testing.F) {
 		}
 
 		got := id.String()
-
 		if got != s {
 			t.Errorf("roundtrip mismatch: in=%q out=%q", s, got)
 		}
@@ -67,7 +66,6 @@ func FuzzSpanIDFromHex(f *testing.F) {
 		}
 
 		got := id.String()
-
 		if got != s {
 			t.Errorf("roundtrip mismatch: in=%q out=%q", s, got)
 		}
