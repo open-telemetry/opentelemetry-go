@@ -28,7 +28,7 @@ func (h Hash) Uint64(val uint64) Hash {
 	// if it returns an err then panic
 	_, err := h.d.Write(buf[:])
 	if err != nil {
-		panic("xxhash write of uint64 failed: " + err.Error()) // codecov:ignore
+		panic("xxhash write of uint64 failed: " + err.Error())
 	}
 	return h
 }
@@ -53,7 +53,7 @@ func (h Hash) String(val string) Hash {
 	// if it returns an err then panic
 	_, err := h.d.WriteString(val)
 	if err != nil {
-		panic("xxhash write of string failed: " + err.Error()) // codecov:ignore
+		panic("xxhash write of string failed: " + err.Error())
 	}
 	return h
 }
