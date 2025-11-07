@@ -25,9 +25,10 @@ func (h Hash) Uint64(val uint64) Hash {
 	var buf [8]byte
 	binary.LittleEndian.PutUint64(buf[:], val)
 	// errors from Write are always nil for xxhash
+	// if it returns an err then panic
 	_, err := h.d.Write(buf[:])
 	if err != nil {
-		panic("xxhash write of uint64 failed: " + err.Error())
+		panic("xxhash write of uint64 failed: " + err.Error()) // codecov:ignore
 	}
 	return h
 }
@@ -49,9 +50,10 @@ func (h Hash) Int64(val int64) Hash {
 
 func (h Hash) String(val string) Hash {
 	// errors from WriteString are always nil for xxhash
+	// if it returns an err then panic
 	_, err := h.d.WriteString(val)
 	if err != nil {
-		panic("xxhash write of string failed: " + err.Error())
+		panic("xxhash write of string failed: " + err.Error()) // codecov:ignore
 	}
 	return h
 }
