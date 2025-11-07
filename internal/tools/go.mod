@@ -235,7 +235,7 @@ require (
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/telemetry v0.0.0-20251105150722-cbe4531f26c3 // indirect
+	golang.org/x/telemetry v0.0.0-20251106204201-5cc343d36a5d // indirect
 	golang.org/x/text v0.30.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
