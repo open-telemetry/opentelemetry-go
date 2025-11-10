@@ -302,15 +302,16 @@ func (s *cumulativeHistogram[N]) measure(
 		return hPt
 	}).(*hotColdHistogramPoint[N])
 
-	hotIdx := h.hcwg.start()
-	defer h.hcwg.done(hotIdx)
-
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
 	// of s.bounds. This aligns with the histogramPoint in that the length of histogramPoint
 	// is len(s.bounds)+1, with the last bucket representing:
 	// (s.bounds[len(s.bounds)-1], +∞).
 	idx := sort.SearchFloat64s(s.bounds, float64(value))
+
+	hotIdx := h.hcwg.start()
+	defer h.hcwg.done(hotIdx)
+
 	h.hotColdPoint[hotIdx].counts[idx].Add(1)
 	if !s.noMinMax {
 		h.hotColdPoint[hotIdx].minMax.Update(value)
