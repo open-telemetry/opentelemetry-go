@@ -289,7 +289,7 @@ func (s *cumulativeHistogram[N]) measure(
 			//
 			// Then,
 			//
-			//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
+			//   count = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 			hotColdPoint: [2]histogramPointCounters[N]{
 				{
 					counts: make([]atomic.Uint64, len(s.bounds)+1),
