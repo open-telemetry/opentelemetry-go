@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -30,8 +31,19 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 	t.Helper()
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
+	// drop metric reader metrics as we are only testing for stdoutmetric exporter
+	dropReaderMetrics := sdkmetric.NewView(
+		sdkmetric.Instrument{
+			Scope: instrumentation.Scope{Name: "go.opentelemetry.io/otel/sdk/metric/internal/observ"},
+		},
+		sdkmetric.Stream{Aggregation: sdkmetric.AggregationDrop{}},
+	)
+
 	reader := sdkmetric.NewManualReader()
-	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropReaderMetrics),
+	)
 
 	originalMP := otel.GetMeterProvider()
 	otel.SetMeterProvider(mp)
@@ -149,7 +161,6 @@ func checkInflight(t *testing.T, rm metricdata.ResourceMetrics, wantInflight met
 		}
 	}
 	require.True(t, found)
-
 	metricdatatest.AssertEqual(t, wantInflight, inflightMetric, metricdatatest.IgnoreTimestamp())
 }
 
