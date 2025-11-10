@@ -40,7 +40,7 @@ type histogramPointCounters[N int64 | float64] struct {
 }
 
 func (b *histogramPointCounters[N]) loadCountsInto(into *[]uint64) uint64 {
-	// TODO (#3047): Making copies for bounds and counts incurs a large
+	// TODO (#3047): Making copies for counts incurs a large
 	// memory allocation footprint. Alternatives should be explored.
 	counts := reset(*into, len(b.counts), len(b.counts))
 	count := uint64(0)
@@ -120,7 +120,7 @@ func (s *deltaHistogram[N]) measure(
 			//
 			// Then,
 			//
-			//   buckets = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
+			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
