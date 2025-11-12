@@ -16,12 +16,15 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
@@ -38,6 +41,14 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) error
 
 func newNoopClient() *client {
 	return &client{}
+}
+
+var exporterN atomic.Int64
+
+// nextExporterID returns the next unique ID for an exporter.
+func nextExporterID() int64 {
+	const inc = 1
+	return exporterN.Add(inc) - inc
 }
 
 // newHTTPClient creates a new HTTP log client.
@@ -92,7 +103,11 @@ func newHTTPClient(cfg config) (*client, error) {
 		requestFunc: cfg.retryCfg.Value.RequestFunc(evaluate),
 		client:      hc,
 	}
-	return &client{uploadLogs: c.uploadLogs}, nil
+
+	id := nextExporterID()
+	c.inst, err = observ.NewInstrumentation(id, cfg.endpoint.Value)
+
+	return &client{uploadLogs: c.uploadLogs}, err
 }
 
 type httpClient struct {
@@ -101,6 +116,8 @@ type httpClient struct {
 	compression Compression
 	requestFunc retry.RequestFunc
 	client      *http.Client
+
+	inst *observ.Instrumentation
 }
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
@@ -134,6 +151,12 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		return err
 	}
 
+	var statusCode int
+	if c.inst != nil {
+		op := c.inst.ExportLogs(ctx, int64(len(data)))
+		defer func() { op.End(uploadErr, statusCode) }()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
@@ -158,6 +181,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			}()
 		}
 
+		statusCode = resp.StatusCode
 		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			// Success, do not retry.
 
@@ -180,7 +204,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 					msg := respProto.PartialSuccess.GetErrorMessage()
 					n := respProto.PartialSuccess.GetRejectedLogRecords()
 					if n != 0 || msg != "" {
-						err := errPartial{msg: msg, n: n}
+						err := internal.LogPartialSuccessError(n, msg)
 						uploadErr = errors.Join(uploadErr, err)
 					}
 				}
@@ -215,23 +239,6 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			return fmt.Errorf("failed to send logs to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	}))
-}
-
-type errPartial struct {
-	msg string
-	n   int64
-}
-
-var _ error = errPartial{}
-
-func (e errPartial) Error() string {
-	const form = "OTLP partial success: %s (%d log records rejected)"
-	return fmt.Sprintf(form, e.msg, e.n)
-}
-
-func (errPartial) Is(target error) bool {
-	_, ok := target.(errPartial)
-	return ok
 }
 
 var gzPool = sync.Pool{

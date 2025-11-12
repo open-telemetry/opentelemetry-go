@@ -112,7 +112,7 @@ func ignoreLogs(ctx context.Context) bool {
 	return ok
 }
 
-// Use a processor which sets EventName on log records having "event.name" string attribute.
+// Use a processor which sets EventName on log records having "otel.event.name" string attribute.
 // This is useful for users of logging libraries that do not support
 // setting the event name on log records, but do support attributes.
 func ExampleProcessor_eventName() {
@@ -132,17 +132,17 @@ func ExampleProcessor_eventName() {
 }
 
 // EventNameProcessor is a [log.Processor] that sets the EventName
-// on log records having "event.name" string attribute.
+// on log records having "otel.event.name" string attribute.
 // It is useful for logging libraries that do not support
 // setting the event name on log records,
 // but do support attributes.
 type EventNameProcessor struct{}
 
-// OnEmit sets the EventName on log records having an "event.name" string attribute.
+// OnEmit sets the EventName on log records having an "otel.event.name" string attribute.
 // The original attribute is not removed.
 func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv logapi.KeyValue) bool {
-		if kv.Key == "event.name" && kv.Value.Kind() == logapi.KindString {
+		if kv.Key == "otel.event.name" && kv.Value.Kind() == logapi.KindString {
 			record.SetEventName(kv.Value.AsString())
 		}
 		return true
