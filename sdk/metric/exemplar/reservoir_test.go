@@ -158,21 +158,35 @@ func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) 
 
 		var wg sync.WaitGroup
 
+		const goroutines = 2
+		
 		// Call Offer concurrently with another Offer, and with Collect.
-		for i := range 2 {
+		for i := range goroutines {
 			wg.Add(1)
-			go func() {
-				ctx, ts, val, attrs := generateOfferInputs[N](t, i+1)
+			go func(interation int) {
+				ctx, ts, val, attrs := generateOfferInputs[N](t, iteration+1)
 				r.Offer(ctx, ts, val, attrs)
 				wg.Done()
-			}()
+			}(i)
 		}
-		var dest []Exemplar
-		r.Collect(&dest)
-		for _, e := range dest {
-			validateExemplar[N](t, e)
-		}
-		wg.Wait()
+ 
+        // Also test concurrent Collect calls
+        wg.Add(1)
+        go func() {
+            var dest []Exemplar
+            r.Collect(&dest)
+            wg.Done()
+        }()
+        
+        wg.Wait()
+        
+        // Final collect to validate state
+        var dest []Exemplar
+        r.Collect(&dest)
+        assert.NotEmpty(t, dest)
+        for _, e := range dest {
+            validateExemplar[N](t, e)
+        }
 	}
 }
 
@@ -193,12 +207,18 @@ func generateOfferInputs[N int64 | float64](
 }
 
 func validateExemplar[N int64 | float64](t *testing.T, e Exemplar) {
+	t.Helper()
 	i := 0
 	switch e.Value.Type() {
 	case Int64ValueType:
 		i = int(e.Value.Int64())
 	case Float64ValueType:
 		i = int(e.Value.Float64())
+	default:
+		t.Fatalf("unexpected value type: %v", e.Value.Type())
+	}
+	if i == 0 {
+		t.Fatal("empty exemplar")
 	}
 	ctx, ts, _, attrs := generateOfferInputs[N](t, i)
 	sc := trace.SpanContextFromContext(ctx)
