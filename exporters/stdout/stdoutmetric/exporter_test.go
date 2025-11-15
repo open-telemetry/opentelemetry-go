@@ -483,3 +483,27 @@ func TestExporterExportEncodingErrorTracking(t *testing.T) {
 	}
 	assert.True(t, foundErrorType)
 }
+
+func BenchmarkExporterExport(b *testing.B) {
+	rm := &metricdata.ResourceMetrics{ScopeMetrics: scopeMetrics()}
+
+	run := func(b *testing.B) {
+		ex, err := stdoutmetric.New(stdoutmetric.WithWriter(io.Discard))
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			err = ex.Export(b.Context(), rm)
+		}
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
+}
