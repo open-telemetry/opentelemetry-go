@@ -217,23 +217,19 @@ func BenchmarkExportMetrics(b *testing.B) {
 		em := newExp(b)
 		b.ResetTimer()
 		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				op := em.ExportMetrics(b.Context(), 10)
-				op.End(nil)
-			}
-		})
+		for b.Loop() {
+			op := em.ExportMetrics(b.Context(), 10)
+			op.End(nil)
+		}
 	})
 
 	b.Run("WithError", func(b *testing.B) {
 		em := newExp(b)
 		b.ResetTimer()
 		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				op := em.ExportMetrics(b.Context(), 10)
-				op.End(errExport)
-			}
-		})
+		for b.Loop() {
+			op := em.ExportMetrics(b.Context(), 10)
+			op.End(errExport)
+		}
 	})
 }
