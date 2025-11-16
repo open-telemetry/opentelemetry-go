@@ -498,6 +498,7 @@ func BenchmarkExporterExport(b *testing.B) {
 		for b.Loop() {
 			err = ex.Export(b.Context(), rm)
 		}
+		_ = err
 	}
 
 	b.Run("Observability", func(b *testing.B) {
