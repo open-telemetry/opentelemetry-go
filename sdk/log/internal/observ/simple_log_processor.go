@@ -37,7 +37,7 @@ var measureAttrsPool = sync.Pool{
 // simpleProcessorN is a global 0-based count of the number of simple processor created.
 var simpleProcessorN atomic.Int64
 
-// NextSimpleProcessorID returns the next unique ID for an simpleProcessor.
+// NextSimpleProcessorID returns the next unique ID for a simpleProcessor.
 func NextSimpleProcessorID() int64 {
 	const inc = 1
 	return simpleProcessorN.Add(inc) - inc
