@@ -528,8 +528,6 @@ func BenchmarkFiltering(b *testing.B) {
 	b.Run("AllDropped", benchFn(func(attribute.KeyValue) bool { return false }))
 }
 
-var sinkSet attribute.Set
-
 func BenchmarkNewSet(b *testing.B) {
 	attrs := []attribute.KeyValue{
 		attribute.String("B1", "2"),
@@ -542,7 +540,59 @@ func BenchmarkNewSet(b *testing.B) {
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sinkSet = attribute.NewSet(attrs...)
+	for b.Loop() {
+		attribute.NewSet(attrs...)
+	}
+}
+
+// generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths.
+func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
+	// Generate base strings of specified lengths
+	keyBase := ""
+	valueBase := ""
+
+	// Build key base string
+	for i := 0; i < keyLen; i++ {
+		keyBase += string(rune('a' + i%26))
+	}
+
+	// Build value base string
+	for i := 0; i < valueLen; i++ {
+		valueBase += string(rune('0' + i%10))
+	}
+
+	// Create 5 attributes with different suffixes to ensure uniqueness
+	attrs := []attribute.KeyValue{
+		attribute.String(keyBase+"1", valueBase+"x"),
+		attribute.String(keyBase+"2", valueBase+"y"),
+		attribute.String(keyBase+"3", valueBase+"z"),
+		attribute.String(keyBase+"4", valueBase+"w"),
+		attribute.String(keyBase+"5", valueBase+"v"),
+	}
+	return attrs
+}
+
+func BenchmarkNewSetStringAttrs(b *testing.B) {
+	testCases := []struct {
+		name     string
+		keyLen   int
+		valueLen int
+	}{
+		{"SmallStrings", 2, 1},        // B1="2"
+		{"MediumStrings", 10, 10},     // realistic service names, etc.
+		{"LargeStrings", 25, 25},      // longer service names, URLs, etc.
+		{"VeryLargeStrings", 50, 100}, // very long values like URLs, descriptions
+		{"HugeStrings", 100, 500},     // extremely large like full URLs, JSON, etc.
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			attrs := generateStringAttrsWithSize(tc.keyLen, tc.valueLen)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				attribute.NewSet(attrs...)
+			}
+		})
 	}
 }
