@@ -163,8 +163,8 @@ func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) 
 		// Call Offer concurrently with another Offer, and with Collect.
 		for i := range goroutines {
 			wg.Add(1)
-			go func(interation int) {
-				ctx, ts, val, attrs := generateOfferInputs[N](t, i+1)
+			go func(iteration int) {
+				ctx, ts, val, attrs := generateOfferInputs[N](iteration + 1)
 				r.Offer(ctx, ts, val, attrs)
 				wg.Done()
 			}(i)
@@ -191,7 +191,6 @@ func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) 
 }
 
 func generateOfferInputs[N int64 | float64](
-	t *testing.T,
 	i int,
 ) (context.Context, time.Time, Value, []attribute.KeyValue) {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
@@ -199,7 +198,7 @@ func generateOfferInputs[N int64 | float64](
 		SpanID:     trace.SpanID([8]byte{byte(i)}),
 		TraceFlags: trace.FlagsSampled,
 	})
-	ctx := trace.ContextWithSpanContext(t.Context(), sc)
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
 	ts := time.Unix(int64(i), int64(i))
 	val := NewValue(N(i))
 	attrs := []attribute.KeyValue{attribute.Int("i", i)}
@@ -220,7 +219,7 @@ func validateExemplar[N int64 | float64](t *testing.T, e Exemplar) {
 	if i == 0 {
 		t.Fatal("empty exemplar")
 	}
-	ctx, ts, _, attrs := generateOfferInputs[N](t, i)
+	ctx, ts, _, attrs := generateOfferInputs[N](i)
 	sc := trace.SpanContextFromContext(ctx)
 	tID := sc.TraceID()
 	sID := sc.SpanID()
