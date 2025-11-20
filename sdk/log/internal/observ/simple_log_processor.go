@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -31,6 +32,24 @@ var measureAttrsPool = sync.Pool{
 		// to avoid allocations on every call.
 		return &s
 	},
+}
+
+// simpleProcessorN is a global 0-based count of the number of simple processor created.
+var simpleProcessorN atomic.Int64
+
+// NextSimpleProcessorID returns the next unique ID for a simpleProcessor.
+func NextSimpleProcessorID() int64 {
+	const inc = 1
+	return simpleProcessorN.Add(inc) - inc
+}
+
+// SetSimpleProcessorID sets the exporter ID counter to v and returns the previous
+// value.
+//
+// This function is useful for testing purposes, allowing you to reset the
+// counter. It should not be used in production code.
+func SetSimpleProcessorID(v int64) int64 {
+	return simpleProcessorN.Swap(v)
 }
 
 // GetSLPComponentName returns the component name attribute for a
