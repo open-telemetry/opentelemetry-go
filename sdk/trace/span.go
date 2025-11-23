@@ -146,8 +146,8 @@ type recordingSpan struct {
 	// links are stored in FIFO queue capped by configured limit.
 	links evictedQueue[Link]
 
-	// executionTracerTaskEnd ends the execution tracer span.
-	executionTracerTaskEnd func()
+	// runtimeTraceEnd ends the execution tracer task or region.
+	runtimeTraceEnd func()
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
@@ -492,9 +492,9 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		s.addEvent(semconv.ExceptionEventName, opts...)
 	}
 
-	if s.executionTracerTaskEnd != nil {
+	if s.runtimeTraceEnd != nil {
 		s.mu.Unlock()
-		s.executionTracerTaskEnd()
+		s.runtimeTraceEnd()
 		s.mu.Lock()
 	}
 
@@ -887,18 +887,21 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	var endFn func()
 
 	if hasLocalParent := s.parent.IsValid() && !s.parent.IsRemote(); hasLocalParent {
 		region := rt.StartRegion(ctx, s.name)
-		s.executionTracerTaskEnd = region.End
-		return ctx
+		endFn = region.End
+	} else {
+		taskCtx, task := rt.NewTask(ctx, s.name)
+		endFn = task.End
+		ctx = taskCtx
 	}
 
-	nctx, task := rt.NewTask(ctx, s.name)
-	s.executionTracerTaskEnd = task.End
-	return nctx
+	s.mu.Lock()
+	s.runtimeTraceEnd = endFn
+	s.mu.Unlock()
+	return ctx
 }
 
 // nonRecordingSpan is a minimal implementation of the OpenTelemetry Span API

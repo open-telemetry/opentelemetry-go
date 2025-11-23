@@ -1190,7 +1190,7 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 		t.Fatal("recording span not returned from always sampled Tracer")
 	}
 
-	s.executionTracerTaskEnd = executionTracerTaskEnd
+	s.runtimeTraceEnd = executionTracerTaskEnd
 	s.End()
 
 	if n != 1 {
