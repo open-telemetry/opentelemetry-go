@@ -71,16 +71,16 @@ func (tr *tracer) Start(
 		}
 	}
 	if rtt, ok := s.(runtimeTracer); ok {
-		newCtx = rtt.runtimeTrace(newCtx)
+		newCtx = rtt.runtimeTrace(newCtx, &config)
 	}
 
 	return newCtx, s
 }
 
 type runtimeTracer interface {
-	// runtimeTrace starts a "runtime/trace".Task for the span and
-	// returns a context containing the task.
-	runtimeTrace(ctx context.Context) context.Context
+	// runtimeTrace may start a "runtime/trace".Task or "runtime/trace".Region
+	// for the span and returns a context containing the task.
+	runtimeTrace(ctx context.Context, config *trace.SpanConfig) context.Context
 }
 
 // newSpan returns a new configured span.
