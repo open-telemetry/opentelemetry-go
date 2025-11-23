@@ -879,18 +879,25 @@ func (s *recordingSpan) addChild() {
 func (*recordingSpan) private() {}
 
 // runtimeTrace starts a "runtime/trace".Task for the span and returns a
-// context containing the task.
+// context containing the task. If the span has a local parent, it creates
+// a "runtime/trace".Region instead.
 func (s *recordingSpan) runtimeTrace(ctx context.Context) context.Context {
 	if !rt.IsEnabled() {
 		// Avoid additional overhead if runtime/trace is not enabled.
 		return ctx
 	}
-	nctx, task := rt.NewTask(ctx, s.name)
 
 	s.mu.Lock()
-	s.executionTracerTaskEnd = task.End
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 
+	if hasLocalParent := s.parent.IsValid() && !s.parent.IsRemote(); hasLocalParent {
+		region := rt.StartRegion(ctx, s.name)
+		s.executionTracerTaskEnd = region.End
+		return ctx
+	}
+
+	nctx, task := rt.NewTask(ctx, s.name)
+	s.executionTracerTaskEnd = task.End
 	return nctx
 }
 
