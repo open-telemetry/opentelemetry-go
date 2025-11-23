@@ -886,7 +886,7 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 		return ctx
 	}
 
-	if config.RuntimeRegion() {
+	if config.ProfileRegion() {
 		region := rt.StartRegion(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = region.End
@@ -894,7 +894,7 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 		return ctx
 	}
 
-	if config.RuntimeTask() || !s.parent.IsValid() {
+	if config.ProfileTask() || !s.parent.IsValid() {
 		nctx, task := rt.NewTask(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = task.End

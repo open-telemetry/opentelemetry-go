@@ -98,14 +98,14 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 	return cfg.spanKind
 }
 
-// RuntimeRegion reports whether the span should create a runtime/trace.Region.
-func (cfg *SpanConfig) RuntimeRegion() bool {
+// ProfileRegion reports whether the span should create a runtime/trace.Region.
+func (cfg *SpanConfig) ProfileRegion() bool {
 	return cfg.profileRegion
 }
 
-// RuntimeTask reports whether the span should create a runtime/trace.Task.
+// ProfileTask reports whether the span should create a runtime/trace.Task.
 // For root local spans, this is the default behavior.
-func (cfg *SpanConfig) RuntimeTask() bool {
+func (cfg *SpanConfig) ProfileTask() bool {
 	return cfg.profileTask
 }
 
