@@ -1181,7 +1181,7 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 	tr := tp.Tracer("TestRecordingSpanRuntimeTracerTaskEnd")
 
 	var n uint64
-	executionTracerTaskEnd := func() {
+	runtimeTraceEnd := func() {
 		atomic.AddUint64(&n, 1)
 	}
 	_, apiSpan := tr.Start(t.Context(), "foo")
@@ -1190,7 +1190,7 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 		t.Fatal("recording span not returned from always sampled Tracer")
 	}
 
-	s.runtimeTraceEnd = executionTracerTaskEnd
+	s.runtimeTraceEnd = runtimeTraceEnd
 	s.End()
 
 	if n != 1 {
