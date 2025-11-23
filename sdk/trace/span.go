@@ -886,20 +886,19 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 		return ctx
 	}
 
-	if config.ProfileRegion() {
-		region := rt.StartRegion(ctx, s.name)
-		s.mu.Lock()
-		s.runtimeTraceEnd = region.End
-		s.mu.Unlock()
-		return ctx
-	}
-
 	if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot || config.ProfileTask() {
 		nctx, task := rt.NewTask(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = task.End
 		s.mu.Unlock()
 		return nctx
+	}
+
+	if config.ProfileRegion() {
+		region := rt.StartRegion(ctx, s.name)
+		s.mu.Lock()
+		s.runtimeTraceEnd = region.End
+		s.mu.Unlock()
 	}
 
 	return ctx
