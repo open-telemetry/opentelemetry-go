@@ -894,7 +894,7 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 		return ctx
 	}
 
-	if config.ProfileTask() || !s.parent.IsValid() {
+	if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot || config.ProfileTask() {
 		nctx, task := rt.NewTask(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = task.End
