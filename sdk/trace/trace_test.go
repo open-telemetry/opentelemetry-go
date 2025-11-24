@@ -1171,7 +1171,7 @@ func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
 
 	_, apiSpan := tr.Start(t.Context(), "foo")
-	if _, ok := apiSpan.(runtimeTracer); ok {
+	if _, ok := apiSpan.(profilingSpan); ok {
 		t.Fatalf("non recording span implements runtime trace task tracking")
 	}
 }

@@ -70,18 +70,11 @@ func (tr *tracer) Start(
 			sp.sp.OnStart(ctx, rw)
 		}
 	}
-	if rtt, ok := s.(runtimeTracer); ok {
-		newCtx = rtt.runtimeTrace(newCtx, &config)
+	if profilingSpan, ok := s.(profilingSpan); ok {
+		newCtx = profilingSpan.startProfiling(newCtx, &config)
 	}
 
 	return newCtx, s
-}
-
-type runtimeTracer interface {
-	// runtimeTrace may start a "runtime/trace" Task (returning a new context)
-	// or a Region (no context change). If tracing is disabled (globally or
-	// for the span), it does nothing.
-	runtimeTrace(ctx context.Context, config *trace.SpanConfig) context.Context
 }
 
 // newSpan returns a new configured span.

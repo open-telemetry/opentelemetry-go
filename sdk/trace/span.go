@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	rt "runtime/trace"
 	"slices"
 	"strings"
 	"sync"
@@ -146,7 +145,7 @@ type recordingSpan struct {
 	// links are stored in FIFO queue capped by configured limit.
 	links evictedQueue[Link]
 
-	// runtimeTraceEnd ends the execution tracer task or region.
+	// runtimeTraceEnd ends the "runtime/trace" task or region.
 	runtimeTraceEnd func()
 
 	// tracer is the SDK tracer that created this span.
@@ -161,7 +160,7 @@ type recordingSpan struct {
 
 var (
 	_ ReadWriteSpan = (*recordingSpan)(nil)
-	_ runtimeTracer = (*recordingSpan)(nil)
+	_ profilingSpan = (*recordingSpan)(nil)
 )
 
 func (s *recordingSpan) setOrigCtx(ctx context.Context) {
@@ -492,9 +491,9 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		s.addEvent(semconv.ExceptionEventName, opts...)
 	}
 
-	if s.runtimeTraceEnd != nil {
+	if s.profilingStarted() {
 		s.mu.Unlock()
-		s.runtimeTraceEnd()
+		s.endProfiling()
 		s.mu.Lock()
 	}
 
@@ -880,19 +879,20 @@ func (*recordingSpan) private() {}
 
 // runtimeTrace starts a "runtime/trace".Task or a "runtime/trace".Region
 // for the span and returns a context containing the task.
-func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConfig) context.Context {
-	if !rt.IsEnabled() {
+func (s *recordingSpan) startProfiling(ctx context.Context, config *trace.SpanConfig) context.Context {
+	if !globalRuntimeTracer.IsEnabled() {
 		// Avoid additional overhead if runtime/trace is not enabled.
 		return ctx
 	}
 
-	shouldCreateTask := !s.parent.IsValid() || s.parent.IsRemote() // create task by default for local root spans
+	// Create a task for local root spans unless explicitly disabled
+	shouldCreateTask := !s.parent.IsValid() || s.parent.IsRemote()
 	if config.ProfileTask() != nil {
 		shouldCreateTask = *config.ProfileTask()
 	}
 
 	if shouldCreateTask {
-		nctx, task := rt.NewTask(ctx, s.name)
+		nctx, task := globalRuntimeTracer.NewTask(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = task.End
 		s.mu.Unlock()
@@ -900,13 +900,21 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 	}
 
 	if config.ProfileRegion() != nil && *config.ProfileRegion() {
-		region := rt.StartRegion(ctx, s.name)
+		region := globalRuntimeTracer.StartRegion(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = region.End
 		s.mu.Unlock()
 	}
 
 	return ctx
+}
+
+func (s *recordingSpan) endProfiling() {
+	s.runtimeTraceEnd()
+}
+
+func (s *recordingSpan) profilingStarted() bool {
+	return s.runtimeTraceEnd != nil
 }
 
 // nonRecordingSpan is a minimal implementation of the OpenTelemetry Span API
