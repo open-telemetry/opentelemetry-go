@@ -12,6 +12,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func TestNewSpanConfig(t *testing.T) {
 	k1v1 := attribute.String("key1", "value1")
 	k1v2 := attribute.String("key1", "value2")
@@ -141,6 +145,68 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
+			[]SpanStartOption{
+				WithProfileTask(true),
+			},
+			SpanConfig{
+				profileTask: boolPtr(true),
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithProfileTask(false),
+			},
+			SpanConfig{
+				profileTask: boolPtr(false),
+			},
+		},
+		{
+			[]SpanStartOption{
+				// Multiple calls overwrites with last-one-wins.
+				WithProfileTask(true),
+				WithProfileTask(false),
+			},
+			SpanConfig{
+				profileTask: boolPtr(false),
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithProfileRegion(true),
+			},
+			SpanConfig{
+				profileRegion: boolPtr(true),
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithProfileRegion(false),
+			},
+			SpanConfig{
+				profileRegion: boolPtr(false),
+			},
+		},
+		{
+			[]SpanStartOption{
+				// Multiple calls overwrites with last-one-wins.
+				WithProfileRegion(true),
+				WithProfileRegion(false),
+			},
+			SpanConfig{
+				profileRegion: boolPtr(false),
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithProfileTask(true),
+				WithProfileRegion(true),
+			},
+			SpanConfig{
+				profileTask:   boolPtr(true),
+				profileRegion: boolPtr(true),
+			},
+		},
+		{
 			// Everything should work together.
 			[]SpanStartOption{
 				WithAttributes(k1v1),
@@ -148,13 +214,17 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1, link2),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
+				WithProfileTask(true),
+				WithProfileRegion(false),
 			},
 			SpanConfig{
-				attributes: []attribute.KeyValue{k1v1},
-				timestamp:  timestamp0,
-				links:      []Link{link1, link2},
-				newRoot:    true,
-				spanKind:   SpanKindConsumer,
+				attributes:    []attribute.KeyValue{k1v1},
+				timestamp:     timestamp0,
+				links:         []Link{link1, link2},
+				newRoot:       true,
+				spanKind:      SpanKindConsumer,
+				profileTask:   boolPtr(true),
+				profileRegion: boolPtr(false),
 			},
 		},
 	}
@@ -362,6 +432,25 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			name: "with span kind",
 			options: []SpanStartOption{
 				WithSpanKind(SpanKindClient),
+			},
+		},
+		{
+			name: "with profile task",
+			options: []SpanStartOption{
+				WithProfileTask(true),
+			},
+		},
+		{
+			name: "with profile region",
+			options: []SpanStartOption{
+				WithProfileRegion(true),
+			},
+		},
+		{
+			name: "with profile task and region",
+			options: []SpanStartOption{
+				WithProfileTask(true),
+				WithProfileRegion(false),
 			},
 		},
 	} {
