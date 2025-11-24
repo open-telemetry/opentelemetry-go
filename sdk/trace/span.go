@@ -886,7 +886,12 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 		return ctx
 	}
 
-	if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot || config.ProfileTask() {
+	shouldCreateTask := !s.parent.IsValid() || s.parent.IsRemote() // create task by default for local root spans
+	if config.ProfileTask() != nil {
+		shouldCreateTask = *config.ProfileTask()
+	}
+
+	if shouldCreateTask {
 		nctx, task := rt.NewTask(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = task.End
@@ -894,7 +899,7 @@ func (s *recordingSpan) runtimeTrace(ctx context.Context, config *trace.SpanConf
 		return nctx
 	}
 
-	if config.ProfileRegion() {
+	if config.ProfileRegion() != nil && *config.ProfileRegion() {
 		region := rt.StartRegion(ctx, s.name)
 		s.mu.Lock()
 		s.runtimeTraceEnd = region.End

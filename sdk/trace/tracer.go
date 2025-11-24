@@ -78,8 +78,9 @@ func (tr *tracer) Start(
 }
 
 type runtimeTracer interface {
-	// runtimeTrace may start a "runtime/trace".Task or "runtime/trace".Region
-	// for the span and returns a context containing the task.
+	// runtimeTrace may start a "runtime/trace" Task (returning a new context)
+	// or a Region (no context change). If tracing is disabled (globally or
+	// for the span), it does nothing.
 	runtimeTrace(ctx context.Context, config *trace.SpanConfig) context.Context
 }
 

@@ -62,8 +62,8 @@ type SpanConfig struct {
 	newRoot       bool
 	spanKind      SpanKind
 	stackTrace    bool
-	profileRegion bool
-	profileTask   bool
+	profileRegion *bool
+	profileTask   *bool
 }
 
 // Attributes describe the associated qualities of a Span.
@@ -99,13 +99,13 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 }
 
 // ProfileRegion reports whether the span should create a runtime/trace.Region.
-func (cfg *SpanConfig) ProfileRegion() bool {
+func (cfg *SpanConfig) ProfileRegion() *bool {
 	return cfg.profileRegion
 }
 
 // ProfileTask reports whether the span should create a runtime/trace.Task.
 // For root local spans, this is the default behavior.
-func (cfg *SpanConfig) ProfileTask() bool {
+func (cfg *SpanConfig) ProfileTask() *bool {
 	return cfg.profileTask
 }
 
@@ -286,24 +286,25 @@ func WithStackTrace(b bool) SpanEndEventOption {
 type profileRegionOption bool
 
 func (o profileRegionOption) applySpanStart(c SpanConfig) SpanConfig {
-	c.profileRegion = bool(o)
+	profileRegion := bool(o)
+	c.profileRegion = &profileRegion
 	return c
 }
 
 var _ SpanStartOption = profileRegionOption(false)
 
-// WithProfileRegion requests that the span create a runtime/trace.Region.
-// Regions must be ended from the same goroutine where they were started,
-// so this should only be used when it's guaranteed that the span's End()
-// method will be called from the same goroutine where it started.
-func WithProfileRegion() SpanStartOption {
-	return profileRegionOption(true)
+// WithProfileRegion requests creating a runtime/trace.Region. Because a
+// Region must be started and ended in the same goroutine, use this option
+// only when the span itself starts and ends in the same goroutine.
+func WithProfileRegion(profileRegion bool) SpanStartOption {
+	return profileRegionOption(profileRegion)
 }
 
 type profileTaskOption bool
 
 func (o profileTaskOption) applySpanStart(c SpanConfig) SpanConfig {
-	c.profileTask = bool(o)
+	profileTask := bool(o)
+	c.profileTask = &profileTask
 	return c
 }
 
@@ -311,8 +312,8 @@ var _ SpanStartOption = profileTaskOption(false)
 
 // WithProfileTask explicitly requests that the span create a runtime/trace.Task.
 // This is the default behavior for root local spans when runtime/trace is enabled.
-func WithProfileTask() SpanStartOption {
-	return profileTaskOption(true)
+func WithProfileTask(profileTask bool) SpanStartOption {
+	return profileTaskOption(profileTask)
 }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
