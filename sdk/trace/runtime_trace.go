@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type endFunc func()
+
 // runtimeTraceAPI abstracts the runtime/trace package so it can be mocked
 // in tests. The runtime/trace API provides local, runtime-level
 // instrumentation, recorded in Go execution profiles, similar to distributed
@@ -19,8 +21,8 @@ import (
 // duplicating logic.
 type runtimeTraceAPI interface {
 	IsEnabled() bool
-	NewTask(ctx context.Context, name string) (context.Context, *profile.Task)
-	StartRegion(ctx context.Context, name string) *profile.Region
+	NewTask(ctx context.Context, name string) (context.Context, endFunc)
+	StartRegion(ctx context.Context, name string) endFunc
 }
 
 type standardRuntimeTraceWrapper struct{}
@@ -29,12 +31,14 @@ func (r standardRuntimeTraceWrapper) IsEnabled() bool {
 	return profile.IsEnabled()
 }
 
-func (r standardRuntimeTraceWrapper) NewTask(ctx context.Context, name string) (context.Context, *profile.Task) {
-	return profile.NewTask(ctx, name)
+func (r standardRuntimeTraceWrapper) NewTask(ctx context.Context, name string) (context.Context, endFunc) {
+	nctx, task := profile.NewTask(ctx, name)
+	return nctx, task.End
 }
 
-func (r standardRuntimeTraceWrapper) StartRegion(ctx context.Context, name string) *profile.Region {
-	return profile.StartRegion(ctx, name)
+func (r standardRuntimeTraceWrapper) StartRegion(ctx context.Context, name string) endFunc {
+	region := profile.StartRegion(ctx, name)
+	return region.End
 }
 
 // globalRuntimeTracer is the variable that holds the global runtime tracer implementation.

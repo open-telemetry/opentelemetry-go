@@ -892,17 +892,17 @@ func (s *recordingSpan) startProfiling(ctx context.Context, config *trace.SpanCo
 	}
 
 	if shouldCreateTask {
-		nctx, task := globalRuntimeTracer.NewTask(ctx, s.name)
+		nctx, endFunc := globalRuntimeTracer.NewTask(ctx, s.name)
 		s.mu.Lock()
-		s.runtimeTraceEnd = task.End
+		s.runtimeTraceEnd = endFunc
 		s.mu.Unlock()
 		return nctx
 	}
 
 	if config.ProfileRegion() != nil && *config.ProfileRegion() {
-		region := globalRuntimeTracer.StartRegion(ctx, s.name)
+		endFunc := globalRuntimeTracer.StartRegion(ctx, s.name)
 		s.mu.Lock()
-		s.runtimeTraceEnd = region.End
+		s.runtimeTraceEnd = endFunc
 		s.mu.Unlock()
 	}
 
