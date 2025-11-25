@@ -285,16 +285,6 @@ func WithStackTrace(b bool) SpanEndEventOption {
 	return stackTraceOption(b)
 }
 
-type profileRegionOption bool
-
-func (o profileRegionOption) applySpanStart(c SpanConfig) SpanConfig {
-	profileRegion := bool(o)
-	c.profileRegion = &profileRegion
-	return c
-}
-
-var _ SpanStartOption = profileRegionOption(false)
-
 // WithProfileRegion requests that the span create a runtime/trace.Region.
 // Because a Region must be started and ended in the same goroutine, use this
 // option only when the span itself starts and ends in the same goroutine.
@@ -302,24 +292,20 @@ var _ SpanStartOption = profileRegionOption(false)
 // so, for the special case of creating a region attached to the background
 // task, use WithProfileTask(false) together with WithProfileRegion(true).
 func WithProfileRegion(profileRegion bool) SpanStartOption {
-	return profileRegionOption(profileRegion)
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.profileRegion = &profileRegion
+		return cfg
+	})
 }
-
-type profileTaskOption bool
-
-func (o profileTaskOption) applySpanStart(c SpanConfig) SpanConfig {
-	profileTask := bool(o)
-	c.profileTask = &profileTask
-	return c
-}
-
-var _ SpanStartOption = profileTaskOption(false)
 
 // WithProfileTask requests that the span create a runtime/trace.Task.
 // If this option is not passed, root local spans will still create a task when
 // runtime/trace is enabled. To turn off this default behavior, use WithProfileTask(false).
 func WithProfileTask(profileTask bool) SpanStartOption {
-	return profileTaskOption(profileTask)
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.profileTask = &profileTask
+		return cfg
+	})
 }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
