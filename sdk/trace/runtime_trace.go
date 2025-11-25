@@ -6,50 +6,55 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 
-	profile "runtime/trace"
+	runtimetrace "runtime/trace"
 
 	"go.opentelemetry.io/otel/trace"
 )
 
-type endFunc func()
+type runtimeTraceEndFn func()
 
-// runtimeTraceAPI abstracts the runtime/trace package so it can be mocked
+// runtimeTracer abstracts the runtime/trace package so it can be mocked
 // in tests. The runtime/trace API provides local, runtime-level
 // instrumentation, recorded in Go execution profiles, similar to distributed
 // tracing but confined to a single Go process. This interface allows
 // integrating that instrumentation with distributed tracing without
 // duplicating logic.
-type runtimeTraceAPI interface {
+type runtimeTracer interface {
 	IsEnabled() bool
-	NewTask(ctx context.Context, name string) (context.Context, endFunc)
-	StartRegion(ctx context.Context, name string) endFunc
+	NewTask(ctx context.Context, name string) (context.Context, runtimeTraceEndFn)
+	StartRegion(ctx context.Context, name string) runtimeTraceEndFn
 }
 
-type standardRuntimeTraceWrapper struct{}
+// standardRuntimeTracer is the default implementation of runtimeTracer.
+// It simply wraps the runtime/trace package.
+type standardRuntimeTracer struct{}
 
-func (r standardRuntimeTraceWrapper) IsEnabled() bool {
-	return profile.IsEnabled()
+func (standardRuntimeTracer) IsEnabled() bool {
+	return runtimetrace.IsEnabled()
 }
 
-func (r standardRuntimeTraceWrapper) NewTask(ctx context.Context, name string) (context.Context, endFunc) {
-	nctx, task := profile.NewTask(ctx, name)
+func (standardRuntimeTracer) NewTask(ctx context.Context, name string) (context.Context, runtimeTraceEndFn) {
+	nctx, task := runtimetrace.NewTask(ctx, name)
 	return nctx, task.End
 }
 
-func (r standardRuntimeTraceWrapper) StartRegion(ctx context.Context, name string) endFunc {
-	region := profile.StartRegion(ctx, name)
+func (standardRuntimeTracer) StartRegion(ctx context.Context, name string) runtimeTraceEndFn {
+	region := runtimetrace.StartRegion(ctx, name)
 	return region.End
 }
 
-// globalRuntimeTracer is the variable that holds the global runtime tracer implementation.
-// It defaults to the real implementation but can be swapped for testing.
-var globalRuntimeTracer runtimeTraceAPI = standardRuntimeTraceWrapper{}
+// globalRuntimeTracer is the variable that holds the global runtimeTracer
+// implementation. It defaults to the real implementation but can be swapped
+// for testing.
+var globalRuntimeTracer runtimeTracer = standardRuntimeTracer{}
 
-// profilingSpan is an interface for spans that can integrate with runtimeTraceAPI
+// profilingSpan is an interface for spans that can integrate with
+// runtimeTracer.
 type profilingSpan interface {
-	// startProfiling may start a "runtime/trace" Task (returning a new context)
-	// or a Region (no context change). If tracing is disabled (globally or
-	// for the span), it does nothing.
+	// startProfiling may start a "runtime/trace" Task (returning a new
+	// context) or a Region (no context change). If tracing is disabled
+	// (globally or for the span), it does nothing. Concrete implementations
+	// may have their own defaults when config is not explicit.
 	startProfiling(ctx context.Context, config *trace.SpanConfig) context.Context
 	endProfiling()
 	profilingStarted() bool

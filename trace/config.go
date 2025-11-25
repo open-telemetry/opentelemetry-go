@@ -99,12 +99,14 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 }
 
 // ProfileRegion reports whether the span should create a runtime/trace.Region.
+// For root local spans, this config is ignored unless ProfileTask() is false.
 func (cfg *SpanConfig) ProfileRegion() *bool {
 	return cfg.profileRegion
 }
 
 // ProfileTask reports whether the span should create a runtime/trace.Task.
-// For root local spans, this is the default behavior.
+// For root local spans, this is the default behavior when runtime/trace is
+// enabled and this method returns nil.
 func (cfg *SpanConfig) ProfileTask() *bool {
 	return cfg.profileTask
 }
@@ -293,9 +295,12 @@ func (o profileRegionOption) applySpanStart(c SpanConfig) SpanConfig {
 
 var _ SpanStartOption = profileRegionOption(false)
 
-// WithProfileRegion requests creating a runtime/trace.Region. Because a
-// Region must be started and ended in the same goroutine, use this option
-// only when the span itself starts and ends in the same goroutine.
+// WithProfileRegion requests that the span create a runtime/trace.Region.
+// Because a Region must be started and ended in the same goroutine, use this
+// option only when the span itself starts and ends in the same goroutine.
+// For root local spans, this config is ignored unless ProfileTask() is false,
+// so, for the special case of creating a region attached to the background
+// task, use WithProfileTask(false) together with WithProfileRegion(true).
 func WithProfileRegion(profileRegion bool) SpanStartOption {
 	return profileRegionOption(profileRegion)
 }
@@ -310,8 +315,9 @@ func (o profileTaskOption) applySpanStart(c SpanConfig) SpanConfig {
 
 var _ SpanStartOption = profileTaskOption(false)
 
-// WithProfileTask explicitly requests that the span create a runtime/trace.Task.
-// This is the default behavior for root local spans when runtime/trace is enabled.
+// WithProfileTask requests that the span create a runtime/trace.Task.
+// If this option is not passed, root local spans will still create a task when
+// runtime/trace is enabled. To turn off this default behavior, use WithProfileTask(false).
 func WithProfileTask(profileTask bool) SpanStartOption {
 	return profileTaskOption(profileTask)
 }

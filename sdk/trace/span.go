@@ -146,7 +146,7 @@ type recordingSpan struct {
 	links evictedQueue[Link]
 
 	// runtimeTraceEnd ends the "runtime/trace" task or region.
-	runtimeTraceEnd func()
+	runtimeTraceEnd runtimeTraceEndFn
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
@@ -877,8 +877,7 @@ func (s *recordingSpan) addChild() {
 
 func (*recordingSpan) private() {}
 
-// runtimeTrace starts a "runtime/trace".Task or a "runtime/trace".Region
-// for the span and returns a context containing the task.
+// startProfiling implements profilingSpan.
 func (s *recordingSpan) startProfiling(ctx context.Context, config *trace.SpanConfig) context.Context {
 	if !globalRuntimeTracer.IsEnabled() {
 		// Avoid additional overhead if runtime/trace is not enabled.
@@ -909,10 +908,12 @@ func (s *recordingSpan) startProfiling(ctx context.Context, config *trace.SpanCo
 	return ctx
 }
 
+// endProfiling implements profilingSpan.
 func (s *recordingSpan) endProfiling() {
 	s.runtimeTraceEnd()
 }
 
+// profilingStarted implements profilingSpan.
 func (s *recordingSpan) profilingStarted() bool {
 	return s.runtimeTraceEnd != nil
 }
