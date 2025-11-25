@@ -157,6 +157,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 			t = &tracer{
 				provider:             p,
 				instrumentationScope: is,
+				spanOptions:          c.SpanOptions(),
 			}
 
 			var err error

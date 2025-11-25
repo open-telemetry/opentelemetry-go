@@ -187,6 +187,15 @@ func TestNewSpanConfig(t *testing.T) {
 		},
 		{
 			[]SpanStartOption{
+				ProfileTask(),
+			},
+			SpanConfig{
+				profileTask: boolPtr(true),
+			},
+			nil,
+		},
+		{
+			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithProfileTask(true),
 				WithProfileTask(false),
@@ -226,6 +235,15 @@ func TestNewSpanConfig(t *testing.T) {
 		},
 		{
 			[]SpanStartOption{
+				ProfileRegion(),
+			},
+			SpanConfig{
+				profileRegion: boolPtr(true),
+			},
+			nil,
+		},
+		{
+			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithProfileRegion(true),
 				WithProfileRegion(false),
@@ -247,6 +265,72 @@ func TestNewSpanConfig(t *testing.T) {
 			nil,
 		},
 		{
+			[]SpanStartOption{
+				WithAsyncEnd(true),
+			},
+			SpanConfig{
+				asyncEnd: true,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.True(t, cfg.AsyncEnd())
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithAsyncEnd(false),
+			},
+			SpanConfig{
+				asyncEnd: false,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.False(t, cfg.AsyncEnd())
+			},
+		},
+		{
+			[]SpanStartOption{
+				AsyncEnd(),
+			},
+			SpanConfig{
+				asyncEnd: true,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.True(t, cfg.AsyncEnd())
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithSkipProfiling(false),
+			},
+			SpanConfig{
+				skipProfiling: false,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.False(t, cfg.SkipProfiling())
+			},
+		},
+		{
+			[]SpanStartOption{
+				WithSkipProfiling(true),
+			},
+			SpanConfig{
+				skipProfiling: true,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.True(t, cfg.SkipProfiling())
+			},
+		},
+		{
+			[]SpanStartOption{
+				NoProfiling(),
+			},
+			SpanConfig{
+				skipProfiling: true,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.True(t, cfg.SkipProfiling())
+			},
+		},
+		{
 			// Everything should work together.
 			[]SpanStartOption{
 				WithAttributes(k1v1),
@@ -254,8 +338,10 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1, link2),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
-				WithProfileTask(true),
-				WithProfileRegion(false),
+				ProfileTask(),
+				ProfileRegion(),
+				AsyncEnd(),
+				NoProfiling(),
 			},
 			SpanConfig{
 				attributes:    []attribute.KeyValue{k1v1},
@@ -264,7 +350,9 @@ func TestNewSpanConfig(t *testing.T) {
 				newRoot:       true,
 				spanKind:      SpanKindConsumer,
 				profileTask:   boolPtr(true),
-				profileRegion: boolPtr(false),
+				profileRegion: boolPtr(true),
+				asyncEnd:      true,
+				skipProfiling: true,
 			},
 			nil,
 		},
@@ -339,11 +427,15 @@ func TestTracerConfig(t *testing.T) {
 		WithInstrumentationVersion(v2),
 		WithSchemaURL(schemaURL),
 		WithInstrumentationAttributes(attrs.ToSlice()...),
+		AutoProfiling(),
+		NoProfiling(),
 	)
 
 	assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
 	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+	assert.True(t, c.AutoProfiling())
+	assert.True(t, c.SkipProfiling())
 }
 
 func TestWithInstrumentationAttributesNotLazy(t *testing.T) {
@@ -413,6 +505,30 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 			name: "with instrumentation attribute set",
 			options: []TracerOption{
 				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
+			},
+		},
+		{
+			name: "with auto profiling",
+			options: []TracerOption{
+				WithAutoProfiling(true),
+			},
+		},
+		{
+			name: "auto profiling",
+			options: []TracerOption{
+				AutoProfiling(),
+			},
+		},
+		{
+			name: "no profiling",
+			options: []TracerOption{
+				NoProfiling(),
+			},
+		},
+		{
+			name: "with skip profiling",
+			options: []TracerOption{
+				WithSkipProfiling(true),
 			},
 		},
 	} {
@@ -486,16 +602,45 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			},
 		},
 		{
+			name: "profile task",
+			options: []SpanStartOption{
+				ProfileTask(),
+			},
+		},
+		{
 			name: "with profile region",
 			options: []SpanStartOption{
 				WithProfileRegion(true),
 			},
 		},
 		{
-			name: "with profile task and region",
+			name: "profile region",
 			options: []SpanStartOption{
-				WithProfileTask(true),
-				WithProfileRegion(false),
+				ProfileRegion(),
+			},
+		},
+		{
+			name: "with async end",
+			options: []SpanStartOption{
+				WithAsyncEnd(true),
+			},
+		},
+		{
+			name: "async end",
+			options: []SpanStartOption{
+				AsyncEnd(),
+			},
+		},
+		{
+			name: "with skip profiling",
+			options: []SpanStartOption{
+				WithSkipProfiling(true),
+			},
+		},
+		{
+			name: "no profiling",
+			options: []SpanStartOption{
+				NoProfiling(),
 			},
 		},
 	} {

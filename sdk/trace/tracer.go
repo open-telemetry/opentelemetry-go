@@ -20,6 +20,8 @@ type tracer struct {
 	instrumentationScope instrumentation.Scope
 
 	inst observ.Tracer
+
+	spanOptions []trace.SpanStartOption
 }
 
 var _ trace.Tracer = &tracer{}
@@ -34,7 +36,8 @@ func (tr *tracer) Start(
 	name string,
 	options ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
-	config := trace.NewSpanStartConfig(options...)
+	config := trace.NewSpanStartConfig(tr.spanOptions...)
+	config.ApplyOptions(options...)
 
 	if ctx == nil {
 		// Prevent trace.ContextWithSpan from panicking.

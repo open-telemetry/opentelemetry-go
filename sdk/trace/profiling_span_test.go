@@ -86,7 +86,7 @@ func TestProfilingSpan(t *testing.T) {
 		globalRuntimeTracer = mockRT
 
 		ctx := t.Context()
-		_, span := tracer.Start(ctx, "root-span", trace.WithProfileTask(true))
+		_, span := tracer.Start(ctx, "root-span", trace.ProfileTask())
 		assertCalls(t, mockRT, 1, 1, 0, 0, 0)
 
 		profilingSpan, ok := span.(profilingSpan)
@@ -115,7 +115,7 @@ func TestProfilingSpan(t *testing.T) {
 		rootCtx, _ := tracer.Start(ctx, "root-span")
 		assertCalls(t, mockRT, 1, 1, 0, 0, 0) // root span should create a task
 
-		_, childSpan := tracer.Start(rootCtx, "child-span", trace.WithProfileRegion(true))
+		_, childSpan := tracer.Start(rootCtx, "child-span", trace.ProfileRegion())
 		assertCalls(t, mockRT, 2, 1, 1, 0, 0) // child span should create a region
 
 		profilingSpan, ok := childSpan.(profilingSpan)
@@ -131,7 +131,7 @@ func TestProfilingSpan(t *testing.T) {
 		rootCtx, _ := tracer.Start(ctx, "root-span")
 		assertCalls(t, mockRT, 1, 1, 0, 0, 0) // root span should create a task
 
-		_, childSpan := tracer.Start(rootCtx, "child-span", trace.WithProfileTask(true))
+		_, childSpan := tracer.Start(rootCtx, "child-span", trace.ProfileTask())
 		assertCalls(t, mockRT, 2, 2, 0, 0, 0) // child span should create another task
 
 		profilingSpan, ok := childSpan.(profilingSpan)
@@ -160,7 +160,7 @@ func TestProfilingSpan(t *testing.T) {
 		globalRuntimeTracer = mockRT
 
 		ctx := t.Context()
-		_, span := tracer.Start(ctx, "root-span", trace.WithProfileTask(true))
+		_, span := tracer.Start(ctx, "root-span", trace.ProfileTask())
 		assertCalls(t, mockRT, 1, 0, 0, 0, 0)
 
 		profilingSpan, ok := span.(profilingSpan)
@@ -173,7 +173,7 @@ func TestProfilingSpan(t *testing.T) {
 		globalRuntimeTracer = mockRT
 
 		ctx := t.Context()
-		_, span := tracer.Start(ctx, "root-span", trace.WithProfileRegion(true))
+		_, span := tracer.Start(ctx, "root-span", trace.ProfileRegion())
 		assertCalls(t, mockRT, 1, 1, 0, 0, 0)
 
 		profilingSpan, ok := span.(profilingSpan)
@@ -189,7 +189,7 @@ func TestProfilingSpan(t *testing.T) {
 		globalRuntimeTracer = mockRT
 
 		ctx := t.Context()
-		_, span := tracer.Start(ctx, "root-span", trace.WithProfileTask(false), trace.WithProfileRegion(true))
+		_, span := tracer.Start(ctx, "root-span", trace.WithProfileTask(false), trace.ProfileRegion())
 		assertCalls(t, mockRT, 1, 0, 1, 0, 0)
 
 		profilingSpan, ok := span.(profilingSpan)
@@ -206,7 +206,7 @@ func TestProfilingSpan(t *testing.T) {
 			rootCtx, _ := tracer.Start(ctx, "root-span")
 			assertCalls(t, mockRT, 1, 1, 0, 0, 0) // root span should create a task
 
-			_, _ = tracer.Start(rootCtx, "child-span", trace.WithProfileTask(true), trace.WithProfileRegion(true))
+			_, _ = tracer.Start(rootCtx, "child-span", trace.ProfileTask(), trace.ProfileRegion())
 			assertCalls(t, mockRT, 2, 2, 0, 0, 0)
 		})
 		t.Run("WithProfileRegion first", func(t *testing.T) {
@@ -217,7 +217,7 @@ func TestProfilingSpan(t *testing.T) {
 			rootCtx, _ := tracer.Start(ctx, "root-span")
 			assertCalls(t, mockRT, 1, 1, 0, 0, 0) // root span should create a task
 
-			_, _ = tracer.Start(rootCtx, "child-span", trace.WithProfileRegion(true), trace.WithProfileTask(true))
+			_, _ = tracer.Start(rootCtx, "child-span", trace.ProfileRegion(), trace.ProfileTask())
 			assertCalls(t, mockRT, 2, 2, 0, 0, 0)
 		})
 	})
@@ -242,7 +242,7 @@ func TestProfilingSpan(t *testing.T) {
 		rootCtx, span := tracer.Start(ctx, "root-span")
 		assertCalls(t, mockRT, 1, 1, 0, 0, 0)
 
-		_, childSpan := tracer.Start(rootCtx, "child-span", trace.WithProfileRegion(true))
+		_, childSpan := tracer.Start(rootCtx, "child-span", trace.ProfileRegion())
 		assertCalls(t, mockRT, 2, 1, 1, 0, 0)
 
 		childSpan.End()
@@ -258,5 +258,73 @@ func TestProfilingSpan(t *testing.T) {
 		rootProfilingSpan, ok := span.(profilingSpan)
 		require.True(t, ok)
 		assert.True(t, rootProfilingSpan.profilingStarted()) // should return true even after it ended
+	})
+}
+
+func TestAutoProfiling(t *testing.T) {
+	// Notice the usage of trace.AutoProfiling(), trace.AsyncEnd() and
+	// trace.NoProfiling() in this test. These are the main options expected to
+	// be used by most users that want automatic profiling.
+
+	originalRuntimeTracer := globalRuntimeTracer
+	t.Cleanup(func() {
+		globalRuntimeTracer = originalRuntimeTracer
+	})
+
+	tracerProvider := NewTracerProvider(WithSampler(AlwaysSample()))
+	tracer := tracerProvider.Tracer("TestAutoProfiling", trace.AutoProfiling())
+
+	t.Run("local root creates a task and children create regions", func(t *testing.T) {
+		mockRT := newMockRuntimeTracer(true)
+		globalRuntimeTracer = mockRT
+
+		ctx := t.Context()
+		spanCtx, span := tracer.Start(ctx, "root-span")
+		assertCalls(t, mockRT, 1, 1, 0, 0, 0)
+
+		childSpanCtx, childSpan := tracer.Start(spanCtx, "child-span")
+		assertCalls(t, mockRT, 2, 1, 1, 0, 0)
+
+		_, grandchildSpan := tracer.Start(childSpanCtx, "grandchild-span")
+		assertCalls(t, mockRT, 3, 1, 2, 0, 0)
+
+		grandchildSpan.End()
+		assertCalls(t, mockRT, 3, 1, 2, 0, 1)
+
+		childSpan.End()
+		assertCalls(t, mockRT, 3, 1, 2, 0, 2)
+
+		span.End()
+		assertCalls(t, mockRT, 3, 1, 2, 1, 2)
+	})
+
+	t.Run("async spans create tasks instead of regions", func(t *testing.T) {
+		mockRT := newMockRuntimeTracer(true)
+		globalRuntimeTracer = mockRT
+
+		ctx := t.Context()
+		rootCtx, rootSpan := tracer.Start(ctx, "root-span")
+		assertCalls(t, mockRT, 1, 1, 0, 0, 0)
+
+		_, childSpan := tracer.Start(rootCtx, "child-span", trace.AsyncEnd())
+		assertCalls(t, mockRT, 2, 2, 0, 0, 0) // async span creates a task instead of a region
+
+		childSpan.End()
+		assertCalls(t, mockRT, 2, 2, 0, 1, 0)
+
+		rootSpan.End()
+		assertCalls(t, mockRT, 2, 2, 0, 2, 0)
+	})
+
+	t.Run("disable profiling at span level", func(t *testing.T) {
+		mockRT := newMockRuntimeTracer(true)
+		globalRuntimeTracer = mockRT
+
+		ctx := t.Context()
+		_, span := tracer.Start(ctx, "root-span", trace.NoProfiling())
+		assertCalls(t, mockRT, 1, 0, 0, 0, 0)
+
+		span.End()
+		assertCalls(t, mockRT, 1, 0, 0, 0, 0)
 	})
 }

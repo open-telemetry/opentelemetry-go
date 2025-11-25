@@ -14,8 +14,10 @@ import (
 type TracerConfig struct {
 	instrumentationVersion string
 	// Schema URL of the telemetry emitted by the Tracer.
-	schemaURL string
-	attrs     attribute.Set
+	schemaURL     string
+	attrs         attribute.Set
+	autoProfiling bool
+	skipProfiling bool
 }
 
 // InstrumentationVersion returns the version of the library providing instrumentation.
@@ -32,6 +34,27 @@ func (t *TracerConfig) InstrumentationAttributes() attribute.Set {
 // SchemaURL returns the Schema URL of the telemetry emitted by the Tracer.
 func (t *TracerConfig) SchemaURL() string {
 	return t.schemaURL
+}
+
+// AutoProfiling returns whether automatic profiling is enabled.
+func (t *TracerConfig) AutoProfiling() bool {
+	return t.autoProfiling
+}
+
+// SkipProfiling reports whether profiling is skipped by default at the
+// tracer level.
+func (t *TracerConfig) SkipProfiling() bool {
+	return t.skipProfiling
+}
+
+// SpanOptions returns the default span start options for this tracer.
+func (t *TracerConfig) SpanOptions() []SpanStartOption {
+	var opts []SpanStartOption
+	if t.AutoProfiling() {
+		opts = append(opts, ProfileRegion())
+	}
+	opts = append(opts, WithSkipProfiling(t.SkipProfiling()))
+	return opts
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
@@ -64,6 +87,8 @@ type SpanConfig struct {
 	stackTrace    bool
 	profileRegion *bool
 	profileTask   *bool
+	skipProfiling bool
+	asyncEnd      bool
 }
 
 // Attributes describe the associated qualities of a Span.
@@ -109,6 +134,24 @@ func (cfg *SpanConfig) ProfileRegion() *bool {
 // enabled and this method returns nil.
 func (cfg *SpanConfig) ProfileTask() *bool {
 	return cfg.profileTask
+}
+
+// SkipProfiling reports whether profiling is skipped at the span level.
+func (cfg *SpanConfig) SkipProfiling() bool {
+	return cfg.skipProfiling
+}
+
+// AsyncEnd reports whether the span will be ended on a different goroutine
+// than the one it was started on.
+func (cfg *SpanConfig) AsyncEnd() bool {
+	return cfg.asyncEnd
+}
+
+// ApplyOptions applies all the options to the current SpanConfig.
+func (cfg *SpanConfig) ApplyOptions(options ...SpanStartOption) {
+	for _, option := range options {
+		*cfg = option.applySpanStart(*cfg)
+	}
 }
 
 // NewSpanStartConfig applies all the options to a returned SpanConfig.
@@ -298,6 +341,12 @@ func WithProfileRegion(profileRegion bool) SpanStartOption {
 	})
 }
 
+// ProfileRegion is a utility function to request that the span create a
+// runtime/trace.Region.
+func ProfileRegion() SpanStartOption {
+	return WithProfileRegion(true)
+}
+
 // WithProfileTask requests that the span create a runtime/trace.Task.
 // If this option is not passed, root local spans will still create a task when
 // runtime/trace is enabled. To turn off this default behavior, use WithProfileTask(false).
@@ -306,6 +355,27 @@ func WithProfileTask(profileTask bool) SpanStartOption {
 		cfg.profileTask = &profileTask
 		return cfg
 	})
+}
+
+// ProfileTask is a utility function to request that the span create a
+// runtime/trace.Task.
+func ProfileTask() SpanStartOption {
+	return WithProfileTask(true)
+}
+
+// WithAsyncEnd hints the tracer that the span will be ended on a different
+// goroutine than the one it was started on.
+func WithAsyncEnd(asyncEnd bool) SpanStartOption {
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.asyncEnd = asyncEnd
+		return cfg
+	})
+}
+
+// AsyncEnd is a utility function to hint the tracer that the span will be
+// ended on a different goroutine than the one it was started on.
+func AsyncEnd() SpanStartOption {
+	return WithAsyncEnd(true)
 }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
@@ -397,4 +467,57 @@ func WithSchemaURL(schemaURL string) TracerOption {
 		cfg.schemaURL = schemaURL
 		return cfg
 	})
+}
+
+// WithAutoProfiling enables or disables automatic runtime profiling.
+// When enabled, root local spans start a "runtime/trace".Task and their
+// child spans start a "runtime/trace".Region.
+//
+// Because profile regions must begin and end on the same goroutine, any span
+// that ends on a different goroutine must be annotated with WithAsyncEnd().
+func WithAutoProfiling(autoProfiling bool) TracerOption {
+	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
+		cfg.autoProfiling = autoProfiling
+		return cfg
+	})
+}
+
+// AutoProfiling is a utility function to enable automatic runtime profiling.
+func AutoProfiling() TracerOption {
+	return WithAutoProfiling(true)
+}
+
+// Option represents a configuration that can be applied to both the tracer
+// and individual spans. Implements SpanStartOption and TracerOption.
+type Option struct {
+	spanStartOption SpanStartOption
+	tracerOption    TracerOption
+}
+
+func (o *Option) applySpanStart(cfg SpanConfig) SpanConfig {
+	return o.spanStartOption.applySpanStart(cfg)
+}
+
+func (o *Option) apply(cfg TracerConfig) TracerConfig {
+	return o.tracerOption.apply(cfg)
+}
+
+// WithSkipProfiling allows disabling profiling regardless of whether
+// "runtime/trace" is enabled or not. The option can be applied at the tracer
+// level or overridden per span.
+func WithSkipProfiling(skip bool) *Option {
+	spanStartOption := spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.skipProfiling = skip
+		return cfg
+	})
+	tracerOption := tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
+		cfg.skipProfiling = skip
+		return cfg
+	})
+	return &Option{spanStartOption, tracerOption}
+}
+
+// NoProfiling is a utility function to disable profiling.
+func NoProfiling() *Option {
+	return WithSkipProfiling(true)
 }
