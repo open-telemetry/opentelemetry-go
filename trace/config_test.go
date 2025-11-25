@@ -34,13 +34,15 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 
 	tests := []struct {
-		options  []SpanStartOption
-		expected SpanConfig
+		options              []SpanStartOption
+		expected             SpanConfig
+		customAssertFunction func(t *testing.T, cfg SpanConfig)
 	}{
 		{
 			// No non-zero-values should be set.
 			[]SpanStartOption{},
 			SpanConfig{},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -49,6 +51,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				attributes: []attribute.KeyValue{k1v1},
 			},
+			nil,
 		},
 		{
 			// Multiple calls should append not overwrite.
@@ -61,6 +64,7 @@ func TestNewSpanConfig(t *testing.T) {
 				// No uniqueness is guaranteed by the API.
 				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -70,6 +74,7 @@ func TestNewSpanConfig(t *testing.T) {
 				// No uniqueness is guaranteed by the API.
 				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -78,6 +83,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				timestamp: timestamp0,
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -88,6 +94,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				timestamp: timestamp1,
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -96,6 +103,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				links: []Link{link1},
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -107,6 +115,7 @@ func TestNewSpanConfig(t *testing.T) {
 				// No uniqueness is guaranteed by the API.
 				links: []Link{link1, link1, link2},
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -115,6 +124,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				newRoot: true,
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -125,6 +135,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				newRoot: true,
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -133,6 +144,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				spanKind: SpanKindConsumer,
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -143,6 +155,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				spanKind: SpanKindConsumer,
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -151,6 +164,12 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				profileTask: boolPtr(true),
 			},
+			func(t *testing.T, cfg SpanConfig) {
+				if assert.NotNil(t, cfg.ProfileTask()) {
+					assert.True(t, *cfg.ProfileTask())
+				}
+				assert.Nil(t, cfg.ProfileRegion())
+			},
 		},
 		{
 			[]SpanStartOption{
@@ -158,6 +177,12 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			SpanConfig{
 				profileTask: boolPtr(false),
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				if assert.NotNil(t, cfg.ProfileTask()) {
+					assert.False(t, *cfg.ProfileTask())
+				}
+				assert.Nil(t, cfg.ProfileRegion())
 			},
 		},
 		{
@@ -169,6 +194,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				profileTask: boolPtr(false),
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -177,6 +203,12 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				profileRegion: boolPtr(true),
 			},
+			func(t *testing.T, cfg SpanConfig) {
+				if assert.NotNil(t, cfg.ProfileRegion()) {
+					assert.True(t, *cfg.ProfileRegion())
+				}
+				assert.Nil(t, cfg.ProfileTask())
+			},
 		},
 		{
 			[]SpanStartOption{
@@ -184,6 +216,12 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 			SpanConfig{
 				profileRegion: boolPtr(false),
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				if assert.NotNil(t, cfg.ProfileRegion()) {
+					assert.False(t, *cfg.ProfileRegion())
+				}
+				assert.Nil(t, cfg.ProfileTask())
 			},
 		},
 		{
@@ -195,6 +233,7 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				profileRegion: boolPtr(false),
 			},
+			nil,
 		},
 		{
 			[]SpanStartOption{
@@ -205,6 +244,7 @@ func TestNewSpanConfig(t *testing.T) {
 				profileTask:   boolPtr(true),
 				profileRegion: boolPtr(true),
 			},
+			nil,
 		},
 		{
 			// Everything should work together.
@@ -226,10 +266,15 @@ func TestNewSpanConfig(t *testing.T) {
 				profileTask:   boolPtr(true),
 				profileRegion: boolPtr(false),
 			},
+			nil,
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, NewSpanStartConfig(test.options...))
+		config := NewSpanStartConfig(test.options...)
+		assert.Equal(t, test.expected, config)
+		if test.customAssertFunction != nil {
+			test.customAssertFunction(t, config)
+		}
 	}
 }
 
