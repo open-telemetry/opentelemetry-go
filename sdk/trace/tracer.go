@@ -21,7 +21,7 @@ type tracer struct {
 
 	inst observ.Tracer
 
-	spanOptions []trace.SpanStartOption
+	profiling trace.ProfilingMode
 }
 
 var _ trace.Tracer = &tracer{}
@@ -36,8 +36,7 @@ func (tr *tracer) Start(
 	name string,
 	options ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
-	config := trace.NewSpanStartConfig(tr.spanOptions...)
-	config.ApplyOptions(options...)
+	config := trace.NewSpanStartConfig(options...)
 
 	if ctx == nil {
 		// Prevent trace.ContextWithSpan from panicking.
@@ -74,7 +73,7 @@ func (tr *tracer) Start(
 		}
 	}
 	if profilingSpan, ok := s.(profilingSpan); ok {
-		newCtx = profilingSpan.startProfiling(newCtx, &config)
+		newCtx = profilingSpan.startProfiling(newCtx, &config, tr.profiling)
 	}
 
 	return newCtx, s

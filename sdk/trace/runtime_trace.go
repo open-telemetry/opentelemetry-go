@@ -55,7 +55,7 @@ type profilingSpan interface {
 	// context) or a Region (no context change). If tracing is disabled
 	// (globally or for the span), it does nothing. Concrete implementations
 	// may have their own defaults when config is not explicit.
-	startProfiling(ctx context.Context, config *trace.SpanConfig) context.Context
+	startProfiling(ctx context.Context, config *trace.SpanConfig, tracerSetting trace.ProfilingMode) context.Context
 	endProfiling()
 	profilingStarted() bool
 }

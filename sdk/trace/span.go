@@ -877,44 +877,85 @@ func (s *recordingSpan) addChild() {
 
 func (*recordingSpan) private() {}
 
+func (s *recordingSpan) shouldCreateTask(config *trace.SpanConfig, tracerSetting trace.ProfilingMode) bool {
+	if config.ProfileTask() > tracerSetting {
+		tracerSetting = config.ProfileTask()
+	}
+
+	switch tracerSetting {
+	case trace.ProfilingDefault:
+		isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote()
+		return isLocalRoot
+	case trace.ProfilingAuto:
+		if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot {
+			return true
+		}
+		return tracerSetting >= config.ProfileRegion() && config.AsyncEnd()
+	case trace.ProfilingManual:
+		return config.ProfileTask() == trace.ProfilingManual
+	case trace.ProfilingDisabled:
+		return false
+	default:
+		return false // unrecognized value
+	}
+}
+
+func (s *recordingSpan) shouldCreateRegion(config *trace.SpanConfig, tracerSetting trace.ProfilingMode) bool {
+	if config.ProfileRegion() > tracerSetting {
+		tracerSetting = config.ProfileRegion()
+	}
+
+	switch tracerSetting {
+	case trace.ProfilingDefault:
+		return false
+	case trace.ProfilingAuto:
+		if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot {
+			return false
+		}
+		return !config.AsyncEnd()
+	case trace.ProfilingManual:
+		return config.ProfileRegion() == trace.ProfilingManual
+	case trace.ProfilingDisabled:
+		return false
+	default:
+		return false // unrecognized value
+	}
+}
+
 // startProfiling implements profilingSpan.
-func (s *recordingSpan) startProfiling(ctx context.Context, config *trace.SpanConfig) context.Context {
-	if !globalRuntimeTracer.IsEnabled() || config.SkipProfiling() {
+func (s *recordingSpan) startProfiling(
+	ctx context.Context,
+	config *trace.SpanConfig,
+	tracerSetting trace.ProfilingMode,
+) context.Context {
+	if !globalRuntimeTracer.IsEnabled() {
 		// Avoid additional overhead if runtime/trace is not enabled.
 		return ctx
 	}
 
-	isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote()
-
-	// Create a task for local root spans unless explicitly disabled
-	shouldCreateTask := isLocalRoot
-	if config.ProfileTask() != nil {
-		shouldCreateTask = *config.ProfileTask()
-	}
-	createRegionRequested := config.ProfileRegion() != nil && *config.ProfileRegion()
-	if createRegionRequested && config.AsyncEnd() {
-		// If a region is requested and the span is async, create a task instead.
-		shouldCreateTask = true
-	}
-	if taskExplicitlyDisabled := config.ProfileTask() != nil && !*config.ProfileTask(); taskExplicitlyDisabled {
-		shouldCreateTask = false
+	var endFn runtimeTraceEndFn
+	if s.shouldCreateTask(config, tracerSetting) {
+		ctx, endFn = globalRuntimeTracer.NewTask(ctx, s.name)
 	}
 
-	if shouldCreateTask {
-		nctx, endFunc := globalRuntimeTracer.NewTask(ctx, s.name)
+	if s.shouldCreateRegion(config, tracerSetting) {
+		regionEndFn := globalRuntimeTracer.StartRegion(ctx, s.name)
+		if endFn == nil {
+			endFn = regionEndFn
+		} else {
+			taskEndFn := endFn
+			endFn = func() {
+				regionEndFn()
+				taskEndFn()
+			}
+		}
+	}
+
+	if endFn != nil {
 		s.mu.Lock()
-		s.runtimeTraceEnd = endFunc
-		s.mu.Unlock()
-		return nctx
-	}
-
-	if createRegionRequested {
-		endFunc := globalRuntimeTracer.StartRegion(ctx, s.name)
-		s.mu.Lock()
-		s.runtimeTraceEnd = endFunc
+		s.runtimeTraceEnd = endFn
 		s.mu.Unlock()
 	}
-
 	return ctx
 }
 
