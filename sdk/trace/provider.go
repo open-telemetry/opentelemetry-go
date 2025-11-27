@@ -157,7 +157,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 			t = &tracer{
 				provider:             p,
 				instrumentationScope: is,
-				profiling:            c.ProfilingMode(),
+				profilingMode:        c.ProfilingMode(),
 			}
 
 			var err error

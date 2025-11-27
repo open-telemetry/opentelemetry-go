@@ -326,9 +326,10 @@ func WithProfileRegion(profileRegion ProfilingMode) SpanStartOption {
 	})
 }
 
-// ProfileRegion is equivalent to WithProfileRegion(ProfilingManual).
+// ProfileRegion is equivalent to applying both
+// WithProfileRegion(ProfilingManual) and WithProfileTask(ProfilingDisabled).
 func ProfileRegion() SpanStartOption {
-	return WithProfileRegion(ProfilingManual)
+	return ComposeSpanStartOptions(WithProfileTask(ProfilingDisabled), WithProfileRegion(ProfilingManual))
 }
 
 // WithProfileTask controls whether the span should create a runtime/trace.Task.
@@ -345,9 +346,10 @@ func WithProfileTask(profileTask ProfilingMode) SpanStartOption {
 	})
 }
 
-// ProfileTask is equivalent to WithProfileTask(ProfilingManual).
+// ProfileTask is equivalent to applying both
+// WithProfileTask(ProfilingManual) and WithProfileRegion(ProfilingDisabled).
 func ProfileTask() SpanStartOption {
-	return WithProfileTask(ProfilingManual)
+	return ComposeSpanStartOptions(WithProfileRegion(ProfilingDisabled), WithProfileTask(ProfilingManual))
 }
 
 // NoProfiling is equivalent to applying both

@@ -193,8 +193,8 @@ func TestManualInstrumentation(t *testing.T) {
 		_, rootSpanWithBothTaskAndRegion := tracer.Start(
 			ctx,
 			"root-span-with-both-task-and-region",
-			trace.ProfileTask(),
-			trace.ProfileRegion(),
+			trace.WithProfileTask(trace.ProfilingManual),
+			trace.WithProfileRegion(trace.ProfilingManual),
 		)
 		assertCalls(t, mockRT, 4, 2, 2, 1, 1)
 		profilingSpan, ok := rootSpanWithBothTaskAndRegion.(profilingSpan)
@@ -302,21 +302,13 @@ func TestAutoInstrumentation(t *testing.T) {
 		assertCalls(t, mockRT, 1, 1, 0, 0, 0)
 
 		_, childSpan := tracer.Start(rootCtx, "child-span", trace.ProfileTask())
-		// notice it also creates a region because it is part of the auto instrumentation and wasn't disabled explicitly
-		assertCalls(t, mockRT, 2, 2, 1, 0, 0)
+		assertCalls(t, mockRT, 2, 2, 0, 0, 0)
 
 		childSpan.End()
-		assertCalls(t, mockRT, 2, 2, 1, 1, 1)
-
-		_, childSpan2 := tracer.Start(rootCtx, "child-span-2", trace.NoProfiling(), trace.ProfileTask())
-		// no region this time
-		assertCalls(t, mockRT, 3, 3, 1, 1, 1)
-
-		childSpan2.End()
-		assertCalls(t, mockRT, 3, 3, 1, 2, 1)
+		assertCalls(t, mockRT, 2, 2, 0, 1, 0)
 
 		rootSpan.End()
-		assertCalls(t, mockRT, 3, 3, 1, 3, 1)
+		assertCalls(t, mockRT, 2, 2, 0, 2, 0)
 	})
 
 	t.Run("disable profiling at span level", func(t *testing.T) {

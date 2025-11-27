@@ -20,8 +20,8 @@ type tracer struct {
 	instrumentationScope instrumentation.Scope
 
 	inst observ.Tracer
-
-	profiling trace.ProfilingMode
+	
+	profilingMode trace.ProfilingMode
 }
 
 var _ trace.Tracer = &tracer{}
@@ -73,7 +73,7 @@ func (tr *tracer) Start(
 		}
 	}
 	if profilingSpan, ok := s.(profilingSpan); ok {
-		newCtx = profilingSpan.startProfiling(newCtx, &config, tr.profiling)
+		newCtx = profilingSpan.startProfiling(newCtx, &config, tr.profilingMode)
 	}
 
 	return newCtx, s
