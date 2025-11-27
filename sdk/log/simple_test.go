@@ -40,6 +40,12 @@ func (e *exporter) ForceFlush(context.Context) error {
 	return nil
 }
 
+func TestSimpleProcessorEnabled(t *testing.T) {
+	e := log.NewSimpleProcessor(nil)
+	enabled := e.Enabled(t.Context(), log.EnabledParameters{})
+	assert.True(t, enabled, "Enabled should return true")
+}
+
 func TestSimpleProcessorOnEmit(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
