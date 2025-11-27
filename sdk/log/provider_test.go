@@ -49,7 +49,7 @@ func (p *processor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-func (p *processor) Enabled(context.Context, EnabledParameters) bool {
+func (*processor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 

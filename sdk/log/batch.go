@@ -204,7 +204,7 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 }
 
 // Enabled returns true, indicating this Processor will process all records.
-func (b *BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
+func (*BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 

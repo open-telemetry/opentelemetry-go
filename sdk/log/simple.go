@@ -59,7 +59,7 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 }
 
 // Enabled returns true, indicating this Processor will process all records.
-func (s *SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
+func (*SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 
