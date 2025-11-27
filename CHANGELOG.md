@@ -24,6 +24,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental observability metrics for manual reader in `go.opentelemetry.io/otel/sdk/metric`. (#7524)
 - Add experimental observability metrics for periodic reader in `go.opentelemetry.io/otel/sdk/metric`. (#7571)
 - Support `OTEL_EXPORTER_OTLP_LOGS_INSECURE` and `OTEL_EXPORTER_OTLP_INSECURE` environmental variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7608)
+- Add `Enabled` method to the `Processor` interface in `go.opentelemetry.io/otel/sdk/log`.
+  All `Processor` implementations now include an `Enabled` method. (#7617)
 
 ### Fixed
 
@@ -40,6 +42,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
+- Remove the `FilterProcessor` interface in `go.opentelemetry.io/otel/sdk/log`.
+  The `Enabled` method has been added to the `Processor` interface instead.
+  All `Processor` implementations must now implement the `Enabled` method.
+  Custom processors that do not filter records can implement `Enabled` to return `true`.
+  The `EnabledParameters` type remains available for use with the `Processor.Enabled` method. (#7617)
 
 ### Changed
 

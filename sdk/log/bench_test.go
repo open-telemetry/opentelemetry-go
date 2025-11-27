@@ -136,7 +136,7 @@ func (timestampProcessor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-func (timestampProcessor) Enabled(context.Context, Record) bool {
+func (timestampProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 
@@ -155,7 +155,7 @@ func (attrAddProcessor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-func (attrAddProcessor) Enabled(context.Context, Record) bool {
+func (attrAddProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 
@@ -174,7 +174,7 @@ func (attrSetDecorator) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-func (attrSetDecorator) Enabled(context.Context, Record) bool {
+func (attrSetDecorator) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 

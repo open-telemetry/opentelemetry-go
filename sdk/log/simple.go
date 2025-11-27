@@ -58,6 +58,11 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	return s.exporter.Export(ctx, *records)
 }
 
+// Enabled returns true, indicating this Processor will process all records.
+func (s *SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
+	return true
+}
+
 // Shutdown shuts down the exporter.
 func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
 	if s.exporter == nil {

@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	logapi "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -52,7 +51,7 @@ func Example() {
 }
 
 // Use a processor that filters out records based on the provided context.
-func ExampleFilterProcessor() {
+func ExampleProcessor_contextFilter() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
@@ -82,14 +81,7 @@ func WithIgnoreLogs(ctx context.Context) context.Context {
 // [WithIgnoreLogs] is passed to its methods.
 type ContextFilterProcessor struct {
 	log.Processor
-
-	lazyFilter sync.Once
-	// Support the FilterProcessor interface for the embedded processor.
-	filter log.FilterProcessor
 }
-
-// Compile time check.
-var _ log.FilterProcessor = (*ContextFilterProcessor)(nil)
 
 func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	if ignoreLogs(ctx) {
@@ -99,12 +91,7 @@ func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record)
 }
 
 func (p *ContextFilterProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
-	p.lazyFilter.Do(func() {
-		if f, ok := p.Processor.(log.FilterProcessor); ok {
-			p.filter = f
-		}
-	})
-	return !ignoreLogs(ctx) && (p.filter == nil || p.filter.Enabled(ctx, param))
+	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, param)
 }
 
 func ignoreLogs(ctx context.Context) bool {
@@ -150,6 +137,11 @@ func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
 	return nil
 }
 
+// Enabled returns true, indicating this Processor will process all records.
+func (*EventNameProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
 // Shutdown returns nil.
 func (*EventNameProcessor) Shutdown(context.Context) error {
 	return nil
@@ -191,6 +183,11 @@ func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) erro
 		return true
 	})
 	return nil
+}
+
+// Enabled returns true, indicating this Processor will process all records.
+func (*RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
 }
 
 // Shutdown returns nil.
