@@ -16,29 +16,6 @@ import (
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
 type Processor interface {
-	// OnEmit is called when a Record is emitted.
-	//
-	// OnEmit will be called independent of Enabled. Implementations need to
-	// validate the arguments themselves before processing.
-	//
-	// Implementation should not interrupt the record processing
-	// if the context is canceled.
-	//
-	// All retry logic must be contained in this function. The SDK does not
-	// implement any retry logic. All errors returned by this function are
-	// considered unrecoverable and will be reported to a configured error
-	// Handler.
-	//
-	// The SDK invokes the processors sequentially in the same order as
-	// they were registered using WithProcessor.
-	// Implementations may synchronously modify the record so that the changes
-	// are visible in the next registered processor.
-	//
-	// Note that Record is not concurrent safe. Therefore, asynchronous
-	// processing may cause race conditions. Use Record.Clone
-	// to create a copy that shares no state with the original.
-	OnEmit(ctx context.Context, record *Record) error
-
 	// Enabled reports whether the Processor will process for the given context
 	// and param.
 	//
@@ -67,6 +44,29 @@ type Processor interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(ctx context.Context, param EnabledParameters) bool
+
+	// OnEmit is called when a Record is emitted.
+	//
+	// OnEmit will be called independent of Enabled. Implementations need to
+	// validate the arguments themselves before processing.
+	//
+	// Implementation should not interrupt the record processing
+	// if the context is canceled.
+	//
+	// All retry logic must be contained in this function. The SDK does not
+	// implement any retry logic. All errors returned by this function are
+	// considered unrecoverable and will be reported to a configured error
+	// Handler.
+	//
+	// The SDK invokes the processors sequentially in the same order as
+	// they were registered using WithProcessor.
+	// Implementations may synchronously modify the record so that the changes
+	// are visible in the next registered processor.
+	//
+	// Note that Record is not concurrent safe. Therefore, asynchronous
+	// processing may cause race conditions. Use Record.Clone
+	// to create a copy that shares no state with the original.
+	OnEmit(ctx context.Context, record *Record) error
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.

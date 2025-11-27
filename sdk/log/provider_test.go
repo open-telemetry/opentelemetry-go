@@ -40,6 +40,10 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name}
 }
 
+func (*processor) Enabled(context.Context, EnabledParameters) bool {
+	return true
+}
+
 func (p *processor) OnEmit(_ context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
@@ -47,10 +51,6 @@ func (p *processor) OnEmit(_ context.Context, r *Record) error {
 
 	p.records = append(p.records, *r)
 	return nil
-}
-
-func (*processor) Enabled(context.Context, EnabledParameters) bool {
-	return true
 }
 
 func (p *processor) Shutdown(context.Context) error {

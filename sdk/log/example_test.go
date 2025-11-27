@@ -125,6 +125,11 @@ func ExampleProcessor_eventName() {
 // but do support attributes.
 type EventNameProcessor struct{}
 
+// Enabled returns true, indicating this Processor will process all records.
+func (*EventNameProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
 // OnEmit sets the EventName on log records having an "otel.event.name" string attribute.
 // The original attribute is not removed.
 func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
@@ -135,11 +140,6 @@ func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
 		return true
 	})
 	return nil
-}
-
-// Enabled returns true, indicating this Processor will process all records.
-func (*EventNameProcessor) Enabled(context.Context, log.EnabledParameters) bool {
-	return true
 }
 
 // Shutdown returns nil.
@@ -173,6 +173,11 @@ func ExampleProcessor_redact() {
 // from attributes containing "token" in the key.
 type RedactTokensProcessor struct{}
 
+// Enabled returns true, indicating this Processor will process all records.
+func (*RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
 // OnEmit redacts values from attributes containing "token" in the key
 // by replacing them with a REDACTED value.
 func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) error {
@@ -183,11 +188,6 @@ func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) erro
 		return true
 	})
 	return nil
-}
-
-// Enabled returns true, indicating this Processor will process all records.
-func (*RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bool {
-	return true
 }
 
 // Shutdown returns nil.

@@ -40,6 +40,11 @@ var simpleProcRecordsPool = sync.Pool{
 	},
 }
 
+// Enabled returns true, indicating this Processor will process all records.
+func (*SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
+	return true
+}
+
 // OnEmit batches provided log record.
 func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if s.exporter == nil {
@@ -56,11 +61,6 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	}()
 
 	return s.exporter.Export(ctx, *records)
-}
-
-// Enabled returns true, indicating this Processor will process all records.
-func (*SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
-	return true
 }
 
 // Shutdown shuts down the exporter.
