@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7512)
 - Add experimental observability metrics for manual reader in `go.opentelemetry.io/otel/sdk/metric`. (#7524)
 - Add experimental observability metrics for periodic reader in `go.opentelemetry.io/otel/sdk/metric`. (#7571)
+- Support `OTEL_EXPORTER_OTLP_LOGS_INSECURE` and `OTEL_EXPORTER_OTLP_INSECURE` environmental variables in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7608)
 - Add experimental observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#7492)
 
 ### Fixed
@@ -58,6 +59,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `ErrorType` function in `go.opentelemetry.io/otel/semconv/v1.37.0` now handles custom error types.
   If an error implements an `ErrorType() string` method, the return value of that method will be used as the error type. (#7442)
 - Improve performance of concurrent measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7427)
+- Replace fnv hash with xxhash in `go.opentelemetry.io/otel/attribute` for better performance. (#7371)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
