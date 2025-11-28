@@ -43,7 +43,7 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 	readme := filepath.Join(filepath.Dir(path), readmeFilename)
 	_, err = os.Stat(readme)
 	if os.IsNotExist(err) {
-		err = fmt.Errorf("couldn't find %s for %q", readmeFilename, filepath.Dir(path))
+		return fmt.Errorf("couldn't find %s for %q", readmeFilename, filepath.Dir(path))
 	}
 
 	return err
@@ -63,12 +63,17 @@ func main() {
 	fmt.Println("Verifying READMEs in", root)
 
 	var errs []string
-	filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
+	walkErr := filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		if err := verifyReadme(path, info, err); err != nil {
 			errs = append(errs, err.Error())
 		}
 		return nil // continue walking
 	})
+
+	if walkErr != nil {
+		fmt.Println("Error walking directory: ", walkErr)
+		os.Exit(1)
+	}
 
 	if len(errs) > 0 {
 		fmt.Println("Some readme files couldn't be found.")
