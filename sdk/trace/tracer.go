@@ -20,6 +20,8 @@ type tracer struct {
 	instrumentationScope instrumentation.Scope
 
 	inst observ.Tracer
+	
+	profilingMode trace.ProfilingMode
 }
 
 var _ trace.Tracer = &tracer{}
@@ -70,17 +72,11 @@ func (tr *tracer) Start(
 			sp.sp.OnStart(ctx, rw)
 		}
 	}
-	if rtt, ok := s.(runtimeTracer); ok {
-		newCtx = rtt.runtimeTrace(newCtx)
+	if profilingSpan, ok := s.(profilingSpan); ok {
+		newCtx = profilingSpan.startProfiling(newCtx, &config, tr.profilingMode)
 	}
 
 	return newCtx, s
-}
-
-type runtimeTracer interface {
-	// runtimeTrace starts a "runtime/trace".Task for the span and
-	// returns a context containing the task.
-	runtimeTrace(ctx context.Context) context.Context
 }
 
 // newSpan returns a new configured span.

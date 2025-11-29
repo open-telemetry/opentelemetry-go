@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	rt "runtime/trace"
 	"slices"
 	"strings"
 	"sync"
@@ -146,8 +145,8 @@ type recordingSpan struct {
 	// links are stored in FIFO queue capped by configured limit.
 	links evictedQueue[Link]
 
-	// executionTracerTaskEnd ends the execution tracer span.
-	executionTracerTaskEnd func()
+	// runtimeTraceEnd ends the "runtime/trace" task or region.
+	runtimeTraceEnd runtimeTraceEndFn
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
@@ -161,7 +160,7 @@ type recordingSpan struct {
 
 var (
 	_ ReadWriteSpan = (*recordingSpan)(nil)
-	_ runtimeTracer = (*recordingSpan)(nil)
+	_ profilingSpan = (*recordingSpan)(nil)
 )
 
 func (s *recordingSpan) setOrigCtx(ctx context.Context) {
@@ -492,9 +491,9 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		s.addEvent(semconv.ExceptionEventName, opts...)
 	}
 
-	if s.executionTracerTaskEnd != nil {
+	if s.profilingStarted() {
 		s.mu.Unlock()
-		s.executionTracerTaskEnd()
+		s.endProfiling()
 		s.mu.Lock()
 	}
 
@@ -878,20 +877,96 @@ func (s *recordingSpan) addChild() {
 
 func (*recordingSpan) private() {}
 
-// runtimeTrace starts a "runtime/trace".Task for the span and returns a
-// context containing the task.
-func (s *recordingSpan) runtimeTrace(ctx context.Context) context.Context {
-	if !rt.IsEnabled() {
+func (s *recordingSpan) shouldCreateTask(config *trace.SpanConfig, tracerSetting trace.ProfilingMode) bool {
+	if config.ProfileTask() > tracerSetting {
+		tracerSetting = config.ProfileTask()
+	}
+
+	switch tracerSetting {
+	case trace.ProfilingDefault:
+		isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote()
+		return isLocalRoot
+	case trace.ProfilingAuto:
+		if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot {
+			return true
+		}
+		return tracerSetting >= config.ProfileRegion() && config.AsyncEnd()
+	case trace.ProfilingManual:
+		return config.ProfileTask() == trace.ProfilingManual
+	case trace.ProfilingDisabled:
+		return false
+	default:
+		return false // unrecognized value
+	}
+}
+
+func (s *recordingSpan) shouldCreateRegion(config *trace.SpanConfig, tracerSetting trace.ProfilingMode) bool {
+	if config.ProfileRegion() > tracerSetting {
+		tracerSetting = config.ProfileRegion()
+	}
+
+	switch tracerSetting {
+	case trace.ProfilingDefault:
+		return false
+	case trace.ProfilingAuto:
+		if isLocalRoot := !s.parent.IsValid() || s.parent.IsRemote(); isLocalRoot {
+			return false
+		}
+		return !config.AsyncEnd()
+	case trace.ProfilingManual:
+		return config.ProfileRegion() == trace.ProfilingManual
+	case trace.ProfilingDisabled:
+		return false
+	default:
+		return false // unrecognized value
+	}
+}
+
+// startProfiling implements profilingSpan.
+func (s *recordingSpan) startProfiling(
+	ctx context.Context,
+	config *trace.SpanConfig,
+	tracerSetting trace.ProfilingMode,
+) context.Context {
+	if !globalRuntimeTracer.IsEnabled() {
 		// Avoid additional overhead if runtime/trace is not enabled.
 		return ctx
 	}
-	nctx, task := rt.NewTask(ctx, s.name)
 
-	s.mu.Lock()
-	s.executionTracerTaskEnd = task.End
-	s.mu.Unlock()
+	var endFn runtimeTraceEndFn
+	if s.shouldCreateTask(config, tracerSetting) {
+		ctx, endFn = globalRuntimeTracer.NewTask(ctx, s.name)
+	}
 
-	return nctx
+	if s.shouldCreateRegion(config, tracerSetting) {
+		regionEndFn := globalRuntimeTracer.StartRegion(ctx, s.name)
+		if endFn == nil {
+			endFn = regionEndFn
+		} else {
+			taskEndFn := endFn
+			endFn = func() {
+				regionEndFn()
+				taskEndFn()
+			}
+		}
+	}
+
+	if endFn != nil {
+		s.mu.Lock()
+		s.runtimeTraceEnd = endFn
+		s.mu.Unlock()
+	}
+	return ctx
+}
+
+// endProfiling implements profilingSpan.
+func (s *recordingSpan) endProfiling() {
+	s.runtimeTraceEnd()
+}
+
+// profilingStarted implements profilingSpan.
+func (s *recordingSpan) profilingStarted() bool {
+	return s.runtimeTraceEnd != nil
 }
 
 // nonRecordingSpan is a minimal implementation of the OpenTelemetry Span API

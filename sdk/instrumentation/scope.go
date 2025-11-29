@@ -3,7 +3,9 @@
 
 package instrumentation // import "go.opentelemetry.io/otel/sdk/instrumentation"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // Scope represents the instrumentation scope.
 type Scope struct {
