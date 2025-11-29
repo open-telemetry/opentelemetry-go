@@ -4,6 +4,8 @@
 package exemplar
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -143,4 +145,86 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 			assert.Empty(t, dest, "no exemplars should be collected")
 		})
 	}
+}
+
+func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		rp, n := f(1)
+		if n < 1 {
+			t.Skip("skipping, reservoir capacity less than 1:", n)
+		}
+		r := rp(*attribute.EmptySet())
+
+		var wg sync.WaitGroup
+
+		const goroutines = 2
+
+		// Call Offer concurrently with another Offer, and with Collect.
+		for i := range goroutines {
+			wg.Add(1)
+			go func(iteration int) {
+				ctx, ts, val, attrs := generateOfferInputs[N](iteration + 1)
+				r.Offer(ctx, ts, val, attrs)
+				wg.Done()
+			}(i)
+		}
+
+		// Also test concurrent Collect calls
+		wg.Add(1)
+		go func() {
+			var dest []Exemplar
+			r.Collect(&dest)
+			wg.Done()
+		}()
+
+		wg.Wait()
+
+		// Final collect to validate state
+		var dest []Exemplar
+		r.Collect(&dest)
+		assert.NotEmpty(t, dest)
+		for _, e := range dest {
+			validateExemplar[N](t, e)
+		}
+	}
+}
+
+func generateOfferInputs[N int64 | float64](
+	i int,
+) (context.Context, time.Time, Value, []attribute.KeyValue) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID([16]byte{byte(i)}),
+		SpanID:     trace.SpanID([8]byte{byte(i)}),
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ts := time.Unix(int64(i), int64(i))
+	val := NewValue(N(i))
+	attrs := []attribute.KeyValue{attribute.Int("i", i)}
+	return ctx, ts, val, attrs
+}
+
+func validateExemplar[N int64 | float64](t *testing.T, e Exemplar) {
+	t.Helper()
+	i := 0
+	switch e.Value.Type() {
+	case Int64ValueType:
+		i = int(e.Value.Int64())
+	case Float64ValueType:
+		i = int(e.Value.Float64())
+	default:
+		t.Fatalf("unexpected value type: %v", e.Value.Type())
+	}
+	if i == 0 {
+		t.Fatal("empty exemplar")
+	}
+	ctx, ts, _, attrs := generateOfferInputs[N](i)
+	sc := trace.SpanContextFromContext(ctx)
+	tID := sc.TraceID()
+	sID := sc.SpanID()
+	assert.Equal(t, tID[:], e.TraceID)
+	assert.Equal(t, sID[:], e.SpanID)
+	assert.Equal(t, ts, e.Time)
+	assert.Equal(t, attrs, e.FilteredAttributes)
 }
