@@ -104,11 +104,6 @@ func (TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	if !extractPart(opts[:], &h, 2) {
 		return trace.SpanContext{}
 	}
-	if version == 0 && (h != "" || opts[0] > 2) {
-		// version 0 not allow extra
-		// version 0 not allow other flag
-		return trace.SpanContext{}
-	}
 
 	// Clear all flags other than the trace-context supported sampling bit.
 	scc.TraceFlags = trace.TraceFlags(opts[0]) & trace.FlagsSampled // nolint:gosec // slice size already checked.
