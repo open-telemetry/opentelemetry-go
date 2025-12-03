@@ -66,7 +66,7 @@ func NewFrequency(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Frequency{noop.Int64Gauge{}}, err
+		return Frequency{noop.Int64Gauge{}}, err
 	}
 	return Frequency{i}, nil
 }
@@ -146,7 +146,7 @@ func NewTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Time{noop.Float64ObservableCounter{}}, err
+		return Time{noop.Float64ObservableCounter{}}, err
 	}
 	return Time{i}, nil
 }
@@ -209,7 +209,7 @@ func NewUtilization(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Utilization{noop.Int64Gauge{}}, err
+		return Utilization{noop.Int64Gauge{}}, err
 	}
 	return Utilization{i}, nil
 }

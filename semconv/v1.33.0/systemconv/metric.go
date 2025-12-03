@@ -227,7 +227,7 @@ func NewCPULogicalCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPULogicalCount{noop.Int64UpDownCounter{}}, err
+		return CPULogicalCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CPULogicalCount{i}, nil
 }
@@ -297,7 +297,7 @@ func NewCPUPhysicalCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPUPhysicalCount{noop.Int64UpDownCounter{}}, err
+		return CPUPhysicalCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CPUPhysicalCount{i}, nil
 }
@@ -366,7 +366,7 @@ func NewDiskIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskIO{noop.Int64Counter{}}, err
+		return DiskIO{noop.Int64Counter{}}, err
 	}
 	return DiskIO{i}, nil
 }
@@ -447,7 +447,7 @@ func NewDiskIOTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskIOTime{noop.Float64Counter{}}, err
+		return DiskIOTime{noop.Float64Counter{}}, err
 	}
 	return DiskIOTime{i}, nil
 }
@@ -539,7 +539,7 @@ func NewDiskLimit(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskLimit{noop.Int64UpDownCounter{}}, err
+		return DiskLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return DiskLimit{i}, nil
 }
@@ -618,7 +618,7 @@ func NewDiskMerged(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskMerged{noop.Int64Counter{}}, err
+		return DiskMerged{noop.Int64Counter{}}, err
 	}
 	return DiskMerged{i}, nil
 }
@@ -699,7 +699,7 @@ func NewDiskOperationTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskOperationTime{noop.Float64Counter{}}, err
+		return DiskOperationTime{noop.Float64Counter{}}, err
 	}
 	return DiskOperationTime{i}, nil
 }
@@ -794,7 +794,7 @@ func NewDiskOperations(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskOperations{noop.Int64Counter{}}, err
+		return DiskOperations{noop.Int64Counter{}}, err
 	}
 	return DiskOperations{i}, nil
 }
@@ -875,7 +875,7 @@ func NewFilesystemLimit(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return FilesystemLimit{noop.Int64UpDownCounter{}}, err
+		return FilesystemLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemLimit{i}, nil
 }
@@ -977,7 +977,7 @@ func NewFilesystemUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return FilesystemUsage{noop.Int64UpDownCounter{}}, err
+		return FilesystemUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemUsage{i}, nil
 }
@@ -1090,7 +1090,7 @@ func NewFilesystemUtilization(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return FilesystemUtilization{noop.Int64Gauge{}}, err
+		return FilesystemUtilization{noop.Int64Gauge{}}, err
 	}
 	return FilesystemUtilization{i}, nil
 }
@@ -1195,7 +1195,7 @@ func NewLinuxMemoryAvailable(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return LinuxMemoryAvailable{noop.Int64UpDownCounter{}}, err
+		return LinuxMemoryAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return LinuxMemoryAvailable{i}, nil
 }
@@ -1273,7 +1273,7 @@ func NewLinuxMemorySlabUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return LinuxMemorySlabUsage{noop.Int64UpDownCounter{}}, err
+		return LinuxMemorySlabUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return LinuxMemorySlabUsage{i}, nil
 }
@@ -1363,7 +1363,7 @@ func NewMemoryLimit(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemoryLimit{noop.Int64UpDownCounter{}}, err
+		return MemoryLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return MemoryLimit{i}, nil
 }
@@ -1432,7 +1432,7 @@ func NewMemoryShared(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemoryShared{noop.Int64UpDownCounter{}}, err
+		return MemoryShared{noop.Int64UpDownCounter{}}, err
 	}
 	return MemoryShared{i}, nil
 }
@@ -1505,7 +1505,7 @@ func NewMemoryUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, err
+		return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
@@ -1560,7 +1560,7 @@ func NewMemoryUtilization(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemoryUtilization{noop.Float64ObservableGauge{}}, err
+		return MemoryUtilization{noop.Float64ObservableGauge{}}, err
 	}
 	return MemoryUtilization{i}, nil
 }
@@ -1610,7 +1610,7 @@ func NewNetworkConnections(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetworkConnections{noop.Int64UpDownCounter{}}, err
+		return NetworkConnections{noop.Int64UpDownCounter{}}, err
 	}
 	return NetworkConnections{i}, nil
 }
@@ -1703,7 +1703,7 @@ func NewNetworkDropped(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetworkDropped{noop.Int64Counter{}}, err
+		return NetworkDropped{noop.Int64Counter{}}, err
 	}
 	return NetworkDropped{i}, nil
 }
@@ -1802,7 +1802,7 @@ func NewNetworkErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetworkErrors{noop.Int64Counter{}}, err
+		return NetworkErrors{noop.Int64Counter{}}, err
 	}
 	return NetworkErrors{i}, nil
 }
@@ -1900,7 +1900,7 @@ func NewNetworkIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64ObservableCounter{}}, err
+		return NetworkIO{noop.Int64ObservableCounter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
@@ -1958,7 +1958,7 @@ func NewNetworkPackets(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetworkPackets{noop.Int64Counter{}}, err
+		return NetworkPackets{noop.Int64Counter{}}, err
 	}
 	return NetworkPackets{i}, nil
 }
@@ -2039,7 +2039,7 @@ func NewPagingFaults(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PagingFaults{noop.Int64Counter{}}, err
+		return PagingFaults{noop.Int64Counter{}}, err
 	}
 	return PagingFaults{i}, nil
 }
@@ -2113,7 +2113,7 @@ func NewPagingOperations(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PagingOperations{noop.Int64Counter{}}, err
+		return PagingOperations{noop.Int64Counter{}}, err
 	}
 	return PagingOperations{i}, nil
 }
@@ -2195,7 +2195,7 @@ func NewPagingUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PagingUsage{noop.Int64UpDownCounter{}}, err
+		return PagingUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return PagingUsage{i}, nil
 }
@@ -2281,7 +2281,7 @@ func NewPagingUtilization(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PagingUtilization{noop.Int64Gauge{}}, err
+		return PagingUtilization{noop.Int64Gauge{}}, err
 	}
 	return PagingUtilization{i}, nil
 }
@@ -2363,7 +2363,7 @@ func NewProcessCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ProcessCount{noop.Int64UpDownCounter{}}, err
+		return ProcessCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ProcessCount{i}, nil
 }
@@ -2446,7 +2446,7 @@ func NewProcessCreated(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ProcessCreated{noop.Int64Counter{}}, err
+		return ProcessCreated{noop.Int64Counter{}}, err
 	}
 	return ProcessCreated{i}, nil
 }
@@ -2513,7 +2513,7 @@ func NewUptime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Uptime{noop.Float64Gauge{}}, err
+		return Uptime{noop.Float64Gauge{}}, err
 	}
 	return Uptime{i}, nil
 }
