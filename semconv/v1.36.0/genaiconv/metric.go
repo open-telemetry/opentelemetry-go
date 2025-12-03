@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package genaiconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "gen_ai" namespace.
 package genaiconv
 
@@ -208,6 +208,7 @@ func (m ClientOperationDuration) Record(
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -351,6 +352,7 @@ func (m ClientTokenUsage) Record(
 func (m ClientTokenUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -484,6 +486,7 @@ func (m ServerRequestDuration) Record(
 func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -624,6 +627,7 @@ func (m ServerTimePerOutputToken) Record(
 func (m ServerTimePerOutputToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -756,6 +760,7 @@ func (m ServerTimeToFirstToken) Record(
 func (m ServerTimeToFirstToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
