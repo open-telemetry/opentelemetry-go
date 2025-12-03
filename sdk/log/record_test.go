@@ -553,13 +553,9 @@ func TestRecordDroppedAttributes(t *testing.T) {
 
 		attrs := make([]log.KeyValue, i)
 		attrs[0] = log.Bool("only key different then the rest", true)
-		// The rest have empty keys (duplicates with each other)
 		assert.False(t, called, "non-dropped attributed logged")
 
 		r.AddAttributes(attrs...)
-		// After deduplication:
-		// - if i==1: only 1 unique key, no dropped (within limit)
-		// - if i>1: 2 unique keys (first + one empty key), limit=1, so 1 dropped
 		expectedDropped := 0
 		if i > 1 {
 			expectedDropped = 1
@@ -569,14 +565,10 @@ func TestRecordDroppedAttributes(t *testing.T) {
 			assert.True(t, called, "dropped attributes not logged")
 		}
 
-		// Reset for second call
 		called = false
 		logAttrDropped = func() { called = true }
 
 		r.AddAttributes(attrs...)
-		// After second add: still limit=1
-		// - if i==1: no new drops (still 1 attribute, within limit)
-		// - if i>1: dropped count increases by 1
 		expectedDropped = 0
 		if i > 1 {
 			expectedDropped = 2
@@ -584,9 +576,6 @@ func TestRecordDroppedAttributes(t *testing.T) {
 		assert.Equalf(t, expectedDropped, r.DroppedAttributes(), "%d: second AddAttributes", i)
 
 		r.SetAttributes(attrs...)
-		// SetAttributes resets, then adds
-		// - if i==1: no dropped
-		// - if i>1: 1 dropped
 		expectedDropped = 0
 		if i > 1 {
 			expectedDropped = 1
@@ -1226,10 +1215,10 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 			operation: func(r *Record) {
 				r.SetAttributes(
 					log.String("key1", "value1"),
-					log.String("key1", "value2"), // duplicate
+					log.String("key1", "value2"),
 					log.String("key2", "value3"),
 					log.String("key3", "value4"),
-					log.String("key3", "value5"), // duplicate
+					log.String("key3", "value5"),
 				)
 			},
 			expectKeyValueDropped:  true,
@@ -1326,8 +1315,8 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 				log.String("key", "value2"),
 				log.String("key", "value3"),
 			},
-			attributeCountLimit: 0, // No limit
-			expectedDropped:     0, // Deduplication doesn't count
+			attributeCountLimit: 0,
+			expectedDropped:     0,
 			expectedAttrCount:   1,
 			description:         "Multiple duplicates should not increase dropped count",
 		},
@@ -1335,10 +1324,10 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 			name: "Deduplication and limit",
 			attrs: []log.KeyValue{
 				log.String("a", "value1"),
-				log.String("a", "value2"), // duplicate
+				log.String("a", "value2"),
 				log.String("b", "value3"),
 				log.String("c", "value4"),
-				log.String("c", "value5"), // duplicate
+				log.String("c", "value5"),
 			},
 			attributeCountLimit: 2,
 			expectedDropped:     1, // Only limit drops count (3 unique -> 2 kept)
@@ -1363,11 +1352,11 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 			attrs: []log.KeyValue{
 				log.String("a", "a1"),
 				log.String("b", "b1"),
-				log.String("a", "a2"), // dup
+				log.String("a", "a2"),
 				log.String("c", "c1"),
-				log.String("b", "b2"), // dup
+				log.String("b", "b2"),
 				log.String("d", "d1"),
-				log.String("a", "a3"), // dup
+				log.String("a", "a3"),
 				log.String("e", "e1"),
 			},
 			attributeCountLimit: 3,
