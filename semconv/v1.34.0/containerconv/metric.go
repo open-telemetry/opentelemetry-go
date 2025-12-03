@@ -90,7 +90,7 @@ func NewCPUTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64Counter{}}, err
+		return CPUTime{noop.Float64Counter{}}, err
 	}
 	return CPUTime{i}, nil
 }
@@ -174,7 +174,7 @@ func NewCPUUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPUUsage{noop.Int64Gauge{}}, err
+		return CPUUsage{noop.Int64Gauge{}}, err
 	}
 	return CPUUsage{i}, nil
 }
@@ -259,7 +259,7 @@ func NewDiskIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DiskIO{noop.Int64Counter{}}, err
+		return DiskIO{noop.Int64Counter{}}, err
 	}
 	return DiskIO{i}, nil
 }
@@ -348,7 +348,7 @@ func NewMemoryUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64Counter{}}, err
+		return MemoryUsage{noop.Int64Counter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
@@ -417,7 +417,7 @@ func NewNetworkIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64Counter{}}, err
+		return NetworkIO{noop.Int64Counter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
@@ -507,7 +507,7 @@ func NewUptime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Uptime{noop.Float64Gauge{}}, err
+		return Uptime{noop.Float64Gauge{}}, err
 	}
 	return Uptime{i}, nil
 }
