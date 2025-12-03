@@ -75,7 +75,7 @@ func NewCosmosDBClientActiveInstanceCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
+		return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CosmosDBClientActiveInstanceCount{i}, nil
 }
@@ -165,7 +165,7 @@ func NewCosmosDBClientOperationRequestCharge(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
+		return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
 	}
 	return CosmosDBClientOperationRequestCharge{i}, nil
 }

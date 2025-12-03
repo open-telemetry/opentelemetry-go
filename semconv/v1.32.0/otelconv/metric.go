@@ -106,7 +106,7 @@ func NewSDKExporterLogExported(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterLogExported{noop.Int64Counter{}}, err
+		return SDKExporterLogExported{noop.Int64Counter{}}, err
 	}
 	return SDKExporterLogExported{i}, nil
 }
@@ -223,7 +223,7 @@ func NewSDKExporterLogInflight(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterLogInflight{noop.Int64UpDownCounter{}}, err
+		return SDKExporterLogInflight{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKExporterLogInflight{i}, nil
 }
@@ -329,7 +329,7 @@ func NewSDKExporterSpanExportedCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterSpanExportedCount{noop.Int64Counter{}}, err
+		return SDKExporterSpanExportedCount{noop.Int64Counter{}}, err
 	}
 	return SDKExporterSpanExportedCount{i}, nil
 }
@@ -448,7 +448,7 @@ func NewSDKExporterSpanInflightCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterSpanInflightCount{noop.Int64UpDownCounter{}}, err
+		return SDKExporterSpanInflightCount{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKExporterSpanInflightCount{i}, nil
 }
@@ -552,7 +552,7 @@ func NewSDKLogCreated(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKLogCreated{noop.Int64Counter{}}, err
+		return SDKLogCreated{noop.Int64Counter{}}, err
 	}
 	return SDKLogCreated{i}, nil
 }
@@ -620,7 +620,7 @@ func NewSDKProcessorLogProcessed(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogProcessed{noop.Int64Counter{}}, err
+		return SDKProcessorLogProcessed{noop.Int64Counter{}}, err
 	}
 	return SDKProcessorLogProcessed{i}, nil
 }
@@ -724,7 +724,7 @@ func NewSDKProcessorLogQueueCapacity(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogQueueCapacity{noop.Int64UpDownCounter{}}, err
+		return SDKProcessorLogQueueCapacity{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKProcessorLogQueueCapacity{i}, nil
 }
@@ -816,7 +816,7 @@ func NewSDKProcessorLogQueueSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogQueueSize{noop.Int64UpDownCounter{}}, err
+		return SDKProcessorLogQueueSize{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKProcessorLogQueueSize{i}, nil
 }
@@ -909,7 +909,7 @@ func NewSDKProcessorSpanProcessedCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanProcessedCount{noop.Int64Counter{}}, err
+		return SDKProcessorSpanProcessedCount{noop.Int64Counter{}}, err
 	}
 	return SDKProcessorSpanProcessedCount{i}, nil
 }
@@ -1013,7 +1013,7 @@ func NewSDKProcessorSpanQueueCapacity(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanQueueCapacity{noop.Int64UpDownCounter{}}, err
+		return SDKProcessorSpanQueueCapacity{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKProcessorSpanQueueCapacity{i}, nil
 }
@@ -1106,7 +1106,7 @@ func NewSDKProcessorSpanQueueSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanQueueSize{noop.Int64UpDownCounter{}}, err
+		return SDKProcessorSpanQueueSize{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKProcessorSpanQueueSize{i}, nil
 }
@@ -1197,7 +1197,7 @@ func NewSDKSpanEndedCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKSpanEndedCount{noop.Int64Counter{}}, err
+		return SDKSpanEndedCount{noop.Int64Counter{}}, err
 	}
 	return SDKSpanEndedCount{i}, nil
 }
@@ -1283,7 +1283,7 @@ func NewSDKSpanLiveCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKSpanLiveCount{noop.Int64UpDownCounter{}}, err
+		return SDKSpanLiveCount{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKSpanLiveCount{i}, nil
 }
