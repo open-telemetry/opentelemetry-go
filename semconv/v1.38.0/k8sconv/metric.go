@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package k8sconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "k8s" namespace.
 package k8sconv
 

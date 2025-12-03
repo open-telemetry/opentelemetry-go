@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package containerconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "container" namespace.
 package containerconv
 
