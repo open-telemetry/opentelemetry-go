@@ -109,7 +109,7 @@ func NewClientActiveRequests(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientActiveRequests{noop.Int64UpDownCounter{}}, err
+		return ClientActiveRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientActiveRequests{i}, nil
 }
@@ -244,7 +244,7 @@ func NewClientConnectionDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionDuration{noop.Float64Histogram{}}, err
+		return ClientConnectionDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionDuration{i}, nil
 }
@@ -377,7 +377,7 @@ func NewClientOpenConnections(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientOpenConnections{noop.Int64UpDownCounter{}}, err
+		return ClientOpenConnections{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientOpenConnections{i}, nil
 }
@@ -515,7 +515,7 @@ func NewClientRequestBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestBodySize{noop.Int64Histogram{}}, err
+		return ClientRequestBodySize{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestBodySize{i}, nil
 }
@@ -693,7 +693,7 @@ func NewClientRequestDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestDuration{noop.Float64Histogram{}}, err
+		return ClientRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientRequestDuration{i}, nil
 }
@@ -857,7 +857,7 @@ func NewClientResponseBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponseBodySize{noop.Int64Histogram{}}, err
+		return ClientResponseBodySize{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseBodySize{i}, nil
 }
@@ -1035,7 +1035,7 @@ func NewServerActiveRequests(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerActiveRequests{noop.Int64UpDownCounter{}}, err
+		return ServerActiveRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ServerActiveRequests{i}, nil
 }
@@ -1157,7 +1157,7 @@ func NewServerRequestBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestBodySize{noop.Int64Histogram{}}, err
+		return ServerRequestBodySize{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestBodySize{i}, nil
 }
@@ -1338,7 +1338,7 @@ func NewServerRequestDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestDuration{noop.Float64Histogram{}}, err
+		return ServerRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerRequestDuration{i}, nil
 }
@@ -1505,7 +1505,7 @@ func NewServerResponseBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerResponseBodySize{noop.Int64Histogram{}}, err
+		return ServerResponseBodySize{noop.Int64Histogram{}}, err
 	}
 	return ServerResponseBodySize{i}, nil
 }
