@@ -282,6 +282,7 @@ func (m BatteryCharge) Record(
 func (m BatteryCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -434,6 +435,7 @@ func (m BatteryChargeLimit) Record(
 func (m BatteryChargeLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -600,6 +602,7 @@ func (m BatteryTimeLeft) Record(
 func (m BatteryTimeLeft) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -757,6 +760,7 @@ func (m CPUSpeed) Record(
 func (m CPUSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -893,6 +897,7 @@ func (m CPUSpeedLimit) Record(
 func (m CPUSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1304,6 +1309,7 @@ func (m FanSpeed) Record(
 func (m FanSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1433,6 +1439,7 @@ func (m FanSpeedLimit) Record(
 func (m FanSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1568,6 +1575,7 @@ func (m FanSpeedRatio) Record(
 func (m FanSpeedRatio) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2174,6 +2182,7 @@ func (m GpuMemoryUtilization) Record(
 func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2331,6 +2340,7 @@ func (m GpuUtilization) Record(
 func (m GpuUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2494,6 +2504,7 @@ func (m HostAmbientTemperature) Record(
 func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2752,6 +2763,7 @@ func (m HostHeatingMargin) Record(
 func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2885,6 +2897,7 @@ func (m HostPower) Record(
 func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -3278,6 +3291,7 @@ func (m LogicalDiskUtilization) Record(
 func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -3717,6 +3731,7 @@ func (m NetworkBandwidthUtilization) Record(
 func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4361,6 +4376,7 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4679,6 +4695,7 @@ func (m PhysicalDiskSmart) Record(
 func (m PhysicalDiskSmart) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4854,6 +4871,7 @@ func (m Power) Record(
 func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5272,6 +5290,7 @@ func (m PowerSupplyUtilization) Record(
 func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5714,6 +5733,7 @@ func (m Temperature) Record(
 func (m Temperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5843,6 +5863,7 @@ func (m TemperatureLimit) Record(
 func (m TemperatureLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5978,6 +5999,7 @@ func (m Voltage) Record(
 func (m Voltage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -6107,6 +6129,7 @@ func (m VoltageLimit) Record(
 func (m VoltageLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -6242,6 +6265,7 @@ func (m VoltageNominal) Record(
 func (m VoltageNominal) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

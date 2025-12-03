@@ -381,6 +381,7 @@ func (m ClientOperationDuration) Record(
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -727,6 +728,7 @@ func (m ProcessDuration) Record(
 func (m ProcessDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

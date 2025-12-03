@@ -297,6 +297,7 @@ func (m CPUUsage) Record(
 func (m CPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1545,6 +1546,7 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

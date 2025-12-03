@@ -189,6 +189,7 @@ func (m ClientDuration) Record(
 func (m ClientDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -361,6 +362,7 @@ func (m ClientRequestSize) Record(
 func (m ClientRequestSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -533,6 +535,7 @@ func (m ClientResponseSize) Record(
 func (m ClientResponseSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -706,6 +709,7 @@ func (m ServerDuration) Record(
 func (m ServerDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -880,6 +884,7 @@ func (m ServerRequestSize) Record(
 func (m ServerRequestSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1054,6 +1059,7 @@ func (m ServerResponseSize) Record(
 func (m ServerResponseSize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

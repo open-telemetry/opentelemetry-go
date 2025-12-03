@@ -270,6 +270,7 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
