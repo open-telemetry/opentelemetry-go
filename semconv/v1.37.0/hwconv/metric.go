@@ -2,6 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
+
 // Package hwconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "hw" namespace.
 package hwconv
