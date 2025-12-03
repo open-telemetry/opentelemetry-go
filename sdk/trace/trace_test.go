@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1171,30 +1170,8 @@ func TestNonRecordingSpanDoesNotTrackRuntimeTracerTask(t *testing.T) {
 	tr := tp.Tracer("TestNonRecordingSpanDoesNotTrackRuntimeTracerTask")
 
 	_, apiSpan := tr.Start(t.Context(), "foo")
-	if _, ok := apiSpan.(runtimeTracer); ok {
+	if _, ok := apiSpan.(profilingSpan); ok {
 		t.Fatalf("non recording span implements runtime trace task tracking")
-	}
-}
-
-func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
-	tp := NewTracerProvider(WithSampler(AlwaysSample()))
-	tr := tp.Tracer("TestRecordingSpanRuntimeTracerTaskEnd")
-
-	var n uint64
-	executionTracerTaskEnd := func() {
-		atomic.AddUint64(&n, 1)
-	}
-	_, apiSpan := tr.Start(t.Context(), "foo")
-	s, ok := apiSpan.(*recordingSpan)
-	if !ok {
-		t.Fatal("recording span not returned from always sampled Tracer")
-	}
-
-	s.executionTracerTaskEnd = executionTracerTaskEnd
-	s.End()
-
-	if n != 1 {
-		t.Error("recording span did not end runtime trace task")
 	}
 }
 

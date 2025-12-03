@@ -14,8 +14,9 @@ import (
 type TracerConfig struct {
 	instrumentationVersion string
 	// Schema URL of the telemetry emitted by the Tracer.
-	schemaURL string
-	attrs     attribute.Set
+	schemaURL     string
+	attrs         attribute.Set
+	profilingMode ProfilingMode
 }
 
 // InstrumentationVersion returns the version of the library providing instrumentation.
@@ -32,6 +33,11 @@ func (t *TracerConfig) InstrumentationAttributes() attribute.Set {
 // SchemaURL returns the Schema URL of the telemetry emitted by the Tracer.
 func (t *TracerConfig) SchemaURL() string {
 	return t.schemaURL
+}
+
+// ProfilingMode returns the profiling mode for the tracer.
+func (t *TracerConfig) ProfilingMode() ProfilingMode {
+	return t.profilingMode
 }
 
 // NewTracerConfig applies all the options to a returned TracerConfig.
@@ -56,12 +62,15 @@ func (fn tracerOptionFunc) apply(cfg TracerConfig) TracerConfig {
 
 // SpanConfig is a group of options for a Span.
 type SpanConfig struct {
-	attributes []attribute.KeyValue
-	timestamp  time.Time
-	links      []Link
-	newRoot    bool
-	spanKind   SpanKind
-	stackTrace bool
+	attributes    []attribute.KeyValue
+	timestamp     time.Time
+	links         []Link
+	newRoot       bool
+	spanKind      SpanKind
+	stackTrace    bool
+	profileRegion ProfilingMode
+	profileTask   ProfilingMode
+	asyncEnd      bool
 }
 
 // Attributes describe the associated qualities of a Span.
@@ -94,6 +103,24 @@ func (cfg *SpanConfig) NewRoot() bool {
 // SpanKind is the role a Span has in a trace.
 func (cfg *SpanConfig) SpanKind() SpanKind {
 	return cfg.spanKind
+}
+
+// ProfileRegion reports whether the span should create a runtime/trace.Region.
+// The returned mode may be overridden by tracer-level profiling settings.
+func (cfg *SpanConfig) ProfileRegion() ProfilingMode {
+	return cfg.profileRegion
+}
+
+// ProfileTask reports whether the span should create a runtime/trace.Task.
+// The returned mode may be overridden by tracer-level profiling settings.
+func (cfg *SpanConfig) ProfileTask() ProfilingMode {
+	return cfg.profileTask
+}
+
+// AsyncEnd reports whether the span will be ended on a different goroutine
+// than the one it was started on.
+func (cfg *SpanConfig) AsyncEnd() bool {
+	return cfg.asyncEnd
 }
 
 // NewSpanStartConfig applies all the options to a returned SpanConfig.
@@ -130,6 +157,17 @@ type spanOptionFunc func(SpanConfig) SpanConfig
 
 func (fn spanOptionFunc) applySpanStart(cfg SpanConfig) SpanConfig {
 	return fn(cfg)
+}
+
+// ComposeSpanStartOptions combines the given options into one, applying them
+// sequentially with later options taking precedence.
+func ComposeSpanStartOptions(options ...SpanStartOption) SpanStartOption {
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		for _, option := range options {
+			cfg = option.applySpanStart(cfg)
+		}
+		return cfg
+	})
 }
 
 // SpanEndOption applies an option to a SpanConfig. These options are
@@ -270,6 +308,70 @@ func WithStackTrace(b bool) SpanEndEventOption {
 	return stackTraceOption(b)
 }
 
+// WithProfileRegion controls whether the span should create a
+// runtime/trace.Region.
+//   - ProfilingManual: the span always creates a Region.
+//   - ProfilingDisabled: the span does not create a Region.
+//   - ProfilingDefault: equivalent to ProfilingDisabled.
+//   - ProfilingAuto: the tracer decides whether to create a Region. This is
+//     typically configured at the tracer level via WithAutoProfiling, but it
+//     may also be set per span.
+//
+// Note: when profiling is set to ProfilingAuto, spans that end on a different
+// goroutine than they started must be annotated with AsyncEnd().
+func WithProfileRegion(profileRegion ProfilingMode) SpanStartOption {
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.profileRegion = profileRegion
+		return cfg
+	})
+}
+
+// ProfileRegion is equivalent to applying both
+// WithProfileRegion(ProfilingManual) and WithProfileTask(ProfilingDisabled).
+func ProfileRegion() SpanStartOption {
+	return ComposeSpanStartOptions(WithProfileTask(ProfilingDisabled), WithProfileRegion(ProfilingManual))
+}
+
+// WithProfileTask controls whether the span should create a runtime/trace.Task.
+//   - ProfilingManual: the span always creates a Task.
+//   - ProfilingDisabled: the span does not create a Task.
+//   - ProfilingDefault: only root local spans create a Task.
+//   - ProfilingAuto: the tracer decides whether to create a Task. This is
+//     typically configured at the tracer level via WithAutoProfiling, but it
+//     may also be set per span.
+func WithProfileTask(profileTask ProfilingMode) SpanStartOption {
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.profileTask = profileTask
+		return cfg
+	})
+}
+
+// ProfileTask is equivalent to applying both
+// WithProfileTask(ProfilingManual) and WithProfileRegion(ProfilingDisabled).
+func ProfileTask() SpanStartOption {
+	return ComposeSpanStartOptions(WithProfileRegion(ProfilingDisabled), WithProfileTask(ProfilingManual))
+}
+
+// NoProfiling is equivalent to applying both
+// WithProfileRegion(ProfilingDisabled) and WithProfileTask(ProfilingDisabled).
+func NoProfiling() SpanStartOption {
+	return ComposeSpanStartOptions(WithProfileRegion(ProfilingDisabled), WithProfileTask(ProfilingDisabled))
+}
+
+// WithAsyncEnd hints the tracer that the span will be ended on a different
+// goroutine than the one it was started on.
+func WithAsyncEnd(asyncEnd bool) SpanStartOption {
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.asyncEnd = asyncEnd
+		return cfg
+	})
+}
+
+// AsyncEnd is equivalent to WithAsyncEnd(true).
+func AsyncEnd() SpanStartOption {
+	return WithAsyncEnd(true)
+}
+
 // WithLinks adds links to a Span. The links are added to the existing Span
 // links, i.e. this does not overwrite. Links with invalid span context are ignored.
 func WithLinks(links ...Link) SpanStartOption {
@@ -360,3 +462,57 @@ func WithSchemaURL(schemaURL string) TracerOption {
 		return cfg
 	})
 }
+
+// WithProfilingMode controls the profiling behavior of the tracer.
+//
+// Tracer-level profiling settings can be overridden by span-level settings,
+// following the hierarchy:
+//
+//	ProfilingDefault < ProfilingAuto < ProfilingManual < ProfilingDisabled
+//
+// A span may override the tracer’s mode only by selecting a *less strict*
+// setting. For example, if the tracer is configured with ProfilingAuto,
+// a span configured with ProfilingManual can take over and perform its own
+// instrumentation. However, if the tracer is configured with ProfilingDisabled,
+// no span-level option can re-enable profiling.
+//
+// When profiling is set to ProfilingAuto, spans that end on a different
+// goroutine than they started must be annotated with AsyncEnd().
+func WithProfilingMode(mode ProfilingMode) TracerOption {
+	return tracerOptionFunc(func(cfg TracerConfig) TracerConfig {
+		cfg.profilingMode = mode
+		return cfg
+	})
+}
+
+// AutoProfiling is equivalent to WithProfilingMode(ProfilingAuto).
+func AutoProfiling() TracerOption {
+	return WithProfilingMode(ProfilingAuto)
+}
+
+// ProfilingMode defines the profiling behavior that can be applied at the
+// tracer or span level.
+type ProfilingMode int
+
+const (
+	// ProfilingDefault is the default profiling mode. Root local spans create
+	// a runtime/trace.Task, while child spans do not create a Task or Region
+	// unless overridden at the span level.
+	ProfilingDefault ProfilingMode = iota
+
+	// ProfilingAuto delegates instrumentation decisions to the tracer. Because
+	// tasks must begin and end on the same goroutine, spans that end on a
+	// different goroutine than they started must be annotated with AsyncEnd()
+	// when using this mode.
+	ProfilingAuto
+
+	// ProfilingManual disables default and automatic profiling. The user is
+	// responsible for explicitly creating runtime/trace.Task and
+	// runtime/trace.Region instrumentation at the span level.
+	ProfilingManual
+
+	// ProfilingDisabled disables profiling entirely. All profiler-related settings
+	// at the span level are ignored, and no runtime/trace instrumentation is
+	// produced.
+	ProfilingDisabled
+)

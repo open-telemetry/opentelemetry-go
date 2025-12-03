@@ -30,24 +30,31 @@ func TestNewSpanConfig(t *testing.T) {
 	}
 
 	tests := []struct {
-		options  []SpanStartOption
-		expected SpanConfig
+		name                 string
+		options              []SpanStartOption
+		expected             SpanConfig
+		customAssertFunction func(t *testing.T, cfg SpanConfig)
 	}{
 		{
 			// No non-zero-values should be set.
+			"Zero value",
 			[]SpanStartOption{},
 			SpanConfig{},
+			nil,
 		},
 		{
+			"WithAttributes",
 			[]SpanStartOption{
 				WithAttributes(k1v1),
 			},
 			SpanConfig{
 				attributes: []attribute.KeyValue{k1v1},
 			},
+			nil,
 		},
 		{
 			// Multiple calls should append not overwrite.
+			"WithAttributes multiple calls",
 			[]SpanStartOption{
 				WithAttributes(k1v1),
 				WithAttributes(k1v2),
@@ -57,8 +64,10 @@ func TestNewSpanConfig(t *testing.T) {
 				// No uniqueness is guaranteed by the API.
 				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
+			nil,
 		},
 		{
+			"WithAttributes multiple values",
 			[]SpanStartOption{
 				WithAttributes(k1v1, k1v2, k2v2),
 			},
@@ -66,16 +75,20 @@ func TestNewSpanConfig(t *testing.T) {
 				// No uniqueness is guaranteed by the API.
 				attributes: []attribute.KeyValue{k1v1, k1v2, k2v2},
 			},
+			nil,
 		},
 		{
+			"WithTimestamp",
 			[]SpanStartOption{
 				WithTimestamp(timestamp0),
 			},
 			SpanConfig{
 				timestamp: timestamp0,
 			},
+			nil,
 		},
 		{
+			"WithTimestamp multiple calls",
 			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithTimestamp(timestamp0),
@@ -84,16 +97,20 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				timestamp: timestamp1,
 			},
+			nil,
 		},
 		{
+			"WithLinks",
 			[]SpanStartOption{
 				WithLinks(link1),
 			},
 			SpanConfig{
 				links: []Link{link1},
 			},
+			nil,
 		},
 		{
+			"WithLinks multiple calls",
 			[]SpanStartOption{
 				// Multiple calls should append not overwrite.
 				WithLinks(link1),
@@ -103,16 +120,20 @@ func TestNewSpanConfig(t *testing.T) {
 				// No uniqueness is guaranteed by the API.
 				links: []Link{link1, link1, link2},
 			},
+			nil,
 		},
 		{
+			"WithNewRoot",
 			[]SpanStartOption{
 				WithNewRoot(),
 			},
 			SpanConfig{
 				newRoot: true,
 			},
+			nil,
 		},
 		{
+			"WithNewRoot multiple calls",
 			[]SpanStartOption{
 				// Multiple calls should not change NewRoot state.
 				WithNewRoot(),
@@ -121,16 +142,20 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				newRoot: true,
 			},
+			nil,
 		},
 		{
+			"WithSpanKind",
 			[]SpanStartOption{
 				WithSpanKind(SpanKindConsumer),
 			},
 			SpanConfig{
 				spanKind: SpanKindConsumer,
 			},
+			nil,
 		},
 		{
+			"WithSpanKind multiple calls",
 			[]SpanStartOption{
 				// Multiple calls overwrites with last-one-wins.
 				WithSpanKind(SpanKindClient),
@@ -139,27 +164,237 @@ func TestNewSpanConfig(t *testing.T) {
 			SpanConfig{
 				spanKind: SpanKindConsumer,
 			},
+			nil,
+		},
+		{
+			"WithProfileTask: ProfilingDefault",
+			[]SpanStartOption{
+				WithProfileTask(ProfilingDefault),
+			},
+			SpanConfig{
+				profileTask: ProfilingDefault,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingDefault, cfg.ProfileTask())
+			},
+		},
+		{
+			"WithProfileTask: ProfilingAuto",
+			[]SpanStartOption{
+				WithProfileTask(ProfilingAuto),
+			},
+			SpanConfig{
+				profileTask: ProfilingAuto,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingAuto, cfg.ProfileTask())
+			},
+		},
+		{
+			"WithProfileTask: ProfilingManual",
+			[]SpanStartOption{
+				WithProfileTask(ProfilingManual),
+			},
+			SpanConfig{
+				profileTask: ProfilingManual,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingManual, cfg.ProfileTask())
+			},
+		},
+		{
+			"WithProfileTask: ProfilingDisabled",
+			[]SpanStartOption{
+				WithProfileTask(ProfilingDisabled),
+			},
+			SpanConfig{
+				profileTask: ProfilingDisabled,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingDisabled, cfg.ProfileTask())
+			},
+		},
+		{
+			"ProfileTask",
+			[]SpanStartOption{
+				ProfileTask(),
+			},
+			SpanConfig{
+				profileTask:   ProfilingManual,
+				profileRegion: ProfilingDisabled,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingManual, cfg.ProfileTask())
+				assert.Equal(t, ProfilingDisabled, cfg.ProfileRegion())
+			},
+		},
+		{
+			"WithProfileTask multiple calls",
+			[]SpanStartOption{
+				// Multiple calls overwrites with last-one-wins.
+				WithProfileTask(ProfilingDisabled),
+				WithProfileTask(ProfilingManual),
+			},
+			SpanConfig{
+				profileTask: ProfilingManual,
+			},
+			nil,
+		},
+		{
+			"WithProfileRegion: ProfilingDefault",
+			[]SpanStartOption{
+				// Multiple calls overwrites with last-one-wins.
+				WithProfileTask(ProfilingDisabled),
+				WithProfileTask(ProfilingManual),
+			},
+			SpanConfig{
+				profileTask: ProfilingManual,
+			},
+			nil,
+		},
+		{
+			"WithProfileRegion: ProfilingAuto",
+			[]SpanStartOption{
+				WithProfileRegion(ProfilingAuto),
+			},
+			SpanConfig{
+				profileRegion: ProfilingAuto,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingAuto, cfg.ProfileRegion())
+			},
+		},
+		{
+			"WithProfileRegion: ProfilingManual",
+			[]SpanStartOption{
+				WithProfileRegion(ProfilingManual),
+			},
+			SpanConfig{
+				profileRegion: ProfilingManual,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingManual, cfg.ProfileRegion())
+			},
+		},
+		{
+			"WithProfileRegion: ProfilingDisabled",
+			[]SpanStartOption{
+				WithProfileRegion(ProfilingDisabled),
+			},
+			SpanConfig{
+				profileRegion: ProfilingDisabled,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingDisabled, cfg.ProfileRegion())
+			},
+		},
+		{
+			"ProfileRegion",
+			[]SpanStartOption{
+				ProfileRegion(),
+			},
+			SpanConfig{
+				profileRegion: ProfilingManual,
+				profileTask:   ProfilingDisabled,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.Equal(t, ProfilingManual, cfg.ProfileRegion())
+				assert.Equal(t, ProfilingDisabled, cfg.ProfileTask())
+			},
+		},
+		{
+			"WithProfileRegion multiple calls",
+			[]SpanStartOption{
+				// Multiple calls overwrites with last-one-wins.
+				WithProfileRegion(ProfilingDisabled),
+				WithProfileRegion(ProfilingManual),
+			},
+			SpanConfig{
+				profileRegion: ProfilingManual,
+			},
+			nil,
+		},
+		{
+			"WithAsyncEnd: true",
+			[]SpanStartOption{
+				WithAsyncEnd(true),
+			},
+			SpanConfig{
+				asyncEnd: true,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.True(t, cfg.AsyncEnd())
+			},
+		},
+		{
+			"WithAsyncEnd: false",
+			[]SpanStartOption{
+				WithAsyncEnd(false),
+			},
+			SpanConfig{
+				asyncEnd: false,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.False(t, cfg.AsyncEnd())
+			},
+		},
+		{
+			"AsyncEnd",
+			[]SpanStartOption{
+				AsyncEnd(),
+			},
+			SpanConfig{
+				asyncEnd: true,
+			},
+			func(t *testing.T, cfg SpanConfig) {
+				assert.True(t, cfg.AsyncEnd())
+			},
+		},
+		{
+			"NoProfiling",
+			[]SpanStartOption{
+				NoProfiling(),
+			},
+			SpanConfig{
+				profileRegion: ProfilingDisabled,
+				profileTask:   ProfilingDisabled,
+			},
+			nil,
 		},
 		{
 			// Everything should work together.
+			"Everything together",
 			[]SpanStartOption{
 				WithAttributes(k1v1),
 				WithTimestamp(timestamp0),
 				WithLinks(link1, link2),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
+				WithProfileTask(ProfilingManual),
+				WithProfileRegion(ProfilingManual),
+				AsyncEnd(),
 			},
 			SpanConfig{
-				attributes: []attribute.KeyValue{k1v1},
-				timestamp:  timestamp0,
-				links:      []Link{link1, link2},
-				newRoot:    true,
-				spanKind:   SpanKindConsumer,
+				attributes:    []attribute.KeyValue{k1v1},
+				timestamp:     timestamp0,
+				links:         []Link{link1, link2},
+				newRoot:       true,
+				spanKind:      SpanKindConsumer,
+				profileTask:   ProfilingManual,
+				profileRegion: ProfilingManual,
+				asyncEnd:      true,
 			},
+			nil,
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, NewSpanStartConfig(test.options...))
+		t.Run(test.name, func(t *testing.T) {
+			config := NewSpanStartConfig(test.options...)
+			assert.Equal(t, test.expected, config)
+			if test.customAssertFunction != nil {
+				test.customAssertFunction(t, config)
+			}
+		})
 	}
 }
 
@@ -224,11 +459,13 @@ func TestTracerConfig(t *testing.T) {
 		WithInstrumentationVersion(v2),
 		WithSchemaURL(schemaURL),
 		WithInstrumentationAttributes(attrs.ToSlice()...),
+		WithProfilingMode(ProfilingAuto),
 	)
 
 	assert.Equal(t, v2, c.InstrumentationVersion(), "instrumentation version")
 	assert.Equal(t, schemaURL, c.SchemaURL(), "schema URL")
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
+	assert.Equal(t, ProfilingAuto, c.ProfilingMode())
 }
 
 func TestWithInstrumentationAttributesNotLazy(t *testing.T) {
@@ -300,6 +537,30 @@ func BenchmarkNewTracerConfig(b *testing.B) {
 				WithInstrumentationAttributeSet(attribute.NewSet(attribute.String("key", "value"))),
 			},
 		},
+		{
+			name: "with default profiling",
+			options: []TracerOption{
+				WithProfilingMode(ProfilingDefault),
+			},
+		},
+		{
+			name: "with auto profiling",
+			options: []TracerOption{
+				WithProfilingMode(ProfilingAuto),
+			},
+		},
+		{
+			name: "with manual profiling",
+			options: []TracerOption{
+				WithProfilingMode(ProfilingManual),
+			},
+		},
+		{
+			name: "with no profiling",
+			options: []TracerOption{
+				WithProfilingMode(ProfilingDisabled),
+			},
+		},
 	} {
 		b.Run(bb.name, func(b *testing.B) {
 			b.ReportAllocs()
@@ -362,6 +623,30 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			name: "with span kind",
 			options: []SpanStartOption{
 				WithSpanKind(SpanKindClient),
+			},
+		},
+		{
+			name: "profile task",
+			options: []SpanStartOption{
+				ProfileTask(),
+			},
+		},
+		{
+			name: "profile region",
+			options: []SpanStartOption{
+				ProfileRegion(),
+			},
+		},
+		{
+			name: "async end",
+			options: []SpanStartOption{
+				AsyncEnd(),
+			},
+		},
+		{
+			name: "no profiling",
+			options: []SpanStartOption{
+				NoProfiling(),
 			},
 		},
 	} {
