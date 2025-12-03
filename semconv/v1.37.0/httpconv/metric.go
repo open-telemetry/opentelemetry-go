@@ -2,7 +2,6 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
 // Package httpconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "http" namespace.
 package httpconv
@@ -326,6 +325,7 @@ func (m ClientConnectionDuration) Record(
 func (m ClientConnectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -625,6 +625,7 @@ func (m ClientRequestBodySize) Record(
 func (m ClientRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -793,6 +794,7 @@ func (m ClientRequestDuration) Record(
 func (m ClientRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -975,6 +977,7 @@ func (m ClientResponseBodySize) Record(
 func (m ClientResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1284,6 +1287,7 @@ func (m ServerRequestBodySize) Record(
 func (m ServerRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1459,6 +1463,7 @@ func (m ServerRequestDuration) Record(
 func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1648,6 +1653,7 @@ func (m ServerResponseBodySize) Record(
 func (m ServerResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

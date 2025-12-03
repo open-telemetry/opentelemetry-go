@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package otelconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "otel" namespace.
 package otelconv
 
@@ -865,6 +864,7 @@ func (m SDKExporterOperationDuration) Record(
 func (m SDKExporterOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1415,6 +1415,7 @@ func (m SDKMetricReaderCollectionDuration) Record(
 func (m SDKMetricReaderCollectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package dnsconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "dns" namespace.
 package dnsconv
 
@@ -128,6 +127,7 @@ func (m LookupDuration) Record(
 func (m LookupDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

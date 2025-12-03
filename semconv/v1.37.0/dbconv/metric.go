@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package dbconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "db" namespace.
 package dbconv
 
@@ -437,6 +436,7 @@ func (m ClientConnectionCreateTime) Record(
 func (m ClientConnectionCreateTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1124,6 +1124,7 @@ func (m ClientConnectionUseTime) Record(
 func (m ClientConnectionUseTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1237,6 +1238,7 @@ func (m ClientConnectionWaitTime) Record(
 func (m ClientConnectionWaitTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1351,6 +1353,7 @@ func (m ClientOperationDuration) Record(
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1543,6 +1546,7 @@ func (m ClientResponseReturnedRows) Record(
 func (m ClientResponseReturnedRows) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

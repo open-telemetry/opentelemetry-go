@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package azureconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "azure" namespace.
 package azureconv
 
@@ -271,6 +270,7 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

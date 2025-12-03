@@ -2,8 +2,7 @@
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package k8sconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "k8s" namespace.
 package k8sconv
 
@@ -2574,6 +2573,7 @@ func (m HPAMetricTargetCPUAverageUtilization) Record(
 func (m HPAMetricTargetCPUAverageUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2712,6 +2712,7 @@ func (m HPAMetricTargetCPUAverageValue) Record(
 func (m HPAMetricTargetCPUAverageValue) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2848,6 +2849,7 @@ func (m HPAMetricTargetCPUValue) Record(
 func (m HPAMetricTargetCPUValue) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4268,6 +4270,7 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4691,6 +4694,7 @@ func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribu
 func (m NodeMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5026,6 +5030,7 @@ func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.
 func (m NodeUptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5219,6 +5224,7 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5642,6 +5648,7 @@ func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribut
 func (m PodMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5977,6 +5984,7 @@ func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.K
 func (m PodUptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
