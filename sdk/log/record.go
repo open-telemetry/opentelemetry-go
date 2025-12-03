@@ -27,6 +27,10 @@ var logAttrDropped = sync.OnceFunc(func() {
 	global.Warn("limit reached: dropping log Record attributes")
 })
 
+var logKeyValuePairDropped = sync.OnceFunc(func() {
+	global.Warn("key duplication: dropping key-value pair")
+})
+
 // uniquePool is a pool of unique attributes used for attributes de-duplication.
 var uniquePool = sync.Pool{
 	New: func() any { return new([]log.KeyValue) },
@@ -132,13 +136,17 @@ type Record struct {
 }
 
 func (r *Record) addDropped(n int) {
-	logAttrDropped()
 	r.dropped += n
+	if n > 0 {
+		logAttrDropped()
+	}
 }
 
 func (r *Record) setDropped(n int) {
-	logAttrDropped()
 	r.dropped = n
+	if n > 0 {
+		logAttrDropped()
+	}
 }
 
 // EventName returns the event name.
@@ -233,7 +241,9 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		var drop int
 		if !r.allowDupKeys {
 			attrs, drop = dedup(attrs)
-			r.setDropped(drop)
+			if drop > 0 {
+				logKeyValuePairDropped()
+			}
 		}
 
 		attrs, drop := head(attrs, r.attributeCountLimit)
@@ -266,6 +276,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			idx, found := uIndex[a.Key]
 			if found {
 				dropped++
+				logKeyValuePairDropped()
 				(*unique)[idx] = a
 				continue
 			}
@@ -274,6 +285,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			if found {
 				// New attrs overwrite any existing with the same key.
 				dropped++
+				logKeyValuePairDropped()
 				if idx < 0 {
 					r.front[-(idx + 1)] = a
 				} else {
@@ -289,7 +301,6 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		if dropped > 0 {
 			attrs = make([]log.KeyValue, len(*unique))
 			copy(attrs, *unique)
-			r.addDropped(dropped)
 		}
 	}
 
@@ -352,7 +363,9 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	r.setDropped(0)
 	if !r.allowDupKeys {
 		attrs, drop = dedup(attrs)
-		r.setDropped(drop)
+		if drop > 0 {
+			logKeyValuePairDropped()
+		}
 	}
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
@@ -515,7 +528,9 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 			// Deduplicate then truncate.
 			// Do not do at the same time to avoid wasted truncation operations.
 			newKvs, dropped = dedup(kvs)
-			r.addDropped(dropped)
+			if dropped > 0 {
+				logKeyValuePairDropped()
+			}
 		} else {
 			newKvs = kvs
 		}
