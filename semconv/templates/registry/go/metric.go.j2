@@ -84,7 +84,7 @@ func New{{ metric_name }}(
 		opt...,
 	)
 	if err != nil {
-	    return {{metric_name}}{noop.{{ metric_inst }}{}}, err
+		return {{metric_name}}{noop.{{ metric_inst }}{}}, err
 	}
 	return {{ metric_name }}{i}, nil
 }
@@ -137,3 +137,4 @@ func ({{ metric_name}}) Attr{{name}}(val {{ attr.type | map_text("attribute_type
 {%- endif %}
 {%- endfor %}
 {%- endfor %}
+
