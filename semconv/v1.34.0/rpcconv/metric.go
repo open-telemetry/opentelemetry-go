@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package rpcconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "rpc" namespace.
 package rpcconv
 
