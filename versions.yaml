@@ -45,20 +45,19 @@ excluded-modules:
 modules:
   go.opentelemetry.io/otel/exporters/stdout/stdouttrace:
     version-refs:
-      - ./exporters/stdout/stdouttrace/internal/version.go
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/prometheus:
     version-refs:
-      - ./exporters/prometheus/internal/version.go
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc:
     version-refs:
-      - ./exporters/otlp/otlplog/otlploggrpc/internal/version.go
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc:
     version-refs:
-      - ./exporters/otlp/otlptrace/otlptracegrpc/internal/version.go
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp:
     version-refs:
-      - ./exporters/otlp/otlptrace/otlptracehttp/internal/version.go
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp:
     version-refs:
-      - ./exporters/otlp/otlplog/otlploghttp/internal/version.go
-
+      - ./internal/version.go
