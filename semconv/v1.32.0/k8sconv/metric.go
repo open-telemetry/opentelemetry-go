@@ -74,7 +74,7 @@ func NewCronJobActiveJobs(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CronJobActiveJobs{noop.Int64UpDownCounter{}}, err
+		return CronJobActiveJobs{noop.Int64UpDownCounter{}}, err
 	}
 	return CronJobActiveJobs{i}, nil
 }
@@ -152,7 +152,7 @@ func NewDaemonSetCurrentScheduledNodes(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DaemonSetCurrentScheduledNodes{noop.Int64UpDownCounter{}}, err
+		return DaemonSetCurrentScheduledNodes{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetCurrentScheduledNodes{i}, nil
 }
@@ -230,7 +230,7 @@ func NewDaemonSetDesiredScheduledNodes(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DaemonSetDesiredScheduledNodes{noop.Int64UpDownCounter{}}, err
+		return DaemonSetDesiredScheduledNodes{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetDesiredScheduledNodes{i}, nil
 }
@@ -308,7 +308,7 @@ func NewDaemonSetMisscheduledNodes(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DaemonSetMisscheduledNodes{noop.Int64UpDownCounter{}}, err
+		return DaemonSetMisscheduledNodes{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetMisscheduledNodes{i}, nil
 }
@@ -385,7 +385,7 @@ func NewDaemonSetReadyNodes(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DaemonSetReadyNodes{noop.Int64UpDownCounter{}}, err
+		return DaemonSetReadyNodes{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetReadyNodes{i}, nil
 }
@@ -462,7 +462,7 @@ func NewDeploymentAvailablePods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DeploymentAvailablePods{noop.Int64UpDownCounter{}}, err
+		return DeploymentAvailablePods{noop.Int64UpDownCounter{}}, err
 	}
 	return DeploymentAvailablePods{i}, nil
 }
@@ -538,7 +538,7 @@ func NewDeploymentDesiredPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return DeploymentDesiredPods{noop.Int64UpDownCounter{}}, err
+		return DeploymentDesiredPods{noop.Int64UpDownCounter{}}, err
 	}
 	return DeploymentDesiredPods{i}, nil
 }
@@ -615,7 +615,7 @@ func NewHPACurrentPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HPACurrentPods{noop.Int64UpDownCounter{}}, err
+		return HPACurrentPods{noop.Int64UpDownCounter{}}, err
 	}
 	return HPACurrentPods{i}, nil
 }
@@ -692,7 +692,7 @@ func NewHPADesiredPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HPADesiredPods{noop.Int64UpDownCounter{}}, err
+		return HPADesiredPods{noop.Int64UpDownCounter{}}, err
 	}
 	return HPADesiredPods{i}, nil
 }
@@ -768,7 +768,7 @@ func NewHPAMaxPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HPAMaxPods{noop.Int64UpDownCounter{}}, err
+		return HPAMaxPods{noop.Int64UpDownCounter{}}, err
 	}
 	return HPAMaxPods{i}, nil
 }
@@ -844,7 +844,7 @@ func NewHPAMinPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HPAMinPods{noop.Int64UpDownCounter{}}, err
+		return HPAMinPods{noop.Int64UpDownCounter{}}, err
 	}
 	return HPAMinPods{i}, nil
 }
@@ -920,7 +920,7 @@ func NewJobActivePods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return JobActivePods{noop.Int64UpDownCounter{}}, err
+		return JobActivePods{noop.Int64UpDownCounter{}}, err
 	}
 	return JobActivePods{i}, nil
 }
@@ -997,7 +997,7 @@ func NewJobDesiredSuccessfulPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return JobDesiredSuccessfulPods{noop.Int64UpDownCounter{}}, err
+		return JobDesiredSuccessfulPods{noop.Int64UpDownCounter{}}, err
 	}
 	return JobDesiredSuccessfulPods{i}, nil
 }
@@ -1073,7 +1073,7 @@ func NewJobFailedPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return JobFailedPods{noop.Int64UpDownCounter{}}, err
+		return JobFailedPods{noop.Int64UpDownCounter{}}, err
 	}
 	return JobFailedPods{i}, nil
 }
@@ -1149,7 +1149,7 @@ func NewJobMaxParallelPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return JobMaxParallelPods{noop.Int64UpDownCounter{}}, err
+		return JobMaxParallelPods{noop.Int64UpDownCounter{}}, err
 	}
 	return JobMaxParallelPods{i}, nil
 }
@@ -1225,7 +1225,7 @@ func NewJobSuccessfulPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return JobSuccessfulPods{noop.Int64UpDownCounter{}}, err
+		return JobSuccessfulPods{noop.Int64UpDownCounter{}}, err
 	}
 	return JobSuccessfulPods{i}, nil
 }
@@ -1301,7 +1301,7 @@ func NewNamespacePhase(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NamespacePhase{noop.Int64UpDownCounter{}}, err
+		return NamespacePhase{noop.Int64UpDownCounter{}}, err
 	}
 	return NamespacePhase{i}, nil
 }
@@ -1384,7 +1384,7 @@ func NewNodeCPUTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NodeCPUTime{noop.Float64Counter{}}, err
+		return NodeCPUTime{noop.Float64Counter{}}, err
 	}
 	return NodeCPUTime{i}, nil
 }
@@ -1453,7 +1453,7 @@ func NewNodeCPUUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NodeCPUUsage{noop.Int64Gauge{}}, err
+		return NodeCPUUsage{noop.Int64Gauge{}}, err
 	}
 	return NodeCPUUsage{i}, nil
 }
@@ -1522,7 +1522,7 @@ func NewNodeMemoryUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NodeMemoryUsage{noop.Int64Gauge{}}, err
+		return NodeMemoryUsage{noop.Int64Gauge{}}, err
 	}
 	return NodeMemoryUsage{i}, nil
 }
@@ -1590,7 +1590,7 @@ func NewNodeNetworkErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NodeNetworkErrors{noop.Int64Counter{}}, err
+		return NodeNetworkErrors{noop.Int64Counter{}}, err
 	}
 	return NodeNetworkErrors{i}, nil
 }
@@ -1678,7 +1678,7 @@ func NewNodeNetworkIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NodeNetworkIO{noop.Int64Counter{}}, err
+		return NodeNetworkIO{noop.Int64Counter{}}, err
 	}
 	return NodeNetworkIO{i}, nil
 }
@@ -1766,7 +1766,7 @@ func NewNodeUptime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NodeUptime{noop.Float64Gauge{}}, err
+		return NodeUptime{noop.Float64Gauge{}}, err
 	}
 	return NodeUptime{i}, nil
 }
@@ -1836,7 +1836,7 @@ func NewPodCPUTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PodCPUTime{noop.Float64Counter{}}, err
+		return PodCPUTime{noop.Float64Counter{}}, err
 	}
 	return PodCPUTime{i}, nil
 }
@@ -1905,7 +1905,7 @@ func NewPodCPUUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PodCPUUsage{noop.Int64Gauge{}}, err
+		return PodCPUUsage{noop.Int64Gauge{}}, err
 	}
 	return PodCPUUsage{i}, nil
 }
@@ -1974,7 +1974,7 @@ func NewPodMemoryUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PodMemoryUsage{noop.Int64Gauge{}}, err
+		return PodMemoryUsage{noop.Int64Gauge{}}, err
 	}
 	return PodMemoryUsage{i}, nil
 }
@@ -2042,7 +2042,7 @@ func NewPodNetworkErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PodNetworkErrors{noop.Int64Counter{}}, err
+		return PodNetworkErrors{noop.Int64Counter{}}, err
 	}
 	return PodNetworkErrors{i}, nil
 }
@@ -2130,7 +2130,7 @@ func NewPodNetworkIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PodNetworkIO{noop.Int64Counter{}}, err
+		return PodNetworkIO{noop.Int64Counter{}}, err
 	}
 	return PodNetworkIO{i}, nil
 }
@@ -2218,7 +2218,7 @@ func NewPodUptime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PodUptime{noop.Float64Gauge{}}, err
+		return PodUptime{noop.Float64Gauge{}}, err
 	}
 	return PodUptime{i}, nil
 }
@@ -2289,7 +2289,7 @@ func NewReplicaSetAvailablePods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ReplicaSetAvailablePods{noop.Int64UpDownCounter{}}, err
+		return ReplicaSetAvailablePods{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicaSetAvailablePods{i}, nil
 }
@@ -2365,7 +2365,7 @@ func NewReplicaSetDesiredPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ReplicaSetDesiredPods{noop.Int64UpDownCounter{}}, err
+		return ReplicaSetDesiredPods{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicaSetDesiredPods{i}, nil
 }
@@ -2443,7 +2443,7 @@ func NewReplicationControllerAvailablePods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ReplicationControllerAvailablePods{noop.Int64UpDownCounter{}}, err
+		return ReplicationControllerAvailablePods{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicationControllerAvailablePods{i}, nil
 }
@@ -2521,7 +2521,7 @@ func NewReplicationControllerDesiredPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ReplicationControllerDesiredPods{noop.Int64UpDownCounter{}}, err
+		return ReplicationControllerDesiredPods{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicationControllerDesiredPods{i}, nil
 }
@@ -2598,7 +2598,7 @@ func NewStatefulSetCurrentPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return StatefulSetCurrentPods{noop.Int64UpDownCounter{}}, err
+		return StatefulSetCurrentPods{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetCurrentPods{i}, nil
 }
@@ -2674,7 +2674,7 @@ func NewStatefulSetDesiredPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return StatefulSetDesiredPods{noop.Int64UpDownCounter{}}, err
+		return StatefulSetDesiredPods{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetDesiredPods{i}, nil
 }
@@ -2750,7 +2750,7 @@ func NewStatefulSetReadyPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return StatefulSetReadyPods{noop.Int64UpDownCounter{}}, err
+		return StatefulSetReadyPods{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetReadyPods{i}, nil
 }
@@ -2827,7 +2827,7 @@ func NewStatefulSetUpdatedPods(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return StatefulSetUpdatedPods{noop.Int64UpDownCounter{}}, err
+		return StatefulSetUpdatedPods{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetUpdatedPods{i}, nil
 }
