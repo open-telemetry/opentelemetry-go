@@ -115,7 +115,7 @@ func NewPipelineRunActive(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PipelineRunActive{noop.Int64UpDownCounter{}}, err
+		return PipelineRunActive{noop.Int64UpDownCounter{}}, err
 	}
 	return PipelineRunActive{i}, nil
 }
@@ -221,7 +221,7 @@ func NewPipelineRunDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PipelineRunDuration{noop.Float64Histogram{}}, err
+		return PipelineRunDuration{noop.Float64Histogram{}}, err
 	}
 	return PipelineRunDuration{i}, nil
 }
@@ -343,7 +343,7 @@ func NewPipelineRunErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PipelineRunErrors{noop.Int64Counter{}}, err
+		return PipelineRunErrors{noop.Int64Counter{}}, err
 	}
 	return PipelineRunErrors{i}, nil
 }
@@ -458,7 +458,7 @@ func NewSystemErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SystemErrors{noop.Int64Counter{}}, err
+		return SystemErrors{noop.Int64Counter{}}, err
 	}
 	return SystemErrors{i}, nil
 }
@@ -568,7 +568,7 @@ func NewWorkerCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return WorkerCount{noop.Int64UpDownCounter{}}, err
+		return WorkerCount{noop.Int64UpDownCounter{}}, err
 	}
 	return WorkerCount{i}, nil
 }
