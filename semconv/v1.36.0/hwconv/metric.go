@@ -104,7 +104,7 @@ func NewEnergy(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Energy{noop.Int64Counter{}}, err
+		return Energy{noop.Int64Counter{}}, err
 	}
 	return Energy{i}, nil
 }
@@ -224,7 +224,7 @@ func NewErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Errors{noop.Int64Counter{}}, err
+		return Errors{noop.Int64Counter{}}, err
 	}
 	return Errors{i}, nil
 }
@@ -350,7 +350,7 @@ func NewHostAmbientTemperature(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostAmbientTemperature{noop.Int64Gauge{}}, err
+		return HostAmbientTemperature{noop.Int64Gauge{}}, err
 	}
 	return HostAmbientTemperature{i}, nil
 }
@@ -466,7 +466,7 @@ func NewHostEnergy(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostEnergy{noop.Int64Counter{}}, err
+		return HostEnergy{noop.Int64Counter{}}, err
 	}
 	return HostEnergy{i}, nil
 }
@@ -593,7 +593,7 @@ func NewHostHeatingMargin(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostHeatingMargin{noop.Int64Gauge{}}, err
+		return HostHeatingMargin{noop.Int64Gauge{}}, err
 	}
 	return HostHeatingMargin{i}, nil
 }
@@ -709,7 +709,7 @@ func NewHostPower(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostPower{noop.Int64Gauge{}}, err
+		return HostPower{noop.Int64Gauge{}}, err
 	}
 	return HostPower{i}, nil
 }
@@ -835,7 +835,7 @@ func NewPower(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Power{noop.Int64Gauge{}}, err
+		return Power{noop.Int64Gauge{}}, err
 	}
 	return Power{i}, nil
 }
@@ -959,7 +959,7 @@ func NewStatus(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Status{noop.Int64UpDownCounter{}}, err
+		return Status{noop.Int64UpDownCounter{}}, err
 	}
 	return Status{i}, nil
 }

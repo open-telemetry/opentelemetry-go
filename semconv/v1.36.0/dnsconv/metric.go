@@ -56,7 +56,7 @@ func NewLookupDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return LookupDuration{noop.Float64Histogram{}}, err
+		return LookupDuration{noop.Float64Histogram{}}, err
 	}
 	return LookupDuration{i}, nil
 }
