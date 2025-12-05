@@ -43,6 +43,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `AddAttributes`, `SetAttributes`, `SetBody` on `Record` in `go.opentelemetry.io/otel/sdk/log` to not mutate input. (#7403)
 - Do not double record measurements of `RecordSet` methods in `go.opentelemetry.io/otel/semconv/v1.37.0`. (#7655)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/exporters/zipkin`. (#7670)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
