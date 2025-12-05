@@ -270,7 +270,7 @@ func NewClientConnectionCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionCount{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionCount{i}, nil
 }
@@ -359,7 +359,7 @@ func NewClientConnectionCreateTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionCreateTime{noop.Float64Histogram{}}, err
+		return ClientConnectionCreateTime{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionCreateTime{i}, nil
 }
@@ -443,7 +443,7 @@ func NewClientConnectionIdleMax(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionIdleMax{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionIdleMax{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionIdleMax{i}, nil
 }
@@ -527,7 +527,7 @@ func NewClientConnectionIdleMin(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionIdleMin{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionIdleMin{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionIdleMin{i}, nil
 }
@@ -611,7 +611,7 @@ func NewClientConnectionMax(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionMax{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionMax{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionMax{i}, nil
 }
@@ -697,7 +697,7 @@ func NewClientConnectionPendingRequests(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionPendingRequests{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionPendingRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionPendingRequests{i}, nil
 }
@@ -782,7 +782,7 @@ func NewClientConnectionTimeouts(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionTimeouts{noop.Int64Counter{}}, err
+		return ClientConnectionTimeouts{noop.Int64Counter{}}, err
 	}
 	return ClientConnectionTimeouts{i}, nil
 }
@@ -867,7 +867,7 @@ func NewClientConnectionUseTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionUseTime{noop.Float64Histogram{}}, err
+		return ClientConnectionUseTime{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionUseTime{i}, nil
 }
@@ -951,7 +951,7 @@ func NewClientConnectionWaitTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionWaitTime{noop.Float64Histogram{}}, err
+		return ClientConnectionWaitTime{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionWaitTime{i}, nil
 }
@@ -1035,7 +1035,7 @@ func NewClientOperationDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientOperationDuration{noop.Float64Histogram{}}, err
+		return ClientOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientOperationDuration{i}, nil
 }
@@ -1200,7 +1200,7 @@ func NewClientResponseReturnedRows(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponseReturnedRows{noop.Int64Histogram{}}, err
+		return ClientResponseReturnedRows{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseReturnedRows{i}, nil
 }
