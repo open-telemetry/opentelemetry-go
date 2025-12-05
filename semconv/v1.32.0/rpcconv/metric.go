@@ -46,7 +46,7 @@ func NewClientDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientDuration{noop.Float64Histogram{}}, err
+		return ClientDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientDuration{i}, nil
 }
@@ -117,7 +117,7 @@ func NewClientRequestSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestSize{noop.Int64Histogram{}}, err
+		return ClientRequestSize{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestSize{i}, nil
 }
@@ -185,7 +185,7 @@ func NewClientRequestsPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestsPerRPC{noop.Int64Histogram{}}, err
+		return ClientRequestsPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestsPerRPC{i}, nil
 }
@@ -255,7 +255,7 @@ func NewClientResponseSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponseSize{noop.Int64Histogram{}}, err
+		return ClientResponseSize{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseSize{i}, nil
 }
@@ -323,7 +323,7 @@ func NewClientResponsesPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponsesPerRPC{noop.Int64Histogram{}}, err
+		return ClientResponsesPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ClientResponsesPerRPC{i}, nil
 }
@@ -393,7 +393,7 @@ func NewServerDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerDuration{noop.Float64Histogram{}}, err
+		return ServerDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerDuration{i}, nil
 }
@@ -464,7 +464,7 @@ func NewServerRequestSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestSize{noop.Int64Histogram{}}, err
+		return ServerRequestSize{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestSize{i}, nil
 }
@@ -532,7 +532,7 @@ func NewServerRequestsPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestsPerRPC{noop.Int64Histogram{}}, err
+		return ServerRequestsPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestsPerRPC{i}, nil
 }
@@ -602,7 +602,7 @@ func NewServerResponseSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerResponseSize{noop.Int64Histogram{}}, err
+		return ServerResponseSize{noop.Int64Histogram{}}, err
 	}
 	return ServerResponseSize{i}, nil
 }
@@ -670,7 +670,7 @@ func NewServerResponsesPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerResponsesPerRPC{noop.Int64Histogram{}}, err
+		return ServerResponsesPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ServerResponsesPerRPC{i}, nil
 }
