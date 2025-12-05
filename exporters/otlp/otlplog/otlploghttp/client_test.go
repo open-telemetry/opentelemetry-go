@@ -879,7 +879,8 @@ func TestClientInstrumentation(t *testing.T) {
 
 	client, coll, addr := factory(rCh)
 	t.Cleanup(func() {
-		assert.NoError(t, coll.Shutdown(t.Context()))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, coll.Shutdown(ctx))
 	})
 	assert.ErrorIs(t, client.UploadLogs(t.Context(), resourceLogs), internal.PartialSuccess{})
 
