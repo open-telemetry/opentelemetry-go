@@ -65,6 +65,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If an error implements an `ErrorType() string` method, the return value of that method will be used as the error type. (#7442)
 - Improve performance of concurrent measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7427)
 - Replace fnv hash with xxhash in `go.opentelemetry.io/otel/attribute` for better performance. (#7371)
+- Improve the concurrent performance of `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by 4x. (#7443)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
