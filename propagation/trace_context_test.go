@@ -82,6 +82,18 @@ func TestExtractValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
+			name: "current version unused bit set",
+			header: http.Header{
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09"},
+			},
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsSampled,
+				Remote:     true,
+			}),
+		},
+		{
 			name: "future version not sampled",
 			header: http.Header{
 				traceparent: []string{"02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"},
@@ -227,10 +239,6 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 		{
 			name:   "zero trace ID and span ID",
 			header: "00-00000000000000000000000000000000-0000000000000000-01",
-		},
-		{
-			name:   "trace-flag unused bits set",
-			header: "00-ab000000000000000000000000000000-cd00000000000000-09",
 		},
 		{
 			name:   "missing options",
