@@ -101,6 +101,8 @@ type collector struct {
 	unitNamer         otlptranslator.UnitNamer
 
 	inst *observ.Instrumentation
+
+	bridgeErrorOnce sync.Once
 }
 
 // New returns a Prometheus Exporter.
@@ -235,6 +237,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	for j, scopeMetrics := range metrics.ScopeMetrics {
 		if scopeMetrics.Scope.Name == bridgeScopeName {
+			c.bridgeErrorOnce.Do(func() {
+				otel.Handle(errBridgeNotSupported)
+			})
 			continue
 		}
 		n := len(c.resourceKeyVals.keys) + 2 // resource attrs + scope name + scope version
