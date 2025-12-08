@@ -10,5 +10,7 @@ var (
 	errInvalidMetricType  = errors.New("invalid metric type")
 	errInvalidMetric      = errors.New("invalid metric")
 	errEHScaleBelowMin    = errors.New("exponential histogram scale below minimum supported")
-	errBridgeNotSupported = errors.New("metrics from the Prometheus Bridge are not supproted in the Prometheus exporter, and will be skipped")
+	errBridgeNotSupported = errors.New(
+		"metrics from the prometheus bridge are not supported in the prometheus exporter, and will be dropped",
+	)
 )
