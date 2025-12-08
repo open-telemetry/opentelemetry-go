@@ -798,6 +798,9 @@ func TestMultiScopes(t *testing.T) {
 }
 
 func TestBridgeScopeIgnored(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
 	ctx := t.Context()
 	registry := prometheus.NewRegistry()
 	exporter, err := New(
@@ -835,6 +838,8 @@ func TestBridgeScopeIgnored(t *testing.T) {
 
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
+
+	require.ErrorIs(t, handledError, errBridgeNotSupported)
 }
 
 func TestDuplicateMetrics(t *testing.T) {
