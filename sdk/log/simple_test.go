@@ -50,7 +50,7 @@ func (e *exporter) ForceFlush(context.Context) error {
 	e.forceFlushCalled = true
 	return nil
 }
-  
+
 var _ log.Exporter = (*failingTestExporter)(nil)
 
 type failingTestExporter struct {
