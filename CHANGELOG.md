@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix log error message from dropping key-value pair and remove the count in `go.opentelemetry.io/otel/sdk/log`. (#7662)
+- Fix bad log message when key-value pairs are dropped because of key duplication in `go.opentelemetry.io/otel/sdk/log`. (#7662)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
