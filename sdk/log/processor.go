@@ -20,8 +20,7 @@ type Processor interface {
 	// and param.
 	//
 	// The param contains a subset of the information that will be available
-	// in the Record passed to OnEmit, as defined by EnabledParameters (for
-	// example, the Severity or EventName of the Record).
+	// in the Record passed to OnEmit, as defined by EnabledParameters.
 	//
 	// The returned value will be true when the Processor will process for the
 	// provided context and param, and will be false if the Processor will not
