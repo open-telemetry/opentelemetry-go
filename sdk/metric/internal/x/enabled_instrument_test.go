@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,6 +19,8 @@ func (*testInstrument) Enabled(_ context.Context) bool {
 
 func TestEnabledInstrument(t *testing.T) {
 	var ei EnabledInstrument = &testInstrument{}
+
+	assert.Implements(t, (*EnabledInstrument)(nil), ei, "testInstrument should implement EnabledInstrument")
 
 	ctx := t.Context()
 	enabled := ei.Enabled(ctx)

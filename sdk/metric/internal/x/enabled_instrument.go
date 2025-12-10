@@ -5,7 +5,7 @@ package x // import "go.opentelemetry.io/otel/sdk/metric/internal/x"
 
 import "context"
 
-// EnabledInstrument interface is implemented by synchronous instruments.
+// EnabledInstrument informs whether the instrument is enabled.
 type EnabledInstrument interface {
 	// Enabled reports whether the instrument will process measurements for the given context.
 	//
