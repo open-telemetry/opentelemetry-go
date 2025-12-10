@@ -21,6 +21,10 @@ type Processor interface {
 	//
 	// The param contains a subset of the information that will be available
 	// in the Record passed to OnEmit, as defined by EnabledParameters.
+	// A field being unset in param does not imply the corresponding field
+	// in the Record passed to OnEmit will be unset. For example, a log bridge
+	// may be unable to populate all fields in EnabledParameters even though
+	// they are present on the final Record.
 	//
 	// The returned value will be true when the Processor will process for the
 	// provided context and param, and will be false if the Processor will not
