@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package genaiconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "gen_ai" namespace.
 package genaiconv
 
@@ -136,7 +139,7 @@ func NewClientOperationDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientOperationDuration{noop.Float64Histogram{}}, err
+		return ClientOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientOperationDuration{i}, nil
 }
@@ -254,7 +257,7 @@ func NewClientTokenUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientTokenUsage{noop.Int64Histogram{}}, err
+		return ClientTokenUsage{noop.Int64Histogram{}}, err
 	}
 	return ClientTokenUsage{i}, nil
 }
@@ -370,7 +373,7 @@ func NewServerRequestDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestDuration{noop.Float64Histogram{}}, err
+		return ServerRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerRequestDuration{i}, nil
 }
@@ -489,7 +492,7 @@ func NewServerTimePerOutputToken(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerTimePerOutputToken{noop.Float64Histogram{}}, err
+		return ServerTimePerOutputToken{noop.Float64Histogram{}}, err
 	}
 	return ServerTimePerOutputToken{i}, nil
 }
@@ -600,7 +603,7 @@ func NewServerTimeToFirstToken(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerTimeToFirstToken{noop.Float64Histogram{}}, err
+		return ServerTimeToFirstToken{noop.Float64Histogram{}}, err
 	}
 	return ServerTimeToFirstToken{i}, nil
 }

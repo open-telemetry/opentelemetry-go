@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package vcsconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "vcs" namespace.
 package vcsconv
 
@@ -168,7 +171,7 @@ func NewChangeCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeCount{noop.Int64UpDownCounter{}}, err
+		return ChangeCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ChangeCount{i}, nil
 }
@@ -278,7 +281,7 @@ func NewChangeDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeDuration{noop.Float64Gauge{}}, err
+		return ChangeDuration{noop.Float64Gauge{}}, err
 	}
 	return ChangeDuration{i}, nil
 }
@@ -395,7 +398,7 @@ func NewChangeTimeToApproval(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeTimeToApproval{noop.Float64Gauge{}}, err
+		return ChangeTimeToApproval{noop.Float64Gauge{}}, err
 	}
 	return ChangeTimeToApproval{i}, nil
 }
@@ -536,7 +539,7 @@ func NewChangeTimeToMerge(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeTimeToMerge{noop.Float64Gauge{}}, err
+		return ChangeTimeToMerge{noop.Float64Gauge{}}, err
 	}
 	return ChangeTimeToMerge{i}, nil
 }
@@ -676,7 +679,7 @@ func NewContributorCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ContributorCount{noop.Int64Gauge{}}, err
+		return ContributorCount{noop.Int64Gauge{}}, err
 	}
 	return ContributorCount{i}, nil
 }
@@ -781,7 +784,7 @@ func NewRefCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefCount{noop.Int64UpDownCounter{}}, err
+		return RefCount{noop.Int64UpDownCounter{}}, err
 	}
 	return RefCount{i}, nil
 }
@@ -892,7 +895,7 @@ func NewRefLinesDelta(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefLinesDelta{noop.Int64Gauge{}}, err
+		return RefLinesDelta{noop.Int64Gauge{}}, err
 	}
 	return RefLinesDelta{i}, nil
 }
@@ -1040,7 +1043,7 @@ func NewRefRevisionsDelta(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefRevisionsDelta{noop.Int64Gauge{}}, err
+		return RefRevisionsDelta{noop.Int64Gauge{}}, err
 	}
 	return RefRevisionsDelta{i}, nil
 }
@@ -1185,7 +1188,7 @@ func NewRefTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefTime{noop.Float64Gauge{}}, err
+		return RefTime{noop.Float64Gauge{}}, err
 	}
 	return RefTime{i}, nil
 }
@@ -1301,7 +1304,7 @@ func NewRepositoryCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RepositoryCount{noop.Int64UpDownCounter{}}, err
+		return RepositoryCount{noop.Int64UpDownCounter{}}, err
 	}
 	return RepositoryCount{i}, nil
 }
