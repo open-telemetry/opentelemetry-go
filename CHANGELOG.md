@@ -77,6 +77,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not double record measurements of `RecordSet` methods in `go.opentelemetry.io/otel/semconv/v1.37.0`. (#7655)
 - Do not double record measurements of `RecordSet` methods in `go.opentelemetry.io/otel/semconv/v1.36.0`. (#7656)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/exporters/zipkin`. (#7670)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7274)
