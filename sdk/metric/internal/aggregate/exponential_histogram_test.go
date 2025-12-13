@@ -706,7 +706,6 @@ func TestSubNormal(t *testing.T) {
 	want := &expoHistogramDataPoint[float64]{
 		attrs:   alice,
 		maxSize: 4,
-		count:   3,
 		min:     math.SmallestNonzeroFloat64,
 		max:     math.SmallestNonzeroFloat64,
 		sum:     3 * math.SmallestNonzeroFloat64,
