@@ -193,6 +193,10 @@ func (l *hotColdWaitGroup) start() uint64 {
 	return l.startedCountAndHotIdx.Add(1) >> 63
 }
 
+func (l *hotColdWaitGroup) loadHot() uint64 {
+	return l.startedCountAndHotIdx.Load() >> 63
+}
+
 // done signals to the reader that an operation has fully completed.
 // done is safe to call concurrently.
 func (l *hotColdWaitGroup) done(hotIdx uint64) {
@@ -272,4 +276,59 @@ func (m *limitedSyncMap) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	return m.len
+}
+
+// atomicLimitedRange is a range which can grow to at most maxSize. It is used
+// to emulate a slice which is bounded in size, but can grow in either
+// direction from any starting index.
+type atomicLimitedRange struct {
+	startAndEnd atomic.Uint64
+	maxSize     int32
+}
+
+func (r *atomicLimitedRange) Load() (start, end int32) {
+	n := r.startAndEnd.Load()
+	return int32(n >> 32), int32(n & ((1 << 32) - 1))
+}
+
+func (r *atomicLimitedRange) Store(start, end int32) {
+	// end must be cast to a uint32 first to avoid sign extension.
+	r.startAndEnd.Store(uint64(start)<<32 | uint64(uint32(end)))
+}
+
+func (r *atomicLimitedRange) Add(idx int32) bool {
+	for {
+		n := r.startAndEnd.Load()
+		start, end := int32(n>>32), int32(n&((1<<32)-1))
+		if idx >= start && idx < end {
+			// no expansion needed
+			return true
+		}
+
+		// If idx doesn't fit, still expand as far as possible in that
+		// direction to prevent the range from growing in the opposite
+		// direction. This ensures the following scale change is able to fit
+		// our point after the change.
+		partialExpansion := false
+		if start == end {
+			start = idx
+			end = idx + 1
+		} else if idx < start {
+			start = idx
+			if end-start > r.maxSize {
+				start = end - r.maxSize
+				partialExpansion = true
+			}
+		} else if idx >= end {
+			end = idx + 1
+			if end-start > r.maxSize {
+				end = start + r.maxSize
+				partialExpansion = true
+			}
+		}
+		if !r.startAndEnd.CompareAndSwap(n, uint64(start)<<32|uint64(uint32(end))) {
+			continue
+		}
+		return !partialExpansion
+	}
 }
