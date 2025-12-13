@@ -1346,6 +1346,54 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 	)
 }
 
+func TestRecordErrorWithErrorStatus(t *testing.T) {
+	err := ottest.NewTestError("test error")
+	typ := "go.opentelemetry.io/otel/sdk/internal/internaltest.TestError"
+	msg := "test error"
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	span := startSpan(tp, "RecordError")
+
+	errTime := time.Now()
+	span.RecordError(err, trace.WithTimestamp(errTime), trace.WithStatus())
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &snapshot{
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:   sc.WithRemote(true),
+		name:     "span0",
+		status:   Status{Code: codes.Error, Description: msg},
+		spanKind: trace.SpanKindInternal,
+		events: []Event{
+			{
+				Name: semconv.ExceptionEventName,
+				Time: errTime,
+				Attributes: []attribute.KeyValue{
+					semconv.ExceptionType(typ),
+					semconv.ExceptionMessage(msg),
+				},
+			},
+		},
+		instrumentationScope: instrumentation.Scope{Name: "RecordError"},
+	}
+
+	assert.Equal(t, got.spanContext, want.spanContext)
+	assert.Equal(t, got.parent, want.parent)
+	assert.Equal(t, got.name, want.name)
+	assert.Equal(t, got.status, want.status)
+	assert.Equal(t, got.spanKind, want.spanKind)
+	assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
+	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
+}
+
 func TestRecordErrorNil(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1601,6 +1649,32 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End",
 		gotStackTraceFunctionName[3],
 	)
+}
+
+func TestSpanCapturesPanicWithErrorStatus(t *testing.T) {
+	err := errors.New("error message")
+	typ := "*errors.errorString"
+	msg := "error message"
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	_, span := tp.Tracer("CatchPanic").Start(
+		context.Background(),
+		"span",
+	)
+
+	f := func() {
+		defer span.End(trace.WithStatusOnPanic())
+		panic(err)
+	}
+	require.PanicsWithError(t, msg, f)
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	require.Equal(t, Status{Code: codes.Error, Description: msg}, spans[0].Status())
+	require.Len(t, spans[0].Events(), 1)
+	assert.Equal(t, spans[0].Events()[0].Name, semconv.ExceptionEventName)
+	assert.Equal(t, spans[0].Events()[0].Attributes[0].Value.AsString(), typ)
+	assert.Equal(t, spans[0].Events()[0].Attributes[1].Value.AsString(), msg)
 }
 
 func TestReadOnlySpan(t *testing.T) {
