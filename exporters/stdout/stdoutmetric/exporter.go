@@ -24,7 +24,7 @@ type exporter struct {
 	temporalitySelector metric.TemporalitySelector
 	aggregationSelector metric.AggregationSelector
 
-	redactTimestamps bool
+	redactors []RedactorFunc
 }
 
 // New returns a configured metric exporter.
@@ -36,7 +36,7 @@ func New(options ...Option) (metric.Exporter, error) {
 	exp := &exporter{
 		temporalitySelector: cfg.temporalitySelector,
 		aggregationSelector: cfg.aggregationSelector,
-		redactTimestamps:    cfg.redactTimestamps,
+		redactors:           cfg.redactors,
 	}
 	exp.encVal.Store(*cfg.encoder)
 	return exp, nil
@@ -54,8 +54,8 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if e.redactTimestamps {
-		redactTimestamps(data)
+	for _, redactor := range e.redactors {
+		redactor(data)
 	}
 
 	global.Debug("STDOUT exporter export", "Data", data)
