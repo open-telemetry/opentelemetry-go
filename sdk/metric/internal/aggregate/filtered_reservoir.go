@@ -36,6 +36,10 @@ type filteredExemplarReservoir[N int64 | float64] struct {
 	// reservoir.ConcurrentSafe in order to improve performance.
 	reservoirMux   sync.Mutex
 	concurrentSafe bool
+	// reservoirs can indicate that they would like to record the exemplars'
+	// timestamp by embedding reservoir.DeferTimestamp. The
+	// FilteredExemplarReservoir will pass a zero timestamp in this case.
+	deferTimestamp bool
 }
 
 // NewFilteredExemplarReservoir creates a [FilteredExemplarReservoir] which only offers values
@@ -45,17 +49,22 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 	r exemplar.Reservoir,
 ) FilteredExemplarReservoir[N] {
 	_, concurrentSafe := r.(reservoir.ConcurrentSafe)
+	_, deferTimestamp := r.(reservoir.DeferTimestamp)
 	return &filteredExemplarReservoir[N]{
 		filter:         f,
 		reservoir:      r,
 		concurrentSafe: concurrentSafe,
+		deferTimestamp: deferTimestamp,
 	}
 }
 
 func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
 	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
-		ts := time.Now()
+		var ts time.Time
+		if !f.deferTimestamp {
+			ts = time.Now()
+		}
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()

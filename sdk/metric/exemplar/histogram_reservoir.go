@@ -41,6 +41,7 @@ var _ Reservoir = &HistogramReservoir{}
 // define by bounds.
 type HistogramReservoir struct {
 	reservoir.ConcurrentSafe
+	reservoir.DeferTimestamp
 	*storage
 
 	// bounds are bucket bounds in ascending order.

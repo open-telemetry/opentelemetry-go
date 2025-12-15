@@ -37,6 +37,7 @@ var _ Reservoir = &FixedSizeReservoir{}
 // additional measurement with a decreasing probability.
 type FixedSizeReservoir struct {
 	reservoir.ConcurrentSafe
+	reservoir.DeferTimestamp
 	*storage
 	mu sync.Mutex
 

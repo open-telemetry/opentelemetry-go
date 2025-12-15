@@ -26,6 +26,9 @@ func newStorage(n int) *storage {
 }
 
 func (r *storage) store(ctx context.Context, idx int, ts time.Time, v Value, droppedAttr []attribute.KeyValue) {
+	if ts.IsZero() {
+		ts = time.Now()
+	}
 	r.measurements[idx].mux.Lock()
 	defer r.measurements[idx].mux.Unlock()
 	r.measurements[idx].FilteredAttributes = droppedAttr
