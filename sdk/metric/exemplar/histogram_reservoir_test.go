@@ -15,3 +15,13 @@ func TestHist(t *testing.T) {
 		return HistogramReservoirProvider(bounds), len(bounds)
 	}))
 }
+
+func TestHistogramReservoirConcurrentSafe(t *testing.T) {
+	bounds := []float64{0, 100}
+	t.Run("Int64", reservoirConcurrentSafeTest[int64](func(int) (ReservoirProvider, int) {
+		return HistogramReservoirProvider(bounds), len(bounds)
+	}))
+	t.Run("Float64", reservoirConcurrentSafeTest[float64](func(int) (ReservoirProvider, int) {
+		return HistogramReservoirProvider(bounds), len(bounds)
+	}))
+}
