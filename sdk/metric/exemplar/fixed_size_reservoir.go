@@ -104,11 +104,11 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	count, next := r.incrementCount()
 	intCount := int(count) // nolint:gosec // count is at most 32 bits in length
 	if intCount < r.k {
-		r.store(intCount, newMeasurement(ctx, t, n, a))
+		r.store(ctx, intCount, t, n, a)
 	} else if count == next {
 		// Overwrite a random existing measurement with the one offered.
 		idx := rand.IntN(r.k)
-		r.store(idx, newMeasurement(ctx, t, n, a))
+		r.store(ctx, idx, t, n, a)
 		r.wMu.Lock()
 		defer r.wMu.Unlock()
 		r.advance()
