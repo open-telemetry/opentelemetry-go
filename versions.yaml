@@ -46,6 +46,9 @@ modules:
   go.opentelemetry.io/otel/exporters/stdout/stdouttrace:
     version-refs:
       - ./internal/version.go
+  go.opentelemetry.io/otel/exporters/stdout/stdoutmetric:
+    version-refs:
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/prometheus:
     version-refs:
       - ./internal/version.go
