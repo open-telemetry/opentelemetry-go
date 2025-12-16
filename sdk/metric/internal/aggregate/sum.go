@@ -18,7 +18,7 @@ type sumValue[N int64 | float64] struct {
 }
 
 type sumValueMap[N int64 | float64] struct {
-	values limitedSyncMap
+	values limitedSyncMap[*sumValue[N]]
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
@@ -54,11 +54,11 @@ func newDeltaSum[N int64 | float64](
 		start:     now(),
 		hotColdValMap: [2]sumValueMap[N]{
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
 				newRes: r,
 			},
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
 				newRes: r,
 			},
 		},
@@ -99,8 +99,7 @@ func (s *deltaSum[N]) collect(
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
-		val := value.(*sumValue[N])
+	s.hotColdValMap[readIdx].values.Range(func(_ attribute.Distinct, val *sumValue[N]) bool {
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
@@ -131,7 +130,7 @@ func newCumulativeSum[N int64 | float64](
 		monotonic: monotonic,
 		start:     now(),
 		sumValueMap: sumValueMap[N]{
-			values: limitedSyncMap{aggLimit: limit},
+			values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
 			newRes: r,
 		},
 	}
@@ -161,8 +160,7 @@ func (s *cumulativeSum[N]) collect(
 	dPts := reset(sData.DataPoints, 0, s.values.Len())
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		val := value.(*sumValue[N])
+	s.values.Range(func(_ attribute.Distinct, val *sumValue[N]) bool {
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
 			StartTime:  s.start,
@@ -225,8 +223,7 @@ func (s *precomputedSum[N]) delta(
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(key, value any) bool {
-		val := value.(*sumValue[N])
+	s.hotColdValMap[readIdx].values.Range(func(key attribute.Distinct, val *sumValue[N]) bool {
 		n := val.n.load()
 
 		delta := n - s.reported[key]
@@ -269,8 +266,7 @@ func (s *precomputedSum[N]) cumulative(
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
-		val := value.(*sumValue[N])
+	s.hotColdValMap[readIdx].values.Range(func(_ attribute.Distinct, val *sumValue[N]) bool {
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start

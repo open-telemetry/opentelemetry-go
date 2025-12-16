@@ -93,7 +93,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap
+	hotColdValMap [2]limitedSyncMap[*histogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -162,7 +162,7 @@ func newDeltaHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]limitedSyncMap{
+		hotColdValMap: [2]limitedSyncMap[*histogramPoint[N]]{
 			{aggLimit: limit},
 			{aggLimit: limit},
 		},
@@ -191,9 +191,7 @@ func (s *deltaHistogram[N]) collect(
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].Range(func(_, value any) bool {
-		val := value.(*histogramPoint[N])
-
+	s.hotColdValMap[readIdx].Range(func(_ attribute.Distinct, val *histogramPoint[N]) bool {
 		count := val.loadCountsInto(&hDPts[i].BucketCounts)
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
@@ -240,7 +238,7 @@ func (s *deltaHistogram[N]) collect(
 // to reading. Unlike deltaHistogram, this maintains a single map so that the
 // preserved attribute sets do not change when collect() is called.
 type cumulativeHistogram[N int64 | float64] struct {
-	values limitedSyncMap
+	values limitedSyncMap[*hotColdHistogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -269,7 +267,7 @@ func newCumulativeHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		values:   limitedSyncMap{aggLimit: limit},
+		values:   limitedSyncMap[*hotColdHistogramPoint[N]]{aggLimit: limit},
 	}
 }
 
@@ -340,8 +338,7 @@ func (s *cumulativeHistogram[N]) collect(
 	hDPts := reset(h.DataPoints, 0, s.values.Len())
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		val := value.(*hotColdHistogramPoint[N])
+	s.values.Range(func(_ attribute.Distinct, val *hotColdHistogramPoint[N]) bool {
 		// swap, observe, and clear the point
 		readIdx := val.hcwg.swapHotAndWait()
 		var bucketCounts []uint64

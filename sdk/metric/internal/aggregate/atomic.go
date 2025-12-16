@@ -220,15 +220,16 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 }
 
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
-// attribute sets and provides a Len() function.
-type limitedSyncMap struct {
+// attribute sets and provides a Len() function. It is generic over the type
+// of value stored in the map.
+type limitedSyncMap[V any] struct {
 	sync.Map
 	aggLimit int
 	len      int
 	lenMux   sync.Mutex
 }
 
-func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
+func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
 	actual, loaded := m.Load(fltrAttr.Equivalent())
 	if loaded {
 		return actual
@@ -261,14 +262,23 @@ func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(a
 	return actual
 }
 
-func (m *limitedSyncMap) Clear() {
+// Range calls the function f sequentially for each key and value present in
+// the map, with values properly typed as V. If f returns false, range stops
+// the iteration.
+func (m *limitedSyncMap[V]) Range(f func(key attribute.Distinct, value V) bool) {
+	m.Map.Range(func(key, value any) bool {
+		return f(key.(attribute.Distinct), value.(V))
+	})
+}
+
+func (m *limitedSyncMap[V]) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	m.len = 0
 	m.Map.Clear()
 }
 
-func (m *limitedSyncMap) Len() int {
+func (m *limitedSyncMap[V]) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	return m.len

@@ -21,7 +21,7 @@ type lastValuePoint[N int64 | float64] struct {
 // lastValueMap summarizes a set of measurements as the last one made.
 type lastValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
-	values limitedSyncMap
+	values limitedSyncMap[*lastValuePoint[N]]
 }
 
 func (s *lastValueMap[N]) measure(
@@ -50,11 +50,11 @@ func newDeltaLastValue[N int64 | float64](
 		start:  now(),
 		hotColdValMap: [2]lastValueMap[N]{
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: limitedSyncMap[*lastValuePoint[N]]{aggLimit: limit},
 				newRes: r,
 			},
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: limitedSyncMap[*lastValuePoint[N]]{aggLimit: limit},
 				newRes: r,
 			},
 		},
@@ -108,8 +108,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	dPts := reset(gData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
-		v := value.(*lastValuePoint[N])
+	s.hotColdValMap[readIdx].values.Range(func(_ attribute.Distinct, v *lastValuePoint[N]) bool {
 		dPts[i].Attributes = v.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -137,7 +136,7 @@ func newCumulativeLastValue[N int64 | float64](
 ) *cumulativeLastValue[N] {
 	return &cumulativeLastValue[N]{
 		lastValueMap: lastValueMap[N]{
-			values: limitedSyncMap{aggLimit: limit},
+			values: limitedSyncMap[*lastValuePoint[N]]{aggLimit: limit},
 			newRes: r,
 		},
 		start: now(),
@@ -157,8 +156,7 @@ func (s *cumulativeLastValue[N]) collect(
 	dPts := reset(gData.DataPoints, 0, s.values.Len())
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		v := value.(*lastValuePoint[N])
+	s.values.Range(func(_ attribute.Distinct, v *lastValuePoint[N]) bool {
 		newPt := metricdata.DataPoint[N]{
 			Attributes: v.attrs,
 			StartTime:  s.start,
