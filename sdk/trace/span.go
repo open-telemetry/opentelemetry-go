@@ -840,7 +840,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.instrumentationScope = s.tracer.instrumentationScope
 	sd.name = s.name
 	sd.parent = s.parent
-	sd.resource = s.tracer.provider.resource
+	sd.resource = resource.MergeEntities(s.tracer.provider.resource, s.tracer.entities)
 	sd.spanContext = s.spanContext
 	sd.spanKind = s.spanKind
 	sd.startTime = s.startTime

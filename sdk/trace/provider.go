@@ -66,7 +66,7 @@ type TracerProvider struct {
 	embedded.TracerProvider
 
 	mu             sync.Mutex
-	namedTracer    map[instrumentation.Scope]*tracer
+	namedTracer    map[resource.EntityDistinct]map[instrumentation.Scope]*tracer
 	spanProcessors atomic.Pointer[spanProcessorStates]
 
 	isShutdown atomic.Bool
@@ -104,7 +104,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer: make(map[instrumentation.Scope]*tracer),
+		namedTracer: make(map[resource.EntityDistinct]map[instrumentation.Scope]*tracer),
 		sampler:     o.sampler,
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
@@ -129,6 +129,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 //
 // This method is safe to be called concurrently.
 func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	return p.tracer(name, emptyEntitySet, opts)
+}
+
+var emptyEntitySet = resource.NewEntitySet()
+
+func (p *TracerProvider) tracer(name string, entities resource.EntitySet, opts []trace.TracerOption) trace.Tracer {
 	// This check happens before the mutex is acquired to avoid deadlocking if Tracer() is called from within Shutdown().
 	if p.isShutdown.Load() {
 		return noop.NewTracerProvider().Tracer(name, opts...)
@@ -152,11 +158,17 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		if p.isShutdown.Load() {
 			return noop.NewTracerProvider().Tracer(name, opts...), true
 		}
-		t, ok := p.namedTracer[is]
+		st, hasEntity := p.namedTracer[entities.Distinct()]
+		if !hasEntity {
+			st = make(map[instrumentation.Scope]*tracer)
+		}
+		t, ok := st[is]
 		if !ok {
+
 			t = &tracer{
 				provider:             p,
 				instrumentationScope: is,
+				entities:             entities,
 			}
 
 			var err error
@@ -165,7 +177,10 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 				otel.Handle(err)
 			}
 
-			p.namedTracer[is] = t
+			st[is] = t
+		}
+		if !hasEntity {
+			p.namedTracer[entities.Distinct()] = st
 		}
 		return t, ok
 	}()
@@ -314,6 +329,55 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
 	return retErr
+}
+
+type boundTracerProvider struct {
+	embedded.TracerProvider
+	provider *TracerProvider
+	entities resource.EntitySet
+}
+
+func (b *boundTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	return b.provider.tracer(name, b.entities, opts)
+}
+
+// BindEntity binds an entity to the TracerProvider. Telemetry recorded with
+// the bound provider will be associated with the entities merged into the
+// providers' resource.
+//
+// It is the caller's responsibility to call Unbind on the returned Binding.
+func (p *TracerProvider) BindEnties(entities ...resource.Entity) (trace.TracerProvider, Binding, error) {
+	es := resource.NewEntitySet(entities...)
+	return &boundTracerProvider{
+		provider: p,
+		entities: es,
+	}, &binding{provider: p, entityKey: es.Distinct()}, nil
+}
+
+type binding struct {
+	unbindOnce sync.Once
+	provider   *TracerProvider
+	entityKey  resource.EntityDistinct
+}
+
+func (b *binding) Unbind() error {
+	var err error
+	b.unbindOnce.Do(func() {
+		b.provider.mu.Lock()
+		defer b.provider.mu.Unlock()
+		// TODO: This probably needs to "shutdown" the individual tracers under this entity.
+		delete(b.provider.namedTracer, b.entityKey)
+	})
+	return err
+}
+
+// Binding is an token representing the unique binding of entities
+// for a set of instruments with a Meter.
+type Binding interface {
+	// Unbind removes the Binding from a TracerProvider.
+	//
+	// This method needs to be idempotent and concurrent safe.
+	Unbind() error
 }
 
 func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
