@@ -45,6 +45,7 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	posBuckets expoBuckets
 	negBuckets expoBuckets
 	zeroCount  uint64
+	start      time.Time
 }
 
 func newExpoHistogramDataPoint[N int64 | float64](
@@ -68,6 +69,7 @@ func newExpoHistogramDataPoint[N int64 | float64](
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		scale:    maxScale,
+		start:    now(),
 	}
 }
 
@@ -446,7 +448,7 @@ func (e *expoHistogram[N]) cumulative(
 	var i int
 	for _, val := range e.values {
 		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
+		hDPts[i].StartTime = val.start
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count()
 		hDPts[i].Scale = val.scale

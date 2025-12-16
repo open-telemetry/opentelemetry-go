@@ -15,6 +15,7 @@ type sumValue[N int64 | float64] struct {
 	n     atomicCounter[N]
 	res   FilteredExemplarReservoir[N]
 	attrs attribute.Set
+	start time.Time
 }
 
 type sumValueMap[N int64 | float64] struct {
@@ -32,6 +33,7 @@ func (s *sumValueMap[N]) measure(
 		return &sumValue[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			start: now(),
 		}
 	}).(*sumValue[N])
 	sv.n.add(value)
@@ -129,7 +131,6 @@ func newCumulativeSum[N int64 | float64](
 ) *cumulativeSum[N] {
 	return &cumulativeSum[N]{
 		monotonic: monotonic,
-		start:     now(),
 		sumValueMap: sumValueMap[N]{
 			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
@@ -140,7 +141,6 @@ func newCumulativeSum[N int64 | float64](
 // deltaSum is the storage for sums which never reset.
 type cumulativeSum[N int64 | float64] struct {
 	monotonic bool
-	start     time.Time
 
 	sumValueMap[N]
 }
@@ -165,7 +165,7 @@ func (s *cumulativeSum[N]) collect(
 		val := value.(*sumValue[N])
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  s.start,
+			StartTime:  val.start,
 			Time:       t,
 			Value:      val.n.load(),
 		}

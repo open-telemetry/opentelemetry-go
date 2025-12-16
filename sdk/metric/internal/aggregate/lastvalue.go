@@ -16,6 +16,7 @@ type lastValuePoint[N int64 | float64] struct {
 	attrs attribute.Set
 	value atomicN[N]
 	res   FilteredExemplarReservoir[N]
+	start time.Time
 }
 
 // lastValue summarizes a set of measurements as the last one made.
@@ -34,6 +35,7 @@ func (s *lastValueMap[N]) measure(
 		return &lastValuePoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			start: now(),
 		}
 	}).(*lastValuePoint[N])
 
@@ -128,7 +130,6 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 // cumulativeLastValue summarizes a set of measurements as the last one made.
 type cumulativeLastValue[N int64 | float64] struct {
 	lastValueMap[N]
-	start time.Time
 }
 
 func newCumulativeLastValue[N int64 | float64](
@@ -140,7 +141,6 @@ func newCumulativeLastValue[N int64 | float64](
 			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
 		},
-		start: now(),
 	}
 }
 
@@ -161,7 +161,7 @@ func (s *cumulativeLastValue[N]) collect(
 		v := value.(*lastValuePoint[N])
 		newPt := metricdata.DataPoint[N]{
 			Attributes: v.attrs,
-			StartTime:  s.start,
+			StartTime:  v.start,
 			Time:       t,
 			Value:      v.value.Load(),
 		}

@@ -29,6 +29,7 @@ type hotColdHistogramPoint[N int64 | float64] struct {
 
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
+	start time.Time
 }
 
 // histogramPointCounters contains only the atomic counter data, and is used by
@@ -242,7 +243,6 @@ func (s *deltaHistogram[N]) collect(
 type cumulativeHistogram[N int64 | float64] struct {
 	values limitedSyncMap
 
-	start    time.Time
 	noMinMax bool
 	noSum    bool
 	bounds   []float64
@@ -264,7 +264,6 @@ func newCumulativeHistogram[N int64 | float64](
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
 	return &cumulativeHistogram[N]{
-		start:    now(),
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		bounds:   b,
@@ -298,6 +297,7 @@ func (s *cumulativeHistogram[N]) measure(
 					counts: make([]atomic.Uint64, len(s.bounds)+1),
 				},
 			},
+			start: now(),
 		}
 		return hPt
 	}).(*hotColdHistogramPoint[N])
@@ -348,7 +348,7 @@ func (s *cumulativeHistogram[N]) collect(
 		count := val.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 		newPt := metricdata.HistogramDataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  s.start,
+			StartTime:  val.start,
 			Time:       t,
 			Count:      count,
 			Bounds:     bounds,
