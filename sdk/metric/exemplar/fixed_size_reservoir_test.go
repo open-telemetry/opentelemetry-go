@@ -55,6 +55,15 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
 }
 
+func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {
+	t.Run("Int64", reservoirConcurrentSafeTest[int64](func(n int) (ReservoirProvider, int) {
+		return FixedSizeReservoirProvider(n), n
+	}))
+	t.Run("Float64", reservoirConcurrentSafeTest[float64](func(n int) (ReservoirProvider, int) {
+		return FixedSizeReservoirProvider(n), n
+	}))
+}
+
 func TestNextTrackerAtomics(t *testing.T) {
 	capacity := 10
 	nt := newNextTracker(capacity)
