@@ -393,7 +393,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			var c cache[string, instID]
 			p := newPipeline(nil, tt.reader, tt.views, exemplar.AlwaysOffFilter, 0)
 			i := newInserter[N](p, &c)
-			readerAggregation := i.readerDefaultAggregation(tt.inst.Kind)
+			readerAggregation := i.readerDefaultAggregation(tt.inst.Kind, false)
 			input, err := i.Instrument(tt.inst, readerAggregation)
 			var comps []aggregate.ComputeAggregation
 			for _, instSyncs := range p.aggregations {
@@ -418,7 +418,7 @@ func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 		Name: "foo",
 		Kind: InstrumentKind(255),
 	}
-	readerAggregation := i.readerDefaultAggregation(inst.Kind)
+	readerAggregation := i.readerDefaultAggregation(inst.Kind, false)
 	_, _ = i.Instrument(inst, readerAggregation)
 }
 
@@ -435,7 +435,7 @@ func TestPipelinesAggregatorForEachReader(t *testing.T) {
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	var c cache[string, instID]
 	r := newResolver[int64](pipes, &c)
-	aggs, err := r.Aggregators(inst)
+	aggs, err := r.Aggregators(inst, false)
 	require.NoError(t, err, "resolved Aggregators error")
 	require.Len(t, aggs, 2, "instrument aggregators")
 
@@ -516,7 +516,7 @@ func testPipelineRegistryResolveIntAggregators(t *testing.T, p pipelines, wantCo
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	var c cache[string, instID]
 	r := newResolver[int64](p, &c)
-	aggs, err := r.Aggregators(inst)
+	aggs, err := r.Aggregators(inst, false)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -526,7 +526,7 @@ func testPipelineRegistryResolveFloatAggregators(t *testing.T, p pipelines, want
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
-	aggs, err := r.Aggregators(inst)
+	aggs, err := r.Aggregators(inst, false)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -536,7 +536,7 @@ func testPipelineRegistryResolveIntHistogramAggregators(t *testing.T, p pipeline
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	var c cache[string, instID]
 	r := newResolver[int64](p, &c)
-	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
+	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3}, false)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -546,7 +546,7 @@ func testPipelineRegistryResolveFloatHistogramAggregators(t *testing.T, p pipeli
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	var c cache[string, instID]
 	r := newResolver[float64](p, &c)
-	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3})
+	aggs, err := r.HistogramAggregators(inst, []float64{1, 2, 3}, false)
 	assert.NoError(t, err)
 
 	require.Len(t, aggs, wantCount)
@@ -575,20 +575,20 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 
 	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
-	intAggs, err := ri.Aggregators(inst)
+	intAggs, err := ri.Aggregators(inst, false)
 	assert.Error(t, err)
 	assert.Empty(t, intAggs)
 
 	rf := newResolver[float64](p, &vc)
-	floatAggs, err := rf.Aggregators(inst)
+	floatAggs, err := rf.Aggregators(inst, false)
 	assert.Error(t, err)
 	assert.Empty(t, floatAggs)
 
-	intAggs, err = ri.HistogramAggregators(inst, []float64{1, 2, 3})
+	intAggs, err = ri.HistogramAggregators(inst, []float64{1, 2, 3}, false)
 	assert.Error(t, err)
 	assert.Empty(t, intAggs)
 
-	floatAggs, err = rf.HistogramAggregators(inst, []float64{1, 2, 3})
+	floatAggs, err = rf.HistogramAggregators(inst, []float64{1, 2, 3}, false)
 	assert.Error(t, err)
 	assert.Empty(t, floatAggs)
 }
@@ -634,14 +634,14 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 
 	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
-	intAggs, err := ri.Aggregators(fooInst)
+	intAggs, err := ri.Aggregators(fooInst, false)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 1)
 
 	// The Rename view should produce the same instrument without an error, the
 	// default view should also cause a new aggregator to be returned.
-	intAggs, err = ri.Aggregators(barInst)
+	intAggs, err = ri.Aggregators(barInst, false)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, intAggs, 2)
@@ -649,19 +649,19 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	// Creating a float foo instrument should log a warning because there is an
 	// int foo instrument.
 	rf := newResolver[float64](p, &vc)
-	floatAggs, err := rf.Aggregators(fooInst)
+	floatAggs, err := rf.Aggregators(fooInst, false)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, l.InfoN(), "instrument conflict not logged")
 	assert.Len(t, floatAggs, 1)
 
 	fooInst = Instrument{Name: "foo-float", Kind: InstrumentKindCounter}
 
-	floatAggs, err = rf.Aggregators(fooInst)
+	floatAggs, err = rf.Aggregators(fooInst, false)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "no info logging should happen")
 	assert.Len(t, floatAggs, 1)
 
-	floatAggs, err = rf.Aggregators(barInst)
+	floatAggs, err = rf.Aggregators(barInst, false)
 	assert.NoError(t, err)
 	// Both the rename and default view aggregators created above should now
 	// conflict. Therefore, 2 warning messages should be logged.

@@ -313,7 +313,10 @@ type aggVal[N int64 | float64] struct {
 // readerDefaultAggregation returns the default aggregation for the instrument
 // kind based on the reader's aggregation preferences. This is used unless the
 // aggregation is overridden with a view.
-func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind) Aggregation {
+func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind, defaultDisabled bool) Aggregation {
+	if defaultDisabled {
+		return AggregationDrop{}
+	}
 	aggregation := i.pipeline.reader.aggregation(kind)
 	switch aggregation.(type) {
 	case nil, AggregationDefault:
@@ -641,12 +644,12 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) {
+func (r resolver[N]) Aggregators(id Instrument, defaultDisabled bool) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	var err error
 	for _, i := range r.inserters {
-		in, e := i.Instrument(id, i.readerDefaultAggregation(id.Kind))
+		in, e := i.Instrument(id, i.readerDefaultAggregation(id.Kind, defaultDisabled))
 		if e != nil {
 			err = errors.Join(err, e)
 		}
@@ -658,12 +661,12 @@ func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) 
 // HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
 // defined by key. If boundaries were provided on instrument instantiation, those take precedence
 // over boundaries provided by the reader.
-func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64) ([]aggregate.Measure[N], error) {
+func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64, defaultDisabled bool) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	var err error
 	for _, i := range r.inserters {
-		agg := i.readerDefaultAggregation(id.Kind)
+		agg := i.readerDefaultAggregation(id.Kind, defaultDisabled)
 		if histAgg, ok := agg.(AggregationExplicitBucketHistogram); ok && len(boundaries) > 0 {
 			histAgg.Boundaries = boundaries
 			agg = histAgg

@@ -158,7 +158,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
-				readerAggregation := i.readerDefaultAggregation(inst.Kind)
+				readerAggregation := i.readerDefaultAggregation(inst.Kind, false)
 				got, err := i.Instrument(inst, readerAggregation)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
@@ -385,7 +385,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0)
 	i := newInserter[int64](pipe, &vc)
 
-	readerAggregation := i.readerDefaultAggregation(kind)
+	readerAggregation := i.readerDefaultAggregation(kind, false)
 	_, origID, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
 	require.NoError(t, err)
 
