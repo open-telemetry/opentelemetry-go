@@ -18,7 +18,7 @@ type lastValuePoint[N int64 | float64] struct {
 	res   FilteredExemplarReservoir[N]
 }
 
-// lastValue summarizes a set of measurements as the last one made.
+// lastValueMap summarizes a set of measurements as the last one made.
 type lastValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	values limitedSyncMap
@@ -98,7 +98,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	t time.Time,
 ) int {
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
-	// the lastValuePoints is missed (better luck next time).
+	// the DataPoints is missed (better luck next time).
 	gData, _ := (*dest).(metricdata.Gauge[N])
 	// delta always clears values on collection
 	readIdx := s.hcwg.swapHotAndWait()
@@ -122,7 +122,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	// Do not report stale values.
 	s.hotColdValMap[readIdx].values.Clear()
 	*dest = gData
-	return n
+	return i
 }
 
 // cumulativeLastValue summarizes a set of measurements as the last one made.
