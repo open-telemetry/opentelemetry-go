@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"sync"
@@ -125,7 +126,7 @@ type ExportOp struct {
 	start time.Time
 }
 
-func (e *ExportOp) ExportLogs(err error) {
+func (e *ExportOp) End(err error, count int64) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
@@ -137,11 +138,21 @@ func successful(err error, n int64) int64 {
 	if err != nil {
 		return n
 	}
-	return n - failed(err)
+	return n - rejectedCount(n, err)
 }
 
-var errPool = sync.Pool{}
+var errPool = sync.Pool{
+	New: func() any {
+		return new(internal.PartialSuccess)
+	},
+}
 
-func failed(err error) int64 {
-	return 0
+func rejectedCount(n int64, err error) int64 {
+	ps := errPool.Get().(*internal.PartialSuccess)
+	defer errPool.Put(ps)
+
+	if errors.As(err, ps) {
+		return min(max(ps.RejectedItems, 0), n)
+	}
+	return n
 }
