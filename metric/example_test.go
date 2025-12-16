@@ -301,3 +301,23 @@ func ExampleMeter_attributes() {
 			metric.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)))
 	})
 }
+
+// You can define metrics which are disabled by default using the [WithDefaultDisabled] option.
+//
+// Here's how you might define a counter that is disabled by default.
+func ExampleMeter_withDefaultDisabled() {
+	var err error
+	itemsCounter, err := meter.Int64UpDownCounter(
+		"items.counter",
+		metric.WithDescription("Number of items."),
+		metric.WithUnit("{item}"),
+		metric.WithDefaultDisabled(),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// This increment is a no-op unless the user has explicitly enabled the
+	// metric using the SDK.
+	itemsCounter.Add(context.Background(), 1)
+}

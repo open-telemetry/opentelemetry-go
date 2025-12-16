@@ -15,15 +15,17 @@ import (
 
 func TestInt64ObservableConfiguration(t *testing.T) {
 	const (
-		token  int64 = 43
-		desc         = "Instrument description."
-		uBytes       = "By"
+		token           int64 = 43
+		desc                  = "Instrument description."
+		uBytes                = "By"
+		defaultDisabled       = true
 	)
 
 	run := func(got int64ObservableConfig) func(*testing.T) {
 		return func(t *testing.T) {
 			assert.Equal(t, desc, got.Description(), "description")
 			assert.Equal(t, uBytes, got.Unit(), "unit")
+			assert.Equal(t, defaultDisabled, got.DefaultDisabled(), "defaultDisabled")
 
 			// Functions are not comparable.
 			cBacks := got.Callbacks()
@@ -44,6 +46,7 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 		NewInt64ObservableCounterConfig(
 			WithDescription(desc),
 			WithUnit(uBytes),
+			WithDefaultDisabled(),
 			WithInt64Callback(cback),
 		),
 	))
@@ -52,6 +55,7 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 		NewInt64ObservableUpDownCounterConfig(
 			WithDescription(desc),
 			WithUnit(uBytes),
+			WithDefaultDisabled(),
 			WithInt64Callback(cback),
 		),
 	))
@@ -60,6 +64,7 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 		NewInt64ObservableGaugeConfig(
 			WithDescription(desc),
 			WithUnit(uBytes),
+			WithDefaultDisabled(),
 			WithInt64Callback(cback),
 		),
 	))
@@ -68,6 +73,7 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 type int64ObservableConfig interface {
 	Description() string
 	Unit() string
+	DefaultDisabled() bool
 	Callbacks() []Int64Callback
 }
 

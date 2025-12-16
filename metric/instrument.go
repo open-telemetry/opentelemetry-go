@@ -196,6 +196,85 @@ func (o unitOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64Ob
 // The unit u should be defined using the appropriate [UCUM](https://ucum.org) case-sensitive code.
 func WithUnit(u string) InstrumentOption { return unitOpt(u) }
 
+type defaultDisabledOpt struct{}
+
+func (o defaultDisabledOpt) applyFloat64Counter(c Float64CounterConfig) Float64CounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyFloat64UpDownCounter(c Float64UpDownCounterConfig) Float64UpDownCounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyFloat64Histogram(c Float64HistogramConfig) Float64HistogramConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyFloat64Gauge(c Float64GaugeConfig) Float64GaugeConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyFloat64ObservableCounter(c Float64ObservableCounterConfig) Float64ObservableCounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyFloat64ObservableUpDownCounter(
+	c Float64ObservableUpDownCounterConfig,
+) Float64ObservableUpDownCounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyFloat64ObservableGauge(c Float64ObservableGaugeConfig) Float64ObservableGaugeConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64Counter(c Int64CounterConfig) Int64CounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64UpDownCounter(c Int64UpDownCounterConfig) Int64UpDownCounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64Histogram(c Int64HistogramConfig) Int64HistogramConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64Gauge(c Int64GaugeConfig) Int64GaugeConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64ObservableCounter(c Int64ObservableCounterConfig) Int64ObservableCounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64ObservableUpDownCounter(
+	c Int64ObservableUpDownCounterConfig,
+) Int64ObservableUpDownCounterConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+func (o defaultDisabledOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64ObservableGaugeConfig {
+	c.defaultDisabled = true
+	return c
+}
+
+// WithDefaultDisabled sets the instrument to be disabled by default.
+func WithDefaultDisabled() InstrumentOption { return defaultDisabledOpt{} }
+
 // WithExplicitBucketBoundaries sets the instrument explicit bucket boundaries.
 //
 // This option is considered "advisory", and may be ignored by API implementations.
