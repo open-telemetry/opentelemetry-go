@@ -30,12 +30,12 @@ func (s *lastValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *lastValuePoint[N] {
 		return &lastValuePoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
 		}
-	}).(*lastValuePoint[N])
+	})
 
 	lv.value.Store(value)
 	lv.res.Offer(ctx, value, droppedAttr)

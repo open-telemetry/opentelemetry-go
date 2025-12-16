@@ -28,12 +28,12 @@ func (s *sumValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *sumValue[N] {
 		return &sumValue[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
 		}
-	}).(*sumValue[N])
+	})
 	sv.n.add(value)
 	// It is possible for collection to race with measurement and observe the
 	// exemplar in the batch of metrics after the add() for cumulative sums.

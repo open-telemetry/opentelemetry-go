@@ -220,25 +220,57 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 }
 
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
-// attribute sets and provides a Len() function. It is generic over the type
-// of value stored in the map.
+// attribute sets and provides generic type-safe methods. It is generic over
+// the type of value stored in the map.
 type limitedSyncMap[V any] struct {
-	sync.Map
+	m        sync.Map
 	aggLimit int
 	len      int
 	lenMux   sync.Mutex
 }
 
-func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
-	actual, loaded := m.Load(fltrAttr.Equivalent())
+// Load returns the value stored for a key, or nil if no value is present.
+// The bool result indicates whether value was found in the map.
+func (m *limitedSyncMap[V]) Load(key attribute.Distinct) (V, bool) {
+	val, ok := m.m.Load(key)
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return val.(V), true
+}
+
+// Store sets the value for a key.
+func (m *limitedSyncMap[V]) Store(key attribute.Distinct, value V) {
+	m.m.Store(key, value)
+}
+
+// LoadOrStore returns the existing value for the key if present.
+// Otherwise, it stores and returns the given value.
+// The loaded result is true if the value was loaded, false if stored.
+func (m *limitedSyncMap[V]) LoadOrStore(key attribute.Distinct, value V) (V, bool) {
+	actual, loaded := m.m.LoadOrStore(key, value)
+	return actual.(V), loaded
+}
+
+// Delete deletes the value for a key.
+func (m *limitedSyncMap[V]) Delete(key attribute.Distinct) {
+	m.m.Delete(key)
+}
+
+// LoadOrStoreAttr is used to enforce aggregation limits when storing values
+// by attribute set. It returns the value associated with the key (or the newly
+// stored value), and a bool indicating whether the key already existed.
+func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
+	actual, loaded := m.m.Load(fltrAttr.Equivalent())
 	if loaded {
-		return actual
+		return actual.(V)
 	}
 	// If the overflow set exists, assume we have already overflowed and don't
 	// bother with the slow path below.
-	actual, loaded = m.Load(overflowSet.Equivalent())
+	actual, loaded = m.m.Load(overflowSet.Equivalent())
 	if loaded {
-		return actual
+		return actual.(V)
 	}
 	// Slow path: add a new attribute set.
 	m.lenMux.Lock()
@@ -247,37 +279,39 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 	// re-fetch now that we hold the lock to ensure we don't use the overflow
 	// set unless we are sure the attribute set isn't being written
 	// concurrently.
-	actual, loaded = m.Load(fltrAttr.Equivalent())
+	actual, loaded = m.m.Load(fltrAttr.Equivalent())
 	if loaded {
-		return actual
+		return actual.(V)
 	}
 
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
 	}
-	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
+	actual, loaded = m.m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
 	if !loaded {
 		m.len++
 	}
-	return actual
+	return actual.(V)
 }
 
 // Range calls the function f sequentially for each key and value present in
 // the map, with values properly typed as V. If f returns false, range stops
 // the iteration.
 func (m *limitedSyncMap[V]) Range(f func(key attribute.Distinct, value V) bool) {
-	m.Map.Range(func(key, value any) bool {
+	m.m.Range(func(key, value any) bool {
 		return f(key.(attribute.Distinct), value.(V))
 	})
 }
 
+// Clear removes all items from the map and resets the length counter.
 func (m *limitedSyncMap[V]) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	m.len = 0
-	m.Map.Clear()
+	m.m.Clear()
 }
 
+// Len returns the number of items currently in the map.
 func (m *limitedSyncMap[V]) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()

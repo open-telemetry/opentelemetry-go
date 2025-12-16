@@ -358,9 +358,8 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h.collect(&data)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
-	hPt, ok := h.values.Load(alice.Equivalent())
+	hcHistPt, ok := h.values.Load(alice.Equivalent())
 	require.True(t, ok)
-	hcHistPt := hPt.(*hotColdHistogramPoint[int64])
 	readIdx := hcHistPt.hcwg.swapHotAndWait()
 	var bucketCounts []uint64
 	hcHistPt.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
@@ -371,9 +370,8 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	cpCounts := make([]uint64, len(hdp.BucketCounts))
 	copy(cpCounts, hdp.BucketCounts)
 	hdp.BucketCounts[0] = 10
-	hPt, ok = h.values.Load(alice.Equivalent())
+	hcHistPt, ok = h.values.Load(alice.Equivalent())
 	require.True(t, ok)
-	hcHistPt = hPt.(*hotColdHistogramPoint[int64])
 	readIdx = hcHistPt.hcwg.swapHotAndWait()
 	hcHistPt.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 	assert.Equal(

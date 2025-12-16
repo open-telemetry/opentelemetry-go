@@ -110,7 +110,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *histogramPoint[N] {
 		hPt := &histogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -124,7 +124,7 @@ func (s *deltaHistogram[N]) measure(
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
-	}).(*histogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -277,7 +277,7 @@ func (s *cumulativeHistogram[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *hotColdHistogramPoint[N] {
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -298,7 +298,7 @@ func (s *cumulativeHistogram[N]) measure(
 			},
 		}
 		return hPt
-	}).(*hotColdHistogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
