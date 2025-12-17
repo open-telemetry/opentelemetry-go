@@ -36,8 +36,9 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 		k = math.MaxInt32
 	}
 	return &FixedSizeReservoir{
-		storage:     newStorage(k),
-		nextTracker: newNextTracker(uint32(k)),
+		storage: newStorage(k),
+		// Above we ensure k is positive, and less than MaxInt32.
+		nextTracker: newNextTracker(uint32(k)), // nolint: gosec
 	}
 }
 
@@ -176,7 +177,9 @@ func (r *nextTracker) reset() {
 // increment and the current next value.
 func (r *nextTracker) incrementCount() (uint32, uint32) {
 	n := r.countAndNext.Add(1)
-	return uint32(n&((1<<32)-1) - 1), uint32(n >> 32)
+	// Both count and next are stored in the upper and lower 32 bits, and thus
+	// can't overflow.
+	return uint32(n&((1<<32)-1) - 1), uint32(n >> 32) // nolint: gosec
 }
 
 // incrementNext increments the next value.
