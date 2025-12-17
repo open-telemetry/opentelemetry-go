@@ -134,8 +134,8 @@ func newNextTracker(k int) *nextTracker {
 }
 
 type nextTracker struct {
-	// count is the number of measurement seen, and is in the lower 32 bits.
-	// once the reservoir has been filled, and is in the upper 32 bits.
+    // countAndNext holds the current counts in the lower 32 bits and the next
+    // value in the upper 32 bits.
 	countAndNext atomic.Uint64
 	// w is the largest random number in a distribution that is used to compute
 	// the next next.
@@ -143,7 +143,7 @@ type nextTracker struct {
 	// wMu ensures w is kept consistent with next during advance and reset.
 	wMu sync.Mutex
 	// k is the number of measurements that can be stored in the reservoir.
-	k int
+	k uint32
 }
 
 // reset resets r to the initial state.
@@ -168,13 +168,14 @@ func (r *nextTracker) reset() {
 	r.advance()
 }
 
-// returns the count before the increment and next value.
+// incrementCount increments the count. It returns the count before the
+// increment and the current next value.
 func (r *nextTracker) incrementCount() (uint64, uint64) {
 	n := r.countAndNext.Add(1)
 	return n&((1<<32)-1) - 1, n >> 32
 }
 
-// returns the count before the increment and next value.
+// incrementNext increments the next value.
 func (r *nextTracker) incrementNext(inc uint64) {
 	r.countAndNext.Add(inc << 32)
 }
