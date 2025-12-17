@@ -30,9 +30,12 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 	if k < 0 {
 		k = 0
 	}
+	if k > math.MaxUint32 {
+		k = math.MaxUint32
+	}
 	return &FixedSizeReservoir{
 		storage:     newStorage(k),
-		nextTracker: newNextTracker(k),
+		nextTracker: newNextTracker(uint32(k)),
 	}
 }
 
@@ -102,12 +105,11 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	// comparison of reservoir sampling algorithms.
 
 	count, next := r.incrementCount()
-	intCount := int(count) // nolint:gosec // count is at most 32 bits in length
-	if intCount < r.k {
-		r.store(ctx, intCount, t, n, a)
+	if count < r.k {
+		r.store(ctx, int(count), t, n, a)
 	} else if count == next {
 		// Overwrite a random existing measurement with the one offered.
-		idx := rand.IntN(r.k)
+		idx := rand.IntN(int(r.k))
 		r.store(ctx, idx, t, n, a)
 		r.wMu.Lock()
 		defer r.wMu.Unlock()
@@ -127,7 +129,7 @@ func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 	r.reset()
 }
 
-func newNextTracker(k int) *nextTracker {
+func newNextTracker(k uint32) *nextTracker {
 	nt := &nextTracker{k: k}
 	nt.reset()
 	return nt
@@ -152,7 +154,7 @@ func (r *nextTracker) reset() {
 	defer r.wMu.Unlock()
 	// This resets the number of exemplars known.
 	// Random index inserts should only happen after the storage is full.
-	r.setCountAndNext(0, uint64(r.k)) // nolint:gosec // we ensure k is 1 or greater.
+	r.setCountAndNext(0, r.k)
 
 	// Initial random number in the series used to generate r.next.
 	//
@@ -170,19 +172,19 @@ func (r *nextTracker) reset() {
 
 // incrementCount increments the count. It returns the count before the
 // increment and the current next value.
-func (r *nextTracker) incrementCount() (uint64, uint64) {
+func (r *nextTracker) incrementCount() (uint32, uint32) {
 	n := r.countAndNext.Add(1)
-	return n&((1<<32)-1) - 1, n >> 32
+	return uint32(n&((1<<32)-1) - 1), uint32(n >> 32)
 }
 
 // incrementNext increments the next value.
-func (r *nextTracker) incrementNext(inc uint64) {
-	r.countAndNext.Add(inc << 32)
+func (r *nextTracker) incrementNext(inc uint32) {
+	r.countAndNext.Add(uint64(inc) << 32)
 }
 
 // returns the count before the increment and next value.
-func (r *nextTracker) setCountAndNext(count, next uint64) {
-	r.countAndNext.Store(next<<32 + count)
+func (r *nextTracker) setCountAndNext(count, next uint32) {
+	r.countAndNext.Store(uint64(next)<<32 + uint64(count))
 }
 
 // advance updates the count at which the offered measurement will overwrite an
@@ -211,7 +213,7 @@ func (r *nextTracker) advance() {
 	//
 	// Important to note, the new r.next will always be at least 1 more than
 	// the last r.next.
-	r.incrementNext(uint64(math.Log(randomFloat64())/math.Log(1-r.w)) + 1)
+	r.incrementNext(uint32(math.Log(randomFloat64())/math.Log(1-r.w)) + 1)
 }
 
 // randomFloat64 returns, as a float64, a uniform pseudo-random number in the
