@@ -30,8 +30,10 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 	if k < 0 {
 		k = 0
 	}
-	if k > math.MaxUint32 {
-		k = math.MaxUint32
+	// Use math.MaxInt32 instead of math.MaxUint32 to prevent overflowing int
+	// on 32-bit systems.
+	if k > math.MaxInt32 {
+		k = math.MaxInt32
 	}
 	return &FixedSizeReservoir{
 		storage:     newStorage(k),
