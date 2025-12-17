@@ -245,3 +245,37 @@ func TestTracestateIsPassed(t *testing.T) {
 		})
 	}
 }
+
+func TestAlwaysRecordRootSampled(t *testing.T) {
+	sampler := AlwaysRecord(AlwaysSample())
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.ContextWithSpanContext(
+		t.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		}),
+	)
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
+		t.Error("Sampling decision should be RecordAndSample")
+	}
+}
+
+func TestAlwaysRecordRootNotSampled(t *testing.T) {
+	sampler := AlwaysRecord(NeverSample())
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	parentCtx := trace.ContextWithSpanContext(
+		t.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		}),
+	)
+	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordOnly {
+		t.Error("Sampling decision should be RecordOnly")
+	}
+}
