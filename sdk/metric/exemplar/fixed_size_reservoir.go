@@ -184,7 +184,7 @@ func (r *nextTracker) incrementNext(inc uint32) {
 	r.countAndNext.Add(uint64(inc) << 32)
 }
 
-// returns the count before the increment and next value.
+// setCountAndNext sets the count and next values.
 func (r *nextTracker) setCountAndNext(count, next uint32) {
 	r.countAndNext.Store(uint64(next)<<32 + uint64(count))
 }
