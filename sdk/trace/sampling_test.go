@@ -246,37 +246,50 @@ func TestTracestateIsPassed(t *testing.T) {
 	}
 }
 
-func TestAlwaysRecordRootSampled(t *testing.T) {
-	sampler := AlwaysRecord(AlwaysSample())
-	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.ContextWithSpanContext(
-		t.Context(),
-		trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled,
-		}),
-	)
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordAndSample {
-		t.Error("Sampling decision should be RecordAndSample")
+func TestAlwaysRecordSamplingDecision(t *testing.T) {
+	testCases := []struct {
+		name             string
+		rootSampler      Sampler
+		expectedDecision SamplingDecision
+	}{
+		{
+			name:             "when root sampler decision is RecordAndSample, AlwaysRecord returns RecordAndSample",
+			rootSampler:      AlwaysSample(),
+			expectedDecision: RecordAndSample,
+		},
+		{
+			name:             "when root sampler decision is Drop, AlwaysRecord returns RecordOnly",
+			rootSampler:      NeverSample(),
+			expectedDecision: RecordOnly,
+		},
+		{
+			name:             "when root sampler decision is RecordOnly, AlwaysRecord returns RecordOnly",
+			rootSampler:      RecordingOnly(),
+			expectedDecision: RecordOnly,
+		},
 	}
-}
 
-func TestAlwaysRecordRootNotSampled(t *testing.T) {
-	sampler := AlwaysRecord(NeverSample())
-	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-	parentCtx := trace.ContextWithSpanContext(
-		t.Context(),
-		trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled,
-		}),
-	)
-	if sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx}).Decision != RecordOnly {
-		t.Error("Sampling decision should be RecordOnly")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sampler := AlwaysRecord(tc.rootSampler)
+			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+			spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+			parentCtx := trace.ContextWithSpanContext(
+				t.Context(),
+				trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    traceID,
+					SpanID:     spanID,
+					TraceFlags: trace.FlagsSampled,
+				}),
+			)
+			samplingResult := sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx})
+			if samplingResult.Decision != tc.expectedDecision {
+				t.Errorf("Sampling decision should be %v, got %v instead",
+					tc.expectedDecision,
+					samplingResult.Decision,
+				)
+			}
+		})
 	}
 }
 
