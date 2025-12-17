@@ -295,17 +295,14 @@ type alwaysRecord struct {
 }
 
 func (ar alwaysRecord) ShouldSample(p SamplingParameters) SamplingResult {
-	rootSamplerSamplingDecision := ar.root.ShouldSample(p).Decision
-	if rootSamplerSamplingDecision == Drop {
+	rootSamplerSamplingResult := ar.root.ShouldSample(p)
+	if rootSamplerSamplingResult.Decision == Drop {
 		return SamplingResult{
 			Decision:   RecordOnly,
 			Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
 		}
 	}
-	return SamplingResult{
-		Decision:   rootSamplerSamplingDecision,
-		Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
-	}
+	return rootSamplerSamplingResult
 }
 
 func (ar alwaysRecord) Description() string {
