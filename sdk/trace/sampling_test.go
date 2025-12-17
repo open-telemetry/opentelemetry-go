@@ -279,3 +279,16 @@ func TestAlwaysRecordRootNotSampled(t *testing.T) {
 		t.Error("Sampling decision should be RecordOnly")
 	}
 }
+
+func TestAlwaysRecordDefaultDescription(t *testing.T) {
+	sampler := AlwaysRecord(NeverSample())
+
+	expectedDescription := fmt.Sprintf("AlwaysRecord{%s}", NeverSample().Description())
+
+	if sampler.Description() != expectedDescription {
+		t.Errorf("Sampler description should be %s, got '%s' instead",
+			expectedDescription,
+			sampler.Description(),
+		)
+	}
+}
