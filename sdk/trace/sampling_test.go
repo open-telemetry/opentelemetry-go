@@ -247,6 +247,9 @@ func TestTracestateIsPassed(t *testing.T) {
 }
 
 func TestAlwaysRecordSamplingDecision(t *testing.T) {
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+
 	testCases := []struct {
 		name             string
 		rootSampler      Sampler
@@ -272,8 +275,6 @@ func TestAlwaysRecordSamplingDecision(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sampler := AlwaysRecord(tc.rootSampler)
-			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-			spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 			parentCtx := trace.ContextWithSpanContext(
 				t.Context(),
 				trace.NewSpanContext(trace.SpanContextConfig{
