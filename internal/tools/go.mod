@@ -38,7 +38,7 @@ require (
 	github.com/MirrexOne/unqueryvet v1.3.0 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
-	github.com/alecthomas/chroma/v2 v2.21.0 // indirect
+	github.com/alecthomas/chroma/v2 v2.21.1 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
 	github.com/alexkohler/prealloc v1.0.0 // indirect
@@ -235,7 +235,7 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/telemetry v0.0.0-20251215142616-e75fd47794af // indirect
+	golang.org/x/telemetry v0.0.0-20251217172151-2adc8cf14124 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
