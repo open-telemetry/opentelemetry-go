@@ -306,5 +306,5 @@ func (ar alwaysRecord) ShouldSample(p SamplingParameters) SamplingResult {
 }
 
 func (ar alwaysRecord) Description() string {
-	return "AlwaysRecord{" + ar.root.Description() + "}"
+	return "AlwaysRecord{root:" + ar.root.Description() + "}"
 }
