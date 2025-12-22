@@ -7,13 +7,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
-	"sync"
-	"time"
 )
 
 const (
@@ -34,6 +36,22 @@ var (
 		New: func() any {
 			const n = 1
 			s := make([]metric.AddOption, 0, n)
+			return &s
+		},
+	}
+	attrsPool = &sync.Pool{
+		New: func() any {
+			const n = 1 + // component.name
+				1 + // component.type
+				1 // error.type
+			s := make([]attribute.KeyValue, 0, n)
+			return &s
+		},
+	}
+	recordOptPool = &sync.Pool{
+		New: func() any {
+			const n = 1
+			s := make([]metric.RecordOption, 0, n)
 			return &s
 		},
 	}
@@ -65,7 +83,16 @@ func GetComponentName(id int64) string {
 	return fmt.Sprintf("%s/%d", ComponentType, id)
 }
 
-// NewInstrumentation .
+func getAttrs(id int64) []attribute.KeyValue {
+	attrs := make([]attribute.KeyValue, 0, 2)
+	attrs = append(attrs,
+		semconv.OTelComponentName(GetComponentName(id)),
+		semconv.OTelComponentNameKey.String(ComponentType))
+
+	return attrs
+}
+
+// NewInstrumentation returns instrumentation for stdlog exporter
 func NewInstrumentation(id int64) (*Instrumentation, error) {
 	inst := &Instrumentation{}
 
@@ -98,11 +125,16 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	inst.attrs = getAttrs(id)
+	inst.addOpt = metric.WithAttributeSet(attribute.NewSet(inst.attrs...))
+	inst.recOpt = metric.WithAttributeSet(attribute.NewSet(inst.attrs...))
 	return inst, nil
 }
 
-func (i *Instrumentation) Export(ctx context.Context, count int64) ExportOp {
+// ExportLogs instruments the ExportLogs method of the exporter. It returns
+// an [ExportOp] that must have its [ExportOp.End] method called when the
+// ExportLogs method returns.
+func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 
 	addOpt := get[metric.AddOption](addOptPool)
@@ -119,6 +151,7 @@ func (i *Instrumentation) Export(ctx context.Context, count int64) ExportOp {
 	}
 }
 
+// ExportOp tracks the operation being observed by [Instrumentation.ExportLogs].
 type ExportOp struct {
 	count int64
 	ctx   context.Context
@@ -126,18 +159,71 @@ type ExportOp struct {
 	start time.Time
 }
 
-func (e *ExportOp) End(err error, count int64) {
+// End completes the observation of the operation being observed by a call to
+// [Instrumentation.ExportLogs].
+// Any error that is encountered is provided as err.
+//
+// If err is not nil, all logs will be recorded as failures unless error is of
+// type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
+// of successfully exported logs will be determined by inspecting the
+// RejectedItems field of the PartialSuccess.
+func (e *ExportOp) End(err error) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
 	e.inst.inflight.Add(e.ctx, e.count, *addOpt...)
+
+	success := successful(err, e.count)
+	e.inst.exported.Add(e.ctx, success, *addOpt...)
+
+	if err != nil {
+		attrs := get[attribute.KeyValue](attrsPool)
+		defer put(attrsPool, attrs)
+		*attrs = append(*attrs, e.inst.attrs...)
+		*attrs = append(*attrs, semconv.ErrorType(err))
+
+		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
+		*addOpt = append((*addOpt)[:0], o)
+		e.inst.exported.Add(e.ctx, e.count, *addOpt...)
+	}
+
+	recordOpt := get[metric.RecordOption](recordOptPool)
+	defer put(recordOptPool, recordOpt)
+
+	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
+	e.inst.duration.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 }
 
+func (i *Instrumentation) recordOption(err error) metric.RecordOption {
+	if err == nil {
+		return i.recOpt
+	}
+	attrs := get[attribute.KeyValue](attrsPool)
+	defer put(attrsPool, attrs)
+
+	*attrs = append(*attrs, i.attrs...)
+	*attrs = append(*attrs, semconv.ErrorType(err))
+	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
+}
+
+// successful returns the number of successfully exported logs out of the n
+// that were exported based on the provided error.
+//
+// If err is nil, n is returned. All logs were successfully exported.
+//
+// If err is not nil and not an [internal.PartialSuccess] error, 0 is returned.
+// It is assumed all logs failed to be exported.
+//
+// If err is an [internal.PartialSuccess] error, the number of successfully
+// exported logs is computed by subtracting the RejectedItems field from n. If
+// RejectedItems is negative, n is returned. If RejectedItems is greater than
+// n, 0 is returned.
 func successful(err error, n int64) int64 {
 	if err != nil {
-		return n
+		return n // All logs successfully exported.
 	}
+	// Splict rejected calculation so successful is inlineable.
 	return n - rejectedCount(n, err)
 }
 
@@ -147,6 +233,8 @@ var errPool = sync.Pool{
 	},
 }
 
+// rejectedCount returns how many out of the n logs exporter were rejected based on
+// the provided non-nil err.
 func rejectedCount(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
 	defer errPool.Put(ps)
