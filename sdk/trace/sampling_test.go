@@ -297,7 +297,7 @@ func TestAlwaysRecordSamplingDecision(t *testing.T) {
 func TestAlwaysRecordDefaultDescription(t *testing.T) {
 	sampler := AlwaysRecord(NeverSample())
 
-	expectedDescription := fmt.Sprintf("AlwaysRecord{%s}", NeverSample().Description())
+	expectedDescription := fmt.Sprintf("AlwaysRecord{root:%s}", NeverSample().Description())
 
 	if sampler.Description() != expectedDescription {
 		t.Errorf("Sampler description should be %s, got '%s' instead",
