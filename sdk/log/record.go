@@ -27,6 +27,10 @@ var logAttrDropped = sync.OnceFunc(func() {
 	global.Warn("limit reached: dropping log Record attributes")
 })
 
+var logKeyDuplicate = sync.OnceFunc(func() {
+	global.Warn("key duplication: dropping key-value pair")
+})
+
 // uniquePool is a pool of unique attributes used for attributes de-duplication.
 var uniquePool = sync.Pool{
 	New: func() any { return new([]log.KeyValue) },
@@ -233,7 +237,9 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		var drop int
 		if !r.allowDupKeys {
 			attrs, drop = dedup(attrs)
-			r.setDropped(drop)
+			if drop > 0 {
+				logKeyDuplicate()
+			}
 		}
 
 		attrs, drop := head(attrs, r.attributeCountLimit)
@@ -289,7 +295,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		if dropped > 0 {
 			attrs = make([]log.KeyValue, len(*unique))
 			copy(attrs, *unique)
-			r.addDropped(dropped)
+			logKeyDuplicate()
 		}
 	}
 
@@ -352,7 +358,9 @@ func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	r.setDropped(0)
 	if !r.allowDupKeys {
 		attrs, drop = dedup(attrs)
-		r.setDropped(drop)
+		if drop > 0 {
+			logKeyDuplicate()
+		}
 	}
 
 	attrs, drop = head(attrs, r.attributeCountLimit)
@@ -515,7 +523,9 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 			// Deduplicate then truncate.
 			// Do not do at the same time to avoid wasted truncation operations.
 			newKvs, dropped = dedup(kvs)
-			r.addDropped(dropped)
+			if dropped > 0 {
+				logKeyDuplicate()
+			}
 		} else {
 			newKvs = kvs
 		}
