@@ -8,17 +8,9 @@
 package processconv
 
 import (
-	"context"
-	"sync"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
 )
 
 // CPUModeAttr is an attribute conforming to the cpu.mode semantic conventions.
@@ -103,10 +95,10 @@ var (
 // the "process.context_switches" semantic conventions. It represents the number
 // of times the process has been context switched.
 type ContextSwitches struct {
-	metric.Int64Counter
+	metric.Int64ObservableCounter
 }
 
-var newContextSwitchesOpts = []metric.Int64CounterOption{
+var newContextSwitchesOpts = []metric.Int64ObservableCounterOption{
 	metric.WithDescription("Number of times the process has been context switched."),
 	metric.WithUnit("{context_switch}"),
 }
@@ -114,11 +106,11 @@ var newContextSwitchesOpts = []metric.Int64CounterOption{
 // NewContextSwitches returns a new ContextSwitches instrument.
 func NewContextSwitches(
 	m metric.Meter,
-	opt ...metric.Int64CounterOption,
+	opt ...metric.Int64ObservableCounterOption,
 ) (ContextSwitches, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContextSwitches{noop.Int64Counter{}}, nil
+		return ContextSwitches{noop.Int64ObservableCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -127,19 +119,19 @@ func NewContextSwitches(
 		opt = append(opt, newContextSwitchesOpts...)
 	}
 
-	i, err := m.Int64Counter(
+	i, err := m.Int64ObservableCounter(
 		"process.context_switches",
 		opt...,
 	)
 	if err != nil {
-	    return ContextSwitches{noop.Int64Counter{}}, err
+		return ContextSwitches{noop.Int64ObservableCounter{}}, err
 	}
 	return ContextSwitches{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContextSwitches) Inst() metric.Int64Counter {
-	return m.Int64Counter
+func (m ContextSwitches) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -155,52 +147,6 @@ func (ContextSwitches) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ContextSwitches) Description() string {
 	return "Number of times the process has been context switched."
-}
-
-// Add adds incr to the existing count for attrs.
-//
-// All additional attrs passed are included in the recorded value.
-func (m ContextSwitches) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m ContextSwitches) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Counter.Add(ctx, incr, *o...)
 }
 
 // AttrContextSwitchType returns an optional attribute for the
@@ -244,7 +190,7 @@ func NewCPUTime(
 		opt...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64ObservableCounter{}}, err
+		return CPUTime{noop.Float64ObservableCounter{}}, err
 	}
 	return CPUTime{i}, nil
 }
@@ -281,10 +227,10 @@ func (CPUTime) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
 // in process.cpu.time since the last measurement, divided by the elapsed time
 // and number of CPUs available to the process.
 type CPUUtilization struct {
-	metric.Int64Gauge
+	metric.Int64ObservableGauge
 }
 
-var newCPUUtilizationOpts = []metric.Int64GaugeOption{
+var newCPUUtilizationOpts = []metric.Int64ObservableGaugeOption{
 	metric.WithDescription("Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."),
 	metric.WithUnit("1"),
 }
@@ -292,11 +238,11 @@ var newCPUUtilizationOpts = []metric.Int64GaugeOption{
 // NewCPUUtilization returns a new CPUUtilization instrument.
 func NewCPUUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Int64ObservableGaugeOption,
 ) (CPUUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return CPUUtilization{noop.Int64Gauge{}}, nil
+		return CPUUtilization{noop.Int64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -305,19 +251,19 @@ func NewCPUUtilization(
 		opt = append(opt, newCPUUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Int64ObservableGauge(
 		"process.cpu.utilization",
 		opt...,
 	)
 	if err != nil {
-	    return CPUUtilization{noop.Int64Gauge{}}, err
+		return CPUUtilization{noop.Int64ObservableGauge{}}, err
 	}
 	return CPUUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m CPUUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m CPUUtilization) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -335,52 +281,6 @@ func (CPUUtilization) Description() string {
 	return "Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."
 }
 
-// Record records val to the current distribution for attrs.
-//
-// All additional attrs passed are included in the recorded value.
-func (m CPUUtilization) Record(
-	ctx context.Context,
-	val int64,
-	attrs ...attribute.KeyValue,
-) {
-	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
-		return
-	}
-
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64Gauge.Record(ctx, val, *o...)
-}
-
-// RecordSet records val to the current distribution for set.
-func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
-		return
-	}
-
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
-}
-
 // AttrCPUMode returns an optional attribute for the "cpu.mode" semantic
 // convention. It represents a process SHOULD be characterized *either* by data
 // points with no `mode` labels, *or only* data points with `mode` labels.
@@ -392,10 +292,10 @@ func (CPUUtilization) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
 // "process.disk.io" semantic conventions. It represents the disk bytes
 // transferred.
 type DiskIO struct {
-	metric.Int64Counter
+	metric.Int64ObservableCounter
 }
 
-var newDiskIOOpts = []metric.Int64CounterOption{
+var newDiskIOOpts = []metric.Int64ObservableCounterOption{
 	metric.WithDescription("Disk bytes transferred."),
 	metric.WithUnit("By"),
 }
@@ -403,11 +303,11 @@ var newDiskIOOpts = []metric.Int64CounterOption{
 // NewDiskIO returns a new DiskIO instrument.
 func NewDiskIO(
 	m metric.Meter,
-	opt ...metric.Int64CounterOption,
+	opt ...metric.Int64ObservableCounterOption,
 ) (DiskIO, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return DiskIO{noop.Int64Counter{}}, nil
+		return DiskIO{noop.Int64ObservableCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -416,19 +316,19 @@ func NewDiskIO(
 		opt = append(opt, newDiskIOOpts...)
 	}
 
-	i, err := m.Int64Counter(
+	i, err := m.Int64ObservableCounter(
 		"process.disk.io",
 		opt...,
 	)
 	if err != nil {
-	    return DiskIO{noop.Int64Counter{}}, err
+		return DiskIO{noop.Int64ObservableCounter{}}, err
 	}
 	return DiskIO{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m DiskIO) Inst() metric.Int64Counter {
-	return m.Int64Counter
+func (m DiskIO) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -446,52 +346,6 @@ func (DiskIO) Description() string {
 	return "Disk bytes transferred."
 }
 
-// Add adds incr to the existing count for attrs.
-//
-// All additional attrs passed are included in the recorded value.
-func (m DiskIO) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
 // AttrDiskIODirection returns an optional attribute for the "disk.io.direction"
 // semantic convention. It represents the disk IO operation direction.
 func (DiskIO) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
@@ -502,10 +356,10 @@ func (DiskIO) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
 // "process.memory.usage" semantic conventions. It represents the amount of
 // physical memory in use.
 type MemoryUsage struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
-var newMemoryUsageOpts = []metric.Int64UpDownCounterOption{
+var newMemoryUsageOpts = []metric.Int64ObservableUpDownCounterOption{
 	metric.WithDescription("The amount of physical memory in use."),
 	metric.WithUnit("By"),
 }
@@ -513,11 +367,11 @@ var newMemoryUsageOpts = []metric.Int64UpDownCounterOption{
 // NewMemoryUsage returns a new MemoryUsage instrument.
 func NewMemoryUsage(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (MemoryUsage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return MemoryUsage{noop.Int64UpDownCounter{}}, nil
+		return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -526,19 +380,19 @@ func NewMemoryUsage(
 		opt = append(opt, newMemoryUsageOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"process.memory.usage",
 		opt...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64UpDownCounter{}}, err
+		return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m MemoryUsage) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m MemoryUsage) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -556,48 +410,14 @@ func (MemoryUsage) Description() string {
 	return "The amount of physical memory in use."
 }
 
-// Add adds incr to the existing count for attrs.
-func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m MemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
 // MemoryVirtual is an instrument used to record metric values conforming to the
 // "process.memory.virtual" semantic conventions. It represents the amount of
 // committed virtual memory.
 type MemoryVirtual struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
-var newMemoryVirtualOpts = []metric.Int64UpDownCounterOption{
+var newMemoryVirtualOpts = []metric.Int64ObservableUpDownCounterOption{
 	metric.WithDescription("The amount of committed virtual memory."),
 	metric.WithUnit("By"),
 }
@@ -605,11 +425,11 @@ var newMemoryVirtualOpts = []metric.Int64UpDownCounterOption{
 // NewMemoryVirtual returns a new MemoryVirtual instrument.
 func NewMemoryVirtual(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (MemoryVirtual, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return MemoryVirtual{noop.Int64UpDownCounter{}}, nil
+		return MemoryVirtual{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -618,19 +438,19 @@ func NewMemoryVirtual(
 		opt = append(opt, newMemoryVirtualOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"process.memory.virtual",
 		opt...,
 	)
 	if err != nil {
-	    return MemoryVirtual{noop.Int64UpDownCounter{}}, err
+		return MemoryVirtual{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryVirtual{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m MemoryVirtual) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m MemoryVirtual) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -648,48 +468,14 @@ func (MemoryVirtual) Description() string {
 	return "The amount of committed virtual memory."
 }
 
-// Add adds incr to the existing count for attrs.
-func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m MemoryVirtual) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
 // NetworkIO is an instrument used to record metric values conforming to the
 // "process.network.io" semantic conventions. It represents the network bytes
 // transferred.
 type NetworkIO struct {
-	metric.Int64Counter
+	metric.Int64ObservableCounter
 }
 
-var newNetworkIOOpts = []metric.Int64CounterOption{
+var newNetworkIOOpts = []metric.Int64ObservableCounterOption{
 	metric.WithDescription("Network bytes transferred."),
 	metric.WithUnit("By"),
 }
@@ -697,11 +483,11 @@ var newNetworkIOOpts = []metric.Int64CounterOption{
 // NewNetworkIO returns a new NetworkIO instrument.
 func NewNetworkIO(
 	m metric.Meter,
-	opt ...metric.Int64CounterOption,
+	opt ...metric.Int64ObservableCounterOption,
 ) (NetworkIO, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NetworkIO{noop.Int64Counter{}}, nil
+		return NetworkIO{noop.Int64ObservableCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -710,19 +496,19 @@ func NewNetworkIO(
 		opt = append(opt, newNetworkIOOpts...)
 	}
 
-	i, err := m.Int64Counter(
+	i, err := m.Int64ObservableCounter(
 		"process.network.io",
 		opt...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64Counter{}}, err
+		return NetworkIO{noop.Int64ObservableCounter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NetworkIO) Inst() metric.Int64Counter {
-	return m.Int64Counter
+func (m NetworkIO) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -740,52 +526,6 @@ func (NetworkIO) Description() string {
 	return "Network bytes transferred."
 }
 
-// Add adds incr to the existing count for attrs.
-//
-// All additional attrs passed are included in the recorded value.
-func (m NetworkIO) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
 // AttrNetworkIODirection returns an optional attribute for the
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
@@ -797,10 +537,10 @@ func (NetworkIO) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.Ke
 // conforming to the "process.open_file_descriptor.count" semantic conventions.
 // It represents the number of file descriptors in use by the process.
 type OpenFileDescriptorCount struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
-var newOpenFileDescriptorCountOpts = []metric.Int64UpDownCounterOption{
+var newOpenFileDescriptorCountOpts = []metric.Int64ObservableUpDownCounterOption{
 	metric.WithDescription("Number of file descriptors in use by the process."),
 	metric.WithUnit("{file_descriptor}"),
 }
@@ -808,11 +548,11 @@ var newOpenFileDescriptorCountOpts = []metric.Int64UpDownCounterOption{
 // NewOpenFileDescriptorCount returns a new OpenFileDescriptorCount instrument.
 func NewOpenFileDescriptorCount(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (OpenFileDescriptorCount, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return OpenFileDescriptorCount{noop.Int64UpDownCounter{}}, nil
+		return OpenFileDescriptorCount{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -821,19 +561,19 @@ func NewOpenFileDescriptorCount(
 		opt = append(opt, newOpenFileDescriptorCountOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"process.open_file_descriptor.count",
 		opt...,
 	)
 	if err != nil {
-	    return OpenFileDescriptorCount{noop.Int64UpDownCounter{}}, err
+		return OpenFileDescriptorCount{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return OpenFileDescriptorCount{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m OpenFileDescriptorCount) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m OpenFileDescriptorCount) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -851,48 +591,14 @@ func (OpenFileDescriptorCount) Description() string {
 	return "Number of file descriptors in use by the process."
 }
 
-// Add adds incr to the existing count for attrs.
-func (m OpenFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m OpenFileDescriptorCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
 // PagingFaults is an instrument used to record metric values conforming to the
 // "process.paging.faults" semantic conventions. It represents the number of page
 // faults the process has made.
 type PagingFaults struct {
-	metric.Int64Counter
+	metric.Int64ObservableCounter
 }
 
-var newPagingFaultsOpts = []metric.Int64CounterOption{
+var newPagingFaultsOpts = []metric.Int64ObservableCounterOption{
 	metric.WithDescription("Number of page faults the process has made."),
 	metric.WithUnit("{fault}"),
 }
@@ -900,11 +606,11 @@ var newPagingFaultsOpts = []metric.Int64CounterOption{
 // NewPagingFaults returns a new PagingFaults instrument.
 func NewPagingFaults(
 	m metric.Meter,
-	opt ...metric.Int64CounterOption,
+	opt ...metric.Int64ObservableCounterOption,
 ) (PagingFaults, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PagingFaults{noop.Int64Counter{}}, nil
+		return PagingFaults{noop.Int64ObservableCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -913,19 +619,19 @@ func NewPagingFaults(
 		opt = append(opt, newPagingFaultsOpts...)
 	}
 
-	i, err := m.Int64Counter(
+	i, err := m.Int64ObservableCounter(
 		"process.paging.faults",
 		opt...,
 	)
 	if err != nil {
-	    return PagingFaults{noop.Int64Counter{}}, err
+		return PagingFaults{noop.Int64ObservableCounter{}}, err
 	}
 	return PagingFaults{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PagingFaults) Inst() metric.Int64Counter {
-	return m.Int64Counter
+func (m PagingFaults) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -943,52 +649,6 @@ func (PagingFaults) Description() string {
 	return "Number of page faults the process has made."
 }
 
-// Add adds incr to the existing count for attrs.
-//
-// All additional attrs passed are included in the recorded value.
-func (m PagingFaults) Add(
-	ctx context.Context,
-	incr int64,
-	attrs ...attribute.KeyValue,
-) {
-	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(
-		*o,
-		metric.WithAttributes(
-			attrs...,
-		),
-	)
-
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64Counter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Counter.Add(ctx, incr, *o...)
-}
-
 // AttrSystemPagingFaultType returns an optional attribute for the
 // "system.paging.fault.type" semantic convention. It represents the paging fault
 // type.
@@ -1000,10 +660,10 @@ func (PagingFaults) AttrSystemPagingFaultType(val SystemPagingFaultTypeAttr) att
 // "process.thread.count" semantic conventions. It represents the process threads
 // count.
 type ThreadCount struct {
-	metric.Int64UpDownCounter
+	metric.Int64ObservableUpDownCounter
 }
 
-var newThreadCountOpts = []metric.Int64UpDownCounterOption{
+var newThreadCountOpts = []metric.Int64ObservableUpDownCounterOption{
 	metric.WithDescription("Process threads count."),
 	metric.WithUnit("{thread}"),
 }
@@ -1011,11 +671,11 @@ var newThreadCountOpts = []metric.Int64UpDownCounterOption{
 // NewThreadCount returns a new ThreadCount instrument.
 func NewThreadCount(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Int64ObservableUpDownCounterOption,
 ) (ThreadCount, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ThreadCount{noop.Int64UpDownCounter{}}, nil
+		return ThreadCount{noop.Int64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -1024,19 +684,19 @@ func NewThreadCount(
 		opt = append(opt, newThreadCountOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Int64ObservableUpDownCounter(
 		"process.thread.count",
 		opt...,
 	)
 	if err != nil {
-	    return ThreadCount{noop.Int64UpDownCounter{}}, err
+		return ThreadCount{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return ThreadCount{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ThreadCount) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ThreadCount) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1054,48 +714,14 @@ func (ThreadCount) Description() string {
 	return "Process threads count."
 }
 
-// Add adds incr to the existing count for attrs.
-func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
-// AddSet adds incr to the existing count for set.
-func (m ThreadCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
-		return
-	}
-
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
-}
-
 // Uptime is an instrument used to record metric values conforming to the
 // "process.uptime" semantic conventions. It represents the time the process has
 // been running.
 type Uptime struct {
-	metric.Float64Gauge
+	metric.Float64ObservableGauge
 }
 
-var newUptimeOpts = []metric.Float64GaugeOption{
+var newUptimeOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("The time the process has been running."),
 	metric.WithUnit("s"),
 }
@@ -1103,11 +729,11 @@ var newUptimeOpts = []metric.Float64GaugeOption{
 // NewUptime returns a new Uptime instrument.
 func NewUptime(
 	m metric.Meter,
-	opt ...metric.Float64GaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (Uptime, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return Uptime{noop.Float64Gauge{}}, nil
+		return Uptime{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -1116,19 +742,19 @@ func NewUptime(
 		opt = append(opt, newUptimeOpts...)
 	}
 
-	i, err := m.Float64Gauge(
+	i, err := m.Float64ObservableGauge(
 		"process.uptime",
 		opt...,
 	)
 	if err != nil {
-	    return Uptime{noop.Float64Gauge{}}, err
+		return Uptime{noop.Float64ObservableGauge{}}, err
 	}
 	return Uptime{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m Uptime) Inst() metric.Float64Gauge {
-	return m.Float64Gauge
+func (m Uptime) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1144,46 +770,4 @@ func (Uptime) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (Uptime) Description() string {
 	return "The time the process has been running."
-}
-
-// Record records val to the current distribution for attrs.
-//
-// Instrumentations SHOULD use a gauge with type `double` and measure uptime in
-// seconds as a floating point number with the highest precision available.
-// The actual accuracy would depend on the instrumentation and operating system.
-func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
-	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
-		return
-	}
-
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Float64Gauge.Record(ctx, val, *o...)
-}
-
-// RecordSet records val to the current distribution for set.
-//
-// Instrumentations SHOULD use a gauge with type `double` and measure uptime in
-// seconds as a floating point number with the highest precision available.
-// The actual accuracy would depend on the instrumentation and operating system.
-func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
-	if set.Len() == 0 {
-		m.Float64Gauge.Record(ctx, val)
-		return
-	}
-
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
-
-	*o = append(*o, metric.WithAttributeSet(set))
-	m.Float64Gauge.Record(ctx, val, *o...)
 }
