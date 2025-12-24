@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `AlwaysRecord` sampler in `go.opentelemetry.io/otel/sdk/trace`. (#7724)
+
 ### Changed
 
 - `Exporter` in `go.opentelemetry.io/otel/exporter/prometheus` ignores metrics with the scope `go.opentelemetry.io/contrib/bridges/prometheus`.
