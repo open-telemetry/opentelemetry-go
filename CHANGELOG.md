@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix bad log message when key-value pairs are dropped because of key duplication in `go.opentelemetry.io/otel/sdk/log`. (#7662)
+- Fix `DroppedAttributes` in `go.opentelemetry.io/otel/sdk/log` to not count the non-attribute key-value pairs dropped because of key duplication. (#7662)
+- Fix `setDropped` in `go.opentelemetry.io/otel/sdk/log` to log dropped keys only when the input quantity is greater than zero. (#7662)
 ### Changed
 
 - `Exporter` in `go.opentelemetry.io/otel/exporter/prometheus` ignores metrics with the scope `go.opentelemetry.io/contrib/bridges/prometheus`.
