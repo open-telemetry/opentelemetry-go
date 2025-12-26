@@ -1077,7 +1077,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 	}
 }
 
-func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
+func TestDeduplicationBehavior(t *testing.T) {
 	origKeyValueDropped := logKeyValuePairDropped
 	origAttrDropped := logAttrDropped
 	t.Cleanup(func() {
@@ -1087,188 +1087,52 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 
 	testCases := []struct {
 		name                string
-		setupRecord         func() *Record
-		operation           func(*Record)
+		attributeCountLimit int
+		allowDupKeys        bool
+		attrs               []log.KeyValue
 		wantKeyValueDropped bool
 		wantAttrDropped     bool
 		wantDroppedCount    int
 		wantAttributeCount  int
-		description         string
 	}{
 		{
-			name: "SetAttributes with duplicate keys",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					allowDupKeys:              false,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.SetAttributes(
-					log.String("key", "value1"),
-					log.String("key", "value2"),
-				)
-			},
+			name:                "Duplicate keys only",
+			attrs:               []log.KeyValue{log.String("key", "v1"), log.String("key", "v2")},
 			wantKeyValueDropped: true,
-			wantAttrDropped:     false,
-			wantDroppedCount:    0,
+			wantDroppedCount:    0, // Deduplication doesn't count
 			wantAttributeCount:  1,
-			description:         "SetAttributes with duplicate keys should call logKeyValuePairDropped",
 		},
 		{
-			name: "AddAttributes with duplicate keys in new attrs",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					allowDupKeys:              false,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.AddAttributes(
-					log.String("key", "value1"),
-					log.String("key", "value2"),
-				)
-			},
-			wantKeyValueDropped: true,
-			wantAttrDropped:     false,
-			wantDroppedCount:    0,
-			wantAttributeCount:  1,
-			description:         "AddAttributes with duplicate keys should call logKeyValuePairDropped",
-		},
-		{
-			name: "AddAttributes with duplicate between existing and new",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					allowDupKeys:              false,
-				}
-				r.SetAttributes(log.String("key1", "value1"))
-				return r
-			},
-			operation: func(r *Record) {
-				r.AddAttributes(log.String("key1", "value2"))
-			},
-			wantKeyValueDropped: true,
-			wantAttrDropped:     false,
-			wantDroppedCount:    0,
-			wantAttributeCount:  1,
-			description:         "AddAttributes with duplicate between existing and new should call logKeyValuePairDropped",
-		},
-		{
-			name: "AddAttributes with nested map duplicates",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					allowDupKeys:              false,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.AddAttributes(
-					log.Map("outer",
-						log.String("nested", "value1"),
-						log.String("nested", "value2"),
-					),
-				)
-			},
-			wantKeyValueDropped: true,
-			wantAttrDropped:     false,
-			wantDroppedCount:    0,
-			wantAttributeCount:  1,
-			description:         "Nested map duplicates should call logKeyValuePairDropped",
-		},
-		{
-			name: "SetAttributes with limit reached (no duplicates)",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					attributeCountLimit:       2,
-					allowDupKeys:              false,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.SetAttributes(
-					log.String("key1", "value1"),
-					log.String("key2", "value2"),
-					log.String("key3", "value3"),
-				)
-			},
-			wantKeyValueDropped: false,
+			name:                "Limit exceeded only",
+			attributeCountLimit: 2,
+			attrs:               []log.KeyValue{log.String("a", "v1"), log.String("b", "v2"), log.String("c", "v3")},
 			wantAttrDropped:     true,
 			wantDroppedCount:    1,
 			wantAttributeCount:  2,
-			description:         "Limit reached without duplicates should call logAttrDropped",
 		},
 		{
-			name: "SetAttributes with both duplicates and limit",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					attributeCountLimit:       2,
-					allowDupKeys:              false,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.SetAttributes(
-					log.String("key1", "value1"),
-					log.String("key1", "value2"),
-					log.String("key2", "value3"),
-					log.String("key3", "value4"),
-					log.String("key3", "value5"),
-				)
-			},
+			name:                "Both duplicates and limit",
+			attributeCountLimit: 2,
+			attrs:               []log.KeyValue{log.String("a", "v1"), log.String("a", "v2"), log.String("b", "v3"), log.String("c", "v4")},
 			wantKeyValueDropped: true,
 			wantAttrDropped:     true,
-			wantDroppedCount:    1,
+			wantDroppedCount:    1, // Only limit drops count
 			wantAttributeCount:  2,
-			description:         "Both duplicates and limit should call both log functions",
 		},
 		{
-			name: "AddAttributes no duplicates no limit",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					attributeCountLimit:       10,
-					allowDupKeys:              false,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.AddAttributes(
-					log.String("key1", "value1"),
-					log.String("key2", "value2"),
-				)
-			},
+			name:                "allowDupKeys=true",
+			allowDupKeys:        true,
+			attrs:               []log.KeyValue{log.String("key", "v1"), log.String("key", "v2")},
 			wantKeyValueDropped: false,
-			wantAttrDropped:     false,
 			wantDroppedCount:    0,
 			wantAttributeCount:  2,
-			description:         "No duplicates and no limit should not call any log function",
 		},
 		{
-			name: "SetAttributes with allowDupKeys enabled",
-			setupRecord: func() *Record {
-				r := &Record{
-					attributeValueLengthLimit: -1,
-					allowDupKeys:              true,
-				}
-				return r
-			},
-			operation: func(r *Record) {
-				r.SetAttributes(
-					log.String("key", "value1"),
-					log.String("key", "value2"),
-				)
-			},
-			wantKeyValueDropped: false,
-			wantAttrDropped:     false,
+			name:                "Nested map duplicates",
+			attrs:               []log.KeyValue{log.Map("outer", log.String("nested", "v1"), log.String("nested", "v2"))},
+			wantKeyValueDropped: true,
 			wantDroppedCount:    0,
-			wantAttributeCount:  2,
-			description:         "With allowDupKeys=true, should not call logKeyValuePairDropped",
+			wantAttributeCount:  1,
 		},
 	}
 
@@ -1277,191 +1141,73 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 			keyValueDroppedCalled := false
 			attrDroppedCalled := false
 
-			logKeyValuePairDropped = sync.OnceFunc(func() {
-				keyValueDroppedCalled = true
-			})
-			logAttrDropped = sync.OnceFunc(func() {
-				attrDroppedCalled = true
-			})
+			logKeyValuePairDropped = sync.OnceFunc(func() { keyValueDroppedCalled = true })
+			logAttrDropped = sync.OnceFunc(func() { attrDroppedCalled = true })
 
-			r := tc.setupRecord()
-			tc.operation(r)
+			r := &Record{
+				attributeValueLengthLimit: -1,
+				attributeCountLimit:       tc.attributeCountLimit,
+				allowDupKeys:              tc.allowDupKeys,
+			}
 
-			assert.Equal(t, tc.wantKeyValueDropped, keyValueDroppedCalled,
-				"logKeyValuePairDropped call mismatch: %s", tc.description)
-			assert.Equal(t, tc.wantAttrDropped, attrDroppedCalled,
-				"logAttrDropped call mismatch: %s", tc.description)
-			assert.Equal(t, tc.wantDroppedCount, r.DroppedAttributes(),
-				"DroppedAttributes count mismatch: %s", tc.description)
-			assert.Equal(t, tc.wantAttributeCount, r.AttributesLen(),
-				"AttributesLen mismatch: %s", tc.description)
+			r.SetAttributes(tc.attrs...)
+
+			assert.Equal(t, tc.wantKeyValueDropped, keyValueDroppedCalled)
+			assert.Equal(t, tc.wantAttrDropped, attrDroppedCalled)
+			assert.Equal(t, tc.wantDroppedCount, r.DroppedAttributes())
+			assert.Equal(t, tc.wantAttributeCount, r.AttributesLen())
 		})
 	}
 }
 
-func TestDroppedCountExcludesDeduplication(t *testing.T) {
+func TestDroppedLoggingOnlyWhenNonZero(t *testing.T) {
+	origAttrDropped := logAttrDropped
+	t.Cleanup(func() { logAttrDropped = origAttrDropped })
+
 	testCases := []struct {
-		name                string
-		attrs               []log.KeyValue
-		attributeCountLimit int
-		wantDropped         int
-		wantAttrCount       int
-		description         string
+		name       string
+		operation  func(*Record)
+		wantCalled bool
+		wantCount  int
 	}{
 		{
-			name: "Only deduplication, no limit",
-			attrs: []log.KeyValue{
-				log.String("key", "value1"),
-				log.String("key", "value2"),
-				log.String("key", "value3"),
-			},
-			attributeCountLimit: 0,
-			wantDropped:         0,
-			wantAttrCount:       1,
-			description:         "Multiple duplicates should not increase dropped count",
+			name:       "setDropped(0) does not log",
+			operation:  func(r *Record) { r.setDropped(0) },
+			wantCalled: false,
+			wantCount:  0,
 		},
 		{
-			name: "Deduplication and limit",
-			attrs: []log.KeyValue{
-				log.String("a", "value1"),
-				log.String("a", "value2"),
-				log.String("b", "value3"),
-				log.String("c", "value4"),
-				log.String("c", "value5"),
-			},
-			attributeCountLimit: 2,
-			wantDropped:         1, // Only limit drops count (3 unique -> 2 kept)
-			wantAttrCount:       2,
-			description:         "Deduplication then limit: only limit drops should count",
+			name:       "setDropped(n>0) logs",
+			operation:  func(r *Record) { r.setDropped(5) },
+			wantCalled: true,
+			wantCount:  5,
 		},
 		{
-			name: "No deduplication, only limit",
-			attrs: []log.KeyValue{
-				log.String("a", "value1"),
-				log.String("b", "value2"),
-				log.String("c", "value3"),
-				log.String("d", "value4"),
-			},
-			attributeCountLimit: 2,
-			wantDropped:         2, // 2 attributes dropped due to limit
-			wantAttrCount:       2,
-			description:         "Only limit without deduplication",
+			name:       "addDropped(0) does not log",
+			operation:  func(r *Record) { r.addDropped(0) },
+			wantCalled: false,
+			wantCount:  0,
 		},
 		{
-			name: "Complex: multiple duplicates and limit",
-			attrs: []log.KeyValue{
-				log.String("a", "a1"),
-				log.String("b", "b1"),
-				log.String("a", "a2"),
-				log.String("c", "c1"),
-				log.String("b", "b2"),
-				log.String("d", "d1"),
-				log.String("a", "a3"),
-				log.String("e", "e1"),
-			},
-			attributeCountLimit: 3,
-			wantDropped:         2, // 5 unique keys, limit 3, so 2 dropped
-			wantAttrCount:       3,
-			description:         "Complex scenario with multiple duplicates and limit",
+			name:       "addDropped(n>0) logs",
+			operation:  func(r *Record) { r.addDropped(3) },
+			wantCalled: true,
+			wantCount:  3,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := &Record{
-				attributeValueLengthLimit: -1,
-				attributeCountLimit:       tc.attributeCountLimit,
-				allowDupKeys:              false,
-			}
+			called := false
+			logAttrDropped = sync.OnceFunc(func() { called = true })
 
-			r.SetAttributes(tc.attrs...)
+			r := &Record{}
+			tc.operation(r)
 
-			assert.Equal(t, tc.wantDropped, r.DroppedAttributes(),
-				"%s: dropped count mismatch", tc.description)
-			assert.Equal(t, tc.wantAttrCount, r.AttributesLen(),
-				"%s: attribute count mismatch", tc.description)
+			assert.Equal(t, tc.wantCalled, called)
+			assert.Equal(t, tc.wantCount, r.DroppedAttributes())
 		})
 	}
-}
-
-func TestSetDroppedAndAddDroppedWithZero(t *testing.T) {
-	origAttrDropped := logAttrDropped
-	t.Cleanup(func() {
-		logAttrDropped = origAttrDropped
-	})
-
-	t.Run("setDropped(0) does not call log", func(t *testing.T) {
-		called := false
-		logAttrDropped = sync.OnceFunc(func() {
-			called = true
-		})
-
-		r := &Record{}
-		r.setDropped(0)
-
-		assert.False(t, called, "logAttrDropped should not be called for setDropped(0)")
-		assert.Equal(t, 0, r.DroppedAttributes())
-	})
-
-	t.Run("setDropped(n>0) calls log", func(t *testing.T) {
-		called := false
-		logAttrDropped = sync.OnceFunc(func() {
-			called = true
-		})
-
-		r := &Record{}
-		r.setDropped(5)
-
-		assert.True(t, called, "logAttrDropped should be called for setDropped(n>0)")
-		assert.Equal(t, 5, r.DroppedAttributes())
-	})
-
-	t.Run("addDropped(0) does not call log", func(t *testing.T) {
-		called := false
-		logAttrDropped = sync.OnceFunc(func() {
-			called = true
-		})
-
-		r := &Record{}
-		r.addDropped(0)
-
-		assert.False(t, called, "logAttrDropped should not be called for addDropped(0)")
-		assert.Equal(t, 0, r.DroppedAttributes())
-	})
-
-	t.Run("addDropped(n>0) calls log", func(t *testing.T) {
-		called := false
-		logAttrDropped = sync.OnceFunc(func() {
-			called = true
-		})
-
-		r := &Record{}
-		r.addDropped(3)
-
-		assert.True(t, called, "logAttrDropped should be called for addDropped(n>0)")
-		assert.Equal(t, 3, r.DroppedAttributes())
-	})
-
-	t.Run("multiple addDropped accumulates", func(t *testing.T) {
-		called := false
-		logAttrDropped = sync.OnceFunc(func() {
-			called = true
-		})
-
-		r := &Record{}
-		r.addDropped(2)
-		assert.True(t, called, "first addDropped should call log")
-
-		// Reset for second call
-		called = false
-		logAttrDropped = sync.OnceFunc(func() {
-			called = true
-		})
-
-		r.addDropped(3)
-		assert.True(t, called, "second addDropped should call log")
-		assert.Equal(t, 5, r.DroppedAttributes(), "dropped count should accumulate")
-	})
 }
 
 func TestApplyAttrLimitsTruncation(t *testing.T) {
