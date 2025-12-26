@@ -556,11 +556,11 @@ func TestRecordDroppedAttributes(t *testing.T) {
 		assert.False(t, called, "non-dropped attributed logged")
 
 		r.AddAttributes(attrs...)
-		expectedDropped := 0
+		wantDropped := 0
 		if i > 1 {
-			expectedDropped = 1
+			wantDropped = 1
 		}
-		assert.Equalf(t, expectedDropped, r.DroppedAttributes(), "%d: AddAttributes", i)
+		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: AddAttributes", i)
 		if i > 1 {
 			assert.True(t, called, "dropped attributes not logged")
 		}
@@ -569,18 +569,18 @@ func TestRecordDroppedAttributes(t *testing.T) {
 		logAttrDropped = func() { called = true }
 
 		r.AddAttributes(attrs...)
-		expectedDropped = 0
+		wantDropped = 0
 		if i > 1 {
-			expectedDropped = 2
+			wantDropped = 2
 		}
-		assert.Equalf(t, expectedDropped, r.DroppedAttributes(), "%d: second AddAttributes", i)
+		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: second AddAttributes", i)
 
 		r.SetAttributes(attrs...)
-		expectedDropped = 0
+		wantDropped = 0
 		if i > 1 {
-			expectedDropped = 1
+			wantDropped = 1
 		}
-		assert.Equalf(t, expectedDropped, r.DroppedAttributes(), "%d: SetAttributes", i)
+		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: SetAttributes", i)
 	}
 }
 
@@ -1086,14 +1086,14 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 	})
 
 	testCases := []struct {
-		name                   string
-		setupRecord            func() *Record
-		operation              func(*Record)
-		expectKeyValueDropped  bool
-		expectAttrDropped      bool
-		expectedDroppedCount   int
-		expectedAttributeCount int
-		description            string
+		name                string
+		setupRecord         func() *Record
+		operation           func(*Record)
+		wantKeyValueDropped bool
+		wantAttrDropped     bool
+		wantDroppedCount    int
+		wantAttributeCount  int
+		description         string
 	}{
 		{
 			name: "SetAttributes with duplicate keys",
@@ -1110,11 +1110,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					log.String("key", "value2"),
 				)
 			},
-			expectKeyValueDropped:  true,
-			expectAttrDropped:      false,
-			expectedDroppedCount:   0,
-			expectedAttributeCount: 1,
-			description:            "SetAttributes with duplicate keys should call logKeyValuePairDropped",
+			wantKeyValueDropped: true,
+			wantAttrDropped:     false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  1,
+			description:         "SetAttributes with duplicate keys should call logKeyValuePairDropped",
 		},
 		{
 			name: "AddAttributes with duplicate keys in new attrs",
@@ -1131,11 +1131,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					log.String("key", "value2"),
 				)
 			},
-			expectKeyValueDropped:  true,
-			expectAttrDropped:      false,
-			expectedDroppedCount:   0,
-			expectedAttributeCount: 1,
-			description:            "AddAttributes with duplicate keys should call logKeyValuePairDropped",
+			wantKeyValueDropped: true,
+			wantAttrDropped:     false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  1,
+			description:         "AddAttributes with duplicate keys should call logKeyValuePairDropped",
 		},
 		{
 			name: "AddAttributes with duplicate between existing and new",
@@ -1150,11 +1150,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 			operation: func(r *Record) {
 				r.AddAttributes(log.String("key1", "value2"))
 			},
-			expectKeyValueDropped:  true,
-			expectAttrDropped:      false,
-			expectedDroppedCount:   0,
-			expectedAttributeCount: 1,
-			description:            "AddAttributes with duplicate between existing and new should call logKeyValuePairDropped",
+			wantKeyValueDropped: true,
+			wantAttrDropped:     false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  1,
+			description:         "AddAttributes with duplicate between existing and new should call logKeyValuePairDropped",
 		},
 		{
 			name: "AddAttributes with nested map duplicates",
@@ -1173,11 +1173,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					),
 				)
 			},
-			expectKeyValueDropped:  true,
-			expectAttrDropped:      false,
-			expectedDroppedCount:   0,
-			expectedAttributeCount: 1,
-			description:            "Nested map duplicates should call logKeyValuePairDropped",
+			wantKeyValueDropped: true,
+			wantAttrDropped:     false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  1,
+			description:         "Nested map duplicates should call logKeyValuePairDropped",
 		},
 		{
 			name: "SetAttributes with limit reached (no duplicates)",
@@ -1196,11 +1196,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					log.String("key3", "value3"),
 				)
 			},
-			expectKeyValueDropped:  false,
-			expectAttrDropped:      true,
-			expectedDroppedCount:   1,
-			expectedAttributeCount: 2,
-			description:            "Limit reached without duplicates should call logAttrDropped",
+			wantKeyValueDropped: false,
+			wantAttrDropped:     true,
+			wantDroppedCount:    1,
+			wantAttributeCount:  2,
+			description:         "Limit reached without duplicates should call logAttrDropped",
 		},
 		{
 			name: "SetAttributes with both duplicates and limit",
@@ -1221,11 +1221,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					log.String("key3", "value5"),
 				)
 			},
-			expectKeyValueDropped:  true,
-			expectAttrDropped:      true,
-			expectedDroppedCount:   1,
-			expectedAttributeCount: 2,
-			description:            "Both duplicates and limit should call both log functions",
+			wantKeyValueDropped: true,
+			wantAttrDropped:     true,
+			wantDroppedCount:    1,
+			wantAttributeCount:  2,
+			description:         "Both duplicates and limit should call both log functions",
 		},
 		{
 			name: "AddAttributes no duplicates no limit",
@@ -1243,11 +1243,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					log.String("key2", "value2"),
 				)
 			},
-			expectKeyValueDropped:  false,
-			expectAttrDropped:      false,
-			expectedDroppedCount:   0,
-			expectedAttributeCount: 2,
-			description:            "No duplicates and no limit should not call any log function",
+			wantKeyValueDropped: false,
+			wantAttrDropped:     false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  2,
+			description:         "No duplicates and no limit should not call any log function",
 		},
 		{
 			name: "SetAttributes with allowDupKeys enabled",
@@ -1264,11 +1264,11 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 					log.String("key", "value2"),
 				)
 			},
-			expectKeyValueDropped:  false,
-			expectAttrDropped:      false,
-			expectedDroppedCount:   0,
-			expectedAttributeCount: 2,
-			description:            "With allowDupKeys=true, should not call logKeyValuePairDropped",
+			wantKeyValueDropped: false,
+			wantAttrDropped:     false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  2,
+			description:         "With allowDupKeys=true, should not call logKeyValuePairDropped",
 		},
 	}
 
@@ -1287,13 +1287,13 @@ func TestLogKeyValuePairDroppedOnDeduplication(t *testing.T) {
 			r := tc.setupRecord()
 			tc.operation(r)
 
-			assert.Equal(t, tc.expectKeyValueDropped, keyValueDroppedCalled,
+			assert.Equal(t, tc.wantKeyValueDropped, keyValueDroppedCalled,
 				"logKeyValuePairDropped call mismatch: %s", tc.description)
-			assert.Equal(t, tc.expectAttrDropped, attrDroppedCalled,
+			assert.Equal(t, tc.wantAttrDropped, attrDroppedCalled,
 				"logAttrDropped call mismatch: %s", tc.description)
-			assert.Equal(t, tc.expectedDroppedCount, r.DroppedAttributes(),
+			assert.Equal(t, tc.wantDroppedCount, r.DroppedAttributes(),
 				"DroppedAttributes count mismatch: %s", tc.description)
-			assert.Equal(t, tc.expectedAttributeCount, r.AttributesLen(),
+			assert.Equal(t, tc.wantAttributeCount, r.AttributesLen(),
 				"AttributesLen mismatch: %s", tc.description)
 		})
 	}
@@ -1304,8 +1304,8 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 		name                string
 		attrs               []log.KeyValue
 		attributeCountLimit int
-		expectedDropped     int
-		expectedAttrCount   int
+		wantDropped         int
+		wantAttrCount       int
 		description         string
 	}{
 		{
@@ -1316,8 +1316,8 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 				log.String("key", "value3"),
 			},
 			attributeCountLimit: 0,
-			expectedDropped:     0,
-			expectedAttrCount:   1,
+			wantDropped:         0,
+			wantAttrCount:       1,
 			description:         "Multiple duplicates should not increase dropped count",
 		},
 		{
@@ -1330,8 +1330,8 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 				log.String("c", "value5"),
 			},
 			attributeCountLimit: 2,
-			expectedDropped:     1, // Only limit drops count (3 unique -> 2 kept)
-			expectedAttrCount:   2,
+			wantDropped:         1, // Only limit drops count (3 unique -> 2 kept)
+			wantAttrCount:       2,
 			description:         "Deduplication then limit: only limit drops should count",
 		},
 		{
@@ -1343,8 +1343,8 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 				log.String("d", "value4"),
 			},
 			attributeCountLimit: 2,
-			expectedDropped:     2, // 2 attributes dropped due to limit
-			expectedAttrCount:   2,
+			wantDropped:         2, // 2 attributes dropped due to limit
+			wantAttrCount:       2,
 			description:         "Only limit without deduplication",
 		},
 		{
@@ -1360,8 +1360,8 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 				log.String("e", "e1"),
 			},
 			attributeCountLimit: 3,
-			expectedDropped:     2, // 5 unique keys, limit 3, so 2 dropped
-			expectedAttrCount:   3,
+			wantDropped:         2, // 5 unique keys, limit 3, so 2 dropped
+			wantAttrCount:       3,
 			description:         "Complex scenario with multiple duplicates and limit",
 		},
 	}
@@ -1376,9 +1376,9 @@ func TestDroppedCountExcludesDeduplication(t *testing.T) {
 
 			r.SetAttributes(tc.attrs...)
 
-			assert.Equal(t, tc.expectedDropped, r.DroppedAttributes(),
+			assert.Equal(t, tc.wantDropped, r.DroppedAttributes(),
 				"%s: dropped count mismatch", tc.description)
-			assert.Equal(t, tc.expectedAttrCount, r.AttributesLen(),
+			assert.Equal(t, tc.wantAttrCount, r.AttributesLen(),
 				"%s: attribute count mismatch", tc.description)
 		})
 	}
