@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 - Add experimental self-observability log exporter metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
-  Check the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x` package documentation for more information. (#TODO)
+  Check the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x` package documentation for more information. (#7749)
 
 ### Changed
 
