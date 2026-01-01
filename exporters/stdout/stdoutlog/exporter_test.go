@@ -570,7 +570,7 @@ func TestExporterExportObservability(t *testing.T) {
 			}
 			require.Len(t, metrics.ScopeMetrics, 1)
 			assert.Equal(t, expectedMetrics.Scope, metrics.ScopeMetrics[0].Scope)
-			require.Len(t, expectedMetrics.Metrics, 2) // TODO: delete. prev was 3
+			require.Len(t, expectedMetrics.Metrics, 2)
 			metricdatatest.AssertEqual(
 				t,
 				expectedMetrics.Metrics[0],
