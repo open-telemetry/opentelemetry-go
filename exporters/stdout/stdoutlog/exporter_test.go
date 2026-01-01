@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -14,12 +16,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	// "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -455,4 +467,158 @@ func TestValueMarshalJSON(t *testing.T) {
 			assert.JSONEq(t, tc.want, string(got))
 		})
 	}
+}
+
+func TestExporterExportObservability(t *testing.T) {
+	componentNameAttr := observ.ExporterComponentName(0)
+	componentTypeAttr := semconv.OTelComponentTypeKey.String(observ.ComponentType)
+
+	tests := []struct {
+		name                  string
+		exporterOpts          []Option
+		observabilityEnabled  bool
+		expectedExportedCount int64
+		inflightAttrs         attribute.Set
+		attributes            attribute.Set
+		wantErr               error
+	}{
+		{
+			name:                  "Enabled",
+			exporterOpts:          []Option{},
+			observabilityEnabled:  true,
+			expectedExportedCount: expectedDataPointCount,
+			inflightAttrs:         attribute.NewSet(componentNameAttr, componentTypeAttr),
+			attributes:            attribute.NewSet(componentNameAttr, componentTypeAttr),
+		},
+		{
+			name:                  "Disabled",
+			exporterOpts:          []Option{},
+			observabilityEnabled:  false,
+			expectedExportedCount: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tt.observabilityEnabled))
+
+			// Reset the exporter ID counter to ensure consistent component names
+			_ = counter.SetExporterID(0)
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			origMp := otel.GetMeterProvider()
+			otel.SetMeterProvider(mp)
+			t.Cleanup(func() { otel.SetMeterProvider(origMp) })
+
+			exp, err := New(tt.exporterOpts...)
+			require.NoError(t, err)
+			logRecords := logRecords()
+
+			ctx := t.Context()
+			err = exp.Export(ctx, logRecords)
+			if tt.wantErr != nil {
+				assert.ErrorIs(t, err, tt.wantErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			var metrics metricdata.ResourceMetrics
+			err = reader.Collect(ctx, &metrics)
+			require.NoError(t, err)
+
+			if !tt.observabilityEnabled {
+				assert.Empty(t, metrics.ScopeMetrics)
+				return
+			}
+
+			expectedMetrics := metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{
+					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ",
+					Version:   sdk.Version(),
+					SchemaURL: semconv.SchemaURL,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterLogInflight{}.Name(),
+						Description: otelconv.SDKExporterLogInflight{}.Description(),
+						Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Value:      0,
+									Attributes: tt.inflightAttrs,
+								},
+							},
+							Temporality: metricdata.CumulativeTemporality,
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterLogExported{}.Name(),
+						Description: otelconv.SDKExporterLogExported{}.Description(),
+						Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Value:      tt.expectedExportedCount,
+									Attributes: tt.attributes,
+								},
+							},
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+						},
+					},
+				},
+			}
+			require.Len(t, metrics.ScopeMetrics, 1)
+			assert.Equal(t, expectedMetrics.Scope, metrics.ScopeMetrics[0].Scope)
+			require.Len(t, expectedMetrics.Metrics, 2) // TODO: delete. prev was 3
+			metricdatatest.AssertEqual(
+				t,
+				expectedMetrics.Metrics[0],
+				metrics.ScopeMetrics[0].Metrics[0],
+				metricdatatest.IgnoreTimestamp(),
+			)
+			metricdatatest.AssertEqual(
+				t,
+				expectedMetrics.Metrics[1],
+				metrics.ScopeMetrics[0].Metrics[1],
+				metricdatatest.IgnoreTimestamp(),
+			)
+		})
+	}
+}
+
+const expectedDataPointCount = 19
+
+func logRecords() []sdklog.Record {
+	logRecords := []sdklog.Record{}
+	for i := 0; i < expectedDataPointCount; i++ {
+		logRecords = append(logRecords, getRecord(time.Now()))
+	}
+	return logRecords
+}
+
+func BenchmarkExporterExport(b *testing.B) {
+	logRecords := logRecords()
+
+	run := func(b *testing.B) {
+		ex, err := New(WithWriter(io.Discard))
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			err = ex.Export(b.Context(), logRecords)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
 }

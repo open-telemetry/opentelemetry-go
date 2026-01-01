@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -18,6 +20,8 @@ var _ log.Exporter = &Exporter{}
 type Exporter struct {
 	encoder    atomic.Pointer[json.Encoder]
 	timestamps bool
+
+	inst *observ.Instrumentation
 }
 
 // New creates an [Exporter].
@@ -34,11 +38,17 @@ func New(options ...Option) (*Exporter, error) {
 	}
 	e.encoder.Store(enc)
 
-	return &e, nil
+	var err error
+	e.inst, err = observ.NewInstrumentation(counter.NextExporterID())
+	return &e, err
 }
 
 // Export exports log records to writer.
-func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
+func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
+	if e.inst != nil {
+		op := e.inst.ExportLogs(ctx, int64(len(records)))
+		defer func() { op.End(err) }()
+	}
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
