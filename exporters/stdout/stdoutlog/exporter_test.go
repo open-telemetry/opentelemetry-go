@@ -18,11 +18,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	// "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
@@ -534,7 +533,7 @@ func TestExporterExportObservability(t *testing.T) {
 			expectedMetrics := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ",
-					Version:   sdk.Version(),
+					Version:   internal.Version,
 					SchemaURL: semconv.SchemaURL,
 				},
 				Metrics: []metricdata.Metrics{
