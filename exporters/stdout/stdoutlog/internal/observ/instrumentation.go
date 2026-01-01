@@ -140,19 +140,19 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp 
 	start := time.Now()
 	i.inflight.Add(ctx, count, i.addOpts...)
 	return ExportOp{
-		ctx:     ctx,
-		start:   start,
-		nTraces: count,
-		inst:    i,
+		ctx:   ctx,
+		start: start,
+		nLogs: count,
+		inst:  i,
 	}
 }
 
 // ExportOp is an in-progress ExportLogs operation.
 type ExportOp struct {
-	ctx     context.Context
-	start   time.Time
-	nTraces int64
-	inst    *Instrumentation
+	ctx   context.Context
+	start time.Time
+	nLogs int64
+	inst  *Instrumentation
 }
 
 // End ends the ExportLogs operation, recording its duration.
@@ -161,9 +161,9 @@ type ExportOp struct {
 // it is added to metrics as attribute.
 func (e ExportOp) End(err error) {
 	durationSeconds := time.Since(e.start).Seconds()
-	e.inst.inflight.Add(e.ctx, -e.nTraces, e.inst.addOpts...)
+	e.inst.inflight.Add(e.ctx, -e.nLogs, e.inst.addOpts...)
 	if err == nil { // short circuit in case of success to avoid allocations
-		e.inst.exported.Inst().Add(e.ctx, e.nTraces, e.inst.addOpts...)
+		e.inst.exported.Inst().Add(e.ctx, e.nLogs, e.inst.addOpts...)
 		e.inst.duration.Inst().Record(e.ctx, durationSeconds, e.inst.recordOpts...)
 		return
 	}
@@ -184,6 +184,6 @@ func (e ExportOp) End(err error) {
 	*addOpts = append(*addOpts, attrOpt)
 	*recordOpts = append(*recordOpts, attrOpt)
 
-	e.inst.exported.Inst().Add(e.ctx, e.nTraces, *addOpts...)
+	e.inst.exported.Inst().Add(e.ctx, e.nLogs, *addOpts...)
 	e.inst.duration.Inst().Record(e.ctx, durationSeconds, *recordOpts...)
 }

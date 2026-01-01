@@ -485,7 +485,7 @@ func TestExporterExportObservability(t *testing.T) {
 			name:                  "Enabled",
 			exporterOpts:          []Option{},
 			observabilityEnabled:  true,
-			expectedExportedCount: expectedDataPointCount,
+			expectedExportedCount: expectedLogCount,
 			inflightAttrs:         attribute.NewSet(componentNameAttr, componentTypeAttr),
 			attributes:            attribute.NewSet(componentNameAttr, componentTypeAttr),
 		},
@@ -587,11 +587,11 @@ func TestExporterExportObservability(t *testing.T) {
 	}
 }
 
-const expectedDataPointCount = 19
+const expectedLogCount = 19
 
 func logRecords() []sdklog.Record {
 	logRecords := []sdklog.Record{}
-	for i := 0; i < expectedDataPointCount; i++ {
+	for i := 0; i < expectedLogCount; i++ {
 		logRecords = append(logRecords, getRecord(time.Now()))
 	}
 	return logRecords

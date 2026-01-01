@@ -31,7 +31,7 @@ func setupTestMeterProvider(t *testing.T) *testSetup {
 	t.Helper()
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	// drop metric reader metrics as we are only testing for stdoutmetric exporter
+	// drop metric reader metrics as we are only testing for stdoutlog exporter
 	dropReaderMetrics := sdkmetric.NewView(
 		sdkmetric.Instrument{
 			Scope: instrumentation.Scope{Name: "go.opentelemetry.io/otel/sdk/metric/internal/observ"},
@@ -171,8 +171,8 @@ func TestInstrumentationExportLogs(t *testing.T) {
 	op1 := setup.em.ExportLogs(ctx, 2)
 	op2 := setup.em.ExportLogs(ctx, 3)
 	op3 := setup.em.ExportLogs(ctx, 1)
-	totalMetrics := int64(6)
-	checkInflight(t, collectMetrics(t, setup), inflight(dPt(exporterSet(), totalMetrics)))
+	totalLogs := int64(6)
+	checkInflight(t, collectMetrics(t, setup), inflight(dPt(exporterSet(), totalLogs)))
 
 	op2.End(nil)
 	op1.End(errExport)
@@ -195,7 +195,7 @@ func TestInstrumentationExportLogs(t *testing.T) {
 	)
 }
 
-func BenchmarkExportMetrics(b *testing.B) {
+func BenchmarkExportLogs(b *testing.B) {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	orig := otel.GetMeterProvider()
 	b.Cleanup(func() {
