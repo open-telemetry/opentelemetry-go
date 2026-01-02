@@ -1,7 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package observ
+// Package observ provides observability metrics for OTLP log exporters.
+// This is an experimental feature controlled by the x.Observability feature flag.
+package observ // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
 
 import (
 	"context"
@@ -9,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -29,6 +33,11 @@ const (
 	// it uses the Go package prefixed type name to ensure uniqueness and
 	// identity.
 	ComponentType = "go.opentelemetry.io/otel/exporters/stdout/stdoutlog.Exporter"
+
+	// Version is the current version of this instrumentation.
+	//
+	// This matches the version of the exporter.
+	Version = internal.Version
 )
 
 var (
@@ -92,18 +101,26 @@ func getAttrs(id int64) []attribute.KeyValue {
 	return attrs
 }
 
-// NewInstrumentation returns instrumentation for stdlog exporter
+// NewInstrumentation returns instrumentation for stdlog exporter.
 func NewInstrumentation(id int64) (*Instrumentation, error) {
+	if !x.Observability.Enabled() {
+		return nil, nil
+	}
+
 	inst := &Instrumentation{}
 
 	mp := otel.GetMeterProvider()
-	m := mp.Meter(ScopeName)
+	m := mp.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
 
 	var err error
 
 	inflight, e := otelconv.NewSDKExporterLogInflight(m)
 	if e != nil {
-		e = fmt.Errorf("failed to create the inflight metirc %w", e)
+		e = fmt.Errorf("failed to create the inflight metric %w", e)
 		err = errors.Join(err, e)
 	}
 	inst.inflight = inflight.Inst()
@@ -167,25 +184,27 @@ type ExportOp struct {
 // type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
 // of successfully exported logs will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
-func (e *ExportOp) End(err error) {
+func (e ExportOp) End(err error) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.inflight.Add(e.ctx, e.count, *addOpt...)
+	e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
 
 	success := successful(err, e.count)
 	e.inst.exported.Add(e.ctx, success, *addOpt...)
 
 	if err != nil {
+		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
 		*attrs = append(*attrs, semconv.ErrorType(err))
 
 		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
+
 		*addOpt = append((*addOpt)[:0], o)
-		e.inst.exported.Add(e.ctx, e.count, *addOpt...)
+		e.inst.exported.Add(e.ctx, e.count-success, *addOpt...)
 	}
 
 	recordOpt := get[metric.RecordOption](recordOptPool)
@@ -220,10 +239,10 @@ func (i *Instrumentation) recordOption(err error) metric.RecordOption {
 // RejectedItems is negative, n is returned. If RejectedItems is greater than
 // n, 0 is returned.
 func successful(err error, n int64) int64 {
-	if err != nil {
+	if err == nil {
 		return n // All logs successfully exported.
 	}
-	// Splict rejected calculation so successful is inlineable.
+	// Split rejected calculation so successful is inlineable.
 	return n - rejectedCount(n, err)
 }
 
@@ -239,8 +258,10 @@ func rejectedCount(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
 	defer errPool.Put(ps)
 
+	// check for partial success
 	if errors.As(err, ps) {
 		return min(max(ps.RejectedItems, 0), n)
 	}
+	// all logs exporter
 	return n
 }
