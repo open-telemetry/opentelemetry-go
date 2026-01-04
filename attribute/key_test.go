@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+
 func TestDefined(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
@@ -64,6 +65,11 @@ func TestEmit(t *testing.T) {
 			want: "true",
 		},
 		{
+			name: `test Key.Emit() can emit a string representing self.BOOLSLICE`,
+			v:    attribute.BoolSliceValue([]bool{true, false, true}),
+			want: `[true,false,true]`,
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.INT64SLICE`,
 			v:    attribute.Int64SliceValue([]int64{1, 42}),
 			want: `[1,42]`,
@@ -95,7 +101,6 @@ func TestEmit(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			// proto: func (v attribute.Value) Emit() string {
 			have := testcase.v.Emit()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -103,3 +108,4 @@ func TestEmit(t *testing.T) {
 		})
 	}
 }
+
