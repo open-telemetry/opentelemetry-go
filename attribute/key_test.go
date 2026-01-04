@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-
 func TestDefined(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
@@ -101,6 +100,7 @@ func TestEmit(t *testing.T) {
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
+			// proto: func (v attribute.Value) Emit() string {
 			have := testcase.v.Emit()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
@@ -108,4 +108,3 @@ func TestEmit(t *testing.T) {
 		})
 	}
 }
-
