@@ -59,8 +59,8 @@ Currently, this project supports the following environments.
 | Ubuntu   | 1.24       | 386          |
 | Ubuntu   | 1.25       | arm64        |
 | Ubuntu   | 1.24       | arm64        |
-| macOS 13 | 1.25       | amd64        |
-| macOS 13 | 1.24       | amd64        |
+| macOS    | 1.25       | amd64        |
+| macOS    | 1.24       | amd64        |
 | macOS    | 1.25       | arm64        |
 | macOS    | 1.24       | arm64        |
 | Windows  | 1.25       | amd64        |

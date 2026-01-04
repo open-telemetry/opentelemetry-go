@@ -81,117 +81,127 @@ func benchSyncViews(sc trace.SpanContext, views ...View) func(*testing.B) {
 	expRdr := NewManualReader(WithAggregationSelector(exponentialAggregationSelector))
 	expProvider := NewMeterProvider(WithReader(expRdr), WithView(views...))
 	expMeter := expProvider.Meter("benchSyncViews")
+	// Precompute histogram values so they are distributed equally to buckets.
+	histogramBuckets := DefaultAggregationSelector(InstrumentKindHistogram).(AggregationExplicitBucketHistogram).Boundaries
+	histogramObservations := make([]float64, len(histogramBuckets))
+	for i, bucket := range histogramBuckets {
+		histogramObservations[i] = bucket + 1
+	}
 	return func(b *testing.B) {
 		ctx := trace.ContextWithSpanContext(b.Context(), sc)
 		iCtr, err := meter.Int64Counter("int64-counter")
 		assert.NoError(b, err)
 		b.Run("Int64Counter", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
-				return func() { iCtr.Add(ctx, 1, o...) }
+				return func(int) { iCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		fCtr, err := meter.Float64Counter("float64-counter")
 		assert.NoError(b, err)
 		b.Run("Float64Counter", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
-				return func() { fCtr.Add(ctx, 1, o...) }
+				return func(int) { fCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		iUDCtr, err := meter.Int64UpDownCounter("int64-up-down-counter")
 		assert.NoError(b, err)
 		b.Run("Int64UpDownCounter", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
-				return func() { iUDCtr.Add(ctx, 1, o...) }
+				return func(int) { iUDCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		fUDCtr, err := meter.Float64UpDownCounter("float64-up-down-counter")
 		assert.NoError(b, err)
 		b.Run("Float64UpDownCounter", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.AddOption{metric.WithAttributeSet(s)}
-				return func() { fUDCtr.Add(ctx, 1, o...) }
+				return func(int) { fUDCtr.Add(ctx, 1, o...) }
 			}
 		}()))
 
 		iGauge, err := meter.Int64Gauge("int64-gauge")
 		assert.NoError(b, err)
 		b.Run("Int64Gauge", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { iGauge.Record(ctx, 1, o...) }
+				return func(int) { iGauge.Record(ctx, 1, o...) }
 			}
 		}()))
 
 		fGauge, err := meter.Float64Gauge("float64-gauge")
 		assert.NoError(b, err)
 		b.Run("Float64Gauge", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { fGauge.Record(ctx, 1, o...) }
+				return func(int) { fGauge.Record(ctx, 1, o...) }
 			}
 		}()))
 
 		iHist, err := meter.Int64Histogram("int64-histogram")
 		assert.NoError(b, err)
 		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { iHist.Record(ctx, 1, o...) }
+				return func(i int) { iHist.Record(ctx, int64(histogramObservations[i%len(histogramObservations)]), o...) }
 			}
 		}()))
 
 		fHist, err := meter.Float64Histogram("float64-histogram")
 		assert.NoError(b, err)
 		b.Run("Float64Histogram", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(i int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { fHist.Record(ctx, 1, o...) }
+				return func(i int) { fHist.Record(ctx, histogramObservations[i%len(histogramObservations)], o...) }
 			}
 		}()))
 
 		expIHist, err := expMeter.Int64Histogram("exponential-int64-histogram")
 		assert.NoError(b, err)
 		b.Run("ExponentialInt64Histogram", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { expIHist.Record(ctx, 1, o...) }
+				return func(int) { expIHist.Record(ctx, 1, o...) }
 			}
 		}()))
 
 		expFHist, err := expMeter.Float64Histogram("exponential-float64-histogram")
 		assert.NoError(b, err)
 		b.Run("ExponentialFloat64Histogram", benchMeasAttrs(func() measF {
-			return func(s attribute.Set) func() {
+			return func(s attribute.Set) func(int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
-				return func() { expFHist.Record(ctx, 1, o...) }
+				return func(int) { expFHist.Record(ctx, 1, o...) }
 			}
 		}()))
 	}
 }
 
-type measF func(s attribute.Set) func()
+type measF func(s attribute.Set) func(i int)
 
 func benchMeasAttrs(meas measF) func(*testing.B) {
 	return func(b *testing.B) {
 		b.Run("Attributes/0", func(b *testing.B) {
 			f := meas(*attribute.EmptySet())
 			b.RunParallel(func(pb *testing.PB) {
+				i := 0
 				for pb.Next() {
-					f()
+					f(i)
+					i++
 				}
 			})
 		})
 		b.Run("Attributes/1", func(b *testing.B) {
 			f := meas(attribute.NewSet(attribute.Bool("K", true)))
 			b.RunParallel(func(pb *testing.PB) {
+				i := 0
 				for pb.Next() {
-					f()
+					f(i)
+					i++
 				}
 			})
 		})
@@ -204,8 +214,10 @@ func benchMeasAttrs(meas measF) func(*testing.B) {
 			}
 			f := meas(attribute.NewSet(attrs...))
 			b.RunParallel(func(pb *testing.PB) {
+				i := 0
 				for pb.Next() {
-					f()
+					f(i)
+					i++
 				}
 			})
 		})

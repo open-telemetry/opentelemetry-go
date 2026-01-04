@@ -797,6 +797,51 @@ func TestMultiScopes(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestBridgeScopeIgnored(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+		WithRegisterer(registry),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+
+	fooCounter, err := provider.Meter(bridgeScopeName, otelmetric.WithInstrumentationVersion("v0.1.0")).
+		Int64Counter(
+			"foo",
+			otelmetric.WithUnit("s"),
+			otelmetric.WithDescription("meter foo counter"))
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
+
+	file, err := os.Open("testdata/just_target_info.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, handledError, errBridgeNotSupported)
+}
+
 func TestDuplicateMetrics(t *testing.T) {
 	ab := attribute.NewSet(attribute.String("A", "B"))
 	withAB := otelmetric.WithAttributeSet(ab)

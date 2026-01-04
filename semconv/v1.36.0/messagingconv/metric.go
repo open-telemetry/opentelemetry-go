@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package messagingconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "messaging" namespace.
 package messagingconv
 
@@ -111,7 +111,7 @@ func NewClientConsumedMessages(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConsumedMessages{noop.Int64Counter{}}, err
+		return ClientConsumedMessages{noop.Int64Counter{}}, err
 	}
 	return ClientConsumedMessages{i}, nil
 }
@@ -289,7 +289,7 @@ func NewClientOperationDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientOperationDuration{noop.Float64Histogram{}}, err
+		return ClientOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientOperationDuration{i}, nil
 }
@@ -364,6 +364,7 @@ func (m ClientOperationDuration) Record(
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -464,7 +465,7 @@ func NewClientSentMessages(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientSentMessages{noop.Int64Counter{}}, err
+		return ClientSentMessages{noop.Int64Counter{}}, err
 	}
 	return ClientSentMessages{i}, nil
 }
@@ -619,7 +620,7 @@ func NewProcessDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ProcessDuration{noop.Float64Histogram{}}, err
+		return ProcessDuration{noop.Float64Histogram{}}, err
 	}
 	return ProcessDuration{i}, nil
 }
@@ -694,6 +695,7 @@ func (m ProcessDuration) Record(
 func (m ProcessDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
