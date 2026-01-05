@@ -79,12 +79,12 @@ func TestEmit(t *testing.T) {
 			want: "42",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.INT`,
+			name: `test Key.Emit() can representing an int value`,
 			v:    attribute.IntValue(7),
 			want: "7",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.INTSLICE`,
+			name: `test Key.Emit() can represent an []int value`,
 			v:    attribute.IntSliceValue([]int{1, 2, 3}),
 			want: `[1,2,3]`,
 		},
