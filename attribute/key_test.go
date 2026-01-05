@@ -66,7 +66,7 @@ func TestEmit(t *testing.T) {
 		{
 			name: `test Key.Emit() can emit a string representing self.BOOLSLICE`,
 			v:    attribute.BoolSliceValue([]bool{true, false, true}),
-			want: `[true,false,true]`,
+			want: `[true false true]`,
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.INT64SLICE`,
