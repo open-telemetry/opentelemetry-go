@@ -476,10 +476,12 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	if recovered := recover(); recovered != nil {
 		// Record but don't stop the panic.
 		defer panic(recovered)
+		recoveredStr := fmt.Sprint(recovered)
+
 		opts := []trace.EventOption{
 			trace.WithAttributes(
 				semconv.ExceptionType(typeStr(recovered)),
-				semconv.ExceptionMessage(fmt.Sprint(recovered)),
+				semconv.ExceptionMessage(recoveredStr),
 			),
 		}
 
@@ -487,6 +489,10 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 			opts = append(opts, trace.WithAttributes(
 				semconv.ExceptionStacktrace(recordStackTrace()),
 			))
+		}
+
+		if config.ErrorStatusOnPanic() {
+			s.SetStatus(codes.Error, recoveredStr)
 		}
 
 		s.addEvent(semconv.ExceptionEventName, opts...)
@@ -562,6 +568,10 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 		opts = append(opts, trace.WithAttributes(
 			semconv.ExceptionStacktrace(recordStackTrace()),
 		))
+	}
+
+	if c.ErrorStatus() {
+		s.SetStatus(codes.Error, err.Error())
 	}
 
 	s.addEvent(semconv.ExceptionEventName, opts...)

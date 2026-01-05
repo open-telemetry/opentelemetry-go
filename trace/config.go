@@ -56,12 +56,13 @@ func (fn tracerOptionFunc) apply(cfg TracerConfig) TracerConfig {
 
 // SpanConfig is a group of options for a Span.
 type SpanConfig struct {
-	attributes []attribute.KeyValue
-	timestamp  time.Time
-	links      []Link
-	newRoot    bool
-	spanKind   SpanKind
-	stackTrace bool
+	attributes         []attribute.KeyValue
+	timestamp          time.Time
+	links              []Link
+	newRoot            bool
+	spanKind           SpanKind
+	stackTrace         bool
+	errorStatusOnPanic bool
 }
 
 // Attributes describe the associated qualities of a Span.
@@ -96,6 +97,11 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 	return cfg.spanKind
 }
 
+// ErrorStatusOnPanic checks whether setting error status on panic is enabled.
+func (cfg *SpanConfig) ErrorStatusOnPanic() bool {
+	return cfg.errorStatusOnPanic
+}
+
 // NewSpanStartConfig applies all the options to a returned SpanConfig.
 // No validation is performed on the returned SpanConfig (e.g. no uniqueness
 // checking or bounding of data), it is left to the SDK to perform this
@@ -126,9 +132,9 @@ type SpanStartOption interface {
 	applySpanStart(SpanConfig) SpanConfig
 }
 
-type spanOptionFunc func(SpanConfig) SpanConfig
+type spanStartOptionFunc func(SpanConfig) SpanConfig
 
-func (fn spanOptionFunc) applySpanStart(cfg SpanConfig) SpanConfig {
+func (fn spanStartOptionFunc) applySpanStart(cfg SpanConfig) SpanConfig {
 	return fn(cfg)
 }
 
@@ -138,11 +144,18 @@ type SpanEndOption interface {
 	applySpanEnd(SpanConfig) SpanConfig
 }
 
+type spanEndOptionFunc func(config SpanConfig) SpanConfig
+
+func (fn spanEndOptionFunc) applySpanEnd(cfg SpanConfig) SpanConfig {
+	return fn(cfg)
+}
+
 // EventConfig is a group of options for an Event.
 type EventConfig struct {
-	attributes []attribute.KeyValue
-	timestamp  time.Time
-	stackTrace bool
+	attributes  []attribute.KeyValue
+	timestamp   time.Time
+	stackTrace  bool
+	errorStatus bool
 }
 
 // Attributes describe the associated qualities of an Event.
@@ -158,6 +171,11 @@ func (cfg *EventConfig) Timestamp() time.Time {
 // StackTrace reports whether stack trace capturing is enabled.
 func (cfg *EventConfig) StackTrace() bool {
 	return cfg.stackTrace
+}
+
+// ErrorStatus checks whether setting error status is enabled.
+func (cfg *EventConfig) ErrorStatus() bool {
+	return cfg.errorStatus
 }
 
 // NewEventConfig applies all the EventOptions to a returned EventConfig. If no
@@ -178,6 +196,12 @@ func NewEventConfig(options ...EventOption) EventConfig {
 // EventOption applies span event options to an EventConfig.
 type EventOption interface {
 	applyEvent(EventConfig) EventConfig
+}
+
+type eventOptionFunc func(EventConfig) EventConfig
+
+func (fn eventOptionFunc) applyEvent(cfg EventConfig) EventConfig {
+	return fn(cfg)
 }
 
 // SpanOption are options that can be used at both the beginning and end of a span.
@@ -270,10 +294,26 @@ func WithStackTrace(b bool) SpanEndEventOption {
 	return stackTraceOption(b)
 }
 
+// WithStatus sets the flag to set span's status to error.
+func WithStatus() EventOption {
+	return eventOptionFunc(func(cfg EventConfig) EventConfig {
+		cfg.errorStatus = true
+		return cfg
+	})
+}
+
+// WithStatusOnPanic sets the flag to set span's status to error if panic is occurred.
+func WithStatusOnPanic() SpanEndOption {
+	return spanEndOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.errorStatusOnPanic = true
+		return cfg
+	})
+}
+
 // WithLinks adds links to a Span. The links are added to the existing Span
 // links, i.e. this does not overwrite. Links with invalid span context are ignored.
 func WithLinks(links ...Link) SpanStartOption {
-	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+	return spanStartOptionFunc(func(cfg SpanConfig) SpanConfig {
 		cfg.links = append(cfg.links, links...)
 		return cfg
 	})
@@ -283,7 +323,7 @@ func WithLinks(links ...Link) SpanStartOption {
 // existing parent span context will be ignored when defining the Span's trace
 // identifiers.
 func WithNewRoot() SpanStartOption {
-	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+	return spanStartOptionFunc(func(cfg SpanConfig) SpanConfig {
 		cfg.newRoot = true
 		return cfg
 	})
@@ -291,7 +331,7 @@ func WithNewRoot() SpanStartOption {
 
 // WithSpanKind sets the SpanKind of a Span.
 func WithSpanKind(kind SpanKind) SpanStartOption {
-	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+	return spanStartOptionFunc(func(cfg SpanConfig) SpanConfig {
 		cfg.spanKind = kind
 		return cfg
 	})

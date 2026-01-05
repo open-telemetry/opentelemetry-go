@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `trace.WithStatus` option for `span.RecordError`. (#5762)
+- Add the`trace.WithStatusOnPanic` option for `span.End`. (#5762)
+
 ### Changed
 
 - `Exporter` in `go.opentelemetry.io/otel/exporter/prometheus` ignores metrics with the scope `go.opentelemetry.io/contrib/bridges/prometheus`.
