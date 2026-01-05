@@ -79,6 +79,16 @@ func TestEmit(t *testing.T) {
 			want: "42",
 		},
 		{
+		    name: `test Key.Emit() can emit a string representing self.INT`,
+		    v:    attribute.IntValue(7),
+		    want: "7",
+		},
+		{
+		    name: `test Key.Emit() can emit a string representing self.INTSLICE`,
+		    v:    attribute.IntSliceValue([]int{1, 2, 3}),
+		    want: `[1,2,3]`,
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64SLICE`,
 			v:    attribute.Float64SliceValue([]float64{1.0, 42.5}),
 			want: `[1,42.5]`,
