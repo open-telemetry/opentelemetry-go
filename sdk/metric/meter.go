@@ -586,8 +586,8 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 		return
 	}
 	c := metric.NewObserveConfig(opts)
-	// Access to r.pipe.float64Measure is already guarded by a lock in pipeline.produce.
-	// TODO (#5946): Refactor pipeline and observable measures.
+	r.pipe.Lock()
+	defer r.pipe.Unlock()
 	measures := r.pipe.float64Measures[oImpl.observableID]
 	for _, m := range measures {
 		m(context.Background(), v, c.Attributes())
@@ -616,8 +616,8 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 		return
 	}
 	c := metric.NewObserveConfig(opts)
-	// Access to r.pipe.int64Measures is already guarded b a lock in pipeline.produce.
-	// TODO (#5946): Refactor pipeline and observable measures.
+	r.pipe.Lock()
+	defer r.pipe.Unlock()
 	measures := r.pipe.int64Measures[oImpl.observableID]
 	for _, m := range measures {
 		m(context.Background(), v, c.Attributes())
