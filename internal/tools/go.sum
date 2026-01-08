@@ -4,6 +4,8 @@
 4d63.com/gochecknoglobals v0.2.2/go.mod h1:lLxwTQjL5eIesRbvnzIP3jZtG140FnTdz+AlMa+ogt0=
 codeberg.org/chavacava/garif v0.2.0 h1:F0tVjhYbuOCnvNcU3YSpO6b3Waw6Bimy4K0mM8y6MfY=
 codeberg.org/chavacava/garif v0.2.0/go.mod h1:P2BPbVbT4QcvLZrORc2T29szK3xEOlnl0GiPTJmEqBQ=
+codeberg.org/polyfloyd/go-errorlint v1.9.0 h1:VkdEEmA1VBpH6ecQoMR4LdphVI3fA4RrCh2an7YmodI=
+codeberg.org/polyfloyd/go-errorlint v1.9.0/go.mod h1:GPRRu2LzVijNn4YkrZYJfatQIdS+TrcK8rL5Xs24qw8=
 dario.cat/mergo v1.0.2 h1:85+piFYR1tMbRrLcDwR18y4UKJ3aH1Tbzi24VRW1TK8=
 dario.cat/mergo v1.0.2/go.mod h1:E/hbnu0NxMFBjpMIE34DRGLWqDy0g5FuKDhCb31ngxA=
 dev.gaijin.team/go/exhaustruct/v4 v4.0.0 h1:873r7aNneqoBB3IaFIzhvt2RFYTuHgmMjoKfwODoI1Y=
@@ -51,8 +53,8 @@ github.com/alecthomas/repr v0.5.2 h1:SU73FTI9D1P5UNtvseffFSGmdNci/O6RsqzeXJtP0Qs
 github.com/alecthomas/repr v0.5.2/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/alexkohler/nakedret/v2 v2.0.6 h1:ME3Qef1/KIKr3kWX3nti3hhgNxw6aqN5pZmQiFSsuzQ=
 github.com/alexkohler/nakedret/v2 v2.0.6/go.mod h1:l3RKju/IzOMQHmsEvXwkqMDzHHvurNQfAgE1eVmT40Q=
-github.com/alexkohler/prealloc v1.0.0 h1:Hbq0/3fJPQhNkN0dR95AVrr6R7tou91y0uHG5pOcUuw=
-github.com/alexkohler/prealloc v1.0.0/go.mod h1:VetnK3dIgFBBKmg0YnD9F9x6Icjd+9cvfHR56wJVlKE=
+github.com/alexkohler/prealloc v1.0.1 h1:A9P1haqowqUxWvU9nk6tQ7YktXIHf+LQM9wPRhuteEE=
+github.com/alexkohler/prealloc v1.0.1/go.mod h1:fT39Jge3bQrfA7nPMDngUfvUbQGQeJyGQnR+913SCig=
 github.com/alfatraining/structtag v1.0.0 h1:2qmcUqNcCoyVJ0up879K614L9PazjBSFruTB0GOFjCc=
 github.com/alfatraining/structtag v1.0.0/go.mod h1:p3Xi5SwzTi+Ryj64DqjLWz7XurHxbGsq6y3ubePJPus=
 github.com/alingse/asasalint v0.0.11 h1:SFwnQXJ49Kx/1GghOFz1XGqHYKp21Kq1nHad/0WQRnw=
@@ -213,10 +215,10 @@ github.com/golangci/go-printf-func-name v0.1.1 h1:hIYTFJqAGp1iwoIfsNTpoq1xZAarog
 github.com/golangci/go-printf-func-name v0.1.1/go.mod h1:Es64MpWEZbh0UBtTAICOZiB+miW53w/K9Or/4QogJss=
 github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6 h1:jlKy3uQkETB3zMBK8utduvojT+If2nDAM1pWpEzXjaY=
 github.com/golangci/gofmt v0.0.0-20250704145412-3e58ba0443c6/go.mod h1:OyaRySOXorMn8zJqFku8YsKptIhPkANyKKTMC+rqMCs=
-github.com/golangci/golangci-lint/v2 v2.7.2 h1:AhBC+YeEueec4AGlIbvPym5C70Thx0JykIqXbdIXWx0=
-github.com/golangci/golangci-lint/v2 v2.7.2/go.mod h1:pDijleoBu7e8sejMqyZ3L5n6geqe+cVvOAz2QImqqVc=
-github.com/golangci/golines v0.0.0-20250821215611-d4663ad2c370 h1:O2u8NCU/gGczNpU7/yjZIAvXMHLwKCAKsNc8axyQPWU=
-github.com/golangci/golines v0.0.0-20250821215611-d4663ad2c370/go.mod h1:k9mmcyWKSTMcPPvQUCfRWWQ9VHJ1U9Dc0R7kaXAgtnQ=
+github.com/golangci/golangci-lint/v2 v2.8.0 h1:wJnr3hJWY3eVzOUcfwbDc2qbi2RDEpvLmQeNFaPSNYA=
+github.com/golangci/golangci-lint/v2 v2.8.0/go.mod h1:xl+HafQ9xoP8rzw0z5AwnO5kynxtb80e8u02Ej/47RI=
+github.com/golangci/golines v0.14.0 h1:xt9d3RKBjhasA3qpoXs99J2xN2t6eBlpLHt0TrgyyXc=
+github.com/golangci/golines v0.14.0/go.mod h1:gf555vPG2Ia7mmy2mzmhVQbVjuK8Orw0maR1G4vVAAQ=
 github.com/golangci/misspell v0.7.0 h1:4GOHr/T1lTW0hhR4tgaaV1WS/lJ+ncvYCoFKmqJsj0c=
 github.com/golangci/misspell v0.7.0/go.mod h1:WZyyI2P3hxPY2UVHs3cS8YcllAeyfquQcKfdeE9AFVg=
 github.com/golangci/plugin-module-register v0.1.2 h1:e5WM6PO6NIAEcij3B053CohVp3HIYbzSuP53UAYgOpg=
@@ -314,6 +316,8 @@ github.com/ldez/gomoddirectives v0.8.0 h1:JqIuTtgvFC2RdH1s357vrE23WJF2cpDCPFgA/T
 github.com/ldez/gomoddirectives v0.8.0/go.mod h1:jutzamvZR4XYJLr0d5Honycp4Gy6GEg2mS9+2YX3F1Q=
 github.com/ldez/grignotin v0.10.1 h1:keYi9rYsgbvqAZGI1liek5c+jv9UUjbvdj3Tbn5fn4o=
 github.com/ldez/grignotin v0.10.1/go.mod h1:UlDbXFCARrXbWGNGP3S5vsysNXAPhnSuBufpTEbwOas=
+github.com/ldez/structtags v0.6.1 h1:bUooFLbXx41tW8SvkfwfFkkjPYvFFs59AAMgVg6DUBk=
+github.com/ldez/structtags v0.6.1/go.mod h1:YDxVSgDy/MON6ariaxLF2X09bh19qL7MtGBN5MrvbdY=
 github.com/ldez/tagliatelle v0.7.2 h1:KuOlL70/fu9paxuxbeqlicJnCspCRjH0x8FW+NfgYUk=
 github.com/ldez/tagliatelle v0.7.2/go.mod h1:PtGgm163ZplJfZMZ2sf5nhUT170rSuPgBimoyYtdaSI=
 github.com/ldez/usetesting v0.5.0 h1:3/QtzZObBKLy1F4F8jLuKJiKBjjVFi1IavpoWbmqLwc=
@@ -382,8 +386,6 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/polyfloyd/go-errorlint v1.8.0 h1:DL4RestQqRLr8U4LygLw8g2DX6RN1eBJOpa2mzsrl1Q=
-github.com/polyfloyd/go-errorlint v1.8.0/go.mod h1:G2W0Q5roxbLCt0ZQbdoxQxXktTjwNyDbEaj3n7jvl4s=
 github.com/prashantv/gostub v1.1.0 h1:BTyx3RfQjRHnUWaGF9oQos79AlQ5k8WNktv7VGvVH4g=
 github.com/prashantv/gostub v1.1.0/go.mod h1:A5zLQHz7ieHGG7is6LLXLz7I8+3LZzsrV0P1IAHhP5U=
 github.com/prometheus/client_golang v1.23.2 h1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=
