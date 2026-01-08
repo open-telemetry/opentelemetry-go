@@ -142,13 +142,6 @@ func (r *Record) addDropped(n int) {
 	}
 }
 
-func (r *Record) setDropped(n int) {
-	r.dropped = n
-	if n > 0 {
-		logAttrDropped()
-	}
-}
-
 // EventName returns the event name.
 // A log record with non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
@@ -360,7 +353,7 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
-	r.setDropped(0)
+	r.dropped = 0
 	if !r.allowDupKeys {
 		attrs, drop = dedup(attrs)
 		if drop > 0 {
