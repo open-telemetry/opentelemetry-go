@@ -193,6 +193,7 @@ func TestMerge(t *testing.T) {
 		})
 	}
 }
+
 func TestMergeIdempotent(t *testing.T) {
 	r := resource.NewSchemaless(
 		attribute.String("k1", "v1"),
@@ -206,6 +207,19 @@ func TestMergeIdempotent(t *testing.T) {
 	require.Equal(t, r.SchemaURL(), merged.SchemaURL())
 }
 
+func TestMergeIdempotentWithSchema(t *testing.T) {
+	r := resource.NewWithAttributes(
+		"https://opentelemetry.io/schemas/1.21.0",
+		attribute.String("k1", "v1"),
+		attribute.String("k2", "v2"),
+	)
+
+	merged, err := resource.Merge(r, r)
+	require.NoError(t, err)
+
+	require.True(t, r.Equal(merged))
+	require.Equal(t, r.SchemaURL(), merged.SchemaURL())
+}
 
 func TestEmpty(t *testing.T) {
 	var res *resource.Resource
@@ -232,6 +246,7 @@ func TestDefault(t *testing.T) {
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(sdk.Version()))
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
 }
+
 func TestEquivalentStability(t *testing.T) {
 	r1 := resource.NewSchemaless(
 		attribute.String("a", "1"),
