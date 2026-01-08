@@ -1113,7 +1113,12 @@ func TestDeduplicationBehavior(t *testing.T) {
 		{
 			name:                "Both duplicates and limit",
 			attributeCountLimit: 2,
-			attrs:               []log.KeyValue{log.String("a", "v1"), log.String("a", "v2"), log.String("b", "v3"), log.String("c", "v4")},
+			attrs: []log.KeyValue{
+				log.String("a", "v1"),
+				log.String("a", "v2"),
+				log.String("b", "v3"),
+				log.String("c", "v4"),
+			},
 			wantKeyValueDropped: true,
 			wantAttrDropped:     true,
 			wantDroppedCount:    1, // Only limit drops count
@@ -1128,8 +1133,10 @@ func TestDeduplicationBehavior(t *testing.T) {
 			wantAttributeCount:  2,
 		},
 		{
-			name:                "Nested map duplicates",
-			attrs:               []log.KeyValue{log.Map("outer", log.String("nested", "v1"), log.String("nested", "v2"))},
+			name: "Nested map duplicates",
+			attrs: []log.KeyValue{
+				log.Map("outer", log.String("nested", "v1"), log.String("nested", "v2")),
+			},
 			wantKeyValueDropped: true,
 			wantDroppedCount:    0,
 			wantAttributeCount:  1,
