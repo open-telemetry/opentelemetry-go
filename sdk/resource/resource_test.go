@@ -193,7 +193,6 @@ func TestMerge(t *testing.T) {
 		})
 	}
 }
-
 func TestMergeIdempotent(t *testing.T) {
 	r := resource.NewSchemaless(
 		attribute.String("k1", "v1"),
