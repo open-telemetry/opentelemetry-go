@@ -179,7 +179,7 @@ func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric
 	i.count++
 }
 
-func (i *testCountingFloatInstrument) Enabled(context.Context) bool {
+func (_ *testCountingFloatInstrument) Enabled(context.Context) bool {
 	return true
 }
 
@@ -208,6 +208,6 @@ func (i *testCountingIntInstrument) Record(context.Context, int64, ...metric.Rec
 	i.count++
 }
 
-func (i *testCountingIntInstrument) Enabled(context.Context) bool {
+func (_ *testCountingIntInstrument) Enabled(context.Context) bool {
 	return true
 }
