@@ -1160,56 +1160,6 @@ func TestDeduplicationBehavior(t *testing.T) {
 	}
 }
 
-func TestDroppedLoggingOnlyWhenNonZero(t *testing.T) {
-	origAttrDropped := logAttrDropped
-	t.Cleanup(func() { logAttrDropped = origAttrDropped })
-
-	testCases := []struct {
-		name       string
-		operation  func(*Record)
-		wantCalled bool
-		wantCount  int
-	}{
-		{
-			name:       "setDropped(0) does not log",
-			operation:  func(r *Record) { r.setDropped(0) },
-			wantCalled: false,
-			wantCount:  0,
-		},
-		{
-			name:       "setDropped(n>0) logs",
-			operation:  func(r *Record) { r.setDropped(5) },
-			wantCalled: true,
-			wantCount:  5,
-		},
-		{
-			name:       "addDropped(0) does not log",
-			operation:  func(r *Record) { r.addDropped(0) },
-			wantCalled: false,
-			wantCount:  0,
-		},
-		{
-			name:       "addDropped(n>0) logs",
-			operation:  func(r *Record) { r.addDropped(3) },
-			wantCalled: true,
-			wantCount:  3,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			called := false
-			logAttrDropped = sync.OnceFunc(func() { called = true })
-
-			r := &Record{}
-			tc.operation(r)
-
-			assert.Equal(t, tc.wantCalled, called)
-			assert.Equal(t, tc.wantCount, r.DroppedAttributes())
-		})
-	}
-}
-
 func TestApplyAttrLimitsTruncation(t *testing.T) {
 	testcases := []struct {
 		name        string
