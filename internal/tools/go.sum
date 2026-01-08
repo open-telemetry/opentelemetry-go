@@ -362,8 +362,8 @@ github.com/nishanths/exhaustive v0.12.0 h1:vIY9sALmw6T/yxiASewa4TQcFsVYZQQRUQJhK
 github.com/nishanths/exhaustive v0.12.0/go.mod h1:mEZ95wPIZW+x8kC4TgC+9YCUgiST7ecevsVDTgc2obs=
 github.com/nishanths/predeclared v0.2.2 h1:V2EPdZPliZymNAn79T8RkNApBjMmVKh5XRpLm/w98Vk=
 github.com/nishanths/predeclared v0.2.2/go.mod h1:RROzoN6TnGQupbC+lqggsOlcgysk3LMK/HI84Mp280c=
-github.com/nunnatsa/ginkgolinter v0.21.2 h1:khzWfm2/Br8ZemX8QM1pl72LwM+rMeW6VUbQ4rzh0Po=
-github.com/nunnatsa/ginkgolinter v0.21.2/go.mod h1:GItSI5fw7mCGLPmkvGYrr1kEetZe7B593jcyOpyabsY=
+github.com/nunnatsa/ginkgolinter v0.22.0 h1:o9g7JN6efdBxAHhejvPkodEjWsOBze9zDnPePsvC/Qg=
+github.com/nunnatsa/ginkgolinter v0.22.0/go.mod h1:zIFAk36fhcHQIiYOGXLbrGTXz7cvpufhRYem6ToCVnY=
 github.com/onsi/ginkgo/v2 v2.27.2 h1:LzwLj0b89qtIy6SSASkzlNvX6WktqurSHwkk2ipF/Ns=
 github.com/onsi/ginkgo/v2 v2.27.2/go.mod h1:ArE1D/XhNXBXCBkKOLkbsb2c81dQHCRcF5zwn/ykDRo=
 github.com/onsi/gomega v1.38.2 h1:eZCjf2xjZAqe+LeWvKb5weQ+NcPwX84kqJ0cZNxok2A=
