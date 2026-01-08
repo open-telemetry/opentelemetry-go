@@ -179,6 +179,10 @@ func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric
 	i.count++
 }
 
+func (i *testCountingFloatInstrument) Enabled(context.Context) bool {
+	return true
+}
+
 type testCountingIntInstrument struct {
 	count int
 
@@ -202,4 +206,8 @@ func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOpt
 
 func (i *testCountingIntInstrument) Record(context.Context, int64, ...metric.RecordOption) {
 	i.count++
+}
+
+func (i *testCountingIntInstrument) Enabled(context.Context) bool {
+	return true
 }
