@@ -214,7 +214,7 @@ func (i *int64Inst) aggregate(
 	s attribute.Set,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, s, nil)
 	}
 }
 
@@ -240,6 +240,13 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 	i.aggregate(ctx, val, c.Attributes())
 }
 
+func (i *float64Inst) AddWithAttributes(ctx context.Context, val float64, attrs []attribute.KeyValue, opts ...metric.AddOption) {
+	// for PoC, ignore the attribute set passed in.
+	for _, in := range i.measures {
+		in(ctx, val, *attribute.EmptySet(), attrs)
+	}
+}
+
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
@@ -251,7 +258,7 @@ func (i *float64Inst) Enabled(context.Context) bool {
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, s, nil)
 	}
 }
 
@@ -342,7 +349,7 @@ type measures[N int64 | float64] []aggregate.Measure[N]
 // observe records the val for the set of attrs.
 func (m measures[N]) observe(val N, s attribute.Set) {
 	for _, in := range m {
-		in(context.Background(), val, s)
+		in(context.Background(), val, s, nil)
 	}
 }
 

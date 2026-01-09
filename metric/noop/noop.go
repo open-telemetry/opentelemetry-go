@@ -15,6 +15,7 @@ package noop // import "go.opentelemetry.io/otel/metric/noop"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -197,6 +198,10 @@ type Float64Counter struct{ embedded.Float64Counter }
 
 // Add performs no operation.
 func (Float64Counter) Add(context.Context, float64, ...metric.AddOption) {}
+
+// Add performs no operation.
+func (Float64Counter) AddWithAttributes(context.Context, float64, []attribute.KeyValue, ...metric.AddOption) {
+}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.

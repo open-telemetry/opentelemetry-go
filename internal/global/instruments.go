@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -226,6 +227,12 @@ func (i *sfCounter) setDelegate(m metric.Meter) {
 func (i *sfCounter) Add(ctx context.Context, incr float64, opts ...metric.AddOption) {
 	if ctr := i.delegate.Load(); ctr != nil {
 		ctr.(metric.Float64Counter).Add(ctx, incr, opts...)
+	}
+}
+
+func (i *sfCounter) AddWithAttributes(ctx context.Context, incr float64, attrs []attribute.KeyValue, opts ...metric.AddOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Counter).AddWithAttributes(ctx, incr, attrs, opts...)
 	}
 }
 

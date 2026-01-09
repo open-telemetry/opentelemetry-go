@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -25,6 +26,7 @@ type Float64Counter interface {
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
 	Add(ctx context.Context, incr float64, options ...AddOption)
+	AddWithAttributes(ctx context.Context, incr float64, attrs []attribute.KeyValue, options ...AddOption)
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that

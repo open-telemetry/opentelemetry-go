@@ -336,7 +336,8 @@ type expoHistogram[N int64 | float64] struct {
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	fltrAttrSet attribute.Set,
+	fltrAttrs []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	// Ignore NaN and infinity.
@@ -347,17 +348,17 @@ func (e *expoHistogram[N]) measure(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	v, ok := e.values[fltrAttr.Equivalent()]
+	v, ok := e.values[fltrAttrSet.Equivalent()]
 	if !ok {
-		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
+		fltrAttrSet = e.limit.Attributes(fltrAttrSet, e.values)
 		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
+		v, ok = e.values[fltrAttrSet.Equivalent()]
 		if !ok {
-			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-			v.res = e.newRes(fltrAttr)
+			v = newExpoHistogramDataPoint[N](fltrAttrSet, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+			v.res = e.newRes(fltrAttrSet)
 
-			e.values[fltrAttr.Equivalent()] = v
+			e.values[fltrAttrSet.Equivalent()] = v
 		}
 	}
 	v.record(value)
