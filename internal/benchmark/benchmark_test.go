@@ -107,6 +107,15 @@ func BenchmarkCounterIncrement(b *testing.B) {
 					}
 				})
 			})
+			b.Run("NewDynamicWithAttributes", func(b *testing.B) {
+				counter := testCounter(b)
+				b.ReportAllocs()
+				b.RunParallel(func(pb *testing.PB) {
+					for pb.Next() {
+						counter.AddWithAttributes(ctx, 1, attrs)
+					}
+				})
+			})
 		})
 	}
 }
