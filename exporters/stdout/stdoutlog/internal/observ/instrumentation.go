@@ -120,21 +120,21 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 
 	inflight, e := otelconv.NewSDKExporterLogInflight(m)
 	if e != nil {
-		e = fmt.Errorf("failed to create the inflight metric %w", e)
+		e = fmt.Errorf("failed to create the inflight metric: %w", e)
 		err = errors.Join(err, e)
 	}
 	inst.inflight = inflight.Inst()
 
 	exported, e := otelconv.NewSDKExporterLogExported(m)
 	if e != nil {
-		e = fmt.Errorf("failed to create the exported metric %w", e)
+		e = fmt.Errorf("failed to create the exported metric: %w", e)
 		err = errors.Join(err, e)
 	}
 	inst.exported = exported.Inst()
 
 	duration, e := otelconv.NewSDKExporterOperationDuration(m)
 	if e != nil {
-		e = fmt.Errorf("failed to create the duration metric %w", e)
+		e = fmt.Errorf("failed to create the duration metric: %w", e)
 		err = errors.Join(err, e)
 	}
 	inst.duration = duration.Inst()
@@ -252,7 +252,7 @@ var errPool = sync.Pool{
 	},
 }
 
-// rejectedCount returns how many out of the n logs exporter were rejected based on
+// rejectedCount returns how many out of the n logs exported were rejected based on
 // the provided non-nil err.
 func rejectedCount(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
@@ -262,6 +262,6 @@ func rejectedCount(n int64, err error) int64 {
 	if errors.As(err, ps) {
 		return min(max(ps.RejectedItems, 0), n)
 	}
-	// all logs exporter
+	// all logs exported
 	return n
 }
