@@ -553,20 +553,19 @@ func TestRecordDroppedAttributes(t *testing.T) {
 
 		attrs := make([]log.KeyValue, i)
 		attrs[0] = log.Bool("only key different then the rest", true)
-		assert.False(t, called, "non-dropped attributed logged")
 
 		r.AddAttributes(attrs...)
+		// Deduplication doesn't count as dropped.
 		wantDropped := 0
 		if i > 1 {
 			wantDropped = 1
 		}
 		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: AddAttributes", i)
-		if i > 1 {
-			assert.True(t, called, "dropped attributes not logged")
+		if i <= 1 {
+			assert.False(t, called, "%d: dropped attributes logged", i)
+		} else {
+			assert.True(t, called, "%d: dropped attributes not logged", i)
 		}
-
-		called = false
-		logAttrDropped = func() { called = true }
 
 		r.AddAttributes(attrs...)
 		wantDropped = 0
