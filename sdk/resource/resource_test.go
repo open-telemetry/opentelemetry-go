@@ -206,6 +206,7 @@ func TestMergeIdempotent(t *testing.T) {
 	require.True(t, r.Equal(merged))
 	require.Equal(t, r.SchemaURL(), merged.SchemaURL())
 }
+
 func TestMergeIdempotentWithSchema(t *testing.T) {
 	r := resource.NewWithAttributes(
 		"https://opentelemetry.io/schemas/1.21.0",
