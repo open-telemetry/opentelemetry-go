@@ -41,6 +41,7 @@ module-sets:
       - go.opentelemetry.io/otel/schema
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
+  - go.opentelemetry.io/otel/internal/benchmark
   - go.opentelemetry.io/otel/trace/internal/telemetry/test
 modules:
   go.opentelemetry.io/otel/exporters/stdout/stdouttrace:
