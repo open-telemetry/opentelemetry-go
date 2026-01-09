@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -172,6 +173,10 @@ func (i *testCountingFloatInstrument) observe() {
 }
 
 func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
+	i.count++
+}
+
+func (i *testCountingFloatInstrument) AddWithAttributes(context.Context, float64, []attribute.KeyValue, ...metric.AddOption) {
 	i.count++
 }
 
