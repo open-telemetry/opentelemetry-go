@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -236,6 +237,14 @@ func (i *sfCounter) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *sfCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Counter {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Float64Counter).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of sfCounter with bound attributes stored.
+	return i
+}
+
 type sfUpDownCounter struct {
 	embedded.Float64UpDownCounter
 
@@ -267,6 +276,14 @@ func (i *sfUpDownCounter) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Float64UpDownCounter).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *sfUpDownCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64UpDownCounter {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Float64UpDownCounter).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of sfUpDownCounter with bound attributes stored.
+	return i
 }
 
 type sfHistogram struct {
@@ -302,6 +319,14 @@ func (i *sfHistogram) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *sfHistogram) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Histogram {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Float64Histogram).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of sfHistogram with bound attributes stored.
+	return i
+}
+
 type sfGauge struct {
 	embedded.Float64Gauge
 
@@ -333,6 +358,13 @@ func (i *sfGauge) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Float64Gauge).Enabled(ctx)
 	}
 	return false
+}
+func (i *sfGauge) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Gauge {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Float64Gauge).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of sfGauge with bound attributes stored.
+	return i
 }
 
 type siCounter struct {
@@ -368,6 +400,14 @@ func (i *siCounter) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *siCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Counter {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Int64Counter).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of siCounter with bound attributes stored.
+	return i
+}
+
 type siUpDownCounter struct {
 	embedded.Int64UpDownCounter
 
@@ -399,6 +439,14 @@ func (i *siUpDownCounter) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Int64UpDownCounter).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *siUpDownCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Int64UpDownCounter {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Int64UpDownCounter).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of siUpDownCounter with bound attributes stored.
+	return i
 }
 
 type siHistogram struct {
@@ -434,6 +482,14 @@ func (i *siHistogram) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *siHistogram) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Histogram {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Int64Histogram).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of siHistogram with bound attributes stored.
+	return i
+}
+
 type siGauge struct {
 	embedded.Int64Gauge
 
@@ -465,4 +521,12 @@ func (i *siGauge) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Int64Gauge).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *siGauge) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Gauge {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Int64Gauge).WithAttributes(kvs...)
+	}
+	// TODO: return a copy of siGauge with bound attributes stored.
+	return i
 }
