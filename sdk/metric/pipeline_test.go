@@ -78,6 +78,23 @@ func TestPipelineUsesResource(t *testing.T) {
 	assert.Equal(t, res, output.Resource)
 }
 
+func TestPipelineNoDeadlock(t *testing.T) {
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
+
+	_ = pipe.addMultiCallback(func(context.Context) error {
+		isPipelineLockable := pipe.TryLock()
+		if isPipelineLockable {
+			pipe.Unlock()
+		}
+		assert.True(t, isPipelineLockable)
+		return nil
+	})
+
+	output := metricdata.ResourceMetrics{}
+	err := pipe.produce(t.Context(), &output)
+	assert.NoError(t, err)
+}
+
 func TestPipelineConcurrentSafe(t *testing.T) {
 	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
 	ctx := t.Context()
