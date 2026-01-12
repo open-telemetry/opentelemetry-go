@@ -240,11 +240,11 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	assert.Len(t, tMeter.callbacks, 1)
 
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
-	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
-	assert.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
+	require.IsType(t, &testFloat64Counter{}, ctr, "the meter did not delegate calls to the meter")
+	assert.Equal(t, 1, ctr.(*testFloat64Counter).count)
 
-	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
-	assert.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
+	require.IsType(t, &testFloat64Observable{}, actr, "the meter did not delegate calls to the meter")
+	assert.Equal(t, 1, actr.(*testFloat64Observable).count)
 
 	assert.Equal(t, 1, mp.count)
 }
@@ -289,12 +289,12 @@ func TestMeterDelegatesCalls(t *testing.T) {
 	assert.Equal(t, 1, tMeter.siHist)
 
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
-	require.IsType(t, &testCountingFloatInstrument{}, ctr, "the meter did not delegate calls to the meter")
-	assert.Equal(t, 1, ctr.(*testCountingFloatInstrument).count)
+	require.IsType(t, &testFloat64Counter{}, ctr, "the meter did not delegate calls to the meter")
+	assert.Equal(t, 1, ctr.(*testFloat64Counter).count)
 
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
-	require.IsType(t, &testCountingFloatInstrument{}, actr, "the meter did not delegate calls to the meter")
-	assert.Equal(t, 1, actr.(*testCountingFloatInstrument).count)
+	require.IsType(t, &testFloat64Observable{}, actr, "the meter did not delegate calls to the meter")
+	assert.Equal(t, 1, actr.(*testFloat64Observable).count)
 
 	assert.Equal(t, 1, mp.count)
 }

@@ -47,7 +47,7 @@ type testMeter struct {
 
 func (m *testMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	m.siCount++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64Counter{}, nil
 }
 
 func (m *testMeter) Int64UpDownCounter(
@@ -55,17 +55,17 @@ func (m *testMeter) Int64UpDownCounter(
 	...metric.Int64UpDownCounterOption,
 ) (metric.Int64UpDownCounter, error) {
 	m.siUDCount++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64UpDownCounter{}, nil
 }
 
 func (m *testMeter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	m.siHist++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64Histogram{}, nil
 }
 
 func (m *testMeter) Int64Gauge(string, ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
 	m.siGauge++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64Gauge{}, nil
 }
 
 func (m *testMeter) Int64ObservableCounter(
@@ -73,7 +73,7 @@ func (m *testMeter) Int64ObservableCounter(
 	...metric.Int64ObservableCounterOption,
 ) (metric.Int64ObservableCounter, error) {
 	m.aiCount++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64Observable{}, nil
 }
 
 func (m *testMeter) Int64ObservableUpDownCounter(
@@ -81,7 +81,7 @@ func (m *testMeter) Int64ObservableUpDownCounter(
 	...metric.Int64ObservableUpDownCounterOption,
 ) (metric.Int64ObservableUpDownCounter, error) {
 	m.aiUDCount++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64Observable{}, nil
 }
 
 func (m *testMeter) Int64ObservableGauge(
@@ -89,12 +89,12 @@ func (m *testMeter) Int64ObservableGauge(
 	...metric.Int64ObservableGaugeOption,
 ) (metric.Int64ObservableGauge, error) {
 	m.aiGauge++
-	return &testCountingIntInstrument{}, nil
+	return &testInt64Observable{}, nil
 }
 
 func (m *testMeter) Float64Counter(string, ...metric.Float64CounterOption) (metric.Float64Counter, error) {
 	m.sfCount++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64Counter{}, nil
 }
 
 func (m *testMeter) Float64UpDownCounter(
@@ -102,7 +102,7 @@ func (m *testMeter) Float64UpDownCounter(
 	...metric.Float64UpDownCounterOption,
 ) (metric.Float64UpDownCounter, error) {
 	m.sfUDCount++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64UpDownCounter{}, nil
 }
 
 func (m *testMeter) Float64Histogram(
@@ -110,12 +110,12 @@ func (m *testMeter) Float64Histogram(
 	...metric.Float64HistogramOption,
 ) (metric.Float64Histogram, error) {
 	m.sfHist++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64Histogram{}, nil
 }
 
 func (m *testMeter) Float64Gauge(string, ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
 	m.sfGauge++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64Gauge{}, nil
 }
 
 func (m *testMeter) Float64ObservableCounter(
@@ -123,7 +123,7 @@ func (m *testMeter) Float64ObservableCounter(
 	...metric.Float64ObservableCounterOption,
 ) (metric.Float64ObservableCounter, error) {
 	m.afCount++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64Observable{}, nil
 }
 
 func (m *testMeter) Float64ObservableUpDownCounter(
@@ -131,7 +131,7 @@ func (m *testMeter) Float64ObservableUpDownCounter(
 	...metric.Float64ObservableUpDownCounterOption,
 ) (metric.Float64ObservableUpDownCounter, error) {
 	m.afUDCount++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64Observable{}, nil
 }
 
 func (m *testMeter) Float64ObservableGauge(
@@ -139,7 +139,7 @@ func (m *testMeter) Float64ObservableGauge(
 	...metric.Float64ObservableGaugeOption,
 ) (metric.Float64ObservableGauge, error) {
 	m.afGauge++
-	return &testCountingFloatInstrument{}, nil
+	return &testFloat64Observable{}, nil
 }
 
 // RegisterCallback captures the function that will be called during Collect.
@@ -183,14 +183,14 @@ type observationRecorder struct {
 }
 
 func (observationRecorder) ObserveFloat64(i metric.Float64Observable, _ float64, _ ...metric.ObserveOption) {
-	iImpl, ok := i.(*testCountingFloatInstrument)
+	iImpl, ok := i.(*testFloat64Observable)
 	if ok {
 		iImpl.observe()
 	}
 }
 
 func (observationRecorder) ObserveInt64(i metric.Int64Observable, _ int64, _ ...metric.ObserveOption) {
-	iImpl, ok := i.(*testCountingIntInstrument)
+	iImpl, ok := i.(*testInt64Observable)
 	if ok {
 		iImpl.observe()
 	}
