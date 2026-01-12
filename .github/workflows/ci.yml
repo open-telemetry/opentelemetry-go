@@ -30,7 +30,7 @@ jobs:
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Tools cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         env:
           cache-name: go-tools-cache
         with:
@@ -111,7 +111,7 @@ jobs:
       - name: Run coverage tests
         run: make test-coverage
       - name: Store coverage test output
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
           path: coverage.txt
@@ -122,11 +122,11 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
       - name: Upload coverage report
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           fail_ci_if_error: true
           files: ./coverage.txt

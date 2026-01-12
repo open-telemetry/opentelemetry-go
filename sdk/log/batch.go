@@ -184,6 +184,11 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	return done
 }
 
+// Enabled returns true, indicating this Processor will process all records.
+func (*BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
+	return true
+}
+
 // OnEmit batches provided log record.
 func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	if b.stopped.Load() || b.q == nil {

@@ -45,12 +45,21 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	}
 
 	var sum float64
-	for _, m := range r.measurements {
-		sum += m.Value.Float64()
+	for i := range r.measurements {
+		sum += r.measurements[i].Value.Float64()
 	}
 	mean := sum / float64(sampleSize)
 
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+}
+
+func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {
+	t.Run("Int64", reservoirConcurrentSafeTest[int64](func(n int) (ReservoirProvider, int) {
+		return FixedSizeReservoirProvider(n), n
+	}))
+	t.Run("Float64", reservoirConcurrentSafeTest[float64](func(n int) (ReservoirProvider, int) {
+		return FixedSizeReservoirProvider(n), n
+	}))
 }

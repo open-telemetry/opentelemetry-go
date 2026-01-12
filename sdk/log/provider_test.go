@@ -40,6 +40,10 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name}
 }
 
+func (*processor) Enabled(context.Context, EnabledParameters) bool {
+	return true
+}
+
 func (p *processor) OnEmit(_ context.Context, r *Record) error {
 	if p.Err != nil {
 		return p.Err
@@ -65,8 +69,6 @@ type fltrProcessor struct {
 	enabled bool
 	params  []EnabledParameters
 }
-
-var _ FilterProcessor = (*fltrProcessor)(nil)
 
 func newFltrProcessor(name string, enabled bool) *fltrProcessor {
 	return &fltrProcessor{

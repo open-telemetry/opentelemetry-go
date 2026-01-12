@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package dnsconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "dns" namespace.
 package dnsconv
 
@@ -53,7 +56,7 @@ func NewLookupDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return LookupDuration{noop.Float64Histogram{}}, err
+		return LookupDuration{noop.Float64Histogram{}}, err
 	}
 	return LookupDuration{i}, nil
 }

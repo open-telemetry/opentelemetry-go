@@ -379,7 +379,13 @@ func (bip *baggageItemsPreservationTest) check(t *testing.T, _ *mockTracer) {
 			if gotValue, ok := recordedItems[expectedItem.key]; !ok {
 				t.Errorf("Missing baggage item %q in recording %d", expectedItem.key, i+1)
 			} else if gotValue != expectedItem.value {
-				t.Errorf("Expected recorded baggage item %q in recording %d + 1to be %q, got %q", expectedItem.key, i, expectedItem.value, gotValue)
+				t.Errorf(
+					"Expected recorded baggage item %q in recording %d + 1to be %q, got %q",
+					expectedItem.key,
+					i,
+					expectedItem.value,
+					gotValue,
+				)
 			} else {
 				delete(recordedItems, expectedItem.key)
 			}
