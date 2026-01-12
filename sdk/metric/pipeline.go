@@ -58,6 +58,8 @@ func newPipeline(
 	}
 }
 
+type callback func(context.Context) error
+
 // pipeline connects all of the instruments created by a meter provider to a Reader.
 // This is the object that will be `Reader.register()` when a meter provider is created.
 //
@@ -74,7 +76,7 @@ type pipeline struct {
 	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
 	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
 	aggregations     map[instrumentation.Scope][]instrumentSync
-	callbacks        []func(context.Context) error
+	callbacks        []callback
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
@@ -109,11 +111,9 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 	p.aggregations[scope] = append(p.aggregations[scope], iSync)
 }
 
-type multiCallback func(context.Context) error
-
 // addMultiCallback registers a multi-instrument callback to be run when
 // `produce()` is called.
-func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
+func (p *pipeline) addMultiCallback(c callback) (unregister func()) {
 	p.Lock()
 	defer p.Unlock()
 	e := p.multiCallbacks.PushBack(c)
@@ -148,7 +148,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
+		f := e.Value.(callback)
 		if e := f(ctx); e != nil {
 			err = errors.Join(err, e)
 		}
@@ -295,7 +295,7 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation)
 
 // addCallback registers a single instrument callback to be run when
 // `produce()` is called.
-func (i *inserter[N]) addCallback(cback func(context.Context) error) {
+func (i *inserter[N]) addCallback(cback callback) {
 	i.pipeline.Lock()
 	defer i.pipeline.Unlock()
 	i.pipeline.callbacks = append(i.pipeline.callbacks, cback)
