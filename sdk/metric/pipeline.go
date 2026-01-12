@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -136,23 +137,30 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		return err
 	}
 
+	// To prevent deadlock when a callback needs to acquire a mutex,
+	// we copy all callbacks in a local array, then release the pipeline's mutex
+	// before calling all callbacks.
+	// For now callbacks are called serially,
+	// see #3034 for a discussion about calling them asynchronously
 	p.Lock()
-	defer p.Unlock()
+	callbacks := slices.Clone(p.callbacks)
+	callbacks = slices.Grow(callbacks, p.multiCallbacks.Len())
+	for node := p.multiCallbacks.Front(); node != nil; node = node.Next() {
+		callbacks = append(callbacks, node.Value.(callback))
+	}
+	p.Unlock()
 
 	var err error
-	for _, c := range p.callbacks {
-		// TODO make the callbacks parallel. ( #3034 )
-		if e := c(ctx); e != nil {
+	for _, cb := range callbacks {
+		// TODO make the callbacks asynchronous ( #3034 )
+		e := cb(ctx)
+		if e != nil {
 			err = errors.Join(err, e)
 		}
 	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
-		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(callback)
-		if e := f(ctx); e != nil {
-			err = errors.Join(err, e)
-		}
-	}
+
+	p.Lock()
+	defer p.Unlock()
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
