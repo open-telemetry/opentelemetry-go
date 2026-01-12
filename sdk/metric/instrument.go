@@ -178,18 +178,13 @@ func (i instID) normalize() instID {
 
 type int64Inst struct {
 	measures []aggregate.Measure[int64]
-
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
-	embedded.Int64Gauge
 }
 
 var (
-	_ metric.Int64Counter       = (*int64Inst)(nil)
-	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
-	_ metric.Int64Histogram     = (*int64Inst)(nil)
-	_ metric.Int64Gauge         = (*int64Inst)(nil)
+	_ metric.Int64Counter       = (*int64Counter)(nil)
+	_ metric.Int64UpDownCounter = (*int64UpDownCounter)(nil)
+	_ metric.Int64Histogram     = (*int64Histogram)(nil)
+	_ metric.Int64Gauge         = (*int64Gauge)(nil)
 )
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
@@ -206,6 +201,46 @@ func (i *int64Inst) Enabled(context.Context) bool {
 	return len(i.measures) != 0
 }
 
+type int64Counter struct {
+	embedded.Int64Counter
+	int64Inst
+}
+
+func (i *int64Counter) WithAttributes(_ ...attribute.KeyValue) metric.Int64Counter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type int64UpDownCounter struct {
+	embedded.Int64UpDownCounter
+	int64Inst
+}
+
+func (i *int64UpDownCounter) WithAttributes(_ ...attribute.KeyValue) metric.Int64UpDownCounter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type int64Histogram struct {
+	embedded.Int64Histogram
+	int64Inst
+}
+
+func (i *int64Histogram) WithAttributes(_ ...attribute.KeyValue) metric.Int64Histogram {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type int64Gauge struct {
+	embedded.Int64Gauge
+	int64Inst
+}
+
+func (i *int64Gauge) WithAttributes(_ ...attribute.KeyValue) metric.Int64Gauge {
+	// TODO: bind counter to attributes
+	return i
+}
+
 func (i *int64Inst) aggregate(
 	ctx context.Context,
 	val int64,
@@ -218,18 +253,13 @@ func (i *int64Inst) aggregate(
 
 type float64Inst struct {
 	measures []aggregate.Measure[float64]
-
-	embedded.Float64Counter
-	embedded.Float64UpDownCounter
-	embedded.Float64Histogram
-	embedded.Float64Gauge
 }
 
 var (
-	_ metric.Float64Counter       = (*float64Inst)(nil)
-	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
-	_ metric.Float64Histogram     = (*float64Inst)(nil)
-	_ metric.Float64Gauge         = (*float64Inst)(nil)
+	_ metric.Float64Counter       = (*float64Counter)(nil)
+	_ metric.Float64UpDownCounter = (*float64UpDownCounter)(nil)
+	_ metric.Float64Histogram     = (*float64Histogram)(nil)
+	_ metric.Float64Gauge         = (*float64Gauge)(nil)
 )
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
@@ -252,6 +282,46 @@ func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Se
 	}
 }
 
+type float64Counter struct {
+	embedded.Float64Counter
+	float64Inst
+}
+
+func (i *float64Counter) WithAttributes(_ ...attribute.KeyValue) metric.Float64Counter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type float64UpDownCounter struct {
+	embedded.Float64UpDownCounter
+	float64Inst
+}
+
+func (i *float64UpDownCounter) WithAttributes(_ ...attribute.KeyValue) metric.Float64UpDownCounter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type float64Histogram struct {
+	embedded.Float64Histogram
+	float64Inst
+}
+
+func (i *float64Histogram) WithAttributes(_ ...attribute.KeyValue) metric.Float64Histogram {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type float64Gauge struct {
+	embedded.Float64Gauge
+	float64Inst
+}
+
+func (i *float64Gauge) WithAttributes(_ ...attribute.KeyValue) metric.Float64Gauge {
+	// TODO: bind counter to attributes
+	return i
+}
+
 // observableID is a comparable unique identifier of an observable.
 type observableID[N int64 | float64] struct {
 	name        string
@@ -268,6 +338,10 @@ type float64Observable struct {
 	embedded.Float64ObservableCounter
 	embedded.Float64ObservableUpDownCounter
 	embedded.Float64ObservableGauge
+}
+
+func (o *float64Observable) WithAttributes(_ ...attribute.KeyValue) metric.Float64Observable {
+	return o
 }
 
 var (
@@ -289,6 +363,10 @@ type int64Observable struct {
 	embedded.Int64ObservableCounter
 	embedded.Int64ObservableUpDownCounter
 	embedded.Int64ObservableGauge
+}
+
+func (o *int64Observable) WithAttributes(_ ...attribute.KeyValue) metric.Int64Observable {
+	return o
 }
 
 var (
