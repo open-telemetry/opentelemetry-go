@@ -16,7 +16,7 @@ import (
 var now = time.Now
 
 // Measure receives measurements to be aggregated.
-type Measure[N int64 | float64] func(context.Context, N, attribute.Set, []attribute.KeyValue)
+type Measure[N int64 | float64] func(context.Context, N, AttributesProvider)
 
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
@@ -49,6 +49,27 @@ type Builder[N int64 | float64] struct {
 	AggregationLimit int
 }
 
+type AttributesProvider interface {
+	Attributes() attribute.Set
+	AttributesDistinct() attribute.Distinct
+	// TODO: we might want to "push down" filters to preserve performance in this case.
+	// E.g. with:
+	// FilteredAttributes(attribute.Filter) (attribute.Set, []attribute.KeyValue)
+	// FilteredAttributesDistinct(attribute.Filter) (attribute.Distinct, []attribute.KeyValue)
+}
+
+type attributesProvider struct {
+	set attribute.Set
+}
+
+func (p *attributesProvider) Attributes() attribute.Set {
+	return p.set
+}
+
+func (p *attributesProvider) AttributesDistinct() attribute.Distinct {
+	return p.set.Equivalent()
+}
+
 func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	if b.ReservoirFunc != nil {
 		return b.ReservoirFunc
@@ -57,18 +78,22 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	return dropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttrSet attribute.Set, fltrAttrs []attribute.KeyValue, droppedAttr []attribute.KeyValue)
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr AttributesProvider, droppedAttr []attribute.KeyValue)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
 		fltr := b.Filter // Copy to make it immutable after assignment.
-		return func(ctx context.Context, n N, a attribute.Set, attrs []attribute.KeyValue) {
-			fAttr, dropped := a.Filter(fltr)
-			f(ctx, n, fAttr, attrs, dropped)
+		return func(ctx context.Context, n N, a AttributesProvider) {
+			// By calling a.Attributes() here, we are computing the full set,
+			// and lose some performance benefits of deferring set computation.
+			set := a.Attributes()
+			newSet, dropped := set.Filter(fltr)
+			f(ctx, n, &attributesProvider{set: newSet}, dropped)
 		}
 	}
-	return func(ctx context.Context, n N, a attribute.Set, attrs []attribute.KeyValue) {
-		f(ctx, n, a, attrs, nil)
+
+	return func(ctx context.Context, n N, a AttributesProvider) {
+		f(ctx, n, a, nil)
 	}
 }
 

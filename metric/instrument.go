@@ -242,11 +242,13 @@ func (c AddConfig) Attributes() attribute.Set {
 	return attribute.NewSet(c.attrsSlice...)
 }
 
-// AttributesSlice returns the configured attributes as a slice.
-// This returns nil if attributes were provided with a single
-// WithAttributeSet.
-func (c AddConfig) AttributesSlice() []attribute.KeyValue {
-	return c.attrsSlice
+// AttributesDistinct returns the attribute.Distinct for attributes provided
+// by WithAttributes or WithAttributeSet.
+func (c AddConfig) AttributesDistinct() attribute.Distinct {
+	if len(c.attrsSlice) == 0 {
+		return c.attrs.Equivalent()
+	}
+	return attribute.NewDistinct(c.attrsSlice...)
 }
 
 // RecordOption applies options to an addition measurement. See
@@ -278,11 +280,13 @@ func (c RecordConfig) Attributes() attribute.Set {
 	return attribute.NewSet(c.attrsSlice...)
 }
 
-// AttributesSlice returns the configured attributes as a slice.
-// This returns nil if attributes were provided with a single
-// WithAttributeSet.
-func (c RecordConfig) AttributesSlice() []attribute.KeyValue {
-	return c.attrsSlice
+// AttributesDistinct returns the attribute.Distinct for attributes provided
+// by WithAttributes or WithAttributeSet.
+func (c RecordConfig) AttributesDistinct() attribute.Distinct {
+	if len(c.attrsSlice) == 0 {
+		return c.attrs.Equivalent()
+	}
+	return attribute.NewDistinct(c.attrsSlice...)
 }
 
 // ObserveOption applies options to an addition measurement. See
@@ -314,11 +318,13 @@ func (c ObserveConfig) Attributes() attribute.Set {
 	return attribute.NewSet(c.attrsSlice...)
 }
 
-// AttributesSlice returns the configured attributes as a slice.
-// This returns nil if attributes were provided with a single
-// WithAttributeSet.
-func (c ObserveConfig) AttributesSlice() []attribute.KeyValue {
-	return c.attrsSlice
+// AttributesDistinct returns the attribute.Distinct for attributes provided
+// by WithAttributes or WithAttributeSet.
+func (c ObserveConfig) AttributesDistinct() attribute.Distinct {
+	if len(c.attrsSlice) == 0 {
+		return c.attrs.Equivalent()
+	}
+	return attribute.NewDistinct(c.attrsSlice...)
 }
 
 // MeasurementOption applies options to all instrument measurement.

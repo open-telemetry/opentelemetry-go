@@ -174,7 +174,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil, nil)
+				h.measure(t.Context(), v, &attributesProvider{set: alice}, nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -216,7 +216,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil, nil)
+				h.measure(t.Context(), v, &attributesProvider{set: alice}, nil)
 			}
 			dp := h.values[alice.Equivalent()]
 

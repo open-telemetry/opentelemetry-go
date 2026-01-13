@@ -196,12 +196,14 @@ var (
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	// metric.AddConfig implements aggregate.AttributesProvider
+	i.aggregate(ctx, val, c)
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	// metric.RecordConfig implements aggregate.AttributesProvider
+	i.aggregate(ctx, val, c)
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
@@ -211,10 +213,10 @@ func (i *int64Inst) Enabled(context.Context) bool {
 func (i *int64Inst) aggregate(
 	ctx context.Context,
 	val int64,
-	s attribute.Set,
+	s aggregate.AttributesProvider,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s, nil)
+		in(ctx, val, s)
 	}
 }
 
@@ -237,34 +239,23 @@ var (
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	attrs := c.AttributesSlice()
-	if len(attrs) > 0 {
-		// In this case, we got a raw attributes slice, either because someone
-		// used more than one WithAttributes or WithAttributeSet options, or
-		// because the user only used WithAttributes.
-		for _, in := range i.measures {
-			in(ctx, val, *attribute.EmptySet(), attrs)
-		}
-		return
-	}
-	// In this case, someone called the API using only a single
-	// WithAttributeSet option. Since they already computed the full set, just
-	// used that.
-	i.aggregate(ctx, val, c.Attributes())
+	// metric.AddConfig implements aggregate.AttributesProvider
+	i.aggregate(ctx, val, c)
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	// metric.RecordConfig implements aggregate.AttributesProvider
+	i.aggregate(ctx, val, c)
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
 	return len(i.measures) != 0
 }
 
-func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
+func (i *float64Inst) aggregate(ctx context.Context, val float64, s aggregate.AttributesProvider) {
 	for _, in := range i.measures {
-		in(ctx, val, s, nil)
+		in(ctx, val, s)
 	}
 }
 
@@ -342,7 +333,7 @@ func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc,
 }
 
 // observe records the val for the set of attrs.
-func (o *observable[N]) observe(val N, s attribute.Set) {
+func (o *observable[N]) observe(val N, s aggregate.AttributesProvider) {
 	o.measures.observe(val, s)
 }
 
@@ -353,9 +344,9 @@ func (o *observable[N]) appendMeasures(meas []aggregate.Measure[N]) {
 type measures[N int64 | float64] []aggregate.Measure[N]
 
 // observe records the val for the set of attrs.
-func (m measures[N]) observe(val N, s attribute.Set) {
+func (m measures[N]) observe(val N, s aggregate.AttributesProvider) {
 	for _, in := range m {
-		in(context.Background(), val, s, nil)
+		in(context.Background(), val, s)
 	}
 }
 

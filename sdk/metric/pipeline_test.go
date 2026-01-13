@@ -163,7 +163,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
-					in(t.Context(), 1, *attribute.EmptySet(), nil)
+					in(t.Context(), 1, &attributesProvider{set: *attribute.EmptySet()})
 				}
 
 				out := metricdata.ResourceMetrics{}
@@ -660,7 +660,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 		func(ctx context.Context) error {
 			callbackCounts[0]++
 			for _, m := range pipe.int64Measures[testObsID] {
-				m(ctx, 123, *attribute.EmptySet(), nil)
+				m(ctx, 123, &attributesProvider{set: *attribute.EmptySet()})
 			}
 			return nil
 		},

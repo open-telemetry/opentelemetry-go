@@ -11,6 +11,18 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+type attributesProvider struct {
+	set attribute.Set
+}
+
+func (p *attributesProvider) Attributes() attribute.Set {
+	return p.set
+}
+
+func (p *attributesProvider) AttributesDistinct() attribute.Distinct {
+	return p.set.Equivalent()
+}
+
 func BenchmarkInstrument(b *testing.B) {
 	attr := func(id int) attribute.Set {
 		return attribute.NewSet(
@@ -46,7 +58,7 @@ func BenchmarkInstrument(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			inst.aggregate(ctx, int64(i), attr(i))
+			inst.aggregate(ctx, int64(i), &attributesProvider{set: attr(i)})
 		}
 	})
 
@@ -70,7 +82,7 @@ func BenchmarkInstrument(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			o.observe(int64(i), attr(i))
+			o.observe(int64(i), &attributesProvider{set: attr(i)})
 		}
 	})
 }

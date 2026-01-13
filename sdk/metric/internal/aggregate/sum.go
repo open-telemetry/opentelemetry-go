@@ -25,26 +25,15 @@ type sumValueMap[N int64 | float64] struct {
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttrSet attribute.Set,
-	fltrAttrs []attribute.KeyValue,
+	fltrAttrs AttributesProvider,
 	droppedAttr []attribute.KeyValue,
 ) {
-	key := fltrAttrSet.Equivalent()
-	if fltrAttrs != nil {
-		// If the user called Add using WithAttributes, or used multiple
-		// attribues options, we can delay computing the complete set until we
-		// know we need to store it.
-		key = attribute.NewDistinct(fltrAttrs...)
-	}
-	sv := s.values.LoadOrStoreAttr(key, func(overflow bool) any {
+	// Just compute the Distinct when performing the lookup.
+	sv := s.values.LoadOrStoreAttr(fltrAttrs.AttributesDistinct(), func(overflow bool) any {
 		attr := overflowSet
 		if !overflow {
-			attr = fltrAttrSet
-			// Only compute the NewSet if this is the first time we've seen
-			// this attribute set in the SDK.
-			if len(fltrAttrs) > 0 {
-				attr = attribute.NewSet(fltrAttrs...)
-			}
+			// Compute the full attribute set when this is a new element.
+			attr = fltrAttrs.Attributes()
 		}
 		return &sumValue[N]{
 			res:   s.newRes(attr),
@@ -91,10 +80,10 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]sumValueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttrSet attribute.Set, fltrAttrs []attribute.KeyValue, droppedAttr []attribute.KeyValue) {
+func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttrs AttributesProvider, droppedAttr []attribute.KeyValue) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttrSet, fltrAttrs, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttrs, droppedAttr)
 }
 
 func (s *deltaSum[N]) collect(
