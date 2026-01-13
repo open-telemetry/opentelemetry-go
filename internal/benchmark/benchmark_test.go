@@ -139,7 +139,14 @@ func BenchmarkCounterIncrement(b *testing.B) {
 							default:
 								panic("unknown attrsLen")
 							}
-							counter.AddWithAttributes(ctx, 1, *attrsSlice)
+							addOpt := addOptPool.Get().(*[]metric.AddOption)
+							defer func() {
+								*addOpt = (*addOpt)[:0]
+								addOptPool.Put(addOpt)
+							}()
+							opt := metric.WithAttributes(*attrsSlice...)
+							*addOpt = append(*addOpt, opt)
+							counter.Add(ctx, 1, *addOpt...)
 						}()
 						i++
 					}
