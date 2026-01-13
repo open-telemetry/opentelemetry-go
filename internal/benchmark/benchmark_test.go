@@ -51,7 +51,7 @@ func BenchmarkCounterIncrement(b *testing.B) {
 		}
 		b.Run(fmt.Sprintf("Attributes/%d", attrsLen), func(b *testing.B) {
 			// Based on https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
-			b.Run("OptimizedDynamicAttributeSet", func(b *testing.B) {
+			b.Run("OptimizedWithAttributeSet", func(b *testing.B) {
 				counter := testCounter(b)
 				b.ReportAllocs()
 				b.RunParallel(func(pb *testing.PB) {
@@ -102,7 +102,7 @@ func BenchmarkCounterIncrement(b *testing.B) {
 					}
 				})
 			})
-			b.Run("NewDynamicWithAttributes", func(b *testing.B) {
+			b.Run("OptimizedWithAttributes", func(b *testing.B) {
 				counter := testCounter(b)
 				b.ReportAllocs()
 				b.RunParallel(func(pb *testing.PB) {
@@ -147,92 +147,6 @@ func BenchmarkCounterIncrement(b *testing.B) {
 							opt := metric.WithAttributes(*attrsSlice...)
 							*addOpt = append(*addOpt, opt)
 							counter.Add(ctx, 1, *addOpt...)
-						}()
-						i++
-					}
-				})
-			})
-			b.Run("AttributeDotNewSet", func(b *testing.B) {
-				b.ReportAllocs()
-				b.RunParallel(func(pb *testing.PB) {
-					i := 0
-					for pb.Next() {
-						// Wrap in a function so we can use defer.
-						func() {
-							attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-							defer func() {
-								*attrsSlice = (*attrsSlice)[:0] // Reset.
-								attrPool.Put(attrsSlice)
-							}()
-							switch attrsLen {
-							case 1:
-								*attrsSlice = append(*attrsSlice, attribute.Int("i", i%100))
-							case 3:
-								*attrsSlice = append(*attrsSlice,
-									attribute.Int("i", i%100),
-									attribute.String("a", "a"),
-									attribute.String("b", "b"),
-								)
-							case 10:
-								*attrsSlice = append(*attrsSlice,
-									attribute.Int("i", i%100),
-									attribute.String("a", "a"),
-									attribute.String("b", "b"),
-									attribute.String("c", "c"),
-									attribute.String("d", "d"),
-									attribute.String("e", "e"),
-									attribute.String("f", "f"),
-									attribute.String("g", "g"),
-									attribute.String("h", "h"),
-									attribute.String("j", "j"),
-								)
-							default:
-								panic("unknown attrsLen")
-							}
-							attribute.NewSet(*attrsSlice...)
-						}()
-						i++
-					}
-				})
-			})
-			b.Run("AttributeDotNewDistinct", func(b *testing.B) {
-				b.ReportAllocs()
-				b.RunParallel(func(pb *testing.PB) {
-					i := 0
-					for pb.Next() {
-						// Wrap in a function so we can use defer.
-						func() {
-							attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-							defer func() {
-								*attrsSlice = (*attrsSlice)[:0] // Reset.
-								attrPool.Put(attrsSlice)
-							}()
-							switch attrsLen {
-							case 1:
-								*attrsSlice = append(*attrsSlice, attribute.Int("i", i%100))
-							case 3:
-								*attrsSlice = append(*attrsSlice,
-									attribute.Int("i", i%100),
-									attribute.String("a", "a"),
-									attribute.String("b", "b"),
-								)
-							case 10:
-								*attrsSlice = append(*attrsSlice,
-									attribute.Int("i", i%100),
-									attribute.String("a", "a"),
-									attribute.String("b", "b"),
-									attribute.String("c", "c"),
-									attribute.String("d", "d"),
-									attribute.String("e", "e"),
-									attribute.String("f", "f"),
-									attribute.String("g", "g"),
-									attribute.String("h", "h"),
-									attribute.String("j", "j"),
-								)
-							default:
-								panic("unknown attrsLen")
-							}
-							attribute.NewDistinct(*attrsSlice...)
 						}()
 						i++
 					}
