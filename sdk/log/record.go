@@ -136,13 +136,10 @@ type Record struct {
 }
 
 func (r *Record) addDropped(n int) {
-	logAttrDropped()
 	r.dropped += n
-}
-
-func (r *Record) setDropped(n int) {
-	logAttrDropped()
-	r.dropped = n
+	if n > 0 {
+		logAttrDropped()
+	}
 }
 
 // EventName returns the event name.
@@ -238,7 +235,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		if !r.allowDupKeys {
 			attrs, drop = dedup(attrs)
 			if drop > 0 {
-				logKeyDuplicate()
+				logKeyValuePairDropped()
 			}
 		}
 
@@ -272,6 +269,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			idx, found := uIndex[a.Key]
 			if found {
 				dropped++
+				logKeyValuePairDropped()
 				(*unique)[idx] = a
 				continue
 			}
@@ -280,6 +278,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 			if found {
 				// New attrs overwrite any existing with the same key.
 				dropped++
+				logKeyValuePairDropped()
 				if idx < 0 {
 					r.front[-(idx + 1)] = a
 				} else {
@@ -295,7 +294,6 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		if dropped > 0 {
 			attrs = make([]log.KeyValue, len(*unique))
 			copy(attrs, *unique)
-			logKeyDuplicate()
 		}
 	}
 
@@ -355,11 +353,11 @@ func (r *Record) addAttrs(attrs []log.KeyValue) {
 // SetAttributes sets (and overrides) attributes to the log record.
 func (r *Record) SetAttributes(attrs ...log.KeyValue) {
 	var drop int
-	r.setDropped(0)
+	r.dropped = 0
 	if !r.allowDupKeys {
 		attrs, drop = dedup(attrs)
 		if drop > 0 {
-			logKeyDuplicate()
+			logKeyValuePairDropped()
 		}
 	}
 
@@ -524,7 +522,7 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 			// Do not do at the same time to avoid wasted truncation operations.
 			newKvs, dropped = dedup(kvs)
 			if dropped > 0 {
-				logKeyDuplicate()
+				logKeyValuePairDropped()
 			}
 		} else {
 			newKvs = kvs
