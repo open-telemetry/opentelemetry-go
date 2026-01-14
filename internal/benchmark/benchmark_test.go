@@ -12,7 +12,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -36,38 +35,34 @@ var (
 	}
 )
 
-func BenchmarkCounterIncrement(b *testing.B) {
+func BenchmarkCounterAdd(b *testing.B) {
 	ctx := b.Context()
 	for _, mp := range []struct {
 		name     string
 		provider func() metric.MeterProvider
 	}{
 		{
-			name:     "NoOpMeterProvider",
-			provider: func() metric.MeterProvider { return noop.NewMeterProvider() },
-		},
-		{
-			name: "DefaultMeterProvider",
+			name: "NoFilter",
 			provider: func() metric.MeterProvider {
 				return sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewManualReader()))
 			},
 		},
 		{
-			name: "FilteredMeterProvider",
+			name: "Filtered",
 			provider: func() metric.MeterProvider {
 				view := sdkmetric.NewView(
 					sdkmetric.Instrument{
 						Name: "test.counter",
 					},
-					// Filter out one attribute from each call, but don't change cardinality.
-					sdkmetric.Stream{AttributeFilter: attribute.NewDenyKeysFilter("b")},
+					// Filter out one attribute from each call.
+					sdkmetric.Stream{AttributeFilter: attribute.NewDenyKeysFilter("a")},
 				)
 				return sdkmetric.NewMeterProvider(sdkmetric.WithView(view), sdkmetric.WithReader(sdkmetric.NewManualReader()))
 			},
 		},
 	} {
 		b.Run(mp.name, func(b *testing.B) {
-			for _, attrsLen := range []int{2, 5, 10} {
+			for _, attrsLen := range []int{1, 5, 10} {
 				attrPool := sync.Pool{
 					New: func() any {
 						// Pre-allocate common capacity
@@ -77,115 +72,104 @@ func BenchmarkCounterIncrement(b *testing.B) {
 					},
 				}
 				b.Run(fmt.Sprintf("Attributes/%d", attrsLen), func(b *testing.B) {
-					for _, cardinality := range []int{1, 10, 100} {
-						b.Run(fmt.Sprintf("Cardinality/%d", cardinality), func(b *testing.B) {
-							b.Run("PrecomputedWithAttributeSet", func(b *testing.B) {
-								counter := testCounter(b, mp.provider())
-								opts := make([][]metric.AddOption, cardinality)
-								for i := range cardinality {
-									opts[i] = []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(getAttributes(attrsLen, cardinality, i)...))}
-								}
-								b.ReportAllocs()
-								b.RunParallel(func(pb *testing.PB) {
-									i := 0
-									for pb.Next() {
-										counter.Add(ctx, 1, opts[i%cardinality]...)
-										i++
-									}
-								})
-							})
-							b.Run("PrecomputedWithAttributes", func(b *testing.B) {
-								counter := testCounter(b, mp.provider())
-								opts := make([][]metric.AddOption, cardinality)
-								for i := range cardinality {
-									opts[i] = []metric.AddOption{metric.WithAttributes(getAttributes(attrsLen, cardinality, i)...)}
-								}
-								b.ReportAllocs()
-								b.RunParallel(func(pb *testing.PB) {
-									i := 0
-									for pb.Next() {
-										counter.Add(ctx, 1, opts[i%cardinality]...)
-										i++
-									}
-								})
-							})
-							// Based on https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
-							b.Run("DynamicWithAttributeSet", func(b *testing.B) {
-								counter := testCounter(b, mp.provider())
-								b.ReportAllocs()
-								b.RunParallel(func(pb *testing.PB) {
-									i := 0
-									for pb.Next() {
-										// Wrap in a function so we can use defer.
-										func() {
-											attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-											defer func() {
-												*attrsSlice = (*attrsSlice)[:0] // Reset.
-												attrPool.Put(attrsSlice)
-											}()
-											appendAttributes(attrsLen, cardinality, i, attrsSlice)
-											addOpt := addOptPool.Get().(*[]metric.AddOption)
-											defer func() {
-												*addOpt = (*addOpt)[:0]
-												addOptPool.Put(addOpt)
-											}()
-											set := attribute.NewSet(*attrsSlice...)
-											*addOpt = append(*addOpt, metric.WithAttributeSet(set))
-											counter.Add(ctx, 1, *addOpt...)
-										}()
-										i++
-									}
-								})
-							})
-							b.Run("DynamicWithAttributes", func(b *testing.B) {
-								counter := testCounter(b, mp.provider())
-								b.ReportAllocs()
-								b.RunParallel(func(pb *testing.PB) {
-									i := 0
-									for pb.Next() {
-										// Wrap in a function so we can use defer.
-										func() {
-											attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-											defer func() {
-												*attrsSlice = (*attrsSlice)[:0] // Reset.
-												attrPool.Put(attrsSlice)
-											}()
-											appendAttributes(attrsLen, cardinality, i, attrsSlice)
-											addOpt := addOptPool.Get().(*[]metric.AddOption)
-											defer func() {
-												*addOpt = (*addOpt)[:0]
-												addOptPool.Put(addOpt)
-											}()
-											counter.Add(ctx, 1, metric.WithAttributes(*attrsSlice...))
-										}()
-										i++
-									}
-								})
-							})
+					b.Run("Precomputed/WithAttributeSet", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						precomputedOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(getAttributes(attrsLen)...))}
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							i := 0
+							for pb.Next() {
+								counter.Add(ctx, 1, precomputedOpts...)
+								i++
+							}
 						})
-					}
+					})
+					b.Run("Precomputed/WithAttributes", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						precomputedOpts := []metric.AddOption{metric.WithAttributes(getAttributes(attrsLen)...)}
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							i := 0
+							for pb.Next() {
+								counter.Add(ctx, 1, precomputedOpts...)
+								i++
+							}
+						})
+					})
+					// Based on https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
+					b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							i := 0
+							for pb.Next() {
+								// Wrap in a function so we can use defer.
+								func() {
+									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
+									defer func() {
+										*attrsSlice = (*attrsSlice)[:0] // Reset.
+										attrPool.Put(attrsSlice)
+									}()
+									appendAttributes(attrsLen, attrsSlice)
+									addOpt := addOptPool.Get().(*[]metric.AddOption)
+									defer func() {
+										*addOpt = (*addOpt)[:0]
+										addOptPool.Put(addOpt)
+									}()
+									set := attribute.NewSet(*attrsSlice...)
+									*addOpt = append(*addOpt, metric.WithAttributeSet(set))
+									counter.Add(ctx, 1, *addOpt...)
+								}()
+								i++
+							}
+						})
+					})
+					b.Run("Dynamic/WithAttributes", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							i := 0
+							for pb.Next() {
+								// Wrap in a function so we can use defer.
+								func() {
+									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
+									defer func() {
+										*attrsSlice = (*attrsSlice)[:0] // Reset.
+										attrPool.Put(attrsSlice)
+									}()
+									appendAttributes(attrsLen, attrsSlice)
+									addOpt := addOptPool.Get().(*[]metric.AddOption)
+									defer func() {
+										*addOpt = (*addOpt)[:0]
+										addOptPool.Put(addOpt)
+									}()
+									counter.Add(ctx, 1, metric.WithAttributes(*attrsSlice...))
+								}()
+								i++
+							}
+						})
+					})
 				})
 			}
 		})
 	}
 }
 
-func getAttributes(number, cardinality, index int) []attribute.KeyValue {
+func getAttributes(number int) []attribute.KeyValue {
 	kvs := make([]attribute.KeyValue, 0, number)
-	appendAttributes(number, cardinality, index, &kvs)
+	appendAttributes(number, &kvs)
 	return kvs
 }
 
-func appendAttributes(number, cardinality, index int, kvs *[]attribute.KeyValue) {
+func appendAttributes(number int, kvs *[]attribute.KeyValue) {
 	switch number {
-	case 2:
+	case 1:
 		*kvs = append(*kvs,
-			attribute.Int("a", index%cardinality),
-			attribute.String("b", "b"),
+			attribute.String("a", "a"),
 		)
 	case 5:
 		*kvs = append(*kvs,
-			attribute.Int("a", index%cardinality),
+			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
 			attribute.String("d", "d"),
@@ -193,9 +177,11 @@ func appendAttributes(number, cardinality, index int, kvs *[]attribute.KeyValue)
 		)
 	case 10:
 		*kvs = append(*kvs,
-			attribute.Int("a", index%cardinality),
+			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
+			attribute.String("d", "d"),
+			attribute.String("e", "e"),
 			attribute.String("f", "f"),
 			attribute.String("g", "g"),
 			attribute.String("h", "h"),
