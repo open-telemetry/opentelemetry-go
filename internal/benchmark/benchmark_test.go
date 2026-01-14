@@ -24,16 +24,14 @@ func testCounter(b *testing.B, mp metric.MeterProvider) metric.Float64Counter {
 	return counter
 }
 
-var (
-	addOptPool = &sync.Pool{
-		New: func() any {
-			const n = 1 // WithAttributeSet
-			o := make([]metric.AddOption, 0, n)
-			// Return a pointer to avoid extra allocation on Put().
-			return &o
-		},
-	}
-)
+var addOptPool = &sync.Pool{
+	New: func() any {
+		const n = 1 // WithAttributeSet
+		o := make([]metric.AddOption, 0, n)
+		// Return a pointer to avoid extra allocation on Put().
+		return &o
+	},
+}
 
 func BenchmarkCounterAdd(b *testing.B) {
 	ctx := b.Context()
@@ -74,7 +72,9 @@ func BenchmarkCounterAdd(b *testing.B) {
 				b.Run(fmt.Sprintf("Attributes/%d", attrsLen), func(b *testing.B) {
 					b.Run("Precomputed/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
-						precomputedOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(getAttributes(attrsLen)...))}
+						precomputedOpts := []metric.AddOption{
+							metric.WithAttributeSet(attribute.NewSet(getAttributes(attrsLen)...)),
+						}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
 							i := 0
