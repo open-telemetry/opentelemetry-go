@@ -18,6 +18,12 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
+var (
+	attributesA = attribute.String("a", "a")
+	attributesB = attribute.String("b", "b")
+	setAB       = attribute.NewSet(attributesA, attributesB)
+)
+
 func TestMeterProviderConcurrentSafe(*testing.T) {
 	mp := &meterProvider{}
 	done := make(chan struct{})
@@ -144,12 +150,13 @@ func testSetupAllInstrumentTypes(
 	assert.NoError(t, err)
 
 	_, err = m.RegisterCallback(func(_ context.Context, obs metric.Observer) error {
-		obs.ObserveFloat64(afcounter, 3)
+		obs.WithAttributes(attributesA).WithAttributes(attributesB).ObserveFloat64(afcounter, 3)
 		return nil
 	}, afcounter)
 	require.NoError(t, err)
 
 	sfcounter, err := m.Float64Counter("test_Sync_Counter")
+	sfcounter = sfcounter.WithAttributes(attributesA).WithAttributes(attributesB)
 	require.NoError(t, err)
 	_, err = m.Float64UpDownCounter("test_Sync_UpDownCounter")
 	assert.NoError(t, err)
@@ -242,9 +249,13 @@ func TestMeterProviderDelegatesCalls(t *testing.T) {
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testFloat64Counter{}, ctr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, ctr.(*testFloat64Counter).count)
+	attrs := attribute.NewSet(ctr.(*testFloat64Counter).attributes...)
+	assert.True(t, attrs.Equals(&setAB))
 
 	require.IsType(t, &testFloat64Observable{}, actr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, actr.(*testFloat64Observable).count)
+	attrs = attribute.NewSet(actr.(*testFloat64Observable).attributes...)
+	assert.True(t, attrs.Equals(&setAB))
 
 	assert.Equal(t, 1, mp.count)
 }
@@ -291,10 +302,14 @@ func TestMeterDelegatesCalls(t *testing.T) {
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testFloat64Counter{}, ctr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, ctr.(*testFloat64Counter).count)
+	attrs := attribute.NewSet(ctr.(*testFloat64Counter).attributes...)
+	assert.True(t, attrs.Equals(&setAB))
 
 	// Because the Meter was provided by testMeterProvider it should also return our test instrument
 	require.IsType(t, &testFloat64Observable{}, actr, "the meter did not delegate calls to the meter")
 	assert.Equal(t, 1, actr.(*testFloat64Observable).count)
+	attrs = attribute.NewSet(actr.(*testFloat64Observable).attributes...)
+	assert.True(t, attrs.Equals(&setAB))
 
 	assert.Equal(t, 1, mp.count)
 }
@@ -338,7 +353,7 @@ func TestMeterDefersDelegations(t *testing.T) {
 
 	// Because the Meter was a delegate it should return a delegated instrument
 
-	assert.IsType(t, &sfCounter{}, ctr)
+	assert.IsType(t, &boundSfCounter{}, ctr)
 	assert.IsType(t, &afCounter{}, actr)
 	assert.Equal(t, 1, mp.count)
 }

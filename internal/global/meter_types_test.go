@@ -6,6 +6,7 @@ package global // import "go.opentelemetry.io/otel/internal/global"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -179,19 +180,24 @@ func (m *testMeter) collect() {
 type observationRecorder struct {
 	embedded.Observer
 
-	ctx context.Context
+	ctx        context.Context
+	attributes []attribute.KeyValue
 }
 
-func (observationRecorder) ObserveFloat64(i metric.Float64Observable, _ float64, _ ...metric.ObserveOption) {
+func (o observationRecorder) ObserveFloat64(i metric.Float64Observable, _ float64, _ ...metric.ObserveOption) {
 	iImpl, ok := i.(*testFloat64Observable)
 	if ok {
-		iImpl.observe()
+		iImpl.observe(o.attributes...)
 	}
 }
 
-func (observationRecorder) ObserveInt64(i metric.Int64Observable, _ int64, _ ...metric.ObserveOption) {
+func (o observationRecorder) ObserveInt64(i metric.Int64Observable, _ int64, _ ...metric.ObserveOption) {
 	iImpl, ok := i.(*testInt64Observable)
 	if ok {
-		iImpl.observe()
+		iImpl.observe(o.attributes...)
 	}
+}
+
+func (o observationRecorder) WithAttributes(kvs ...attribute.KeyValue) metric.Observer {
+	return observationRecorder{ctx: o.ctx, attributes: append(o.attributes, kvs...)}
 }

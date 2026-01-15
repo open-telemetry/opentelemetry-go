@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -267,6 +268,14 @@ type Observer interface {
 
 	// ObserveInt64 records the int64 value for obsrv.
 	ObserveInt64(obsrv Int64Observable, value int64, opts ...ObserveOption)
+
+	// WithAttributes binds attributes to the returned Observer.
+	// Subsequent calls to Add on the returned Observer will include th
+	// provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Observer it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Observer
 }
 
 // Registration is an token representing the unique registration of a callback

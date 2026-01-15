@@ -213,6 +213,12 @@ type sfCounter struct {
 	delegate atomic.Value // metric.Float64Counter
 }
 
+type boundSfCounter struct {
+	sfCounter
+
+	attributes []attribute.KeyValue
+}
+
 var _ metric.Float64Counter = (*sfCounter)(nil)
 
 func (i *sfCounter) setDelegate(m metric.Meter) {
@@ -241,8 +247,8 @@ func (i *sfCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Coun
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(metric.Float64Counter).WithAttributes(kvs...)
 	}
-	// TODO: return a copy of sfCounter with bound attributes stored.
-	return i
+	// TODO: do we need to copy for safety?
+	return &boundSfCounter{sfCounter: *i, attributes: kvs}
 }
 
 type sfUpDownCounter struct {
@@ -359,6 +365,7 @@ func (i *sfGauge) Enabled(ctx context.Context) bool {
 	}
 	return false
 }
+
 func (i *sfGauge) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Gauge {
 	if ctr := i.delegate.Load(); ctr != nil {
 		return ctr.(metric.Float64Gauge).WithAttributes(kvs...)

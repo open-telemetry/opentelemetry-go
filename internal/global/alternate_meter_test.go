@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -222,6 +223,10 @@ func (ao *altObserver) ObserveFloat64(inst metric.Float64Observable, _ float64, 
 
 func (ao *altObserver) ObserveInt64(inst metric.Int64Observable, _ int64, _ ...metric.ObserveOption) {
 	ao.observe(inst)
+}
+
+func (ao *altObserver) WithAttributes(...attribute.KeyValue) metric.Observer {
+	return ao
 }
 
 func (ao *altObserver) observe(inst any) {

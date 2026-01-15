@@ -542,6 +542,8 @@ type observer struct {
 	pipe    *pipeline
 	float64 map[observableID[float64]]struct{}
 	int64   map[observableID[int64]]struct{}
+
+	attributes []attribute.KeyValue
 }
 
 func newObserver(p *pipeline) observer {
@@ -623,6 +625,11 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	for _, m := range measures {
 		m(context.Background(), v, c.Attributes())
 	}
+}
+
+func (r observer) WithAttributes(kvs ...attribute.KeyValue) metric.Observer {
+	// TODO: implement!
+	return r
 }
 
 type noopRegister struct{ embedded.Registration }

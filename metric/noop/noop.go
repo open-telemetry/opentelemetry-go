@@ -177,6 +177,11 @@ func (Observer) ObserveFloat64(metric.Float64Observable, float64, ...metric.Obse
 func (Observer) ObserveInt64(metric.Int64Observable, int64, ...metric.ObserveOption) {
 }
 
+// WithAttributes performs no operation.
+func (Observer) WithAttributes(...attribute.KeyValue) metric.Observer {
+	return Observer{}
+}
+
 // Registration is the registration of a Callback with a No-Op Meter.
 type Registration struct{ embedded.Registration }
 
