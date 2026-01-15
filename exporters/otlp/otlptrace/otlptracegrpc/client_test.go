@@ -39,7 +39,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
