@@ -70,6 +70,10 @@ func BenchmarkCounterAdd(b *testing.B) {
 					},
 				}
 				b.Run(fmt.Sprintf("Attributes/%d", attrsLen), func(b *testing.B) {
+					// This case shows the performance of our API + SDK when
+					// following our contributor guidance for recording
+					// cached attributes by passing attribute.Set:
+					// https: //github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#cache-common-attribute-sets-for-repeated-measurements
 					b.Run("Precomputed/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						precomputedOpts := []metric.AddOption{
@@ -77,31 +81,33 @@ func BenchmarkCounterAdd(b *testing.B) {
 						}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
-							i := 0
 							for pb.Next() {
 								counter.Add(ctx, 1, precomputedOpts...)
-								i++
 							}
 						})
 					})
+					// This case shows the performance of our API + SDK when
+					// following our contributor guidance for recording
+					// cached attributes by passing []attribute.KeyValue:
+					// https: //github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#cache-common-attribute-sets-for-repeated-measurements
 					b.Run("Precomputed/WithAttributes", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						precomputedOpts := []metric.AddOption{metric.WithAttributes(getAttributes(attrsLen)...)}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
-							i := 0
 							for pb.Next() {
 								counter.Add(ctx, 1, precomputedOpts...)
-								i++
 							}
 						})
 					})
-					// Based on https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
+					// This case shows the performance of our API + SDK when
+					// following our contributor guidance for recording
+					// varying attributes by passing attribute.Set:
+					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
 					b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
-							i := 0
 							for pb.Next() {
 								// Wrap in a function so we can use defer.
 								func() {
@@ -120,10 +126,13 @@ func BenchmarkCounterAdd(b *testing.B) {
 									*addOpt = append(*addOpt, metric.WithAttributeSet(set))
 									counter.Add(ctx, 1, *addOpt...)
 								}()
-								i++
 							}
 						})
 					})
+					// This case shows the performance of our API + SDK when
+					// following our contributor guidance for recording
+					// varying attributes by passing []attribute.KeyValue:
+					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
 					b.Run("Dynamic/WithAttributes", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
@@ -146,6 +155,18 @@ func BenchmarkCounterAdd(b *testing.B) {
 									counter.Add(ctx, 1, metric.WithAttributes(*attrsSlice...))
 								}()
 								i++
+							}
+						})
+					})
+					// This case shows the performance of our API + SDK when
+					// users use it in the "obvious" way, without explicitly
+					// trying to optimize for performance.
+					b.Run("Naive/WithAttributes", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							for pb.Next() {
+								counter.Add(ctx, 1, metric.WithAttributes(getAttributes(attrsLen)...))
 							}
 						})
 					})
