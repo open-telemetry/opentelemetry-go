@@ -174,7 +174,7 @@ func operationDuration(err error) metricdata.Metrics {
 		c := int64(status.Code(err))
 		return attribute.NewSet(append(
 			[]attribute.KeyValue{
-				attribute.Int64("rpc.grpc.status_code", c),
+				semconv.RPCGRPCStatusCodeKey.Int64(c),
 			},
 			baseAttrs(err)...,
 		)...)

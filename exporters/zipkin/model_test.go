@@ -1154,7 +1154,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.ServicePeerName("peer-service-test"),
+					semconv.PeerService("peer-service-test"),
 					semconv.ServerAddress("server-address-test"),
 					semconv.NetworkPeerAddress("10.1.2.80"),
 				},

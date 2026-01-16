@@ -116,7 +116,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		// Do not modify attrs (NewSet sorts in-place), make a new slice.
 		recOpt: metric.WithAttributeSet(attribute.NewSet(append(
 			// Default to OK status code.
-			[]attribute.KeyValue{attribute.Int64("rpc.grpc.status_code", int64(codes.OK))},
+			[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
 			attrs...,
 		)...)),
 	}
@@ -292,7 +292,7 @@ func (i *Instrumentation) recordOption(err error, code codes.Code) metric.Record
 	*attrs = append(*attrs, i.attrs...)
 
 	c := int64(code) // uint32 -> int64.
-	*attrs = append(*attrs, attribute.Int64("rpc.grpc.status_code", c))
+	*attrs = append(*attrs, semconv.RPCGRPCStatusCodeKey.Int64(c))
 	if err != nil {
 		*attrs = append(*attrs, semconv.ErrorType(err))
 	}
