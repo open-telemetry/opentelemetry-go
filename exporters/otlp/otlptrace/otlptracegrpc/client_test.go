@@ -519,7 +519,9 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
-							attribute.Int64("rpc.grpc.status_code", int64(codes.OK)),
+							otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
+								otelconv.RPCGRPCStatusCodeOk,
+							),
 						)...)},
 					},
 					Temporality: 0x1,
