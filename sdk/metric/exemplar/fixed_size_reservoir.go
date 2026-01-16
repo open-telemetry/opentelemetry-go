@@ -116,6 +116,14 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 		r.store(ctx, idx, t, n, a)
 		r.wMu.Lock()
 		defer r.wMu.Unlock()
+		newCount, newNext := r.loadCountAndNext()
+		if newNext < next || newCount < count {
+			// This Observe() raced with Collect(), and r.reset() has been
+			// called since r.incrementCount(). Skip the call to advance in
+			// this case because our exemplar may have been collected in the
+			// previous interval.
+			return
+		}
 		r.advance()
 	}
 }
@@ -190,6 +198,13 @@ func (r *nextTracker) incrementNext(inc uint32) {
 // setCountAndNext sets the count and next values.
 func (r *nextTracker) setCountAndNext(count, next uint32) {
 	r.countAndNext.Store(uint64(next)<<32 + uint64(count))
+}
+
+func (r *nextTracker) loadCountAndNext() (uint32, uint32) {
+	n := r.countAndNext.Load()
+	// Both count and next are stored in the upper and lower 32 bits, and thus
+	// can't overflow.
+	return uint32(n&((1<<32)-1) - 1), uint32(n >> 32) // nolint: gosec
 }
 
 // advance updates the count at which the offered measurement will overwrite an
