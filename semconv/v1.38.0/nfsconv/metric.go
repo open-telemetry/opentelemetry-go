@@ -99,7 +99,7 @@ func NewClientNetCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientNetCount{noop.Int64Counter{}}, err
+		return ClientNetCount{noop.Int64Counter{}}, err
 	}
 	return ClientNetCount{i}, nil
 }
@@ -221,7 +221,7 @@ func NewClientNetTCPConnectionAccepted(
 		opt...,
 	)
 	if err != nil {
-	    return ClientNetTCPConnectionAccepted{noop.Int64Counter{}}, err
+		return ClientNetTCPConnectionAccepted{noop.Int64Counter{}}, err
 	}
 	return ClientNetTCPConnectionAccepted{i}, nil
 }
@@ -317,7 +317,7 @@ func NewClientOperationCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientOperationCount{noop.Int64Counter{}}, err
+		return ClientOperationCount{noop.Int64Counter{}}, err
 	}
 	return ClientOperationCount{i}, nil
 }
@@ -433,7 +433,7 @@ func NewClientProcedureCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientProcedureCount{noop.Int64Counter{}}, err
+		return ClientProcedureCount{noop.Int64Counter{}}, err
 	}
 	return ClientProcedureCount{i}, nil
 }
@@ -552,7 +552,7 @@ func NewClientRPCAuthrefreshCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientRPCAuthrefreshCount{noop.Int64Counter{}}, err
+		return ClientRPCAuthrefreshCount{noop.Int64Counter{}}, err
 	}
 	return ClientRPCAuthrefreshCount{i}, nil
 }
@@ -649,7 +649,7 @@ func NewClientRPCCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientRPCCount{noop.Int64Counter{}}, err
+		return ClientRPCCount{noop.Int64Counter{}}, err
 	}
 	return ClientRPCCount{i}, nil
 }
@@ -745,7 +745,7 @@ func NewClientRPCRetransmitCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientRPCRetransmitCount{noop.Int64Counter{}}, err
+		return ClientRPCRetransmitCount{noop.Int64Counter{}}, err
 	}
 	return ClientRPCRetransmitCount{i}, nil
 }
@@ -841,7 +841,7 @@ func NewServerFhStaleCount(
 		opt...,
 	)
 	if err != nil {
-	    return ServerFhStaleCount{noop.Int64Counter{}}, err
+		return ServerFhStaleCount{noop.Int64Counter{}}, err
 	}
 	return ServerFhStaleCount{i}, nil
 }
@@ -940,7 +940,7 @@ func NewServerIO(
 		opt...,
 	)
 	if err != nil {
-	    return ServerIO{noop.Int64Counter{}}, err
+		return ServerIO{noop.Int64Counter{}}, err
 	}
 	return ServerIO{i}, nil
 }
@@ -1057,7 +1057,7 @@ func NewServerNetCount(
 		opt...,
 	)
 	if err != nil {
-	    return ServerNetCount{noop.Int64Counter{}}, err
+		return ServerNetCount{noop.Int64Counter{}}, err
 	}
 	return ServerNetCount{i}, nil
 }
@@ -1179,7 +1179,7 @@ func NewServerNetTCPConnectionAccepted(
 		opt...,
 	)
 	if err != nil {
-	    return ServerNetTCPConnectionAccepted{noop.Int64Counter{}}, err
+		return ServerNetTCPConnectionAccepted{noop.Int64Counter{}}, err
 	}
 	return ServerNetTCPConnectionAccepted{i}, nil
 }
@@ -1275,7 +1275,7 @@ func NewServerOperationCount(
 		opt...,
 	)
 	if err != nil {
-	    return ServerOperationCount{noop.Int64Counter{}}, err
+		return ServerOperationCount{noop.Int64Counter{}}, err
 	}
 	return ServerOperationCount{i}, nil
 }
@@ -1391,7 +1391,7 @@ func NewServerProcedureCount(
 		opt...,
 	)
 	if err != nil {
-	    return ServerProcedureCount{noop.Int64Counter{}}, err
+		return ServerProcedureCount{noop.Int64Counter{}}, err
 	}
 	return ServerProcedureCount{i}, nil
 }
@@ -1509,7 +1509,7 @@ func NewServerRepcacheRequests(
 		opt...,
 	)
 	if err != nil {
-	    return ServerRepcacheRequests{noop.Int64Counter{}}, err
+		return ServerRepcacheRequests{noop.Int64Counter{}}, err
 	}
 	return ServerRepcacheRequests{i}, nil
 }
@@ -1621,7 +1621,7 @@ func NewServerRPCCount(
 		opt...,
 	)
 	if err != nil {
-	    return ServerRPCCount{noop.Int64Counter{}}, err
+		return ServerRPCCount{noop.Int64Counter{}}, err
 	}
 	return ServerRPCCount{i}, nil
 }
@@ -1742,7 +1742,7 @@ func NewServerThreadCount(
 		opt...,
 	)
 	if err != nil {
-	    return ServerThreadCount{noop.Int64UpDownCounter{}}, err
+		return ServerThreadCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ServerThreadCount{i}, nil
 }

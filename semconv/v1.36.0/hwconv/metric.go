@@ -134,7 +134,7 @@ func (Energy) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m Energy) Add(
@@ -254,7 +254,7 @@ func (Errors) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m Errors) Add(
@@ -865,7 +865,7 @@ func (Power) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -989,9 +989,9 @@ func (Status) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The state is the the current state of the component
+// # The state is the the current state of the component
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 //

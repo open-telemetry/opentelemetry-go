@@ -281,7 +281,7 @@ func NewCPUFrequency(
 		opt...,
 	)
 	if err != nil {
-	    return CPUFrequency{noop.Int64Gauge{}}, err
+		return CPUFrequency{noop.Int64Gauge{}}, err
 	}
 	return CPUFrequency{i}, nil
 }
@@ -393,7 +393,7 @@ func NewCPULogicalCount(
 		opt...,
 	)
 	if err != nil {
-	    return CPULogicalCount{noop.Int64UpDownCounter{}}, err
+		return CPULogicalCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CPULogicalCount{i}, nil
 }
@@ -491,7 +491,7 @@ func NewCPUPhysicalCount(
 		opt...,
 	)
 	if err != nil {
-	    return CPUPhysicalCount{noop.Int64UpDownCounter{}}, err
+		return CPUPhysicalCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CPUPhysicalCount{i}, nil
 }
@@ -589,7 +589,7 @@ func NewCPUTime(
 		opt...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64ObservableCounter{}}, err
+		return CPUTime{noop.Float64ObservableCounter{}}, err
 	}
 	return CPUTime{i}, nil
 }
@@ -661,7 +661,7 @@ func NewCPUUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return CPUUtilization{noop.Int64Gauge{}}, err
+		return CPUUtilization{noop.Int64Gauge{}}, err
 	}
 	return CPUUtilization{i}, nil
 }
@@ -778,7 +778,7 @@ func NewDiskIO(
 		opt...,
 	)
 	if err != nil {
-	    return DiskIO{noop.Int64Counter{}}, err
+		return DiskIO{noop.Int64Counter{}}, err
 	}
 	return DiskIO{i}, nil
 }
@@ -894,7 +894,7 @@ func NewDiskIOTime(
 		opt...,
 	)
 	if err != nil {
-	    return DiskIOTime{noop.Float64Counter{}}, err
+		return DiskIOTime{noop.Float64Counter{}}, err
 	}
 	return DiskIOTime{i}, nil
 }
@@ -930,7 +930,6 @@ func (DiskIOTime) Description() string {
 //   - Windows: The complement of
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
-//
 //
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
@@ -969,7 +968,6 @@ func (m DiskIOTime) Add(
 //   - Windows: The complement of
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
-//
 //
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
@@ -1028,7 +1026,7 @@ func NewDiskLimit(
 		opt...,
 	)
 	if err != nil {
-	    return DiskLimit{noop.Int64UpDownCounter{}}, err
+		return DiskLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return DiskLimit{i}, nil
 }
@@ -1138,7 +1136,7 @@ func NewDiskMerged(
 		opt...,
 	)
 	if err != nil {
-	    return DiskMerged{noop.Int64Counter{}}, err
+		return DiskMerged{noop.Int64Counter{}}, err
 	}
 	return DiskMerged{i}, nil
 }
@@ -1254,7 +1252,7 @@ func NewDiskOperationTime(
 		opt...,
 	)
 	if err != nil {
-	    return DiskOperationTime{noop.Float64Counter{}}, err
+		return DiskOperationTime{noop.Float64Counter{}}, err
 	}
 	return DiskOperationTime{i}, nil
 }
@@ -1289,7 +1287,6 @@ func (DiskOperationTime) Description() string {
 //   - Linux: Fields 7 & 11 from [procfs-diskstats]
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
-//
 //
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) Add(
@@ -1326,7 +1323,6 @@ func (m DiskOperationTime) Add(
 //   - Linux: Fields 7 & 11 from [procfs-diskstats]
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
-//
 //
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
@@ -1390,7 +1386,7 @@ func NewDiskOperations(
 		opt...,
 	)
 	if err != nil {
-	    return DiskOperations{noop.Int64Counter{}}, err
+		return DiskOperations{noop.Int64Counter{}}, err
 	}
 	return DiskOperations{i}, nil
 }
@@ -1506,7 +1502,7 @@ func NewFilesystemLimit(
 		opt...,
 	)
 	if err != nil {
-	    return FilesystemLimit{noop.Int64UpDownCounter{}}, err
+		return FilesystemLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemLimit{i}, nil
 }
@@ -1638,7 +1634,7 @@ func NewFilesystemUsage(
 		opt...,
 	)
 	if err != nil {
-	    return FilesystemUsage{noop.Int64UpDownCounter{}}, err
+		return FilesystemUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemUsage{i}, nil
 }
@@ -1787,7 +1783,7 @@ func NewFilesystemUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return FilesystemUtilization{noop.Int64Gauge{}}, err
+		return FilesystemUtilization{noop.Int64Gauge{}}, err
 	}
 	return FilesystemUtilization{i}, nil
 }
@@ -1927,7 +1923,7 @@ func NewLinuxMemoryAvailable(
 		opt...,
 	)
 	if err != nil {
-	    return LinuxMemoryAvailable{noop.Int64UpDownCounter{}}, err
+		return LinuxMemoryAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return LinuxMemoryAvailable{i}, nil
 }
@@ -2040,7 +2036,7 @@ func NewLinuxMemorySlabUsage(
 		opt...,
 	)
 	if err != nil {
-	    return LinuxMemorySlabUsage{noop.Int64UpDownCounter{}}, err
+		return LinuxMemorySlabUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return LinuxMemorySlabUsage{i}, nil
 }
@@ -2169,7 +2165,7 @@ func NewMemoryLimit(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryLimit{noop.Int64UpDownCounter{}}, err
+		return MemoryLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return MemoryLimit{i}, nil
 }
@@ -2261,7 +2257,7 @@ func NewMemoryShared(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryShared{noop.Int64UpDownCounter{}}, err
+		return MemoryShared{noop.Int64UpDownCounter{}}, err
 	}
 	return MemoryShared{i}, nil
 }
@@ -2365,7 +2361,7 @@ func NewMemoryUsage(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, err
+		return MemoryUsage{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
@@ -2429,7 +2425,7 @@ func NewMemoryUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryUtilization{noop.Float64ObservableGauge{}}, err
+		return MemoryUtilization{noop.Float64ObservableGauge{}}, err
 	}
 	return MemoryUtilization{i}, nil
 }
@@ -2493,7 +2489,7 @@ func NewNetworkConnectionCount(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkConnectionCount{noop.Int64UpDownCounter{}}, err
+		return NetworkConnectionCount{noop.Int64UpDownCounter{}}, err
 	}
 	return NetworkConnectionCount{i}, nil
 }
@@ -2621,7 +2617,7 @@ func NewNetworkErrors(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkErrors{noop.Int64Counter{}}, err
+		return NetworkErrors{noop.Int64Counter{}}, err
 	}
 	return NetworkErrors{i}, nil
 }
@@ -2655,7 +2651,6 @@ func (NetworkErrors) Description() string {
 //   - Linux: the `errs` column in `/proc/net/dev` ([source]).
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
-//
 //
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
@@ -2693,7 +2688,6 @@ func (m NetworkErrors) Add(
 //   - Linux: the `errs` column in `/proc/net/dev` ([source]).
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
-//
 //
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
@@ -2761,7 +2755,7 @@ func NewNetworkIO(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64ObservableCounter{}}, err
+		return NetworkIO{noop.Int64ObservableCounter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
@@ -2833,7 +2827,7 @@ func NewNetworkPacketCount(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkPacketCount{noop.Int64Counter{}}, err
+		return NetworkPacketCount{noop.Int64Counter{}}, err
 	}
 	return NetworkPacketCount{i}, nil
 }
@@ -2950,7 +2944,7 @@ func NewNetworkPacketDropped(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkPacketDropped{noop.Int64Counter{}}, err
+		return NetworkPacketDropped{noop.Int64Counter{}}, err
 	}
 	return NetworkPacketDropped{i}, nil
 }
@@ -2984,7 +2978,6 @@ func (NetworkPacketDropped) Description() string {
 //   - Linux: the `drop` column in `/proc/net/dev` ([source])
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
-//
 //
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
@@ -3022,7 +3015,6 @@ func (m NetworkPacketDropped) Add(
 //   - Linux: the `drop` column in `/proc/net/dev` ([source])
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
-//
 //
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
@@ -3090,7 +3082,7 @@ func NewPagingFaults(
 		opt...,
 	)
 	if err != nil {
-	    return PagingFaults{noop.Int64Counter{}}, err
+		return PagingFaults{noop.Int64Counter{}}, err
 	}
 	return PagingFaults{i}, nil
 }
@@ -3201,7 +3193,7 @@ func NewPagingOperations(
 		opt...,
 	)
 	if err != nil {
-	    return PagingOperations{noop.Int64Counter{}}, err
+		return PagingOperations{noop.Int64Counter{}}, err
 	}
 	return PagingOperations{i}, nil
 }
@@ -3319,7 +3311,7 @@ func NewPagingUsage(
 		opt...,
 	)
 	if err != nil {
-	    return PagingUsage{noop.Int64UpDownCounter{}}, err
+		return PagingUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return PagingUsage{i}, nil
 }
@@ -3436,7 +3428,7 @@ func NewPagingUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return PagingUtilization{noop.Int64Gauge{}}, err
+		return PagingUtilization{noop.Int64Gauge{}}, err
 	}
 	return PagingUtilization{i}, nil
 }
@@ -3553,7 +3545,7 @@ func NewProcessCount(
 		opt...,
 	)
 	if err != nil {
-	    return ProcessCount{noop.Int64UpDownCounter{}}, err
+		return ProcessCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ProcessCount{i}, nil
 }
@@ -3666,7 +3658,7 @@ func NewProcessCreated(
 		opt...,
 	)
 	if err != nil {
-	    return ProcessCreated{noop.Int64Counter{}}, err
+		return ProcessCreated{noop.Int64Counter{}}, err
 	}
 	return ProcessCreated{i}, nil
 }
@@ -3758,7 +3750,7 @@ func NewUptime(
 		opt...,
 	)
 	if err != nil {
-	    return Uptime{noop.Float64Gauge{}}, err
+		return Uptime{noop.Float64Gauge{}}, err
 	}
 	return Uptime{i}, nil
 }

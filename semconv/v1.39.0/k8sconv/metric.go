@@ -1319,12 +1319,12 @@ func (ContainerStatusReason) Description() string {
 // Corresponds to the `reason` field of the: [K8s ContainerStateWaiting] or
 // [K8s ContainerStateTerminated]
 //
-// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
-// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-//
 // All possible container state reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current state reason will be non-zero.
+//
+// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
+// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
 func (m ContainerStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -1439,11 +1439,11 @@ func (ContainerStatusState) Description() string {
 // The containerStatusState is the the state of the container.
 // [K8s ContainerState]
 //
-// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
-//
 // All possible container states will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current state will be non-zero.
+//
+// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
 func (m ContainerStatusState) Add(
 	ctx context.Context,
 	incr int64,
@@ -7127,11 +7127,11 @@ func (PodStatusPhase) Description() string {
 // The podStatusPhase is the the phase for the pod. Corresponds to the `phase`
 // field of the: [K8s PodStatus]
 //
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
-//
 // All possible pod phases will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current phase will be non-zero.
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusPhase) Add(
 	ctx context.Context,
 	incr int64,
@@ -7246,11 +7246,11 @@ func (PodStatusReason) Description() string {
 // The podStatusReason is the the reason for the pod state. Corresponds to the
 // `reason` field of the: [K8s PodStatus]
 //
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
-//
 // All possible pod status reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current reason will be non-zero.
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusReason) Add(
 	ctx context.Context,
 	incr int64,
