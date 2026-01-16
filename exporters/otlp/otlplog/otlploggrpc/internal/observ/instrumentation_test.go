@@ -175,7 +175,7 @@ func logOperationDurationMetrics(err error, code codes.Code) metricdata.Metrics 
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(GetComponentName(ID)),
 		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
-		semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
+		attribute.Int64("rpc.grpc.status_code", int64(code)),
 	}
 	attrs = append(attrs, ServerAddrAttrs(TARGET)...)
 	if err != nil {
