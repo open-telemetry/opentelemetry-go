@@ -84,8 +84,8 @@ func ExampleMeter_asynchronous_multiple() {
 			// This call does work
 			runtime.ReadMemStats(memStats)
 
-			o.WithAttributes(attribute.String("sybsystem", "memory")).ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
-			o.WithAttributes(attribute.String("sybsystem", "gc")).ObserveInt64(gcCount, int64(memStats.NumGC))
+			o.WithAttributes(attribute.String("subsystem", "memory")).ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
+			o.WithAttributes(attribute.String("subsystem", "gc")).ObserveInt64(gcCount, int64(memStats.NumGC))
 
 			return nil
 		},
