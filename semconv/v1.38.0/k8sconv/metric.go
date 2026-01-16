@@ -272,7 +272,7 @@ func NewContainerCPULimit(
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimit{noop.Int64UpDownCounter{}}, err
+	    return ContainerCPULimit{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerCPULimit{i}, nil
 }
@@ -373,7 +373,7 @@ func NewContainerCPULimitUtilization(
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitUtilization{noop.Int64Gauge{}}, err
+	    return ContainerCPULimitUtilization{noop.Int64Gauge{}}, err
 	}
 	return ContainerCPULimitUtilization{i}, nil
 }
@@ -473,7 +473,7 @@ func NewContainerCPURequest(
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequest{noop.Int64UpDownCounter{}}, err
+	    return ContainerCPURequest{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerCPURequest{i}, nil
 }
@@ -575,7 +575,7 @@ func NewContainerCPURequestUtilization(
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestUtilization{noop.Int64Gauge{}}, err
+	    return ContainerCPURequestUtilization{noop.Int64Gauge{}}, err
 	}
 	return ContainerCPURequestUtilization{i}, nil
 }
@@ -669,7 +669,7 @@ func NewContainerEphemeralStorageLimit(
 		opt...,
 	)
 	if err != nil {
-		return ContainerEphemeralStorageLimit{noop.Int64UpDownCounter{}}, err
+	    return ContainerEphemeralStorageLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerEphemeralStorageLimit{i}, nil
 }
@@ -771,7 +771,7 @@ func NewContainerEphemeralStorageRequest(
 		opt...,
 	)
 	if err != nil {
-		return ContainerEphemeralStorageRequest{noop.Int64UpDownCounter{}}, err
+	    return ContainerEphemeralStorageRequest{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerEphemeralStorageRequest{i}, nil
 }
@@ -871,7 +871,7 @@ func NewContainerMemoryLimit(
 		opt...,
 	)
 	if err != nil {
-		return ContainerMemoryLimit{noop.Int64UpDownCounter{}}, err
+	    return ContainerMemoryLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerMemoryLimit{i}, nil
 }
@@ -971,7 +971,7 @@ func NewContainerMemoryRequest(
 		opt...,
 	)
 	if err != nil {
-		return ContainerMemoryRequest{noop.Int64UpDownCounter{}}, err
+	    return ContainerMemoryRequest{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerMemoryRequest{i}, nil
 }
@@ -1072,7 +1072,7 @@ func NewContainerReady(
 		opt...,
 	)
 	if err != nil {
-		return ContainerReady{noop.Int64UpDownCounter{}}, err
+	    return ContainerReady{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerReady{i}, nil
 }
@@ -1175,7 +1175,7 @@ func NewContainerRestartCount(
 		opt...,
 	)
 	if err != nil {
-		return ContainerRestartCount{noop.Int64UpDownCounter{}}, err
+	    return ContainerRestartCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerRestartCount{i}, nil
 }
@@ -1288,7 +1288,7 @@ func NewContainerStatusReason(
 		opt...,
 	)
 	if err != nil {
-		return ContainerStatusReason{noop.Int64UpDownCounter{}}, err
+	    return ContainerStatusReason{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerStatusReason{i}, nil
 }
@@ -1319,12 +1319,12 @@ func (ContainerStatusReason) Description() string {
 // Corresponds to the `reason` field of the: [K8s ContainerStateWaiting] or
 // [K8s ContainerStateTerminated]
 //
+// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
+// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
+//
 // All possible container state reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current state reason will be non-zero.
-//
-// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
-// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
 func (m ContainerStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -1409,7 +1409,7 @@ func NewContainerStatusState(
 		opt...,
 	)
 	if err != nil {
-		return ContainerStatusState{noop.Int64UpDownCounter{}}, err
+	    return ContainerStatusState{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerStatusState{i}, nil
 }
@@ -1439,11 +1439,11 @@ func (ContainerStatusState) Description() string {
 // The containerStatusState is the the state of the container.
 // [K8s ContainerState]
 //
+// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
+//
 // All possible container states will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current state will be non-zero.
-//
-// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
 func (m ContainerStatusState) Add(
 	ctx context.Context,
 	incr int64,
@@ -1528,7 +1528,7 @@ func NewContainerStorageLimit(
 		opt...,
 	)
 	if err != nil {
-		return ContainerStorageLimit{noop.Int64UpDownCounter{}}, err
+	    return ContainerStorageLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerStorageLimit{i}, nil
 }
@@ -1628,7 +1628,7 @@ func NewContainerStorageRequest(
 		opt...,
 	)
 	if err != nil {
-		return ContainerStorageRequest{noop.Int64UpDownCounter{}}, err
+	    return ContainerStorageRequest{noop.Int64UpDownCounter{}}, err
 	}
 	return ContainerStorageRequest{i}, nil
 }
@@ -1728,7 +1728,7 @@ func NewCronJobJobActive(
 		opt...,
 	)
 	if err != nil {
-		return CronJobJobActive{noop.Int64UpDownCounter{}}, err
+	    return CronJobJobActive{noop.Int64UpDownCounter{}}, err
 	}
 	return CronJobJobActive{i}, nil
 }
@@ -1832,7 +1832,7 @@ func NewDaemonSetNodeCurrentScheduled(
 		opt...,
 	)
 	if err != nil {
-		return DaemonSetNodeCurrentScheduled{noop.Int64UpDownCounter{}}, err
+	    return DaemonSetNodeCurrentScheduled{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetNodeCurrentScheduled{i}, nil
 }
@@ -1936,7 +1936,7 @@ func NewDaemonSetNodeDesiredScheduled(
 		opt...,
 	)
 	if err != nil {
-		return DaemonSetNodeDesiredScheduled{noop.Int64UpDownCounter{}}, err
+	    return DaemonSetNodeDesiredScheduled{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetNodeDesiredScheduled{i}, nil
 }
@@ -2040,7 +2040,7 @@ func NewDaemonSetNodeMisscheduled(
 		opt...,
 	)
 	if err != nil {
-		return DaemonSetNodeMisscheduled{noop.Int64UpDownCounter{}}, err
+	    return DaemonSetNodeMisscheduled{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetNodeMisscheduled{i}, nil
 }
@@ -2143,7 +2143,7 @@ func NewDaemonSetNodeReady(
 		opt...,
 	)
 	if err != nil {
-		return DaemonSetNodeReady{noop.Int64UpDownCounter{}}, err
+	    return DaemonSetNodeReady{noop.Int64UpDownCounter{}}, err
 	}
 	return DaemonSetNodeReady{i}, nil
 }
@@ -2246,7 +2246,7 @@ func NewDeploymentPodAvailable(
 		opt...,
 	)
 	if err != nil {
-		return DeploymentPodAvailable{noop.Int64UpDownCounter{}}, err
+	    return DeploymentPodAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return DeploymentPodAvailable{i}, nil
 }
@@ -2348,7 +2348,7 @@ func NewDeploymentPodDesired(
 		opt...,
 	)
 	if err != nil {
-		return DeploymentPodDesired{noop.Int64UpDownCounter{}}, err
+	    return DeploymentPodDesired{noop.Int64UpDownCounter{}}, err
 	}
 	return DeploymentPodDesired{i}, nil
 }
@@ -2452,7 +2452,7 @@ func NewHPAMetricTargetCPUAverageUtilization(
 		opt...,
 	)
 	if err != nil {
-		return HPAMetricTargetCPUAverageUtilization{noop.Int64Gauge{}}, err
+	    return HPAMetricTargetCPUAverageUtilization{noop.Int64Gauge{}}, err
 	}
 	return HPAMetricTargetCPUAverageUtilization{i}, nil
 }
@@ -2591,7 +2591,7 @@ func NewHPAMetricTargetCPUAverageValue(
 		opt...,
 	)
 	if err != nil {
-		return HPAMetricTargetCPUAverageValue{noop.Int64Gauge{}}, err
+	    return HPAMetricTargetCPUAverageValue{noop.Int64Gauge{}}, err
 	}
 	return HPAMetricTargetCPUAverageValue{i}, nil
 }
@@ -2728,7 +2728,7 @@ func NewHPAMetricTargetCPUValue(
 		opt...,
 	)
 	if err != nil {
-		return HPAMetricTargetCPUValue{noop.Int64Gauge{}}, err
+	    return HPAMetricTargetCPUValue{noop.Int64Gauge{}}, err
 	}
 	return HPAMetricTargetCPUValue{i}, nil
 }
@@ -2866,7 +2866,7 @@ func NewHPAPodCurrent(
 		opt...,
 	)
 	if err != nil {
-		return HPAPodCurrent{noop.Int64UpDownCounter{}}, err
+	    return HPAPodCurrent{noop.Int64UpDownCounter{}}, err
 	}
 	return HPAPodCurrent{i}, nil
 }
@@ -2969,7 +2969,7 @@ func NewHPAPodDesired(
 		opt...,
 	)
 	if err != nil {
-		return HPAPodDesired{noop.Int64UpDownCounter{}}, err
+	    return HPAPodDesired{noop.Int64UpDownCounter{}}, err
 	}
 	return HPAPodDesired{i}, nil
 }
@@ -3071,7 +3071,7 @@ func NewHPAPodMax(
 		opt...,
 	)
 	if err != nil {
-		return HPAPodMax{noop.Int64UpDownCounter{}}, err
+	    return HPAPodMax{noop.Int64UpDownCounter{}}, err
 	}
 	return HPAPodMax{i}, nil
 }
@@ -3173,7 +3173,7 @@ func NewHPAPodMin(
 		opt...,
 	)
 	if err != nil {
-		return HPAPodMin{noop.Int64UpDownCounter{}}, err
+	    return HPAPodMin{noop.Int64UpDownCounter{}}, err
 	}
 	return HPAPodMin{i}, nil
 }
@@ -3275,7 +3275,7 @@ func NewJobPodActive(
 		opt...,
 	)
 	if err != nil {
-		return JobPodActive{noop.Int64UpDownCounter{}}, err
+	    return JobPodActive{noop.Int64UpDownCounter{}}, err
 	}
 	return JobPodActive{i}, nil
 }
@@ -3378,7 +3378,7 @@ func NewJobPodDesiredSuccessful(
 		opt...,
 	)
 	if err != nil {
-		return JobPodDesiredSuccessful{noop.Int64UpDownCounter{}}, err
+	    return JobPodDesiredSuccessful{noop.Int64UpDownCounter{}}, err
 	}
 	return JobPodDesiredSuccessful{i}, nil
 }
@@ -3480,7 +3480,7 @@ func NewJobPodFailed(
 		opt...,
 	)
 	if err != nil {
-		return JobPodFailed{noop.Int64UpDownCounter{}}, err
+	    return JobPodFailed{noop.Int64UpDownCounter{}}, err
 	}
 	return JobPodFailed{i}, nil
 }
@@ -3582,7 +3582,7 @@ func NewJobPodMaxParallel(
 		opt...,
 	)
 	if err != nil {
-		return JobPodMaxParallel{noop.Int64UpDownCounter{}}, err
+	    return JobPodMaxParallel{noop.Int64UpDownCounter{}}, err
 	}
 	return JobPodMaxParallel{i}, nil
 }
@@ -3684,7 +3684,7 @@ func NewJobPodSuccessful(
 		opt...,
 	)
 	if err != nil {
-		return JobPodSuccessful{noop.Int64UpDownCounter{}}, err
+	    return JobPodSuccessful{noop.Int64UpDownCounter{}}, err
 	}
 	return JobPodSuccessful{i}, nil
 }
@@ -3786,7 +3786,7 @@ func NewNamespacePhase(
 		opt...,
 	)
 	if err != nil {
-		return NamespacePhase{noop.Int64UpDownCounter{}}, err
+	    return NamespacePhase{noop.Int64UpDownCounter{}}, err
 	}
 	return NamespacePhase{i}, nil
 }
@@ -3894,7 +3894,7 @@ func NewNodeConditionStatus(
 		opt...,
 	)
 	if err != nil {
-		return NodeConditionStatus{noop.Int64UpDownCounter{}}, err
+	    return NodeConditionStatus{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeConditionStatus{i}, nil
 }
@@ -4015,7 +4015,7 @@ func NewNodeCPUAllocatable(
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUAllocatable{noop.Int64UpDownCounter{}}, err
+	    return NodeCPUAllocatable{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeCPUAllocatable{i}, nil
 }
@@ -4107,7 +4107,7 @@ func NewNodeCPUTime(
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUTime{noop.Float64Counter{}}, err
+	    return NodeCPUTime{noop.Float64Counter{}}, err
 	}
 	return NodeCPUTime{i}, nil
 }
@@ -4203,7 +4203,7 @@ func NewNodeCPUUsage(
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUUsage{noop.Int64Gauge{}}, err
+	    return NodeCPUUsage{noop.Int64Gauge{}}, err
 	}
 	return NodeCPUUsage{i}, nil
 }
@@ -4303,7 +4303,7 @@ func NewNodeEphemeralStorageAllocatable(
 		opt...,
 	)
 	if err != nil {
-		return NodeEphemeralStorageAllocatable{noop.Int64UpDownCounter{}}, err
+	    return NodeEphemeralStorageAllocatable{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeEphemeralStorageAllocatable{i}, nil
 }
@@ -4395,7 +4395,7 @@ func NewNodeFilesystemAvailable(
 		opt...,
 	)
 	if err != nil {
-		return NodeFilesystemAvailable{noop.Int64UpDownCounter{}}, err
+	    return NodeFilesystemAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeFilesystemAvailable{i}, nil
 }
@@ -4503,7 +4503,7 @@ func NewNodeFilesystemCapacity(
 		opt...,
 	)
 	if err != nil {
-		return NodeFilesystemCapacity{noop.Int64UpDownCounter{}}, err
+	    return NodeFilesystemCapacity{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeFilesystemCapacity{i}, nil
 }
@@ -4611,7 +4611,7 @@ func NewNodeFilesystemUsage(
 		opt...,
 	)
 	if err != nil {
-		return NodeFilesystemUsage{noop.Int64UpDownCounter{}}, err
+	    return NodeFilesystemUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeFilesystemUsage{i}, nil
 }
@@ -4723,7 +4723,7 @@ func NewNodeMemoryAllocatable(
 		opt...,
 	)
 	if err != nil {
-		return NodeMemoryAllocatable{noop.Int64UpDownCounter{}}, err
+	    return NodeMemoryAllocatable{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeMemoryAllocatable{i}, nil
 }
@@ -4815,7 +4815,7 @@ func NewNodeMemoryAvailable(
 		opt...,
 	)
 	if err != nil {
-		return NodeMemoryAvailable{noop.Int64UpDownCounter{}}, err
+	    return NodeMemoryAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeMemoryAvailable{i}, nil
 }
@@ -4923,7 +4923,7 @@ func NewNodeMemoryPagingFaults(
 		opt...,
 	)
 	if err != nil {
-		return NodeMemoryPagingFaults{noop.Int64Counter{}}, err
+	    return NodeMemoryPagingFaults{noop.Int64Counter{}}, err
 	}
 	return NodeMemoryPagingFaults{i}, nil
 }
@@ -5051,7 +5051,7 @@ func NewNodeMemoryRss(
 		opt...,
 	)
 	if err != nil {
-		return NodeMemoryRss{noop.Int64UpDownCounter{}}, err
+	    return NodeMemoryRss{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeMemoryRss{i}, nil
 }
@@ -5159,7 +5159,7 @@ func NewNodeMemoryUsage(
 		opt...,
 	)
 	if err != nil {
-		return NodeMemoryUsage{noop.Int64Gauge{}}, err
+	    return NodeMemoryUsage{noop.Int64Gauge{}}, err
 	}
 	return NodeMemoryUsage{i}, nil
 }
@@ -5255,7 +5255,7 @@ func NewNodeMemoryWorkingSet(
 		opt...,
 	)
 	if err != nil {
-		return NodeMemoryWorkingSet{noop.Int64UpDownCounter{}}, err
+	    return NodeMemoryWorkingSet{noop.Int64UpDownCounter{}}, err
 	}
 	return NodeMemoryWorkingSet{i}, nil
 }
@@ -5363,7 +5363,7 @@ func NewNodeNetworkErrors(
 		opt...,
 	)
 	if err != nil {
-		return NodeNetworkErrors{noop.Int64Counter{}}, err
+	    return NodeNetworkErrors{noop.Int64Counter{}}, err
 	}
 	return NodeNetworkErrors{i}, nil
 }
@@ -5481,7 +5481,7 @@ func NewNodeNetworkIO(
 		opt...,
 	)
 	if err != nil {
-		return NodeNetworkIO{noop.Int64Counter{}}, err
+	    return NodeNetworkIO{noop.Int64Counter{}}, err
 	}
 	return NodeNetworkIO{i}, nil
 }
@@ -5599,7 +5599,7 @@ func NewNodePodAllocatable(
 		opt...,
 	)
 	if err != nil {
-		return NodePodAllocatable{noop.Int64UpDownCounter{}}, err
+	    return NodePodAllocatable{noop.Int64UpDownCounter{}}, err
 	}
 	return NodePodAllocatable{i}, nil
 }
@@ -5691,7 +5691,7 @@ func NewNodeUptime(
 		opt...,
 	)
 	if err != nil {
-		return NodeUptime{noop.Float64Gauge{}}, err
+	    return NodeUptime{noop.Float64Gauge{}}, err
 	}
 	return NodeUptime{i}, nil
 }
@@ -5791,7 +5791,7 @@ func NewPodCPUTime(
 		opt...,
 	)
 	if err != nil {
-		return PodCPUTime{noop.Float64Counter{}}, err
+	    return PodCPUTime{noop.Float64Counter{}}, err
 	}
 	return PodCPUTime{i}, nil
 }
@@ -5887,7 +5887,7 @@ func NewPodCPUUsage(
 		opt...,
 	)
 	if err != nil {
-		return PodCPUUsage{noop.Int64Gauge{}}, err
+	    return PodCPUUsage{noop.Int64Gauge{}}, err
 	}
 	return PodCPUUsage{i}, nil
 }
@@ -5985,7 +5985,7 @@ func NewPodFilesystemAvailable(
 		opt...,
 	)
 	if err != nil {
-		return PodFilesystemAvailable{noop.Int64UpDownCounter{}}, err
+	    return PodFilesystemAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return PodFilesystemAvailable{i}, nil
 }
@@ -6093,7 +6093,7 @@ func NewPodFilesystemCapacity(
 		opt...,
 	)
 	if err != nil {
-		return PodFilesystemCapacity{noop.Int64UpDownCounter{}}, err
+	    return PodFilesystemCapacity{noop.Int64UpDownCounter{}}, err
 	}
 	return PodFilesystemCapacity{i}, nil
 }
@@ -6201,7 +6201,7 @@ func NewPodFilesystemUsage(
 		opt...,
 	)
 	if err != nil {
-		return PodFilesystemUsage{noop.Int64UpDownCounter{}}, err
+	    return PodFilesystemUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return PodFilesystemUsage{i}, nil
 }
@@ -6313,7 +6313,7 @@ func NewPodMemoryAvailable(
 		opt...,
 	)
 	if err != nil {
-		return PodMemoryAvailable{noop.Int64UpDownCounter{}}, err
+	    return PodMemoryAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return PodMemoryAvailable{i}, nil
 }
@@ -6421,7 +6421,7 @@ func NewPodMemoryPagingFaults(
 		opt...,
 	)
 	if err != nil {
-		return PodMemoryPagingFaults{noop.Int64Counter{}}, err
+	    return PodMemoryPagingFaults{noop.Int64Counter{}}, err
 	}
 	return PodMemoryPagingFaults{i}, nil
 }
@@ -6549,7 +6549,7 @@ func NewPodMemoryRss(
 		opt...,
 	)
 	if err != nil {
-		return PodMemoryRss{noop.Int64UpDownCounter{}}, err
+	    return PodMemoryRss{noop.Int64UpDownCounter{}}, err
 	}
 	return PodMemoryRss{i}, nil
 }
@@ -6657,7 +6657,7 @@ func NewPodMemoryUsage(
 		opt...,
 	)
 	if err != nil {
-		return PodMemoryUsage{noop.Int64Gauge{}}, err
+	    return PodMemoryUsage{noop.Int64Gauge{}}, err
 	}
 	return PodMemoryUsage{i}, nil
 }
@@ -6753,7 +6753,7 @@ func NewPodMemoryWorkingSet(
 		opt...,
 	)
 	if err != nil {
-		return PodMemoryWorkingSet{noop.Int64UpDownCounter{}}, err
+	    return PodMemoryWorkingSet{noop.Int64UpDownCounter{}}, err
 	}
 	return PodMemoryWorkingSet{i}, nil
 }
@@ -6861,7 +6861,7 @@ func NewPodNetworkErrors(
 		opt...,
 	)
 	if err != nil {
-		return PodNetworkErrors{noop.Int64Counter{}}, err
+	    return PodNetworkErrors{noop.Int64Counter{}}, err
 	}
 	return PodNetworkErrors{i}, nil
 }
@@ -6979,7 +6979,7 @@ func NewPodNetworkIO(
 		opt...,
 	)
 	if err != nil {
-		return PodNetworkIO{noop.Int64Counter{}}, err
+	    return PodNetworkIO{noop.Int64Counter{}}, err
 	}
 	return PodNetworkIO{i}, nil
 }
@@ -7097,7 +7097,7 @@ func NewPodStatusPhase(
 		opt...,
 	)
 	if err != nil {
-		return PodStatusPhase{noop.Int64UpDownCounter{}}, err
+	    return PodStatusPhase{noop.Int64UpDownCounter{}}, err
 	}
 	return PodStatusPhase{i}, nil
 }
@@ -7127,11 +7127,11 @@ func (PodStatusPhase) Description() string {
 // The podStatusPhase is the the phase for the pod. Corresponds to the `phase`
 // field of the: [K8s PodStatus]
 //
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
+//
 // All possible pod phases will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current phase will be non-zero.
-//
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusPhase) Add(
 	ctx context.Context,
 	incr int64,
@@ -7216,7 +7216,7 @@ func NewPodStatusReason(
 		opt...,
 	)
 	if err != nil {
-		return PodStatusReason{noop.Int64UpDownCounter{}}, err
+	    return PodStatusReason{noop.Int64UpDownCounter{}}, err
 	}
 	return PodStatusReason{i}, nil
 }
@@ -7246,11 +7246,11 @@ func (PodStatusReason) Description() string {
 // The podStatusReason is the the reason for the pod state. Corresponds to the
 // `reason` field of the: [K8s PodStatus]
 //
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
+//
 // All possible pod status reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current reason will be non-zero.
-//
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -7335,7 +7335,7 @@ func NewPodUptime(
 		opt...,
 	)
 	if err != nil {
-		return PodUptime{noop.Float64Gauge{}}, err
+	    return PodUptime{noop.Float64Gauge{}}, err
 	}
 	return PodUptime{i}, nil
 }
@@ -7435,7 +7435,7 @@ func NewPodVolumeAvailable(
 		opt...,
 	)
 	if err != nil {
-		return PodVolumeAvailable{noop.Int64UpDownCounter{}}, err
+	    return PodVolumeAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return PodVolumeAvailable{i}, nil
 }
@@ -7567,7 +7567,7 @@ func NewPodVolumeCapacity(
 		opt...,
 	)
 	if err != nil {
-		return PodVolumeCapacity{noop.Int64UpDownCounter{}}, err
+	    return PodVolumeCapacity{noop.Int64UpDownCounter{}}, err
 	}
 	return PodVolumeCapacity{i}, nil
 }
@@ -7699,7 +7699,7 @@ func NewPodVolumeInodeCount(
 		opt...,
 	)
 	if err != nil {
-		return PodVolumeInodeCount{noop.Int64UpDownCounter{}}, err
+	    return PodVolumeInodeCount{noop.Int64UpDownCounter{}}, err
 	}
 	return PodVolumeInodeCount{i}, nil
 }
@@ -7831,7 +7831,7 @@ func NewPodVolumeInodeFree(
 		opt...,
 	)
 	if err != nil {
-		return PodVolumeInodeFree{noop.Int64UpDownCounter{}}, err
+	    return PodVolumeInodeFree{noop.Int64UpDownCounter{}}, err
 	}
 	return PodVolumeInodeFree{i}, nil
 }
@@ -7963,7 +7963,7 @@ func NewPodVolumeInodeUsed(
 		opt...,
 	)
 	if err != nil {
-		return PodVolumeInodeUsed{noop.Int64UpDownCounter{}}, err
+	    return PodVolumeInodeUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return PodVolumeInodeUsed{i}, nil
 }
@@ -8101,7 +8101,7 @@ func NewPodVolumeUsage(
 		opt...,
 	)
 	if err != nil {
-		return PodVolumeUsage{noop.Int64UpDownCounter{}}, err
+	    return PodVolumeUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return PodVolumeUsage{i}, nil
 }
@@ -8238,7 +8238,7 @@ func NewReplicaSetPodAvailable(
 		opt...,
 	)
 	if err != nil {
-		return ReplicaSetPodAvailable{noop.Int64UpDownCounter{}}, err
+	    return ReplicaSetPodAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicaSetPodAvailable{i}, nil
 }
@@ -8340,7 +8340,7 @@ func NewReplicaSetPodDesired(
 		opt...,
 	)
 	if err != nil {
-		return ReplicaSetPodDesired{noop.Int64UpDownCounter{}}, err
+	    return ReplicaSetPodDesired{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicaSetPodDesired{i}, nil
 }
@@ -8444,7 +8444,7 @@ func NewReplicationControllerPodAvailable(
 		opt...,
 	)
 	if err != nil {
-		return ReplicationControllerPodAvailable{noop.Int64UpDownCounter{}}, err
+	    return ReplicationControllerPodAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicationControllerPodAvailable{i}, nil
 }
@@ -8548,7 +8548,7 @@ func NewReplicationControllerPodDesired(
 		opt...,
 	)
 	if err != nil {
-		return ReplicationControllerPodDesired{noop.Int64UpDownCounter{}}, err
+	    return ReplicationControllerPodDesired{noop.Int64UpDownCounter{}}, err
 	}
 	return ReplicationControllerPodDesired{i}, nil
 }
@@ -8653,7 +8653,7 @@ func NewResourceQuotaCPULimitHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPULimitHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaCPULimitHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPULimitHard{i}, nil
 }
@@ -8758,7 +8758,7 @@ func NewResourceQuotaCPULimitUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPULimitUsed{i}, nil
 }
@@ -8863,7 +8863,7 @@ func NewResourceQuotaCPURequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPURequestHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaCPURequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPURequestHard{i}, nil
 }
@@ -8968,7 +8968,7 @@ func NewResourceQuotaCPURequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPURequestUsed{i}, nil
 }
@@ -9074,7 +9074,7 @@ func NewResourceQuotaEphemeralStorageLimitHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaEphemeralStorageLimitHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaEphemeralStorageLimitHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaEphemeralStorageLimitHard{i}, nil
 }
@@ -9180,7 +9180,7 @@ func NewResourceQuotaEphemeralStorageLimitUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaEphemeralStorageLimitUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaEphemeralStorageLimitUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaEphemeralStorageLimitUsed{i}, nil
 }
@@ -9286,7 +9286,7 @@ func NewResourceQuotaEphemeralStorageRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaEphemeralStorageRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaEphemeralStorageRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaEphemeralStorageRequestHard{i}, nil
 }
@@ -9392,7 +9392,7 @@ func NewResourceQuotaEphemeralStorageRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaEphemeralStorageRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaEphemeralStorageRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaEphemeralStorageRequestUsed{i}, nil
 }
@@ -9498,7 +9498,7 @@ func NewResourceQuotaHugepageCountRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaHugepageCountRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaHugepageCountRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaHugepageCountRequestHard{i}, nil
 }
@@ -9620,7 +9620,7 @@ func NewResourceQuotaHugepageCountRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaHugepageCountRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaHugepageCountRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaHugepageCountRequestUsed{i}, nil
 }
@@ -9741,7 +9741,7 @@ func NewResourceQuotaMemoryLimitHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaMemoryLimitHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaMemoryLimitHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaMemoryLimitHard{i}, nil
 }
@@ -9846,7 +9846,7 @@ func NewResourceQuotaMemoryLimitUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaMemoryLimitUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaMemoryLimitUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaMemoryLimitUsed{i}, nil
 }
@@ -9951,7 +9951,7 @@ func NewResourceQuotaMemoryRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaMemoryRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaMemoryRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaMemoryRequestHard{i}, nil
 }
@@ -10056,7 +10056,7 @@ func NewResourceQuotaMemoryRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaMemoryRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaMemoryRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaMemoryRequestUsed{i}, nil
 }
@@ -10161,7 +10161,7 @@ func NewResourceQuotaObjectCountHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaObjectCountHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaObjectCountHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaObjectCountHard{i}, nil
 }
@@ -10283,7 +10283,7 @@ func NewResourceQuotaObjectCountUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaObjectCountUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaObjectCountUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaObjectCountUsed{i}, nil
 }
@@ -10407,7 +10407,7 @@ func NewResourceQuotaPersistentvolumeclaimCountHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaPersistentvolumeclaimCountHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaPersistentvolumeclaimCountHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaPersistentvolumeclaimCountHard{i}, nil
 }
@@ -10543,7 +10543,7 @@ func NewResourceQuotaPersistentvolumeclaimCountUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaPersistentvolumeclaimCountUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaPersistentvolumeclaimCountUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaPersistentvolumeclaimCountUsed{i}, nil
 }
@@ -10677,7 +10677,7 @@ func NewResourceQuotaStorageRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaStorageRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaStorageRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaStorageRequestHard{i}, nil
 }
@@ -10811,7 +10811,7 @@ func NewResourceQuotaStorageRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaStorageRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ResourceQuotaStorageRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ResourceQuotaStorageRequestUsed{i}, nil
 }
@@ -10943,7 +10943,7 @@ func NewStatefulSetPodCurrent(
 		opt...,
 	)
 	if err != nil {
-		return StatefulSetPodCurrent{noop.Int64UpDownCounter{}}, err
+	    return StatefulSetPodCurrent{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetPodCurrent{i}, nil
 }
@@ -11045,7 +11045,7 @@ func NewStatefulSetPodDesired(
 		opt...,
 	)
 	if err != nil {
-		return StatefulSetPodDesired{noop.Int64UpDownCounter{}}, err
+	    return StatefulSetPodDesired{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetPodDesired{i}, nil
 }
@@ -11147,7 +11147,7 @@ func NewStatefulSetPodReady(
 		opt...,
 	)
 	if err != nil {
-		return StatefulSetPodReady{noop.Int64UpDownCounter{}}, err
+	    return StatefulSetPodReady{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetPodReady{i}, nil
 }
@@ -11250,7 +11250,7 @@ func NewStatefulSetPodUpdated(
 		opt...,
 	)
 	if err != nil {
-		return StatefulSetPodUpdated{noop.Int64UpDownCounter{}}, err
+	    return StatefulSetPodUpdated{noop.Int64UpDownCounter{}}, err
 	}
 	return StatefulSetPodUpdated{i}, nil
 }

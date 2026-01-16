@@ -1063,8 +1063,7 @@ func AWSExtendedRequestID(val string) attribute.KeyValue {
 // "aws.lambda.invoked_arn" semantic conventions. It represents the full invoked
 // ARN as provided on the `Context` passed to the function (
 // `Lambda-Runtime-Invoked-Function-Arn` header on the `/runtime/invocation/next`
-//
-//	applicable).
+//  applicable).
 func AWSLambdaInvokedARN(val string) attribute.KeyValue {
 	return AWSLambdaInvokedARNKey.String(val)
 }
@@ -2038,8 +2037,7 @@ func CloudRegion(val string) attribute.KeyValue {
 // "cloud.resource_id" semantic conventions. It represents the cloud
 // provider-specific native identifier of the monitored cloud resource (e.g. an
 // [ARN] on AWS, a [fully qualified resource ID] on Azure, a [full resource name]
-//
-//	on GCP).
+//  on GCP).
 //
 // [ARN]: https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html
 // [fully qualified resource ID]: https://learn.microsoft.com/rest/api/resources/resources/get-by-id

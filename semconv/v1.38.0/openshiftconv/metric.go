@@ -55,7 +55,7 @@ func NewClusterquotaCPULimitHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPULimitHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaCPULimitHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPULimitHard{i}, nil
 }
@@ -164,7 +164,7 @@ func NewClusterquotaCPULimitUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPULimitUsed{i}, nil
 }
@@ -274,7 +274,7 @@ func NewClusterquotaCPURequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPURequestHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaCPURequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPURequestHard{i}, nil
 }
@@ -384,7 +384,7 @@ func NewClusterquotaCPURequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPURequestUsed{i}, nil
 }
@@ -494,7 +494,7 @@ func NewClusterquotaEphemeralStorageLimitHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaEphemeralStorageLimitHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaEphemeralStorageLimitHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaEphemeralStorageLimitHard{i}, nil
 }
@@ -604,7 +604,7 @@ func NewClusterquotaEphemeralStorageLimitUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaEphemeralStorageLimitUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaEphemeralStorageLimitUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaEphemeralStorageLimitUsed{i}, nil
 }
@@ -714,7 +714,7 @@ func NewClusterquotaEphemeralStorageRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaEphemeralStorageRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaEphemeralStorageRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaEphemeralStorageRequestHard{i}, nil
 }
@@ -825,7 +825,7 @@ func NewClusterquotaEphemeralStorageRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaEphemeralStorageRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaEphemeralStorageRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaEphemeralStorageRequestUsed{i}, nil
 }
@@ -935,7 +935,7 @@ func NewClusterquotaHugepageCountRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaHugepageCountRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaHugepageCountRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaHugepageCountRequestHard{i}, nil
 }
@@ -1061,7 +1061,7 @@ func NewClusterquotaHugepageCountRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaHugepageCountRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaHugepageCountRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaHugepageCountRequestUsed{i}, nil
 }
@@ -1187,7 +1187,7 @@ func NewClusterquotaMemoryLimitHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaMemoryLimitHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaMemoryLimitHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaMemoryLimitHard{i}, nil
 }
@@ -1297,7 +1297,7 @@ func NewClusterquotaMemoryLimitUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaMemoryLimitUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaMemoryLimitUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaMemoryLimitUsed{i}, nil
 }
@@ -1407,7 +1407,7 @@ func NewClusterquotaMemoryRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaMemoryRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaMemoryRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaMemoryRequestHard{i}, nil
 }
@@ -1517,7 +1517,7 @@ func NewClusterquotaMemoryRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaMemoryRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaMemoryRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaMemoryRequestUsed{i}, nil
 }
@@ -1627,7 +1627,7 @@ func NewClusterquotaObjectCountHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaObjectCountHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaObjectCountHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaObjectCountHard{i}, nil
 }
@@ -1754,7 +1754,7 @@ func NewClusterquotaObjectCountUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaObjectCountUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaObjectCountUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaObjectCountUsed{i}, nil
 }
@@ -1882,7 +1882,7 @@ func NewClusterquotaPersistentvolumeclaimCountHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaPersistentvolumeclaimCountHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaPersistentvolumeclaimCountHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaPersistentvolumeclaimCountHard{i}, nil
 }
@@ -2022,7 +2022,7 @@ func NewClusterquotaPersistentvolumeclaimCountUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaPersistentvolumeclaimCountUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaPersistentvolumeclaimCountUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaPersistentvolumeclaimCountUsed{i}, nil
 }
@@ -2161,7 +2161,7 @@ func NewClusterquotaStorageRequestHard(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaStorageRequestHard{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaStorageRequestHard{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaStorageRequestHard{i}, nil
 }
@@ -2300,7 +2300,7 @@ func NewClusterquotaStorageRequestUsed(
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaStorageRequestUsed{noop.Int64UpDownCounter{}}, err
+	    return ClusterquotaStorageRequestUsed{noop.Int64UpDownCounter{}}, err
 	}
 	return ClusterquotaStorageRequestUsed{i}, nil
 }
