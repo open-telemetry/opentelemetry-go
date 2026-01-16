@@ -693,7 +693,7 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											semconv.RPCGRPCStatusCode(int(codes. OK)),
+											attribute.Int64("rpc.grpc.status_code", int64(codes.OK)),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
@@ -829,7 +829,7 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											semconv.RPCGRPCStatusCode(int(status.Code(wantErr))),
+											attribute.Int64("rpc.grpc.status_code", int64(status.Code(wantErr))),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 											semconv.ErrorType(wantErr),
@@ -872,7 +872,7 @@ func TestClientObservability(t *testing.T) {
 				wantErr = errors.Join(wantErr, err)
 
 				wantErrTypeAttr := semconv.ErrorType(wantErr)
-				wantGRPCStatusCodeAttr := semconv.RPCGRPCStatusCode(int(codes.InvalidArgument))
+				wantGRPCStatusCodeAttr := attribute.Int64("rpc.grpc.status_code", int64(codes.InvalidArgument))
 				rCh := make(chan exportResult, 1)
 				rCh <- exportResult{
 					Err: err,
@@ -1138,11 +1138,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 									otelconv.ComponentTypeOtlpGRPCLogExporter,
 								),
-								otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
-									otelconv.RPCGRPCStatusCodeAttr(
-										status.Code(wantErr),
-									),
-								),
+								attribute.Int64("rpc.grpc.status_code", int64(status.Code(wantErr))),
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
 								semconv.ErrorType(wantErr),
