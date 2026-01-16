@@ -233,7 +233,7 @@ func (i *Instrumentation) recordOption(err error) metric.RecordOption {
 	code := int64(status.Code(err))
 	*attrs = append(
 		*attrs,
-		semconv.RPCGRPCStatusCodeKey.Int64(code),
+		attribute.Int64("rpc.grpc.status_code", code),
 		semconv.ErrorType(err),
 	)
 
