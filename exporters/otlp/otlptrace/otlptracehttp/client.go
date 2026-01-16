@@ -291,7 +291,7 @@ func (d *client) newRequest(body []byte) (request, error) {
 		}
 
 		req.bodyReader = bodyReader(b.Bytes())
-		req.GetBody = bodyReaderErr(body)
+		req.GetBody = bodyReaderErr(b.Bytes())
 	}
 
 	return req, nil
