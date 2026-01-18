@@ -10,6 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `Enabled` method to all synchronous instrument interfaces (`Float64Counter`, `Float64UpDownCounter`, `Float64Histogram`, `Float64Gauge`, `Int64Counter`, `Int64UpDownCounter`, `Int64Histogram`, `Int64Gauge`,) in `go.opentelemetry.io/otel/metric`.
+  This stabilizes the synchronous instrument enabled feature, allowing users to check if an instrument will process measurements before performing computationally expensive operations. (#7763)
+- Add `AlwaysRecord` sampler in `go.opentelemetry.io/otel/sdk/trace`. (#7724)
+- Add `go.opentelemetry.io/otel/semconv/v1.39.0` package.
+  The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.`(#7783)
 - Added `http/json` support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` (#7804)
 
 ### Changed
@@ -21,6 +27,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve the concurrent performance of `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by 4x. (#7443)
 - Improve performance of concurrent synchronous gauge measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7478)
 - Improve performance of concurrent exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7702)
+
+### Fixed
+
+- Fix bad log message when key-value pairs are dropped because of key duplication in `go.opentelemetry.io/otel/sdk/log`. (#7662)
+- Fix `DroppedAttributes` on `Record` in `go.opentelemetry.io/otel/sdk/log` to not count the non-attribute key-value pairs dropped because of key duplication. (#7662)
+- Fix `SetAttributes` on `Record` in `go.opentelemetry.io/otel/sdk/log` to not log that attributes are dropped when they are actually not dropped. (#7662)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

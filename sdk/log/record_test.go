@@ -553,17 +553,33 @@ func TestRecordDroppedAttributes(t *testing.T) {
 
 		attrs := make([]log.KeyValue, i)
 		attrs[0] = log.Bool("only key different then the rest", true)
-		assert.False(t, called, "non-dropped attributed logged")
 
 		r.AddAttributes(attrs...)
-		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: AddAttributes", i)
-		assert.True(t, called, "dropped attributes not logged")
+		// Deduplication doesn't count as dropped.
+		wantDropped := 0
+		if i > 1 {
+			wantDropped = 1
+		}
+		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: AddAttributes", i)
+		if i <= 1 {
+			assert.False(t, called, "%d: dropped attributes logged", i)
+		} else {
+			assert.True(t, called, "%d: dropped attributes not logged", i)
+		}
 
 		r.AddAttributes(attrs...)
-		assert.Equalf(t, 2*i-1, r.DroppedAttributes(), "%d: second AddAttributes", i)
+		wantDropped = 0
+		if i > 1 {
+			wantDropped = 2
+		}
+		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: second AddAttributes", i)
 
 		r.SetAttributes(attrs...)
-		assert.Equalf(t, i-1, r.DroppedAttributes(), "%d: SetAttributes", i)
+		wantDropped = 0
+		if i > 1 {
+			wantDropped = 1
+		}
+		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: SetAttributes", i)
 	}
 }
 
@@ -957,7 +973,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 				log.String("g", "GG"),
 				log.String("h", "H"),
 			),
-			wantDroppedAttrs: 10,
+			wantDroppedAttrs: 0, // Deduplication doesn't count as dropped
 		},
 		{
 			name:             "EmptyMap",
@@ -987,7 +1003,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 				log.MapValue(log.String("key", "value2")),
 				log.StringValue("normal"),
 			),
-			wantDroppedAttrs: 1,
+			wantDroppedAttrs: 0, // Nested deduplication doesn't count as dropped
 		},
 		{
 			name: "NestedSliceInMap",
@@ -1001,7 +1017,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 					log.MapValue(log.String("nested", "value2")),
 				),
 			),
-			wantDroppedAttrs: 1,
+			wantDroppedAttrs: 0, // Nested deduplication doesn't count as dropped
 		},
 		{
 			name: "DeeplyNestedStructure",
@@ -1023,7 +1039,7 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 					),
 				),
 			),
-			wantDroppedAttrs: 1,
+			wantDroppedAttrs: 0, // Deeply nested deduplication doesn't count as dropped
 		},
 		{
 			name: "NestedMapWithoutDuplicateKeys",
@@ -1056,6 +1072,96 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
 				assert.Equal(t, tc.wantDroppedAttrs, r.DroppedAttributes())
 			})
+		})
+	}
+}
+
+func TestDeduplicationBehavior(t *testing.T) {
+	origKeyValueDropped := logKeyValuePairDropped
+	origAttrDropped := logAttrDropped
+	t.Cleanup(func() {
+		logKeyValuePairDropped = origKeyValueDropped
+		logAttrDropped = origAttrDropped
+	})
+
+	testCases := []struct {
+		name                string
+		attributeCountLimit int
+		allowDupKeys        bool
+		attrs               []log.KeyValue
+		wantKeyValueDropped bool
+		wantAttrDropped     bool
+		wantDroppedCount    int
+		wantAttributeCount  int
+	}{
+		{
+			name:                "Duplicate keys only",
+			attrs:               []log.KeyValue{log.String("key", "v1"), log.String("key", "v2")},
+			wantKeyValueDropped: true,
+			wantDroppedCount:    0, // Deduplication doesn't count
+			wantAttributeCount:  1,
+		},
+		{
+			name:                "Limit exceeded only",
+			attributeCountLimit: 2,
+			attrs:               []log.KeyValue{log.String("a", "v1"), log.String("b", "v2"), log.String("c", "v3")},
+			wantAttrDropped:     true,
+			wantDroppedCount:    1,
+			wantAttributeCount:  2,
+		},
+		{
+			name:                "Both duplicates and limit",
+			attributeCountLimit: 2,
+			attrs: []log.KeyValue{
+				log.String("a", "v1"),
+				log.String("a", "v2"),
+				log.String("b", "v3"),
+				log.String("c", "v4"),
+			},
+			wantKeyValueDropped: true,
+			wantAttrDropped:     true,
+			wantDroppedCount:    1, // Only limit drops count
+			wantAttributeCount:  2,
+		},
+		{
+			name:                "allowDupKeys=true",
+			allowDupKeys:        true,
+			attrs:               []log.KeyValue{log.String("key", "v1"), log.String("key", "v2")},
+			wantKeyValueDropped: false,
+			wantDroppedCount:    0,
+			wantAttributeCount:  2,
+		},
+		{
+			name: "Nested map duplicates",
+			attrs: []log.KeyValue{
+				log.Map("outer", log.String("nested", "v1"), log.String("nested", "v2")),
+			},
+			wantKeyValueDropped: true,
+			wantDroppedCount:    0,
+			wantAttributeCount:  1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			keyValueDroppedCalled := false
+			attrDroppedCalled := false
+
+			logKeyValuePairDropped = sync.OnceFunc(func() { keyValueDroppedCalled = true })
+			logAttrDropped = sync.OnceFunc(func() { attrDroppedCalled = true })
+
+			r := &Record{
+				attributeValueLengthLimit: -1,
+				attributeCountLimit:       tc.attributeCountLimit,
+				allowDupKeys:              tc.allowDupKeys,
+			}
+
+			r.SetAttributes(tc.attrs...)
+
+			assert.Equal(t, tc.wantKeyValueDropped, keyValueDroppedCalled)
+			assert.Equal(t, tc.wantAttrDropped, attrDroppedCalled)
+			assert.Equal(t, tc.wantDroppedCount, r.DroppedAttributes())
+			assert.Equal(t, tc.wantAttributeCount, r.AttributesLen())
 		})
 	}
 }
