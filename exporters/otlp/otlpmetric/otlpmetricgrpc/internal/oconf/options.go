@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package oconf provides configuration for the otlpmetric exporters.
-package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+package oconf
 
 import (
 	"crypto/tls"
@@ -54,6 +54,7 @@ type (
 		TLSCfg      *tls.Config
 		Headers     map[string]string
 		Compression Compression
+		Encoding    Encoding
 		Timeout     time.Duration
 		URLPath     string
 
@@ -90,6 +91,7 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:     DefaultMetricsPath,
 			Compression: NoCompression,
+			Encoding:    ProtobufEncoding,
 			Timeout:     DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
@@ -298,6 +300,13 @@ func WithEndpointURL(v string) GenericOption {
 func WithCompression(compression Compression) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.Compression = compression
+		return cfg
+	})
+}
+
+func WithEncoding(encoding Encoding) HTTPOption {
+	return NewHTTPOption(func(cfg Config) Config {
+		cfg.Metrics.Encoding = encoding
 		return cfg
 	})
 }

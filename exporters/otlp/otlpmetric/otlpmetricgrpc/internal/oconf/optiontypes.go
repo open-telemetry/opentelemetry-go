@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+package oconf
 
 import "time"
 
@@ -29,6 +29,16 @@ const (
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
 	GzipCompression
+)
+
+// Encoding describes the encoding used for payloads sent to the collector.
+type Encoding int
+
+const (
+	// ProtobufEncoding tells the driver to send payloads using protobuf encoding.
+	ProtobufEncoding Encoding = iota
+	// JSONEncoding tells the driver to send payloads using JSON encoding.
+	JSONEncoding
 )
 
 // RetrySettings defines configuration for retrying batches in case of export failure
