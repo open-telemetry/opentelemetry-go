@@ -19,9 +19,11 @@ import (
 )
 
 var (
-	attributesA = attribute.String("a", "a")
-	attributesB = attribute.String("b", "b")
-	setAB       = attribute.NewSet(attributesA, attributesB)
+	attributeA = attribute.String("a", "a")
+	attributeB = attribute.String("b", "b")
+	attributeC = attribute.String("c", "c")
+	setAB      = attribute.NewSet(attributeA, attributeB)
+	setABC     = attribute.NewSet(attributeA, attributeB, attributeC)
 )
 
 func TestMeterProviderConcurrentSafe(*testing.T) {
@@ -150,13 +152,13 @@ func testSetupAllInstrumentTypes(
 	assert.NoError(t, err)
 
 	_, err = m.RegisterCallback(func(_ context.Context, obs metric.Observer) error {
-		obs.WithAttributes(attributesA).WithAttributes(attributesB).ObserveFloat64(afcounter, 3)
+		obs.WithAttributes(attributeA).WithAttributes(attributeB).ObserveFloat64(afcounter, 3)
 		return nil
 	}, afcounter)
 	require.NoError(t, err)
 
 	sfcounter, err := m.Float64Counter("test_Sync_Counter")
-	sfcounter = sfcounter.WithAttributes(attributesA).WithAttributes(attributesB)
+	sfcounter = sfcounter.WithAttributes(attributeA).WithAttributes(attributeB)
 	require.NoError(t, err)
 	_, err = m.Float64UpDownCounter("test_Sync_UpDownCounter")
 	assert.NoError(t, err)
@@ -353,7 +355,13 @@ func TestMeterDefersDelegations(t *testing.T) {
 
 	// Because the Meter was a delegate it should return a delegated instrument
 
-	assert.IsType(t, &boundSfCounter{}, ctr)
+	assert.IsType(t, &boundSFCounter{}, ctr)
+	attrs := attribute.NewSet(ctr.(*boundSFCounter).attributes...)
+	assert.True(t, attrs.Equals(&setAB))
+	boundCtr := ctr.WithAttributes(attributeC)
+	assert.IsType(t, &testFloat64Counter{}, boundCtr)
+	attrs = attribute.NewSet(boundCtr.(*testFloat64Counter).attributes...)
+	assert.True(t, attrs.Equals(&setABC))
 	assert.IsType(t, &afCounter{}, actr)
 	assert.Equal(t, 1, mp.count)
 }

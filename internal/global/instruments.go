@@ -213,10 +213,12 @@ type sfCounter struct {
 	delegate atomic.Value // metric.Float64Counter
 }
 
-type boundSfCounter struct {
-	sfCounter
+type boundSFCounter struct {
+	embedded.Float64Counter
 
+	base       *sfCounter
 	attributes []attribute.KeyValue
+	delegate   atomic.Value // metric.Float64Counter
 }
 
 var _ metric.Float64Counter = (*sfCounter)(nil)
@@ -248,7 +250,41 @@ func (i *sfCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Coun
 		return ctr.(metric.Float64Counter).WithAttributes(kvs...)
 	}
 	// TODO: do we need to copy for safety?
-	return &boundSfCounter{sfCounter: *i, attributes: kvs}
+	return &boundSFCounter{base: i, attributes: kvs}
+}
+
+func (i *boundSFCounter) Add(ctx context.Context, incr float64, opts ...metric.AddOption) {
+	if ctr := i.getDelegate(); ctr != nil {
+		ctr.Add(ctx, incr, opts...)
+	}
+}
+
+func (i *boundSFCounter) Enabled(ctx context.Context) bool {
+	return i.base.Enabled(ctx)
+}
+
+func (i *boundSFCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Counter {
+	if ctr := i.getDelegate(); ctr != nil {
+		return ctr.WithAttributes(kvs...)
+	}
+	// TODO: do we need to copy for safety?
+	return &boundSFCounter{base: i.base, attributes: append(i.attributes, kvs...)}
+}
+
+func (i *boundSFCounter) getDelegate() metric.Float64Counter {
+	if ctr := i.delegate.Load(); ctr != nil {
+		return ctr.(metric.Float64Counter)
+	}
+	// setDelegate only delegates the base counter sfCounter, and not the
+	// bound versions because storing references to all boundSFCounter would
+	// not be cardinality-limited. Instead, we lazily bind and store
+	// instruments as-needed.
+	if ctr := i.base.delegate.Load(); ctr != nil {
+		bound := ctr.(metric.Float64Counter).WithAttributes(i.attributes...)
+		i.delegate.Store(bound)
+		return bound
+	}
+	return nil
 }
 
 type sfUpDownCounter struct {
