@@ -333,10 +333,18 @@ type expoHistogram[N int64 | float64] struct {
 	start time.Time
 }
 
+func (s *expoHistogram[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
+	// TODO: This isn't actually a performance improvement, but I need to
+	// figure out how to make this work with how delta maps are cleared.
+	return func(ctx context.Context, value N) {
+		s.measure(ctx, value, fltrAttr, droppedAttr)
+	}
+}
+
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	fltrAttr []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	// Ignore NaN and infinity.
@@ -347,17 +355,18 @@ func (e *expoHistogram[N]) measure(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	v, ok := e.values[fltrAttr.Equivalent()]
+	v, ok := e.values[attribute.NewDistinct(fltrAttr...)]
 	if !ok {
-		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
+		set := attribute.NewSet(fltrAttr...)
+		set = e.limit.Attributes(set, e.values)
 		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
+		v, ok = e.values[set.Equivalent()]
 		if !ok {
-			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-			v.res = e.newRes(fltrAttr)
+			v = newExpoHistogramDataPoint[N](set, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+			v.res = e.newRes(set)
 
-			e.values[fltrAttr.Equivalent()] = v
+			e.values[set.Equivalent()] = v
 		}
 	}
 	v.record(value)

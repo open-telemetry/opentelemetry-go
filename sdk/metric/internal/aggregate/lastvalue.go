@@ -24,21 +24,17 @@ type lastValueMap[N int64 | float64] struct {
 	values limitedSyncMap
 }
 
-func (s *lastValueMap[N]) measure(
-	ctx context.Context,
-	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
-) {
+func (s *lastValueMap[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
 	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &lastValuePoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
 		}
 	}).(*lastValuePoint[N])
-
-	lv.value.Store(value)
-	lv.res.Offer(ctx, value, droppedAttr)
+	return func(ctx context.Context, value N) {
+		lv.value.Store(value)
+		lv.res.Offer(ctx, value, droppedAttr)
+	}
 }
 
 func newDeltaLastValue[N int64 | float64](
@@ -70,15 +66,23 @@ type deltaLastValue[N int64 | float64] struct {
 	hotColdValMap [2]lastValueMap[N]
 }
 
+func (s *deltaLastValue[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
+	// TODO: This isn't actually a performance improvement. This needs to be
+	// refactored to offer benefits.
+	return func(ctx context.Context, value N) {
+		s.measure(ctx, value, fltrAttr, droppedAttr)
+	}
+}
+
 func (s *deltaLastValue[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	fltrAttr []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].lookup(fltrAttr, droppedAttr)(ctx, value)
 }
 
 func (s *deltaLastValue[N]) collect(

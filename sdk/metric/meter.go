@@ -593,7 +593,8 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.float64Measures[oImpl.observableID]
 	for _, m := range measures {
-		m(context.Background(), v, c.Attributes())
+		attrs := c.Attributes()
+		m(attrs.ToSlice())(context.Background(), v)
 	}
 }
 
@@ -623,7 +624,8 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.int64Measures[oImpl.observableID]
 	for _, m := range measures {
-		m(context.Background(), v, c.Attributes())
+		attrs := c.Attributes()
+		m(attrs.ToSlice())(context.Background(), v)
 	}
 }
 
@@ -641,7 +643,7 @@ func (noopRegister) Unregister() error {
 // int64InstProvider provides int64 OpenTelemetry instruments.
 type int64InstProvider struct{ *meter }
 
-func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[int64], error) {
+func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Lookup[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -655,7 +657,7 @@ func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]ag
 func (p int64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Int64HistogramConfig,
-) ([]aggregate.Measure[int64], error) {
+) ([]aggregate.Lookup[int64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
@@ -702,7 +704,7 @@ func (p int64InstProvider) lookupHistogram(name string, cfg metric.Int64Histogra
 // float64InstProvider provides float64 OpenTelemetry instruments.
 type float64InstProvider struct{ *meter }
 
-func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[float64], error) {
+func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Lookup[float64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -716,7 +718,7 @@ func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]
 func (p float64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Float64HistogramConfig,
-) ([]aggregate.Measure[float64], error) {
+) ([]aggregate.Lookup[float64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
@@ -767,10 +769,12 @@ type int64Observer struct {
 
 func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 	c := metric.NewObserveConfig(opts)
-	o.observe(val, c.Attributes())
+	attrs := c.Attributes()
+	o.observe(val, attrs.ToSlice())
 }
 
 func (o int64Observer) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Observer {
+	// TODO: implement
 	return o
 }
 
@@ -781,9 +785,11 @@ type float64Observer struct {
 
 func (o float64Observer) Observe(val float64, opts ...metric.ObserveOption) {
 	c := metric.NewObserveConfig(opts)
-	o.observe(val, c.Attributes())
+	attrs := c.Attributes()
+	o.observe(val, attrs.ToSlice())
 }
 
 func (o float64Observer) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Observer {
+	// TODO: implement
 	return o
 }

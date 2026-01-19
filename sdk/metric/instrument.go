@@ -177,7 +177,7 @@ func (i instID) normalize() instID {
 }
 
 type int64Inst struct {
-	measures []aggregate.Measure[int64]
+	measures []aggregate.Lookup[int64]
 }
 
 var (
@@ -189,12 +189,14 @@ var (
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
@@ -244,15 +246,15 @@ func (i *int64Gauge) WithAttributes(_ ...attribute.KeyValue) metric.Int64Gauge {
 func (i *int64Inst) aggregate(
 	ctx context.Context,
 	val int64,
-	s attribute.Set,
+	s []attribute.KeyValue,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(s)(ctx, val)
 	}
 }
 
 type float64Inst struct {
-	measures []aggregate.Measure[float64]
+	measures []aggregate.Lookup[float64]
 }
 
 var (
@@ -264,21 +266,23 @@ var (
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
 	return len(i.measures) != 0
 }
 
-func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
+func (i *float64Inst) aggregate(ctx context.Context, val float64, s []attribute.KeyValue) {
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(s)(ctx, val)
 	}
 }
 
@@ -341,6 +345,7 @@ type float64Observable struct {
 }
 
 func (o *float64Observable) WithAttributes(_ ...attribute.KeyValue) metric.Float64Observable {
+	// TODO: implement
 	return o
 }
 
@@ -366,6 +371,7 @@ type int64Observable struct {
 }
 
 func (o *int64Observable) WithAttributes(_ ...attribute.KeyValue) metric.Int64Observable {
+	// TODO: implement
 	return o
 }
 
@@ -404,20 +410,20 @@ func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc,
 }
 
 // observe records the val for the set of attrs.
-func (o *observable[N]) observe(val N, s attribute.Set) {
+func (o *observable[N]) observe(val N, s []attribute.KeyValue) {
 	o.measures.observe(val, s)
 }
 
-func (o *observable[N]) appendMeasures(meas []aggregate.Measure[N]) {
+func (o *observable[N]) appendMeasures(meas []aggregate.Lookup[N]) {
 	o.measures = append(o.measures, meas...)
 }
 
-type measures[N int64 | float64] []aggregate.Measure[N]
+type measures[N int64 | float64] []aggregate.Lookup[N]
 
 // observe records the val for the set of attrs.
-func (m measures[N]) observe(val N, s attribute.Set) {
+func (m measures[N]) observe(val N, s []attribute.KeyValue) {
 	for _, in := range m {
-		in(context.Background(), val, s)
+		in(s)(context.Background(), val)
 	}
 }
 

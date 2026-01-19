@@ -22,23 +22,20 @@ type sumValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
-func (s *sumValueMap[N]) measure(
-	ctx context.Context,
-	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
-) {
+func (s *sumValueMap[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
 	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &sumValue[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
 		}
 	}).(*sumValue[N])
-	sv.n.add(value)
-	// It is possible for collection to race with measurement and observe the
-	// exemplar in the batch of metrics after the add() for cumulative sums.
-	// This is an accepted tradeoff to avoid locking during measurement.
-	sv.res.Offer(ctx, value, droppedAttr)
+	return func(ctx context.Context, value N) {
+		sv.n.add(value)
+		// It is possible for collection to race with measurement and observe the
+		// exemplar in the batch of metrics after the add() for cumulative sums.
+		// This is an accepted tradeoff to avoid locking during measurement.
+		sv.res.Offer(ctx, value, droppedAttr)
+	}
 }
 
 // newDeltaSum returns an aggregator that summarizes a set of measurements as
@@ -74,10 +71,14 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]sumValueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	hotIdx := s.hcwg.start()
-	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+func (s *deltaSum[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
+	// TODO: This isn't actually a performance improvement. This needs to be
+	// refactored to offer benefits.
+	return func(ctx context.Context, value N) {
+		hotIdx := s.hcwg.start()
+		defer s.hcwg.done(hotIdx)
+		s.hotColdValMap[hotIdx].lookup(fltrAttr, droppedAttr)(ctx, value)
+	}
 }
 
 func (s *deltaSum[N]) collect(
