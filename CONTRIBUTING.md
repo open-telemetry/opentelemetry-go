@@ -1109,6 +1109,71 @@ func TestObservability(t *testing.T) {
 Test order should not affect results.
 Ensure that any global state (e.g. component ID counters) is reset between tests.
 
+
+## Semantic Conventions Upgrade
+
+[Semantic convetions](https://github.com/open-telemetry/semantic-conventions) are periodically released, whhich might introduce new attributes and/or deprecate existing ones.
+
+This section covers all the steps required to update to a newer release of the semanctic conventions.
+
+
+### Generate the new Semconv package
+
+First, run the generation command with the target version tag:
+
+```sh
+
+make semconv-generate TAG=v1.39.0
+
+```
+
+This will generate a new go package under the semconv directory whose name matches the new version. 
+It is assumed here that the target semconv version has been released in the conventions repository.
+
+The `CHANGELOG.md` should also be updated to reflect the new changes:
+
+```md
+- The `go.opentelemetry.io/otel/semconv/v1.39.0` package.
+
+The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
+
+See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.`(#PR_NUMBER)
+```
+
+
+### Update Semconv imports
+
+
+Once the new semconv module has been generated, update all semconv imports throughout the codebase to reference the new version:
+  
+```go
+
+// Before
+semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+
+  
+
+// After
+semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+```
+
+Once complete, run `make` command to check for any compilation or test failures.
+
+#### Handling attribute changes
+
+Some semconv releases might impact attributes that are currently being used. Changes could stem from a simple renaming, to more complex changes like merging attributes and property values being changed.
+
+One should update the code to the new attributes that superseed the impacted ones, hence sticking to the semantic conventions. In cases where the underlying value does not change, for example an attribute being renamed, the change should be trivial.
+
+However, if the attribute value is somehwat modified, for example, the new attribute has a different type, then a migration for that particular package might have to be planned. (Example issue [#7806](https://github.com/open-telemetry/opentelemetry-go/issues/7806) for an example)
+
+### Go contrib linter update
+
+Update [.golangci.yml](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/.golangci.yml#L57)) in [opentelemetry-go-contrib]((https://github.com/open-telemetry/opentelemetry-go-contrib/) to mandate the new semconv version.
+
+
 ## Approvers and Maintainers
 
 ### Maintainers
