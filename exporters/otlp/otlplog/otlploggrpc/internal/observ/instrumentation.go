@@ -149,7 +149,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	i.addOpt = metric.WithAttributeSet(attribute.NewSet(i.presetAttrs...))
 	i.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
 		// Default to OK status code.
-		[]attribute.KeyValue{attribute.Int64("rpc.grpc.status_code", 0)},
+		[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
 		i.presetAttrs...,
 	)...))
 	return i, nil
