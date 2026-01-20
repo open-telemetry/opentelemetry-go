@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 )
 
 const scopeName = "go.opentelemetry.op/otel/internal/benchmark"
@@ -42,7 +43,7 @@ func BenchmarkCounterAdd(b *testing.B) {
 		{
 			name: "NoFilter",
 			provider: func() metric.MeterProvider {
-				return sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewManualReader()))
+				return sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewManualReader()), sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter))
 			},
 		},
 		{
@@ -55,7 +56,10 @@ func BenchmarkCounterAdd(b *testing.B) {
 					// Filter out one attribute from each call.
 					sdkmetric.Stream{AttributeFilter: attribute.NewDenyKeysFilter("a")},
 				)
-				return sdkmetric.NewMeterProvider(sdkmetric.WithView(view), sdkmetric.WithReader(sdkmetric.NewManualReader()))
+				return sdkmetric.NewMeterProvider(
+					sdkmetric.WithView(view),
+					sdkmetric.WithReader(sdkmetric.NewManualReader()),
+					sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter))
 			},
 		},
 	} {
