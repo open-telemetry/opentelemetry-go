@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -255,6 +256,11 @@ func (i *int64Inst) aggregate(
 
 type float64Inst struct {
 	measures []aggregate.Lookup[float64]
+	// TODO: at minimum, this needs to implement cardinality limiting.
+	// We should actually refactor the SDK so that the measures are nested
+	// within the sync.Map already used within the SDK's aggregation package.
+	// This would mean we only need a single lookup.
+	boundInsts sync.Map // boundFloat64Inst
 }
 
 var (
@@ -286,13 +292,80 @@ func (i *float64Inst) aggregate(ctx context.Context, val float64, s []attribute.
 	}
 }
 
+var _ metric.Float64Counter = (*boundFloat64Counter)(nil)
+
+func (i *boundFloat64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
+	c := metric.NewAddConfig(opts)
+	attrs := c.Attributes()
+	if attrs.Len() == 0 {
+		// Fast path requires no lookup
+		i.aggregate(ctx, val)
+		return
+	}
+	i.base.aggregate(ctx, val, append(i.attrs, attrs.ToSlice()...))
+}
+
+func (i *boundFloat64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
+	c := metric.NewRecordConfig(opts)
+	attrs := c.Attributes()
+	if attrs.Len() == 0 {
+		i.aggregate(ctx, val)
+		return
+	}
+	i.base.aggregate(ctx, val, append(i.attrs, attrs.ToSlice()...))
+}
+
+func (i *boundFloat64Inst) Enabled(context.Context) bool {
+	return len(i.measures) != 0
+}
+
+func (i *boundFloat64Inst) aggregate(ctx context.Context, val float64) {
+	for _, in := range i.measures {
+		// Note that this does not perform a lookup
+		in(ctx, val)
+	}
+}
+
+type boundFloat64Inst struct {
+	base     *float64Inst
+	measures []aggregate.Measure[float64]
+	attrs    []attribute.KeyValue
+}
+
 type float64Counter struct {
 	embedded.Float64Counter
 	float64Inst
 }
 
-func (i *float64Counter) WithAttributes(_ ...attribute.KeyValue) metric.Float64Counter {
-	// TODO: bind counter to attributes
+func (i *float64Counter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Counter {
+	// TODO: we are computing the distinct twice: Once here, and once in the aggregation package.
+	// We should pass the Distinct to the Lookup function to avoid recomputing it.
+	distinct := attribute.NewDistinct(kvs...)
+	if boundCounter, ok := i.float64Inst.boundInsts.Load(distinct); ok {
+		// Fast path.
+		bc := boundCounter.(*boundFloat64Counter)
+		return bc
+	}
+	// Slow path.
+	measures := make([]aggregate.Measure[float64], len(i.measures))
+	for _, m := range i.measures {
+		measures = append(measures, m(kvs))
+	}
+	cp := make([]attribute.KeyValue, len(kvs))
+	copy(kvs, cp)
+	newBoundCounter := &boundFloat64Counter{boundFloat64Inst: boundFloat64Inst{base: &i.float64Inst, attrs: cp, measures: measures}}
+	boundCounter, _ := i.float64Inst.boundInsts.LoadOrStore(distinct, newBoundCounter)
+	bc := boundCounter.(*boundFloat64Counter)
+	return bc
+}
+
+type boundFloat64Counter struct {
+	embedded.Float64Counter
+	boundFloat64Inst
+}
+
+func (i *boundFloat64Counter) WithAttributes(_ ...attribute.KeyValue) metric.Float64Counter {
+	// TODO: re-bind counter to attributes
 	return i
 }
 
