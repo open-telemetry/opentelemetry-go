@@ -347,7 +347,7 @@ func (i *float64Counter) WithAttributes(kvs ...attribute.KeyValue) metric.Float6
 		return bc
 	}
 	// Slow path.
-	measures := make([]aggregate.Measure[float64], len(i.measures))
+	measures := make([]aggregate.Measure[float64], 0, len(i.measures))
 	for _, m := range i.measures {
 		measures = append(measures, m(kvs))
 	}
