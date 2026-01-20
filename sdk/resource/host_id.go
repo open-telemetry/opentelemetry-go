@@ -51,11 +51,11 @@ type hostIDReaderDarwin struct {
 	execCommand commandExecutor
 }
 
-// read executes `ioreg -rd1 -c "IOPlatformExpertDevice"` and parses host id
+// read executes `/usr/sbin/ioreg -rd1 -c "IOPlatformExpertDevice"` and parses host id
 // from the IOPlatformUUID line. If the command fails or the uuid cannot be
 // parsed an error will be returned.
 func (r *hostIDReaderDarwin) read() (string, error) {
-	result, err := r.execCommand("ioreg", "-rd1", "-c", "IOPlatformExpertDevice")
+	result, err := r.execCommand("/usr/sbin/ioreg", "-rd1", "-c", "IOPlatformExpertDevice")
 	if err != nil {
 		return "", err
 	}
