@@ -746,8 +746,8 @@ Encapsulate setup in constructor functions, ensuring clear ownership and scope:
 import (
 	"errors"
 
-    semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-    "go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 type SDKComponent struct {
@@ -1073,7 +1073,7 @@ func nextID() int64 {
 func componentName() attribute.KeyValue {
 	id := nextID()
 	name := fmt.Sprintf("%s/%d", componentType, id)
-    return semconv.OTelComponentName(name)
+	return semconv.OTelComponentName(name)
 }
 ```
 
