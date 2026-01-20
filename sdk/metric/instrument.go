@@ -295,13 +295,14 @@ func (i *float64Inst) aggregate(ctx context.Context, val float64, s []attribute.
 var _ metric.Float64Counter = (*boundFloat64Counter)(nil)
 
 func (i *boundFloat64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
-	c := metric.NewAddConfig(opts)
-	attrs := c.Attributes()
-	if attrs.Len() == 0 {
+	if len(opts) == 0 {
 		// Fast path requires no lookup
 		i.aggregate(ctx, val)
 		return
 	}
+	// Computing AddConfig adds 7 ns of overhead (50%)
+	c := metric.NewAddConfig(opts)
+	attrs := c.Attributes()
 	i.base.aggregate(ctx, val, append(i.attrs, attrs.ToSlice()...))
 }
 
@@ -320,6 +321,7 @@ func (i *boundFloat64Inst) Enabled(context.Context) bool {
 }
 
 func (i *boundFloat64Inst) aggregate(ctx context.Context, val float64) {
+	// Iterating over measures adds 1 ns of overhead.
 	for _, in := range i.measures {
 		// Note that this does not perform a lookup
 		in(ctx, val)

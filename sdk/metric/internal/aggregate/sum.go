@@ -34,6 +34,7 @@ func (s *sumValueMap[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []att
 		// It is possible for collection to race with measurement and observe the
 		// exemplar in the batch of metrics after the add() for cumulative sums.
 		// This is an accepted tradeoff to avoid locking during measurement.
+		// Calling Offer (even if it is a never-filter) takes 5 ns (42%)
 		sv.res.Offer(ctx, value, droppedAttr)
 	}
 }
