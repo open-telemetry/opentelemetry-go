@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
 )
 
 func TestManualReader(t *testing.T) {
