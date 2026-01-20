@@ -222,6 +222,12 @@ func (v Value) AsInterface() any {
 	return unknownValueType{}
 }
 
+// String implements the Stringer interface, used when you pass an object to fmt.Println, etc.
+// Do not confuse with AsString, which you should call if you know the value is of String type.
+func (v Value) String() string {
+	return v.Emit()
+}
+
 // Emit returns a string representation of Value's data.
 func (v Value) Emit() string {
 	switch v.Type() {
