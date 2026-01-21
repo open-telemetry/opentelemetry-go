@@ -266,6 +266,102 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 	assertMetrics(t, collect(), n+n, int64(success), err, http.StatusPartialContent)
 }
 
+func setupDrop(t *testing.T, instNameToDrop string) (*Instrumentation, func() metricdata.ScopeMetrics) {
+	t.Helper()
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() {
+		otel.SetMeterProvider(original)
+	})
+
+	view := metric.NewView(
+		metric.Instrument{
+			Name:  instNameToDrop,
+			Scope: instrumentation.Scope{Name: ScopeName}, // optional but recommended
+		},
+		metric.Stream{
+			Aggregation: metric.AggregationDrop{},
+		},
+	)
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r), metric.WithView(view))
+	otel.SetMeterProvider(mp)
+
+	inst, err := NewInstrumentation(ID, TARGET)
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	return inst, func() metricdata.ScopeMetrics {
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, r.Collect(t.Context(), &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+		return rm.ScopeMetrics[0]
+	}
+}
+func assertDroppedMetric(
+	t *testing.T,
+	got metricdata.ScopeMetrics,
+	dropped string,
+	want1 string,
+	want2 string,
+) {
+	t.Helper()
+
+	assert.Equal(t, Scope, got.Scope, "unexpected scope")
+	m := got.Metrics
+	require.Len(t, m, 2, "expected 2 metrics")
+
+	var has1, has2 bool
+	for i := range m {
+		require.NotEqual(t, dropped, m[i].Name, "dropped metric should not be emitted")
+		if m[i].Name == want1 {
+			has1 = true
+		}
+		if m[i].Name == want2 {
+			has2 = true
+		}
+	}
+	require.True(t, has1, "missing expected metric %q", want1)
+	require.True(t, has2, "missing expected metric %q", want2)
+}
+
+// Verify End does not emit metrics for instruments disabled via views.
+func TestEndSkipsDisabledInstruments(t *testing.T) {
+	inflightName := otelconv.SDKExporterLogInflight{}.Name()
+	exportedName := otelconv.SDKExporterLogExported{}.Name()
+	durationName := otelconv.SDKExporterOperationDuration{}.Name()
+	tests := []struct {
+		name  string
+		drop  string
+		want1 string
+		want2 string
+	}{{
+		name:  "inflight dropped",
+		drop:  inflightName,
+		want1: exportedName,
+		want2: durationName,
+	}, {
+		name:  "exported dropped",
+		drop:  exportedName,
+		want1: inflightName,
+		want2: durationName,
+	},
+		{
+			name:  "duration dropped",
+			drop:  durationName,
+			want1: inflightName,
+			want2: exportedName,
+		}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inst, collect := setupDrop(t, tt.drop)
+			inst.ExportLogs(t.Context(), 10).End(nil, http.StatusOK)
+			got := collect()
+			assertDroppedMetric(t, got, tt.drop, tt.want1, tt.want2)
+		})
+	}
+}
+
 func TestSetPresetAttrs(t *testing.T) {
 	tests := []struct {
 		endpoint string
