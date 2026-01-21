@@ -4,7 +4,7 @@
 
 Create a `Version Release` issue to track the release process.
 
-## Semantic Convetion Upgrade
+## Semantic Convention Upgrade
 
 ### Semantic Convention Generation
 
@@ -28,11 +28,7 @@ The `CHANGELOG.md` should also be updated to reflect the new changes:
 
 
 ```md
-- The `go.opentelemetry.io/otel/semconv/v1.39.0` package.
-
-The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
-
-See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.`(#PR_NUMBER)
+- The `go.opentelemetry.io/otel/semconv/<NEW VERSION>` package. The package contains semantic conventions from the `<NEW VERSION>` version of the OpenTelemetry Semantic Conventions. See the [migration documentation](./semconv/<NEW VERSION>/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/<PREVIOUS VERSION>`. (#PR_NUMBER)
 ```
 
 > **Tip:** Change to the release and prior version to match the changes
