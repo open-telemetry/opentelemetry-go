@@ -166,16 +166,16 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp 
 		start: start,
 		inst:  i,
 	}
-	 if i.logInflightMetric.Enabled(ctx) {
-	  addOpt := get[metric.AddOption](addOpPool)
-	  defer put(addOpPool, addOpt)
+	if i.logInflightMetric.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOpPool)
+		defer put(addOpPool, addOpt)
 
-	  *addOpt = append(*addOpt, i.addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
 
-	  i.logInflightMetric.Add(ctx, count, *addOpt...)
-	 }
+		i.logInflightMetric.Add(ctx, count, *addOpt...)
+	}
 
-	 return ext
+	return ext
 }
 
 // ExportOp tracks the operation being observed by [Instrumentation.ExportLogs].
@@ -199,22 +199,22 @@ func (e ExportOp) End(err error) {
 	logInflightMetricEnabled := e.inst.logInflightMetric.Enabled(e.ctx)
 	logExportedMetricEnabled := e.inst.logExportedMetric.Enabled(e.ctx)
 	logExportedDurationMetricEnabled := e.inst.logExportedDurationMetric.Enabled(e.ctx)
-	
+
 	var addOpt *[]metric.AddOption
 	if logInflightMetricEnabled || logExportedMetricEnabled {
 		success := successful(e.nLogs, err)
 		addOpt = get[metric.AddOption](addOpPool)
 		defer put(addOpPool, addOpt)
 		*addOpt = append(*addOpt, e.inst.addOpt)
-		
+
 		if logInflightMetricEnabled {
 			e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
 		}
-		
+
 		if logExportedMetricEnabled {
 			e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
 		}
-		
+
 		if err != nil && logExportedMetricEnabled {
 			// Add the error.type attribute to the attribute set.
 			attrs := get[attribute.KeyValue](attrsPool)
@@ -225,7 +225,7 @@ func (e ExportOp) End(err error) {
 			o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
 
 			// Reset addOpt with new attribute set
-			// Note: addOpt is guaranteed non-nil here because it was 
+			// Note: addOpt is guaranteed non-nil here because it was
 			// initialized in the parent if-block.
 			*addOpt = append((*addOpt)[:0], o)
 
