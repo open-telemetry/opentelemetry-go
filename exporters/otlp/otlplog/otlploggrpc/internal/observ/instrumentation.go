@@ -166,16 +166,16 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp 
 		start: start,
 		inst:  i,
 	}
-	if(i.logInflightMetric.Enabled(ctx)){
-		addOpt := get[metric.AddOption](addOpPool)
-		defer put(addOpPool, addOpt)
+	 if i.logInflightMetric.Enabled(ctx) {
+	  addOpt := get[metric.AddOption](addOpPool)
+	  defer put(addOpPool, addOpt)
 
-		*addOpt = append(*addOpt, i.addOpt)
+	  *addOpt = append(*addOpt, i.addOpt)
 
-		i.logInflightMetric.Add(ctx, count, *addOpt...)
-	}
+	  i.logInflightMetric.Add(ctx, count, *addOpt...)
+	 }
 
-	return ext;
+	 return ext
 }
 
 // ExportOp tracks the operation being observed by [Instrumentation.ExportLogs].
