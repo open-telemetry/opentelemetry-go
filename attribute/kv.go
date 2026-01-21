@@ -18,6 +18,11 @@ func (kv KeyValue) Valid() bool {
 	return kv.Key.Defined() && kv.Value.Type() != INVALID
 }
 
+// String implements the Stringer interface, used when you pass an object to fmt.Println, etc.
+func (kv KeyValue) String() string {
+	return "{" + string(kv.Key) + ":" + kv.Value.String() + "}"
+}
+
 // Bool creates a KeyValue with a BOOL Value type.
 func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)

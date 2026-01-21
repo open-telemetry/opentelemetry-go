@@ -169,3 +169,84 @@ func TestIncorrectCast(t *testing.T) {
 		})
 	}
 }
+
+func TestKeyValueString(t *testing.T) {
+	tests := []struct {
+		name string
+		kv   attribute.KeyValue
+		want string
+	}{
+		{
+			name: "int positive",
+			kv:   attribute.Int("key", 42),
+			want: "{key:42}",
+		},
+		{
+			name: "float64 negative",
+			kv:   attribute.Float64("key", -3.14),
+			want: "{key:-3.14}",
+		},
+		{
+			name: "string simple",
+			kv:   attribute.String("key", "value"),
+			want: "{key:value}",
+		},
+		{
+			name: "string empty",
+			kv:   attribute.String("key", ""),
+			want: "{key:}",
+		},
+		{
+			name: "string with spaces",
+			kv:   attribute.String("key", "hello world"),
+			want: "{key:hello world}",
+		},
+		{
+			name: "bool slice",
+			kv:   attribute.BoolSlice("key", []bool{true, false, true}),
+			want: "{key:[true false true]}",
+		},
+		{
+			name: "int slice",
+			kv:   attribute.IntSlice("key", []int{1, 2, 3}),
+			want: "{key:[1,2,3]}",
+		},
+		{
+			name: "int64 slice",
+			kv:   attribute.Int64Slice("key", []int64{1, 2, 3}),
+			want: "{key:[1,2,3]}",
+		},
+		{
+			name: "float64 slice",
+			kv:   attribute.Float64Slice("key", []float64{1.5, 2.5, 3.5}),
+			want: "{key:[1.5,2.5,3.5]}",
+		},
+		{
+			name: "string slice",
+			kv:   attribute.StringSlice("key", []string{"foo", "bar"}),
+			want: `{key:["foo","bar"]}`,
+		},
+		{
+			name: "empty key",
+			kv:   attribute.String("", "value"),
+			want: "{:value}",
+		},
+		{
+			name: "invalid/uninitialized KeyValue",
+			kv:   attribute.KeyValue{},
+			want: "{:unknown}",
+		},
+		{
+			name: "key with special characters",
+			kv:   attribute.String("key-with-dashes", "value"),
+			want: "{key-with-dashes:value}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.kv.String()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

@@ -206,3 +206,104 @@ func TestAsSlice(t *testing.T) {
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
 }
+
+func TestValueString(t *testing.T) {
+	tests := []struct {
+		name  string
+		value attribute.Value
+		want  string
+	}{
+		{
+			name:  "bool true",
+			value: attribute.BoolValue(true),
+			want:  "true",
+		},
+		{
+			name:  "int64 positive",
+			value: attribute.Int64Value(42),
+			want:  "42",
+		},
+		{
+			name:  "int negative",
+			value: attribute.IntValue(-42),
+			want:  "-42",
+		},
+		{
+			name:  "float64 positive",
+			value: attribute.Float64Value(42.5),
+			want:  "42.5",
+		},
+		{
+			name:  "float64 scientific notation",
+			value: attribute.Float64Value(1.23e-10),
+			want:  "1.23e-10",
+		},
+		{
+			name:  "string empty",
+			value: attribute.StringValue(""),
+			want:  "",
+		},
+		{
+			name:  "string with spaces",
+			value: attribute.StringValue("hello world"),
+			want:  "hello world",
+		},
+		{
+			name:  "string with special characters",
+			value: attribute.StringValue("hello\nworld\t!"),
+			want:  "hello\nworld\t!",
+		},
+		{
+			name:  "bool slice",
+			value: attribute.BoolSliceValue([]bool{true, false, true}),
+			want:  "[true false true]",
+		},
+		{
+			name:  "bool slice empty",
+			value: attribute.BoolSliceValue([]bool{}),
+			want:  "[]",
+		},
+		{
+			name:  "int64 slice",
+			value: attribute.Int64SliceValue([]int64{1, -2, 3}),
+			want:  "[1,-2,3]",
+		},
+		{
+			name:  "int64 slice empty",
+			value: attribute.Int64SliceValue([]int64{}),
+			want:  "[]",
+		},
+		{
+			name:  "int slice",
+			value: attribute.IntSliceValue([]int{1, -2, 3}),
+			want:  "[1,-2,3]",
+		},
+		{
+			name:  "float64 slice",
+			value: attribute.Float64SliceValue([]float64{1.5, -2.5, 3.0}),
+			want:  "[1.5,-2.5,3]",
+		},
+		{
+			name:  "string slice",
+			value: attribute.StringSliceValue([]string{"foo", "bar", "baz"}),
+			want:  `["foo","bar","baz"]`,
+		},
+		{
+			name:  "string slice with empty strings",
+			value: attribute.StringSliceValue([]string{"", "bar", ""}),
+			want:  `["","bar",""]`,
+		},
+		{
+			name:  "invalid type",
+			value: attribute.Value{},
+			want:  "unknown",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.value.String()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
