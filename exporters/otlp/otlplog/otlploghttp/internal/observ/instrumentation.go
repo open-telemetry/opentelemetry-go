@@ -182,14 +182,7 @@ func ServerAddrAttrs(target string) []attribute.KeyValue {
 }
 
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
-	extOp := ExportOp{
-		ctx:   ctx,
-		inst:  i,
-		count: count,
-	}
-	if i.operationDuration.Enabled(ctx) {
-		extOp.start = time.Now()
-	}
+	start := time.Now()
 
 	if i.inflightMetric.Enabled(ctx) {
 		addOpt := get[metric.AddOption](addOptPool)
@@ -198,7 +191,12 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp 
 		i.inflightMetric.Add(ctx, count, *addOpt...)
 	}
 
-	return extOp
+	return ExportOp{
+		ctx:   ctx,
+		inst:  i,
+		count: count,
+		start: start,
+	}
 }
 
 // ExportOp tracks the operationDuration being observed by [Instrumentation.ExportLogs].
