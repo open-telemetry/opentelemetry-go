@@ -26,7 +26,6 @@ Ensure things look correct before submitting a pull request to include the addit
 
 The `CHANGELOG.md` should also be updated to reflect the new changes:
 
-
 ```md
 - The `go.opentelemetry.io/otel/semconv/<NEW VERSION>` package. The package contains semantic conventions from the `<NEW VERSION>` version of the OpenTelemetry Semantic Conventions. See the [migration documentation](./semconv/<NEW VERSION>/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/<PREVIOUS VERSION>`. (#PR_NUMBER)
 ```
@@ -36,7 +35,6 @@ The `CHANGELOG.md` should also be updated to reflect the new changes:
 ### Update Semconv imports
 
 Once the new semconv module has been generated, update all semconv imports throughout the codebase to reference the new version:
-
 
 ```go
 // Before
