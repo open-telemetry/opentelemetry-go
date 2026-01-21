@@ -37,8 +37,8 @@ github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lpr
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/MirrexOne/unqueryvet v1.5.2 h1:4UE3O5RQDcnZaH+V1dlZ6Aj0YkIg5WkYPkfK6AkSFSk=
-github.com/MirrexOne/unqueryvet v1.5.2/go.mod h1:Uh/EEw7TYRy4tZOGxP6rzKYYac/7KVD12d8MyaDxaFU=
+github.com/MirrexOne/unqueryvet v1.5.3 h1:LpT3rsH+IY3cQddWF9bg4C7jsbASdGnrOSofY8IPEiw=
+github.com/MirrexOne/unqueryvet v1.5.3/go.mod h1:fs9Zq6eh1LRIhsDIsxf9PONVUjYdFHdtkHIgZdJnyPU=
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1 h1:vckeWVESWp6Qog7UZSARNqfu/cZqvki8zsuj3piCMx4=
 github.com/OpenPeeDeeP/depguard/v2 v2.2.1/go.mod h1:q4DKzC4UcVaAvcfd41CZh0PWpGgzrVxUYBlgKNGquUo=
 github.com/ProtonMail/go-crypto v1.3.0 h1:ILq8+Sf5If5DCpHQp4PbZdS1J7HDFRXz/+xKBiRGFrw=
