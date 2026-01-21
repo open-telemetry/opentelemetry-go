@@ -55,9 +55,9 @@ Once complete, run `make` to check for any compilation or test failures.
 
 Some semconv releases might impact attributes that are currently being used. Changes could stem from a simple renaming, to more complex changes like merging attributes and property values being changed.
 
-One should update the code to the new attributes that superseed the impacted ones, hence sticking to the semantic conventions. In cases where the underlying value does not change, for example an attribute being renamed, the change should be trivial.
+One should update the code to the new attributes that supersede the impacted ones, hence sticking to the semantic conventions. However, legacy attributes might still be emitted in accordance to the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable.
 
-However, if the attribute value is somehwat modified, for example, the new attribute has a different type, then a migration for that particular package might have to be planned. (See issue [#7806](https://github.com/open-telemetry/opentelemetry-go/issues/7806) for an example)
+For an example on how such migration might have to be tracked and performed, see issue [#7806](https://github.com/open-telemetry/opentelemetry-go/issues/7806).
 
 ### Go contrib linter update
 
