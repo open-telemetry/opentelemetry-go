@@ -199,12 +199,12 @@ var bmarkRes metricdata.Aggregation
 
 func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Lookup[N], ComputeAggregation), count int) {
 	ctx := b.Context()
-	attrs := make([]attribute.Set, count)
+	attrs := make([][]attribute.KeyValue, count)
 	for i := range attrs {
-		attrs[i] = attribute.NewSet(attribute.Int("value", i))
+		attrs[i] = []attribute.KeyValue{attribute.Int("value", i)}
 	}
 
-	b.Run("Lookup", func(b *testing.B) {
+	b.Run("LookupAndMeasure", func(b *testing.B) {
 		got := &bmarkRes
 		meas, comp := factory()
 		b.ReportAllocs()
@@ -212,7 +212,26 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Lookup
 
 		for n := 0; n < b.N; n++ {
 			for _, attr := range attrs {
-				meas(attr.ToSlice())(ctx, 1)
+				meas(attr)(ctx, 1)
+			}
+		}
+
+		comp(got)
+	})
+
+	b.Run("OnlyMeasure", func(b *testing.B) {
+		got := &bmarkRes
+		meas, comp := factory()
+		measures := make([]Measure[N], 0, len(attrs))
+		for _, attr := range attrs {
+			measures = append(measures, meas(attr))
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			for _, measure := range measures {
+				measure(ctx, 1)
 			}
 		}
 
@@ -224,7 +243,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Lookup
 		for n := range comps {
 			meas, comp := factory()
 			for _, attr := range attrs {
-				meas(attr.ToSlice())(ctx, 1)
+				meas(attr)(ctx, 1)
 			}
 			comps[n] = comp
 		}
