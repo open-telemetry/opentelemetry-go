@@ -31,6 +31,16 @@ const (
 	GzipCompression
 )
 
+// Encoding describes the encoding used for payloads sent to the collector.
+type Encoding int
+
+const (
+	// ProtobufEncoding tells the driver to send payloads using protobuf encoding.
+	ProtobufEncoding Encoding = iota
+	// JSONEncoding tells the driver to send payloads using JSON encoding.
+	JSONEncoding
+)
+
 // RetrySettings defines configuration for retrying batches in case of export failure
 // using an exponential backoff.
 type RetrySettings struct {

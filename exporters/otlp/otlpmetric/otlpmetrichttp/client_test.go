@@ -73,6 +73,57 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	require.Len(t, got, 1, "upload of one ResourceMetrics")
 }
 
+func TestClientWithJSONEncoding(t *testing.T) {
+	ctx := t.Context()
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(JSONEncoding)}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding")
+
+	// Verify the Content-Type header was set correctly for JSON
+	headers := coll.Headers()
+	require.Contains(t, headers, "Content-Type")
+	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+}
+
+func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
+	ctx := t.Context()
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{
+		WithEndpoint(addr),
+		WithInsecure(),
+		WithEncoding(JSONEncoding),
+		WithCompression(GzipCompression),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding and gzip compression")
+
+	// Verify headers
+	headers := coll.Headers()
+	require.Contains(t, headers, "Content-Type")
+	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+	require.Contains(t, headers, "Content-Encoding")
+	assert.Equal(t, []string{"gzip"}, headers["Content-Encoding"])
+}
+
 func TestNewWithInvalidEndpoint(t *testing.T) {
 	ctx := t.Context()
 	exp, err := New(ctx, WithEndpoint("host:invalid-port"))
@@ -151,6 +202,37 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSON", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{"application/json"}, got["Content-Type"])
+		require.Regexp(t, "OTel Go OTLP over HTTP/JSON metrics exporter/[01]\\..*", got)
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSONAndCompressionGZip", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding), WithCompression(GzipCompression))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{"application/json"}, got["Content-Type"])
+		require.Contains(t, got, "Content-Encoding")
+		assert.Equal(t, []string{"gzip"}, got["Content-Encoding"])
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 

@@ -18,6 +18,9 @@ import (
 // collector.
 type Compression oconf.Compression
 
+// Encoding describes the encoding used for payloads sent to the collector.
+type Encoding oconf.Encoding
+
 // HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
 // This type is compatible with http.Transport.Proxy and can be used to set a custom proxy function
 // to the OTLP HTTP client.
@@ -30,6 +33,13 @@ const (
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
 	GzipCompression = Compression(oconf.GzipCompression)
+)
+
+const (
+	// ProtobufEncoding tells the driver to send payloads using protobuf encoding.
+	ProtobufEncoding = Encoding(oconf.ProtobufEncoding)
+	// JSONEncoding tells the driver to send payloads using JSON encoding.
+	JSONEncoding = Encoding(oconf.JSONEncoding)
 )
 
 // Option applies an option to the Exporter.
@@ -107,6 +117,13 @@ func WithEndpointURL(u string) Option {
 // passed, no compression strategy will be used.
 func WithCompression(compression Compression) Option {
 	return wrappedOption{oconf.WithCompression(oconf.Compression(compression))}
+}
+
+// WithEncoding sets the encoding the Exporter will use to encode the payload.
+//
+// By default, if this option is not passed, protobuf encoding will be used.
+func WithEncoding(encoding Encoding) Option {
+	return wrappedOption{oconf.WithEncoding(oconf.Encoding(encoding))}
 }
 
 // WithURLPath sets the URL path the Exporter will send requests to.

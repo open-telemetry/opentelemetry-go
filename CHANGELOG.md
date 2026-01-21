@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.39.0` package.
   The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.`(#7783)
+- Added `http/json` support to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` (#7804)
 
 ### Changed
 

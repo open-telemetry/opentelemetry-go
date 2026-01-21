@@ -20,6 +20,7 @@ import (
 
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
@@ -31,6 +32,7 @@ type client struct {
 	// req is cloned for every upload the client makes.
 	req         *http.Request
 	compression Compression
+	encoding    Encoding
 	requestFunc retry.RequestFunc
 	httpClient  *http.Client
 }
@@ -88,7 +90,17 @@ func newClient(cfg oconf.Config) (*client, error) {
 		return nil, err
 	}
 
-	userAgent := "OTel Go OTLP over HTTP/protobuf metrics exporter/" + Version()
+	encoding := Encoding(cfg.Metrics.Encoding)
+	var userAgent string
+	var contentType string
+	switch encoding {
+	case JSONEncoding:
+		userAgent = "OTel Go OTLP over HTTP/JSON metrics exporter/" + Version()
+		contentType = "application/json"
+	default:
+		userAgent = "OTel Go OTLP over HTTP/protobuf metrics exporter/" + Version()
+		contentType = "application/x-protobuf"
+	}
 	req.Header.Set("User-Agent", userAgent)
 
 	if n := len(cfg.Metrics.Headers); n > 0 {
@@ -96,10 +108,11 @@ func newClient(cfg oconf.Config) (*client, error) {
 			req.Header.Set(k, v)
 		}
 	}
-	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Content-Type", contentType)
 
 	return &client{
 		compression: Compression(cfg.Metrics.Compression),
+		encoding:    encoding,
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,
@@ -129,7 +142,15 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	pbRequest := &colmetricpb.ExportMetricsServiceRequest{
 		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 	}
-	body, err := proto.Marshal(pbRequest)
+
+	var body []byte
+	var err error
+	switch c.encoding {
+	case JSONEncoding:
+		body, err = protojson.Marshal(pbRequest)
+	default:
+		body, err = proto.Marshal(pbRequest)
+	}
 	if err != nil {
 		return err
 	}
