@@ -211,7 +211,6 @@ func (e ExportOp) End(err error) {
 			e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
 		}
 		
-		success := successful(e.nLogs, err)
 		if logExportedMetricEnabled {
 			e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
 		}
