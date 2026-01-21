@@ -6,9 +6,12 @@ package otlptracehttp_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
 
 const (
@@ -580,6 +583,59 @@ func TestClientInstrumentation(t *testing.T) {
 		metricdatatest.IgnoreValue(),
 	}
 	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func TestGetBodyCalledOnRedirect(t *testing.T) {
+	// Test that req.GetBody is set correctly, allowing the HTTP transport
+	// to re-send the body on 307 redirects.
+
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/traces/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(server.Listener.Addr().String()),
+		otlptracehttp.WithInsecure(),
+	)
+
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
 }
 
 func BenchmarkExporterExportSpans(b *testing.B) {
