@@ -36,7 +36,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate `go.opentelemetry.io/otel/exporters/zipkin`. Read more about [Deprecating Zipkin Exporter](https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/). (#7670)
+- Deprecate `go.opentelemetry.io/otel/exporters/zipkin`.
+  For more information, see the [OTel blog post deprecating the Zipkin exporter](https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/). (#7670)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

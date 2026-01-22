@@ -1,7 +1,5 @@
-// Deprecated: The zipkin exporter is deprecated and will be removed in early 2027. 1Code has comments. Press enter to view.
-// See the blog post "[Deprecating Zipkin Exporter]".
-//
-// [Deprecating Zipkin Exporter]: https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/
+// Deprecated: The zipkin exporter is deprecated and will be removed in early 2027.
+// See the blog post "Deprecating Zipkin Exporter": https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/
 module go.opentelemetry.io/otel/exporters/zipkin
 
 go 1.24.0
