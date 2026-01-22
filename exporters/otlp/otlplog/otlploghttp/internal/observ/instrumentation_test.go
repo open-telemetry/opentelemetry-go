@@ -4,6 +4,7 @@
 package observ
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/internal/global"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -266,102 +268,96 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 	assertMetrics(t, collect(), n+n, int64(success), err, http.StatusPartialContent)
 }
 
-func setupDrop(t *testing.T, instNameToDrop string) (*Instrumentation, func() metricdata.ScopeMetrics) {
-	t.Helper()
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	original := otel.GetMeterProvider()
-	t.Cleanup(func() {
-		otel.SetMeterProvider(original)
-	})
-
-	view := metric.NewView(
-		metric.Instrument{
-			Name:  instNameToDrop,
-			Scope: instrumentation.Scope{Name: ScopeName}, // optional but recommended
-		},
-		metric.Stream{
-			Aggregation: metric.AggregationDrop{},
-		},
-	)
-	r := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(r), metric.WithView(view))
-	otel.SetMeterProvider(mp)
-
-	inst, err := NewInstrumentation(ID, TARGET)
-	require.NoError(t, err)
-	require.NotNil(t, inst)
-
-	return inst, func() metricdata.ScopeMetrics {
-		var rm metricdata.ResourceMetrics
-		require.NoError(t, r.Collect(t.Context(), &rm))
-		require.Len(t, rm.ScopeMetrics, 1)
-		return rm.ScopeMetrics[0]
-	}
-}
-func assertDroppedMetric(
-	t *testing.T,
-	got metricdata.ScopeMetrics,
-	dropped string,
-	want1 string,
-	want2 string,
-) {
-	t.Helper()
-
-	assert.Equal(t, Scope, got.Scope, "unexpected scope")
-	m := got.Metrics
-	require.Len(t, m, 2, "expected 2 metrics")
-
-	var has1, has2 bool
-	for i := range m {
-		require.NotEqual(t, dropped, m[i].Name, "dropped metric should not be emitted")
-		if m[i].Name == want1 {
-			has1 = true
-		}
-		if m[i].Name == want2 {
-			has2 = true
-		}
-	}
-	require.True(t, has1, "missing expected metric %q", want1)
-	require.True(t, has2, "missing expected metric %q", want2)
+type spy struct {
+	enabled  bool
+	called   *bool
+	panicMsg string
 }
 
-// Verify End does not emit metrics for instruments disabled via views.
+func (s spy) Enabled(context.Context) bool { return s.enabled }
+
+func (s spy) markCalled() {
+	if !s.enabled {
+		panic(s.panicMsg)
+	}
+	if s.called != nil {
+		*s.called = true
+	}
+}
+
+type upDownCounterSpy struct {
+	embedded.Int64UpDownCounter
+	spy
+}
+
+func (c upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.spy.markCalled() }
+
+type counterSpy struct {
+	embedded.Int64Counter
+	spy
+}
+
+func (c counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.spy.markCalled() }
+
+type histogramSpy struct {
+	embedded.Float64Histogram
+	spy
+}
+
+func (h histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.spy.markCalled() }
+
 func TestEndSkipsDisabledInstruments(t *testing.T) {
-	inflightName := otelconv.SDKExporterLogInflight{}.Name()
-	exportedName := otelconv.SDKExporterLogExported{}.Name()
-	durationName := otelconv.SDKExporterOperationDuration{}.Name()
+	const n = 10
+
 	tests := []struct {
-		name  string
-		drop  string
-		want1 string
-		want2 string
-	}{{
-		name:  "inflight dropped",
-		drop:  inflightName,
-		want1: exportedName,
-		want2: durationName,
-	}, {
-		name:  "exported dropped",
-		drop:  exportedName,
-		want1: inflightName,
-		want2: durationName,
-	},
-		{
-			name:  "duration dropped",
-			drop:  durationName,
-			want1: inflightName,
-			want2: exportedName,
-		}}
+		name         string
+		disable      string // "inflight" | "exported" | "duration"
+		wantInflight bool
+		wantExported bool
+		wantDuration bool
+	}{
+		{name: "inflight disabled", disable: "inflight", wantExported: true, wantDuration: true},
+		{name: "exported disabled", disable: "exported", wantInflight: true, wantDuration: true},
+		{name: "duration disabled", disable: "duration", wantInflight: true, wantExported: true},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			inst, collect := setupDrop(t, tt.drop)
-			inst.ExportLogs(t.Context(), 10).End(nil, http.StatusOK)
-			got := collect()
-			assertDroppedMetric(t, got, tt.drop, tt.want1, tt.want2)
+			var inflightCalled, exportedCalled, durationCalled bool
+
+			inst := &Instrumentation{
+				inflightMetric: upDownCounterSpy{
+					spy: spy{
+						enabled:  tt.disable != "inflight",
+						called:   &inflightCalled,
+						panicMsg: "inflight Add called while disabled",
+					},
+				},
+				exportedMetric: counterSpy{
+					spy: spy{
+						enabled:  tt.disable != "exported",
+						called:   &exportedCalled,
+						panicMsg: "exported Add called while disabled",
+					},
+				},
+				operationDuration: histogramSpy{
+					spy: spy{
+						enabled:  tt.disable != "duration",
+						called:   &durationCalled,
+						panicMsg: "duration Record called while disabled",
+					},
+				},
+			}
+
+			// If your Enabled() guards are missing, this will panic in the disabled case.
+			inst.ExportLogs(t.Context(), n).End(nil, http.StatusOK)
+
+			require.Equal(t, tt.wantInflight, inflightCalled)
+			require.Equal(t, tt.wantExported, exportedCalled)
+			require.Equal(t, tt.wantDuration, durationCalled)
 		})
 	}
 }
-
 func TestSetPresetAttrs(t *testing.T) {
 	tests := []struct {
 		endpoint string
