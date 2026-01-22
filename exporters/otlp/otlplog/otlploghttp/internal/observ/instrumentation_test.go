@@ -290,21 +290,21 @@ type upDownCounterSpy struct {
 	spy
 }
 
-func (c upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.spy.markCalled() }
+func (c upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.markCalled() }
 
 type counterSpy struct {
 	embedded.Int64Counter
 	spy
 }
 
-func (c counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.spy.markCalled() }
+func (c counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.markCalled() }
 
 type histogramSpy struct {
 	embedded.Float64Histogram
 	spy
 }
 
-func (h histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.spy.markCalled() }
+func (h histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.markCalled() }
 
 func TestEndSkipsDisabledInstruments(t *testing.T) {
 	const n = 10
@@ -358,6 +358,7 @@ func TestEndSkipsDisabledInstruments(t *testing.T) {
 		})
 	}
 }
+
 func TestSetPresetAttrs(t *testing.T) {
 	tests := []struct {
 		endpoint string
