@@ -239,8 +239,8 @@ type ExportOp struct {
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, code codes.Code) {
-	inflightSpansEnabled := e.inst.inflightSpans.Enabled(e.ctx)
-	exportedSpansEnabled := e.inst.exportedSpans.Enabled(e.ctx)
+	isOn := e.inst.inflightSpans.Enabled(e.ctx)
+	esOn := e.inst.exportedSpans.Enabled(e.ctx)
 	if inflightSpansEnabled || exportedSpansEnabled {
 		success := successful(e.nSpans, err)
 		addOpt := get[metric.AddOption](addOptPool)
