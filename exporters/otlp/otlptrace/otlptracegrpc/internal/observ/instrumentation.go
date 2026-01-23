@@ -205,8 +205,7 @@ func BaseAttrs(id int64, target string) []attribute.KeyValue {
 // ExportSpans method returns.
 func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp {
 	start := time.Now()
-	inflightSpansEnabled := i.inflightSpans.Enabled(ctx)
-	if inflightSpansEnabled {
+	if i.inflightSpans.Enabled(ctx) {
 		addOpt := get[metric.AddOption](addOptPool)
 		defer put(addOptPool, addOpt)
 		*addOpt = append(*addOpt, i.addOpt)
