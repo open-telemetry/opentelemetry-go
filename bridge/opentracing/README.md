@@ -62,3 +62,50 @@ if s, ok := sc.(spanContextProvider); ok {
 	...
 }
 ```
+
+## Migrating from OpenTracing to OpenTelemetry
+
+If your codebase (or libraries you depend on) are still instrumented with OpenTracing, you can migrate incrementally by:
+1) installing OpenTelemetry SDK,
+2) wiring the OpenTracing bridge (shim),
+3) progressively replacing OpenTracing instrumentation with OpenTelemetry instrumentation.
+
+For a general, vendor-neutral migration approach, see the OpenTelemetry migration guide:
+- [Migrating from OpenTracing](https://opentelemetry.io/docs/migration/opentracing/) :contentReference[oaicite:4]{index=4}
+
+### Minimal Go example (OpenTracing API -> OpenTelemetry SDK)
+
+This repository provides an OpenTracing bridge that forwards OpenTracing API calls to the OpenTelemetry SDK.
+In Go, you can create a pair of tracers using `NewTracerPair()`:
+- `BridgeTracer` implements the OpenTracing API (use it as the OpenTracing global tracer)
+- `WrapperTracer` implements the OpenTelemetry API and cooperates with the bridge
+
+```go
+// Pseudo-code (exporter setup omitted for brevity)
+
+import (
+"github.com/opentracing/opentracing-go"
+"go.opentelemetry.io/otel"
+"go.opentelemetry.io/otel/sdk/trace"
+otelBridge "go.opentelemetry.io/otel/bridge/opentracing"
+)
+
+func main() {
+// 1) Configure OpenTelemetry SDK TracerProvider (exporter, resource, sampler, etc.)
+tp := trace.NewTracerProvider(/* ... */)
+
+// 2) Create an OpenTelemetry tracer you want to use under the hood
+otelTracer := tp.Tracer("example-service")
+
+// 3) Create a tracer pair for bridging
+bridgeTracer, wrapperTracerProvider := otelBridge.NewTracerPair(otelTracer) // (*BridgeTracer, *WrapperTracerProvider) :contentReference[oaicite:2]{index=2}
+
+// 4) Register globals:
+// - OpenTracing global tracer for existing OpenTracing instrumentation
+// - OpenTelemetry TracerProvider so new OTel instrumentation cooperates with OpenTracing context
+opentracing.SetGlobalTracer(bridgeTracer)
+otel.SetTracerProvider(wrapperTracerProvider)
+
+/* ... */
+}
+```
