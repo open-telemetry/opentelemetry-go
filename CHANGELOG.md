@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve the concurrent performance of `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by 4x. (#7443)
 - Improve performance of concurrent synchronous gauge measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7478)
 - Improve performance of concurrent exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7702)
+- Improve performance OTLP HTTP log exporter observability metrics by adding Enabled checks to avoid unnecessary attribute work.`go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ`. (#7813)
 
 ### Fixed
 
