@@ -311,7 +311,7 @@ func TestEndSkipsDisabledInstruments(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		disable      string // "inflight" | "exported" | "duration"
+		disable      string // "inflight" | "exported" | "duration" | "all"
 		wantInflight bool
 		wantExported bool
 		wantDuration bool
@@ -319,6 +319,7 @@ func TestEndSkipsDisabledInstruments(t *testing.T) {
 		{name: "inflight disabled", disable: "inflight", wantExported: true, wantDuration: true},
 		{name: "exported disabled", disable: "exported", wantInflight: true, wantDuration: true},
 		{name: "duration disabled", disable: "duration", wantInflight: true, wantExported: true},
+		{name: "all disabled", disable: "all"},
 	}
 
 	for _, tt := range tests {
@@ -328,21 +329,21 @@ func TestEndSkipsDisabledInstruments(t *testing.T) {
 			inst := &Instrumentation{
 				inflightMetric: upDownCounterSpy{
 					spy: spy{
-						enabled:  tt.disable != "inflight",
+						enabled:  tt.disable != "inflight" && tt.disable != "all",
 						called:   &inflightCalled,
 						panicMsg: "inflight Add called while disabled",
 					},
 				},
 				exportedMetric: counterSpy{
 					spy: spy{
-						enabled:  tt.disable != "exported",
+						enabled:  tt.disable != "exported" && tt.disable != "all",
 						called:   &exportedCalled,
 						panicMsg: "exported Add called while disabled",
 					},
 				},
 				operationDuration: histogramSpy{
 					spy: spy{
-						enabled:  tt.disable != "duration",
+						enabled:  tt.disable != "duration" && tt.disable != "all",
 						called:   &durationCalled,
 						panicMsg: "duration Record called while disabled",
 					},
