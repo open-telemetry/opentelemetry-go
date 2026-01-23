@@ -69,7 +69,9 @@ var (
 	}
 )
 
-func get[T any](p *sync.Pool) *[]T { return p.Get().(*[]T) }
+func get[T any](p *sync.Pool) *[]T {
+	return p.Get().(*[]T)
+}
 
 func put[T any](p *sync.Pool, s *[]T) {
 	*s = (*s)[:0] // Reset.
@@ -241,17 +243,17 @@ type ExportOp struct {
 func (e ExportOp) End(err error, code codes.Code) {
 	isOn := e.inst.inflightSpans.Enabled(e.ctx)
 	esOn := e.inst.exportedSpans.Enabled(e.ctx)
-	if inflightSpansEnabled || exportedSpansEnabled {
+	if isOn || esOn {
 		success := successful(e.nSpans, err)
 		addOpt := get[metric.AddOption](addOptPool)
 		defer put(addOptPool, addOpt)
 		*addOpt = append(*addOpt, e.inst.addOpt)
-		if inflightSpansEnabled {
+		if isOn {
 			e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
 		}
 		// Record successfully exported spans, even if the value is 0 which are
 		// meaningful to distribution aggregations.
-		if exportedSpansEnabled {
+		if esOn {
 			e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
 			if err != nil {
 				attrs := get[attribute.KeyValue](measureAttrsPool)
