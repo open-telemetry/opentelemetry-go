@@ -158,10 +158,10 @@ func TestExtractValidTraceContext(t *testing.T) {
 				traceparent: []string{"02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID: traceID,
-				SpanID:  spanID,
+				TraceID:    traceID,
+				SpanID:     spanID,
 				TraceFlags: trace.TraceFlags(0x08),
-				Remote:  true,
+				Remote:     true,
 			}),
 		},
 		{
