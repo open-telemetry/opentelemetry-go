@@ -57,6 +57,42 @@ func TestExtractValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
+			name: "random",
+			header: http.Header{
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-02"},
+			},
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0x02),
+				Remote:     true,
+			}),
+		},
+		{
+			name: "sampled and random",
+			header: http.Header{
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-03"},
+			},
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0x03),
+				Remote:     true,
+			}),
+		},
+		{
+			name: "additional flag bits preserved",
+			header: http.Header{
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09"},
+			},
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0x09),
+				Remote:     true,
+			}),
+		},
+		{
 			name: "valid tracestate",
 			header: http.Header{
 				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00"},
@@ -112,7 +148,7 @@ func TestExtractValidTraceContext(t *testing.T) {
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.FlagsSampled,
+				TraceFlags: trace.TraceFlags(0x09),
 				Remote:     true,
 			}),
 		},
@@ -124,6 +160,7 @@ func TestExtractValidTraceContext(t *testing.T) {
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
+				TraceFlags: trace.TraceFlags(0x08),
 				Remote:  true,
 			}),
 		},
@@ -229,10 +266,6 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			header: "00-00000000000000000000000000000000-0000000000000000-01",
 		},
 		{
-			name:   "trace-flag unused bits set",
-			header: "00-ab000000000000000000000000000000-cd00000000000000-09",
-		},
-		{
 			name:   "missing options",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
 		},
@@ -287,14 +320,38 @@ func TestInjectValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
-			name: "unsupported trace flag bits dropped",
+			name: "trace flag bits preserved",
 			header: http.Header{
-				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"},
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-ff"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: 0xff,
+				TraceFlags: trace.TraceFlags(0xff),
+				Remote:     true,
+			}),
+		},
+		{
+			name: "random",
+			header: http.Header{
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-02"},
+			},
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0x02),
+				Remote:     true,
+			}),
+		},
+		{
+			name: "sampled and random",
+			header: http.Header{
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-03"},
+			},
+			sc: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0x03),
 				Remote:     true,
 			}),
 		},
