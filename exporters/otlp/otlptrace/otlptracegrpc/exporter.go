@@ -7,11 +7,16 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
 )
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, opts ...Option) (*otlptrace.Exporter, error) {
-	return otlptrace.New(ctx, NewClient(opts...))
+	client := newClient(opts...)
+	if  otlpconfig.GetEnvConfigErr()!=nil{
+		return nil,otlpconfig.GetEnvConfigErr()
+	}
+	return otlptrace.New(ctx, client)
 }
 
 // NewUnstarted constructs a new Exporter and does not start it.

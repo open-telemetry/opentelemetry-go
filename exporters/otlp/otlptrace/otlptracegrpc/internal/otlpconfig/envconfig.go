@@ -9,6 +9,7 @@ package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net/url"
 	"os"
 	"path"
@@ -17,6 +18,15 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
 )
+
+var envConfigErr error
+
+func GetEnvConfigErr() error {
+	return envConfigErr
+}
+func ResetEnvConfigErr() {
+	envConfigErr = nil
+}
 
 // DefaultEnvOptionsReader is the default environments reader.
 var DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
@@ -45,10 +55,17 @@ func ApplyHTTPEnvConfigs(cfg Config) Config {
 
 func getOptionsFromEnv() []GenericOption {
 	opts := []GenericOption{}
-
+	envConfigErr = nil
 	tlsConf := &tls.Config{}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
+			if u.Path != "" && u.Path != "/" {
+				envConfigErr = fmt.Errorf(
+					"invalid OTLP endpoint %q: gRPC endpoint must not include a path",
+					u.String(),
+				)
+				return
+			}
 			opts = append(opts, withEndpointScheme(u))
 			opts = append(opts, newSplitOption(func(cfg Config) Config {
 				cfg.Traces.Endpoint = u.Host
@@ -114,7 +131,7 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
 		// exporter is going to send telemetry.
-		cfg.Traces.Endpoint = path.Join(u.Host, u.Path)
+		cfg.Traces.Endpoint = u.Host
 		return cfg
 	}
 }
