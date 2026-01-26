@@ -124,6 +124,22 @@ func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 	}
 }
 
+func safeInvoke(ctx context.Context, f func(context.Context) error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch e := r.(type) {
+			case error:
+				err = e
+			case string:
+				err = errors.New(e)
+			default:
+				err = fmt.Errorf("panic occurred during callback %p: %v", f, e)
+			}
+		}
+	}()
+	return f(ctx)
+}
+
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
@@ -142,14 +158,14 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	var err error
 	for _, c := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if e := c(ctx); e != nil {
+		if e := safeInvoke(ctx, c); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
 		f := e.Value.(multiCallback)
-		if e := f(ctx); e != nil {
+		if e := safeInvoke(ctx, f); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
