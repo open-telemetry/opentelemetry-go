@@ -5,6 +5,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -12,9 +13,10 @@ import (
 )
 
 type sumValue[N int64 | float64] struct {
-	n     atomicCounter[N]
-	res   FilteredExemplarReservoir[N]
-	attrs attribute.Set
+	n       atomicCounter[N]
+	res     FilteredExemplarReservoir[N]
+	attrs   attribute.Set
+	deleted atomic.Bool
 }
 
 type sumValueMap[N int64 | float64] struct {
@@ -81,6 +83,46 @@ func (s *deltaSum[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attrib
 		s.hotColdValMap[hotIdx].lookup(fltrAttr, droppedAttr)(ctx, value)
 	}
 }
+
+type boundDeltaSum[N int64 | float64] struct {
+	parent      *deltaSum[N]
+	sumValue    atomic.Pointer[boundSumValue[N]]
+	fltrAttr    []attribute.KeyValue
+	droppedAttr []attribute.KeyValue
+}
+
+type boundSumValue[N int64 | float64] struct {
+	val    *sumValue[N]
+	hotIdx uint64
+}
+
+func (b *boundDeltaSum[N]) measure(ctx context.Context, value N) {
+	hotIdx := b.parent.hcwg.start()
+	defer b.parent.hcwg.done(hotIdx)
+	sv := b.sumValue.Load()
+	// hotIdx might have been swapped twice, and the values may be equal despite sumValue still referencing an element that was cleared.
+	// To catch this, we have a deleted flag on each data point.
+	if hotIdx == sv.hotIdx && !sv.val.deleted.Load() {
+		sv.val.n.add(value)
+		sv.val.res.Offer(ctx, value, b.droppedAttr)
+		return
+	}
+	newSV := b.parent.hotColdValMap[hotIdx].values.LoadOrStoreAttr(b.fltrAttr, func(attr attribute.Set) any {
+		return &sumValue[N]{
+			res:   b.parent.hotColdValMap[hotIdx].newRes(attr),
+			attrs: attr,
+		}
+	}).(*sumValue[N])
+	b.sumValue.CompareAndSwap(sv, &boundSumValue[N]{val: newSV, hotIdx: hotIdx})
+
+	// collect was called. We need to re-perform the lookup
+
+}
+
+// We need to return a boundDeltaSum, which has a measure function on it.
+// boundDeltaSum has an atomic.Pointer to a sumValue.
+// It first makes sure that the boundDeltaSum is valid, and increments it if it is.
+// Otherwise, it performs a new lookup on the parent deltaSum, and CAS to store it.
 
 func (s *deltaSum[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
