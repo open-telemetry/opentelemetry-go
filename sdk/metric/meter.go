@@ -70,7 +70,7 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 	cfg := metric.NewInt64CounterConfig(options...)
 	const kind = InstrumentKindCounter
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.DefaultDisabled())
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.OptIn())
 	if err != nil {
 		return i, err
 	}
@@ -88,7 +88,7 @@ func (m *meter) Int64UpDownCounter(
 	cfg := metric.NewInt64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.DefaultDisabled())
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.OptIn())
 	if err != nil {
 		return i, err
 	}
@@ -117,7 +117,7 @@ func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (met
 	cfg := metric.NewInt64GaugeConfig(options...)
 	const kind = InstrumentKindGauge
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.DefaultDisabled())
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.OptIn())
 	if err != nil {
 		return i, err
 	}
@@ -127,7 +127,7 @@ func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (met
 
 // int64ObservableInstrument returns a new observable identified by the Instrument.
 // It registers callbacks for each reader's pipeline.
-func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int64Callback, defaultDisabled bool) (int64Observable, error) {
+func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int64Callback, optIn bool) (int64Observable, error) {
 	key := instID{
 		Name:        id.Name,
 		Description: id.Description,
@@ -142,7 +142,7 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 		for _, insert := range m.int64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, insert.readerDefaultAggregation(id.Kind), defaultDisabled)
+			in, err := insert.Instrument(id, insert.readerDefaultAggregation(id.Kind), optIn)
 			if err != nil {
 				return inst, err
 			}
@@ -188,7 +188,7 @@ func (m *meter) Int64ObservableCounter(
 		Kind:        InstrumentKindObservableCounter,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, cfg.Callbacks(), cfg.DefaultDisabled())
+	return m.int64ObservableInstrument(id, cfg.Callbacks(), cfg.OptIn())
 }
 
 // Int64ObservableUpDownCounter returns a new instrument identified by name and
@@ -212,7 +212,7 @@ func (m *meter) Int64ObservableUpDownCounter(
 		Kind:        InstrumentKindObservableUpDownCounter,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, cfg.Callbacks(), cfg.DefaultDisabled())
+	return m.int64ObservableInstrument(id, cfg.Callbacks(), cfg.OptIn())
 }
 
 // Int64ObservableGauge returns a new instrument identified by name and
@@ -236,7 +236,7 @@ func (m *meter) Int64ObservableGauge(
 		Kind:        InstrumentKindObservableGauge,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, cfg.Callbacks(), cfg.DefaultDisabled())
+	return m.int64ObservableInstrument(id, cfg.Callbacks(), cfg.OptIn())
 }
 
 // Float64Counter returns a new instrument identified by name and configured
@@ -246,7 +246,7 @@ func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOpti
 	cfg := metric.NewFloat64CounterConfig(options...)
 	const kind = InstrumentKindCounter
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.DefaultDisabled())
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.OptIn())
 	if err != nil {
 		return i, err
 	}
@@ -264,7 +264,7 @@ func (m *meter) Float64UpDownCounter(
 	cfg := metric.NewFloat64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.DefaultDisabled())
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.OptIn())
 	if err != nil {
 		return i, err
 	}
@@ -296,7 +296,7 @@ func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) 
 	cfg := metric.NewFloat64GaugeConfig(options...)
 	const kind = InstrumentKindGauge
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.DefaultDisabled())
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), cfg.OptIn())
 	if err != nil {
 		return i, err
 	}
@@ -309,7 +309,7 @@ func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) 
 func (m *meter) float64ObservableInstrument(
 	id Instrument,
 	callbacks []metric.Float64Callback,
-	defaultDisabled bool,
+	optIn bool,
 ) (float64Observable, error) {
 	key := instID{
 		Name:        id.Name,
@@ -325,7 +325,7 @@ func (m *meter) float64ObservableInstrument(
 		for _, insert := range m.float64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, insert.readerDefaultAggregation(id.Kind), defaultDisabled)
+			in, err := insert.Instrument(id, insert.readerDefaultAggregation(id.Kind), optIn)
 			if err != nil {
 				return inst, err
 			}
@@ -371,7 +371,7 @@ func (m *meter) Float64ObservableCounter(
 		Kind:        InstrumentKindObservableCounter,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, cfg.Callbacks(), cfg.DefaultDisabled())
+	return m.float64ObservableInstrument(id, cfg.Callbacks(), cfg.OptIn())
 }
 
 // Float64ObservableUpDownCounter returns a new instrument identified by name
@@ -395,7 +395,7 @@ func (m *meter) Float64ObservableUpDownCounter(
 		Kind:        InstrumentKindObservableUpDownCounter,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, cfg.Callbacks(), cfg.DefaultDisabled())
+	return m.float64ObservableInstrument(id, cfg.Callbacks(), cfg.OptIn())
 }
 
 // Float64ObservableGauge returns a new instrument identified by name and
@@ -419,7 +419,7 @@ func (m *meter) Float64ObservableGauge(
 		Kind:        InstrumentKindObservableGauge,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, cfg.Callbacks(), cfg.DefaultDisabled())
+	return m.float64ObservableInstrument(id, cfg.Callbacks(), cfg.OptIn())
 }
 
 func validateInstrumentName(name string) error {
@@ -634,7 +634,7 @@ func (noopRegister) Unregister() error {
 // int64InstProvider provides int64 OpenTelemetry instruments.
 type int64InstProvider struct{ *meter }
 
-func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string, defaultDisabled bool) ([]aggregate.Measure[int64], error) {
+func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string, optIn bool) ([]aggregate.Measure[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -642,7 +642,7 @@ func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string, defau
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.int64Resolver.Aggregators(inst, defaultDisabled)
+	return p.int64Resolver.Aggregators(inst, optIn)
 }
 
 func (p int64InstProvider) histogramAggs(
@@ -662,19 +662,19 @@ func (p int64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.int64Resolver.HistogramAggregators(inst, boundaries, cfg.DefaultDisabled())
+	measures, err := p.int64Resolver.HistogramAggregators(inst, boundaries, cfg.OptIn())
 	return measures, errors.Join(aggError, err)
 }
 
 // lookup returns the resolved instrumentImpl.
-func (p int64InstProvider) lookup(kind InstrumentKind, name, desc, u string, defaultDisabled bool) (*int64Inst, error) {
+func (p int64InstProvider) lookup(kind InstrumentKind, name, desc, u string, optIn bool) (*int64Inst, error) {
 	return p.int64Insts.Lookup(instID{
 		Name:        name,
 		Description: desc,
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
-		aggs, err := p.aggs(kind, name, desc, u, defaultDisabled)
+		aggs, err := p.aggs(kind, name, desc, u, optIn)
 		return &int64Inst{measures: aggs}, err
 	})
 }
@@ -695,7 +695,7 @@ func (p int64InstProvider) lookupHistogram(name string, cfg metric.Int64Histogra
 // float64InstProvider provides float64 OpenTelemetry instruments.
 type float64InstProvider struct{ *meter }
 
-func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string, defaultDisabled bool) ([]aggregate.Measure[float64], error) {
+func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string, optIn bool) ([]aggregate.Measure[float64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -703,7 +703,7 @@ func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string, def
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.float64Resolver.Aggregators(inst, defaultDisabled)
+	return p.float64Resolver.Aggregators(inst, optIn)
 }
 
 func (p float64InstProvider) histogramAggs(
@@ -723,19 +723,19 @@ func (p float64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.float64Resolver.HistogramAggregators(inst, boundaries, cfg.DefaultDisabled())
+	measures, err := p.float64Resolver.HistogramAggregators(inst, boundaries, cfg.OptIn())
 	return measures, errors.Join(aggError, err)
 }
 
 // lookup returns the resolved instrumentImpl.
-func (p float64InstProvider) lookup(kind InstrumentKind, name, desc, u string, defaultDisabled bool) (*float64Inst, error) {
+func (p float64InstProvider) lookup(kind InstrumentKind, name, desc, u string, optIn bool) (*float64Inst, error) {
 	return p.float64Insts.Lookup(instID{
 		Name:        name,
 		Description: desc,
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
-		aggs, err := p.aggs(kind, name, desc, u, defaultDisabled)
+		aggs, err := p.aggs(kind, name, desc, u, optIn)
 		return &float64Inst{measures: aggs}, err
 	})
 }

@@ -196,84 +196,84 @@ func (o unitOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64Ob
 // The unit u should be defined using the appropriate [UCUM](https://ucum.org) case-sensitive code.
 func WithUnit(u string) InstrumentOption { return unitOpt(u) }
 
-type defaultDisabledOpt struct{}
+type optInOpt struct{}
 
-func (o defaultDisabledOpt) applyFloat64Counter(c Float64CounterConfig) Float64CounterConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyFloat64Counter(c Float64CounterConfig) Float64CounterConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyFloat64UpDownCounter(c Float64UpDownCounterConfig) Float64UpDownCounterConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyFloat64UpDownCounter(c Float64UpDownCounterConfig) Float64UpDownCounterConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyFloat64Histogram(c Float64HistogramConfig) Float64HistogramConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyFloat64Histogram(c Float64HistogramConfig) Float64HistogramConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyFloat64Gauge(c Float64GaugeConfig) Float64GaugeConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyFloat64Gauge(c Float64GaugeConfig) Float64GaugeConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyFloat64ObservableCounter(c Float64ObservableCounterConfig) Float64ObservableCounterConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyFloat64ObservableCounter(c Float64ObservableCounterConfig) Float64ObservableCounterConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyFloat64ObservableUpDownCounter(
+func (o optInOpt) applyFloat64ObservableUpDownCounter(
 	c Float64ObservableUpDownCounterConfig,
 ) Float64ObservableUpDownCounterConfig {
-	c.defaultDisabled = true
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyFloat64ObservableGauge(c Float64ObservableGaugeConfig) Float64ObservableGaugeConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyFloat64ObservableGauge(c Float64ObservableGaugeConfig) Float64ObservableGaugeConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64Counter(c Int64CounterConfig) Int64CounterConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyInt64Counter(c Int64CounterConfig) Int64CounterConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64UpDownCounter(c Int64UpDownCounterConfig) Int64UpDownCounterConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyInt64UpDownCounter(c Int64UpDownCounterConfig) Int64UpDownCounterConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64Histogram(c Int64HistogramConfig) Int64HistogramConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyInt64Histogram(c Int64HistogramConfig) Int64HistogramConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64Gauge(c Int64GaugeConfig) Int64GaugeConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyInt64Gauge(c Int64GaugeConfig) Int64GaugeConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64ObservableCounter(c Int64ObservableCounterConfig) Int64ObservableCounterConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyInt64ObservableCounter(c Int64ObservableCounterConfig) Int64ObservableCounterConfig {
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64ObservableUpDownCounter(
+func (o optInOpt) applyInt64ObservableUpDownCounter(
 	c Int64ObservableUpDownCounterConfig,
 ) Int64ObservableUpDownCounterConfig {
-	c.defaultDisabled = true
+	c.optIn = true
 	return c
 }
 
-func (o defaultDisabledOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64ObservableGaugeConfig {
-	c.defaultDisabled = true
+func (o optInOpt) applyInt64ObservableGauge(c Int64ObservableGaugeConfig) Int64ObservableGaugeConfig {
+	c.optIn = true
 	return c
 }
 
-// WithDefaultDisabled sets the instrument to be disabled by default.
-func WithDefaultDisabled() InstrumentOption { return defaultDisabledOpt{} }
+// WithOptIn sets the instrument to be disabled by default.
+func WithOptIn() InstrumentOption { return optInOpt{} }
 
 // WithExplicitBucketBoundaries sets the instrument explicit bucket boundaries.
 //

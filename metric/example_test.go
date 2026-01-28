@@ -302,16 +302,16 @@ func ExampleMeter_attributes() {
 	})
 }
 
-// You can define metrics which are disabled by default using the [WithDefaultDisabled] option.
+// You can define metrics which are disabled by default using the [WithOptIn] option.
 //
 // Here's how you might define a counter that is disabled by default.
-func ExampleMeter_withDefaultDisabled() {
+func ExampleMeter_withOptIn() {
 	var err error
 	itemsCounter, err := meter.Int64UpDownCounter(
 		"items.counter",
 		metric.WithDescription("Number of items."),
 		metric.WithUnit("{item}"),
-		metric.WithDefaultDisabled(),
+		metric.WithOptIn(),
 	)
 	if err != nil {
 		panic(err)

@@ -176,8 +176,8 @@ func ExampleNewView_optIn() {
 		metric.WithView(view),
 	)
 
-	// A metric can be marked opt-in using apimetric.WithDefaultDieabled.
-	mp.Meter("example").Int64Counter("optin.counter", apimetric.WithDefaultDisabled())
+	// A metric can be marked opt-in using apimetric.WithOptIn.
+	mp.Meter("example").Int64Counter("optin.counter", apimetric.WithOptIn())
 
 	// Below is an example of how the view will
 	// function in the SDK for certain instruments.

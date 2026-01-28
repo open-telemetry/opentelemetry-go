@@ -11,41 +11,41 @@ import (
 
 func TestInt64Configuration(t *testing.T) {
 	const (
-		token           int64 = 43
-		desc                  = "Instrument description."
-		uBytes                = "By"
-		defaultDisabled       = true
+		token  int64 = 43
+		desc         = "Instrument description."
+		uBytes       = "By"
+		optIn        = true
 	)
 
 	run := func(got int64Config) func(*testing.T) {
 		return func(t *testing.T) {
 			assert.Equal(t, desc, got.Description(), "description")
 			assert.Equal(t, uBytes, got.Unit(), "unit")
-			assert.Equal(t, defaultDisabled, got.DefaultDisabled(), "defaultDisabled")
+			assert.Equal(t, optIn, got.OptIn(), "optIn")
 		}
 	}
 
 	t.Run("Int64Counter", run(
-		NewInt64CounterConfig(WithDescription(desc), WithUnit(uBytes), WithDefaultDisabled()),
+		NewInt64CounterConfig(WithDescription(desc), WithUnit(uBytes), WithOptIn()),
 	))
 
 	t.Run("Int64UpDownCounter", run(
-		NewInt64UpDownCounterConfig(WithDescription(desc), WithUnit(uBytes), WithDefaultDisabled()),
+		NewInt64UpDownCounterConfig(WithDescription(desc), WithUnit(uBytes), WithOptIn()),
 	))
 
 	t.Run("Int64Histogram", run(
-		NewInt64HistogramConfig(WithDescription(desc), WithUnit(uBytes), WithDefaultDisabled()),
+		NewInt64HistogramConfig(WithDescription(desc), WithUnit(uBytes), WithOptIn()),
 	))
 
 	t.Run("Int64Gauge", run(
-		NewInt64GaugeConfig(WithDescription(desc), WithUnit(uBytes), WithDefaultDisabled()),
+		NewInt64GaugeConfig(WithDescription(desc), WithUnit(uBytes), WithOptIn()),
 	))
 }
 
 type int64Config interface {
 	Description() string
 	Unit() string
-	DefaultDisabled() bool
+	OptIn() bool
 }
 
 func TestInt64ExplicitBucketHistogramConfiguration(t *testing.T) {

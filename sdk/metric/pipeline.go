@@ -236,7 +236,7 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *ins
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation, defaultDisabled bool) ([]aggregate.Measure[N], error) {
+func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation, optIn bool) ([]aggregate.Measure[N], error) {
 	var (
 		matched  bool
 		measures []aggregate.Measure[N]
@@ -250,7 +250,7 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation,
 			continue
 		}
 		matched = true
-		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation, defaultDisabled)
+		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation, optIn)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
@@ -279,7 +279,7 @@ func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation,
 		Description: inst.Description,
 		Unit:        inst.Unit,
 	}
-	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation, defaultDisabled)
+	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation, optIn)
 	if e != nil {
 		if err == nil {
 			err = errCreatingAggregators
@@ -354,7 +354,7 @@ func (i *inserter[N]) cachedAggregator(
 	kind InstrumentKind,
 	stream Stream,
 	readerAggregation Aggregation,
-	defaultDisabled bool,
+	optIn bool,
 ) (meas aggregate.Measure[N], aggID uint64, err error) {
 	switch stream.Aggregation.(type) {
 	case nil:
@@ -371,7 +371,7 @@ func (i *inserter[N]) cachedAggregator(
 
 	isEnabled := stream.Enabled != nil && *stream.Enabled
 	isDisabled := stream.Enabled != nil && !*stream.Enabled
-	if (defaultDisabled && !isEnabled) || isDisabled {
+	if (optIn && !isEnabled) || isDisabled {
 		stream.Aggregation = AggregationDrop{}
 	}
 
@@ -648,12 +648,12 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument, defaultDisabled bool) ([]aggregate.Measure[N], error) {
+func (r resolver[N]) Aggregators(id Instrument, optIn bool) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	var err error
 	for _, i := range r.inserters {
-		in, e := i.Instrument(id, i.readerDefaultAggregation(id.Kind), defaultDisabled)
+		in, e := i.Instrument(id, i.readerDefaultAggregation(id.Kind), optIn)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
@@ -665,7 +665,7 @@ func (r resolver[N]) Aggregators(id Instrument, defaultDisabled bool) ([]aggrega
 // HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
 // defined by key. If boundaries were provided on instrument instantiation, those take precedence
 // over boundaries provided by the reader.
-func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64, defaultDisabled bool) ([]aggregate.Measure[N], error) {
+func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64, optIn bool) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	var err error
@@ -675,7 +675,7 @@ func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64, d
 			histAgg.Boundaries = boundaries
 			agg = histAgg
 		}
-		in, e := i.Instrument(id, agg, defaultDisabled)
+		in, e := i.Instrument(id, agg, optIn)
 		if e != nil {
 			err = errors.Join(err, e)
 		}

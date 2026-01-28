@@ -30,9 +30,9 @@ type Float64Counter interface {
 // Float64CounterConfig contains options for synchronous counter instruments that
 // record float64 values.
 type Float64CounterConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
+	description string
+	unit        string
+	optIn       bool
 }
 
 // NewFloat64CounterConfig returns a new [Float64CounterConfig] with all opts
@@ -55,9 +55,9 @@ func (c Float64CounterConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64CounterConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// optIn returns true if the instrument is disabled by default.
+func (c Float64CounterConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Float64CounterOption applies options to a [Float64CounterConfig]. See
@@ -89,9 +89,9 @@ type Float64UpDownCounter interface {
 // Float64UpDownCounterConfig contains options for synchronous counter
 // instruments that record float64 values.
 type Float64UpDownCounterConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
+	description string
+	unit        string
+	optIn       bool
 }
 
 // NewFloat64UpDownCounterConfig returns a new [Float64UpDownCounterConfig]
@@ -114,9 +114,9 @@ func (c Float64UpDownCounterConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64UpDownCounterConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// optIn returns true if the instrument is disabled by default.
+func (c Float64UpDownCounterConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Float64UpDownCounterOption applies options to a
@@ -150,7 +150,7 @@ type Float64Histogram interface {
 type Float64HistogramConfig struct {
 	description              string
 	unit                     string
-	defaultDisabled          bool
+	optIn                    bool
 	explicitBucketBoundaries []float64
 }
 
@@ -174,9 +174,9 @@ func (c Float64HistogramConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64HistogramConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// optIn returns true if the instrument is disabled by default.
+func (c Float64HistogramConfig) OptIn() bool {
+	return c.optIn
 }
 
 // ExplicitBucketBoundaries returns the configured explicit bucket boundaries.
@@ -212,9 +212,9 @@ type Float64Gauge interface {
 // Float64GaugeConfig contains options for synchronous gauge instruments that
 // record float64 values.
 type Float64GaugeConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
+	description string
+	unit        string
+	optIn       bool
 }
 
 // NewFloat64GaugeConfig returns a new [Float64GaugeConfig] with all opts
@@ -237,9 +237,9 @@ func (c Float64GaugeConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64GaugeConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// optIn returns true if the instrument is disabled by default.
+func (c Float64GaugeConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Float64GaugeOption applies options to a [Float64GaugeConfig]. See

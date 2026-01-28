@@ -40,10 +40,10 @@ type Int64ObservableCounter interface {
 // Int64ObservableCounterConfig contains options for asynchronous counter
 // instruments that record int64 values.
 type Int64ObservableCounterConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
-	callbacks       []Int64Callback
+	description string
+	unit        string
+	optIn       bool
+	callbacks   []Int64Callback
 }
 
 // NewInt64ObservableCounterConfig returns a new [Int64ObservableCounterConfig]
@@ -66,9 +66,9 @@ func (c Int64ObservableCounterConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Int64ObservableCounterConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// OptIn returns true if the instrument is disabled by default.
+func (c Int64ObservableCounterConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Callbacks returns the configured callbacks.
@@ -104,10 +104,10 @@ type Int64ObservableUpDownCounter interface {
 // Int64ObservableUpDownCounterConfig contains options for asynchronous counter
 // instruments that record int64 values.
 type Int64ObservableUpDownCounterConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
-	callbacks       []Int64Callback
+	description string
+	unit        string
+	optIn       bool
+	callbacks   []Int64Callback
 }
 
 // NewInt64ObservableUpDownCounterConfig returns a new
@@ -132,9 +132,9 @@ func (c Int64ObservableUpDownCounterConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Int64ObservableUpDownCounterConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// OptIn returns true if the instrument is disabled by default.
+func (c Int64ObservableUpDownCounterConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Callbacks returns the configured callbacks.
@@ -169,10 +169,10 @@ type Int64ObservableGauge interface {
 // Int64ObservableGaugeConfig contains options for asynchronous counter
 // instruments that record int64 values.
 type Int64ObservableGaugeConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
-	callbacks       []Int64Callback
+	description string
+	unit        string
+	optIn       bool
+	callbacks   []Int64Callback
 }
 
 // NewInt64ObservableGaugeConfig returns a new [Int64ObservableGaugeConfig]
@@ -195,9 +195,9 @@ func (c Int64ObservableGaugeConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Int64ObservableGaugeConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// OptIn returns true if the instrument is disabled by default.
+func (c Int64ObservableGaugeConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Callbacks returns the configured callbacks.

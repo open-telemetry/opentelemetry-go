@@ -41,10 +41,10 @@ type Float64ObservableCounter interface {
 // Float64ObservableCounterConfig contains options for asynchronous counter
 // instruments that record float64 values.
 type Float64ObservableCounterConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
-	callbacks       []Float64Callback
+	description string
+	unit        string
+	optIn       bool
+	callbacks   []Float64Callback
 }
 
 // NewFloat64ObservableCounterConfig returns a new
@@ -67,9 +67,9 @@ func (c Float64ObservableCounterConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64ObservableCounterConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// OptIn returns true if the instrument is disabled by default.
+func (c Float64ObservableCounterConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Callbacks returns the configured callbacks.
@@ -105,10 +105,10 @@ type Float64ObservableUpDownCounter interface {
 // Float64ObservableUpDownCounterConfig contains options for asynchronous
 // counter instruments that record float64 values.
 type Float64ObservableUpDownCounterConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
-	callbacks       []Float64Callback
+	description string
+	unit        string
+	optIn       bool
+	callbacks   []Float64Callback
 }
 
 // NewFloat64ObservableUpDownCounterConfig returns a new
@@ -133,9 +133,9 @@ func (c Float64ObservableUpDownCounterConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64ObservableUpDownCounterConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// OptIn returns true if the instrument is disabled by default.
+func (c Float64ObservableUpDownCounterConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Callbacks returns the configured callbacks.
@@ -170,10 +170,10 @@ type Float64ObservableGauge interface {
 // Float64ObservableGaugeConfig contains options for asynchronous counter
 // instruments that record float64 values.
 type Float64ObservableGaugeConfig struct {
-	description     string
-	unit            string
-	defaultDisabled bool
-	callbacks       []Float64Callback
+	description string
+	unit        string
+	optIn       bool
+	callbacks   []Float64Callback
 }
 
 // NewFloat64ObservableGaugeConfig returns a new [Float64ObservableGaugeConfig]
@@ -196,9 +196,9 @@ func (c Float64ObservableGaugeConfig) Unit() string {
 	return c.unit
 }
 
-// DefaultDisabled returns true if the instrument is disabled by default.
-func (c Float64ObservableGaugeConfig) DefaultDisabled() bool {
-	return c.defaultDisabled
+// OptIn returns true if the instrument is disabled by default.
+func (c Float64ObservableGaugeConfig) OptIn() bool {
+	return c.optIn
 }
 
 // Callbacks returns the configured callbacks.
