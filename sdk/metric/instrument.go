@@ -151,6 +151,10 @@ type Stream struct {
 	//
 	// If unspecified, [DefaultExemplarReservoirProviderSelector] is used.
 	ExemplarReservoirProviderSelector ExemplarReservoirProviderSelector
+	// Enabled can be used to enable an OptIn metric, or disable a metric that
+	// is not OptIn. If it is unset, it leaves the enablement of the metric in
+	// its default state.
+	Enabled *bool
 }
 
 // instID are the identifying properties of a instrument.

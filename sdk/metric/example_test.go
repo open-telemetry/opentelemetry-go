@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	apimetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
@@ -155,6 +156,41 @@ func ExampleNewView() {
 	// name: request.latency
 	// description: request latency
 	// unit: ms
+}
+
+func ExampleNewView_optIn() {
+	// Create a view that renames the "latency" instrument from the v0.34.0
+	// version of the "http" instrumentation library as "request.latency".
+	enabledTrue := true
+	view := metric.NewView(metric.Instrument{
+		Name: "optin.counter",
+		Scope: instrumentation.Scope{
+			Name: "example",
+		},
+		// This enables a metric that is disabled by default.
+	}, metric.Stream{Enabled: &enabledTrue})
+
+	// The created view can then be registered with the OpenTelemetry metric
+	// SDK using the WithView option.
+	mp := metric.NewMeterProvider(
+		metric.WithView(view),
+	)
+
+	// A metric can be marked opt-in using apimetric.WithDefaultDieabled.
+	mp.Meter("example").Int64Counter("optin.counter", apimetric.WithDefaultDisabled())
+
+	// Below is an example of how the view will
+	// function in the SDK for certain instruments.
+	stream, _ := view(metric.Instrument{
+		Name: "optin.counter",
+		Kind: metric.InstrumentKindCounter,
+		Scope: instrumentation.Scope{
+			Name: "example",
+		},
+	})
+	fmt.Println("enabled:", *stream.Enabled)
+	// Output:
+	// enabled: true
 }
 
 func ExampleNewView_wildcard() {
