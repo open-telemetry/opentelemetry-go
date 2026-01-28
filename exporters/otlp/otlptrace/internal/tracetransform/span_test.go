@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -207,9 +207,64 @@ func TestBuildSpanFlags(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantFlags, buildSpanFlags(tt.spanContext))
+			assert.Equal(t, tt.wantFlags, buildSpanFlagsWith(tt.spanContext.TraceFlags(), tt.spanContext))
 		})
 	}
+}
+
+func TestSpanFlagsLower8BitsFromTraceFlags(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		traceFlags   trace.TraceFlags
+		parentRemote bool
+		wantLow8     uint32
+		wantMask     uint32
+	}{
+		{name: "unsampled root", traceFlags: 0x00, parentRemote: false, wantLow8: 0x00, wantMask: 0x100},
+		{name: "sampled root", traceFlags: 0x01, parentRemote: false, wantLow8: 0x01, wantMask: 0x100},
+		{name: "custom bits root", traceFlags: 0x05, parentRemote: false, wantLow8: 0x05, wantMask: 0x100},
+		{name: "unsampled remote parent", traceFlags: 0x00, parentRemote: true, wantLow8: 0x00, wantMask: 0x300},
+		{name: "sampled remote parent", traceFlags: 0x01, parentRemote: true, wantLow8: 0x01, wantMask: 0x300},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parent := trace.NewSpanContext(trace.SpanContextConfig{Remote: tc.parentRemote})
+			got := buildSpanFlagsWith(tc.traceFlags, parent)
+			assert.Equal(t, tc.wantLow8, got&0xff)
+			assert.Equal(t, tc.wantMask, got&0x300)
+			// Ensure higher bits are not set beyond 0-9
+			assert.Equal(t, uint32(0), got&^uint32(0x3ff))
+		})
+	}
+}
+
+func TestSpanAndLinkExportLower8Bits(t *testing.T) {
+	// Span: sampled child with local parent
+	spanData := tracetest.SpanStub{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    trace.TraceID{0x1},
+			SpanID:     trace.SpanID{0x2},
+			TraceFlags: trace.TraceFlags(0x01),
+		}),
+		Parent: trace.NewSpanContext(trace.SpanContextConfig{}),
+		Name:   "flags-test",
+	}
+	rss := Spans(tracetest.SpanStubs{spanData}.Snapshots())
+	require.Len(t, rss, 1)
+	scopeSpans := rss[0].GetScopeSpans()
+	require.Len(t, scopeSpans, 1)
+	require.Len(t, scopeSpans[0].Spans, 1)
+	s := scopeSpans[0].Spans[0]
+	assert.Equal(t, uint32(0x01), s.Flags&0xff)
+	assert.Equal(t, uint32(0x100), s.Flags&0x300)
+
+	// Link: sampled link local
+	l := []tracesdk.Link{
+		{SpanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceFlags: 0x01})},
+	}
+	gotLinks := links(l)
+	require.Len(t, gotLinks, 1)
+	assert.Equal(t, uint32(0x01), gotLinks[0].Flags&0xff)
+	assert.Equal(t, uint32(0x100), gotLinks[0].Flags&0x300)
 }
 
 func TestNilSpan(t *testing.T) {
@@ -331,7 +386,7 @@ func TestSpanData(t *testing.T) {
 		SpanId:                 []byte{0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA, 0xF9, 0xF8},
 		ParentSpanId:           []byte{0xEF, 0xEE, 0xED, 0xEC, 0xEB, 0xEA, 0xE9, 0xE8},
 		TraceState:             "key1=val1,key2=val2",
-		Flags:                  0x300,
+		Flags:                  0x300, // lower 8 bits (trace flags) are 0x00 in this fixture; update in new tests below
 		Name:                   spanData.Name,
 		Kind:                   tracepb.Span_SPAN_KIND_SERVER,
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),

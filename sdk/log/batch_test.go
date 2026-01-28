@@ -220,6 +220,13 @@ func TestBatchProcessor(t *testing.T) {
 		_ = b.Shutdown(ctx)
 	})
 
+	t.Run("Enabled", func(t *testing.T) {
+		e := newTestExporter(nil)
+		b := NewBatchProcessor(e)
+		enabled := b.Enabled(ctx, EnabledParameters{})
+		assert.True(t, enabled, "Enabled should return true")
+	})
+
 	t.Run("OnEmit", func(t *testing.T) {
 		const batch = 10
 		e := newTestExporter(nil)

@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package azureconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "azure" namespace.
 package azureconv
 
@@ -75,7 +78,7 @@ func NewCosmosDBClientActiveInstanceCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
+		return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CosmosDBClientActiveInstanceCount{i}, nil
 }
@@ -165,7 +168,7 @@ func NewCosmosDBClientOperationRequestCharge(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
+		return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
 	}
 	return CosmosDBClientOperationRequestCharge{i}, nil
 }

@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -795,6 +795,51 @@ func TestMultiScopes(t *testing.T) {
 
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
+}
+
+func TestBridgeScopeIgnored(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+		WithRegisterer(registry),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+
+	fooCounter, err := provider.Meter(bridgeScopeName, otelmetric.WithInstrumentationVersion("v0.1.0")).
+		Int64Counter(
+			"foo",
+			otelmetric.WithUnit("s"),
+			otelmetric.WithDescription("meter foo counter"))
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
+
+	file, err := os.Open("testdata/just_target_info.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, handledError, errBridgeNotSupported)
 }
 
 func TestDuplicateMetrics(t *testing.T) {
@@ -2497,10 +2542,15 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 					var rm metricdata.ResourceMetrics
 					err := observReader.Collect(t.Context(), &rm)
 					require.NoError(t, err)
-					if len(rm.ScopeMetrics) == 0 {
-						return metricdata.ScopeMetrics{}
+
+					// Find the Prometheus exporter observability scope specifically.
+					for _, sm := range rm.ScopeMetrics {
+						if sm.Scope.Name == observ.ScopeName {
+							return sm
+						}
 					}
-					return rm.ScopeMetrics[0]
+					// Exporter scope not found (e.g., if disabled or no scrape yet).
+					return metricdata.ScopeMetrics{}
 				}
 			}
 
@@ -2811,14 +2861,25 @@ func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	if len(observMetrics.ScopeMetrics) > 0 {
-		scopeMetrics := observMetrics.ScopeMetrics[0]
+		expectedMetrics := map[string]bool{
+			"otel.sdk.exporter.metric_data_point.inflight": false,
+			"otel.sdk.exporter.metric_data_point.exported": false,
+			"otel.sdk.exporter.operation.duration":         false,
+			"otel.sdk.metric_reader.collection.duration":   false,
+		}
+
+		// Check all scope metrics, not just the first one
+		for _, scopeMetrics := range observMetrics.ScopeMetrics {
+			for _, m := range scopeMetrics.Metrics {
+				if _, exists := expectedMetrics[m.Name]; exists {
+					expectedMetrics[m.Name] = true
+				}
+			}
+		}
+
 		foundObservabilityMetrics := 0
-		for _, m := range scopeMetrics.Metrics {
-			switch m.Name {
-			case "otel.sdk.exporter.metric_data_point.inflight",
-				"otel.sdk.exporter.metric_data_point.exported",
-				"otel.sdk.exporter.operation.duration",
-				"otel.sdk.metric_reader.collection.duration":
+		for _, found := range expectedMetrics {
+			if found {
 				foundObservabilityMetrics++
 			}
 		}

@@ -35,8 +35,19 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
+
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
 
 var (
@@ -548,7 +559,7 @@ func TestClient(t *testing.T) {
 		ctx := t.Context()
 		client, _ := factory(rCh)
 
-		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), errPartial{})
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
@@ -810,4 +821,181 @@ func TestConfig(t *testing.T) {
 		err := exp.Export(ctx, make([]log.Record, 1))
 		assert.ErrorContains(t, err, exporterErr.Error())
 	})
+}
+
+// SetExporterID sets the exporter ID counter to v and returns the previous
+// value.
+//
+// This function is useful for testing purposes, allowing you to reset the
+// counter. It should not be used in production code.
+func SetExporterID(v int64) int64 {
+	return exporterN.Swap(v)
+}
+
+func newFactory(t testing.TB) func(rCh <-chan exportResult) (*client, *httpCollector, string) {
+	return func(rCh <-chan exportResult) (*client, *httpCollector, string) {
+		coll, err := newHTTPCollector("", rCh)
+		require.NoError(t, err)
+
+		addr := coll.Addr().String()
+		opts := []Option{WithEndpoint(addr), WithInsecure()}
+		cfg := newConfig(opts)
+		client, err := newHTTPClient(cfg)
+		require.NoError(t, err)
+		return client, coll, addr
+	}
+}
+
+func TestClientInstrumentation(t *testing.T) {
+	// Enable instrumentation for this test.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Reset client ID to be a deterministic.
+	const id = 0
+	SetExporterID(id)
+
+	// Save original meter provider and restore at end of test.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() {
+		otel.SetMeterProvider(orig)
+	})
+
+	// Create a new meter provider to captrue metrics.
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	factory := newFactory(t)
+
+	rCh := make(chan exportResult, 1)
+	rCh <- exportResult{
+		Response: &collogpb.ExportLogsServiceResponse{
+			PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+				RejectedLogRecords: 2,
+				ErrorMessage:       "partially successful",
+			},
+		},
+	}
+
+	client, coll, addr := factory(rCh)
+	t.Cleanup(func() {
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, coll.Shutdown(ctx))
+	})
+	assert.ErrorIs(t, client.UploadLogs(t.Context(), resourceLogs), internal.PartialSuccess{})
+
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	baseAttrs := []attribute.KeyValue{
+		semconv.OTelComponentName(observ.GetComponentName(id)),
+		semconv.OTelComponentTypeOtlpHTTPLogExporter,
+	}
+	baseAttrs = append(baseAttrs, observ.ServerAddrAttrs(addr)...)
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterLogInflight{}.Name(),
+				Description: otelconv.SDKExporterLogInflight{}.Description(),
+				Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(baseAttrs...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterLogExported{}.Name(),
+				Description: otelconv.SDKExporterLogExported{}.Description(),
+				Unit:        otelconv.SDKExporterLogExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(baseAttrs...)},
+						{Attributes: attribute.NewSet(append(
+							baseAttrs,
+							otelconv.SDKExporterLogExported{}.AttrErrorType("*errors.joinError"),
+						)...)},
+					},
+					Temporality: 0x1,
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{Attributes: attribute.NewSet(append(
+							baseAttrs,
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
+						)...)},
+					},
+					Temporality: 0x1,
+				},
+			},
+		},
+	}
+
+	require.Len(t, got.ScopeMetrics, 1)
+	opt := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+		metricdatatest.IgnoreValue(),
+	}
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func BenchmarkExporterExportLogs(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		factory := newFactory(b)
+		client, coll, _ := factory(nil)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, coll.srv.Shutdown(context.Background()))
+		})
+
+		stubs := make([]*lpb.ResourceLogs, n)
+		for i := range stubs {
+			stubs[i] = &lpb.ResourceLogs{
+				Resource: &rpb.Resource{
+					Attributes: []*cpb.KeyValue{kvSrvName, kvSrvVer},
+				},
+				ScopeLogs: []*lpb.ScopeLogs{
+					{
+						Scope:      scope,
+						LogRecords: logRecords[:(i+1)%(len(logRecords)+1)],
+						SchemaUrl:  semconv.SchemaURL,
+					},
+				},
+				SchemaUrl: semconv.SchemaURL,
+			}
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		var err error
+		for b.Loop() {
+			err = client.UploadLogs(b.Context(), stubs)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
 }
