@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
 )
 
+
+
 // DefaultEnvOptionsReader is the default environments reader.
 var DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
 	GetEnv:    os.Getenv,
@@ -45,7 +47,6 @@ func ApplyHTTPEnvConfigs(cfg Config) Config {
 
 func getOptionsFromEnv() []GenericOption {
 	opts := []GenericOption{}
-
 	tlsConf := &tls.Config{}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
@@ -114,7 +115,7 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
 		// exporter is going to send telemetry.
-		cfg.Traces.Endpoint = path.Join(u.Host, u.Path)
+		cfg.Traces.Endpoint = u.Host
 		return cfg
 	}
 }
