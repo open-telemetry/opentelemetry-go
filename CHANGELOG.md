@@ -36,6 +36,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `WithHostID` detector in `go.opentelemetry.io/otel/sdk/resource` to use full path for `ioreg` command on Darwin (macOS). (#7818)
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` to correctly handle HTTP2 GOAWAY frame. (#7794)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/exporters/zipkin`.
+  For more information, see the [OTel blog post deprecating the Zipkin exporter](https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/). (#7670)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
