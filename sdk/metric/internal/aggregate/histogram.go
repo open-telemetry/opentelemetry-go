@@ -93,7 +93,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap
+	hotColdValMap [2]limitedSyncMap[*histogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -110,7 +110,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *histogramPoint[N] {
 		hPt := &histogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -124,7 +124,7 @@ func (s *deltaHistogram[N]) measure(
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
-	}).(*histogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -162,7 +162,7 @@ func newDeltaHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]limitedSyncMap{
+		hotColdValMap: [2]limitedSyncMap[*histogramPoint[N]]{
 			{aggLimit: limit},
 			{aggLimit: limit},
 		},
@@ -191,9 +191,7 @@ func (s *deltaHistogram[N]) collect(
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].Range(func(_, value any) bool {
-		val := value.(*histogramPoint[N])
-
+	s.hotColdValMap[readIdx].Range(func(_ attribute.Distinct, val *histogramPoint[N]) bool {
 		count := val.loadCountsInto(&hDPts[i].BucketCounts)
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
@@ -240,7 +238,7 @@ func (s *deltaHistogram[N]) collect(
 // to reading. Unlike deltaHistogram, this maintains a single map so that the
 // preserved attribute sets do not change when collect() is called.
 type cumulativeHistogram[N int64 | float64] struct {
-	values limitedSyncMap
+	values limitedSyncMap[*hotColdHistogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -269,7 +267,7 @@ func newCumulativeHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		values:   limitedSyncMap{aggLimit: limit},
+		values:   limitedSyncMap[*hotColdHistogramPoint[N]]{aggLimit: limit},
 	}
 }
 
@@ -279,7 +277,7 @@ func (s *cumulativeHistogram[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *hotColdHistogramPoint[N] {
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -300,7 +298,7 @@ func (s *cumulativeHistogram[N]) measure(
 			},
 		}
 		return hPt
-	}).(*hotColdHistogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -340,8 +338,7 @@ func (s *cumulativeHistogram[N]) collect(
 	hDPts := reset(h.DataPoints, 0, s.values.Len())
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		val := value.(*hotColdHistogramPoint[N])
+	s.values.Range(func(_ attribute.Distinct, val *hotColdHistogramPoint[N]) bool {
 		// swap, observe, and clear the point
 		readIdx := val.hcwg.swapHotAndWait()
 		var bucketCounts []uint64
