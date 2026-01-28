@@ -174,7 +174,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice.ToSlice(), nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -216,7 +216,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice.ToSlice(), nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -680,22 +680,22 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 		noSum    = false
 	)
 
-	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Lookup[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
-	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+	b.Run("Int64/Delta", benchmarkAggregate(func() (Lookup[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
+	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Lookup[float64], ComputeAggregation) {
 		return Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
+	b.Run("Float64/Delta", benchmarkAggregate(func() (Lookup[float64], ComputeAggregation) {
 		return Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)

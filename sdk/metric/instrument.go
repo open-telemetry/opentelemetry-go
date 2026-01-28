@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -177,79 +178,227 @@ func (i instID) normalize() instID {
 }
 
 type int64Inst struct {
-	measures []aggregate.Measure[int64]
-
-	embedded.Int64Counter
-	embedded.Int64UpDownCounter
-	embedded.Int64Histogram
-	embedded.Int64Gauge
+	measures []aggregate.Lookup[int64]
 }
 
 var (
-	_ metric.Int64Counter       = (*int64Inst)(nil)
-	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
-	_ metric.Int64Histogram     = (*int64Inst)(nil)
-	_ metric.Int64Gauge         = (*int64Inst)(nil)
+	_ metric.Int64Counter       = (*int64Counter)(nil)
+	_ metric.Int64UpDownCounter = (*int64UpDownCounter)(nil)
+	_ metric.Int64Histogram     = (*int64Histogram)(nil)
+	_ metric.Int64Gauge         = (*int64Gauge)(nil)
 )
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
 	return len(i.measures) != 0
 }
 
+type int64Counter struct {
+	embedded.Int64Counter
+	int64Inst
+}
+
+func (i *int64Counter) WithAttributes(_ ...attribute.KeyValue) metric.Int64Counter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type int64UpDownCounter struct {
+	embedded.Int64UpDownCounter
+	int64Inst
+}
+
+func (i *int64UpDownCounter) WithAttributes(_ ...attribute.KeyValue) metric.Int64UpDownCounter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type int64Histogram struct {
+	embedded.Int64Histogram
+	int64Inst
+}
+
+func (i *int64Histogram) WithAttributes(_ ...attribute.KeyValue) metric.Int64Histogram {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type int64Gauge struct {
+	embedded.Int64Gauge
+	int64Inst
+}
+
+func (i *int64Gauge) WithAttributes(_ ...attribute.KeyValue) metric.Int64Gauge {
+	// TODO: bind counter to attributes
+	return i
+}
+
 func (i *int64Inst) aggregate(
 	ctx context.Context,
 	val int64,
-	s attribute.Set,
+	s []attribute.KeyValue,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(s)(ctx, val)
 	}
 }
 
 type float64Inst struct {
-	measures []aggregate.Measure[float64]
-
-	embedded.Float64Counter
-	embedded.Float64UpDownCounter
-	embedded.Float64Histogram
-	embedded.Float64Gauge
+	measures []aggregate.Lookup[float64]
+	// TODO: at minimum, this needs to implement cardinality limiting.
+	// We should actually refactor the SDK so that the measures are nested
+	// within the sync.Map already used within the SDK's aggregation package.
+	// This would mean we only need a single lookup.
+	boundInsts sync.Map // boundFloat64Inst
 }
 
 var (
-	_ metric.Float64Counter       = (*float64Inst)(nil)
-	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
-	_ metric.Float64Histogram     = (*float64Inst)(nil)
-	_ metric.Float64Gauge         = (*float64Inst)(nil)
+	_ metric.Float64Counter       = (*float64Counter)(nil)
+	_ metric.Float64UpDownCounter = (*float64UpDownCounter)(nil)
+	_ metric.Float64Histogram     = (*float64Histogram)(nil)
+	_ metric.Float64Gauge         = (*float64Gauge)(nil)
 )
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	attrs := c.Attributes()
+	i.aggregate(ctx, val, attrs.ToSlice())
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
 	return len(i.measures) != 0
 }
 
-func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
+func (i *float64Inst) aggregate(ctx context.Context, val float64, s []attribute.KeyValue) {
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(s)(ctx, val)
 	}
+}
+
+var _ metric.Float64Counter = (*boundFloat64Counter)(nil)
+
+func (i *boundFloat64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
+	if len(opts) == 0 {
+		// Fast path requires no lookup
+		i.aggregate(ctx, val)
+		return
+	}
+	// Computing AddConfig adds 7 ns of overhead (50%)
+	c := metric.NewAddConfig(opts)
+	attrs := c.Attributes()
+	i.base.aggregate(ctx, val, append(i.attrs, attrs.ToSlice()...))
+}
+
+func (i *boundFloat64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
+	c := metric.NewRecordConfig(opts)
+	attrs := c.Attributes()
+	if attrs.Len() == 0 {
+		i.aggregate(ctx, val)
+		return
+	}
+	i.base.aggregate(ctx, val, append(i.attrs, attrs.ToSlice()...))
+}
+
+func (i *boundFloat64Inst) Enabled(context.Context) bool {
+	return len(i.measures) != 0
+}
+
+func (i *boundFloat64Inst) aggregate(ctx context.Context, val float64) {
+	// Iterating over measures adds 1 ns of overhead.
+	for _, in := range i.measures {
+		// Note that this does not perform a lookup
+		in(ctx, val)
+	}
+}
+
+type boundFloat64Inst struct {
+	base     *float64Inst
+	measures []aggregate.Measure[float64]
+	attrs    []attribute.KeyValue
+}
+
+type float64Counter struct {
+	embedded.Float64Counter
+	float64Inst
+}
+
+func (i *float64Counter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Counter {
+	// TODO: we are computing the distinct twice: Once here, and once in the aggregation package.
+	// We should pass the Distinct to the Lookup function to avoid recomputing it.
+	distinct := attribute.NewDistinct(kvs...)
+	if boundCounter, ok := i.float64Inst.boundInsts.Load(distinct); ok {
+		// Fast path.
+		bc := boundCounter.(*boundFloat64Counter)
+		return bc
+	}
+	// Slow path.
+	measures := make([]aggregate.Measure[float64], 0, len(i.measures))
+	for _, m := range i.measures {
+		measures = append(measures, m(kvs))
+	}
+	cp := make([]attribute.KeyValue, len(kvs))
+	copy(kvs, cp)
+	newBoundCounter := &boundFloat64Counter{boundFloat64Inst: boundFloat64Inst{base: &i.float64Inst, attrs: cp, measures: measures}}
+	boundCounter, _ := i.float64Inst.boundInsts.LoadOrStore(distinct, newBoundCounter)
+	bc := boundCounter.(*boundFloat64Counter)
+	return bc
+}
+
+type boundFloat64Counter struct {
+	embedded.Float64Counter
+	boundFloat64Inst
+}
+
+func (i *boundFloat64Counter) WithAttributes(_ ...attribute.KeyValue) metric.Float64Counter {
+	// TODO: re-bind counter to attributes
+	return i
+}
+
+type float64UpDownCounter struct {
+	embedded.Float64UpDownCounter
+	float64Inst
+}
+
+func (i *float64UpDownCounter) WithAttributes(_ ...attribute.KeyValue) metric.Float64UpDownCounter {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type float64Histogram struct {
+	embedded.Float64Histogram
+	float64Inst
+}
+
+func (i *float64Histogram) WithAttributes(_ ...attribute.KeyValue) metric.Float64Histogram {
+	// TODO: bind counter to attributes
+	return i
+}
+
+type float64Gauge struct {
+	embedded.Float64Gauge
+	float64Inst
+}
+
+func (i *float64Gauge) WithAttributes(_ ...attribute.KeyValue) metric.Float64Gauge {
+	// TODO: bind counter to attributes
+	return i
 }
 
 // observableID is a comparable unique identifier of an observable.
@@ -268,6 +417,11 @@ type float64Observable struct {
 	embedded.Float64ObservableCounter
 	embedded.Float64ObservableUpDownCounter
 	embedded.Float64ObservableGauge
+}
+
+func (o *float64Observable) WithAttributes(_ ...attribute.KeyValue) metric.Float64Observable {
+	// TODO: implement
+	return o
 }
 
 var (
@@ -289,6 +443,11 @@ type int64Observable struct {
 	embedded.Int64ObservableCounter
 	embedded.Int64ObservableUpDownCounter
 	embedded.Int64ObservableGauge
+}
+
+func (o *int64Observable) WithAttributes(_ ...attribute.KeyValue) metric.Int64Observable {
+	// TODO: implement
+	return o
 }
 
 var (
@@ -326,20 +485,20 @@ func newObservable[N int64 | float64](m *meter, kind InstrumentKind, name, desc,
 }
 
 // observe records the val for the set of attrs.
-func (o *observable[N]) observe(val N, s attribute.Set) {
+func (o *observable[N]) observe(val N, s []attribute.KeyValue) {
 	o.measures.observe(val, s)
 }
 
-func (o *observable[N]) appendMeasures(meas []aggregate.Measure[N]) {
+func (o *observable[N]) appendMeasures(meas []aggregate.Lookup[N]) {
 	o.measures = append(o.measures, meas...)
 }
 
-type measures[N int64 | float64] []aggregate.Measure[N]
+type measures[N int64 | float64] []aggregate.Lookup[N]
 
 // observe records the val for the set of attrs.
-func (m measures[N]) observe(val N, s attribute.Set) {
+func (m measures[N]) observe(val N, s []attribute.KeyValue) {
 	for _, in := range m {
-		in(context.Background(), val, s)
+		in(s)(context.Background(), val)
 	}
 }
 
