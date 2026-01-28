@@ -18,9 +18,6 @@ import (
 )
 
 const (
-	// ScopeName is the name of the instrumentation scope.
-	ScopeName = "go.opentelemetry.io/otel/sdk/log"
-
 	// SchemaURL is the schema URL of the instrumentation.
 	SchemaURL = semconv.SchemaURL
 )
