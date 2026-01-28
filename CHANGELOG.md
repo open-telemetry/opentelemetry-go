@@ -27,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve performance of concurrent synchronous gauge measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7478)
 - Improve performance of concurrent exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7702)
 - Improve performance OTLP HTTP log exporter observability metrics by adding Enabled checks to avoid unnecessary attribute work.`go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ`. (#7813)
+- Improve the concurrent performance of `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`. (#7447)
 
 ### Fixed
 
@@ -35,6 +36,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `SetAttributes` on `Record` in `go.opentelemetry.io/otel/sdk/log` to not log that attributes are dropped when they are actually not dropped. (#7662)
 - `WithHostID` detector in `go.opentelemetry.io/otel/sdk/resource` to use full path for `ioreg` command on Darwin (macOS). (#7818)
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` to correctly handle HTTP2 GOAWAY frame. (#7794)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/exporters/zipkin`.
+  For more information, see the [OTel blog post deprecating the Zipkin exporter](https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/). (#7670)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

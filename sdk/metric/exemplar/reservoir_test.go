@@ -144,6 +144,23 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 			r.Collect(&dest)
 			assert.Empty(t, dest, "no exemplars should be collected")
 		})
+
+		t.Run("Negative reservoir capacity drops all", func(t *testing.T) {
+			t.Helper()
+
+			rp, n := f(-1)
+			if n > 0 {
+				t.Skip("skipping, reservoir capacity greater than 0:", n)
+			}
+			assert.Zero(t, n)
+			r := rp(*attribute.EmptySet())
+
+			r.Offer(t.Context(), staticTime, NewValue(N(10)), nil)
+
+			dest := []Exemplar{{}} // Should be reset to empty.
+			r.Collect(&dest)
+			assert.Empty(t, dest, "no exemplars should be collected")
+		})
 	}
 }
 
