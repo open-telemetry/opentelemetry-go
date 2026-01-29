@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otest provides testing functionliaty for the otlpmetric exporters.
-package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
+package otest
 
 import (
 	"context"
