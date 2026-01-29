@@ -273,6 +273,10 @@ func TestExtractInvalidTraceContextFromHTTPReq(t *testing.T) {
 			name:   "empty options",
 			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-",
 		},
+		{
+			name:   "version 0 with extra content",
+			header: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01-extra",
+		},
 	}
 
 	empty := trace.SpanContext{}
