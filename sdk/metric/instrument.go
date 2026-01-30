@@ -212,7 +212,7 @@ func (i *int64Inst) aggregate(
 	s attribute.Set,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, s, nil)
 	}
 }
 
@@ -234,6 +234,19 @@ var (
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
+	attrs := c.AttributesSlice()
+	if len(attrs) > 0 {
+		// In this case, we got a raw attributes slice, either because someone
+		// used more than one WithAttributes or WithAttributeSet options, or
+		// because the user only used WithAttributes.
+		for _, in := range i.measures {
+			in(ctx, val, *attribute.EmptySet(), attrs)
+		}
+		return
+	}
+	// In this case, someone called the API using only a single
+	// WithAttributeSet option. Since they already computed the full set, just
+	// used that.
 	i.aggregate(ctx, val, c.Attributes())
 }
 
@@ -248,7 +261,7 @@ func (i *float64Inst) Enabled(context.Context) bool {
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, s, nil)
 	}
 }
 
@@ -339,7 +352,7 @@ type measures[N int64 | float64] []aggregate.Measure[N]
 // observe records the val for the set of attrs.
 func (m measures[N]) observe(val N, s attribute.Set) {
 	for _, in := range m {
-		in(context.Background(), val, s)
+		in(context.Background(), val, s, nil)
 	}
 }
 
