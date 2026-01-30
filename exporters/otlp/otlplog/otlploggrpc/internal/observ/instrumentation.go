@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
@@ -20,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
 
 const (
@@ -149,7 +150,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	i.addOpt = metric.WithAttributeSet(attribute.NewSet(i.presetAttrs...))
 	i.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
 		// Default to OK status code.
-		[]attribute.KeyValue{semconv.RPCGRPCStatusCodeOk},
+		[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
 		i.presetAttrs...,
 	)...))
 	return i, nil
@@ -230,10 +231,10 @@ func (i *Instrumentation) recordOption(err error) metric.RecordOption {
 	defer put(attrsPool, attrs)
 
 	*attrs = append(*attrs, i.presetAttrs...)
-	code := int64(status.Code(err))
+	code := status.Code(err)
 	*attrs = append(
 		*attrs,
-		semconv.RPCGRPCStatusCodeKey.Int64(code),
+		semconv.RPCResponseStatusCode(code.String()),
 		semconv.ErrorType(err),
 	)
 
