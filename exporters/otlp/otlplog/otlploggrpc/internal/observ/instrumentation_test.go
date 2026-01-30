@@ -19,8 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
 
 const (
@@ -175,7 +175,7 @@ func logOperationDurationMetrics(err error, code codes.Code) metricdata.Metrics 
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(GetComponentName(ID)),
 		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
-		semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
+		semconv.RPCResponseStatusCode(code.String()),
 	}
 	attrs = append(attrs, ServerAddrAttrs(TARGET)...)
 	if err != nil {

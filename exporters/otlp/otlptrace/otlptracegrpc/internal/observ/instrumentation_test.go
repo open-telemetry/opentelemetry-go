@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
 
 const (
@@ -171,10 +171,10 @@ func spanExported(success, total int64, err error) metricdata.Metrics {
 
 func operationDuration(err error) metricdata.Metrics {
 	rpcSet := func(err error) attribute.Set {
-		c := int64(status.Code(err))
+		c := status.Code(err)
 		return attribute.NewSet(append(
 			[]attribute.KeyValue{
-				semconv.RPCGRPCStatusCodeKey.Int64(c),
+				semconv.RPCResponseStatusCode(c.String()),
 			},
 			baseAttrs(err)...,
 		)...)
