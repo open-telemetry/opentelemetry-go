@@ -533,6 +533,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 
 		sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-		assert.Len(t, sumData.DataPoints, 3, "observable up down counter should use observable-updowncounter-specific limit of 3")
+		assert.Len(
+			t,
+			sumData.DataPoints,
+			3,
+			"observable up down counter should use observable-updowncounter-specific limit of 3",
+		)
 	})
 }

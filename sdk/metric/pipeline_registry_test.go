@@ -413,7 +413,18 @@ func TestCreateAggregators(t *testing.T) {
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 	var c cache[string, instID]
-	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}, exemplar.AlwaysOffFilter, cardinalityLimitsConfig{}), &c)
+
+	i := newInserter[N](
+		newPipeline(
+			nil,
+			NewManualReader(),
+			[]View{defaultView},
+			exemplar.AlwaysOffFilter,
+			cardinalityLimitsConfig{},
+		),
+		&c,
+	)
+
 	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),
@@ -503,7 +514,13 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newPipelines(resource.Empty(), tt.readers, tt.views, exemplar.AlwaysOffFilter, cardinalityLimitsConfig{})
+			p := newPipelines(
+				resource.Empty(),
+				tt.readers,
+				tt.views,
+				exemplar.AlwaysOffFilter,
+				cardinalityLimitsConfig{},
+			)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveIntHistogramAggregators(t, p, tt.wantCount)
