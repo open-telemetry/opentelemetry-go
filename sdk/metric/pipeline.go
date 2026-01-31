@@ -41,7 +41,6 @@ func newPipeline(
 	reader Reader,
 	views []View,
 	exemplarFilter exemplar.Filter,
-	// cardinalityLimit int,
 	cardinalityLimits cardinalityLimitsConfig,
 ) *pipeline {
 	if res == nil {
@@ -54,7 +53,6 @@ func newPipeline(
 		int64Measures:   map[observableID[int64]][]aggregate.Measure[int64]{},
 		float64Measures: map[observableID[float64]][]aggregate.Measure[float64]{},
 		exemplarFilter:  exemplarFilter,
-		// cardinalityLimit: cardinalityLimit,
 		cardinalityLimits: cardinalityLimits,
 		// aggregations is lazy allocated when needed.
 	}
@@ -79,7 +77,6 @@ type pipeline struct {
 	callbacks       []func(context.Context) error
 	multiCallbacks  list.List
 	exemplarFilter  exemplar.Filter
-	// cardinalityLimit int
 	cardinalityLimits cardinalityLimitsConfig
 }
 
@@ -422,6 +419,8 @@ func (i *inserter[N]) cachedAggregator(
 	return cv.Measure, cv.ID, cv.Err
 }
 
+// Attempts fetching the per-instrument cardinality limit for the given instrument kind.
+// If not found, falls back to the global cardinality limit.
 func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
 	if kind == InstrumentKindCounter && i.pipeline.cardinalityLimits.counterCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.counterCardinalityLimit
@@ -640,12 +639,10 @@ func newPipelines(
 	readers []Reader,
 	views []View,
 	exemplarFilter exemplar.Filter,
-	// cardinalityLimit int,
 	cardinalityLimits cardinalityLimitsConfig,
 ) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
-		// p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
 		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimits)
 		r.register(p)
 		pipes = append(pipes, p)
