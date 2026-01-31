@@ -201,6 +201,40 @@ func (l *Set) Encoded(encoder Encoder) string {
 	return encoder.Encode(l.Iter())
 }
 
+// NewDistinct returns a Distinct from key values that can be used as a map
+// key.
+func NewDistinct(kvs ...KeyValue) Distinct {
+	// Check for empty set.
+	if len(kvs) == 0 {
+		return Distinct{hash: emptyHash}
+	}
+
+	// Stable sort so the following de-duplication can implement
+	// last-value-wins semantics.
+	slices.SortStableFunc(kvs, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	position := len(kvs) - 1
+	offset := position - 1
+
+	// The requirements stated above require that the stable
+	// result be placed in the end of the input slice, while
+	// overwritten values are swapped to the beginning.
+	//
+	// De-duplicate with last-value-wins semantics.  Preserve
+	// duplicate values at the beginning of the input slice.
+	for ; offset >= 0; offset-- {
+		if kvs[offset].Key == kvs[position].Key {
+			continue
+		}
+		position--
+		kvs[offset], kvs[position] = kvs[position], kvs[offset]
+	}
+	kvs = kvs[position:]
+	return Distinct{hash: hashKVs(kvs)}
+}
+
 // NewSet returns a new Set. See the documentation for
 // NewSetWithSortableFiltered for more details.
 //
