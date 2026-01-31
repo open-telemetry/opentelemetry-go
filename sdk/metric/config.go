@@ -18,11 +18,11 @@ import (
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res              *resource.Resource
-	readers          []Reader
-	views            []View
-	exemplarFilter   exemplar.Filter
-	cardinalityLimit int
+	res               *resource.Resource
+	readers           []Reader
+	views             []View
+	exemplarFilter    exemplar.Filter
+	cardinalityLimit  int
 	cardinalityLimits cardinalityLimitsConfig
 }
 

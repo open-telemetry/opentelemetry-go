@@ -359,15 +359,15 @@ func intPtr(v int) *int {
 
 func TestWithPerInstrumentCardinalityLimits(t *testing.T) {
 	tests := []struct {
-		name                                    string
-		options                                 []Option
-		expectedCounterLimit                    *int
-		expectedGaugeLimit                      *int
-		expectedHistogramLimit                  *int
-		expectedObservableCounterLimit          *int
-		expectedObservableGaugeLimit            *int
-		expectedObservableUpDownCounterLimit    *int
-		expectedUpDownCounterLimit              *int
+		name                                 string
+		options                              []Option
+		expectedCounterLimit                 *int
+		expectedGaugeLimit                   *int
+		expectedHistogramLimit               *int
+		expectedObservableCounterLimit       *int
+		expectedObservableGaugeLimit         *int
+		expectedObservableUpDownCounterLimit *int
+		expectedUpDownCounterLimit           *int
 	}{
 		{
 			name:                                 "no per-instrument limits set",

@@ -48,12 +48,12 @@ func newPipeline(
 		res = resource.Empty()
 	}
 	return &pipeline{
-		resource:         res,
-		reader:           reader,
-		views:            views,
-		int64Measures:    map[observableID[int64]][]aggregate.Measure[int64]{},
-		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
-		exemplarFilter:   exemplarFilter,
+		resource:        res,
+		reader:          reader,
+		views:           views,
+		int64Measures:   map[observableID[int64]][]aggregate.Measure[int64]{},
+		float64Measures: map[observableID[float64]][]aggregate.Measure[float64]{},
+		exemplarFilter:  exemplarFilter,
 		// cardinalityLimit: cardinalityLimit,
 		cardinalityLimits: cardinalityLimits,
 		// aggregations is lazy allocated when needed.
@@ -73,12 +73,12 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
-	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
-	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
-	aggregations     map[instrumentation.Scope][]instrumentSync
-	callbacks        []func(context.Context) error
-	multiCallbacks   list.List
-	exemplarFilter   exemplar.Filter
+	int64Measures   map[observableID[int64]][]aggregate.Measure[int64]
+	float64Measures map[observableID[float64]][]aggregate.Measure[float64]
+	aggregations    map[instrumentation.Scope][]instrumentSync
+	callbacks       []func(context.Context) error
+	multiCallbacks  list.List
+	exemplarFilter  exemplar.Filter
 	// cardinalityLimit int
 	cardinalityLimits cardinalityLimitsConfig
 }
@@ -423,25 +423,25 @@ func (i *inserter[N]) cachedAggregator(
 }
 
 func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
-	if (kind == InstrumentKindCounter && i.pipeline.cardinalityLimits.counterCardinalityLimit != nil) {
+	if kind == InstrumentKindCounter && i.pipeline.cardinalityLimits.counterCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.counterCardinalityLimit
 	}
-	if (kind == InstrumentKindGauge && i.pipeline.cardinalityLimits.gaugeCardinalityLimit != nil) {
+	if kind == InstrumentKindGauge && i.pipeline.cardinalityLimits.gaugeCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.gaugeCardinalityLimit
 	}
-	if (kind == InstrumentKindHistogram && i.pipeline.cardinalityLimits.histogramCardinalityLimit != nil) {
+	if kind == InstrumentKindHistogram && i.pipeline.cardinalityLimits.histogramCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.histogramCardinalityLimit
 	}
-	if (kind == InstrumentKindObservableCounter && i.pipeline.cardinalityLimits.observableCounterCardinalityLimit != nil) {
+	if kind == InstrumentKindObservableCounter && i.pipeline.cardinalityLimits.observableCounterCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.observableCounterCardinalityLimit
 	}
-	if (kind == InstrumentKindObservableUpDownCounter && i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit != nil) {
+	if kind == InstrumentKindObservableUpDownCounter && i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit
 	}
-	if (kind == InstrumentKindObservableGauge && i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit != nil) {
+	if kind == InstrumentKindObservableGauge && i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit
 	}
-	if (kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit != nil) {
+	if kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit != nil {
 		return *i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit
 	}
 	// If per-instrument cardinality limit is not set, fallback to the global cardinality limit.
