@@ -348,7 +348,7 @@ func TestWithCardinalityLimit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
-			assert.Equal(t, tc.expectedLimit, c.cardinalityLimits.cardinalityLimit)
+			assert.Equal(t, tc.expectedLimit, c.cardinalityLimits.global)
 		})
 	}
 }
@@ -455,52 +455,52 @@ func TestWithPerInstrumentCardinalityLimits(t *testing.T) {
 			c := newConfig(tc.options)
 
 			if tc.expectedCounterLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.counterCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.counter)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.counterCardinalityLimit)
-				assert.Equal(t, *tc.expectedCounterLimit, *c.cardinalityLimits.counterCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.counter)
+				assert.Equal(t, *tc.expectedCounterLimit, *c.cardinalityLimits.counter)
 			}
 
 			if tc.expectedGaugeLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.gaugeCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.gauge)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.gaugeCardinalityLimit)
-				assert.Equal(t, *tc.expectedGaugeLimit, *c.cardinalityLimits.gaugeCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.gauge)
+				assert.Equal(t, *tc.expectedGaugeLimit, *c.cardinalityLimits.gauge)
 			}
 
 			if tc.expectedHistogramLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.histogramCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.histogram)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.histogramCardinalityLimit)
-				assert.Equal(t, *tc.expectedHistogramLimit, *c.cardinalityLimits.histogramCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.histogram)
+				assert.Equal(t, *tc.expectedHistogramLimit, *c.cardinalityLimits.histogram)
 			}
 
 			if tc.expectedObservableCounterLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.observableCounterCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.observableCounter)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.observableCounterCardinalityLimit)
-				assert.Equal(t, *tc.expectedObservableCounterLimit, *c.cardinalityLimits.observableCounterCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.observableCounter)
+				assert.Equal(t, *tc.expectedObservableCounterLimit, *c.cardinalityLimits.observableCounter)
 			}
 
 			if tc.expectedObservableGaugeLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.observableGaugeCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.observableGauge)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.observableGaugeCardinalityLimit)
-				assert.Equal(t, *tc.expectedObservableGaugeLimit, *c.cardinalityLimits.observableGaugeCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.observableGauge)
+				assert.Equal(t, *tc.expectedObservableGaugeLimit, *c.cardinalityLimits.observableGauge)
 			}
 
 			if tc.expectedObservableUpDownCounterLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.observableUpDownCounterCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.observableUpDownCounter)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.observableUpDownCounterCardinalityLimit)
-				assert.Equal(t, *tc.expectedObservableUpDownCounterLimit, *c.cardinalityLimits.observableUpDownCounterCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.observableUpDownCounter)
+				assert.Equal(t, *tc.expectedObservableUpDownCounterLimit, *c.cardinalityLimits.observableUpDownCounter)
 			}
 
 			if tc.expectedUpDownCounterLimit == nil {
-				assert.Nil(t, c.cardinalityLimits.upDownCounterCardinalityLimit)
+				assert.Nil(t, c.cardinalityLimits.upDownCounter)
 			} else {
-				require.NotNil(t, c.cardinalityLimits.upDownCounterCardinalityLimit)
-				assert.Equal(t, *tc.expectedUpDownCounterLimit, *c.cardinalityLimits.upDownCounterCardinalityLimit)
+				require.NotNil(t, c.cardinalityLimits.upDownCounter)
+				assert.Equal(t, *tc.expectedUpDownCounterLimit, *c.cardinalityLimits.upDownCounter)
 			}
 		})
 	}

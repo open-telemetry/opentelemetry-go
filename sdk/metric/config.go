@@ -27,21 +27,21 @@ type config struct {
 
 type cardinalityLimitsConfig struct {
 	// Global cardinality limit
-	cardinalityLimit int
+	global int
 	// Counter cardinality limit
-	counterCardinalityLimit *int
+	counter *int
 	// Gauge cardinality limit
-	gaugeCardinalityLimit *int
+	gauge *int
 	// Histogram cardinality limit
-	histogramCardinalityLimit *int
+	histogram *int
 	// Observable counter cardinality limit
-	observableCounterCardinalityLimit *int
+	observableCounter *int
 	// Observable up down counter cardinality limit
-	observableUpDownCounterCardinalityLimit *int
+	observableUpDownCounter *int
 	// Observable gauge cardinality limit
-	observableGaugeCardinalityLimit *int
+	observableGauge *int
 	// Up down counter cardinality limit
-	upDownCounterCardinalityLimit *int
+	upDownCounter *int
 }
 
 const defaultCardinalityLimit = 0
@@ -95,7 +95,7 @@ func newConfig(options []Option) config {
 		res:            resource.Default(),
 		exemplarFilter: exemplar.TraceBasedFilter,
 		cardinalityLimits: cardinalityLimitsConfig{
-			cardinalityLimit: cardinalityLimitFromEnv(),
+			global: cardinalityLimitFromEnv(),
 		},
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
@@ -192,7 +192,7 @@ func WithCardinalityLimit(limit int) Option {
 	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
 	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.cardinalityLimit = limit
+		cfg.cardinalityLimits.global = limit
 		return cfg
 	})
 }
@@ -205,7 +205,7 @@ func WithCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithCounterCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.counterCardinalityLimit = &limit
+		cfg.cardinalityLimits.counter = &limit
 		return cfg
 	})
 }
@@ -218,7 +218,7 @@ func WithCounterCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithGaugeCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.gaugeCardinalityLimit = &limit
+		cfg.cardinalityLimits.gauge = &limit
 		return cfg
 	})
 }
@@ -231,7 +231,7 @@ func WithGaugeCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithHistogramCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.histogramCardinalityLimit = &limit
+		cfg.cardinalityLimits.histogram = &limit
 		return cfg
 	})
 }
@@ -244,7 +244,7 @@ func WithHistogramCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithObservableCounterCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.observableCounterCardinalityLimit = &limit
+		cfg.cardinalityLimits.observableCounter = &limit
 		return cfg
 	})
 }
@@ -257,7 +257,7 @@ func WithObservableCounterCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithObservableGaugeCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.observableGaugeCardinalityLimit = &limit
+		cfg.cardinalityLimits.observableGauge = &limit
 		return cfg
 	})
 }
@@ -270,7 +270,7 @@ func WithObservableGaugeCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithObservableUpDownCounterCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.observableUpDownCounterCardinalityLimit = &limit
+		cfg.cardinalityLimits.observableUpDownCounter = &limit
 		return cfg
 	})
 }
@@ -283,7 +283,7 @@ func WithObservableUpDownCounterCardinalityLimit(limit int) Option {
 // Setting this to a zero or negative value means no limit is applied.
 func WithUpDownCounterCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.upDownCounterCardinalityLimit = &limit
+		cfg.cardinalityLimits.upDownCounter = &limit
 		return cfg
 	})
 }

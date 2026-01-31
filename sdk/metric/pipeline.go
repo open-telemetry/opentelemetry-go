@@ -422,29 +422,29 @@ func (i *inserter[N]) cachedAggregator(
 // Attempts fetching the per-instrument cardinality limit for the given instrument kind.
 // If not found, falls back to the global cardinality limit.
 func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
-	if kind == InstrumentKindCounter && i.pipeline.cardinalityLimits.counterCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.counterCardinalityLimit
+	if kind == InstrumentKindCounter && i.pipeline.cardinalityLimits.counter != nil {
+		return *i.pipeline.cardinalityLimits.counter
 	}
-	if kind == InstrumentKindGauge && i.pipeline.cardinalityLimits.gaugeCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.gaugeCardinalityLimit
+	if kind == InstrumentKindGauge && i.pipeline.cardinalityLimits.gauge != nil {
+		return *i.pipeline.cardinalityLimits.gauge
 	}
-	if kind == InstrumentKindHistogram && i.pipeline.cardinalityLimits.histogramCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.histogramCardinalityLimit
+	if kind == InstrumentKindHistogram && i.pipeline.cardinalityLimits.histogram != nil {
+		return *i.pipeline.cardinalityLimits.histogram
 	}
-	if kind == InstrumentKindObservableCounter && i.pipeline.cardinalityLimits.observableCounterCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.observableCounterCardinalityLimit
+	if kind == InstrumentKindObservableCounter && i.pipeline.cardinalityLimits.observableCounter != nil {
+		return *i.pipeline.cardinalityLimits.observableCounter
 	}
-	if kind == InstrumentKindObservableUpDownCounter && i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit
+	if kind == InstrumentKindObservableUpDownCounter && i.pipeline.cardinalityLimits.observableUpDownCounter != nil {
+		return *i.pipeline.cardinalityLimits.observableUpDownCounter
 	}
-	if kind == InstrumentKindObservableGauge && i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit
+	if kind == InstrumentKindObservableGauge && i.pipeline.cardinalityLimits.observableGauge != nil {
+		return *i.pipeline.cardinalityLimits.observableGauge
 	}
-	if kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit != nil {
-		return *i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit
+	if kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounter != nil {
+		return *i.pipeline.cardinalityLimits.upDownCounter
 	}
 	// If per-instrument cardinality limit is not set, fallback to the global cardinality limit.
-	return i.pipeline.cardinalityLimits.cardinalityLimit
+	return i.pipeline.cardinalityLimits.global
 }
 
 // logConflict validates if an instrument with the same case-insensitive name
