@@ -96,7 +96,7 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 
 			// Check if context is canceled before attempting to wait and retry.
 			if ctx.Err() != nil {
-				return fmt.Errorf("%w: %w", ctx.Err(), err)
+				return fmt.Errorf("%w: %w", context.Cause(ctx), err)
 			}
 
 			if maxElapsedTime != 0 && time.Since(startTime) > maxElapsedTime {
