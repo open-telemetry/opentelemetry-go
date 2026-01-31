@@ -244,3 +244,295 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
+	const uniqueAttributesCount = 10
+
+	t.Run("counter uses counter-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8), // global limit
+			WithCounterCardinalityLimit(3),
+		)
+
+		meter := mp.Meter("test-meter")
+		counter, err := meter.Int64Counter("counter-metric")
+		require.NoError(t, err)
+
+		for i := range uniqueAttributesCount {
+			counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Len(t, sumData.DataPoints, 3, "counter should use counter-specific limit of 3")
+	})
+
+	t.Run("histogram uses histogram-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8),
+			WithHistogramCardinalityLimit(4),
+		)
+
+		meter := mp.Meter("test-meter")
+		histogram, err := meter.Int64Histogram("histogram-metric")
+		require.NoError(t, err)
+
+		for i := range uniqueAttributesCount {
+			histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		histData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
+		assert.Len(t, histData.DataPoints, 4, "histogram should use histogram-specific limit of 4")
+	})
+
+	t.Run("gauge uses gauge-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8),
+			WithGaugeCardinalityLimit(5),
+		)
+
+		meter := mp.Meter("test-meter")
+		gauge, err := meter.Int64Gauge("gauge-metric")
+		require.NoError(t, err)
+
+		for i := range uniqueAttributesCount {
+			gauge.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		gaugeData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64])
+		assert.Len(t, gaugeData.DataPoints, 5, "gauge should use gauge-specific limit of 5")
+	})
+
+	t.Run("up down counter uses updowncounter-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8),
+			WithUpDownCounterCardinalityLimit(2),
+		)
+
+		meter := mp.Meter("test-meter")
+		upDownCounter, err := meter.Int64UpDownCounter("updowncounter-metric")
+		require.NoError(t, err)
+
+		for i := range uniqueAttributesCount {
+			upDownCounter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Len(t, sumData.DataPoints, 2, "up down counter should use updowncounter-specific limit of 2")
+	})
+
+	t.Run("instrument without specific limit falls back to global limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(6),
+			WithCounterCardinalityLimit(3), // only counter has specific limit
+		)
+
+		meter := mp.Meter("test-meter")
+
+		// Counter should use its specific limit
+		counter, err := meter.Int64Counter("counter-metric")
+		require.NoError(t, err)
+
+		// Histogram should fall back to global limit
+		histogram, err := meter.Int64Histogram("histogram-metric")
+		require.NoError(t, err)
+
+		for i := range uniqueAttributesCount {
+			counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+			histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch m.Name {
+			case "counter-metric":
+				sumData := m.Data.(metricdata.Sum[int64])
+				assert.Len(t, sumData.DataPoints, 3, "counter should use counter-specific limit of 3")
+			case "histogram-metric":
+				histData := m.Data.(metricdata.Histogram[int64])
+				assert.Len(t, histData.DataPoints, 6, "histogram should fall back to global limit of 6")
+			}
+		}
+	})
+
+	t.Run("zero per-instrument limit disables limit for that instrument", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(3),        // global limit
+			WithCounterCardinalityLimit(0), // explicitly disable limit for counters
+		)
+
+		meter := mp.Meter("test-meter")
+
+		// Counter should have no limit (0 means disabled)
+		counter, err := meter.Int64Counter("counter-metric")
+		require.NoError(t, err)
+
+		// Histogram should use global limit
+		histogram, err := meter.Int64Histogram("histogram-metric")
+		require.NoError(t, err)
+
+		for i := range uniqueAttributesCount {
+			counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+			histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+		}
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch m.Name {
+			case "counter-metric":
+				sumData := m.Data.(metricdata.Sum[int64])
+				assert.Len(t, sumData.DataPoints, uniqueAttributesCount, "counter should have no limit (0 disables)")
+			case "histogram-metric":
+				histData := m.Data.(metricdata.Histogram[int64])
+				assert.Len(t, histData.DataPoints, 3, "histogram should use global limit of 3")
+			}
+		}
+	})
+
+	t.Run("observable counter uses observable-counter-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8),
+			WithObservableCounterCardinalityLimit(4),
+		)
+
+		meter := mp.Meter("test-meter")
+		observableCounter, err := meter.Int64ObservableCounter(
+			"observable-counter-metric",
+			api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+				for i := range uniqueAttributesCount {
+					o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+				}
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		require.NotNil(t, observableCounter)
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Len(t, sumData.DataPoints, 4, "observable counter should use observable-counter-specific limit of 4")
+	})
+
+	t.Run("observable gauge uses observable-gauge-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8),
+			WithObservableGaugeCardinalityLimit(5),
+		)
+
+		meter := mp.Meter("test-meter")
+		observableGauge, err := meter.Int64ObservableGauge(
+			"observable-gauge-metric",
+			api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+				for i := range uniqueAttributesCount {
+					o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+				}
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		require.NotNil(t, observableGauge)
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		gaugeData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64])
+		assert.Len(t, gaugeData.DataPoints, 5, "observable gauge should use observable-gauge-specific limit of 5")
+	})
+
+	t.Run("observable up down counter uses observable-updowncounter-specific limit", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithCardinalityLimit(8),
+			WithObservableUpDownCounterCardinalityLimit(3),
+		)
+
+		meter := mp.Meter("test-meter")
+		observableUpDownCounter, err := meter.Int64ObservableUpDownCounter(
+			"observable-updowncounter-metric",
+			api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+				for i := range uniqueAttributesCount {
+					o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+				}
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		require.NotNil(t, observableUpDownCounter)
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+		sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Len(t, sumData.DataPoints, 3, "observable up down counter should use observable-updowncounter-specific limit of 3")
+	})
+}

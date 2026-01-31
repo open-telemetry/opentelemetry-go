@@ -353,6 +353,159 @@ func TestWithCardinalityLimit(t *testing.T) {
 	}
 }
 
+func intPtr(v int) *int {
+	return &v
+}
+
+func TestWithPerInstrumentCardinalityLimits(t *testing.T) {
+	tests := []struct {
+		name                                    string
+		options                                 []Option
+		expectedCounterLimit                    *int
+		expectedGaugeLimit                      *int
+		expectedHistogramLimit                  *int
+		expectedObservableCounterLimit          *int
+		expectedObservableGaugeLimit            *int
+		expectedObservableUpDownCounterLimit    *int
+		expectedUpDownCounterLimit              *int
+	}{
+		{
+			name:                                 "no per-instrument limits set",
+			options:                              []Option{},
+			expectedCounterLimit:                 nil,
+			expectedGaugeLimit:                   nil,
+			expectedHistogramLimit:               nil,
+			expectedObservableCounterLimit:       nil,
+			expectedObservableGaugeLimit:         nil,
+			expectedObservableUpDownCounterLimit: nil,
+			expectedUpDownCounterLimit:           nil,
+		},
+		{
+			name:                 "counter limit set",
+			options:              []Option{WithCounterCardinalityLimit(100)},
+			expectedCounterLimit: intPtr(100),
+		},
+		{
+			name:               "gauge limit set",
+			options:            []Option{WithGaugeCardinalityLimit(200)},
+			expectedGaugeLimit: intPtr(200),
+		},
+		{
+			name:                   "histogram limit set",
+			options:                []Option{WithHistogramCardinalityLimit(300)},
+			expectedHistogramLimit: intPtr(300),
+		},
+		{
+			name:                           "observable counter limit set",
+			options:                        []Option{WithObservableCounterCardinalityLimit(400)},
+			expectedObservableCounterLimit: intPtr(400),
+		},
+		{
+			name:                         "observable gauge limit set",
+			options:                      []Option{WithObservableGaugeCardinalityLimit(500)},
+			expectedObservableGaugeLimit: intPtr(500),
+		},
+		{
+			name:                                 "observable up down counter limit set",
+			options:                              []Option{WithObservableUpDownCounterCardinalityLimit(600)},
+			expectedObservableUpDownCounterLimit: intPtr(600),
+		},
+		{
+			name:                       "up down counter limit set",
+			options:                    []Option{WithUpDownCounterCardinalityLimit(700)},
+			expectedUpDownCounterLimit: intPtr(700),
+		},
+		{
+			name: "multiple limits set",
+			options: []Option{
+				WithCounterCardinalityLimit(100),
+				WithGaugeCardinalityLimit(200),
+				WithHistogramCardinalityLimit(300),
+			},
+			expectedCounterLimit:   intPtr(100),
+			expectedGaugeLimit:     intPtr(200),
+			expectedHistogramLimit: intPtr(300),
+		},
+		{
+			name: "zero value is valid (disables limit)",
+			options: []Option{
+				WithCounterCardinalityLimit(0),
+			},
+			expectedCounterLimit: intPtr(0),
+		},
+		{
+			name: "negative value is valid (disables limit)",
+			options: []Option{
+				WithCounterCardinalityLimit(-1),
+			},
+			expectedCounterLimit: intPtr(-1),
+		},
+		{
+			name: "last option wins for same instrument type",
+			options: []Option{
+				WithCounterCardinalityLimit(100),
+				WithCounterCardinalityLimit(200),
+			},
+			expectedCounterLimit: intPtr(200),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newConfig(tc.options)
+
+			if tc.expectedCounterLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.counterCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.counterCardinalityLimit)
+				assert.Equal(t, *tc.expectedCounterLimit, *c.cardinalityLimits.counterCardinalityLimit)
+			}
+
+			if tc.expectedGaugeLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.gaugeCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.gaugeCardinalityLimit)
+				assert.Equal(t, *tc.expectedGaugeLimit, *c.cardinalityLimits.gaugeCardinalityLimit)
+			}
+
+			if tc.expectedHistogramLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.histogramCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.histogramCardinalityLimit)
+				assert.Equal(t, *tc.expectedHistogramLimit, *c.cardinalityLimits.histogramCardinalityLimit)
+			}
+
+			if tc.expectedObservableCounterLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.observableCounterCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.observableCounterCardinalityLimit)
+				assert.Equal(t, *tc.expectedObservableCounterLimit, *c.cardinalityLimits.observableCounterCardinalityLimit)
+			}
+
+			if tc.expectedObservableGaugeLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.observableGaugeCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.observableGaugeCardinalityLimit)
+				assert.Equal(t, *tc.expectedObservableGaugeLimit, *c.cardinalityLimits.observableGaugeCardinalityLimit)
+			}
+
+			if tc.expectedObservableUpDownCounterLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.observableUpDownCounterCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.observableUpDownCounterCardinalityLimit)
+				assert.Equal(t, *tc.expectedObservableUpDownCounterLimit, *c.cardinalityLimits.observableUpDownCounterCardinalityLimit)
+			}
+
+			if tc.expectedUpDownCounterLimit == nil {
+				assert.Nil(t, c.cardinalityLimits.upDownCounterCardinalityLimit)
+			} else {
+				require.NotNil(t, c.cardinalityLimits.upDownCounterCardinalityLimit)
+				assert.Equal(t, *tc.expectedUpDownCounterLimit, *c.cardinalityLimits.upDownCounterCardinalityLimit)
+			}
+		})
+	}
+}
+
 func sample(parent context.Context) context.Context {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x01},

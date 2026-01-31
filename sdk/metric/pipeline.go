@@ -41,7 +41,8 @@ func newPipeline(
 	reader Reader,
 	views []View,
 	exemplarFilter exemplar.Filter,
-	cardinalityLimit int,
+	// cardinalityLimit int,
+	cardinalityLimits cardinalityLimitsConfig,
 ) *pipeline {
 	if res == nil {
 		res = resource.Empty()
@@ -53,7 +54,8 @@ func newPipeline(
 		int64Measures:    map[observableID[int64]][]aggregate.Measure[int64]{},
 		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
 		exemplarFilter:   exemplarFilter,
-		cardinalityLimit: cardinalityLimit,
+		// cardinalityLimit: cardinalityLimit,
+		cardinalityLimits: cardinalityLimits,
 		// aggregations is lazy allocated when needed.
 	}
 }
@@ -77,7 +79,8 @@ type pipeline struct {
 	callbacks        []func(context.Context) error
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
-	cardinalityLimit int
+	// cardinalityLimit int
+	cardinalityLimits cardinalityLimitsConfig
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -397,7 +400,7 @@ func (i *inserter[N]) cachedAggregator(
 		// limits for the builder (an all the created aggregates).
 		// cardinalityLimit will be 0 by default if unset (or
 		// unrecognized input). Use that value directly.
-		b.AggregationLimit = i.pipeline.cardinalityLimit
+		b.AggregationLimit = i.getCardinalityLimit(kind)
 		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
 		if err != nil {
 			return aggVal[N]{0, nil, err}
@@ -417,6 +420,32 @@ func (i *inserter[N]) cachedAggregator(
 		return aggVal[N]{id, in, err}
 	})
 	return cv.Measure, cv.ID, cv.Err
+}
+
+func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
+	if (kind == InstrumentKindCounter && i.pipeline.cardinalityLimits.counterCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.counterCardinalityLimit
+	}
+	if (kind == InstrumentKindGauge && i.pipeline.cardinalityLimits.gaugeCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.gaugeCardinalityLimit
+	}
+	if (kind == InstrumentKindHistogram && i.pipeline.cardinalityLimits.histogramCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.histogramCardinalityLimit
+	}
+	if (kind == InstrumentKindObservableCounter && i.pipeline.cardinalityLimits.observableCounterCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.observableCounterCardinalityLimit
+	}
+	if (kind == InstrumentKindObservableUpDownCounter && i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.observableUpDownCounterCardinalityLimit
+	}
+	if (kind == InstrumentKindObservableGauge && i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.observableGaugeCardinalityLimit
+	}
+	if (kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit != nil) {
+		return *i.pipeline.cardinalityLimits.upDownCounterCardinalityLimit
+	}
+	// If per-instrument cardinality limit is not set, fallback to the global cardinality limit.
+	return i.pipeline.cardinalityLimits.cardinalityLimit
 }
 
 // logConflict validates if an instrument with the same case-insensitive name
@@ -611,11 +640,13 @@ func newPipelines(
 	readers []Reader,
 	views []View,
 	exemplarFilter exemplar.Filter,
-	cardinalityLimit int,
+	// cardinalityLimit int,
+	cardinalityLimits cardinalityLimitsConfig,
 ) pipelines {
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
-		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
+		// p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
+		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimits)
 		r.register(p)
 		pipes = append(pipes, p)
 	}

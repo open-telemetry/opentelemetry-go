@@ -23,6 +23,26 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	cardinalityLimits cardinalityLimitsConfig
+}
+
+type cardinalityLimitsConfig struct {
+	// Global cardinality limit
+	cardinalityLimit int
+	// Counter cardinality limit
+	counterCardinalityLimit *int
+	// Gauge cardinality limit
+	gaugeCardinalityLimit *int
+	// Histogram cardinality limit
+	histogramCardinalityLimit *int
+	// Observable counter cardinality limit
+	observableCounterCardinalityLimit *int
+	// Observable up down counter cardinality limit
+	observableUpDownCounterCardinalityLimit *int
+	// Observable gauge cardinality limit
+	observableGaugeCardinalityLimit *int
+	// Up down counter cardinality limit
+	upDownCounterCardinalityLimit *int
 }
 
 const defaultCardinalityLimit = 0
@@ -72,10 +92,14 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
+	envCardinalityLimit := cardinalityLimitFromEnv()
 	conf := config{
 		res:              resource.Default(),
 		exemplarFilter:   exemplar.TraceBasedFilter,
-		cardinalityLimit: cardinalityLimitFromEnv(),
+		cardinalityLimit: envCardinalityLimit,
+		cardinalityLimits: cardinalityLimitsConfig{
+			cardinalityLimit: envCardinalityLimit,
+		},
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
@@ -160,17 +184,110 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 	})
 }
 
-// WithCardinalityLimit sets the cardinality limit for the MeterProvider.
+// WithCardinalityLimit sets the global cardinality limit for the MeterProvider.
 //
 // The cardinality limit is the hard limit on the number of metric datapoints
 // that can be collected for a single instrument in a single collect cycle.
 //
 // Setting this to a zero or negative value means no limit is applied.
+// This value will be overridden by the per-instrument cardinality limits if set.
 func WithCardinalityLimit(limit int) Option {
 	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
 	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
+		cfg.cardinalityLimits.cardinalityLimit = limit
+		return cfg
+	})
+}
+
+// WithCounterCardinalityLimit sets the cardinality limit for counters.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single counter in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithCounterCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.counterCardinalityLimit = &limit
+		return cfg
+	})
+}
+
+// WithGaugeCardinalityLimit sets the cardinality limit for gauges.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single gauge in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithGaugeCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.gaugeCardinalityLimit = &limit
+		return cfg
+	})
+}
+
+// WithHistogramCardinalityLimit sets the cardinality limit for histograms.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single histogram in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithHistogramCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.histogramCardinalityLimit = &limit
+		return cfg
+	})
+}
+
+// WithObservableCounterCardinalityLimit sets the cardinality limit for observable counters.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single observable counter in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithObservableCounterCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.observableCounterCardinalityLimit = &limit
+		return cfg
+	})
+}
+
+// WithObservableGaugeCardinalityLimit sets the cardinality limit for observable gauges.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single observable gauge in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithObservableGaugeCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.observableGaugeCardinalityLimit = &limit
+		return cfg
+	})
+}
+
+// WithObservableUpDownCounterCardinalityLimit sets the cardinality limit for observable up down counters.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single observable up down counter in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithObservableUpDownCounterCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.observableUpDownCounterCardinalityLimit = &limit
+		return cfg
+	})
+}
+
+// WithUpDownCounterCardinalityLimit sets the cardinality limit for up down counters.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single up down counter in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithUpDownCounterCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.upDownCounterCardinalityLimit = &limit
 		return cfg
 	})
 }
