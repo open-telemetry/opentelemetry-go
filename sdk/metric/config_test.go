@@ -348,7 +348,7 @@ func TestWithCardinalityLimit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
-			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
+			assert.Equal(t, tc.expectedLimit, c.cardinalityLimits.cardinalityLimit)
 		})
 	}
 }

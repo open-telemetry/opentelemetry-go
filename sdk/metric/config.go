@@ -22,7 +22,6 @@ type config struct {
 	readers           []Reader
 	views             []View
 	exemplarFilter    exemplar.Filter
-	cardinalityLimit  int
 	cardinalityLimits cardinalityLimitsConfig
 }
 
@@ -92,13 +91,11 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
-	envCardinalityLimit := cardinalityLimitFromEnv()
 	conf := config{
-		res:              resource.Default(),
-		exemplarFilter:   exemplar.TraceBasedFilter,
-		cardinalityLimit: envCardinalityLimit,
+		res:            resource.Default(),
+		exemplarFilter: exemplar.TraceBasedFilter,
 		cardinalityLimits: cardinalityLimitsConfig{
-			cardinalityLimit: envCardinalityLimit,
+			cardinalityLimit: cardinalityLimitFromEnv(),
 		},
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
@@ -195,7 +192,6 @@ func WithCardinalityLimit(limit int) Option {
 	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
 	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimit = limit
 		cfg.cardinalityLimits.cardinalityLimit = limit
 		return cfg
 	})
