@@ -431,6 +431,9 @@ func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
 	if kind == InstrumentKindHistogram && i.pipeline.cardinalityLimits.histogram != nil {
 		return *i.pipeline.cardinalityLimits.histogram
 	}
+	if kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounter != nil {
+		return *i.pipeline.cardinalityLimits.upDownCounter
+	}
 	if kind == InstrumentKindObservableCounter && i.pipeline.cardinalityLimits.observableCounter != nil {
 		return *i.pipeline.cardinalityLimits.observableCounter
 	}
@@ -439,9 +442,6 @@ func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
 	}
 	if kind == InstrumentKindObservableGauge && i.pipeline.cardinalityLimits.observableGauge != nil {
 		return *i.pipeline.cardinalityLimits.observableGauge
-	}
-	if kind == InstrumentKindUpDownCounter && i.pipeline.cardinalityLimits.upDownCounter != nil {
-		return *i.pipeline.cardinalityLimits.upDownCounter
 	}
 	// If per-instrument cardinality limit is not set, fallback to the global cardinality limit.
 	return i.pipeline.cardinalityLimits.global

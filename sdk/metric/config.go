@@ -34,14 +34,14 @@ type cardinalityLimitsConfig struct {
 	gauge *int
 	// Histogram cardinality limit
 	histogram *int
+	// Up down counter cardinality limit
+	upDownCounter *int
 	// Observable counter cardinality limit
 	observableCounter *int
 	// Observable up down counter cardinality limit
 	observableUpDownCounter *int
 	// Observable gauge cardinality limit
 	observableGauge *int
-	// Up down counter cardinality limit
-	upDownCounter *int
 }
 
 const defaultCardinalityLimit = 0
@@ -236,6 +236,19 @@ func WithHistogramCardinalityLimit(limit int) Option {
 	})
 }
 
+// WithUpDownCounterCardinalityLimit sets the cardinality limit for up down counters.
+//
+// The cardinality limit is the hard limit on the number of metric datapoints
+// that can be collected for a single up down counter in a single collect cycle.
+//
+// Setting this to a zero or negative value means no limit is applied.
+func WithUpDownCounterCardinalityLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.cardinalityLimits.upDownCounter = &limit
+		return cfg
+	})
+}
+
 // WithObservableCounterCardinalityLimit sets the cardinality limit for observable counters.
 //
 // The cardinality limit is the hard limit on the number of metric datapoints
@@ -271,19 +284,6 @@ func WithObservableGaugeCardinalityLimit(limit int) Option {
 func WithObservableUpDownCounterCardinalityLimit(limit int) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimits.observableUpDownCounter = &limit
-		return cfg
-	})
-}
-
-// WithUpDownCounterCardinalityLimit sets the cardinality limit for up down counters.
-//
-// The cardinality limit is the hard limit on the number of metric datapoints
-// that can be collected for a single up down counter in a single collect cycle.
-//
-// Setting this to a zero or negative value means no limit is applied.
-func WithUpDownCounterCardinalityLimit(limit int) Option {
-	return optionFunc(func(cfg config) config {
-		cfg.cardinalityLimits.upDownCounter = &limit
 		return cfg
 	})
 }
