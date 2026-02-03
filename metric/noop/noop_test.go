@@ -17,83 +17,83 @@ func TestImplementationNoPanics(t *testing.T) {
 	// methods added to it than the No-Op implementation implements them.
 	t.Run("MeterProvider", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(MeterProvider{}),
-		reflect.TypeOf((*metric.MeterProvider)(nil)).Elem(),
+		reflect.TypeFor[metric.MeterProvider](),
 	))
 	t.Run("Meter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Meter{}),
-		reflect.TypeOf((*metric.Meter)(nil)).Elem(),
+		reflect.TypeFor[metric.Meter](),
 	))
 	t.Run("Observer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Observer{}),
-		reflect.TypeOf((*metric.Observer)(nil)).Elem(),
+		reflect.TypeFor[metric.Observer](),
 	))
 	t.Run("Registration", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Registration{}),
-		reflect.TypeOf((*metric.Registration)(nil)).Elem(),
+		reflect.TypeFor[metric.Registration](),
 	))
 	t.Run("Int64Counter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Counter{}),
-		reflect.TypeOf((*metric.Int64Counter)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64Counter](),
 	))
 	t.Run("Float64Counter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Counter{}),
-		reflect.TypeOf((*metric.Float64Counter)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64Counter](),
 	))
 	t.Run("Int64UpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64UpDownCounter{}),
-		reflect.TypeOf((*metric.Int64UpDownCounter)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64UpDownCounter](),
 	))
 	t.Run("Float64UpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64UpDownCounter{}),
-		reflect.TypeOf((*metric.Float64UpDownCounter)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64UpDownCounter](),
 	))
 	t.Run("Int64Histogram", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Histogram{}),
-		reflect.TypeOf((*metric.Int64Histogram)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64Histogram](),
 	))
 	t.Run("Float64Histogram", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Histogram{}),
-		reflect.TypeOf((*metric.Float64Histogram)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64Histogram](),
 	))
 	t.Run("Int64Gauge", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Gauge{}),
-		reflect.TypeOf((*metric.Int64Gauge)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64Gauge](),
 	))
 	t.Run("Float64Gauge", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Gauge{}),
-		reflect.TypeOf((*metric.Float64Gauge)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64Gauge](),
 	))
 	t.Run("Int64ObservableCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableCounter{}),
-		reflect.TypeOf((*metric.Int64ObservableCounter)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64ObservableCounter](),
 	))
 	t.Run("Float64ObservableCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableCounter{}),
-		reflect.TypeOf((*metric.Float64ObservableCounter)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64ObservableCounter](),
 	))
 	t.Run("Int64ObservableGauge", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableGauge{}),
-		reflect.TypeOf((*metric.Int64ObservableGauge)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64ObservableGauge](),
 	))
 	t.Run("Float64ObservableGauge", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableGauge{}),
-		reflect.TypeOf((*metric.Float64ObservableGauge)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64ObservableGauge](),
 	))
 	t.Run("Int64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64ObservableUpDownCounter{}),
-		reflect.TypeOf((*metric.Int64ObservableUpDownCounter)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64ObservableUpDownCounter](),
 	))
 	t.Run("Float64ObservableUpDownCounter", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64ObservableUpDownCounter{}),
-		reflect.TypeOf((*metric.Float64ObservableUpDownCounter)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64ObservableUpDownCounter](),
 	))
 	t.Run("Int64Observer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Int64Observer{}),
-		reflect.TypeOf((*metric.Int64Observer)(nil)).Elem(),
+		reflect.TypeFor[metric.Int64Observer](),
 	))
 	t.Run("Float64Observer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Float64Observer{}),
-		reflect.TypeOf((*metric.Float64Observer)(nil)).Elem(),
+		reflect.TypeFor[metric.Float64Observer](),
 	))
 }
 

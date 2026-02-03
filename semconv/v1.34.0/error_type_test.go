@@ -23,7 +23,7 @@ func TestErrorType(t *testing.T) {
 	builtinErr := errors.New("something went wrong")
 	var nilErr error
 
-	wantCustomType := reflect.TypeOf(customErr)
+	wantCustomType := reflect.TypeFor[CustomError]()
 	wantCustomStr := fmt.Sprintf("%s.%s", wantCustomType.PkgPath(), wantCustomType.Name())
 
 	tests := []struct {
