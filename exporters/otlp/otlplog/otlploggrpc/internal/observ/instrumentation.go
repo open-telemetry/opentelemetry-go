@@ -166,7 +166,9 @@ func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp 
 
 	*addOpt = append(*addOpt, i.addOpt)
 
-	i.logInflightMetric.Add(ctx, count, *addOpt...)
+	if i.logInflightMetric.Enabled(ctx) {
+		i.logInflightMetric.Add(ctx, count, *addOpt...)
+	}
 
 	return ExportOp{
 		nLogs: count,
@@ -198,11 +200,15 @@ func (e ExportOp) End(err error) {
 	defer put(addOpPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+	if e.inst.logInflightMetric.Enabled(e.ctx) {
+		e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+	}
 	success := successful(e.nLogs, err)
-	e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
+	if e.inst.logExportedMetric.Enabled(e.ctx) {
+		e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
+	}
 
-	if err != nil {
+	if err != nil && e.inst.logExportedMetric.Enabled(e.ctx) {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
@@ -220,7 +226,9 @@ func (e ExportOp) End(err error) {
 	recordOpt := get[metric.RecordOption](recordOptPool)
 	defer put(recordOptPool, recordOpt)
 	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
-	e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
+	if e.inst.logExportedDurationMetric.Enabled(e.ctx) {
+		e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
+	}
 }
 
 func (i *Instrumentation) recordOption(err error) metric.RecordOption {
