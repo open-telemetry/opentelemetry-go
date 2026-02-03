@@ -197,7 +197,9 @@ func (t Timer) Stop(err error) {
 		*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
 	}
 
-	t.hist.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
+	if t.hist.Enabled(t.ctx) {
+		t.hist.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
+	}
 }
 
 // ExportMetrics starts the observation of a metric export operation.
@@ -209,7 +211,9 @@ func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportOp {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, i.setOpt)
 
-	i.inflightMetric.Add(ctx, n, *addOpt...)
+	if i.inflightMetric.Enabled(ctx) {
+		i.inflightMetric.Add(ctx, n, *addOpt...)
+	}
 
 	return ExportOp{ctx: ctx, nMetrics: n, inst: i}
 }
@@ -232,8 +236,12 @@ func (e ExportOp) End(success int64, err error) {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.setOpt)
 
-	e.inst.inflightMetric.Add(e.ctx, -e.nMetrics, *addOpt...)
-	e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
+	if e.inst.inflightMetric.Enabled(e.ctx) {
+		e.inst.inflightMetric.Add(e.ctx, -e.nMetrics, *addOpt...)
+	}
+	if e.inst.exportedMetric.Enabled(e.ctx) {
+		e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
+	}
 
 	if err != nil {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
@@ -244,6 +252,8 @@ func (e ExportOp) End(success int64, err error) {
 		set := attribute.NewSet(*attrs...)
 
 		*addOpt = append((*addOpt)[:0], metric.WithAttributeSet(set))
-		e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
+		if e.inst.exportedMetric.Enabled(e.ctx) {
+			e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
+		}
 	}
 }
