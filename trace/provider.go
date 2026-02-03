@@ -53,7 +53,5 @@ type TracerProvider interface {
 	//
 	// If name is empty, then an implementation defined default name will be
 	// used instead.
-	//
-	// This method is safe to call concurrently.
 	Tracer(name string, options ...TracerOption) Tracer
 }
