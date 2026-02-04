@@ -183,7 +183,7 @@ type Timer struct {
 //
 // If err is non-nil, an appropriate error type attribute will be included.
 func (t Timer) Stop(err error) {
-	if t.hist.Enabled(t.ctx) {
+	if !t.hist.Enabled(t.ctx) {
 		return
 	}
 	recordOpt := get[metric.RecordOption](recordOptPool)
