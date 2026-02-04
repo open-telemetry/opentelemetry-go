@@ -195,19 +195,17 @@ type ExportOp struct {
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error) {
 	if !e.inst.logExportedMetric.Enabled(e.ctx) {
-    	return
-    }
+		return
+	}
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
-
 	if e.inst.logInflightMetric.Enabled(e.ctx) {
 		e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
 	}
 	success := successful(e.nLogs, err)
 	e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
-	
-	if err != nil  {
+	if err != nil {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
@@ -226,7 +224,6 @@ func (e ExportOp) End(err error) {
 	defer put(recordOptPool, recordOpt)
 	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
 	e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
-	
 }
 
 func (i *Instrumentation) recordOption(err error) metric.RecordOption {
