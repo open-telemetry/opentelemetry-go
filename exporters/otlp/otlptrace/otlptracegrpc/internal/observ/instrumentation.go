@@ -251,7 +251,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
 	// meaningful to distribution aggregations.
-	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)	
+	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
 
 	if err != nil {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
