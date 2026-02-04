@@ -183,6 +183,9 @@ type Timer struct {
 //
 // If err is non-nil, an appropriate error type attribute will be included.
 func (t Timer) Stop(err error) {
+	if t.hist.Enabled(t.ctx) {
+		return
+	}
 	recordOpt := get[metric.RecordOption](recordOptPool)
 	defer put(recordOptPool, recordOpt)
 	*recordOpt = append(*recordOpt, t.inst.setOpt)
@@ -196,10 +199,7 @@ func (t Timer) Stop(err error) {
 		set := attribute.NewSet(*attrs...)
 		*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
 	}
-
-	if t.hist.Enabled(t.ctx) {
-		t.hist.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
-	}
+	t.hist.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
 }
 
 // ExportMetrics starts the observation of a metric export operation.
@@ -207,11 +207,10 @@ func (t Timer) Stop(err error) {
 // It returns an [ExportOp] that tracks the export operation. The
 // [ExportOp.End] method must be called when the export completes.
 func (i *Instrumentation) ExportMetrics(ctx context.Context, n int64) ExportOp {
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.setOpt)
-
 	if i.inflightMetric.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.setOpt)
 		i.inflightMetric.Add(ctx, n, *addOpt...)
 	}
 
@@ -243,7 +242,7 @@ func (e ExportOp) End(success int64, err error) {
 		e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
 	}
 
-	if err != nil {
+	if err != nil && e.inst.exportedMetric.Enabled(e.ctx) {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
@@ -252,8 +251,6 @@ func (e ExportOp) End(success int64, err error) {
 		set := attribute.NewSet(*attrs...)
 
 		*addOpt = append((*addOpt)[:0], metric.WithAttributeSet(set))
-		if e.inst.exportedMetric.Enabled(e.ctx) {
-			e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
-		}
+		e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
 	}
 }
