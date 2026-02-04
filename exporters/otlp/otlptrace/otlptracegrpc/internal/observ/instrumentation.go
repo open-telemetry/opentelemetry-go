@@ -207,11 +207,10 @@ func BaseAttrs(id int64, target string) []attribute.KeyValue {
 // ExportSpans method returns.
 func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp {
 	start := time.Now()
-
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
 	if i.inflightSpans.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
 		i.inflightSpans.Add(ctx, int64(nSpans), *addOpt...)
 	}
 
@@ -242,20 +241,17 @@ type ExportOp struct {
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, code codes.Code) {
+	if !e.inst.exportedSpans.Enabled(e.ctx) {
+		return
+	}
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
-
-	if e.inst.inflightSpans.Enabled(e.ctx) {
-		e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
-	}
-
+	e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
 	// meaningful to distribution aggregations.
-	if e.inst.exportedSpans.Enabled(e.ctx) {
-		e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
-	}
+	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)	
 
 	if err != nil {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
@@ -268,18 +264,14 @@ func (e ExportOp) End(err error, code codes.Code) {
 		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
 		// Reset addOpt with new attribute set.
 		*addOpt = append((*addOpt)[:0], o)
-
-		if e.inst.exportedSpans.Enabled(e.ctx) {
-			e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
-		}
+		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
 	}
 
-	recOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recOpt)
-	*recOpt = append(*recOpt, e.inst.recordOption(err, code))
-
-	d := time.Since(e.start).Seconds()
 	if e.inst.opDuration.Enabled(e.ctx) {
+		recOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recOpt)
+		*recOpt = append(*recOpt, e.inst.recordOption(err, code))
+		d := time.Since(e.start).Seconds()
 		e.inst.opDuration.Record(e.ctx, d, *recOpt...)
 	}
 }
