@@ -51,7 +51,7 @@ Once complete, run `make` to check for any compilation or test failures.
 
 #### Handling attribute changes
 
-Some semconv releases might impact attributes that are currently being used. Changes could stem from a simple renaming, to more complex changes like merging attributes and property values being changed.
+Some semconv releases might add new attributes or impact attributes that are currently being used. Changes could stem from a simple renaming, to more complex changes like merging attributes and property values being changed.
 
 One should update the code to the new attributes that supersede the impacted ones, hence sticking to the semantic conventions. However, legacy attributes might still be emitted in accordance to the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable.
 
@@ -59,7 +59,7 @@ For an example on how such migration might have to be tracked and performed, see
 
 ### Go contrib linter update
 
-Update [.golangci.yml](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/.golangci.yml#L57) in [opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/) to mandate the new semconv version.
+Update [.golangci.yml](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/.golangci.yml) in [opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib/) to mandate the new semconv version.
 
 ## Breaking changes validation
 
