@@ -200,9 +200,8 @@ func (e ExportOp) End(err error) {
 	addOpt := get[metric.AddOption](addOpPool)
 	defer put(addOpPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
-	if e.inst.logInflightMetric.Enabled(e.ctx) {
-		e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
-	}
+	
+	e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
 	success := successful(e.nLogs, err)
 	e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
 	if err != nil {
