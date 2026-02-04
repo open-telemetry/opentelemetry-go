@@ -207,6 +207,7 @@ func BaseAttrs(id int64, target string) []attribute.KeyValue {
 // ExportSpans method returns.
 func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp {
 	start := time.Now()
+
 	if i.inflightSpans.Enabled(ctx) {
 		addOpt := get[metric.AddOption](addOptPool)
 		defer put(addOptPool, addOpt)
@@ -244,10 +245,13 @@ func (e ExportOp) End(err error, code codes.Code) {
 	if !e.inst.exportedSpans.Enabled(e.ctx) {
 		return
 	}
+
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
+
 	e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
+
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
 	// meaningful to distribution aggregations.
@@ -264,6 +268,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
 		// Reset addOpt with new attribute set.
 		*addOpt = append((*addOpt)[:0], o)
+
 		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
 	}
 
@@ -271,6 +276,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 		recOpt := get[metric.RecordOption](recordOptPool)
 		defer put(recordOptPool, recOpt)
 		*recOpt = append(*recOpt, e.inst.recordOption(err, code))
+
 		d := time.Since(e.start).Seconds()
 		e.inst.opDuration.Record(e.ctx, d, *recOpt...)
 	}
