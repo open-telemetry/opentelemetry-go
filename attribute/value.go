@@ -222,8 +222,10 @@ func (v Value) AsInterface() any {
 	return unknownValueType{}
 }
 
-// String implements the Stringer interface, used when you pass an object to fmt.Println, etc.
-// Do not confuse with AsString, which you should call if you know the value is of String type.
+// String returns Value's value as a string, formatted like [fmt.Sprint].
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
 func (v Value) String() string {
 	return v.Emit()
 }
