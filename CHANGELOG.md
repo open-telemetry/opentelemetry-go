@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `String` method to `attribute.Value` and `KeyValue` in `go.opentelemetry.io/otel/attribute`. (#7812)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -21,7 +25,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.39.0` package.
   The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.` (#7783, #7789)
-- Add `String` method to `attribute.Value` and `KeyValue` in `go.opentelemetry.io/otel/attribute`. (#7812)
 
 ### Changed
 
