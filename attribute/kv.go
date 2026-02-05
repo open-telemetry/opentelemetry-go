@@ -23,6 +23,9 @@ func (kv KeyValue) Valid() bool {
 // The returned string is meant for debugging;
 // the string representation is not stable.
 func (kv KeyValue) String() string {
+	if !kv.Valid() {
+		return "<invalid>"
+	}
 	return string(kv.Key) + ":" + kv.Value.String()
 }
 

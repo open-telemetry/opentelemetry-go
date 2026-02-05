@@ -229,12 +229,12 @@ func TestKeyValueString(t *testing.T) {
 		{
 			name: "empty key",
 			kv:   attribute.String("", "value"),
-			want: ":value",
+			want: "<invalid>",
 		},
 		{
 			name: "invalid/uninitialized KeyValue",
 			kv:   attribute.KeyValue{},
-			want: ":unknown",
+			want: "<invalid>",
 		},
 		{
 			name: "key with special characters",
