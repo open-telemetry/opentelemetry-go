@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Remove documentation of the `TracerProvider.Tracer` being concurrent-safe in `go.opentelemetry.io/otel/trace`.
+  The `TracerProvider` interface does not guarantee that all implementations are concurrent-safe.
+  The default implementation `go.opentelemetry.io/otel/sdk/trace.TracerProvider` is concurrent-safe.
+  However, that does not mean a user of the API can rely on all implementations to also be. (#7872)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
