@@ -590,7 +590,7 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.float64Measures[oImpl.observableID]
 	for _, m := range measures {
-		m(context.Background(), v, c.Attributes())
+		m(context.Background(), v, c.Attributes(), nil)
 	}
 }
 
@@ -620,7 +620,7 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.int64Measures[oImpl.observableID]
 	for _, m := range measures {
-		m(context.Background(), v, c.Attributes())
+		m(context.Background(), v, c.Attributes(), nil)
 	}
 }
 

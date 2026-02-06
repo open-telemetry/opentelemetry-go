@@ -59,7 +59,7 @@ func assertSum[N int64 | float64](
 		for m := range n {
 			t.Logf("input/output number: %d", m)
 			in, out := meas[m], comps[m]
-			in(t.Context(), 1, *attribute.EmptySet())
+			in(t.Context(), 1, *attribute.EmptySet(), nil)
 
 			var got metricdata.Aggregation
 			assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -69,7 +69,7 @@ func assertSum[N int64 | float64](
 				DataPoints:  []metricdata.DataPoint[N]{{Value: v[0]}},
 			}, got, metricdatatest.IgnoreTimestamp())
 
-			in(t.Context(), 3, *attribute.EmptySet())
+			in(t.Context(), 3, *attribute.EmptySet(), nil)
 
 			assert.Equal(t, 1, out(&got), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
@@ -89,7 +89,7 @@ func assertHist[N int64 | float64](
 		requireN[N](t, 1, meas, comps, err)
 
 		in, out := meas[0], comps[0]
-		in(t.Context(), 1, *attribute.EmptySet())
+		in(t.Context(), 1, *attribute.EmptySet(), nil)
 
 		var got metricdata.Aggregation
 		assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -107,7 +107,7 @@ func assertHist[N int64 | float64](
 			}},
 		}, got, metricdatatest.IgnoreTimestamp())
 
-		in(t.Context(), 1, *attribute.EmptySet())
+		in(t.Context(), 1, *attribute.EmptySet(), nil)
 
 		if temp == metricdata.CumulativeTemporality {
 			buckets[1] = 2
@@ -138,8 +138,8 @@ func assertLastValue[N int64 | float64](
 	requireN[N](t, 1, meas, comps, err)
 
 	in, out := meas[0], comps[0]
-	in(t.Context(), 10, *attribute.EmptySet())
-	in(t.Context(), 1, *attribute.EmptySet())
+	in(t.Context(), 10, *attribute.EmptySet(), nil)
+	in(t.Context(), 1, *attribute.EmptySet(), nil)
 
 	var got metricdata.Aggregation
 	assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -287,7 +287,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 				requireN[N](t, 1, meas, comps, err)
 
 				in, out := meas[0], comps[0]
-				in(t.Context(), 1, *attribute.EmptySet())
+				in(t.Context(), 1, *attribute.EmptySet(), nil)
 
 				var got metricdata.Aggregation
 				assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -301,7 +301,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 					}},
 				}, got, metricdatatest.IgnoreTimestamp())
 
-				in(t.Context(), 1, *attribute.EmptySet())
+				in(t.Context(), 1, *attribute.EmptySet(), nil)
 
 				assert.Equal(t, 1, out(&got), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
