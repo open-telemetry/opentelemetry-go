@@ -9,7 +9,14 @@ import (
 	"go.opentelemetry.io/otel/baggage"
 )
 
-const baggageHeader = "baggage"
+const (
+	baggageHeader = "baggage"
+
+	// W3C Baggage specification limits.
+	// https://www.w3.org/TR/baggage/#limits
+	maxMembers               = 64
+	maxBytesPerBaggageString = 8192
+)
 
 // Baggage is a propagator that supports the W3C Baggage format.
 //
@@ -60,13 +67,32 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	if len(bVals) == 0 {
 		return parent
 	}
+
+	// Check combined size of all baggage headers.
+	// W3C spec: "If there are multiple baggage headers, all limits apply to
+	// the combination of all baggage headers and not each header individually."
+	var totalBytes int
+	for _, bStr := range bVals {
+		totalBytes += len(bStr)
+	}
+	if totalBytes > maxBytesPerBaggageString {
+		return parent
+	}
+
 	var members []baggage.Member
 	for _, bStr := range bVals {
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
 			continue
 		}
-		members = append(members, currBag.Members()...)
+
+		currMembers := currBag.Members()
+		if len(members)+len(currMembers) > maxMembers {
+			// W3C Baggage limit exceeded, drop all baggage.
+			// If a platform cannot propagate all baggage, it MUST NOT propagate any partial list-members
+			return parent
+		}
+		members = append(members, currMembers...)
 	}
 
 	b, err := baggage.New(members...)

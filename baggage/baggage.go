@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	maxMembers               = 180
-	maxBytesPerMembers       = 4096
+	maxMembers               = 64
 	maxBytesPerBaggageString = 8192
 
 	listDelimiter     = ","
@@ -29,7 +28,6 @@ var (
 	errInvalidProperty = errors.New("invalid baggage list-member property")
 	errInvalidMember   = errors.New("invalid baggage list-member")
 	errMemberNumber    = errors.New("too many list-members in baggage-string")
-	errMemberBytes     = errors.New("list-member too large")
 	errBaggageBytes    = errors.New("baggage-string too large")
 )
 
@@ -309,10 +307,6 @@ func newInvalidMember() Member {
 // an error if the input is invalid according to the W3C Baggage
 // specification.
 func parseMember(member string) (Member, error) {
-	if n := len(member); n > maxBytesPerMembers {
-		return newInvalidMember(), fmt.Errorf("%w: %d", errMemberBytes, n)
-	}
-
 	var props properties
 	keyValue, properties, found := strings.Cut(member, propertyDelimiter)
 	if found {
