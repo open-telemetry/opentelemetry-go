@@ -261,7 +261,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			name: "multiple headers within total max bytes",
 			headers: []string{
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
-				// The comma as the seperate of memeber would take 1 byte.
+				// The comma as the separate of member would take 1 byte.
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
 			},
 			want: members{
