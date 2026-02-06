@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `String` method to `attribute.Value` and `KeyValue` in `go.opentelemetry.io/otel/attribute`. (#7812)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

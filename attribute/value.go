@@ -221,6 +221,14 @@ func (v Value) AsInterface() any {
 	return unknownValueType{}
 }
 
+// String returns Value's value as a string, formatted like [fmt.Sprint].
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (v Value) String() string {
+	return v.Emit()
+}
+
 // Emit returns a string representation of Value's data.
 func (v Value) Emit() string {
 	switch v.Type() {
