@@ -22,7 +22,7 @@ func BenchmarkInstrument(b *testing.B) {
 
 	b.Run("instrumentImpl/aggregate", func(b *testing.B) {
 		build := aggregate.Builder[int64]{}
-		var meas []aggregate.Measure[int64]
+		var meas []aggregate.Lookup[int64]
 
 		build.Temporality = metricdata.CumulativeTemporality
 		in, _ := build.LastValue()
@@ -46,13 +46,14 @@ func BenchmarkInstrument(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			inst.aggregate(ctx, int64(i), attr(i))
+			attrs := attr(i)
+			inst.aggregate(ctx, int64(i), attrs.ToSlice())
 		}
 	})
 
 	b.Run("observable/observe", func(b *testing.B) {
 		build := aggregate.Builder[int64]{}
-		var meas []aggregate.Measure[int64]
+		var meas []aggregate.Lookup[int64]
 
 		in, _ := build.PrecomputedLastValue()
 		meas = append(meas, in)
@@ -70,7 +71,8 @@ func BenchmarkInstrument(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			o.observe(int64(i), attr(i))
+			attrs := attr(i)
+			o.observe(int64(i), attrs.ToSlice())
 		}
 	})
 }
