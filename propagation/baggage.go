@@ -9,7 +9,14 @@ import (
 	"go.opentelemetry.io/otel/baggage"
 )
 
-const baggageHeader = "baggage"
+const (
+	baggageHeader = "baggage"
+
+	// W3C Baggage specification limits.
+	// https://www.w3.org/TR/baggage/#limits
+	maxMembers               = 64
+	maxBytesPerBaggageString = 8192
+)
 
 // Baggage is a propagator that supports the W3C Baggage format.
 //
@@ -60,13 +67,52 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	if len(bVals) == 0 {
 		return parent
 	}
+
+	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
+	// "If either of the above conditions is not met, a platform MAY drop
+	// list-members until both conditions are met."
+	// We keep the first N complete members that fit within the limits.
 	var members []baggage.Member
+	var totalBytes int
+	limitReached := false
 	for _, bStr := range bVals {
+		if limitReached {
+			break
+		}
+
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
-			continue
+			// Header failed parsing (e.g., invalid format).
+			// Stop processing to maintain "first N" semantics.
+			break
 		}
-		members = append(members, currBag.Members()...)
+		if bStr != "" && currBag.Len() == 0 {
+			// Non-empty header produced no members (e.g., all members exceeded limits).
+			// Stop processing to maintain "first N" semantics.
+			break
+		}
+
+		for _, m := range currBag.Members() {
+			// Check member count limit.
+			if len(members) >= maxMembers {
+				limitReached = true
+				break
+			}
+
+			// Check byte size limit.
+			// Account for comma separator between members.
+			memberBytes := len(m.String())
+			if len(members) > 0 {
+				memberBytes++ // comma separator
+			}
+			if totalBytes+memberBytes > maxBytesPerBaggageString {
+				limitReached = true
+				break
+			}
+
+			members = append(members, m)
+			totalBytes += memberBytes
+		}
 	}
 
 	b, err := baggage.New(members...)
