@@ -68,31 +68,51 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 		return parent
 	}
 
-	// Check combined size of all baggage headers.
-	// W3C spec: "If there are multiple baggage headers, all limits apply to
-	// the combination of all baggage headers and not each header individually."
-	var totalBytes int
-	for _, bStr := range bVals {
-		totalBytes += len(bStr)
-	}
-	if totalBytes > maxBytesPerBaggageString {
-		return parent
-	}
-
+	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
+	// "If either of the above conditions is not met, a platform MAY drop
+	// list-members until both conditions are met."
+	// We keep the first N complete members that fit within the limits.
 	var members []baggage.Member
+	var totalBytes int
+	limitReached := false
 	for _, bStr := range bVals {
+		if limitReached {
+			break
+		}
+
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
-			continue
+			// Header failed parsing (e.g., invalid format).
+			// Stop processing to maintain "first N" semantics.
+			break
+		}
+		if bStr != "" && currBag.Len() == 0 {
+			// Non-empty header produced no members (e.g., all members exceeded limits).
+			// Stop processing to maintain "first N" semantics.
+			break
 		}
 
-		currMembers := currBag.Members()
-		if len(members)+len(currMembers) > maxMembers {
-			// W3C Baggage limit exceeded, drop all baggage.
-			// If a platform cannot propagate all baggage, it MUST NOT propagate any partial list-members
-			return parent
+		for _, m := range currBag.Members() {
+			// Check member count limit.
+			if len(members) >= maxMembers {
+				limitReached = true
+				break
+			}
+
+			// Check byte size limit.
+			// Account for comma separator between members.
+			memberBytes := len(m.String())
+			if len(members) > 0 {
+				memberBytes++ // comma separator
+			}
+			if totalBytes+memberBytes > maxBytesPerBaggageString {
+				limitReached = true
+				break
+			}
+
+			members = append(members, m)
+			totalBytes += memberBytes
 		}
-		members = append(members, currMembers...)
 	}
 
 	b, err := baggage.New(members...)

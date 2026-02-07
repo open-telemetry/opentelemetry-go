@@ -207,7 +207,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    members{},
 		},
 		{
-			name: "multiple headers with one invalid continues parsing",
+			name: "multiple headers with one invalid stops at invalid",
 			headers: []string{
 				"key1=val1",
 				"invalid-no-equals",
@@ -215,7 +215,6 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 			want: members{
 				{Key: "key1", Value: "val1"},
-				{Key: "key2", Value: "val2"},
 			},
 		},
 		{
@@ -224,18 +223,18 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    generateMembers(maxMembers, "k"),
 		},
 		{
-			name:    "single header exceeds max members limit",
+			name:    "single header exceeds max members limit keeps first 64",
 			headers: []string{generateBaggageHeader(maxMembers+1, "k")},
-			want:    members{},
+			want:    generateMembers(maxMembers, "k"),
 		},
 		{
-			name: "multiple headers exceeds total max members limit",
+			name: "multiple headers exceeds total max members limit keeps first 64",
 			headers: []string{
 				generateBaggageHeader(maxMembers/2, "a"),
 				generateBaggageHeader(maxMembers/2, "b"),
 				generateBaggageHeader(1, "c"),
 			},
-			want: members{},
+			want: append(generateMembers(maxMembers/2, "a"), generateMembers(maxMembers/2, "b")...),
 		},
 		{
 			name:    "single header at max bytes limit",
@@ -245,17 +244,19 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
-			name:    "single header exceeds max bytes limit",
+			name:    "single header exceeds max bytes limit drops oversized member",
 			headers: []string{"k=" + strings.Repeat("v", maxBytesPerBaggageString-1)},
 			want:    members{},
 		},
 		{
-			name: "multiple headers exceed total max bytes",
+			name: "multiple headers exceed total max bytes keeps first that fits",
 			headers: []string{
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 			},
-			want: members{},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
+			},
 		},
 		{
 			name: "multiple headers within total max bytes",
@@ -267,6 +268,18 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want: members{
 				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
 				{Key: "y", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2-1)},
+			},
+		},
+		{
+			name: "stops at large member that exceeds byte limit",
+			headers: []string{
+				"small1=v1,small2=v2",
+				"large=" + strings.Repeat("x", maxBytesPerBaggageString),
+				"small3=v3",
+			},
+			want: members{
+				{Key: "small1", Value: "v1"},
+				{Key: "small2", Value: "v2"},
 			},
 		},
 	}

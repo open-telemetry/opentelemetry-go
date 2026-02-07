@@ -519,12 +519,19 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid baggage string: too large",
 			in:   tooLarge,
-			err:  errBaggageBytes,
+			// tooLarge is a single key without "=", so parseMember fails
+			err: errInvalidMember,
 		},
 		{
-			name: "invalid baggage string: too many members",
+			name: "baggage string with too many members keeps first 64",
 			in:   tooManyMembers,
-			err:  errMemberNumber,
+			want: func() baggage.List {
+				b := make(baggage.List)
+				for i := 0; i < maxMembers; i++ {
+					b[fmt.Sprintf("a%d", i)] = baggage.Item{Value: ""}
+				}
+				return b
+			}(),
 		},
 		{
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
