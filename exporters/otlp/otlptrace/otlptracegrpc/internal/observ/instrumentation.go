@@ -250,7 +250,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	if e.inst.inflightSpans.Add(e.ctx){
+	if e.inst.inflightSpans.Enabled(e.ctx) {
 		e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
 	}
 
