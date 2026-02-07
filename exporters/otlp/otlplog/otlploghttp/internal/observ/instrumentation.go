@@ -184,10 +184,12 @@ func ServerAddrAttrs(target string) []attribute.KeyValue {
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
-	i.inflightMetric.Add(ctx, count, *addOpt...)
+	if i.inflightMetric.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
+		i.inflightMetric.Add(ctx, count, *addOpt...)
+	}
 
 	return ExportOp{
 		ctx:   ctx,
@@ -214,11 +216,16 @@ type ExportOp struct {
 // of successfully exported logs will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, code int) {
+	if !e.inst.exportedMetric.Add(e.ctx) {
+		return
+	}
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.inflightMetric.Add(e.ctx, -e.count, *addOpt...)
+	if e.inst.inflightMetric.Enabled(e.ctx) {
+		e.inst.inflightMetric.Add(e.ctx, -e.count, *addOpt...)
+	}
 	success := successful(e.count, err)
 	e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
 
