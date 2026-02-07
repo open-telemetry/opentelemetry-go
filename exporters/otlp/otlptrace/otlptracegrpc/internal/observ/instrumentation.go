@@ -250,7 +250,9 @@ func (e ExportOp) End(err error, code codes.Code) {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
+	if e.inst.inflightSpans.Add(e.ctx){
+		e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
+	}
 
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
