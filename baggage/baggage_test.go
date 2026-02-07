@@ -527,7 +527,7 @@ func TestBaggageParse(t *testing.T) {
 			in:   tooManyMembers,
 			want: func() baggage.List {
 				b := make(baggage.List)
-				for i := 0; i < maxMembers; i++ {
+				for i := range maxMembers {
 					b[fmt.Sprintf("a%d", i)] = baggage.Item{Value: ""}
 				}
 				return b
