@@ -261,10 +261,12 @@ func parseIP(ip string) string {
 func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp {
 	start := time.Now()
 
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
-	i.inflightSpans.Add(ctx, int64(nSpans), *addOpt...)
+	if i.inflightSpans.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
+		i.inflightSpans.Add(ctx, int64(nSpans), *addOpt...)
+	}
 
 	return ExportOp{
 		ctx:    ctx,
@@ -295,11 +297,16 @@ type ExportOp struct {
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, status int) {
+	if !e.inst.exportedSpans.Enabled(e.ctx) {
+		return
+	}
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
+	if e.inst.inflightSpans.Enabled(e.ctx) {
+		e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
+	}
 
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
