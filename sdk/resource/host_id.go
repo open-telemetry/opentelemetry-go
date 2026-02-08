@@ -60,8 +60,7 @@ func (r *hostIDReaderDarwin) read() (string, error) {
 		return "", err
 	}
 
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(result, "\n") {
 		if strings.Contains(line, "IOPlatformUUID") {
 			parts := strings.Split(line, " = ")
 			if len(parts) == 2 {

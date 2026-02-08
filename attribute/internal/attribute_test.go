@@ -101,8 +101,8 @@ var sync any
 func BenchmarkBoolSliceValue(b *testing.B) {
 	b.ReportAllocs()
 	s := []bool{true, false, true, false}
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+
+	for b.Loop() {
 		sync = BoolSliceValue(s)
 	}
 }
@@ -110,8 +110,8 @@ func BenchmarkBoolSliceValue(b *testing.B) {
 func BenchmarkInt64SliceValue(b *testing.B) {
 	b.ReportAllocs()
 	s := []int64{1, 2, 3, 4}
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+
+	for b.Loop() {
 		sync = Int64SliceValue(s)
 	}
 }
@@ -119,8 +119,8 @@ func BenchmarkInt64SliceValue(b *testing.B) {
 func BenchmarkFloat64SliceValue(b *testing.B) {
 	b.ReportAllocs()
 	s := []float64{1.2, 3.4, 5.6, 7.8}
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+
+	for b.Loop() {
 		sync = Float64SliceValue(s)
 	}
 }
@@ -128,8 +128,8 @@ func BenchmarkFloat64SliceValue(b *testing.B) {
 func BenchmarkStringSliceValue(b *testing.B) {
 	b.ReportAllocs()
 	s := []string{"a", "b", "c", "d"}
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+
+	for b.Loop() {
 		sync = StringSliceValue(s)
 	}
 }
@@ -137,9 +137,8 @@ func BenchmarkStringSliceValue(b *testing.B) {
 func BenchmarkAsFloat64Slice(b *testing.B) {
 	b.ReportAllocs()
 	var in any = [2]float64{1, 2.3}
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		sync = AsFloat64Slice(in)
 	}
 }
