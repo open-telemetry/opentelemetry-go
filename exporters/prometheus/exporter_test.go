@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -678,6 +679,25 @@ func TestPrometheusExporter(t *testing.T) {
 				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
 			},
 		},
+		{
+			name:         "exemplar dropped attributes exceed 128 rune limit",
+			expectedFile: "testdata/exemplar_dropped_attrs_limit.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				sc := trace.NewSpanContext(trace.SpanContextConfig{
+					SpanID:     [8]byte{0x01},
+					TraceID:    [16]byte{0x01},
+					TraceFlags: trace.FlagsSampled,
+				})
+				ctx = trace.ContextWithSpanContext(ctx, sc)
+
+				hist, err:= meter.Float64Histogram("test_dropped_attrs_limit")
+				require.NoError(t, err)
+				longVal := strings.Repeat("A", 80)
+				hist.Record(ctx, 1.0, otelmetric.WithAttributes(
+					attribute.String("long_attribute", longVal),
+				))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -719,6 +739,14 @@ func TestPrometheusExporter(t *testing.T) {
 						metric.Stream{Aggregation: metric.AggregationBase2ExponentialHistogram{
 							MaxSize: 10,
 						}},
+					),
+					metric.NewView(
+						metric.Instrument{Name: "test_dropped_attrs_limit"},
+						metric.Stream{
+							AttributeFilter: func(kv attribute.KeyValue) bool {
+								return kv.Key != "long_attribute"
+							},
+						},
 					),
 				),
 			)
