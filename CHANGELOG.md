@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- TracerProvider `ForceFlush()` Joins errors together and continues iteration through SpanProcessors as opposed
+  to returning the first encountered error without attempting exports on subsequent SpanProcessors. (#7856)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
