@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -274,6 +275,14 @@ func TestTracerProviderForceFlush(t *testing.T) {
 		assert.ErrorIs(t, stp.ForceFlush(ctx), sp1.injectExportError, "span processor error not returned")
 		require.False(t, sp1.flushed, "SpanProcessor wrongly considered flushed")
 		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
+	})
+
+	t.Run("WithTimeout", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		ctx, _ := context.WithTimeout(t.Context(), time.Nanosecond)
+		assert.ErrorIs(t, stp.ForceFlush(ctx), context.DeadlineExceeded)
 	})
 }
 
