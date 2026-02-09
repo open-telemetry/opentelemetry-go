@@ -242,7 +242,6 @@ type ExportOp struct {
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, code codes.Code) {
-
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
@@ -258,7 +257,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 		e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
 	}
 
-	if err != nil && e.inst.exportedSpans.Enabled(e.ctx)  {
+	if err != nil && e.inst.exportedSpans.Enabled(e.ctx) {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
