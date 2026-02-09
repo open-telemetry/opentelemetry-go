@@ -242,9 +242,6 @@ type ExportOp struct {
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, code codes.Code) {
-	if !e.inst.exportedSpans.Enabled(e.ctx) {
-		return
-	}
 
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
@@ -257,9 +254,11 @@ func (e ExportOp) End(err error, code codes.Code) {
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
 	// meaningful to distribution aggregations.
-	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
+	if e.inst.exportedSpans.Enabled(e.ctx) {
+		e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
+	}
 
-	if err != nil {
+	if err != nil && e.inst.exportedSpans.Enabled(e.ctx)  {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
