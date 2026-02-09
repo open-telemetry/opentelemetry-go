@@ -297,9 +297,6 @@ type ExportOp struct {
 // of successfully exported spans will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, status int) {
-	if !e.inst.exportedSpans.Enabled(e.ctx) {
-		return
-	}
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
@@ -311,9 +308,11 @@ func (e ExportOp) End(err error, status int) {
 	success := successful(e.nSpans, err)
 	// Record successfully exported spans, even if the value is 0 which are
 	// meaningful to distribution aggregations.
-	e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
+	if e.inst.exportedSpans.Enabled(e.ctx) {
+		e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
+	}
 
-	if err != nil {
+	if err != nil && e.inst.exportedSpans.Enabled(e.ctx) {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
@@ -328,12 +327,14 @@ func (e ExportOp) End(err error, status int) {
 		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
 	}
 
-	recOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recOpt)
-	*recOpt = append(*recOpt, e.inst.recordOption(err, status))
+	if e.inst.opDuration.Enabled(e.ctx) {
+		recOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recOpt)
+		*recOpt = append(*recOpt, e.inst.recordOption(err, status))
 
-	d := time.Since(e.start).Seconds()
-	e.inst.opDuration.Record(e.ctx, d, *recOpt...)
+		d := time.Since(e.start).Seconds()
+		e.inst.opDuration.Record(e.ctx, d, *recOpt...)
+	}
 }
 
 // recordOption returns a RecordOption with attributes representing the
