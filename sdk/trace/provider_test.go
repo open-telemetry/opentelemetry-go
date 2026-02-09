@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -234,7 +233,7 @@ func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
 }
 
 func TestTracerProviderForceFlush(t *testing.T) {
-	t.Run("AfterShutdown", func(t *testing.T) {	
+	t.Run("AfterShutdown", func(t *testing.T) {
 		stp := NewTracerProvider()
 		sp1 := &basicSpanProcessor{}
 		stp.RegisterSpanProcessor(sp1)
@@ -250,7 +249,7 @@ func TestTracerProviderForceFlush(t *testing.T) {
 		assert.False(t, sp1.flushed, "SpanProcessor ForceFlush called after Shutdown")
 	})
 
-	t.Run("Multi", func(t *testing.T) {	
+	t.Run("Multi", func(t *testing.T) {
 		stp := NewTracerProvider()
 		sp1 := &basicSpanProcessor{}
 		sp2 := &basicSpanProcessor{}
@@ -263,7 +262,7 @@ func TestTracerProviderForceFlush(t *testing.T) {
 		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
 	})
 
-	t.Run("MultiWithSPError", func(t *testing.T) {	
+	t.Run("MultiWithSPError", func(t *testing.T) {
 		stp := NewTracerProvider()
 		spErr := errors.New("basic span processor export failure")
 		sp1 := &basicSpanProcessor{injectExportError: spErr}
@@ -277,12 +276,13 @@ func TestTracerProviderForceFlush(t *testing.T) {
 		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
 	})
 
-	t.Run("WithTimeout", func(t *testing.T) {
+	t.Run("WithCancel", func(t *testing.T) {
 		stp := NewTracerProvider()
 		sp1 := &basicSpanProcessor{}
 		stp.RegisterSpanProcessor(sp1)
-		ctx, _ := context.WithTimeout(t.Context(), time.Nanosecond)
-		assert.ErrorIs(t, stp.ForceFlush(ctx), context.DeadlineExceeded)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		assert.ErrorIs(t, stp.ForceFlush(ctx), context.Canceled)
 	})
 }
 
