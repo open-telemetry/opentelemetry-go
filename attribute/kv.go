@@ -18,6 +18,17 @@ func (kv KeyValue) Valid() bool {
 	return kv.Key.Defined() && kv.Value.Type() != INVALID
 }
 
+// String returns key-value pair as a string, formatted like "key:value".
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (kv KeyValue) String() string {
+	if !kv.Valid() {
+		return "<invalid>"
+	}
+	return string(kv.Key) + ":" + kv.Value.String()
+}
+
 // Bool creates a KeyValue with a BOOL Value type.
 func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)
