@@ -4,6 +4,7 @@
 package propagation_test
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -139,7 +140,29 @@ func TestExtractValidBaggage(t *testing.T) {
 	}
 }
 
+// generateBaggageHeader creates a baggage header string with n members.
+func generateBaggageHeader(n int, prefix string) string {
+	parts := make([]string, n)
+	for i := range parts {
+		parts[i] = fmt.Sprintf("%s%d=v%d", prefix, i, i)
+	}
+	return strings.Join(parts, ",")
+}
+
+// generateMembers creates n members with keys like "prefix0", "prefix1", etc.
+func generateMembers(n int, prefix string) members {
+	m := make(members, n)
+	for i := range m {
+		m[i] = member{Key: fmt.Sprintf("%s%d", prefix, i), Value: fmt.Sprintf("v%d", i)}
+	}
+	return m
+}
+
 func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
+	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
+	const maxMembers = 64
+	const maxBytesPerBaggageString = 8192
+
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
 		name    string
@@ -177,6 +200,87 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			name:    "none",
 			headers: []string{},
 			want:    members{},
+		},
+		{
+			name:    "single header with one invalid skips invalid",
+			headers: []string{"key1=val1,invalid-no-equals,key2=val2"},
+			want:    members{},
+		},
+		{
+			name: "multiple headers with one invalid stops at invalid",
+			headers: []string{
+				"key1=val1",
+				"invalid-no-equals",
+				"key2=val2",
+			},
+			want: members{
+				{Key: "key1", Value: "val1"},
+			},
+		},
+		{
+			name:    "single header at max members limit",
+			headers: []string{generateBaggageHeader(maxMembers, "k")},
+			want:    generateMembers(maxMembers, "k"),
+		},
+		{
+			name:    "single header exceeds max members limit keeps first 64",
+			headers: []string{generateBaggageHeader(maxMembers+1, "k")},
+			want:    generateMembers(maxMembers, "k"),
+		},
+		{
+			name: "multiple headers exceeds total max members limit keeps first 64",
+			headers: []string{
+				generateBaggageHeader(maxMembers/2, "a"),
+				generateBaggageHeader(maxMembers/2, "b"),
+				generateBaggageHeader(1, "c"),
+			},
+			want: append(generateMembers(maxMembers/2, "a"), generateMembers(maxMembers/2, "b")...),
+		},
+		{
+			name:    "single header at max bytes limit",
+			headers: []string{"k=" + strings.Repeat("v", maxBytesPerBaggageString-2)},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
+			},
+		},
+		{
+			name:    "single header exceeds max bytes limit drops oversized member",
+			headers: []string{"k=" + strings.Repeat("v", maxBytesPerBaggageString-1)},
+			want:    members{},
+		},
+		{
+			name: "multiple headers exceed total max bytes keeps first that fits",
+			headers: []string{
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
+			},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
+			},
+		},
+		{
+			name: "multiple headers within total max bytes",
+			headers: []string{
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				// The comma as the separate of member would take 1 byte.
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
+			},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
+				{Key: "y", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2-1)},
+			},
+		},
+		{
+			name: "stops at large member that exceeds byte limit",
+			headers: []string{
+				"small1=v1,small2=v2",
+				"large=" + strings.Repeat("x", maxBytesPerBaggageString),
+				"small3=v3",
+			},
+			want: members{
+				{Key: "small1", Value: "v1"},
+				{Key: "small2", Value: "v2"},
+			},
 		},
 	}
 

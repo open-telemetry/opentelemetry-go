@@ -257,9 +257,12 @@ func key(n int) string {
 }
 
 func TestNewBaggageErrorTooManyBytes(t *testing.T) {
-	m := make([]Member, (maxBytesPerBaggageString/maxBytesPerMembers)+1)
+	// Create members that together exceed maxBytesPerBaggageString.
+	// Each member needs key + "=" so use keys that sum to > 8192 bytes.
+	keySize := maxBytesPerBaggageString / maxMembers
+	m := make([]Member, maxMembers)
 	for i := range m {
-		m[i] = Member{key: key(maxBytesPerMembers), hasData: true}
+		m[i] = Member{key: key(keySize), hasData: true}
 	}
 	_, err := New(m...)
 	assert.ErrorIs(t, err, errBaggageBytes)
@@ -276,8 +279,6 @@ func TestNewBaggageErrorTooManyMembers(t *testing.T) {
 
 func TestBaggageParse(t *testing.T) {
 	tooLarge := key(maxBytesPerBaggageString + 1)
-
-	tooLargeMember := key(maxBytesPerMembers + 1)
 
 	m := make([]string, maxMembers+1)
 	for i := range m {
@@ -518,17 +519,19 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid baggage string: too large",
 			in:   tooLarge,
-			err:  errBaggageBytes,
+			// tooLarge is a single key without "=", so parseMember fails
+			err: errInvalidMember,
 		},
 		{
-			name: "invalid baggage string: member too large",
-			in:   tooLargeMember,
-			err:  errMemberBytes,
-		},
-		{
-			name: "invalid baggage string: too many members",
+			name: "baggage string with too many members keeps first 64",
 			in:   tooManyMembers,
-			err:  errMemberNumber,
+			want: func() baggage.List {
+				b := make(baggage.List)
+				for i := range maxMembers {
+					b[fmt.Sprintf("a%d", i)] = baggage.Item{Value: ""}
+				}
+				return b
+			}(),
 		},
 		{
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
