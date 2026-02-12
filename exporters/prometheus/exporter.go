@@ -791,7 +791,11 @@ func addExemplars[N int64 | float64](
 		traceId := hex.EncodeToString(exemplar.TraceID)
 		spanId := hex.EncodeToString(exemplar.SpanID)
 
-		remaingSpace := exemplarRuneLimit - traceKeyLen - utf8.RuneCountInString(traceId) - spanKeyLen - utf8.RuneCountInString(spanId)
+		remaingSpace := exemplarRuneLimit - traceKeyLen - utf8.RuneCountInString(
+			traceId,
+		) - spanKeyLen - utf8.RuneCountInString(
+			spanId,
+		)
 
 		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer, remaingSpace)
 		if err != nil {
@@ -817,7 +821,11 @@ func addExemplars[N int64 | float64](
 	return metricWithExemplar
 }
 
-func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer, remainingSpace int) (prometheus.Labels, error) {
+func attributesToLabels(
+	attrs []attribute.KeyValue,
+	labelNamer otlptranslator.LabelNamer,
+	remainingSpace int,
+) (prometheus.Labels, error) {
 	labels := make(map[string]string, len(attrs)+2)
 	if remainingSpace <= 0 {
 		return labels, nil
