@@ -13,7 +13,7 @@ The next release will require at least [Go 1.25].
 
 ### Added
 
-- Support testing of [Go 1.26]. (TBD)
+- Support testing of [Go 1.26]. (#7902)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -3642,6 +3642,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
