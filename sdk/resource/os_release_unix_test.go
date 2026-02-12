@@ -123,8 +123,6 @@ PROP3='Final value'`)
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result := resource.ParseOSReleaseFile(tc.OSRelease)
 			require.Equal(t, tc.Parsed, result)
@@ -152,8 +150,6 @@ func TestSkip(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result := resource.Skip(tc.Line)
 			require.Equal(t, tc.Expected, result)
@@ -179,8 +175,6 @@ func TestParse(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			key, value, ok := resource.Parse(tc.Line)
 			require.Equal(t, tc.ExpectedKey, key)
@@ -219,8 +213,6 @@ func TestUnquote(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result := resource.Unquote(tc.Text)
 			require.Equal(t, tc.Expected, result)
@@ -243,8 +235,6 @@ func TestUnescape(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result := resource.Unescape(tc.Text)
 			require.Equal(t, tc.Expected, result)
@@ -285,8 +275,6 @@ func TestBuildOSRelease(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.Name, func(t *testing.T) {
 			result := resource.BuildOSRelease(tc.Values)
 			require.Equal(t, tc.Expected, result)
