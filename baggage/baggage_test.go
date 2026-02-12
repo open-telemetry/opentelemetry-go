@@ -532,6 +532,7 @@ func TestBaggageParse(t *testing.T) {
 				}
 				return b
 			}(),
+			err: errMemberNumber,
 		},
 		{
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",

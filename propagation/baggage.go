@@ -55,8 +55,8 @@ func extractSingleBaggage(parent context.Context, carrier TextMapCarrier) contex
 		return parent
 	}
 
-	bag, err := baggage.Parse(bStr)
-	if err != nil {
+	bag, _ := baggage.Parse(bStr)
+	if bag.Len() == 0 {
 		return parent
 	}
 	return baggage.ContextWithBaggage(parent, bag)
@@ -80,16 +80,11 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 			break
 		}
 
-		currBag, err := baggage.Parse(bStr)
-		if err != nil {
-			// Header failed parsing (e.g., invalid format).
-			// Stop processing to maintain "first N" semantics.
-			break
-		}
-		if bStr != "" && currBag.Len() == 0 {
-			// Non-empty header produced no members (e.g., all members exceeded limits).
-			// Stop processing to maintain "first N" semantics.
-			break
+		currBag, _ := baggage.Parse(bStr)
+		if currBag.Len() == 0 {
+			// Header produced no members (invalid format or exceeded limits).
+			// Skip this header and continue processing subsequent headers.
+			continue
 		}
 
 		for _, m := range currBag.Members() {

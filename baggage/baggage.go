@@ -465,9 +465,9 @@ func New(members ...Member) (Baggage, error) {
 // from the W3C Baggage specification which allows duplicate list-members, but
 // conforms to the OpenTelemetry Baggage specification.
 //
-// If the baggage-string exceeds the
-// maximum allowed members (64) or bytes (8192), the first N members that fit
-// within the limits are kept.
+// If the baggage-string exceeds the maximum allowed members (64) or bytes
+// (8192), the first N members that fit within the limits are kept and an
+// error is returned along with the partial result.
 func Parse(bStr string) (Baggage, error) {
 	if bStr == "" {
 		return Baggage{}, nil
@@ -475,9 +475,11 @@ func Parse(bStr string) (Baggage, error) {
 
 	b := make(baggage.List)
 	var totalBytes int
+	var truncateErr error
 	for memberStr := range strings.SplitSeq(bStr, listDelimiter) {
 		// Check member count limit.
 		if len(b) >= maxMembers {
+			truncateErr = errors.Join(truncateErr, errMemberNumber)
 			break
 		}
 
@@ -493,6 +495,7 @@ func Parse(bStr string) (Baggage, error) {
 			memberBytes++ // comma separator
 		}
 		if totalBytes+memberBytes > maxBytesPerBaggageString {
+			truncateErr = errors.Join(truncateErr, errBaggageBytes)
 			break
 		}
 
@@ -504,6 +507,9 @@ func Parse(bStr string) (Baggage, error) {
 		totalBytes += memberBytes
 	}
 
+	if truncateErr != nil {
+		return Baggage{b}, truncateErr
+	}
 	return Baggage{b}, nil
 }
 

@@ -207,7 +207,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    members{},
 		},
 		{
-			name: "multiple headers with one invalid stops at invalid",
+			name: "multiple headers with one invalid skips invalid and continues",
 			headers: []string{
 				"key1=val1",
 				"invalid-no-equals",
@@ -215,6 +215,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 			want: members{
 				{Key: "key1", Value: "val1"},
+				{Key: "key2", Value: "val2"},
 			},
 		},
 		{
@@ -271,7 +272,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
-			name: "stops at large member that exceeds byte limit",
+			name: "skips large member that exceeds byte limit and continues",
 			headers: []string{
 				"small1=v1,small2=v2",
 				"large=" + strings.Repeat("x", maxBytesPerBaggageString),
@@ -280,6 +281,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want: members{
 				{Key: "small1", Value: "v1"},
 				{Key: "small2", Value: "v2"},
+				{Key: "small3", Value: "v3"},
 			},
 		},
 	}
