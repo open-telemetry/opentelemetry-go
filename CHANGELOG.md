@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.24].
+The next release will require at least [Go 1.25].
+
+### Added
+
+- Support testing of [Go 1.26]. (TBD)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
