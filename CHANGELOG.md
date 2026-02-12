@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+
+### Fixed
+
+- Fix dropping entire exemplar when filtered attributes exceed the 128-rune limit.(#7883)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
