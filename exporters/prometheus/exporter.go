@@ -45,6 +45,11 @@ const (
 	exemplarRuneLimit = 128
 )
 
+var (
+	traceKeyLen = utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey)
+	spanKeyLen  = utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey)
+)
+
 var metricsPool = sync.Pool{
 	New: func() any {
 		return &metricdata.ResourceMetrics{}
@@ -784,8 +789,6 @@ func addExemplars[N int64 | float64](
 		return m
 	}
 	promExemplars := make([]prometheus.Exemplar, len(exemplars))
-	traceKeyLen := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey)
-	spanKeyLen := utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey)
 
 	for i, exemplar := range exemplars {
 		traceId := hex.EncodeToString(exemplar.TraceID)

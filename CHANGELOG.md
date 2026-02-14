@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.24].
+The next release will require at least [Go 1.25].
+
+### Added
+
+- Support testing of [Go 1.26]. (#7902)
 
 ### Fixed
 
@@ -47,8 +53,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `SetAttributes` on `Record` in `go.opentelemetry.io/otel/sdk/log` to not log that attributes are dropped when they are actually not dropped. (#7662)
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` to correctly handle HTTP/2 `GOAWAY` frame. (#7794)
 - `WithHostID` detector in `go.opentelemetry.io/otel/sdk/resource` to use full path for `ioreg` command on Darwin (macOS). (#7818)
-- Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` to correctly handle HTTP2 GOAWAY frame. (#7794)
-- Fix dropping entire exemplar when filtered attributes exceed the 128-rune limit.(#7883)
 
 ### Deprecated
 
@@ -3642,6 +3646,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
