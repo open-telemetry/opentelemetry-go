@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -25,6 +26,9 @@ var ErrReaderShutdown = errors.New("reader is shutdown")
 // errNonPositiveDuration is logged when an environmental variable
 // has non-positive value.
 var errNonPositiveDuration = errors.New("non-positive duration")
+
+// errUnknownInstrumentKind is logged when an unknown instrument kind is encountered.
+var errUnknownInstrumentKind = errors.New("unknown instrument kind")
 
 // Reader is the interface used between the SDK and an
 // exporter.  Control flow is bi-directional through the
@@ -58,6 +62,13 @@ type Reader interface {
 	// This method needs to be concurrent safe with itself and all the other
 	// Reader methods.
 	aggregation(InstrumentKind) Aggregation // nolint:revive  // import-shadow for method scoped by type.
+
+	// cardinalityLimit returns the cardinality limit for an instrument kind.
+	// A value of 0 or less means no limit is applied.
+	//
+	// This method needs to be concurrent safe with itself and all the other
+	// Reader methods.
+	cardinalityLimit(InstrumentKind) int
 
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK and stores it in rm. An error is returned if this is called
@@ -192,6 +203,85 @@ func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 	panic("unknown instrument kind")
 }
 
+// CardinalityLimitSelector selects the cardinality limit to use based on the
+// InstrumentKind. The cardinality limit is the maximum number of distinct
+// attribute sets that can be recorded for a single instrument.
+//
+// A return value of 0 means no limit is applied.
+type CardinalityLimitSelector struct {
+	defaultLimit int
+	counter int
+	gauge int
+	histogram int
+	upDownCounter int
+	observableCounter int
+	observableGauge int
+	observableUpDownCounter int
+	observableHistogram int
+}
+
+func (c *CardinalityLimitSelector) getLimit(kind InstrumentKind) int {
+	switch kind {
+	case InstrumentKindCounter:
+		return c.counter
+	case InstrumentKindGauge:
+		return c.gauge
+	case InstrumentKindHistogram:
+		return c.histogram
+	case InstrumentKindUpDownCounter:
+		return c.upDownCounter
+	case InstrumentKindObservableCounter:
+		return c.observableCounter
+	case InstrumentKindObservableGauge:
+		return c.observableGauge
+	case InstrumentKindObservableUpDownCounter:
+		return c.observableUpDownCounter
+	default:
+		global.Error(errUnknownInstrumentKind, "using default cardinality limit", "kind", kind)
+		return defaultCardinalityLimit
+	}
+}
+
+func (c *CardinalityLimitSelector) setLimit(kind InstrumentKind, limit int) {
+	switch kind {
+	case InstrumentKindCounter:
+		c.counter = limit
+	case InstrumentKindGauge:
+		c.gauge = limit
+	case InstrumentKindHistogram:
+		c.histogram = limit
+	case InstrumentKindUpDownCounter:
+		c.upDownCounter = limit
+	case InstrumentKindObservableCounter:
+		c.observableCounter = limit
+	case InstrumentKindObservableGauge:
+		c.observableGauge = limit
+	case InstrumentKindObservableUpDownCounter:
+		c.observableUpDownCounter = limit
+	default:
+		global.Error(errUnknownInstrumentKind, "ignoring")
+	}
+}
+
+// type CardinalityLimitSelector func(InstrumentKind) int
+
+// defaultCardinalityLimitSelector Returns 0 for kinds without an explicit limit,
+// allowing the pipeline to fall back to the provider's global limit.
+func defaultCardinalityLimitSelector() CardinalityLimitSelector {
+	// For all limits, 0 means unset, use default_limit
+	return CardinalityLimitSelector{
+		defaultLimit: defaultCardinalityLimit,
+		counter: 0,
+		gauge: 0,
+		histogram: 0,
+		upDownCounter: 0,
+		observableCounter: 0,
+		observableGauge: 0,
+		observableUpDownCounter: 0,
+		observableHistogram: 0,
+	}
+}
+
 // ReaderOption is an option which can be applied to manual or Periodic
 // readers.
 type ReaderOption interface {
@@ -218,5 +308,34 @@ func (o producerOption) applyManual(c manualReaderConfig) manualReaderConfig {
 // applyPeriodic returns a periodicReaderConfig with option applied.
 func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
 	c.producers = append(c.producers, o.p)
+	return c
+}
+
+// WithKindCardinalityLimit sets the cardinality limit for a specific instrument kind.
+// The cardinality limit is the maximum number of distinct attribute sets that
+// can be recorded for a single instrument.
+//
+// A limit of 0 or less means no limit is applied for that instrument kind.
+//
+// This option can be called multiple times to set different limits for
+// different instrument kinds.
+func WithKindCardinalityLimit(kind InstrumentKind, limit int) ReaderOption {
+	return cardinalityLimitOption{kind: kind, limit: limit}
+}
+
+type cardinalityLimitOption struct {
+	kind  InstrumentKind
+	limit int
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (o cardinalityLimitOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.cardinalityLimitSelector.setLimit(o.kind, o.limit)
+	return c
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (o cardinalityLimitOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
+	c.cardinalityLimitSelector.setLimit(o.kind, o.limit)
 	return c
 }
