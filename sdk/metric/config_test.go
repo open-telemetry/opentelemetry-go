@@ -46,7 +46,7 @@ func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }
 func (r *reader) cardinalityLimit(kind InstrumentKind) int {
-	return defaultCardinalityLimit
+	return r.cardinalityLimitFunc(kind)
 }
 
 func (r *reader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
