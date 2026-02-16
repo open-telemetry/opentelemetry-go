@@ -45,6 +45,7 @@ func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.e
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }
+
 func (r *reader) cardinalityLimit(kind InstrumentKind) int {
 	return r.cardinalityLimitFunc(kind)
 }
