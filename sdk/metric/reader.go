@@ -209,15 +209,15 @@ func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 //
 // A return value of 0 means no limit is applied.
 type CardinalityLimitSelector struct {
-	defaultLimit int
-	counter int
-	gauge int
-	histogram int
-	upDownCounter int
-	observableCounter int
-	observableGauge int
+	defaultLimit            int
+	counter                 int
+	gauge                   int
+	histogram               int
+	upDownCounter           int
+	observableCounter       int
+	observableGauge         int
 	observableUpDownCounter int
-	observableHistogram int
+	observableHistogram     int
 }
 
 func (c *CardinalityLimitSelector) getLimit(kind InstrumentKind) int {
@@ -270,15 +270,15 @@ func (c *CardinalityLimitSelector) setLimit(kind InstrumentKind, limit int) {
 func defaultCardinalityLimitSelector() CardinalityLimitSelector {
 	// For all limits, 0 means unset, use default_limit
 	return CardinalityLimitSelector{
-		defaultLimit: defaultCardinalityLimit,
-		counter: 0,
-		gauge: 0,
-		histogram: 0,
-		upDownCounter: 0,
-		observableCounter: 0,
-		observableGauge: 0,
+		defaultLimit:            defaultCardinalityLimit,
+		counter:                 0,
+		gauge:                   0,
+		histogram:               0,
+		upDownCounter:           0,
+		observableCounter:       0,
+		observableGauge:         0,
 		observableUpDownCounter: 0,
-		observableHistogram: 0,
+		observableHistogram:     0,
 	}
 }
 
