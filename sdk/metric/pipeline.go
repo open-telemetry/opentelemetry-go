@@ -421,11 +421,11 @@ func (i *inserter[N]) cachedAggregator(
 // If no limit is set for the instrument kind, the provider's global limit is used.
 // If no global limit is set, the default limit is used.
 func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
-	if limit := i.pipeline.reader.cardinalityLimit(kind); limit != 0 {
+	if limit := i.pipeline.reader.cardinalityLimit(kind); limit > 0 {
 		return limit
 	}
 	// Fall back to pipeline's global limit (from provider).
-	if i.pipeline.cardinalityLimit != 0 {
+	if i.pipeline.cardinalityLimit > 0 {
 		return i.pipeline.cardinalityLimit
 	}
 	// Fall back to default limit.
