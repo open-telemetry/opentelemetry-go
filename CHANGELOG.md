@@ -17,7 +17,9 @@ The next release will require at least [Go 1.25].
 
 ### Fixed
 
-- Return an error in OTLP/HTTP exporters (`otlploghttp`, `otlpmetrichttp`, and `otlptracehttp`) when configured with both insecure transport and TLS client configuration, which are incompatible. (#7914)
+- Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7914)
+- Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7914)
+- Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7914)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
