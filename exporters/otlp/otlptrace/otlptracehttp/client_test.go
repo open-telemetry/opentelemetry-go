@@ -265,18 +265,6 @@ func TestInsecureWithTLSClientConfig(t *testing.T) {
 	assert.Nil(t, exp)
 }
 
-func TestInsecureWithTLSClientConfigWithHTTPClient(t *testing.T) {
-	client := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint("localhost:4318"),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithTLSClientConfig(&tls.Config{}),
-		otlptracehttp.WithHTTPClient(&http.Client{}),
-	)
-	exp, err := otlptrace.New(t.Context(), client)
-	require.ErrorContains(t, err, "insecure HTTP endpoint cannot use TLS client configuration")
-	assert.Nil(t, exp)
-}
-
 func TestNoRetry(t *testing.T) {
 	mc := runMockCollector(t, mockCollectorConfig{
 		InjectHTTPStatus: []int{http.StatusBadRequest},

@@ -15,6 +15,10 @@ The next release will require at least [Go 1.25].
 
 - Support testing of [Go 1.26]. (#7902)
 
+### Fixed
+
+- Return an error in OTLP/HTTP exporters (`otlploghttp`, `otlpmetrichttp`, and `otlptracehttp`) when configured with both insecure transport and TLS client configuration, which are incompatible. (#7914)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
