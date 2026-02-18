@@ -541,7 +541,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 		assert.NoError(b, err)
 		return counter
 	}
-	var addOptPool = &sync.Pool{
+	addOptPool := &sync.Pool{
 		New: func() any {
 			const n = 1 // WithAttributeSet
 			o := make([]metric.AddOption, 0, n)
