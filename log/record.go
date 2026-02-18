@@ -4,8 +4,13 @@
 package log // import "go.opentelemetry.io/otel/log"
 
 import (
+	"fmt"
+	"reflect"
+	"runtime"
 	"slices"
 	"time"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 // attributesInlineCount is the number of attributes that are efficiently
@@ -138,6 +143,44 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 	r.back = append(r.back, attrs[i:]...)
 }
 
+// RecordException records err as exception attributes on the log record.
+//
+// Existing exception attributes are not overwritten.
+func (r *Record) RecordException(err error) {
+	if r == nil || err == nil {
+		return
+	}
+
+	var hasType, hasMessage, hasStacktrace bool
+	r.WalkAttributes(func(kv KeyValue) bool {
+		switch kv.Key {
+		case string(semconv.ExceptionTypeKey):
+			hasType = true
+		case string(semconv.ExceptionMessageKey):
+			hasMessage = true
+		case string(semconv.ExceptionStacktraceKey):
+			hasStacktrace = true
+		}
+		return !hasType || !hasMessage || !hasStacktrace
+	})
+
+	attrs := make([]KeyValue, 0, 3)
+	if !hasType {
+		attrs = append(attrs, String(string(semconv.ExceptionTypeKey), typeStr(err)))
+	}
+	if !hasMessage {
+		attrs = append(attrs, String(string(semconv.ExceptionMessageKey), err.Error()))
+	}
+	if !hasStacktrace {
+		attrs = append(attrs, String(string(semconv.ExceptionStacktraceKey), stackTrace()))
+	}
+
+	if len(attrs) == 0 {
+		return
+	}
+	r.AddAttributes(attrs...)
+}
+
 // AttributesLen returns the number of attributes in the log record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
@@ -149,4 +192,19 @@ func (r *Record) Clone() Record {
 	res := *r
 	res.back = slices.Clone(r.back)
 	return res
+}
+
+func typeStr(i any) string {
+	t := reflect.TypeOf(i)
+	if t.PkgPath() == "" && t.Name() == "" {
+		// Likely a builtin type.
+		return t.String()
+	}
+	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+}
+
+func stackTrace() string {
+	buf := make([]byte, 2048)
+	n := runtime.Stack(buf, false)
+	return string(buf[:n])
 }
