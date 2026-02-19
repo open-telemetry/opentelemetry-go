@@ -17,7 +17,9 @@ The next release will require at least [Go 1.25].
 
 ### Fixed
 
-- Update `Baggage` in `go.opentelemetry.io/otel/propagation` and `Parse` in `go.opentelemetry.io/otel/baggage` to comply with W3C Baggage specification limits. (#7880)
+- Update `Baggage` in `go.opentelemetry.io/otel/propagation` and `Parse` and `New` in `go.opentelemetry.io/otel/baggage` to comply with W3C Baggage specification limits.
+  `New` and `Parse` now return partial baggage along with an error when limits are exceeded.
+  Errors from baggage extraction are reported to the global error handler. (#7880)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
