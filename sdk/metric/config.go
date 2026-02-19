@@ -25,7 +25,7 @@ type config struct {
 	cardinalityLimit int
 }
 
-const defaultCardinalityLimit = 2000
+const defaultCardinalityLimit = 0
 
 // readerSignals returns a force-flush and shutdown function for a
 // MeterProvider to call in their respective options. All Readers c contains
