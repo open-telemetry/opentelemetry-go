@@ -248,6 +248,9 @@ func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConf
 // use to determine the cardinality limit for an instrument based on its kind.
 // If this option is not used, the reader will use the
 // DefaultCardinalityLimitSelector.
+//
+// The selector should return 0 for instrument kinds that should fall back to
+// the provider's global cardinality limit.
 func WithCardinalityLimitSelector(selector CardinalityLimitSelector) ReaderOption {
 	return cardinalityLimitSelectorOption{selector: selector}
 }
