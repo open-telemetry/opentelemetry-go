@@ -27,10 +27,15 @@ type lastValueMap[N int64 | float64] struct {
 func (s *lastValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	fltrAttrSet attribute.Set,
+	fltrAttrs []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	lv := s.values.LoadOrStoreAttr(fltrAttrSet.Equivalent(), func(overflow bool) any {
+		attr := overflowSet
+		if !overflow {
+			attr = fltrAttrSet
+		}
 		return &lastValuePoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -73,12 +78,13 @@ type deltaLastValue[N int64 | float64] struct {
 func (s *deltaLastValue[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	fltrAttrSet attribute.Set,
+	fltrAttrs []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttrSet, fltrAttrs, droppedAttr)
 }
 
 func (s *deltaLastValue[N]) collect(
