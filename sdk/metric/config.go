@@ -166,7 +166,7 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // that can be collected for a single instrument in a single collect cycle.
 //
 // Setting this to a zero or negative value means no limit is applied.
-// This value applies to all instrument kinds, but can be overridden by individual instrument kind limits.
+// This value applies to all instrument kinds, but can be overridden by [WithKindCardinalityLimit].
 func WithCardinalityLimit(limit int) Option {
 	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
 	// can also be used to set this value.
