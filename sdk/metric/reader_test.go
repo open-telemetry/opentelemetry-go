@@ -237,6 +237,62 @@ var testScopeMetricsB = metricdata.ScopeMetrics{
 	}},
 }
 
+var (
+	ts1 = time.Now()
+	ts2 = time.Now()
+	ts3 = time.Now()
+)
+
+var testScopeMetricsC1 = metricdata.ScopeMetrics{
+	Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+	Metrics: []metricdata.Metrics{{
+		Name:        "metric1",
+		Description: "first of multiple metrics",
+		Unit:        "ms",
+		Data: metricdata.Gauge[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{{
+				Attributes: attribute.NewSet(attribute.String("user", "david")),
+				StartTime:  ts1,
+				Time:       ts1.Add(time.Second),
+				Value:      1,
+			}},
+		},
+	}, {
+		Name:        "metric2",
+		Description: "second of multiple metrics",
+		Unit:        "ms",
+		Data: metricdata.Gauge[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{
+				{
+					Attributes: attribute.NewSet(attribute.String("user", "tyler")),
+					StartTime:  ts2,
+					Time:       ts2.Add(time.Second),
+					Value:      10,
+				},
+			},
+		},
+	}},
+}
+
+var testScopeMetricsC2 = metricdata.ScopeMetrics{
+	Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+	Metrics: []metricdata.Metrics{{
+		Name:        "metric2",
+		Description: "second of multiple metrics",
+		Unit:        "ms",
+		Data: metricdata.Gauge[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{
+				{
+					Attributes: attribute.NewSet(attribute.String("user", "robert")),
+					StartTime:  ts3,
+					Time:       ts3.Add(time.Second),
+					Value:      100,
+				},
+			},
+		},
+	}},
+}
+
 var testResourceMetricsA = metricdata.ResourceMetrics{
 	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
 	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA},
@@ -245,6 +301,16 @@ var testResourceMetricsA = metricdata.ResourceMetrics{
 var testResourceMetricsAB = metricdata.ResourceMetrics{
 	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
 	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA, testScopeMetricsB},
+}
+
+var testResourceMetricsC1 = metricdata.ResourceMetrics{
+	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
+	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsC1},
+}
+
+var testResourceMetricsC2 = metricdata.ResourceMetrics{
+	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
+	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsC2},
 }
 
 type testSDKProducer struct {
