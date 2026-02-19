@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/internal/errorhandler"
 )
 
 const (
@@ -55,7 +56,10 @@ func extractSingleBaggage(parent context.Context, carrier TextMapCarrier) contex
 		return parent
 	}
 
-	bag, _ := baggage.Parse(bStr)
+	bag, err := baggage.Parse(bStr)
+	if err != nil {
+		errorhandler.GetErrorHandler().Handle(err)
+	}
 	if bag.Len() == 0 {
 		return parent
 	}
@@ -80,7 +84,10 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 			break
 		}
 
-		currBag, _ := baggage.Parse(bStr)
+		currBag, err := baggage.Parse(bStr)
+		if err != nil {
+			errorhandler.GetErrorHandler().Handle(err)
+		}
 		if currBag.Len() == 0 {
 			// Header produced no members (invalid format or exceeded limits).
 			// Skip this header and continue processing subsequent headers.
@@ -111,7 +118,10 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	}
 
 	b, err := baggage.New(members...)
-	if err != nil || b.Len() == 0 {
+	if err != nil {
+		errorhandler.GetErrorHandler().Handle(err)
+	}
+	if b.Len() == 0 {
 		return parent
 	}
 	return baggage.ContextWithBaggage(parent, b)
