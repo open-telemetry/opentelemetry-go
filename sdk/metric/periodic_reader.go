@@ -39,7 +39,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 		interval: envDuration(envInterval, defaultInterval),
 		timeout:  envDuration(envTimeout, defaultTimeout),
 	}
-	c.cardinalityLimitSelector = defaultCardinalityLimitSelector()
+	c.cardinalityLimitSelector = DefaultCardinalityLimitSelector
 	for _, o := range options {
 		c = o.applyPeriodic(c)
 	}
@@ -227,7 +227,7 @@ func (r *PeriodicReader) aggregation(
 
 // cardinalityLimit returns the cardinality limit for kind.
 func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) int {
-	return r.cardinalityLimitSelector.getLimit(kind)
+	return r.cardinalityLimitSelector(kind)
 }
 
 // collectAndExport gather all metric data related to the periodicReader r from

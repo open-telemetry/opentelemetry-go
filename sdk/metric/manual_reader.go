@@ -93,7 +93,7 @@ func (mr *ManualReader) aggregation(
 
 // cardinalityLimit returns the cardinality limit for kind.
 func (mr *ManualReader) cardinalityLimit(kind InstrumentKind) int {
-	return mr.cardinalityLimitSelector.getLimit(kind)
+	return mr.cardinalityLimitSelector(kind)
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
@@ -195,10 +195,10 @@ type manualReaderConfig struct {
 // newManualReaderConfig returns a manualReaderConfig configured with options.
 func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 	cfg := manualReaderConfig{
-		temporalitySelector: DefaultTemporalitySelector,
-		aggregationSelector: DefaultAggregationSelector,
+		temporalitySelector:      DefaultTemporalitySelector,
+		aggregationSelector:      DefaultAggregationSelector,
+		cardinalityLimitSelector: DefaultCardinalityLimitSelector,
 	}
-	cfg.cardinalityLimitSelector = defaultCardinalityLimitSelector()
 	for _, opt := range opts {
 		cfg = opt.applyManual(cfg)
 	}
