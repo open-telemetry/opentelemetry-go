@@ -264,8 +264,11 @@ func TestNewBaggageErrorTooManyBytes(t *testing.T) {
 	for i := range m {
 		m[i] = Member{key: key(keySize), hasData: true}
 	}
-	_, err := New(m...)
+	b, err := New(m...)
 	assert.ErrorIs(t, err, errBaggageBytes)
+	// Partial result should contain members that fit within the byte limit.
+	assert.Greater(t, b.Len(), 0, "should return partial baggage")
+	assert.LessOrEqual(t, len(b.String()), maxBytesPerBaggageString, "partial baggage should be within byte limit")
 }
 
 func TestNewBaggageErrorTooManyMembers(t *testing.T) {
@@ -273,8 +276,10 @@ func TestNewBaggageErrorTooManyMembers(t *testing.T) {
 	for i := range m {
 		m[i] = Member{key: fmt.Sprintf("%d", i), hasData: true}
 	}
-	_, err := New(m...)
+	b, err := New(m...)
 	assert.ErrorIs(t, err, errMemberNumber)
+	// Partial result should contain exactly maxMembers.
+	assert.Equal(t, maxMembers, b.Len(), "should return first %d members", maxMembers)
 }
 
 func TestBaggageParse(t *testing.T) {

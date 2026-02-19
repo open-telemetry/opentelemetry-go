@@ -424,6 +424,10 @@ type Baggage struct { //nolint:golint
 // New returns a new valid Baggage. It returns an error if it results in a
 // Baggage exceeding limits set in that specification.
 //
+// If the resulting Baggage exceeds the maximum allowed members or bytes, the
+// first N members that fit within the limits are kept and an error is returned
+// along with the partial result.
+//
 // It expects all the provided members to have already been validated.
 func New(members ...Member) (Baggage, error) {
 	if len(members) == 0 {
@@ -431,29 +435,49 @@ func New(members ...Member) (Baggage, error) {
 	}
 
 	b := make(baggage.List)
+	// Track insertion order for deterministic truncation.
+	var keys []string
 	for _, m := range members {
 		if !m.hasData {
 			return Baggage{}, errInvalidMember
 		}
 
 		// OpenTelemetry resolves duplicates by last-one-wins.
+		if _, exists := b[m.key]; !exists {
+			keys = append(keys, m.key)
+		}
 		b[m.key] = baggage.Item{
 			Value:      m.value,
 			Properties: m.properties.asInternal(),
 		}
 	}
 
-	// Check member numbers after deduplication.
+	var truncateErr error
+
+	// Check member count after deduplication.
 	if len(b) > maxMembers {
-		return Baggage{}, errMemberNumber
+		truncateErr = errors.Join(truncateErr, errMemberNumber)
+		// Keep the first maxMembers keys.
+		for _, k := range keys[maxMembers:] {
+			delete(b, k)
+		}
+		keys = keys[:maxMembers]
 	}
 
+	// Check byte size.
 	bag := Baggage{b}
 	if n := len(bag.String()); n > maxBytesPerBaggageString {
-		return Baggage{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
+		truncateErr = errors.Join(truncateErr, fmt.Errorf("%w: %d", errBaggageBytes, n))
+		// Remove members from the end until the baggage fits.
+		for len(keys) > 0 && len(bag.String()) > maxBytesPerBaggageString {
+			last := keys[len(keys)-1]
+			delete(b, last)
+			keys = keys[:len(keys)-1]
+			bag = Baggage{b}
+		}
 	}
 
-	return bag, nil
+	return Baggage{b}, truncateErr
 }
 
 // Parse attempts to decode a baggage-string from the passed string. It
