@@ -49,7 +49,7 @@ func TestSetErrorHandler(t *testing.T) {
 			t.Fatal("Global ErrorHandler should be the default ErrorHandler")
 		}
 
-		if eh.delegate.Load() != nil {
+		if eh.Delegate.Load() != nil {
 			t.Fatal("ErrorHandler should not delegate when setting itself")
 		}
 	})
@@ -76,7 +76,7 @@ func TestSetErrorHandler(t *testing.T) {
 			t.Fatal("Wrong ErrorHandler returned")
 		}
 
-		if errDel.delegate.Load() == nil {
+		if errDel.Delegate.Load() == nil {
 			t.Fatal("The ErrDelegator should have a delegate")
 		}
 	})

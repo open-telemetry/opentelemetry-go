@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package global
+package errorhandler
 
 import (
 	"bytes"
@@ -38,3 +38,7 @@ func TestErrDelegator(t *testing.T) {
 		t.Error("error not passed to delegate")
 	}
 }
+
+type fnErrHandler func(error)
+
+func (f fnErrHandler) Handle(err error) { f(err) }

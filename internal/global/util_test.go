@@ -6,17 +6,18 @@ package global
 import (
 	"sync"
 	"testing"
+
+	"go.opentelemetry.io/otel/internal/errorhandler"
 )
 
 // ResetForTest configures the test to restores the initial global state during
 // its Cleanup step.
 func ResetForTest(t testing.TB) {
+	errorhandler.ResetForTest(t)
 	t.Cleanup(func() {
-		globalErrorHandler = defaultErrorHandler()
 		globalTracer = defaultTracerValue()
 		globalPropagators = defaultPropagatorsValue()
 		globalMeterProvider = defaultMeterProvider()
-		delegateErrorHandlerOnce = sync.Once{}
 		delegateTraceOnce = sync.Once{}
 		delegateTextMapPropagatorOnce = sync.Once{}
 		delegateMeterOnce = sync.Once{}
