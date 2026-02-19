@@ -464,16 +464,38 @@ func New(members ...Member) (Baggage, error) {
 		keys = keys[:maxMembers]
 	}
 
+	// Pre-compute each member's serialized byte size for deterministic,
+	// O(n) byte-size truncation. This avoids calling Baggage.String() in
+	// a loop (which would be O(n²) and non-deterministic due to map
+	// iteration order).
+	memberSize := make([]int, len(keys))
+	totalBytes := 0
+	for i, k := range keys {
+		m := Member{
+			key:        k,
+			value:      b[k].Value,
+			properties: fromInternalProperties(b[k].Properties),
+		}
+		memberSize[i] = len(m.String())
+		if i > 0 {
+			totalBytes++ // comma separator
+		}
+		totalBytes += memberSize[i]
+	}
+
 	// Check byte size.
-	bag := Baggage{b}
-	if n := len(bag.String()); n > maxBytesPerBaggageString {
-		truncateErr = errors.Join(truncateErr, fmt.Errorf("%w: %d", errBaggageBytes, n))
+	if totalBytes > maxBytesPerBaggageString {
+		truncateErr = errors.Join(truncateErr, fmt.Errorf("%w: %d", errBaggageBytes, totalBytes))
 		// Remove members from the end until the baggage fits.
-		for len(keys) > 0 && len(bag.String()) > maxBytesPerBaggageString {
+		for len(keys) > 0 && totalBytes > maxBytesPerBaggageString {
 			last := keys[len(keys)-1]
+			totalBytes -= memberSize[len(keys)-1]
+			if len(keys) > 1 {
+				totalBytes-- // comma separator
+			}
 			delete(b, last)
 			keys = keys[:len(keys)-1]
-			bag = Baggage{b}
+			memberSize = memberSize[:len(keys)]
 		}
 	}
 
@@ -531,10 +553,7 @@ func Parse(bStr string) (Baggage, error) {
 		totalBytes += memberBytes
 	}
 
-	if truncateErr != nil {
-		return Baggage{b}, truncateErr
-	}
-	return Baggage{b}, nil
+	return Baggage{b}, truncateErr
 }
 
 // Member returns the baggage list-member identified by key.
