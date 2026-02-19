@@ -75,7 +75,7 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
 	// "If either of the above conditions is not met, a platform MAY drop
 	// list-members until both conditions are met."
-	// We keep the first N complete members that fit within the limits.
+	// We drop members until both conditions are met.
 	var members []baggage.Member
 	var totalBytes int
 	limitReached := false

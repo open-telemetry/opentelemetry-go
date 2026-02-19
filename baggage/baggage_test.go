@@ -474,7 +474,11 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid member: empty",
 			in:   "foo=,,bar=",
-			err:  errInvalidMember,
+			want: baggage.List{
+				"foo": {},
+				"bar": {},
+			},
+			err: errInvalidMember,
 		},
 		{
 			name: "invalid member: no key",

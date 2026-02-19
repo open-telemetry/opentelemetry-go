@@ -96,7 +96,10 @@ func TestExtractValidBaggage(t *testing.T) {
 		{
 			name:   "valid header with an invalid header",
 			header: "key1=val1,key2=val2,a,val3",
-			want:   members{},
+			want: members{
+				{Key: "key1", Value: "val1"},
+				{Key: "key2", Value: "val2"},
+			},
 		},
 		{
 			name:   "valid header with no value",
@@ -204,7 +207,10 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 		{
 			name:    "single header with one invalid skips invalid",
 			headers: []string{"key1=val1,invalid-no-equals,key2=val2"},
-			want:    members{},
+			want: members{
+				{Key: "key1", Value: "val1"},
+				{Key: "key2", Value: "val2"},
+			},
 		},
 		{
 			name: "multiple headers with one invalid skips invalid and continues",

@@ -424,8 +424,8 @@ type Baggage struct { //nolint:golint
 // New returns a new valid Baggage. It returns an error if it results in a
 // Baggage exceeding limits set in that specification.
 //
-// If the resulting Baggage exceeds the maximum allowed members or bytes, the
-// first N members that fit within the limits are kept and an error is returned
+// If the resulting Baggage exceeds the maximum allowed members or bytes,
+// members are dropped until the limits are satisfied and an error is returned
 // along with the partial result.
 //
 // It expects all the provided members to have already been validated.
@@ -435,17 +435,11 @@ func New(members ...Member) (Baggage, error) {
 	}
 
 	b := make(baggage.List)
-	// Track insertion order for deterministic truncation.
-	var keys []string
 	for _, m := range members {
 		if !m.hasData {
 			return Baggage{}, errInvalidMember
 		}
-
 		// OpenTelemetry resolves duplicates by last-one-wins.
-		if _, exists := b[m.key]; !exists {
-			keys = append(keys, m.key)
-		}
 		b[m.key] = baggage.Item{
 			Value:      m.value,
 			Properties: m.properties.asInternal(),
@@ -457,45 +451,44 @@ func New(members ...Member) (Baggage, error) {
 	// Check member count after deduplication.
 	if len(b) > maxMembers {
 		truncateErr = errors.Join(truncateErr, errMemberNumber)
-		// Keep the first maxMembers keys.
-		for _, k := range keys[maxMembers:] {
+		for k := range b {
+			if len(b) <= maxMembers {
+				break
+			}
 			delete(b, k)
 		}
-		keys = keys[:maxMembers]
 	}
 
-	// Pre-compute each member's serialized byte size for deterministic,
-	// O(n) byte-size truncation. This avoids calling Baggage.String() in
-	// a loop (which would be O(n²) and non-deterministic due to map
-	// iteration order).
-	memberSize := make([]int, len(keys))
+	// Pre-compute each member's serialized byte size.
+	sizes := make(map[string]int, len(b))
 	totalBytes := 0
-	for i, k := range keys {
+	first := true
+	for k := range b {
 		m := Member{
 			key:        k,
 			value:      b[k].Value,
 			properties: fromInternalProperties(b[k].Properties),
 		}
-		memberSize[i] = len(m.String())
-		if i > 0 {
+		sizes[k] = len(m.String())
+		if !first {
 			totalBytes++ // comma separator
 		}
-		totalBytes += memberSize[i]
+		totalBytes += sizes[k]
+		first = false
 	}
 
-	// Check byte size.
 	if totalBytes > maxBytesPerBaggageString {
 		truncateErr = errors.Join(truncateErr, fmt.Errorf("%w: %d", errBaggageBytes, totalBytes))
-		// Remove members from the end until the baggage fits.
-		for len(keys) > 0 && totalBytes > maxBytesPerBaggageString {
-			last := keys[len(keys)-1]
-			totalBytes -= memberSize[len(keys)-1]
-			if len(keys) > 1 {
-				totalBytes-- // comma separator
+		for k := range b {
+			size := sizes[k]
+			if len(b) > 1 {
+				size++ // comma separator
 			}
-			delete(b, last)
-			keys = keys[:len(keys)-1]
-			memberSize = memberSize[:len(keys)]
+			totalBytes -= size
+			delete(b, k)
+			if totalBytes <= maxBytesPerBaggageString {
+				break
+			}
 		}
 	}
 
@@ -512,8 +505,11 @@ func New(members ...Member) (Baggage, error) {
 // conforms to the OpenTelemetry Baggage specification.
 //
 // If the baggage-string exceeds the maximum allowed members (64) or bytes
-// (8192), the first N members that fit within the limits are kept and an
-// error is returned along with the partial result.
+// (8192), members are dropped until the limits are satisfied and an error is
+// returned along with the partial result.
+//
+// Invalid members are skipped and the error is returned along with the
+// partial result containing the valid members.
 func Parse(bStr string) (Baggage, error) {
 	if bStr == "" {
 		return Baggage{}, nil
@@ -531,7 +527,8 @@ func Parse(bStr string) (Baggage, error) {
 
 		m, err := parseMember(memberStr)
 		if err != nil {
-			return Baggage{}, err
+			truncateErr = errors.Join(truncateErr, err)
+			continue // skip invalid member, keep processing
 		}
 
 		// Check byte size limit.
@@ -553,6 +550,9 @@ func Parse(bStr string) (Baggage, error) {
 		totalBytes += memberBytes
 	}
 
+	if len(b) == 0 {
+		return Baggage{}, truncateErr
+	}
 	return Baggage{b}, truncateErr
 }
 
