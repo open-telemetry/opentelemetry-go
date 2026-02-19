@@ -21,25 +21,24 @@ type ErrorHandler interface {
 	Handle(error)
 }
 
-// ErrDelegator delegates error handling to a wrapped ErrorHandler.
 type ErrDelegator struct {
-	Delegate atomic.Pointer[ErrorHandler]
+	delegate atomic.Pointer[ErrorHandler]
 }
 
-// Compile-time check that ErrDelegator implements ErrorHandler.
+// Compile-time check that delegator implements ErrorHandler.
 var _ ErrorHandler = (*ErrDelegator)(nil)
 
 func (d *ErrDelegator) Handle(err error) {
-	if eh := d.Delegate.Load(); eh != nil {
+	if eh := d.delegate.Load(); eh != nil {
 		(*eh).Handle(err)
 		return
 	}
 	log.Print(err)
 }
 
-// SetDelegate sets the ErrorHandler delegate.
-func (d *ErrDelegator) SetDelegate(eh ErrorHandler) {
-	d.Delegate.Store(&eh)
+// setDelegate sets the ErrorHandler delegate.
+func (d *ErrDelegator) setDelegate(eh ErrorHandler) {
+	d.delegate.Store(&eh)
 }
 
 type errorHandlerHolder struct {
@@ -84,7 +83,7 @@ func SetErrorHandler(h ErrorHandler) {
 
 	delegateErrorHandlerOnce.Do(func() {
 		if def, ok := current.(*ErrDelegator); ok {
-			def.SetDelegate(h)
+			def.setDelegate(h)
 		}
 	})
 	globalErrorHandler.Store(errorHandlerHolder{eh: h})

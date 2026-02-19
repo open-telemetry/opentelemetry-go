@@ -267,7 +267,7 @@ func TestNewBaggageErrorTooManyBytes(t *testing.T) {
 	b, err := New(m...)
 	assert.ErrorIs(t, err, errBaggageBytes)
 	// Partial result should contain members that fit within the byte limit.
-	assert.Greater(t, b.Len(), 0, "should return partial baggage")
+	assert.Positive(t, b.Len(), "should return partial baggage")
 	assert.LessOrEqual(t, len(b.String()), maxBytesPerBaggageString, "partial baggage should be within byte limit")
 }
 
