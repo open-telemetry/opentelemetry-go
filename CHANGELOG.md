@@ -17,7 +17,7 @@ The next release will require at least [Go 1.25].
 
 ### Fixed
 
-- Fix unbounded memory growth in exemplar storage in `go.opentelemetry.io/otel/sdk/metric` caused by slice capacity never shrinking after spikes in high-cardinality scenarios. (#XXXX)
+- Fix unbounded memory growth in exemplar storage in `go.opentelemetry.io/otel/sdk/metric` caused by slice capacity never shrinking after spikes in high-cardinality scenarios. (#7937)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
