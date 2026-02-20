@@ -5,12 +5,15 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -113,5 +116,67 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		return true
 	})
 
+	addExceptionFromError(&newRecord, r.GetError())
+
 	return newRecord
+}
+
+type stackTracer interface {
+	StackTrace() fmt.Formatter
+}
+
+func addExceptionFromError(r *Record, err error) {
+	if r == nil || err == nil {
+		return
+	}
+
+	var hasType, hasMessage, hasStacktrace bool
+	r.WalkAttributes(func(kv log.KeyValue) bool {
+		switch kv.Key {
+		case string(semconv.ExceptionTypeKey):
+			hasType = true
+		case string(semconv.ExceptionMessageKey):
+			hasMessage = true
+		case string(semconv.ExceptionStacktraceKey):
+			hasStacktrace = true
+		}
+		return !hasType || !hasMessage || !hasStacktrace
+	})
+
+	attrs := make([]log.KeyValue, 0, 3)
+	if !hasType {
+		attrs = append(attrs, log.String(string(semconv.ExceptionTypeKey), errorType(err)))
+	}
+	if !hasMessage {
+		attrs = append(attrs, log.String(string(semconv.ExceptionMessageKey), err.Error()))
+	}
+	if !hasStacktrace {
+		if st := errorStackTrace(err); st != "" {
+			attrs = append(attrs, log.String(string(semconv.ExceptionStacktraceKey), st))
+		}
+	}
+
+	if len(attrs) == 0 {
+		return
+	}
+	r.AddAttributes(attrs...)
+}
+
+func errorType(err error) string {
+	t := reflect.TypeOf(err)
+	if t == nil {
+		return ""
+	}
+	if t.PkgPath() == "" && t.Name() == "" {
+		// Likely a builtin type.
+		return t.String()
+	}
+	return fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+}
+
+func errorStackTrace(err error) string {
+	if st, ok := err.(stackTracer); ok {
+		return fmt.Sprintf("%+v", st.StackTrace())
+	}
+	return ""
 }

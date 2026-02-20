@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -312,6 +313,88 @@ func TestLoggerEmit(t *testing.T) {
 			assert.Equal(t, tc.expectedRecords, p1.records)
 		})
 	}
+}
+
+type testStackTrace string
+
+func (tst testStackTrace) Format(f fmt.State, _ rune) {
+	_, _ = f.Write([]byte(tst))
+}
+
+type stackErr struct{ msg string }
+
+func (e stackErr) Error() string { return e.msg }
+
+func (e stackErr) StackTrace() fmt.Formatter { return testStackTrace("stack") }
+
+func TestAddExceptionFromError(t *testing.T) {
+	t.Run("AddsMissing", func(t *testing.T) {
+		r := &Record{}
+		r.attributeValueLengthLimit = -1
+		addExceptionFromError(r, errors.New("boom"))
+
+		var gotType, gotMessage, gotStack string
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			case string(semconv.ExceptionStacktraceKey):
+				gotStack = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "*errors.errorString", gotType)
+		assert.Equal(t, "boom", gotMessage)
+		assert.Empty(t, gotStack)
+	})
+
+	t.Run("AddsStacktraceWhenAvailable", func(t *testing.T) {
+		r := &Record{}
+		r.attributeValueLengthLimit = -1
+		addExceptionFromError(r, stackErr{msg: "boom"})
+
+		var gotStack string
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			if kv.Key == string(semconv.ExceptionStacktraceKey) {
+				gotStack = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "stack", gotStack)
+	})
+
+	t.Run("DoesNotOverwrite", func(t *testing.T) {
+		r := &Record{}
+		r.attributeValueLengthLimit = -1
+		r.AddAttributes(
+			log.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			log.String(string(semconv.ExceptionMessageKey), "existing.message"),
+			log.String(string(semconv.ExceptionStacktraceKey), "existing.stack"),
+		)
+
+		addExceptionFromError(r, stackErr{msg: "boom"})
+
+		var gotType, gotMessage, gotStack string
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			case string(semconv.ExceptionStacktraceKey):
+				gotStack = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "existing.type", gotType)
+		assert.Equal(t, "existing.message", gotMessage)
+		assert.Equal(t, "existing.stack", gotStack)
+	})
 }
 
 func TestLoggerEnabled(t *testing.T) {

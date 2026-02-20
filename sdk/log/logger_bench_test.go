@@ -4,6 +4,8 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 func BenchmarkLoggerEmit(b *testing.B) {
@@ -117,6 +120,66 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 	}
 
 	_ = enabled
+}
+
+type benchStackTrace string
+
+func (bst benchStackTrace) Format(f fmt.State, _ rune) {
+	_, _ = f.Write([]byte(bst))
+}
+
+type benchStackErr struct{ msg string }
+
+func (e benchStackErr) Error() string { return e.msg }
+
+func (e benchStackErr) StackTrace() fmt.Formatter { return benchStackTrace("stack") }
+
+func BenchmarkLoggerEmitExceptionAttributes(b *testing.B) {
+	logger := newTestLogger(b)
+
+	base := log.Record{}
+	base.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
+	base.SetObservedTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
+	base.SetBody(log.StringValue("testing body value"))
+	base.SetSeverity(log.SeverityInfo)
+	base.SetSeverityText("testing text")
+
+	manualErr := errors.New("boom")
+	manual := base
+	manual.AddAttributes(
+		log.String(string(semconv.ExceptionTypeKey), errorType(manualErr)),
+		log.String(string(semconv.ExceptionMessageKey), manualErr.Error()),
+	)
+
+	withErr := base
+	withErr.SetError(manualErr)
+
+	stackErr := benchStackErr{msg: "boom"}
+	manualStack := base
+	manualStack.AddAttributes(
+		log.String(string(semconv.ExceptionTypeKey), errorType(stackErr)),
+		log.String(string(semconv.ExceptionMessageKey), stackErr.Error()),
+		log.String(string(semconv.ExceptionStacktraceKey), "stack"),
+	)
+
+	withStack := base
+	withStack.SetError(stackErr)
+
+	run := func(r log.Record) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					logger.Emit(b.Context(), r)
+				}
+			})
+		}
+	}
+
+	b.Run("Manual", run(manual))
+	b.Run("SetError", run(withErr))
+	b.Run("ManualWithStack", run(manualStack))
+	b.Run("SetErrorWithStack", run(withStack))
 }
 
 func newTestLogger(t testing.TB) log.Logger {

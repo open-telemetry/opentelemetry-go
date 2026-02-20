@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -223,77 +222,15 @@ func TestRecordClone(t *testing.T) {
 	assert.Contains(t, r1Attrs, attr1)
 }
 
-func TestRecordRecordException(t *testing.T) {
+func TestSetError(t *testing.T) {
 	err := assert.AnError
 
 	var r log.Record
-	r.RecordException(err)
+	assert.Nil(t, r.GetError())
 
-	var got []log.KeyValue
-	r.WalkAttributes(func(kv log.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
+	r.SetError(err)
+	assert.Same(t, err, r.GetError())
 
-	var hasType, hasMessage, hasStacktrace bool
-	for _, kv := range got {
-		switch kv.Key {
-		case string(semconv.ExceptionTypeKey):
-			hasType = kv.Value.AsString() != ""
-		case string(semconv.ExceptionMessageKey):
-			hasMessage = kv.Value.AsString() == err.Error()
-		case string(semconv.ExceptionStacktraceKey):
-			hasStacktrace = kv.Value.AsString() != ""
-		}
-	}
-
-	assert.True(t, hasType, "exception.type missing")
-	assert.True(t, hasMessage, "exception.message missing")
-	assert.True(t, hasStacktrace, "exception.stacktrace missing")
-}
-
-func TestRecordRecordExceptionDoesNotOverwrite(t *testing.T) {
-	err := assert.AnError
-
-	var r log.Record
-	r.AddAttributes(
-		log.String(string(semconv.ExceptionTypeKey), "existing.type"),
-		log.String(string(semconv.ExceptionMessageKey), "existing.message"),
-		log.String(string(semconv.ExceptionStacktraceKey), "existing.stack"),
-	)
-
-	r.RecordException(err)
-
-	var gotType, gotMessage, gotStack string
-	r.WalkAttributes(func(kv log.KeyValue) bool {
-		switch kv.Key {
-		case string(semconv.ExceptionTypeKey):
-			gotType = kv.Value.AsString()
-		case string(semconv.ExceptionMessageKey):
-			gotMessage = kv.Value.AsString()
-		case string(semconv.ExceptionStacktraceKey):
-			gotStack = kv.Value.AsString()
-		}
-		return true
-	})
-
-	assert.Equal(t, "existing.type", gotType)
-	assert.Equal(t, "existing.message", gotMessage)
-	assert.Equal(t, "existing.stack", gotStack)
-}
-
-func TestRecordRecordExceptionNilSafe(t *testing.T) {
-	var r *log.Record
-	r.RecordException(assert.AnError)
-
-	var r2 log.Record
-	r2.RecordException(nil)
-
-	// No panic and no attributes added.
-	var got []log.KeyValue
-	r2.WalkAttributes(func(kv log.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
-	assert.Empty(t, got)
+	r.SetError(nil)
+	assert.Nil(t, r.GetError())
 }
