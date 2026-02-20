@@ -221,3 +221,16 @@ func TestRecordClone(t *testing.T) {
 	assert.Contains(t, r1Attrs, attr0)
 	assert.Contains(t, r1Attrs, attr1)
 }
+
+func TestSetError(t *testing.T) {
+	err := assert.AnError
+
+	var r log.Record
+	assert.NoError(t, r.GetError())
+
+	r.SetError(err)
+	assert.Same(t, err, r.GetError())
+
+	r.SetError(nil)
+	assert.NoError(t, r.GetError())
+}
