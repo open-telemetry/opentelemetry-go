@@ -544,6 +544,33 @@ func TestBaggageParse(t *testing.T) {
 			err: errMemberNumber,
 		},
 		{
+			name: "baggage string exceeds byte limit returns partial result",
+			in: func() string {
+				// Create members that collectively exceed maxBytesPerBaggageString.
+				// Each member: "kN=" + value. We use values large enough that
+				// a few members fit but the total exceeds 8192 bytes.
+				var parts []string
+				val := strings.Repeat("v", 2000)
+				for i := range 10 {
+					parts = append(parts, fmt.Sprintf("k%d=%s", i, val))
+				}
+				return strings.Join(parts, ",")
+			}(),
+			want: func() baggage.List {
+				// Only members that fit within 8192 bytes should be kept.
+				// Each member is ~2003 bytes ("kN=" + 2000 "v"s), plus comma.
+				// 4 members = 4*2003 + 3 commas = 8015 bytes (fits).
+				// 5 members = 5*2003 + 4 commas = 10019 bytes (exceeds).
+				b := make(baggage.List)
+				val := strings.Repeat("v", 2000)
+				for i := range 4 {
+					b[fmt.Sprintf("k%d", i)] = baggage.Item{Value: val}
+				}
+				return b
+			}(),
+			err: errBaggageBytes,
+		},
+		{
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
 			in:   "k=aa%ffcc;p=d%fff",
 			want: baggage.List{

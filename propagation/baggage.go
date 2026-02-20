@@ -15,8 +15,7 @@ const (
 
 	// W3C Baggage specification limits.
 	// https://www.w3.org/TR/baggage/#limits
-	maxMembers               = 64
-	maxBytesPerBaggageString = 8192
+	maxMembers = 64
 )
 
 // Baggage is a propagator that supports the W3C Baggage format.
@@ -72,48 +71,18 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 		return parent
 	}
 
-	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
-	// "If either of the above conditions is not met, a platform MAY drop
-	// list-members until both conditions are met."
-	// We drop members until both conditions are met.
 	var members []baggage.Member
-	var totalBytes int
-	limitReached := false
 	for _, bStr := range bVals {
-		if limitReached {
-			break
-		}
-
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
 			errorhandler.GetErrorHandler().Handle(err)
 		}
 		if currBag.Len() == 0 {
-			// Header produced no members (invalid format or exceeded limits).
-			// Skip this header and continue processing subsequent headers.
 			continue
 		}
-
-		for _, m := range currBag.Members() {
-			// Check member count limit.
-			if len(members) >= maxMembers {
-				limitReached = true
-				break
-			}
-
-			// Check byte size limit.
-			// Account for comma separator between members.
-			memberBytes := len(m.String())
-			if len(members) > 0 {
-				memberBytes++ // comma separator
-			}
-			if totalBytes+memberBytes > maxBytesPerBaggageString {
-				limitReached = true
-				break
-			}
-
-			members = append(members, m)
-			totalBytes += memberBytes
+		members = append(members, currBag.Members()...)
+		if len(members) >= maxMembers {
+			break
 		}
 	}
 

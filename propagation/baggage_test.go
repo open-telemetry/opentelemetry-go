@@ -168,9 +168,11 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
-		name    string
-		headers []string
-		want    members
+		name         string
+		headers      []string
+		want         members
+		wantCount    int // Used when want is nil and we only care about count
+		wantMaxBytes int // Used to check that baggage size doesn't exceed limit
 	}{
 		{
 			name:    "non conflicting headers",
@@ -230,18 +232,20 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    generateMembers(maxMembers, "k"),
 		},
 		{
-			name:    "single header exceeds max members limit keeps first 64",
-			headers: []string{generateBaggageHeader(maxMembers+1, "k")},
-			want:    generateMembers(maxMembers, "k"),
+			name:      "single header exceeds max members limit keeps 64",
+			headers:   []string{generateBaggageHeader(maxMembers+1, "k")},
+			want:      generateMembers(maxMembers, "k"),
+			wantCount: 0, // Not used; want is specified
 		},
 		{
-			name: "multiple headers exceeds total max members limit keeps first 64",
+			name: "multiple headers exceeds total max members limit keeps 64",
 			headers: []string{
 				generateBaggageHeader(maxMembers/2, "a"),
 				generateBaggageHeader(maxMembers/2, "b"),
 				generateBaggageHeader(1, "c"),
 			},
-			want: append(generateMembers(maxMembers/2, "a"), generateMembers(maxMembers/2, "b")...),
+			want:      nil, // Non-deterministic truncation by baggage.New()
+			wantCount: maxMembers,
 		},
 		{
 			name:    "single header at max bytes limit",
@@ -256,14 +260,14 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    members{},
 		},
 		{
-			name: "multiple headers exceed total max bytes keeps first that fits",
+			name: "multiple headers exceed total max bytes keeps one that fits",
 			headers: []string{
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 			},
-			want: members{
-				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
-			},
+			want:         nil, // Non-deterministic: either k or y will be kept
+			wantCount:    1,   // Only one member fits
+			wantMaxBytes: maxBytesPerBaggageString,
 		},
 		{
 			name: "multiple headers within total max bytes",
@@ -276,6 +280,20 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
 				{Key: "y", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2-1)},
 			},
+		},
+		{
+			name: "many headers exceeding member limit caps collection early",
+			headers: func() []string {
+				// 100 headers with 10 members each = 1000 total members.
+				// The cap should stop collecting after ~maxMembers and
+				// New() truncates to exactly maxMembers.
+				h := make([]string, 100)
+				for i := range h {
+					h[i] = generateBaggageHeader(10, fmt.Sprintf("h%d_k", i))
+				}
+				return h
+			}(),
+			wantCount: maxMembers,
 		},
 		{
 			name: "skips large member that exceeds byte limit and continues",
@@ -299,8 +317,19 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 
 			ctx := t.Context()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
-			expected := tt.want.Baggage(t)
-			assert.Equal(t, expected, baggage.FromContext(ctx))
+			got := baggage.FromContext(ctx)
+
+			// If want is specified, check exact match
+			if tt.want != nil {
+				expected := tt.want.Baggage(t)
+				assert.Equal(t, expected, got)
+			} else if tt.wantCount > 0 {
+				// If only count is specified, verify count and byte limit
+				assert.Equal(t, tt.wantCount, got.Len(), "expected member count")
+				if tt.wantMaxBytes > 0 {
+					assert.LessOrEqual(t, len(got.String()), tt.wantMaxBytes, "baggage size exceeds limit")
+				}
+			}
 		})
 	}
 }

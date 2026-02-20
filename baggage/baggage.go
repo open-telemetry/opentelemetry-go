@@ -516,6 +516,7 @@ func Parse(bStr string) (Baggage, error) {
 	}
 
 	b := make(baggage.List)
+	sizes := make(map[string]int) // Track per-key byte sizes
 	var totalBytes int
 	var truncateErr error
 	for memberStr := range strings.SplitSeq(bStr, listDelimiter) {
@@ -534,10 +535,22 @@ func Parse(bStr string) (Baggage, error) {
 		// Check byte size limit.
 		// Account for comma separator between members.
 		memberBytes := len(m.String())
-		if len(b) > 0 {
-			memberBytes++ // comma separator
+		_, existingKey := b[m.key]
+		if !existingKey && len(b) > 0 {
+			memberBytes++ // comma separator only for new keys
 		}
-		if totalBytes+memberBytes > maxBytesPerBaggageString {
+
+		// Calculate new totalBytes if we add/overwrite this key
+		var newTotalBytes int
+		if oldSize, exists := sizes[m.key]; exists {
+			// Overwriting existing key: subtract old size, add new size
+			newTotalBytes = totalBytes - oldSize + memberBytes
+		} else {
+			// New key
+			newTotalBytes = totalBytes + memberBytes
+		}
+
+		if newTotalBytes > maxBytesPerBaggageString {
 			truncateErr = errors.Join(truncateErr, errBaggageBytes)
 			break
 		}
@@ -547,7 +560,8 @@ func Parse(bStr string) (Baggage, error) {
 			Value:      m.value,
 			Properties: m.properties.asInternal(),
 		}
-		totalBytes += memberBytes
+		sizes[m.key] = memberBytes
+		totalBytes = newTotalBytes
 	}
 
 	if len(b) == 0 {
