@@ -132,7 +132,7 @@ type benchStackErr struct{ msg string }
 
 func (e benchStackErr) Error() string { return e.msg }
 
-func (e benchStackErr) StackTrace() fmt.Formatter { return benchStackTrace("stack") }
+func (benchStackErr) StackTrace() fmt.Formatter { return benchStackTrace("stack") }
 
 func BenchmarkLoggerEmitExceptionAttributes(b *testing.B) {
 	logger := newTestLogger(b)

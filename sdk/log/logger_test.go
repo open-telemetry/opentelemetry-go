@@ -325,7 +325,7 @@ type stackErr struct{ msg string }
 
 func (e stackErr) Error() string { return e.msg }
 
-func (e stackErr) StackTrace() fmt.Formatter { return testStackTrace("stack") }
+func (stackErr) StackTrace() fmt.Formatter { return testStackTrace("stack") }
 
 func TestAddExceptionFromError(t *testing.T) {
 	t.Run("AddsMissing", func(t *testing.T) {

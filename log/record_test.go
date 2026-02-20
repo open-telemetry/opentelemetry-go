@@ -226,11 +226,11 @@ func TestSetError(t *testing.T) {
 	err := assert.AnError
 
 	var r log.Record
-	assert.Nil(t, r.GetError())
+	assert.NoError(t, r.GetError())
 
 	r.SetError(err)
 	assert.Same(t, err, r.GetError())
 
 	r.SetError(nil)
-	assert.Nil(t, r.GetError())
+	assert.NoError(t, r.GetError())
 }
