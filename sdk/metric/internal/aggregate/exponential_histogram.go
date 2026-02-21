@@ -19,8 +19,6 @@ const (
 	expoMaxScale = 20
 	expoMinScale = -10
 
-	smallestNonZeroNormalFloat64 = 0x1p-1022
-
 	// These redefine the Math constants with a type, so the compiler won't coerce
 	// them into an int on 32 bit platforms.
 	maxInt64 int64 = math.MaxInt64
@@ -61,13 +59,15 @@ func newExpoHistogramDataPoint[N int64 | float64](
 		mi = N(minInt64)
 	}
 	return &expoHistogramDataPoint[N]{
-		attrs:    attrs,
-		min:      ma,
-		max:      mi,
-		maxSize:  maxSize,
-		noMinMax: noMinMax,
-		noSum:    noSum,
-		scale:    maxScale,
+		attrs:      attrs,
+		min:        ma,
+		max:        mi,
+		maxSize:    maxSize,
+		noMinMax:   noMinMax,
+		noSum:      noSum,
+		scale:      maxScale,
+		posBuckets: newExpoBuckets(maxSize),
+		negBuckets: newExpoBuckets(maxSize),
 	}
 }
 
@@ -101,7 +101,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
+	if scaleDelta := p.scaleChange(bin, bucket.startBin, bucket.endBin); scaleDelta > 0 {
 		if p.scale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
 			// This can only happen if there is a max size of 1.
@@ -165,8 +165,8 @@ var scaleFactors = [21]float64{
 
 // scaleChange returns the magnitude of the scale change needed to fit bin in
 // the bucket. If no scale change is needed 0 is returned.
-func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int) int32 {
-	if length == 0 {
+func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin, endBin int32) int32 {
+	if startBin == endBin {
 		// No need to rescale if there are no buckets.
 		return 0
 	}
@@ -175,7 +175,7 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int)
 	high := int(bin)
 	if startBin >= bin {
 		low = int(bin)
-		high = int(startBin) + length - 1
+		high = int(endBin) - 1
 	}
 
 	var count int32
@@ -194,61 +194,62 @@ func (p *expoHistogramDataPoint[N]) count() uint64 {
 	return p.posBuckets.count() + p.negBuckets.count() + p.zeroCount
 }
 
+func newExpoBuckets(maxSize int) expoBuckets {
+	return expoBuckets{
+		counts: make([]uint64, maxSize),
+	}
+}
+
 // expoBuckets is a set of buckets in an exponential histogram.
 type expoBuckets struct {
+	// startBin is the inclusive start of the range.
 	startBin int32
-	counts   []uint64
+	// endBin is the exclusive end of the range.
+	endBin int32
+	// counts is a circular slice of size maxSize, where bin i is stored at
+	// position i % maxSize.
+	counts []uint64
+}
+
+func (e *expoBuckets) getIdx(bin int) int {
+	newBin := bin % len(e.counts)
+	// ensure the index is positive.
+	return (newBin + len(e.counts)) % len(e.counts)
+}
+
+// loadCountsAndOffset returns the buckets counts, the count, and the offset.
+// It is not safe to call concurrently.
+func (e *expoBuckets) loadCountsAndOffset(into *[]uint64) int32 {
+	// TODO (#3047): Making copies for bounds and counts incurs a large
+	// memory allocation footprint. Alternatives should be explored.
+	length := int(e.endBin - e.startBin)
+	counts := reset(*into, length, length)
+	count := uint64(0)
+	eIdx := int(e.startBin)
+	for i := range length {
+		val := e.counts[e.getIdx(eIdx)]
+		counts[i] = val
+		count += val
+		eIdx++
+	}
+	*into = counts
+	return e.startBin
 }
 
 // record increments the count for the given bin, and expands the buckets if needed.
 // Size changes must be done before calling this function.
 func (b *expoBuckets) record(bin int32) {
-	if len(b.counts) == 0 {
-		b.counts = []uint64{1}
+	// we already downscaled, so we are guaranteed that we can fit within the
+	// counts.
+	b.counts[b.getIdx(int(bin))]++
+	switch {
+	case b.startBin == b.endBin:
+		b.endBin = bin + 1
 		b.startBin = bin
-		return
-	}
-
-	endBin := int(b.startBin) + len(b.counts) - 1
-
-	// if the new bin is inside the current range
-	if bin >= b.startBin && int(bin) <= endBin {
-		b.counts[bin-b.startBin]++
-		return
-	}
-	// if the new bin is before the current start add spaces to the counts
-	if bin < b.startBin {
-		origLen := len(b.counts)
-		newLength := endBin - int(bin) + 1
-		shift := b.startBin - bin
-
-		if newLength > cap(b.counts) {
-			b.counts = append(b.counts, make([]uint64, newLength-len(b.counts))...)
-		}
-
-		copy(b.counts[shift:origLen+int(shift)], b.counts)
-		b.counts = b.counts[:newLength]
-		for i := 1; i < int(shift); i++ {
-			b.counts[i] = 0
-		}
+	case bin < b.startBin:
 		b.startBin = bin
-		b.counts[0] = 1
-		return
-	}
-	// if the new is after the end add spaces to the end
-	if int(bin) > endBin {
-		if int(bin-b.startBin) < cap(b.counts) {
-			b.counts = b.counts[:bin-b.startBin+1]
-			for i := endBin + 1 - int(b.startBin); i < len(b.counts); i++ {
-				b.counts[i] = 0
-			}
-			b.counts[bin-b.startBin] = 1
-			return
-		}
-
-		end := make([]uint64, int(bin-b.startBin)-len(b.counts)+1)
-		b.counts = append(b.counts, end...)
-		b.counts[bin-b.startBin] = 1
+	case bin >= b.endBin:
+		b.endBin = bin + 1
 	}
 }
 
@@ -264,26 +265,42 @@ func (b *expoBuckets) downscale(delta int32) {
 	// new Offset: -2
 	// new Counts: [4, 14, 30, 10]
 
-	if len(b.counts) <= 1 || delta < 1 {
+	oldStartBin := b.startBin
+	oldEndBin := b.endBin
+	oldLength := b.endBin - b.startBin
+	if oldLength <= 1 || delta < 1 {
 		b.startBin >>= delta
+		b.endBin += b.startBin - oldStartBin
+		// Shift all elements left by the change in start position
+		startShift := b.getIdx(int(oldStartBin - b.startBin))
+		b.counts = append(b.counts[startShift:], b.counts[:startShift]...)
 		return
 	}
 
 	steps := int32(1) << delta
-	offset := b.startBin % steps
+
+	offset := oldStartBin % steps
 	offset = (offset + steps) % steps // to make offset positive
-	for i := 1; i < len(b.counts); i++ {
-		idx := i + int(offset)
-		if idx%int(steps) == 0 {
-			b.counts[idx/int(steps)] = b.counts[i]
+	newLen := (oldLength-1+offset)/steps + 1
+	b.startBin >>= delta
+	b.endBin = b.startBin + newLen
+	startShift := b.getIdx(int(oldStartBin - b.startBin))
+
+	for i := int(oldStartBin) + 1; i < int(oldEndBin); i++ {
+		newIdx := b.getIdx(int(math.Floor(float64(i)/float64(steps))) + startShift)
+		if i%int(steps) == 0 {
+			b.counts[newIdx] = b.counts[b.getIdx(i)]
 			continue
 		}
-		b.counts[idx/int(steps)] += b.counts[i]
+		b.counts[newIdx] += b.counts[b.getIdx(i)]
 	}
+	// Shift all elements left by the change in start position
+	b.counts = append(b.counts[startShift:], b.counts[:startShift]...)
 
-	lastIdx := (len(b.counts) - 1 + int(offset)) / int(steps)
-	b.counts = b.counts[:lastIdx+1]
-	b.startBin >>= delta
+	// Clear all elements that are outside of our start to end range
+	for i := int(b.endBin); i < int(b.startBin)+len(b.counts); i++ {
+		b.counts[b.getIdx(i)] = 0
+	}
 }
 
 func (b *expoBuckets) count() uint64 {
@@ -390,21 +407,11 @@ func (e *expoHistogram[N]) delta(
 		hDPts[i].ZeroCount = val.zeroCount
 		hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+		offset := val.posBuckets.loadCountsAndOffset(&hDPts[i].PositiveBucket.Counts)
+		hDPts[i].PositiveBucket.Offset = offset
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
+		offset = val.negBuckets.loadCountsAndOffset(&hDPts[i].NegativeBucket.Counts)
+		hDPts[i].NegativeBucket.Offset = offset
 
 		if !e.noSum {
 			hDPts[i].Sum = val.sum
@@ -453,21 +460,11 @@ func (e *expoHistogram[N]) cumulative(
 		hDPts[i].ZeroCount = val.zeroCount
 		hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		copy(hDPts[i].PositiveBucket.Counts, val.posBuckets.counts)
+		offset := val.posBuckets.loadCountsAndOffset(&hDPts[i].PositiveBucket.Counts)
+		hDPts[i].PositiveBucket.Offset = offset
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
+		offset = val.negBuckets.loadCountsAndOffset(&hDPts[i].NegativeBucket.Counts)
+		hDPts[i].NegativeBucket.Offset = offset
 
 		if !e.noSum {
 			hDPts[i].Sum = val.sum
