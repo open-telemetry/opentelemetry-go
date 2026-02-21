@@ -94,8 +94,15 @@ func (m *measurement) exemplar(dest *Exemplar) bool {
 	return true
 }
 
+// reset ensures s has capacity and sets it length. If the capacity of s is too
+// small, a new slice is returned with the specified capacity and length.
 func reset[T any](s []T, length, capacity int) []T {
 	if cap(s) < capacity {
+		return make([]T, length, capacity)
+	}
+	// Shrink if capacity exceeds 2x to prevent unbounded growth.
+	const maxCapacityMultiplier = 2
+	if cap(s) > capacity*maxCapacityMultiplier && capacity > 0 {
 		return make([]T, length, capacity)
 	}
 	return s[:length]
