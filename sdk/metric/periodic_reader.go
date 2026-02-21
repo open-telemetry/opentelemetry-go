@@ -26,9 +26,10 @@ const (
 
 // periodicReaderConfig contains configuration options for a PeriodicReader.
 type periodicReaderConfig struct {
-	interval  time.Duration
-	timeout   time.Duration
-	producers []Producer
+	interval           time.Duration
+	timeout            time.Duration
+	maxExportBatchSize int
+	producers          []Producer
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -96,6 +97,18 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 	})
 }
 
+// WithMaxExportBatchSize returns a PeriodicReaderOption that configures
+// the maximum export batch size allowed for a PeriodicReader.
+func WithMaxExportBatchSize(size int) PeriodicReaderOption {
+	return periodicReaderOptionFunc(func(conf periodicReaderConfig) periodicReaderConfig {
+		if size <= 0 {
+			return conf
+		}
+		conf.maxExportBatchSize = size
+		return conf
+	})
+}
+
 // NewPeriodicReader returns a Reader that collects and exports metric data to
 // the exporter at a defined interval. By default, the returned Reader will
 // collect and export data every 60 seconds, and will cancel any attempts that
@@ -109,12 +122,13 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	conf := newPeriodicReaderConfig(options)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &PeriodicReader{
-		interval: conf.interval,
-		timeout:  conf.timeout,
-		exporter: exporter,
-		flushCh:  make(chan chan error),
-		cancel:   cancel,
-		done:     make(chan struct{}),
+		interval:           conf.interval,
+		timeout:            conf.timeout,
+		maxExportBatchSize: conf.maxExportBatchSize,
+		exporter:           exporter,
+		flushCh:            make(chan chan error),
+		cancel:             cancel,
+		done:               make(chan struct{}),
 		rmPool: sync.Pool{
 			New: func() any {
 				return &metricdata.ResourceMetrics{}
@@ -157,10 +171,11 @@ type PeriodicReader struct {
 	isShutdown        bool
 	externalProducers atomic.Value
 
-	interval time.Duration
-	timeout  time.Duration
-	exporter Exporter
-	flushCh  chan chan error
+	interval           time.Duration
+	timeout            time.Duration
+	maxExportBatchSize int
+	exporter           Exporter
+	flushCh            chan chan error
 
 	done         chan struct{}
 	cancel       context.CancelFunc
@@ -223,14 +238,19 @@ func (r *PeriodicReader) aggregation(
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
-	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect and export timeout"))
-	defer cancel()
-
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
-	err := r.Collect(ctx, rm)
+	var err error
+	err = r.Collect(ctx, rm)
 	if err == nil {
-		err = r.export(ctx, rm)
+		if r.maxExportBatchSize > 0 {
+			for resourceMetricsDPC(rm) > r.maxExportBatchSize {
+				batch := &metricdata.ResourceMetrics{}
+				splitMetrics(r.maxExportBatchSize, rm, batch)
+				err = errors.Join(err, r.export(ctx, batch))
+			}
+		}
+		err = errors.Join(err, r.export(ctx, rm))
 	}
 	r.rmPool.Put(rm)
 	return err
@@ -256,6 +276,8 @@ func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMet
 
 // collect unwraps p as a produceHolder and returns its produce results.
 func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) error {
+	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect timeout"))
+	defer cancel()
 	var err error
 	if r.inst != nil {
 		cp := r.inst.CollectMetrics(ctx)
@@ -296,6 +318,8 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 // export exports metric data m using r's exporter.
 func (r *PeriodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
+	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader export timeout"))
+	defer cancel()
 	return r.exporter.Export(ctx, m)
 }
 
@@ -357,7 +381,14 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			err = r.collect(ctx, ph, m)
 			if err == nil {
-				err = r.export(ctx, m)
+				if r.maxExportBatchSize > 0 {
+					for resourceMetricsDPC(m) > r.maxExportBatchSize {
+						batch := &metricdata.ResourceMetrics{}
+						splitMetrics(r.maxExportBatchSize, m, batch)
+						err = errors.Join(err, r.export(ctx, batch))
+					}
+				}
+				err = errors.Join(err, r.export(ctx, m))
 			}
 			r.rmPool.Put(m)
 		}
