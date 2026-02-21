@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -40,6 +41,13 @@ const (
 	// Registerer, rather than round-tripping them through the bridge and
 	// exporter.
 	bridgeScopeName = "go.opentelemetry.io/contrib/bridges/prometheus"
+
+	exemplarRuneLimit = 128
+)
+
+var (
+	traceKeyLen = utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey)
+	spanKeyLen  = utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey)
 )
 
 var metricsPool = sync.Pool{
@@ -304,6 +312,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Sum[float64]:
 				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+
 			case metricdata.Gauge[int64]:
 				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
 			case metricdata.Gauge[float64]:
@@ -780,15 +789,25 @@ func addExemplars[N int64 | float64](
 		return m
 	}
 	promExemplars := make([]prometheus.Exemplar, len(exemplars))
+
 	for i, exemplar := range exemplars {
-		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer)
+		traceId := hex.EncodeToString(exemplar.TraceID)
+		spanId := hex.EncodeToString(exemplar.SpanID)
+
+		remaingSpace := exemplarRuneLimit - traceKeyLen - utf8.RuneCountInString(
+			traceId,
+		) - spanKeyLen - utf8.RuneCountInString(
+			spanId,
+		)
+
+		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer, remaingSpace)
 		if err != nil {
 			otel.Handle(err)
 			return m
 		}
 		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = hex.EncodeToString(exemplar.TraceID)
-		labels[otlptranslator.ExemplarSpanIDKey] = hex.EncodeToString(exemplar.SpanID)
+		labels[otlptranslator.ExemplarTraceIDKey] = traceId
+		labels[otlptranslator.ExemplarSpanIDKey] = spanId
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -805,14 +824,26 @@ func addExemplars[N int64 | float64](
 	return metricWithExemplar
 }
 
-func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
-	labels := make(map[string]string)
+func attributesToLabels(
+	attrs []attribute.KeyValue,
+	labelNamer otlptranslator.LabelNamer,
+	remainingSpace int,
+) (prometheus.Labels, error) {
+	labels := make(map[string]string, len(attrs)+2)
+	if remainingSpace <= 0 {
+		return labels, nil
+	}
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
 			return nil, err
 		}
-		labels[name] = attr.Value.Emit()
+		val := attr.Value.Emit()
+		attrLength := utf8.RuneCountInString(val) + utf8.RuneCountInString(name)
+		if attrLength <= remainingSpace {
+			labels[name] = val
+			remainingSpace -= attrLength
+		}
 	}
 	return labels, nil
 }
