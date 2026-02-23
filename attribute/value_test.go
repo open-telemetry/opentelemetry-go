@@ -86,6 +86,12 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name:      "Key.Empty() correctly returns keys's internal empty value",
+			value:     k.Empty().Value,
+			wantType:  attribute.EMPTY,
+			wantValue: nil,
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
@@ -142,6 +148,10 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.Empty("Empty"),
+			attribute.Empty("Empty"),
 		},
 	}
 
