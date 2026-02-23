@@ -17,8 +17,7 @@ The next release will require at least [Go 1.25].
 
 ### Changed
 
-- `TracerProvider.ForceFlush` in `go.opentelemetry.io/otel/sdk/trace` joins errors together and continues iteration through SpanProcessors as opposed
-  to returning the first encountered error without attempting exports on subsequent SpanProcessors. (#7856)
+- `TracerProvider.ForceFlush` in `go.opentelemetry.io/otel/sdk/trace` joins errors together and continues iteration through SpanProcessors as opposed to returning the first encountered error without attempting exports on subsequent SpanProcessors. (#7856)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
