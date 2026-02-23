@@ -113,6 +113,11 @@ func TestEmit(t *testing.T) {
 			v:    attribute.SliceValue([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")}),
 			want: `[true,42,"foo"]`,
 		},
+		{
+			name: `test Key.Emit() can emit a string representing empty self.SLICE`,
+			v:    attribute.SliceValue(nil),
+			want: `[]`,
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {
