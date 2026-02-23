@@ -4,6 +4,7 @@
 package observ
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/internal/global"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -264,6 +266,98 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 
 	success += 0
 	assertMetrics(t, collect(), n+n, int64(success), err, http.StatusPartialContent)
+}
+
+type spy struct {
+	enabled  bool
+	called   *bool
+	panicMsg string
+}
+
+func (s spy) Enabled(context.Context) bool { return s.enabled }
+
+func (s spy) markCalled() {
+	if !s.enabled {
+		panic(s.panicMsg)
+	}
+	if s.called != nil {
+		*s.called = true
+	}
+}
+
+type upDownCounterSpy struct {
+	embedded.Int64UpDownCounter
+	spy
+}
+
+func (c upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.markCalled() }
+
+type counterSpy struct {
+	embedded.Int64Counter
+	spy
+}
+
+func (c counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.markCalled() }
+
+type histogramSpy struct {
+	embedded.Float64Histogram
+	spy
+}
+
+func (h histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.markCalled() }
+
+func TestEndSkipsDisabledInstruments(t *testing.T) {
+	const n = 10
+
+	tests := []struct {
+		name         string
+		disable      string // "inflight" | "exported" | "duration" | "all"
+		wantInflight bool
+		wantExported bool
+		wantDuration bool
+	}{
+		{name: "inflight disabled", disable: "inflight", wantExported: true, wantDuration: true},
+		{name: "exported disabled", disable: "exported", wantInflight: true, wantDuration: true},
+		{name: "duration disabled", disable: "duration", wantInflight: true, wantExported: true},
+		{name: "all disabled", disable: "all"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var inflightCalled, exportedCalled, durationCalled bool
+
+			inst := &Instrumentation{
+				inflightMetric: upDownCounterSpy{
+					spy: spy{
+						enabled:  tt.disable != "inflight" && tt.disable != "all",
+						called:   &inflightCalled,
+						panicMsg: "inflight Add called while disabled",
+					},
+				},
+				exportedMetric: counterSpy{
+					spy: spy{
+						enabled:  tt.disable != "exported" && tt.disable != "all",
+						called:   &exportedCalled,
+						panicMsg: "exported Add called while disabled",
+					},
+				},
+				operationDuration: histogramSpy{
+					spy: spy{
+						enabled:  tt.disable != "duration" && tt.disable != "all",
+						called:   &durationCalled,
+						panicMsg: "duration Record called while disabled",
+					},
+				},
+			}
+
+			// If your Enabled() guards are missing, this will panic in the disabled case.
+			inst.ExportLogs(t.Context(), n).End(nil, http.StatusOK)
+
+			require.Equal(t, tt.wantInflight, inflightCalled)
+			require.Equal(t, tt.wantExported, exportedCalled)
+			require.Equal(t, tt.wantDuration, durationCalled)
+		})
+	}
 }
 
 func TestSetPresetAttrs(t *testing.T) {
