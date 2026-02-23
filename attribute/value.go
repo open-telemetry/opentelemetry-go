@@ -18,6 +18,10 @@ import (
 type Type int // nolint: revive  // redefines builtin Type.
 
 // Value represents the value part in key-value pairs.
+//
+// Note that the zero value is invalid.
+// Use [EmptyValue] to create an empty Value
+// or [Empty] to create an [KeyValue] with an empty Value.
 type Value struct {
 	vtype    Type
 	numeric  uint64
