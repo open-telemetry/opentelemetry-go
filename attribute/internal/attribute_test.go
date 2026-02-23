@@ -36,16 +36,11 @@ var wrapStringSliceValue = func(v any) any {
 	return nil
 }
 
-var wrapSliceValue = func(v any) any {
-	return SliceValue(v)
-}
-
 var (
 	wrapAsBoolSlice    = func(v any) any { return AsBoolSlice(v) }
 	wrapAsInt64Slice   = func(v any) any { return AsInt64Slice(v) }
 	wrapAsFloat64Slice = func(v any) any { return AsFloat64Slice(v) }
 	wrapAsStringSlice  = func(v any) any { return AsStringSlice(v) }
-	wrapAsSlice        = func(v any) any { return AsSlice(v) }
 )
 
 func TestSliceValue(t *testing.T) {
@@ -92,39 +87,39 @@ func TestSliceValue(t *testing.T) {
 		},
 		{
 			name: "SliceValue() two int items",
-			args: args{[]int{1, 2}}, want: [2]int{1, 2}, fn: wrapSliceValue,
+			args: args{[]int{1, 2}}, want: [2]int{1, 2}, fn: SliceValue,
 		},
 		{
 			name: "SliceValue() three string items",
-			args: args{[]string{"a", "b", "c"}}, want: [3]string{"a", "b", "c"}, fn: wrapSliceValue,
+			args: args{[]string{"a", "b", "c"}}, want: [3]string{"a", "b", "c"}, fn: SliceValue,
 		},
 		{
 			name: "SliceValue() empty slice",
-			args: args{[]int{}}, want: [0]int{}, fn: wrapSliceValue,
+			args: args{[]int{}}, want: [0]int{}, fn: SliceValue,
 		},
 		{
 			name: "SliceValue() single item",
-			args: args{[]float64{3.14}}, want: [1]float64{3.14}, fn: wrapSliceValue,
+			args: args{[]float64{3.14}}, want: [1]float64{3.14}, fn: SliceValue,
 		},
 		{
 			name: "AsSlice() two int items",
-			args: args{[2]int{1, 2}}, want: []int{1, 2}, fn: wrapAsSlice,
+			args: args{[2]int{1, 2}}, want: []int{1, 2}, fn: AsSlice,
 		},
 		{
 			name: "AsSlice() three string items",
-			args: args{[3]string{"a", "b", "c"}}, want: []string{"a", "b", "c"}, fn: wrapAsSlice,
+			args: args{[3]string{"a", "b", "c"}}, want: []string{"a", "b", "c"}, fn: AsSlice,
 		},
 		{
 			name: "AsSlice() empty array",
-			args: args{[0]int{}}, want: []int{}, fn: wrapAsSlice,
+			args: args{[0]int{}}, want: []int{}, fn: AsSlice,
 		},
 		{
 			name: "AsSlice() single item",
-			args: args{[1]float64{3.14}}, want: []float64{3.14}, fn: wrapAsSlice,
+			args: args{[1]float64{3.14}}, want: []float64{3.14}, fn: AsSlice,
 		},
 		{
 			name: "AsSlice() non-array returns nil",
-			args: args{"not an array"}, want: nil, fn: wrapAsSlice,
+			args: args{"not an array"}, want: nil, fn: AsSlice,
 		},
 	}
 	for _, tt := range tests {
