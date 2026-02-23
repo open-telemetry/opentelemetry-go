@@ -266,7 +266,7 @@ func (v Value) Emit() string {
 	case STRING:
 		return v.stringly
 	case EMPTY:
-		return "<nil>"
+		return "null"
 	default:
 		return "unknown"
 	}

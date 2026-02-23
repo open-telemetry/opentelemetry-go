@@ -111,7 +111,7 @@ func TestEmit(t *testing.T) {
 		{
 			name: `test Key.Emit() can emit a string representing self.EMPTY`,
 			v:    attribute.EmptyValue(),
-			want: "<nil>",
+			want: "null",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
