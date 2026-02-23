@@ -46,7 +46,8 @@ func (TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 		carrier.Set(tracestateHeader, ts)
 	}
 
-	flags := sc.TraceFlags()
+	// Preserve only the spec-defined flags: sampled (0x01) and random (0x02).
+	flags := sc.TraceFlags() & (trace.FlagsSampled | trace.FlagsRandom)
 
 	var sb strings.Builder
 	sb.Grow(2 + 32 + 16 + 2 + 3)
@@ -108,7 +109,8 @@ func (TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 
-	scc.TraceFlags = trace.TraceFlags(opts[0]) // nolint:gosec // slice size already checked.
+	// Preserve only the spec-defined flags: sampled (0x01) and random (0x02).
+	scc.TraceFlags = trace.TraceFlags(opts[0]) & (trace.FlagsSampled | trace.FlagsRandom) // nolint:gosec // slice size already checked.
 
 	// Ignore the error returned here. Failure to parse tracestate MUST NOT
 	// affect the parsing of traceparent according to the W3C tracecontext

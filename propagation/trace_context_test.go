@@ -81,14 +81,14 @@ func TestExtractValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
-			name: "additional flag bits preserved",
+			name: "reserved flag bits zeroed",
 			header: http.Header{
 				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.TraceFlags(0x09),
+				TraceFlags: trace.FlagsSampled,
 				Remote:     true,
 			}),
 		},
@@ -141,27 +141,26 @@ func TestExtractValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
-			name: "future version sample bit set",
+			name: "future version sample bit set reserved bits zeroed",
 			header: http.Header{
 				traceparent: []string{"02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-09"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.TraceFlags(0x09),
+				TraceFlags: trace.FlagsSampled,
 				Remote:     true,
 			}),
 		},
 		{
-			name: "future version sample bit not set",
+			name: "future version reserved bits zeroed",
 			header: http.Header{
 				traceparent: []string{"02-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-08"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     spanID,
-				TraceFlags: trace.TraceFlags(0x08),
-				Remote:     true,
+				TraceID: traceID,
+				SpanID:  spanID,
+				Remote:  true,
 			}),
 		},
 		{
@@ -324,9 +323,9 @@ func TestInjectValidTraceContext(t *testing.T) {
 			}),
 		},
 		{
-			name: "trace flag bits preserved",
+			name: "reserved trace flag bits dropped on inject",
 			header: http.Header{
-				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-ff"},
+				traceparent: []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-03"},
 			},
 			sc: trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
