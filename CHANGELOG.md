@@ -15,7 +15,7 @@ The next release will require at least [Go 1.25].
 
 - Support testing of [Go 1.26]. (#7902)
 - Add `Slice` and `SliceValue` functions for new `SLICE` Type in `go.opentelemetry.io/otel/attribute`.
-  This adds support for heterogeneous arrays (arrays of `Value`) as attribute values. (#7934)
+  This adds support for heterogeneous arrays as attribute values. (#7944)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
