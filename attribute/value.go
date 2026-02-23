@@ -44,6 +44,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// SLICE is a slice of Value types.
+	SLICE
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +115,11 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+// SliceValue creates a SLICE Value.
+func SliceValue(v []Value) Value {
+	return Value{vtype: SLICE, slice: attribute.SliceValue(v)}
 }
 
 // Type returns a type of the Value.
@@ -196,6 +203,22 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsStringSlice(v.slice)
 }
 
+// AsSlice returns the []Value value. Make sure that the Value's type is
+// SLICE.
+func (v Value) AsSlice() []Value {
+	if v.vtype != SLICE {
+		return nil
+	}
+	return v.asSlice()
+}
+
+func (v Value) asSlice() []Value {
+	if val := attribute.AsSlice(v.slice); val != nil {
+		return val.([]Value)
+	}
+	return nil
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -217,6 +240,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case SLICE:
+		return v.asSlice()
 	}
 	return unknownValueType{}
 }
@@ -252,6 +277,8 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case SLICE:
+		return fmt.Sprint(v.asSlice())
 	default:
 		return "unknown"
 	}

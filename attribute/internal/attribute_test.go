@@ -36,11 +36,16 @@ var wrapStringSliceValue = func(v any) any {
 	return nil
 }
 
+var wrapSliceValue = func(v any) any {
+	return SliceValue(v)
+}
+
 var (
 	wrapAsBoolSlice    = func(v any) any { return AsBoolSlice(v) }
 	wrapAsInt64Slice   = func(v any) any { return AsInt64Slice(v) }
 	wrapAsFloat64Slice = func(v any) any { return AsFloat64Slice(v) }
 	wrapAsStringSlice  = func(v any) any { return AsStringSlice(v) }
+	wrapAsSlice        = func(v any) any { return AsSlice(v) }
 )
 
 func TestSliceValue(t *testing.T) {
@@ -84,6 +89,42 @@ func TestSliceValue(t *testing.T) {
 		{
 			name: "AsStringSlice() two items",
 			args: args{[2]string{"1234", "12"}}, want: []string{"1234", "12"}, fn: wrapAsStringSlice,
+		},
+		{
+			name: "SliceValue() two int items",
+			args: args{[]int{1, 2}}, want: [2]int{1, 2}, fn: wrapSliceValue,
+		},
+		{
+			name: "SliceValue() three string items",
+			args: args{[]string{"a", "b", "c"}}, want: [3]string{"a", "b", "c"}, fn: wrapSliceValue,
+		},
+		{
+			name: "SliceValue() empty slice",
+			args: args{[]int{}}, want: [0]int{}, fn: wrapSliceValue,
+		},
+		{
+			name: "SliceValue() single item",
+			args: args{[]float64{3.14}}, want: [1]float64{3.14}, fn: wrapSliceValue,
+		},
+		{
+			name: "AsSlice() two int items",
+			args: args{[2]int{1, 2}}, want: []int{1, 2}, fn: wrapAsSlice,
+		},
+		{
+			name: "AsSlice() three string items",
+			args: args{[3]string{"a", "b", "c"}}, want: []string{"a", "b", "c"}, fn: wrapAsSlice,
+		},
+		{
+			name: "AsSlice() empty array",
+			args: args{[0]int{}}, want: []int{}, fn: wrapAsSlice,
+		},
+		{
+			name: "AsSlice() single item",
+			args: args{[1]float64{3.14}}, want: []float64{3.14}, fn: wrapAsSlice,
+		},
+		{
+			name: "AsSlice() non-array returns nil",
+			args: args{"not an array"}, want: nil, fn: wrapAsSlice,
 		},
 	}
 	for _, tt := range tests {
@@ -140,5 +181,23 @@ func BenchmarkAsFloat64Slice(b *testing.B) {
 
 	for b.Loop() {
 		sync = AsFloat64Slice(in)
+	}
+}
+
+func BenchmarkSliceValue(b *testing.B) {
+	b.ReportAllocs()
+	s := []int{1, 2, 3, 4}
+
+	for b.Loop() {
+		sync = SliceValue(s)
+	}
+}
+
+func BenchmarkAsSlice(b *testing.B) {
+	b.ReportAllocs()
+	var in any = [4]int{1, 2, 3, 4}
+
+	for b.Loop() {
+		sync = AsSlice(in)
 	}
 }

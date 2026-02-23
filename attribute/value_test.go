@@ -86,6 +86,12 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name:      "Key.Slice() correctly returns keys's internal []Value value",
+			value:     k.Slice([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")}).Value,
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
@@ -95,7 +101,7 @@ func TestValue(t *testing.T) {
 			continue
 		}
 		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
+		if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
 			t.Errorf("+got, -want: %s", diff)
 		}
 	}
@@ -142,6 +148,20 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+		},
+		{
+			attribute.Slice("NestedSlice", []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.SliceValue([]attribute.Value{attribute.IntValue(3), attribute.StringValue("nested")}),
+			}),
+			attribute.Slice("NestedSlice", []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.SliceValue([]attribute.Value{attribute.IntValue(3), attribute.StringValue("nested")}),
+			}),
 		},
 	}
 
@@ -205,4 +225,9 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.StringSlice("StringSlice", ss1)
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
+
+	vs1 := []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("test")}
+	kv = attribute.Slice("Slice", vs1)
+	vs2 := kv.Value.AsSlice()
+	assert.Equal(t, vs1, vs2)
 }
