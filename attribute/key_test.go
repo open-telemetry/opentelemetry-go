@@ -108,6 +108,14 @@ func TestEmit(t *testing.T) {
 			v:    attribute.StringSliceValue([]string{"foo", "bar"}),
 			want: `["foo","bar"]`,
 		},
+		{
+			name: `test Key.Emit() can emit a string representing self.MAP`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}),
+			want: `{"key1":{"Type":"STRING","Value":"value1"},"key2":{"Type":"INT64","Value":42}}`,
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {

@@ -165,6 +165,7 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInterface()
 				tt.val.AsString()
 				tt.val.AsStringSlice()
+				tt.val.AsMap()
 			})
 		})
 	}

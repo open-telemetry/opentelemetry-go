@@ -19,6 +19,7 @@ func TestValue(t *testing.T) {
 		value     attribute.Value
 		wantType  attribute.Type
 		wantValue any
+		skipCmp   bool // Skip cmp.Diff for types that don't work with it
 	}{
 		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",
@@ -86,6 +87,19 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name: "Key.Map() correctly returns keys's internal map[string]Value value",
+			value: k.Map(map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}).Value,
+			wantType:  attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			},
+			skipCmp: true,
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
@@ -95,8 +109,37 @@ func TestValue(t *testing.T) {
 			continue
 		}
 		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
+		
+		// For MAP type, use custom comparison
+		if testcase.skipCmp {
+			wantMap, wantOk := testcase.wantValue.(map[string]attribute.Value)
+			gotMap, gotOk := got.(map[string]attribute.Value)
+			if !wantOk || !gotOk {
+				t.Errorf("expected map type")
+				continue
+			}
+			if len(wantMap) != len(gotMap) {
+				t.Errorf("map length mismatch: got %d, want %d", len(gotMap), len(wantMap))
+				continue
+			}
+			for k, wantV := range wantMap {
+				gotV, ok := gotMap[k]
+				if !ok {
+					t.Errorf("missing key %s in result map", k)
+					continue
+				}
+				if wantV.Type() != gotV.Type() {
+					t.Errorf("type mismatch for key %s: got %v, want %v", k, gotV.Type(), wantV.Type())
+					continue
+				}
+				if !assert.Equal(t, wantV.AsInterface(), gotV.AsInterface()) {
+					t.Errorf("value mismatch for key %s", k)
+				}
+			}
+		} else {
+			if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
 		}
 	}
 }
@@ -145,8 +188,22 @@ func TestEquivalence(t *testing.T) {
 		},
 	}
 
+	mapPairs := [][2]attribute.KeyValue{
+		{
+			attribute.Map("Map", map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}),
+			attribute.Map("Map", map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}),
+		},
+	}
+
 	t.Run("Distinct", func(t *testing.T) {
-		for _, p := range pairs {
+		allPairs := append(pairs, mapPairs...)
+		for _, p := range allPairs {
 			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 			m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
 			_, ok := m[s1.Equivalent()]
@@ -164,6 +221,8 @@ func TestEquivalence(t *testing.T) {
 
 	t.Run("Set", func(t *testing.T) {
 		// Maintain backwards compatibility.
+		// Note: MAP types cannot be used as map keys in Go since map[string]Value
+		// is not comparable, so we skip them here.
 		for _, p := range pairs {
 			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 			m := map[attribute.Set]struct{}{s0: {}}
@@ -205,4 +264,106 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.StringSlice("StringSlice", ss1)
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
+
+	m1 := map[string]attribute.Value{
+		"key1": attribute.StringValue("value1"),
+		"key2": attribute.Int64Value(42),
+		"key3": attribute.BoolValue(true),
+	}
+	kv = attribute.Map("Map", m1)
+	m2 := kv.Value.AsMap()
+	assert.Equal(t, m1, m2)
+}
+
+func TestMapValue(t *testing.T) {
+	// Test basic map
+	m := map[string]attribute.Value{
+		"string": attribute.StringValue("test"),
+		"int":    attribute.Int64Value(123),
+		"float":  attribute.Float64Value(3.14),
+		"bool":   attribute.BoolValue(true),
+	}
+	
+	kv := attribute.Map("test", m)
+	assert.Equal(t, attribute.MAP, kv.Value.Type())
+	
+	result := kv.Value.AsMap()
+	assert.Equal(t, m, result)
+	
+	// Test nested map
+	nested := map[string]attribute.Value{
+		"outer": attribute.MapValue(map[string]attribute.Value{
+			"inner": attribute.StringValue("nested value"),
+		}),
+	}
+	
+	kvNested := attribute.Map("nested", nested)
+	assert.Equal(t, attribute.MAP, kvNested.Value.Type())
+	
+	resultNested := kvNested.Value.AsMap()
+	assert.Equal(t, nested, resultNested)
+	
+	// Verify nested value can be extracted
+	outerMap := resultNested["outer"].AsMap()
+	assert.NotNil(t, outerMap)
+	assert.Equal(t, "nested value", outerMap["inner"].AsString())
+	
+	// Test empty map
+	emptyMap := map[string]attribute.Value{}
+	kvEmpty := attribute.Map("empty", emptyMap)
+	assert.Equal(t, attribute.MAP, kvEmpty.Value.Type())
+	assert.Equal(t, emptyMap, kvEmpty.Value.AsMap())
+	
+	// Test AsInterface returns the map
+	iface := kv.Value.AsInterface()
+	mapIface, ok := iface.(map[string]attribute.Value)
+	assert.True(t, ok)
+	assert.Equal(t, m, mapIface)
+}
+
+func TestMapValue_DeepNesting(t *testing.T) {
+	// Test deeply nested maps to verify recursive map<string, AnyValue> support
+	// as per OpenTelemetry spec
+	deepMap := map[string]attribute.Value{
+		"level1": attribute.MapValue(map[string]attribute.Value{
+			"level2": attribute.MapValue(map[string]attribute.Value{
+				"level3": attribute.MapValue(map[string]attribute.Value{
+					"string": attribute.StringValue("deep value"),
+					"int":    attribute.Int64Value(123),
+					"bool":   attribute.BoolValue(true),
+					"slice":  attribute.StringSliceValue([]string{"a", "b"}),
+				}),
+				"sibling": attribute.StringValue("level2 value"),
+			}),
+		}),
+		"topString": attribute.StringValue("top level"),
+	}
+
+	kv := attribute.Map("config", deepMap)
+	assert.Equal(t, attribute.MAP, kv.Value.Type())
+
+	// Navigate through nested structure
+	result := kv.Value.AsMap()
+	assert.NotNil(t, result)
+
+	level1 := result["level1"].AsMap()
+	assert.NotNil(t, level1)
+
+	level2 := level1["level2"].AsMap()
+	assert.NotNil(t, level2)
+
+	level3 := level2["level3"].AsMap()
+	assert.NotNil(t, level3)
+
+	// Verify leaf values
+	assert.Equal(t, "deep value", level3["string"].AsString())
+	assert.Equal(t, int64(123), level3["int"].AsInt64())
+	assert.Equal(t, true, level3["bool"].AsBool())
+	assert.Equal(t, []string{"a", "b"}, level3["slice"].AsStringSlice())
+
+	// Verify sibling at level2
+	assert.Equal(t, "level2 value", level2["sibling"].AsString())
+
+	// Verify top level
+	assert.Equal(t, "top level", result["topString"].AsString())
 }

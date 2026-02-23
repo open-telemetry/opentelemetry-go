@@ -44,6 +44,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// MAP is a map of string keys to Values Type Value.
+	MAP
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +115,11 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+// MapValue creates a MAP Value.
+func MapValue(v map[string]Value) Value {
+	return Value{vtype: MAP, slice: attribute.MapValue(v)}
 }
 
 // Type returns a type of the Value.
@@ -196,6 +203,22 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsStringSlice(v.slice)
 }
 
+// AsMap returns the map[string]Value value. Make sure that the Value's type is
+// MAP.
+func (v Value) AsMap() map[string]Value {
+	if v.vtype != MAP {
+		return nil
+	}
+	return v.asMap()
+}
+
+func (v Value) asMap() map[string]Value {
+	if m, ok := attribute.AsMap(v.slice).(map[string]Value); ok {
+		return m
+	}
+	return nil
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -217,6 +240,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case MAP:
+		return v.asMap()
 	}
 	return unknownValueType{}
 }
@@ -252,6 +277,12 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case MAP:
+		j, err := json.Marshal(v.asMap())
+		if err != nil {
+			return fmt.Sprintf("invalid: %v", v.asMap())
+		}
+		return string(j)
 	default:
 		return "unknown"
 	}
