@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -278,7 +279,33 @@ func (v Value) Emit() string {
 	case STRING:
 		return v.stringly
 	case SLICE:
-		return fmt.Sprint(v.asSlice())
+		slice := v.asSlice()
+		if len(slice) == 0 {
+			return "[]"
+		}
+		var b strings.Builder
+		b.WriteRune('[') //nolint:revive // No need to check error for strings.Builder.
+		// Emit the first value
+		if slice[0].Type() == STRING {
+			b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
+			b.WriteString(slice[0].Emit()) //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
+		} else {
+			b.WriteString(slice[0].Emit()) //nolint:revive // No need to check error for strings.Builder.
+		}
+		// Emit remaining values
+		for _, val := range slice[1:] {
+			b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+			if val.Type() == STRING {
+				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
+				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
+				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
+			} else {
+				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
+			}
+		}
+		b.WriteRune(']') //nolint:revive // No need to check error for strings.Builder.
+		return b.String()
 	default:
 		return "unknown"
 	}
