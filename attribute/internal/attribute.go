@@ -90,14 +90,3 @@ func AsStringSlice(v any) []string {
 	}
 	return cpy
 }
-
-// MapValue stores a map value. The map is stored as-is since maps are reference types
-// and we can compare them appropriately in the attribute package.
-func MapValue(m any) any {
-	return m
-}
-
-// AsMap returns the map value as-is.
-func AsMap(v any) any {
-	return v
-}

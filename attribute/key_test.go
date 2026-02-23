@@ -114,7 +114,7 @@ func TestEmit(t *testing.T) {
 				"key1": attribute.StringValue("value1"),
 				"key2": attribute.Int64Value(42),
 			}),
-			want: `{"key1":{"Type":"STRING","Value":"value1"},"key2":{"Type":"INT64","Value":42}}`,
+			want: `{"key1":"value1","key2":42}`,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

@@ -119,6 +119,10 @@ func StringSliceValue(v []string) Value {
 }
 
 // MapValue creates a MAP Value.
+//
+// A nil map is treated the same as an empty map. Both will round-trip via
+// AsMap as an empty (non-nil) map[string]Value. This is consistent with
+// how nil slices are handled by the other slice-typed constructors.
 func MapValue(v map[string]Value) Value {
 	if v == nil {
 		return Value{vtype: MAP, slice: reflect.New(reflect.ArrayOf(0, reflect.TypeFor[KeyValue]())).Elem().Interface()}
@@ -316,7 +320,8 @@ func (v Value) Emit() string {
 	case STRING:
 		return v.stringly
 	case MAP:
-		j, err := json.Marshal(v.asMap())
+		raw := v.mapEmitValue()
+		j, err := json.Marshal(raw)
 		if err != nil {
 			return fmt.Sprintf("invalid: %v", v.asMap())
 		}
@@ -324,6 +329,22 @@ func (v Value) Emit() string {
 	default:
 		return "unknown"
 	}
+}
+
+// mapEmitValue recursively converts a MAP Value into plain Go types so that
+// json.Marshal produces output consistent with slice-type Emit (raw values
+// without type wrappers).
+func (v Value) mapEmitValue() any {
+	m := v.asMap()
+	raw := make(map[string]any, len(m))
+	for k, val := range m {
+		if val.Type() == MAP {
+			raw[k] = val.mapEmitValue()
+		} else {
+			raw[k] = val.AsInterface()
+		}
+	}
+	return raw
 }
 
 // MarshalJSON returns the JSON encoding of the Value.

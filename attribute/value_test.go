@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -19,7 +20,6 @@ func TestValue(t *testing.T) {
 		value     attribute.Value
 		wantType  attribute.Type
 		wantValue any
-		skipCmp   bool // Skip cmp.Diff for types that don't work with it
 	}{
 		{
 			name:      "Key.Bool() correctly returns keys's internal bool value",
@@ -98,7 +98,6 @@ func TestValue(t *testing.T) {
 				"key1": attribute.StringValue("value1"),
 				"key2": attribute.Int64Value(42),
 			},
-			skipCmp: true,
 		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
@@ -110,36 +109,12 @@ func TestValue(t *testing.T) {
 		}
 		got := testcase.value.AsInterface()
 
-		// For MAP type, use custom comparison
-		if testcase.skipCmp {
-			wantMap, wantOk := testcase.wantValue.(map[string]attribute.Value)
-			gotMap, gotOk := got.(map[string]attribute.Value)
-			if !wantOk || !gotOk {
-				t.Errorf("expected map type")
-				continue
-			}
-			if len(wantMap) != len(gotMap) {
-				t.Errorf("map length mismatch: got %d, want %d", len(gotMap), len(wantMap))
-				continue
-			}
-			for k, wantV := range wantMap {
-				gotV, ok := gotMap[k]
-				if !ok {
-					t.Errorf("missing key %s in result map", k)
-					continue
-				}
-				if wantV.Type() != gotV.Type() {
-					t.Errorf("type mismatch for key %s: got %v, want %v", k, gotV.Type(), wantV.Type())
-					continue
-				}
-				if !assert.Equal(t, wantV.AsInterface(), gotV.AsInterface()) {
-					t.Errorf("value mismatch for key %s", k)
-				}
-			}
-		} else {
-			if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-				t.Errorf("+got, -want: %s", diff)
-			}
+		// Use a cmp.Comparer for attribute.Value to handle unexported fields.
+		opt := cmp.Comparer(func(a, b attribute.Value) bool {
+			return a.Type() == b.Type() && reflect.DeepEqual(a.AsInterface(), b.AsInterface())
+		})
+		if diff := cmp.Diff(testcase.wantValue, got, opt); diff != "" {
+			t.Errorf("+got, -want: %s", diff)
 		}
 	}
 }
@@ -360,4 +335,53 @@ func TestMapValue_DeepNesting(t *testing.T) {
 
 	// Verify top level
 	assert.Equal(t, "top level", result["topString"].AsString())
+}
+
+func TestMapValue_NilMap(t *testing.T) {
+	// nil map round-trips as an empty (non-nil) map,
+	// consistent with how nil slices are handled.
+	v := attribute.MapValue(nil)
+	assert.Equal(t, attribute.MAP, v.Type())
+	got := v.AsMap()
+	assert.NotNil(t, got, "nil map should round-trip as non-nil empty map")
+	assert.Len(t, got, 0)
+}
+
+func TestAsMap_WrongType(t *testing.T) {
+	// AsMap on a non-MAP Value must return nil without panicking.
+	assert.Nil(t, attribute.StringValue("hello").AsMap())
+	assert.Nil(t, attribute.Int64Value(42).AsMap())
+	assert.Nil(t, attribute.BoolValue(true).AsMap())
+	assert.Nil(t, attribute.Float64Value(3.14).AsMap())
+	assert.Nil(t, attribute.BoolSliceValue([]bool{true}).AsMap())
+}
+
+func BenchmarkMapValue(b *testing.B) {
+	m := map[string]attribute.Value{
+		"string":  attribute.StringValue("value"),
+		"int":     attribute.Int64Value(42),
+		"float":   attribute.Float64Value(3.14),
+		"bool":    attribute.BoolValue(true),
+		"strings": attribute.StringSliceValue([]string{"a", "b", "c"}),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_ = attribute.MapValue(m)
+	}
+}
+
+func BenchmarkAsMap(b *testing.B) {
+	v := attribute.MapValue(map[string]attribute.Value{
+		"string":  attribute.StringValue("value"),
+		"int":     attribute.Int64Value(42),
+		"float":   attribute.Float64Value(3.14),
+		"bool":    attribute.BoolValue(true),
+		"strings": attribute.StringSliceValue([]string{"a", "b", "c"}),
+	})
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_ = v.AsMap()
+	}
 }
