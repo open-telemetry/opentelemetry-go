@@ -88,9 +88,11 @@ var _ trace.TracerProvider = &TracerProvider{}
 //   - a random number IDGenerator
 //   - the resource.Default() Resource
 //   - the default SpanLimits.
+//   - no processors (and thus, no exporters)
 //
 // The passed opts are used to override these default values and configure the
-// returned TracerProvider appropriately.
+// returned TracerProvider appropriately. Use WithSpanProcessor to register
+// an exporter, or the convenience methods WithSyncer and WithBatcher.
 //
 // The optional environment exporter selection variable `OTEL_TRACES_EXPORTER`
 // from the OpenTelemetry specification is _not_ supported by the Go
@@ -349,6 +351,9 @@ func WithSyncer(e SpanExporter) TracerProviderOption {
 
 // WithBatcher registers the exporter with the TracerProvider using a
 // BatchSpanProcessor configured with the passed opts.
+//
+// This is a convenience wrapper around WithSpanProcessor to create a BatchSpanProcessor
+// wrapping the exporter.
 func WithBatcher(e SpanExporter, opts ...BatchSpanProcessorOption) TracerProviderOption {
 	return WithSpanProcessor(NewBatchSpanProcessor(e, opts...))
 }

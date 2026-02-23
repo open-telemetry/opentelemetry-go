@@ -38,6 +38,9 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
 //
+// For practical use a WithReader option should be used to configure at least
+// one metric destination.
+//
 // The optional environment exporter selection variable `OTEL_METRICS_EXPORTER`
 // from the OpenTelemetry specification is _not_ supported by the Go
 // OpenTelemetry SDK for provider selection and will be silently ignored.
