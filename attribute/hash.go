@@ -83,28 +83,11 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		}
 	case MAP:
 		h = h.Uint64(mapID)
-		// Hash map entries in a deterministic order (sorted by key)
-		// to ensure consistent hashing across different map iterations
-		m := kv.Value.asMap()
-		if m != nil {
-			// Sort keys for deterministic hashing
-			keys := make([]string, 0, len(m))
-			for k := range m {
-				keys = append(keys, k)
-			}
-			// Use a simple sort for string keys
-			for i := 0; i < len(keys); i++ {
-				for j := i + 1; j < len(keys); j++ {
-					if keys[i] > keys[j] {
-						keys[i], keys[j] = keys[j], keys[i]
-					}
-				}
-			}
-			// Hash each key-value pair in sorted order
-			for _, key := range keys {
-				h = h.String(key)
-				// Recursively hash the value
-				h = hashKV(h, KeyValue{Key: Key(key), Value: m[key]})
+		// Hash map entries in deterministic order (stored sorted by key).
+		entries := kv.Value.asMapKeyValues()
+		if entries != nil {
+			for _, entry := range entries {
+				h = hashKV(h, entry)
 			}
 		}
 	case INVALID:

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
@@ -119,7 +120,27 @@ func StringSliceValue(v []string) Value {
 
 // MapValue creates a MAP Value.
 func MapValue(v map[string]Value) Value {
-	return Value{vtype: MAP, slice: attribute.MapValue(v)}
+	if v == nil {
+		return Value{vtype: MAP, slice: reflect.New(reflect.ArrayOf(0, reflect.TypeFor[KeyValue]())).Elem().Interface()}
+	}
+
+	keys := make([]string, 0, len(v))
+	for k := range v {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	entries := make([]KeyValue, len(keys))
+	for i, k := range keys {
+		entries[i] = KeyValue{Key: Key(k), Value: v[k]}
+	}
+
+	array := reflect.New(reflect.ArrayOf(len(entries), reflect.TypeFor[KeyValue]())).Elem()
+	if len(entries) > 0 {
+		_ = reflect.Copy(array, reflect.ValueOf(entries))
+	}
+
+	return Value{vtype: MAP, slice: array.Interface()}
 }
 
 // Type returns a type of the Value.
@@ -213,10 +234,27 @@ func (v Value) AsMap() map[string]Value {
 }
 
 func (v Value) asMap() map[string]Value {
-	if m, ok := attribute.AsMap(v.slice).(map[string]Value); ok {
-		return m
+	entries := v.asMapKeyValues()
+	if entries == nil {
+		return nil
 	}
-	return nil
+	result := make(map[string]Value, len(entries))
+	for _, kv := range entries {
+		result[string(kv.Key)] = kv.Value
+	}
+	return result
+}
+
+func (v Value) asMapKeyValues() []KeyValue {
+	rv := reflect.ValueOf(v.slice)
+	if rv.Kind() != reflect.Array {
+		return nil
+	}
+	cpy := make([]KeyValue, rv.Len())
+	if len(cpy) > 0 {
+		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
+	}
+	return cpy
 }
 
 type unknownValueType struct{}

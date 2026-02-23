@@ -186,9 +186,6 @@ func TestEquivalence(t *testing.T) {
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 		},
-	}
-
-	mapPairs := [][2]attribute.KeyValue{
 		{
 			attribute.Map("Map", map[string]attribute.Value{
 				"key1": attribute.StringValue("value1"),
@@ -202,8 +199,7 @@ func TestEquivalence(t *testing.T) {
 	}
 
 	t.Run("Distinct", func(t *testing.T) {
-		allPairs := append(pairs, mapPairs...)
-		for _, p := range allPairs {
+		for _, p := range pairs {
 			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 			m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
 			_, ok := m[s1.Equivalent()]
@@ -221,8 +217,6 @@ func TestEquivalence(t *testing.T) {
 
 	t.Run("Set", func(t *testing.T) {
 		// Maintain backwards compatibility.
-		// Note: MAP types cannot be used as map keys in Go since map[string]Value
-		// is not comparable, so we skip them here.
 		for _, p := range pairs {
 			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 			m := map[attribute.Set]struct{}{s0: {}}
