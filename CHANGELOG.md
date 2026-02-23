@@ -12,6 +12,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - TracerProvider `ForceFlush()` Joins errors together and continues iteration through SpanProcessors as opposed
   to returning the first encountered error without attempting exports on subsequent SpanProcessors. (#7856)
+This release is the last to support [Go 1.24].
+The next release will require at least [Go 1.25].
+
+### Added
+
+- Support testing of [Go 1.26]. (#7902)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -3640,6 +3646,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
