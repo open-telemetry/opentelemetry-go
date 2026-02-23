@@ -327,7 +327,7 @@ func TestMapValue_DeepNesting(t *testing.T) {
 	// Verify leaf values
 	assert.Equal(t, "deep value", level3["string"].AsString())
 	assert.Equal(t, int64(123), level3["int"].AsInt64())
-	assert.Equal(t, true, level3["bool"].AsBool())
+	assert.True(t, level3["bool"].AsBool())
 	assert.Equal(t, []string{"a", "b"}, level3["slice"].AsStringSlice())
 
 	// Verify sibling at level2
@@ -344,7 +344,7 @@ func TestMapValue_NilMap(t *testing.T) {
 	assert.Equal(t, attribute.MAP, v.Type())
 	got := v.AsMap()
 	assert.NotNil(t, got, "nil map should round-trip as non-nil empty map")
-	assert.Len(t, got, 0)
+	assert.Empty(t, got)
 }
 
 func TestAsMap_WrongType(t *testing.T) {
