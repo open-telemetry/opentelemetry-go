@@ -124,7 +124,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(t.Context())
-	runs := new(uint64)
+	var runs atomic.Uint64
 	for range goroutines {
 		wg.Add(1)
 		go func() {
@@ -138,13 +138,13 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				default:
 					_ = e.Export(ctx, r)
 					_ = e.ForceFlush(ctx)
-					atomic.AddUint64(runs, 1)
+					runs.Add(1)
 				}
 			}
 		}()
 	}
 
-	for atomic.LoadUint64(runs) == 0 {
+	for runs.Load() == 0 {
 		runtime.Gosched()
 	}
 

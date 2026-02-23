@@ -140,10 +140,10 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 
 	// Configure it with a spy.
-	called := int32(0)
+	var called atomic.Int32
 	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, _ ...trace.TracerOption) trace.Tracer {
-			newVal := atomic.AddInt32(&called, 1)
+			newVal := called.Add(1)
 			assert.Equal(t, "abc", name)
 			if newVal == 10 {
 				// Signal the goroutine to finish.
@@ -156,7 +156,7 @@ func TestTraceProviderDelegatesConcurrentSafe(t *testing.T) {
 	// Wait for the go routine to finish
 	<-done
 
-	assert.LessOrEqual(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
+	assert.LessOrEqual(t, int32(10), called.Load(), "expected configured TraceProvider to be called")
 }
 
 func TestTracerDelegatesConcurrentSafe(t *testing.T) {
@@ -184,13 +184,13 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 
 	// Configure it with a spy.
-	called := int32(0)
+	var called atomic.Int32
 	SetTracerProvider(fnTracerProvider{
 		tracer: func(name string, _ ...trace.TracerOption) trace.Tracer {
 			assert.Equal(t, "abc", name)
 			return fnTracer{
 				start: func(ctx context.Context, spanName string, _ ...trace.SpanStartOption) (context.Context, trace.Span) {
-					newVal := atomic.AddInt32(&called, 1)
+					newVal := called.Add(1)
 					assert.Equal(t, "name", spanName)
 					if newVal == 10 {
 						// Signal the goroutine to finish.
@@ -205,7 +205,7 @@ func TestTracerDelegatesConcurrentSafe(t *testing.T) {
 	// Wait for the go routine to finish
 	<-done
 
-	assert.LessOrEqual(t, int32(10), atomic.LoadInt32(&called), "expected configured TraceProvider to be called")
+	assert.LessOrEqual(t, int32(10), called.Load(), "expected configured TraceProvider to be called")
 }
 
 func TestTraceProviderDelegatesSameInstance(t *testing.T) {

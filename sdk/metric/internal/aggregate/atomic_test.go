@@ -82,14 +82,14 @@ func benchmarkAtomicCounter[N int64 | float64](b *testing.B) {
 func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	hcwg := &hotColdWaitGroup{}
-	var data [2]uint64
+	var data [2]atomic.Uint64
 	for range 5 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			hotIdx := hcwg.start()
 			defer hcwg.done(hotIdx)
-			atomic.AddUint64(&data[hotIdx], 1)
+			data[hotIdx].Add(1)
 		}()
 	}
 	for range 2 {
@@ -98,7 +98,7 @@ func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 			// reading without using atomics should not panic since we are
 			// reading from the cold element, and have waited for all writes to
 			// finish.
-			t.Logf("read value %+v", data[readIdx])
+			t.Logf("read value %+v", data[readIdx].Load())
 		})
 	}
 	wg.Wait()

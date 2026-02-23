@@ -596,26 +596,26 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 type logCounter struct {
 	logr.LogSink
 
-	errN  uint32
-	infoN uint32
+	errN  atomic.Uint32
+	infoN atomic.Uint32
 }
 
 func (l *logCounter) Info(level int, msg string, keysAndValues ...any) {
-	atomic.AddUint32(&l.infoN, 1)
+	l.infoN.Add(1)
 	l.LogSink.Info(level, msg, keysAndValues...)
 }
 
 func (l *logCounter) InfoN() int {
-	return int(atomic.SwapUint32(&l.infoN, 0))
+	return int(l.infoN.Swap(0))
 }
 
 func (l *logCounter) Error(err error, msg string, keysAndValues ...any) {
-	atomic.AddUint32(&l.errN, 1)
+	l.errN.Add(1)
 	l.LogSink.Error(err, msg, keysAndValues...)
 }
 
 func (l *logCounter) ErrorN() int {
-	return int(atomic.SwapUint32(&l.errN, 0))
+	return int(l.errN.Swap(0))
 }
 
 func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
