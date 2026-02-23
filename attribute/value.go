@@ -285,17 +285,10 @@ func (v Value) Emit() string {
 		}
 		var b strings.Builder
 		b.WriteRune('[') //nolint:revive // No need to check error for strings.Builder.
-		// Emit the first value
-		if slice[0].Type() == STRING {
-			b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
-			b.WriteString(slice[0].Emit()) //nolint:revive // No need to check error for strings.Builder.
-			b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
-		} else {
-			b.WriteString(slice[0].Emit()) //nolint:revive // No need to check error for strings.Builder.
-		}
-		// Emit remaining values
-		for _, val := range slice[1:] {
-			b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+		for i, val := range slice {
+			if i > 0 {
+				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+			}
 			if val.Type() == STRING {
 				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
 				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
