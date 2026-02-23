@@ -136,15 +136,12 @@ func TestSliceValue(t *testing.T) {
 	}
 }
 
-// sync is a global used to ensure the benchmark are not optimized away.
-var sync any
-
 func BenchmarkBoolSliceValue(b *testing.B) {
 	b.ReportAllocs()
 	s := []bool{true, false, true, false}
 
 	for b.Loop() {
-		sync = BoolSliceValue(s)
+		BoolSliceValue(s)
 	}
 }
 
@@ -153,7 +150,7 @@ func BenchmarkInt64SliceValue(b *testing.B) {
 	s := []int64{1, 2, 3, 4}
 
 	for b.Loop() {
-		sync = Int64SliceValue(s)
+		Int64SliceValue(s)
 	}
 }
 
@@ -162,7 +159,7 @@ func BenchmarkFloat64SliceValue(b *testing.B) {
 	s := []float64{1.2, 3.4, 5.6, 7.8}
 
 	for b.Loop() {
-		sync = Float64SliceValue(s)
+		Float64SliceValue(s)
 	}
 }
 
@@ -171,7 +168,7 @@ func BenchmarkStringSliceValue(b *testing.B) {
 	s := []string{"a", "b", "c", "d"}
 
 	for b.Loop() {
-		sync = StringSliceValue(s)
+		StringSliceValue(s)
 	}
 }
 
@@ -180,7 +177,7 @@ func BenchmarkAsFloat64Slice(b *testing.B) {
 	var in any = [2]float64{1, 2.3}
 
 	for b.Loop() {
-		sync = AsFloat64Slice(in)
+		AsFloat64Slice(in)
 	}
 }
 
@@ -189,7 +186,7 @@ func BenchmarkSliceValue(b *testing.B) {
 	s := []int{1, 2, 3, 4}
 
 	for b.Loop() {
-		sync = SliceValue(s)
+		SliceValue(s)
 	}
 }
 
@@ -198,6 +195,6 @@ func BenchmarkAsSlice(b *testing.B) {
 	var in any = [4]int{1, 2, 3, 4}
 
 	for b.Loop() {
-		sync = AsSlice(in)
+		AsSlice(in)
 	}
 }
