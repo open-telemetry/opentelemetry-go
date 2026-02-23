@@ -91,6 +91,10 @@ var _ trace.TracerProvider = &TracerProvider{}
 //
 // The passed opts are used to override these default values and configure the
 // returned TracerProvider appropriately.
+//
+// The optional environment exporter selection variable `OTEL_TRACES_EXPORTER`
+// from the OpenTelemetry specification is _not_ supported by the Go
+// OpenTelemetry SDK for provider selection and will be silently ignored.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o := tracerProviderConfig{
 		spanLimits: NewSpanLimits(),

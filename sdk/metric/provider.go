@@ -37,6 +37,10 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // Resource and no Readers. Readers cannot be added after a MeterProvider is
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
+//
+// The optional environment exporter selection variable `OTEL_METRICS_EXPORTER`
+// from the OpenTelemetry specification is _not_ supported by the Go
+// OpenTelemetry SDK for provider selection and will be silently ignored.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
