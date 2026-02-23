@@ -93,7 +93,7 @@ func TestValue(t *testing.T) {
 				"key1": attribute.StringValue("value1"),
 				"key2": attribute.Int64Value(42),
 			}).Value,
-			wantType:  attribute.MAP,
+			wantType: attribute.MAP,
 			wantValue: map[string]attribute.Value{
 				"key1": attribute.StringValue("value1"),
 				"key2": attribute.Int64Value(42),
@@ -109,7 +109,7 @@ func TestValue(t *testing.T) {
 			continue
 		}
 		got := testcase.value.AsInterface()
-		
+
 		// For MAP type, use custom comparison
 		if testcase.skipCmp {
 			wantMap, wantOk := testcase.wantValue.(map[string]attribute.Value)
@@ -277,37 +277,37 @@ func TestMapValue(t *testing.T) {
 		"float":  attribute.Float64Value(3.14),
 		"bool":   attribute.BoolValue(true),
 	}
-	
+
 	kv := attribute.Map("test", m)
 	assert.Equal(t, attribute.MAP, kv.Value.Type())
-	
+
 	result := kv.Value.AsMap()
 	assert.Equal(t, m, result)
-	
+
 	// Test nested map
 	nested := map[string]attribute.Value{
 		"outer": attribute.MapValue(map[string]attribute.Value{
 			"inner": attribute.StringValue("nested value"),
 		}),
 	}
-	
+
 	kvNested := attribute.Map("nested", nested)
 	assert.Equal(t, attribute.MAP, kvNested.Value.Type())
-	
+
 	resultNested := kvNested.Value.AsMap()
 	assert.Equal(t, nested, resultNested)
-	
+
 	// Verify nested value can be extracted
 	outerMap := resultNested["outer"].AsMap()
 	assert.NotNil(t, outerMap)
 	assert.Equal(t, "nested value", outerMap["inner"].AsString())
-	
+
 	// Test empty map
 	emptyMap := map[string]attribute.Value{}
 	kvEmpty := attribute.Map("empty", emptyMap)
 	assert.Equal(t, attribute.MAP, kvEmpty.Value.Type())
 	assert.Equal(t, emptyMap, kvEmpty.Value.AsMap())
-	
+
 	// Test AsInterface returns the map
 	iface := kv.Value.AsInterface()
 	mapIface, ok := iface.(map[string]attribute.Value)
