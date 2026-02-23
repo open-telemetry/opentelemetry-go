@@ -39,12 +39,8 @@ func (t *basicSpanProcessor) Shutdown(context.Context) error {
 func (*basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 func (*basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (t *basicSpanProcessor) ForceFlush(context.Context) error {
-	if t.injectExportError != nil {
-		t.flushed = false
-		return t.injectExportError
-	}
 	t.flushed = true
-	return nil
+	return t.injectExportError
 }
 
 type shutdownSpanProcessor struct {
@@ -262,17 +258,16 @@ func TestTracerProviderForceFlush(t *testing.T) {
 		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
 	})
 
-	t.Run("MultiWithSPError", func(t *testing.T) {
+	t.Run("Error", func(t *testing.T) {
 		stp := NewTracerProvider()
-		spErr := errors.New("basic span processor export failure")
-		sp1 := &basicSpanProcessor{injectExportError: spErr}
+		sp1 := &basicSpanProcessor{injectExportError: assert.AnError}
 		sp2 := &basicSpanProcessor{}
 		stp.RegisterSpanProcessor(sp1)
 		stp.RegisterSpanProcessor(sp2)
 		ctx := t.Context()
 
-		assert.ErrorIs(t, stp.ForceFlush(ctx), sp1.injectExportError, "span processor error not returned")
-		require.False(t, sp1.flushed, "SpanProcessor wrongly considered flushed")
+		assert.ErrorIs(t, stp.ForceFlush(ctx), assert.AnError, "span processor error not returned")
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
 		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
 	})
 
