@@ -23,7 +23,6 @@ var (
 	outFloat64Slice []float64
 	outStr          string
 	outStrSlice     []string
-	outSlice        []attribute.Value
 )
 
 func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
