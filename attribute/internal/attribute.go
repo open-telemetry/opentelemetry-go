@@ -39,6 +39,19 @@ func StringSliceValue(v []string) any {
 	return cp.Interface()
 }
 
+// SliceValue converts a Value slice into an array with same elements as slice.
+func SliceValue(v any) any {
+	rv := reflect.ValueOf(v)
+	n := rv.Len()
+	if n == 0 {
+		// Return a zero-length array to maintain type information.
+		return reflect.New(reflect.ArrayOf(0, rv.Type().Elem())).Elem().Interface()
+	}
+	cp := reflect.New(reflect.ArrayOf(n, rv.Type().Elem())).Elem()
+	reflect.Copy(cp, rv)
+	return cp.Interface()
+}
+
 // AsBoolSlice converts a bool array into a slice into with same elements as array.
 func AsBoolSlice(v any) []bool {
 	rv := reflect.ValueOf(v)
@@ -89,19 +102,6 @@ func AsStringSlice(v any) []string {
 		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
 	}
 	return cpy
-}
-
-// SliceValue converts a Value slice into an array with same elements as slice.
-func SliceValue(v any) any {
-	rv := reflect.ValueOf(v)
-	n := rv.Len()
-	if n == 0 {
-		// Return a zero-length array to maintain type information.
-		return reflect.New(reflect.ArrayOf(0, rv.Type().Elem())).Elem().Interface()
-	}
-	cp := reflect.New(reflect.ArrayOf(n, rv.Type().Elem())).Elem()
-	reflect.Copy(cp, rv)
-	return cp.Interface()
 }
 
 // AsSlice converts a Value array into a slice with same elements as array.
