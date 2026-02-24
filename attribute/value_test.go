@@ -92,6 +92,58 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.SLICE,
 			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
 		},
+		{
+			name:      "SliceValue with nil slice",
+			value:     attribute.SliceValue(nil),
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{},
+		},
+		{
+			name:      "SliceValue with empty slice",
+			value:     attribute.SliceValue([]attribute.Value{}),
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{},
+		},
+		{
+			name:      "SliceValue with single item",
+			value:     attribute.SliceValue([]attribute.Value{attribute.StringValue("hello")}),
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{attribute.StringValue("hello")},
+		},
+		{
+			name: "SliceValue with multiple items",
+			value: attribute.SliceValue([]attribute.Value{
+				attribute.IntValue(1),
+				attribute.StringValue("two"),
+				attribute.Float64Value(3.0),
+			}),
+			wantType: attribute.SLICE,
+			wantValue: []attribute.Value{
+				attribute.IntValue(1),
+				attribute.StringValue("two"),
+				attribute.Float64Value(3.0),
+			},
+		},
+		{
+			name: "SliceValue with nested slices",
+			value: attribute.SliceValue([]attribute.Value{
+				attribute.IntValue(1),
+				attribute.SliceValue([]attribute.Value{
+					attribute.StringValue("nested1"),
+					attribute.StringValue("nested2"),
+				}),
+				attribute.BoolValue(true),
+			}),
+			wantType: attribute.SLICE,
+			wantValue: []attribute.Value{
+				attribute.IntValue(1),
+				attribute.SliceValue([]attribute.Value{
+					attribute.StringValue("nested1"),
+					attribute.StringValue("nested2"),
+				}),
+				attribute.BoolValue(true),
+			},
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
@@ -230,53 +282,4 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.Slice("Slice", vs1)
 	vs2 := kv.Value.AsSlice()
 	assert.Equal(t, vs1, vs2)
-}
-
-func TestSliceValue(t *testing.T) {
-	t.Run("nil slice", func(t *testing.T) {
-		v := attribute.SliceValue(nil)
-		assert.Equal(t, attribute.SLICE, v.Type())
-		result := v.AsSlice()
-		assert.Equal(t, []attribute.Value{}, result, "slice value of nil should be treated as empty slice")
-	})
-
-	t.Run("empty slice", func(t *testing.T) {
-		empty := []attribute.Value{}
-		v := attribute.SliceValue(empty)
-		assert.Equal(t, attribute.SLICE, v.Type())
-		result := v.AsSlice()
-		assert.Equal(t, empty, result)
-	})
-
-	t.Run("single item", func(t *testing.T) {
-		single := []attribute.Value{attribute.StringValue("hello")}
-		v := attribute.SliceValue(single)
-		result := v.AsSlice()
-		assert.Equal(t, single, result)
-	})
-
-	t.Run("multiple items", func(t *testing.T) {
-		multi := []attribute.Value{
-			attribute.IntValue(1),
-			attribute.StringValue("two"),
-			attribute.Float64Value(3.0),
-		}
-		v := attribute.SliceValue(multi)
-		result := v.AsSlice()
-		assert.Equal(t, multi, result)
-	})
-
-	t.Run("nested slices", func(t *testing.T) {
-		nested := []attribute.Value{
-			attribute.IntValue(1),
-			attribute.SliceValue([]attribute.Value{
-				attribute.StringValue("nested1"),
-				attribute.StringValue("nested2"),
-			}),
-			attribute.BoolValue(true),
-		}
-		v := attribute.SliceValue(nested)
-		result := v.AsSlice()
-		assert.Equal(t, nested, result)
-	})
 }
