@@ -334,7 +334,7 @@ type Registration interface {
 
 	// Unregister removes the callback registration from a Meter.
 	//
-	// Implementations of this method need to be safe for a user to call
-	// concurrently.
+	// Implementations of this method need to be idempotent and safe for a user
+	//  to call concurrently.
 	Unregister() error
 }
