@@ -120,7 +120,20 @@ func StringSliceValue(v []string) Value {
 
 // SliceValue creates a SLICE Value.
 func SliceValue(v []Value) Value {
-	return Value{vtype: SLICE, slice: attribute.SliceValue(v)}
+	return Value{vtype: SLICE, slice: sliceValue(v)}
+}
+
+// sliceValue converts a Value slice into an array with same elements as slice.
+func sliceValue(v []Value) any {
+	rv := reflect.ValueOf(v)
+	n := rv.Len()
+	if n == 0 {
+		// Return a zero-length array to maintain type information.
+		return reflect.New(reflect.ArrayOf(0, rv.Type().Elem())).Elem().Interface()
+	}
+	cp := reflect.New(reflect.ArrayOf(n, rv.Type().Elem())).Elem()
+	reflect.Copy(cp, rv)
+	return cp.Interface()
 }
 
 // Type returns a type of the Value.
@@ -214,10 +227,18 @@ func (v Value) AsSlice() []Value {
 }
 
 func (v Value) asSlice() []Value {
-	if val := attribute.AsSlice(v.slice); val != nil {
-		return val.([]Value)
+	rv := reflect.ValueOf(v.slice)
+	if rv.Type().Kind() != reflect.Array {
+		return nil
 	}
-	return nil
+	n := rv.Len()
+	if n == 0 {
+		// Return a zero-length slice to maintain type information.
+		return []Value{}
+	}
+	cpy := make([]Value, n)
+	reflect.Copy(reflect.ValueOf(cpy), rv)
+	return cpy
 }
 
 type unknownValueType struct{}

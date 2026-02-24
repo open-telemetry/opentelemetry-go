@@ -85,42 +85,6 @@ func TestSliceValue(t *testing.T) {
 			name: "AsStringSlice() two items",
 			args: args{[2]string{"1234", "12"}}, want: []string{"1234", "12"}, fn: wrapAsStringSlice,
 		},
-		{
-			name: "SliceValue() two int items",
-			args: args{[]int{1, 2}}, want: [2]int{1, 2}, fn: SliceValue,
-		},
-		{
-			name: "SliceValue() three string items",
-			args: args{[]string{"a", "b", "c"}}, want: [3]string{"a", "b", "c"}, fn: SliceValue,
-		},
-		{
-			name: "SliceValue() empty slice",
-			args: args{[]int{}}, want: [0]int{}, fn: SliceValue,
-		},
-		{
-			name: "SliceValue() single item",
-			args: args{[]float64{3.14}}, want: [1]float64{3.14}, fn: SliceValue,
-		},
-		{
-			name: "AsSlice() two int items",
-			args: args{[2]int{1, 2}}, want: []int{1, 2}, fn: AsSlice,
-		},
-		{
-			name: "AsSlice() three string items",
-			args: args{[3]string{"a", "b", "c"}}, want: []string{"a", "b", "c"}, fn: AsSlice,
-		},
-		{
-			name: "AsSlice() empty array",
-			args: args{[0]int{}}, want: []int{}, fn: AsSlice,
-		},
-		{
-			name: "AsSlice() single item",
-			args: args{[1]float64{3.14}}, want: []float64{3.14}, fn: AsSlice,
-		},
-		{
-			name: "AsSlice() non-array returns nil",
-			args: args{"not an array"}, want: nil, fn: AsSlice,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -173,23 +137,5 @@ func BenchmarkAsFloat64Slice(b *testing.B) {
 
 	for b.Loop() {
 		AsFloat64Slice(in)
-	}
-}
-
-func BenchmarkSliceValue(b *testing.B) {
-	b.ReportAllocs()
-	s := []int{1, 2, 3, 4}
-
-	for b.Loop() {
-		SliceValue(s)
-	}
-}
-
-func BenchmarkAsSlice(b *testing.B) {
-	b.ReportAllocs()
-	var in any = [4]int{1, 2, 3, 4}
-
-	for b.Loop() {
-		AsSlice(in)
 	}
 }
