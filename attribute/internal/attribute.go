@@ -101,7 +101,7 @@ func AsStringSlice(v any) []string {
 // AsBytes converts a bytes array into a slice into with same elements as array.
 func AsBytes(v any) []byte {
 	rv := reflect.ValueOf(v)
-	if rv.Type().Kind() != reflect.Array{
+	if rv.Type().Kind() != reflect.Array {
 		return nil
 	}
 	cpy := make([]byte, rv.Len())

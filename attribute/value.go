@@ -118,6 +118,7 @@ func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
 }
 
+// BytesValue creates a BYTES Value.
 func BytesValue(v []byte) Value {
 	return Value{
 		vtype: BYTES,

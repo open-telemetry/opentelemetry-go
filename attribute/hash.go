@@ -87,7 +87,7 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 			break
 		}
 		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i ++{
+		for i := 0; i < rv.Len(); i++ {
 			h = h.Uint64(rv.Index(i).Uint())
 		}
 	case INVALID:
