@@ -79,7 +79,7 @@ func TestSliceValue(t *testing.T) {
 		},
 		{
 			name: "BytesValue() two items",
-			args: args{v: []byte{1, 2, 3}}, want: [3]byte{1, 2, 3}, fn: wrapBytesValue,
+			args: args{v: []byte{1, 2}}, want: [2]byte{1, 2}, fn: wrapBytesValue,
 		},
 		{
 			name: "AsBoolSlice() two items",
@@ -99,7 +99,7 @@ func TestSliceValue(t *testing.T) {
 		},
 		{
 			name: "AsBytes() two items",
-			args: args{[3]byte{1, 2, 3}}, want: []byte{1, 2, 3}, fn: wrapAsBytes,
+			args: args{[2]byte{1, 2}}, want: []byte{1, 2}, fn: wrapAsBytes,
 		},
 	}
 	for _, tt := range tests {
@@ -161,9 +161,18 @@ func BenchmarkAsFloat64Slice(b *testing.B) {
 
 func BenchmarkBytesValue(b *testing.B) {
 	b.ReportAllocs()
-	bs := []byte("foobar")
+	bs := []byte("foo")
 
 	for b.Loop() {
-		sync = BytesValue(bs)
+		BytesValue(bs)
+	}
+}
+
+func BenchmarkAsBytes(b *testing.B) {
+	b.ReportAllocs()
+	bs := [2]byte{1, 2}
+
+	for b.Loop() {
+		AsBytes(bs)
 	}
 }
