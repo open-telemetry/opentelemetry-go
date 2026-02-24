@@ -294,6 +294,12 @@ func BenchmarkSlice(b *testing.B) {
 			kv.Value.AsSlice()
 		}
 	})
+	b.Run("UnsafeAsSlice", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			kv.Value.UnsafeAsSlice()
+		}
+	})
 	b.Run("Emit", benchmarkEmit(kv))
 }
 

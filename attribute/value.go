@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -218,6 +219,43 @@ func (v Value) asSlice() []Value {
 		return val.([]Value)
 	}
 	return nil
+}
+
+// UnsafeAsSlice returns the []Value value without additional heap allocations.
+// Make sure that the Value's type is SLICE.
+// The returned slice references the underlying array and must not be modified by the caller.
+func (v Value) UnsafeAsSlice() []Value {
+	if v.vtype != SLICE {
+		return nil
+	}
+	return v.unsafeAsSlice()
+}
+
+func (v Value) unsafeAsSlice() []Value {
+	rv := reflect.ValueOf(v.slice)
+	if rv.Type().Kind() != reflect.Array {
+		return nil
+	}
+	n := rv.Len()
+	if n == 0 {
+		return []Value{}
+	}
+
+	// To create a slice view without copying, we need the array to be addressable.
+	// Arrays stored in interfaces are not directly addressable, so we need to
+	// extract the interface's data pointer using unsafe.
+	type iface struct {
+		typ  unsafe.Pointer
+		data unsafe.Pointer
+	}
+
+	// Extract the data pointer from the interface
+	ei := (*iface)(unsafe.Pointer(&v.slice))
+	dataPtr := ei.data
+
+	// Use unsafe.Slice to create a slice view from the array data pointer.
+	// This is the recommended way to create slices from pointers in modern Go.
+	return unsafe.Slice((*Value)(dataPtr), n)
 }
 
 type unknownValueType struct{}

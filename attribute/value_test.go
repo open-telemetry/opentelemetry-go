@@ -231,3 +231,27 @@ func TestAsSlice(t *testing.T) {
 	vs2 := kv.Value.AsSlice()
 	assert.Equal(t, vs1, vs2)
 }
+
+func TestUnsafeAsSlice(t *testing.T) {
+	vs1 := []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("test")}
+	kv := attribute.Slice("Slice", vs1)
+
+	// Test that UnsafeAsSlice returns the same values
+	vs2 := kv.Value.UnsafeAsSlice()
+	assert.Equal(t, vs1, vs2)
+
+	// Test that it returns the same result as AsSlice
+	vs3 := kv.Value.AsSlice()
+	assert.Equal(t, vs3, vs2)
+
+	// Test with empty slice
+	emptySlice := []attribute.Value{}
+	kv = attribute.Slice("EmptySlice", emptySlice)
+	vs4 := kv.Value.UnsafeAsSlice()
+	assert.Equal(t, emptySlice, vs4)
+
+	// Test with non-SLICE type returns nil
+	nonSliceKv := attribute.String("NotASlice", "test")
+	vs5 := nonSliceKv.Value.UnsafeAsSlice()
+	assert.Nil(t, vs5)
+}
