@@ -4,6 +4,7 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 func BenchmarkLoggerEmit(b *testing.B) {
@@ -117,6 +119,53 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 	}
 
 	_ = enabled
+}
+
+func BenchmarkLoggerEmitExceptionAttributes(b *testing.B) {
+	logger := newTestLogger(b)
+
+	base := log.Record{}
+	base.SetBody(log.StringValue("boom"))
+	base.SetSeverity(log.SeverityError)
+
+	manualErr := errors.New("boom")
+	manual := base.Clone()
+	manual.AddAttributes(
+		log.String(string(semconv.ExceptionMessageKey), manualErr.Error()),
+	)
+
+	withErr := base.Clone()
+	withErr.SetErr(manualErr)
+
+	run := func(r log.Record) func(b *testing.B) {
+		return func(b *testing.B) {
+			ctx := b.Context()
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				logger.Emit(ctx, r)
+			}
+		}
+	}
+
+	// Mimic otellogr logsink behavior: logger attributes + converted kv attrs.
+	baseAttrs := []log.KeyValue{
+		log.String("logger.name", "example"),
+		log.String("service.name", "svc"),
+	}
+	kvAttrs := []log.KeyValue{
+		log.String("key1", "value1"),
+		log.Int("key2", 2),
+		log.Bool("key3", true),
+	}
+
+	manual.AddAttributes(baseAttrs...)
+	manual.AddAttributes(kvAttrs...)
+	withErr.AddAttributes(baseAttrs...)
+	withErr.AddAttributes(kvAttrs...)
+
+	b.Run("Manual", run(manual))
+	b.Run("SetError", run(withErr))
 }
 
 func newTestLogger(t testing.TB) log.Logger {

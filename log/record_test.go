@@ -221,3 +221,52 @@ func TestRecordClone(t *testing.T) {
 	assert.Contains(t, r1Attrs, attr0)
 	assert.Contains(t, r1Attrs, attr1)
 }
+
+func TestSetErr(t *testing.T) {
+	err := assert.AnError
+
+	tests := []struct {
+		name  string
+		setup func(*log.Record)
+		want  error
+		same  bool
+	}{
+		{
+			name: "zero value",
+		},
+		{
+			name: "set error",
+			setup: func(r *log.Record) {
+				r.SetErr(err)
+			},
+			want: err,
+			same: true,
+		},
+		{
+			name: "clear error",
+			setup: func(r *log.Record) {
+				r.SetErr(err)
+				r.SetErr(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var r log.Record
+			if tt.setup != nil {
+				tt.setup(&r)
+			}
+
+			if tt.want == nil {
+				assert.NoError(t, r.Err())
+				return
+			}
+			if tt.same {
+				assert.Same(t, tt.want, r.Err())
+				return
+			}
+			assert.Equal(t, tt.want, r.Err())
+		})
+	}
+}
