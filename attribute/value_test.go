@@ -145,17 +145,15 @@ func TestValue(t *testing.T) {
 			},
 		},
 	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		if testcase.wantType == attribute.INVALID {
-			continue
-		}
-		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.value.Type() != testcase.wantType {
+				t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+			}
+			got := testcase.value.AsInterface()
+			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
+		})
 	}
 }
 
