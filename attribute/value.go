@@ -4,6 +4,7 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -44,6 +45,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// BYTES is a slice of bytes Type Value.
+	BYTES
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +116,13 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+func BytesValue(v []byte) Value {
+	return Value{
+		vtype: BYTES,
+		slice: attribute.BytesValue(v),
+	}
 }
 
 // Type returns a type of the Value.
@@ -196,6 +206,15 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsStringSlice(v.slice)
 }
 
+// AsBytes returns the bytes value. Make sure that the Value's type
+// is BYTES.
+func (v Value) AsBytes() []byte {
+	if v.vtype != BYTES {
+		return nil
+	}
+	return attribute.AsBytes(v.slice)
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -217,6 +236,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case BYTES:
+		return v.AsBytes()
 	}
 	return unknownValueType{}
 }
@@ -252,6 +273,8 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case BYTES:
+		return base64.StdEncoding.EncodeToString(v.AsBytes())
 	default:
 		return "unknown"
 	}

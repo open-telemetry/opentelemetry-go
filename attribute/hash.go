@@ -27,6 +27,7 @@ const (
 	int64SliceID   uint64 = 3762322556277578591 // "_[]int64" (little endian)
 	float64SliceID uint64 = 7308324551835016539 // "[]double" (little endian)
 	stringSliceID  uint64 = 7453010373645655387 // "[]string" (little endian)
+	bytesID        uint64 = 6874028470941080415 // "_[]byte_" (little endian)
 )
 
 // hashKVs returns a new xxHash64 hash of kvs.
@@ -79,6 +80,15 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		rv := reflect.ValueOf(kv.Value.slice)
 		for i := 0; i < rv.Len(); i++ {
 			h = h.String(rv.Index(i).String())
+		}
+	case BYTES:
+		h = h.Uint64(bytesID)
+		if kv.Value.slice == nil {
+			break
+		}
+		rv := reflect.ValueOf(kv.Value.slice)
+		for i := 0; i < rv.Len(); i ++{
+			h = h.Uint64(rv.Index(i).Uint())
 		}
 	case INVALID:
 	default:

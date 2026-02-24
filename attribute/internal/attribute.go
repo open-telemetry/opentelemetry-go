@@ -39,6 +39,13 @@ func StringSliceValue(v []string) any {
 	return cp.Interface()
 }
 
+// BytesValue converts a bytes slice into an array with same elements as slice.
+func BytesValue(v []byte) any {
+	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeFor[byte]())).Elem()
+	reflect.Copy(cp, reflect.ValueOf(v))
+	return cp.Interface()
+}
+
 // AsBoolSlice converts a bool array into a slice into with same elements as array.
 func AsBoolSlice(v any) []bool {
 	rv := reflect.ValueOf(v)
@@ -85,6 +92,19 @@ func AsStringSlice(v any) []string {
 		return nil
 	}
 	cpy := make([]string, rv.Len())
+	if len(cpy) > 0 {
+		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
+	}
+	return cpy
+}
+
+// AsBytes converts a bytes array into a slice into with same elements as array.
+func AsBytes(v any) []byte {
+	rv := reflect.ValueOf(v)
+	if rv.Type().Kind() != reflect.Array{
+		return nil
+	}
+	cpy := make([]byte, rv.Len())
 	if len(cpy) > 0 {
 		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
 	}
