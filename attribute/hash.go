@@ -83,9 +83,6 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		}
 	case BYTES:
 		h = h.Uint64(bytesID)
-		if kv.Value.slice == nil {
-			break
-		}
 		rv := reflect.ValueOf(kv.Value.slice)
 		for i := 0; i < rv.Len(); i++ {
 			h = h.Uint64(rv.Index(i).Uint())

@@ -111,7 +111,7 @@ func TestEmit(t *testing.T) {
 		{
 			name: `test Key.Emit() can emit a string representing self.BYTES`,
 			v:    attribute.BytesValue([]byte("foo")),
-			want: `Zm9v`,
+			want: "Zm9v",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

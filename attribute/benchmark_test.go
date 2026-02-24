@@ -23,7 +23,6 @@ var (
 	outFloat64Slice []float64
 	outStr          string
 	outStrSlice     []string
-	outBytes        []byte
 )
 
 func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
@@ -279,22 +278,25 @@ func BenchmarkBytes(b *testing.B) {
 
 	b.Run("Value", func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outV = attribute.BytesValue(v)
+		for b.Loop() {
+			attribute.BytesValue(v)
 		}
 	})
+
 	b.Run("KeyValue", func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outKV = attribute.Bytes(k, v)
+		for b.Loop() {
+			attribute.Bytes(k, v)
 		}
 	})
+
 	b.Run("AsBytes", func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outBytes = kv.Value.AsBytes()
+		for b.Loop() {
+			kv.Value.AsBytes()
 		}
 	})
+
 	b.Run("Emit", benchmarkEmit(kv))
 }
 

@@ -125,7 +125,7 @@ func TestKeyValueValid(t *testing.T) {
 		{
 			desc:  "non-empty key with BYTE type Value should be valid",
 			valid: true,
-			kv:    attribute.Bytes("string", []byte{}),
+			kv:    attribute.Bytes("bytes", []byte{}),
 		},
 	}
 
