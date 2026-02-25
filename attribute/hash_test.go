@@ -36,6 +36,20 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return String(k, "bar") },
 	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
+	func(k string) KeyValue {
+		return Map(k, map[string]Value{"bool": BoolValue(true), "int": Int64Value(42)})
+	},
+	func(k string) KeyValue {
+		return Map(k, map[string]Value{
+			"nested": MapValue(map[string]Value{"inner": StringValue("value")}),
+		})
+	},
+	func(k string) KeyValue { return Map(k, map[string]Value{}) },
+	func(k string) KeyValue {
+		return Map(k, map[string]Value{
+			"float": Float64Value(3.14), "bool": BoolValue(false), "str": StringValue("test"),
+		})
+	},
 }
 
 func TestHashKVsEquality(t *testing.T) {
@@ -237,16 +251,34 @@ func FuzzHashKVs(f *testing.F) {
 			kvs = append(kvs, StringSlice("stringslice", strings))
 		}
 
+		// Add Map.
+		if numAttrs > 7 {
+			mapLen := len(k2) % 3 // 0-2 entries
+			m := make(map[string]Value, mapLen)
+			for i := range mapLen {
+				key := fmt.Sprintf("k%d", i)
+				switch i % 3 {
+				case 0:
+					m[key] = BoolValue((i+len(k1))%2 == 0)
+				case 1:
+					m[key] = IntValue(i + len(k2))
+				case 2:
+					m[key] = StringValue(fmt.Sprintf("v_%d", i))
+				}
+			}
+			kvs = append(kvs, Map("map", m))
+		}
+
 		// Test duplicate keys (should be handled by Set construction).
-		if numAttrs > 7 && k1 != "" {
+		if numAttrs > 8 && k1 != "" {
 			kvs = append(kvs, String(k1, "duplicate_key_value"))
 		}
 
 		// Add more attributes with Unicode keys.
-		if numAttrs > 8 {
+		if numAttrs > 9 {
 			kvs = append(kvs, String("🔑", "unicode_key"))
 		}
-		if numAttrs > 9 {
+		if numAttrs > 10 {
 			kvs = append(kvs, String("empty", ""))
 		}
 
@@ -300,6 +332,26 @@ func FuzzHashKVs(f *testing.F) {
 					val := modifiedKvs[0].Value.AsFloat64()
 					if !math.IsNaN(val) && !math.IsInf(val, 0) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
+					}
+				case MAP:
+					origMap := modifiedKvs[0].Value.AsMap()
+					if len(origMap) > 0 {
+						newMap := make(map[string]Value, len(origMap))
+						for mk, mv := range origMap {
+							newMap[mk] = mv
+						}
+						for mk, mv := range newMap {
+							switch mv.Type() {
+							case INT64:
+								newMap[mk] = Int64Value(mv.AsInt64() + 1)
+							case BOOL:
+								newMap[mk] = BoolValue(!mv.AsBool())
+							case STRING:
+								newMap[mk] = StringValue(mv.AsString() + "_mod")
+							}
+							break // only modify first
+						}
+						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), newMap)
 					}
 				}
 

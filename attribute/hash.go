@@ -83,9 +83,9 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		}
 	case MAP:
 		h = h.Uint64(mapID)
-		// Hash map entries in deterministic order (stored sorted by key).
-		entries := kv.Value.asMapKeyValues()
-		for _, entry := range entries {
+		rv := reflect.ValueOf(kv.Value.slice)
+		for i := 0; i < rv.Len(); i++ {
+			entry := rv.Index(i).Interface().(KeyValue)
 			h = hashKV(h, entry)
 		}
 	case INVALID:

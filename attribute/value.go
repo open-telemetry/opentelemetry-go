@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -124,27 +125,31 @@ func StringSliceValue(v []string) Value {
 // AsMap as an empty (non-nil) map[string]Value. This is consistent with
 // how nil slices are handled by the other slice-typed constructors.
 func MapValue(v map[string]Value) Value {
-	if v == nil {
-		return Value{vtype: MAP, slice: reflect.New(reflect.ArrayOf(0, reflect.TypeFor[KeyValue]())).Elem().Interface()}
+	return Value{vtype: MAP, slice: mapValue(v)}
+}
+
+// mapValue converts a map into a sorted array of KeyValue stored as any.
+func mapValue(v map[string]Value) any {
+	n := len(v)
+	if n == 0 {
+		// Return a zero-length array to maintain type information.
+		return reflect.New(reflect.ArrayOf(0, reflect.TypeFor[KeyValue]())).Elem().Interface()
 	}
 
-	keys := make([]string, 0, len(v))
+	keys := make([]string, 0, n)
 	for k := range v {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	entries := make([]KeyValue, len(keys))
+	entries := make([]KeyValue, n)
 	for i, k := range keys {
 		entries[i] = KeyValue{Key: Key(k), Value: v[k]}
 	}
 
-	array := reflect.New(reflect.ArrayOf(len(entries), reflect.TypeFor[KeyValue]())).Elem()
-	if len(entries) > 0 {
-		_ = reflect.Copy(array, reflect.ValueOf(entries))
-	}
-
-	return Value{vtype: MAP, slice: array.Interface()}
+	cp := reflect.New(reflect.ArrayOf(n, reflect.TypeFor[KeyValue]())).Elem()
+	reflect.Copy(cp, reflect.ValueOf(entries))
+	return cp.Interface()
 }
 
 // Type returns a type of the Value.
@@ -251,13 +256,15 @@ func (v Value) asMap() map[string]Value {
 
 func (v Value) asMapKeyValues() []KeyValue {
 	rv := reflect.ValueOf(v.slice)
-	if rv.Kind() != reflect.Array {
+	if rv.Type().Kind() != reflect.Array {
 		return nil
 	}
-	cpy := make([]KeyValue, rv.Len())
-	if len(cpy) > 0 {
-		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
+	n := rv.Len()
+	if n == 0 {
+		return []KeyValue{}
 	}
+	cpy := make([]KeyValue, n)
+	reflect.Copy(reflect.ValueOf(cpy), rv)
 	return cpy
 }
 
@@ -320,31 +327,33 @@ func (v Value) Emit() string {
 	case STRING:
 		return v.stringly
 	case MAP:
-		raw := v.mapEmitValue()
-		j, err := json.Marshal(raw)
-		if err != nil {
-			return fmt.Sprintf("invalid: %v", v.asMap())
+		entries := v.asMapKeyValues()
+		if len(entries) == 0 {
+			return "{}"
 		}
-		return string(j)
+		var b strings.Builder
+		b.WriteRune('{') //nolint:revive // No need to check error for strings.Builder.
+		for i, kv := range entries {
+			if i > 0 {
+				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+			}
+			b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+			b.WriteString(string(kv.Key)) //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune(':') //nolint:revive // No need to check error for strings.Builder.
+			if kv.Value.Type() == STRING {
+				b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+				b.WriteString(kv.Value.Emit()) //nolint:revive // No need to check error for strings.Builder.
+				b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+			} else {
+				b.WriteString(kv.Value.Emit()) //nolint:revive // No need to check error for strings.Builder.
+			}
+		}
+		b.WriteRune('}') //nolint:revive // No need to check error for strings.Builder.
+		return b.String()
 	default:
 		return "unknown"
 	}
-}
-
-// mapEmitValue recursively converts a MAP Value into plain Go types so that
-// json.Marshal produces output consistent with slice-type Emit (raw values
-// without type wrappers).
-func (v Value) mapEmitValue() any {
-	m := v.asMap()
-	raw := make(map[string]any, len(m))
-	for k, val := range m {
-		if val.Type() == MAP {
-			raw[k] = val.mapEmitValue()
-		} else {
-			raw[k] = val.AsInterface()
-		}
-	}
-	return raw
 }
 
 // MarshalJSON returns the JSON encoding of the Value.

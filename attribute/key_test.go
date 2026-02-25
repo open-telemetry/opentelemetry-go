@@ -116,6 +116,11 @@ func TestEmit(t *testing.T) {
 			}),
 			want: `{"key1":"value1","key2":42}`,
 		},
+		{
+			name: `test Key.Emit() can emit a string representing empty self.MAP`,
+			v:    attribute.MapValue(nil),
+			want: `{}`,
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {

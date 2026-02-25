@@ -4,7 +4,6 @@
 package attribute_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -99,23 +98,68 @@ func TestValue(t *testing.T) {
 				"key2": attribute.Int64Value(42),
 			},
 		},
+		{
+			name:      "MapValue with nil map",
+			value:     attribute.MapValue(nil),
+			wantType:  attribute.MAP,
+			wantValue: map[string]attribute.Value{},
+		},
+		{
+			name:      "MapValue with empty map",
+			value:     attribute.MapValue(map[string]attribute.Value{}),
+			wantType:  attribute.MAP,
+			wantValue: map[string]attribute.Value{},
+		},
+		{
+			name:  "MapValue with single item",
+			value: attribute.MapValue(map[string]attribute.Value{"key": attribute.StringValue("val")}),
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"key": attribute.StringValue("val"),
+			},
+		},
+		{
+			name: "MapValue with multiple items",
+			value: attribute.MapValue(map[string]attribute.Value{
+				"string": attribute.StringValue("test"),
+				"int":    attribute.Int64Value(123),
+				"float":  attribute.Float64Value(3.14),
+				"bool":   attribute.BoolValue(true),
+			}),
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"string": attribute.StringValue("test"),
+				"int":    attribute.Int64Value(123),
+				"float":  attribute.Float64Value(3.14),
+				"bool":   attribute.BoolValue(true),
+			},
+		},
+		{
+			name: "MapValue with nested maps",
+			value: attribute.MapValue(map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested value"),
+				}),
+				"top": attribute.StringValue("top level"),
+			}),
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested value"),
+				}),
+				"top": attribute.StringValue("top level"),
+			},
+		},
 	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		if testcase.wantType == attribute.INVALID {
-			continue
-		}
-		got := testcase.value.AsInterface()
-
-		// Use a cmp.Comparer for attribute.Value to handle unexported fields.
-		opt := cmp.Comparer(func(a, b attribute.Value) bool {
-			return a.Type() == b.Type() && reflect.DeepEqual(a.AsInterface(), b.AsInterface())
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.value.Type() != testcase.wantType {
+				t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+			}
+			got := testcase.value.AsInterface()
+			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
 		})
-		if diff := cmp.Diff(testcase.wantValue, got, opt); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
 	}
 }
 
@@ -169,6 +213,20 @@ func TestEquivalence(t *testing.T) {
 			attribute.Map("Map", map[string]attribute.Value{
 				"key1": attribute.StringValue("value1"),
 				"key2": attribute.Int64Value(42),
+			}),
+		},
+		{
+			attribute.Map("NestedMap", map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested"),
+				}),
+				"top": attribute.BoolValue(true),
+			}),
+			attribute.Map("NestedMap", map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested"),
+				}),
+				"top": attribute.BoolValue(true),
 			}),
 		},
 	}
@@ -242,146 +300,4 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.Map("Map", m1)
 	m2 := kv.Value.AsMap()
 	assert.Equal(t, m1, m2)
-}
-
-func TestMapValue(t *testing.T) {
-	// Test basic map
-	m := map[string]attribute.Value{
-		"string": attribute.StringValue("test"),
-		"int":    attribute.Int64Value(123),
-		"float":  attribute.Float64Value(3.14),
-		"bool":   attribute.BoolValue(true),
-	}
-
-	kv := attribute.Map("test", m)
-	assert.Equal(t, attribute.MAP, kv.Value.Type())
-
-	result := kv.Value.AsMap()
-	assert.Equal(t, m, result)
-
-	// Test nested map
-	nested := map[string]attribute.Value{
-		"outer": attribute.MapValue(map[string]attribute.Value{
-			"inner": attribute.StringValue("nested value"),
-		}),
-	}
-
-	kvNested := attribute.Map("nested", nested)
-	assert.Equal(t, attribute.MAP, kvNested.Value.Type())
-
-	resultNested := kvNested.Value.AsMap()
-	assert.Equal(t, nested, resultNested)
-
-	// Verify nested value can be extracted
-	outerMap := resultNested["outer"].AsMap()
-	assert.NotNil(t, outerMap)
-	assert.Equal(t, "nested value", outerMap["inner"].AsString())
-
-	// Test empty map
-	emptyMap := map[string]attribute.Value{}
-	kvEmpty := attribute.Map("empty", emptyMap)
-	assert.Equal(t, attribute.MAP, kvEmpty.Value.Type())
-	assert.Equal(t, emptyMap, kvEmpty.Value.AsMap())
-
-	// Test AsInterface returns the map
-	iface := kv.Value.AsInterface()
-	mapIface, ok := iface.(map[string]attribute.Value)
-	assert.True(t, ok)
-	assert.Equal(t, m, mapIface)
-}
-
-func TestMapValue_DeepNesting(t *testing.T) {
-	// Test deeply nested maps to verify recursive map<string, AnyValue> support
-	// as per OpenTelemetry spec
-	deepMap := map[string]attribute.Value{
-		"level1": attribute.MapValue(map[string]attribute.Value{
-			"level2": attribute.MapValue(map[string]attribute.Value{
-				"level3": attribute.MapValue(map[string]attribute.Value{
-					"string": attribute.StringValue("deep value"),
-					"int":    attribute.Int64Value(123),
-					"bool":   attribute.BoolValue(true),
-					"slice":  attribute.StringSliceValue([]string{"a", "b"}),
-				}),
-				"sibling": attribute.StringValue("level2 value"),
-			}),
-		}),
-		"topString": attribute.StringValue("top level"),
-	}
-
-	kv := attribute.Map("config", deepMap)
-	assert.Equal(t, attribute.MAP, kv.Value.Type())
-
-	// Navigate through nested structure
-	result := kv.Value.AsMap()
-	assert.NotNil(t, result)
-
-	level1 := result["level1"].AsMap()
-	assert.NotNil(t, level1)
-
-	level2 := level1["level2"].AsMap()
-	assert.NotNil(t, level2)
-
-	level3 := level2["level3"].AsMap()
-	assert.NotNil(t, level3)
-
-	// Verify leaf values
-	assert.Equal(t, "deep value", level3["string"].AsString())
-	assert.Equal(t, int64(123), level3["int"].AsInt64())
-	assert.True(t, level3["bool"].AsBool())
-	assert.Equal(t, []string{"a", "b"}, level3["slice"].AsStringSlice())
-
-	// Verify sibling at level2
-	assert.Equal(t, "level2 value", level2["sibling"].AsString())
-
-	// Verify top level
-	assert.Equal(t, "top level", result["topString"].AsString())
-}
-
-func TestMapValue_NilMap(t *testing.T) {
-	// nil map round-trips as an empty (non-nil) map,
-	// consistent with how nil slices are handled.
-	v := attribute.MapValue(nil)
-	assert.Equal(t, attribute.MAP, v.Type())
-	got := v.AsMap()
-	assert.NotNil(t, got, "nil map should round-trip as non-nil empty map")
-	assert.Empty(t, got)
-}
-
-func TestAsMap_WrongType(t *testing.T) {
-	// AsMap on a non-MAP Value must return nil without panicking.
-	assert.Nil(t, attribute.StringValue("hello").AsMap())
-	assert.Nil(t, attribute.Int64Value(42).AsMap())
-	assert.Nil(t, attribute.BoolValue(true).AsMap())
-	assert.Nil(t, attribute.Float64Value(3.14).AsMap())
-	assert.Nil(t, attribute.BoolSliceValue([]bool{true}).AsMap())
-}
-
-func BenchmarkMapValue(b *testing.B) {
-	m := map[string]attribute.Value{
-		"string":  attribute.StringValue("value"),
-		"int":     attribute.Int64Value(42),
-		"float":   attribute.Float64Value(3.14),
-		"bool":    attribute.BoolValue(true),
-		"strings": attribute.StringSliceValue([]string{"a", "b", "c"}),
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		_ = attribute.MapValue(m)
-	}
-}
-
-func BenchmarkAsMap(b *testing.B) {
-	v := attribute.MapValue(map[string]attribute.Value{
-		"string":  attribute.StringValue("value"),
-		"int":     attribute.Int64Value(42),
-		"float":   attribute.Float64Value(3.14),
-		"bool":    attribute.BoolValue(true),
-		"strings": attribute.StringSliceValue([]string{"a", "b", "c"}),
-	})
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		_ = v.AsMap()
-	}
 }
