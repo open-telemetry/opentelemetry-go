@@ -345,7 +345,7 @@ func (v Value) Emit() string {
 			case kv.Value.Type() == INVALID:
 				_, _ = b.WriteString("null")
 			case kv.Value.Type() == STRING:
-				valJSON, _ := json.Marshal(kv.Value.Emit())
+				valJSON, _ := json.Marshal(kv.Value.stringly)
 				_, _ = b.Write(valJSON)
 			case kv.Value.Type() == FLOAT64:
 				f := kv.Value.AsFloat64()
