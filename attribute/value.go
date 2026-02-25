@@ -337,14 +337,14 @@ func (v Value) Emit() string {
 			if i > 0 {
 				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
 			}
-			b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune('"')              //nolint:revive // No need to check error for strings.Builder.
 			b.WriteString(string(kv.Key)) //nolint:revive // No need to check error for strings.Builder.
-			b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
-			b.WriteRune(':') //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune('"')              //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune(':')              //nolint:revive // No need to check error for strings.Builder.
 			if kv.Value.Type() == STRING {
-				b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+				b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
 				b.WriteString(kv.Value.Emit()) //nolint:revive // No need to check error for strings.Builder.
-				b.WriteRune('"') //nolint:revive // No need to check error for strings.Builder.
+				b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
 			} else {
 				b.WriteString(kv.Value.Emit()) //nolint:revive // No need to check error for strings.Builder.
 			}

@@ -111,8 +111,8 @@ func TestValue(t *testing.T) {
 			wantValue: map[string]attribute.Value{},
 		},
 		{
-			name:  "MapValue with single item",
-			value: attribute.MapValue(map[string]attribute.Value{"key": attribute.StringValue("val")}),
+			name:     "MapValue with single item",
+			value:    attribute.MapValue(map[string]attribute.Value{"key": attribute.StringValue("val")}),
 			wantType: attribute.MAP,
 			wantValue: map[string]attribute.Value{
 				"key": attribute.StringValue("val"),
