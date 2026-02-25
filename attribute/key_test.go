@@ -5,6 +5,7 @@ package attribute_test
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -47,9 +48,11 @@ func TestJSONValue(t *testing.T) {
 
 	data, err := json.Marshal(kvs)
 	require.NoError(t, err)
-	require.JSONEq(t,
+	require.JSONEq(
+		t,
 		`[{"Key":"A","Value":{"Type":"STRING","Value":"B"}},{"Key":"C","Value":{"Type":"INT64","Value":1}}]`,
-		string(data))
+		string(data),
+	)
 }
 
 func TestEmit(t *testing.T) {
@@ -120,6 +123,48 @@ func TestEmit(t *testing.T) {
 			name: `test Key.Emit() can emit a string representing empty self.MAP`,
 			v:    attribute.MapValue(nil),
 			want: `{}`,
+		},
+		{
+			name: `test Key.Emit() escapes quotes in MAP string values`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				"key": attribute.StringValue(`hello "world"`),
+			}),
+			want: `{"key":"hello \"world\""}`,
+		},
+		{
+			name: `test Key.Emit() escapes quotes in MAP keys`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				`k"ey`: attribute.BoolValue(true),
+			}),
+			want: `{"k\"ey":true}`,
+		},
+		{
+			name: `test Key.Emit() quotes NaN float64 in MAP`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				"val": attribute.Float64Value(math.NaN()),
+			}),
+			want: `{"val":"NaN"}`,
+		},
+		{
+			name: `test Key.Emit() quotes +Inf float64 in MAP`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				"val": attribute.Float64Value(math.Inf(1)),
+			}),
+			want: `{"val":"Infinity"}`,
+		},
+		{
+			name: `test Key.Emit() quotes -Inf float64 in MAP`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				"val": attribute.Float64Value(math.Inf(-1)),
+			}),
+			want: `{"val":"-Infinity"}`,
+		},
+		{
+			name: `test Key.Emit() emits null for INVALID values in MAP`,
+			v: attribute.MapValue(map[string]attribute.Value{
+				"a": {},
+			}),
+			want: `{"a":null}`,
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {

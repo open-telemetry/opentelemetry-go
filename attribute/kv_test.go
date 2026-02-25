@@ -59,11 +59,22 @@ func TestKeyValueConstructors(t *testing.T) {
 			},
 		},
 		{
-			name:   "Map",
-			actual: attribute.Map("k1", map[string]attribute.Value{"a": attribute.BoolValue(true), "b": attribute.Int64Value(42)}),
+			name: "Map",
+			actual: attribute.Map(
+				"k1",
+				map[string]attribute.Value{
+					"a": attribute.BoolValue(true),
+					"b": attribute.Int64Value(42),
+				},
+			),
 			expected: attribute.KeyValue{
-				Key:   "k1",
-				Value: attribute.MapValue(map[string]attribute.Value{"a": attribute.BoolValue(true), "b": attribute.Int64Value(42)}),
+				Key: "k1",
+				Value: attribute.MapValue(
+					map[string]attribute.Value{
+						"a": attribute.BoolValue(true),
+						"b": attribute.Int64Value(42),
+					},
+				),
 			},
 		},
 	}

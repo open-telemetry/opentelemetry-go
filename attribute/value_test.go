@@ -153,7 +153,11 @@ func TestValue(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			if testcase.value.Type() != testcase.wantType {
-				t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+				t.Errorf(
+					"wrong value type, got %#v, expected %#v",
+					testcase.value.Type(),
+					testcase.wantType,
+				)
 			}
 			got := testcase.value.AsInterface()
 			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {

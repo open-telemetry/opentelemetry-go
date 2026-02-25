@@ -6,6 +6,7 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -337,16 +338,43 @@ func (v Value) Emit() string {
 			if i > 0 {
 				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
 			}
-			b.WriteRune('"')              //nolint:revive // No need to check error for strings.Builder.
-			b.WriteString(string(kv.Key)) //nolint:revive // No need to check error for strings.Builder.
-			b.WriteRune('"')              //nolint:revive // No need to check error for strings.Builder.
-			b.WriteRune(':')              //nolint:revive // No need to check error for strings.Builder.
-			if kv.Value.Type() == STRING {
-				b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
-				b.WriteString(kv.Value.Emit()) //nolint:revive // No need to check error for strings.Builder.
-				b.WriteRune('"')               //nolint:revive // No need to check error for strings.Builder.
-			} else {
-				b.WriteString(kv.Value.Emit()) //nolint:revive // No need to check error for strings.Builder.
+			b.WriteString(
+				strconv.Quote(string(kv.Key)),
+			) //nolint:revive // No need to check error for strings.Builder.
+			b.WriteRune(
+				':',
+			) //nolint:revive // No need to check error for strings.Builder.
+			switch {
+			case kv.Value.Type() == INVALID:
+				b.WriteString("null") //nolint:revive // No need to check error for strings.Builder.
+			case kv.Value.Type() == STRING:
+				b.WriteString(
+					strconv.Quote(kv.Value.Emit()),
+				) //nolint:revive // No need to check error for strings.Builder.
+			case kv.Value.Type() == FLOAT64:
+				f := kv.Value.AsFloat64()
+				switch {
+				case math.IsNaN(f):
+					b.WriteString(
+						`"NaN"`,
+					) //nolint:revive // No need to check error for strings.Builder.
+				case math.IsInf(f, 1):
+					b.WriteString(
+						`"Infinity"`,
+					) //nolint:revive // No need to check error for strings.Builder.
+				case math.IsInf(f, -1):
+					b.WriteString(
+						`"-Infinity"`,
+					) //nolint:revive // No need to check error for strings.Builder.
+				default:
+					b.WriteString(
+						kv.Value.Emit(),
+					) //nolint:revive // No need to check error for strings.Builder.
+				}
+			default:
+				b.WriteString(
+					kv.Value.Emit(),
+				) //nolint:revive // No need to check error for strings.Builder.
 			}
 		}
 		b.WriteRune('}') //nolint:revive // No need to check error for strings.Builder.
