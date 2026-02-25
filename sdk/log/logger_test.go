@@ -397,7 +397,7 @@ func TestAddExceptionFromError(t *testing.T) {
 	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
 		r := &Record{}
 		r.attributeValueLengthLimit = -1
-		r.attributeCountLimit = 1
+		r.attributeCountLimit = 2
 		r.AddAttributes(log.String("k1", "v1"))
 
 		addExceptionFromError(r, errors.New("boom"))
@@ -415,6 +415,29 @@ func TestAddExceptionFromError(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Equal(t, "boom", gotMessage)
+	})
+
+	t.Run("NoSlotsLeft", func(t *testing.T) {
+		r := &Record{}
+		r.attributeValueLengthLimit = -1
+		r.attributeCountLimit = 1
+		r.AddAttributes(log.String("k1", "v1"))
+
+		addExceptionFromError(r, errors.New("boom"))
+
+		var gotType, gotMessage string
+		r.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Empty(t, gotType)
+		assert.Empty(t, gotMessage)
 	})
 }
 
