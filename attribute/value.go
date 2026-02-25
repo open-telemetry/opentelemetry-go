@@ -213,6 +213,10 @@ func (v Value) AsBytes() []byte {
 	if v.vtype != BYTES {
 		return nil
 	}
+	return v.asBytes()
+}
+
+func (v Value) asBytes() []byte {
 	return attribute.AsBytes(v.slice)
 }
 
@@ -238,7 +242,7 @@ func (v Value) AsInterface() any {
 	case STRINGSLICE:
 		return v.asStringSlice()
 	case BYTES:
-		return v.AsBytes()
+		return v.asBytes()
 	}
 	return unknownValueType{}
 }
@@ -275,7 +279,7 @@ func (v Value) Emit() string {
 	case STRING:
 		return v.stringly
 	case BYTES:
-		return base64.StdEncoding.EncodeToString(v.AsBytes())
+		return base64.StdEncoding.EncodeToString(v.asBytes())
 	default:
 		return "unknown"
 	}
