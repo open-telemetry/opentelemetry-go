@@ -338,13 +338,15 @@ func (v Value) Emit() string {
 			if i > 0 {
 				_, _ = b.WriteRune(',')
 			}
-			_, _ = b.WriteString(strconv.Quote(string(kv.Key)))
+			keyJSON, _ := json.Marshal(string(kv.Key))
+			_, _ = b.Write(keyJSON)
 			_, _ = b.WriteRune(':')
 			switch {
 			case kv.Value.Type() == INVALID:
 				_, _ = b.WriteString("null")
 			case kv.Value.Type() == STRING:
-				_, _ = b.WriteString(strconv.Quote(kv.Value.Emit()))
+				valJSON, _ := json.Marshal(kv.Value.Emit())
+				_, _ = b.Write(valJSON)
 			case kv.Value.Type() == FLOAT64:
 				f := kv.Value.AsFloat64()
 				switch {
