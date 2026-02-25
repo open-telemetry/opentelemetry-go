@@ -333,51 +333,35 @@ func (v Value) Emit() string {
 			return "{}"
 		}
 		var b strings.Builder
-		b.WriteRune('{') //nolint:revive // No need to check error for strings.Builder.
+		_, _ = b.WriteRune('{')
 		for i, kv := range entries {
 			if i > 0 {
-				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+				_, _ = b.WriteRune(',')
 			}
-			b.WriteString(
-				strconv.Quote(string(kv.Key)),
-			) //nolint:revive // No need to check error for strings.Builder.
-			b.WriteRune(
-				':',
-			) //nolint:revive // No need to check error for strings.Builder.
+			_, _ = b.WriteString(strconv.Quote(string(kv.Key)))
+			_, _ = b.WriteRune(':')
 			switch {
 			case kv.Value.Type() == INVALID:
-				b.WriteString("null") //nolint:revive // No need to check error for strings.Builder.
+				_, _ = b.WriteString("null")
 			case kv.Value.Type() == STRING:
-				b.WriteString(
-					strconv.Quote(kv.Value.Emit()),
-				) //nolint:revive // No need to check error for strings.Builder.
+				_, _ = b.WriteString(strconv.Quote(kv.Value.Emit()))
 			case kv.Value.Type() == FLOAT64:
 				f := kv.Value.AsFloat64()
 				switch {
 				case math.IsNaN(f):
-					b.WriteString(
-						`"NaN"`,
-					) //nolint:revive // No need to check error for strings.Builder.
+					_, _ = b.WriteString(`"NaN"`)
 				case math.IsInf(f, 1):
-					b.WriteString(
-						`"Infinity"`,
-					) //nolint:revive // No need to check error for strings.Builder.
+					_, _ = b.WriteString(`"Infinity"`)
 				case math.IsInf(f, -1):
-					b.WriteString(
-						`"-Infinity"`,
-					) //nolint:revive // No need to check error for strings.Builder.
+					_, _ = b.WriteString(`"-Infinity"`)
 				default:
-					b.WriteString(
-						kv.Value.Emit(),
-					) //nolint:revive // No need to check error for strings.Builder.
+					_, _ = b.WriteString(kv.Value.Emit())
 				}
 			default:
-				b.WriteString(
-					kv.Value.Emit(),
-				) //nolint:revive // No need to check error for strings.Builder.
+				_, _ = b.WriteString(kv.Value.Emit())
 			}
 		}
-		b.WriteRune('}') //nolint:revive // No need to check error for strings.Builder.
+		_, _ = b.WriteRune('}')
 		return b.String()
 	default:
 		return "unknown"
