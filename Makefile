@@ -185,9 +185,7 @@ test-coverage: $(GOCOVMERGE)
 .PHONY: benchmark
 benchmark: $(OTEL_GO_MOD_DIRS:%=benchmark/%)
 benchmark/%:
-	@echo "cd $* && $(GO) test -run='^$' -bench=. $(ARGS) ./..." \
-		&& cd $* \
-		&& $(GO) test -run='^$' -bench=. $(ARGS) ./...
+	cd $* && $(GO) test -run='^$$' -bench=. $(ARGS) ./...
 
 print-sharded-benchmarks:
 	@echo $(OTEL_GO_MOD_DIRS) | jq -cR 'split(" ")'
