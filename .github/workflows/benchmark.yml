@@ -46,4 +46,7 @@ jobs:
           allow-empty: true
           # CodSpeed overrides the default benchtime if we don't explicitly specify it.
           # Having this would avoid running benchmark for more than 1 hour.
-          run: make benchmark/${{matrix.shard}} ARGS=-benchtime=1s
+          #
+          # The benchtime is adjusted to 500 ms to speed up the benchmark time.
+          # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
+          run: make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
