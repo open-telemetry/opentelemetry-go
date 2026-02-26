@@ -459,8 +459,7 @@ func New(members ...Member) (Baggage, error) {
 		}
 	}
 
-	// Pre-compute each member's serialized byte size.
-	sizes := make(map[string]int, len(b))
+	// Check byte size and drop members if necessary.
 	totalBytes := 0
 	first := true
 	for k := range b {
@@ -469,27 +468,17 @@ func New(members ...Member) (Baggage, error) {
 			value:      b[k].Value,
 			properties: fromInternalProperties(b[k].Properties),
 		}
-		sizes[k] = len(m.String())
+		memberSize := len(m.String())
 		if !first {
-			totalBytes++ // comma separator
+			memberSize++ // comma separator
 		}
-		totalBytes += sizes[k]
-		first = false
-	}
-
-	if totalBytes > maxBytesPerBaggageString {
-		truncateErr = errors.Join(truncateErr, fmt.Errorf("%w: %d", errBaggageBytes, totalBytes))
-		for k := range b {
-			size := sizes[k]
-			if len(b) > 1 {
-				size++ // comma separator
-			}
-			totalBytes -= size
+		if totalBytes+memberSize > maxBytesPerBaggageString {
+			truncateErr = errors.Join(truncateErr, fmt.Errorf("%w: %d", errBaggageBytes, totalBytes+memberSize))
 			delete(b, k)
-			if totalBytes <= maxBytesPerBaggageString {
-				break
-			}
+			continue
 		}
+		totalBytes += memberSize
+		first = false
 	}
 
 	return Baggage{b}, truncateErr
