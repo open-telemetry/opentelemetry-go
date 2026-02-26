@@ -314,11 +314,11 @@ func TestLoggerEmit(t *testing.T) {
 	}
 }
 
-func TestAddExceptionFromError(t *testing.T) {
+func TestAddExceptionAttrsFromError(t *testing.T) {
 	t.Run("AddsMissing", func(t *testing.T) {
 		r := &Record{}
 		r.attributeValueLengthLimit = -1
-		addExceptionFromError(r, errors.New("boom"))
+		addExceptionAttrsFromError(r, errors.New("boom"))
 
 		var gotType, gotMessage, gotStack string
 		r.WalkAttributes(func(kv log.KeyValue) bool {
@@ -338,69 +338,13 @@ func TestAddExceptionFromError(t *testing.T) {
 		assert.Empty(t, gotStack)
 	})
 
-	t.Run("DoesNotOverwrite", func(t *testing.T) {
-		r := &Record{}
-		r.attributeValueLengthLimit = -1
-		r.AddAttributes(
-			log.String(string(semconv.ExceptionTypeKey), "existing.type"),
-			log.String(string(semconv.ExceptionMessageKey), "existing.message"),
-			log.String(string(semconv.ExceptionStacktraceKey), "existing.stack"),
-		)
-
-		addExceptionFromError(r, errors.New("boom"))
-
-		var gotType, gotMessage, gotStack string
-		r.WalkAttributes(func(kv log.KeyValue) bool {
-			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
-				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
-				gotMessage = kv.Value.AsString()
-			case string(semconv.ExceptionStacktraceKey):
-				gotStack = kv.Value.AsString()
-			}
-			return true
-		})
-
-		assert.Equal(t, "existing.type", gotType)
-		assert.Equal(t, "existing.message", gotMessage)
-		assert.Equal(t, "existing.stack", gotStack)
-	})
-
-	t.Run("DoesNotMixPartial", func(t *testing.T) {
-		r := &Record{}
-		r.attributeValueLengthLimit = -1
-		r.AddAttributes(
-			log.String(string(semconv.ExceptionTypeKey), "existing.type"),
-		)
-
-		addExceptionFromError(r, errors.New("boom"))
-
-		var gotType, gotMessage, gotStack string
-		r.WalkAttributes(func(kv log.KeyValue) bool {
-			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
-				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
-				gotMessage = kv.Value.AsString()
-			case string(semconv.ExceptionStacktraceKey):
-				gotStack = kv.Value.AsString()
-			}
-			return true
-		})
-
-		assert.Equal(t, "existing.type", gotType)
-		assert.Empty(t, gotMessage)
-		assert.Empty(t, gotStack)
-	})
-
 	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
 		r := &Record{}
 		r.attributeValueLengthLimit = -1
 		r.attributeCountLimit = 2
 		r.AddAttributes(log.String("k1", "v1"))
 
-		addExceptionFromError(r, errors.New("boom"))
+		addExceptionAttrsFromError(r, errors.New("boom"))
 
 		var gotType, gotMessage string
 		r.WalkAttributes(func(kv log.KeyValue) bool {
@@ -423,7 +367,7 @@ func TestAddExceptionFromError(t *testing.T) {
 		r.attributeCountLimit = 1
 		r.AddAttributes(log.String("k1", "v1"))
 
-		addExceptionFromError(r, errors.New("boom"))
+		addExceptionAttrsFromError(r, errors.New("boom"))
 
 		var gotType, gotMessage string
 		r.WalkAttributes(func(kv log.KeyValue) bool {
@@ -478,27 +422,53 @@ func (baseErr) Error() string { return "boom" }
 func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
-	var r log.Record
-	r.SetBody(log.StringValue("boom"))
-	r.SetSeverity(log.SeverityError)
-	r.SetErr(errors.New("boom"))
-	r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), "existing.message"))
+	t.Run("ExistingMessage", func(t *testing.T) {
+		var r log.Record
+		r.SetBody(log.StringValue("boom"))
+		r.SetSeverity(log.SeverityError)
+		r.SetErr(errors.New("boom"))
+		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), "existing.message"))
 
-	got := l.newRecord(t.Context(), r)
+		got := l.newRecord(t.Context(), r)
 
-	var gotType, gotMessage string
-	got.WalkAttributes(func(kv log.KeyValue) bool {
-		switch kv.Key {
-		case string(semconv.ExceptionTypeKey):
-			gotType = kv.Value.AsString()
-		case string(semconv.ExceptionMessageKey):
-			gotMessage = kv.Value.AsString()
-		}
-		return true
+		var gotType, gotMessage string
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "existing.message", gotMessage)
+		assert.Empty(t, gotType)
 	})
 
-	assert.Equal(t, "existing.message", gotMessage)
-	assert.Empty(t, gotType)
+	t.Run("ExistingType", func(t *testing.T) {
+		var r log.Record
+		r.SetBody(log.StringValue("boom"))
+		r.SetSeverity(log.SeverityError)
+		r.SetErr(errors.New("boom"))
+		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), "existing.type"))
+
+		got := l.newRecord(t.Context(), r)
+
+		var gotType, gotMessage string
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "existing.type", gotType)
+		assert.Empty(t, gotMessage)
+	})
 }
 
 func TestLoggerEnabled(t *testing.T) {

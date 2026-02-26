@@ -127,34 +127,13 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	})
 
 	if !hasExceptionAttr {
-		addExceptionFromErrorNoScan(&newRecord, r.Err())
+		addExceptionAttrsFromError(&newRecord, r.Err())
 	}
 
 	return newRecord
 }
 
-func addExceptionFromError(r *Record, err error) {
-	if r == nil || err == nil {
-		return
-	}
-
-	hasExceptionAttr := false
-	r.WalkAttributes(func(kv log.KeyValue) bool {
-		switch kv.Key {
-		case exceptionTypeKey, exceptionMessageKey, exceptionStacktraceKey:
-			hasExceptionAttr = true
-			return false
-		}
-		return true
-	})
-	if hasExceptionAttr {
-		return
-	}
-
-	addExceptionFromErrorNoScan(r, err)
-}
-
-func addExceptionFromErrorNoScan(r *Record, err error) {
+func addExceptionAttrsFromError(r *Record, err error) {
 	if r == nil || err == nil {
 		return
 	}
