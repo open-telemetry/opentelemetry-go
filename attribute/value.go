@@ -3,15 +3,14 @@
 
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
-
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "math"
-    "reflect"
-    "sort"
-    "strconv"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"math"
+	"reflect"
+	"sort"
+	"strconv"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
