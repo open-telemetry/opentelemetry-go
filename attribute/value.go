@@ -373,7 +373,7 @@ func (v Value) Emit() string {
 		}
 
 		var b bytes.Buffer
-		b.WriteByte('{') // bytes.Buffer.WriteByte never errors.
+		_ = b.WriteByte('{') // bytes.Buffer.WriteByte never errors.
 		for i, kv := range entries {
 			if i > 0 {
 				_ = b.WriteByte(',')
