@@ -187,7 +187,7 @@ benchmark: $(OTEL_GO_MOD_DIRS:%=benchmark/%)
 benchmark/%:
 	@echo "cd $* && $(GO) test -run=xxxxxMatchNothingxxxxx -bench=. $(ARGS) ./..." \
 		&& cd $* \
-		&& $(GO) test -run=xxxxxMatchNothingxxxxx -bench=. $(ARGS) ./...
+		&& $(GO) test -run='^$' -bench=. $(ARGS) ./...
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
