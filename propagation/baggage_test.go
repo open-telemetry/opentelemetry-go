@@ -171,8 +171,8 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 		name         string
 		headers      []string
 		want         members
-		wantCount    int // Used when want is nil and we only care about count
-		wantMaxBytes int // Used to check that baggage size doesn't exceed limit
+		wantCount    int // Used when want is nil and we only care about count.
+		wantMaxBytes int // Used to check that baggage size doesn't exceed limit.
 	}{
 		{
 			name:    "non conflicting headers",
@@ -232,10 +232,9 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    generateMembers(maxMembers, "k"),
 		},
 		{
-			name:      "single header exceeds max members limit keeps 64",
-			headers:   []string{generateBaggageHeader(maxMembers+1, "k")},
-			want:      generateMembers(maxMembers, "k"),
-			wantCount: 0, // Not used; want is specified
+			name:    "single header exceeds max members limit keeps 64",
+			headers: []string{generateBaggageHeader(maxMembers+1, "k")},
+			want:    generateMembers(maxMembers, "k"),
 		},
 		{
 			name: "multiple headers exceeds total max members limit keeps 64",
@@ -244,8 +243,9 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				generateBaggageHeader(maxMembers/2, "b"),
 				generateBaggageHeader(1, "c"),
 			},
-			want:      nil, // Non-deterministic truncation by baggage.New()
-			wantCount: maxMembers,
+			want:         nil, // Non-deterministic truncation by baggage.New()
+			wantCount:    maxMembers,
+			wantMaxBytes: maxBytesPerBaggageString,
 		},
 		{
 			name:    "single header at max bytes limit",
@@ -293,7 +293,8 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				}
 				return h
 			}(),
-			wantCount: maxMembers,
+			wantCount:    maxMembers,
+			wantMaxBytes: maxBytesPerBaggageString,
 		},
 		{
 			name: "skips large member that exceeds byte limit and continues",
@@ -326,9 +327,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			} else if tt.wantCount > 0 {
 				// If only count is specified, verify count and byte limit
 				assert.Equal(t, tt.wantCount, got.Len(), "expected member count")
-				if tt.wantMaxBytes > 0 {
-					assert.LessOrEqual(t, len(got.String()), tt.wantMaxBytes, "baggage size exceeds limit")
-				}
+				assert.LessOrEqual(t, len(got.String()), tt.wantMaxBytes, "baggage size exceeds limit")
 			}
 		})
 	}
