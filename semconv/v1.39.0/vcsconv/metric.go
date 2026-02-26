@@ -224,7 +224,10 @@ func (m ChangeCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("vcs.change.state", string(changeState)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -369,7 +372,11 @@ func (m ChangeDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.change.state", string(changeState)),
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -512,7 +519,10 @@ func (m ChangeTimeToApproval) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -683,7 +693,10 @@ func (m ChangeTimeToMerge) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -848,7 +861,9 @@ func (m ContributorCount) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -987,7 +1002,10 @@ func (m RefCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("vcs.ref.type", string(refType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -1153,7 +1171,14 @@ func (m RefLinesDelta) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.line_change.type", string(lineChangeType)),
+			attribute.String("vcs.ref.base.name", refBaseName),
+			attribute.String("vcs.ref.base.type", string(refBaseType)),
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.ref.head.type", string(refHeadType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -1335,7 +1360,14 @@ func (m RefRevisionsDelta) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.base.name", refBaseName),
+			attribute.String("vcs.ref.base.type", string(refBaseType)),
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.ref.head.type", string(refHeadType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+			attribute.String("vcs.revision_delta.direction", string(revisionDeltaDirection)),
+		))
 		return
 	}
 
@@ -1498,7 +1530,11 @@ func (m RefTime) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.ref.head.type", string(refHeadType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
