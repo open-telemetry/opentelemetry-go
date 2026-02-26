@@ -3,14 +3,15 @@
 
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
+
 import (
-	"encoding/json"
-	"fmt"
-	"math"
-	"reflect"
-	"sort"
-	"strconv"
-	"strings"
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "math"
+    "reflect"
+    "sort"
+    "strconv"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -296,75 +297,123 @@ func (v Value) AsInterface() any {
 	return unknownValueType{}
 }
 
+// encodeSlice encodes a slice to a JSON string using json.Encoder.
+// SetEscapeHTML(false) is used to avoid escaping characters like '<', '>', '&'.
+// The trailing newline added by Encode is trimmed before returning.
+func encodeSlice(v any) (string, error) {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return "", err
+	}
+	out := b.Bytes()
+	// json.Encoder.Encode always appends a newline, trim it.
+	if len(out) > 0 && out[len(out)-1] == '\n' {
+		out = out[:len(out)-1]
+	}
+	return string(out), nil
+}
+
+// encodeString encodes a string to a quoted JSON string.
+// SetEscapeHTML(false) is used to avoid escaping HTML characters.
+func encodeString(s string) []byte {
+	// json.Marshal for a plain string never errors.
+	b, _ := json.Marshal(s)
+	return b
+}
+
 // Emit returns a string representation of Value's data.
 func (v Value) Emit() string {
 	switch v.Type() {
 	case BOOLSLICE:
 		return fmt.Sprint(v.asBoolSlice())
+
 	case BOOL:
 		return strconv.FormatBool(v.AsBool())
+
 	case INT64SLICE:
-		j, err := json.Marshal(v.asInt64Slice())
+		// json.Encoder errors here only if the slice contains unsupported types,
+		// which cannot happen for []int64, so the error path is a safety fallback.
+		s, err := encodeSlice(v.asInt64Slice())
 		if err != nil {
 			return fmt.Sprintf("invalid: %v", v.asInt64Slice())
 		}
-		return string(j)
+		return s
+
 	case INT64:
 		return strconv.FormatInt(v.AsInt64(), 10)
+
 	case FLOAT64SLICE:
-		j, err := json.Marshal(v.asFloat64Slice())
+		// json.Encoder returns an error if the slice contains NaN or Inf values
+		// since these are not valid JSON numbers. The fallback uses fmt.Sprintf
+		// which renders them as "NaN", "+Inf", "-Inf" etc.
+		s, err := encodeSlice(v.asFloat64Slice())
 		if err != nil {
 			return fmt.Sprintf("invalid: %v", v.asFloat64Slice())
 		}
-		return string(j)
+		return s
+
 	case FLOAT64:
 		return fmt.Sprint(v.AsFloat64())
+
 	case STRINGSLICE:
-		j, err := json.Marshal(v.asStringSlice())
+		s, err := encodeSlice(v.asStringSlice())
 		if err != nil {
 			return fmt.Sprintf("invalid: %v", v.asStringSlice())
 		}
-		return string(j)
+		return s
+
 	case STRING:
 		return v.stringly
+
 	case MAP:
 		entries := v.asMapKeyValues()
 		if len(entries) == 0 {
 			return "{}"
 		}
-		var b strings.Builder
-		_, _ = b.WriteRune('{')
+
+		var b bytes.Buffer
+		b.WriteByte('{') // bytes.Buffer.WriteByte never errors.
 		for i, kv := range entries {
 			if i > 0 {
-				_, _ = b.WriteRune(',')
+				b.WriteByte(',')
 			}
-			keyJSON, _ := json.Marshal(string(kv.Key))
-			_, _ = b.Write(keyJSON)
-			_, _ = b.WriteRune(':')
-			switch {
-			case kv.Value.Type() == INVALID:
-				_, _ = b.WriteString("null")
-			case kv.Value.Type() == STRING:
-				valJSON, _ := json.Marshal(kv.Value.stringly)
-				_, _ = b.Write(valJSON)
-			case kv.Value.Type() == FLOAT64:
+
+			// Encode the key as a quoted JSON string.
+			b.Write(encodeString(string(kv.Key)))
+			b.WriteByte(':')
+
+			// Encode the value based on its type.
+			switch kv.Value.Type() {
+			case INVALID:
+				b.WriteString("null")
+
+			case STRING:
+				b.Write(encodeString(kv.Value.stringly))
+
+			case FLOAT64:
+				// NaN and Inf are not valid JSON — represent them as strings
+				// to avoid silent encoding errors or panics.
 				f := kv.Value.AsFloat64()
 				switch {
 				case math.IsNaN(f):
-					_, _ = b.WriteString(`"NaN"`)
+					b.WriteString(`"NaN"`)
 				case math.IsInf(f, 1):
-					_, _ = b.WriteString(`"Infinity"`)
+					b.WriteString(`"Infinity"`)
 				case math.IsInf(f, -1):
-					_, _ = b.WriteString(`"-Infinity"`)
+					b.WriteString(`"-Infinity"`)
 				default:
-					_, _ = b.WriteString(kv.Value.Emit())
+					b.WriteString(kv.Value.Emit())
 				}
+
 			default:
-				_, _ = b.WriteString(kv.Value.Emit())
+				b.WriteString(kv.Value.Emit())
 			}
 		}
-		_, _ = b.WriteRune('}')
+		b.WriteByte('}')
 		return b.String()
+
 	default:
 		return "unknown"
 	}
