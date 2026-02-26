@@ -15,6 +15,10 @@ The next release will require at least [Go 1.25].
 
 - Support testing of [Go 1.26]. (#7902)
 
+### Fixed
+
+- Fix dropping entire exemplar when filtered attributes exceed the 128-rune limit.(#7883)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
