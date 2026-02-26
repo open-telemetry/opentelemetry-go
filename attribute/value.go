@@ -376,20 +376,20 @@ func (v Value) Emit() string {
 		b.WriteByte('{') // bytes.Buffer.WriteByte never errors.
 		for i, kv := range entries {
 			if i > 0 {
-				b.WriteByte(',')
+				_ = b.WriteByte(',')
 			}
 
 			// Encode the key as a quoted JSON string.
-			b.Write(encodeString(string(kv.Key)))
-			b.WriteByte(':')
+			_,_=b.Write(encodeString(string(kv.Key)))
+			_=b.WriteByte(':')
 
 			// Encode the value based on its type.
 			switch kv.Value.Type() {
 			case INVALID:
-				b.WriteString("null")
+				_,_=b.WriteString("null")
 
 			case STRING:
-				b.Write(encodeString(kv.Value.stringly))
+				_,_=b.Write(encodeString(kv.Value.stringly))
 
 			case FLOAT64:
 				// NaN and Inf are not valid JSON — represent them as strings
@@ -397,20 +397,20 @@ func (v Value) Emit() string {
 				f := kv.Value.AsFloat64()
 				switch {
 				case math.IsNaN(f):
-					b.WriteString(`"NaN"`)
+					_,_=b.WriteString(`"NaN"`)
 				case math.IsInf(f, 1):
-					b.WriteString(`"Infinity"`)
+					_,_=b.WriteString(`"Infinity"`)
 				case math.IsInf(f, -1):
-					b.WriteString(`"-Infinity"`)
+					_,_=b.WriteString(`"-Infinity"`)
 				default:
-					b.WriteString(kv.Value.Emit())
+					_,_=b.WriteString(kv.Value.Emit())
 				}
 
 			default:
-				b.WriteString(kv.Value.Emit())
+				_,_=b.WriteString(kv.Value.Emit())
 			}
 		}
-		b.WriteByte('}')
+		_=b.WriteByte('}')
 		return b.String()
 
 	default:
