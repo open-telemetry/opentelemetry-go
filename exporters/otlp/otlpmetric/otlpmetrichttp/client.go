@@ -52,8 +52,14 @@ var ourTransport = &http.Transport{
 	ExpectContinueTimeout: 1 * time.Second,
 }
 
+var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
+
 // newClient creates a new HTTP metric client.
 func newClient(cfg oconf.Config) (*client, error) {
+	if cfg.Metrics.Insecure && cfg.Metrics.TLSCfg != nil {
+		return nil, errInsecureEndpointWithTLS
+	}
+
 	httpClient := cfg.Metrics.HTTPClient
 	if httpClient == nil {
 		httpClient = &http.Client{

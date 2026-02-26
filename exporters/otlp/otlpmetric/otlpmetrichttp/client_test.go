@@ -238,6 +238,16 @@ func TestConfig(t *testing.T) {
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
+	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
+		exp, err := New(t.Context(),
+			WithEndpoint("localhost:4318"),
+			WithInsecure(),
+			WithTLSClientConfig(&tls.Config{}),
+		)
+		require.ErrorIs(t, err, errInsecureEndpointWithTLS)
+		assert.Nil(t, exp)
+	})
+
 	t.Run("WithCustomUserAgent", func(t *testing.T) {
 		key := http.CanonicalHeaderKey("user-agent")
 		headers := map[string]string{key: "custom-user-agent"}
