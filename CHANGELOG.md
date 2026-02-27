@@ -15,6 +15,10 @@ The next release will require at least [Go 1.25].
 
 - Support testing of [Go 1.26]. (#7902)
 
+### Fixed
+
+- Preserve W3C TraceFlags bitmask (including the random Trace ID flag) during trace context extraction and injection in `go.opentelemetry.io/otel/propagation`. (#7635)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
