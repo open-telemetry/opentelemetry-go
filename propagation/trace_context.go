@@ -104,14 +104,12 @@ func (TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	if !extractPart(opts[:], &h, 2) {
 		return trace.SpanContext{}
 	}
-	if version == 0 && h != "" {
-		// version 0 not allow extra
+	if version == 0 && (h != "" || opts[0] > 3) {
+		// version 0 does not allow extra fields or reserved flag bits.
 		return trace.SpanContext{}
 	}
 
-	// Preserve only the spec-defined flags: sampled (0x01) and random (0x02).
-	//nolint:gosec // slice size already checked.
-	scc.TraceFlags = trace.TraceFlags(opts[0]) &
+	scc.TraceFlags = trace.TraceFlags(opts[0]) & //nolint:gosec // slice size already checked.
 		(trace.FlagsSampled | trace.FlagsRandom)
 
 	// Ignore the error returned here. Failure to parse tracestate MUST NOT
