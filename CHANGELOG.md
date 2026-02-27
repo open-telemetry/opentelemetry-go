@@ -15,6 +15,10 @@ The next release will require at least [Go 1.25].
 
 - Support testing of [Go 1.26]. (#7902)
 
+### Fixed
+
+- Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` to correctly handle HTTP2 GOAWAY frame. (#7931)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
