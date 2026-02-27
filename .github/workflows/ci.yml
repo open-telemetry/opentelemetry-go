@@ -16,7 +16,37 @@ env:
 # Declare default permissions as read only.
 permissions: read-all
 jobs:
-  lint:
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 ## Needed for "Set internal/tools/go.mod timestamp" step.
+      - name: Install Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
+      - name: Tools cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        env:
+          cache-name: go-tools-cache
+        with:
+          path: .tools
+          key: ${{ runner.os }}-${{ env.DEFAULT_GO_VERSION }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+      # The step below is needed to not rebuild all the build tools.
+      - name: Set internal/tools/go.mod timestamp
+        run: |
+          filename="internal/tools/go.mod"
+          unixtime=$(git log -1 --format="%at" -- "${filename}")
+          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
+          touch -t ${touchtime} "${filename}"
+          ls -la --time-style=full-iso "${filename}"
+      - name: Run govulncheck
+        run: make govulncheck
+    lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
