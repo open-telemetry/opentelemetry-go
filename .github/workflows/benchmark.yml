@@ -11,11 +11,27 @@ permissions: read-all
 env:
   DEFAULT_GO_VERSION: "~1.26.0"
 jobs:
+  # Related issue: https://github.com/CodSpeedHQ/codspeed-go/issues/51
+  sharding-benchmark:
+    name: Sharding benchmarks
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.sharding.outputs.shards }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - id: sharding
+        run: |
+          echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
+
   benchmark:
+    needs: sharding-benchmark
     permissions:
       contents: write # required for pushing to gh-pages branch
     name: Benchmarks
     runs-on: oracle-bare-metal-64cpu-512gb-x86-64
+    strategy:
+      matrix:
+        shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
@@ -23,33 +39,14 @@ jobs:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
-      - name: Run benchmarks
-        run: make benchmark | tee output.txt
-      - name: Download previous benchmark data
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v4.10.1
         with:
-          path: ./benchmarks
-          # `github.event.before` means the commit before the push (i.e. the previous commit).
-          # So we can fetch the exact benchmark data from the previous commit.
-          key: ${{ runner.os }}-benchmark-${{ github.event.before }}
-      - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@4bdcce38c94cec68da58d012ac24b7b1155efe8b # v1.20.7
-        with:
-          name: Benchmarks
-          tool: 'go'
-          output-file-path: output.txt
-          external-data-json-path: ./benchmarks/data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          gh-pages-branch: benchmarks
-          fail-on-alert: true
-          alert-threshold: "400%"
-          # Add benchmark summary to GitHub workflow run report
-          summary-always: true
-      - name: Save benchmark data
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        # The cache will be saved even if a step fails.
-        if: always()
-        with:
-          path: ./benchmarks
-          # Use the current commit SHA as the cache key.
-          key: ${{ runner.os }}-benchmark-${{ github.sha }}
+          mode: walltime
+          allow-empty: true
+          # CodSpeed overrides the default benchtime if we don't explicitly specify it.
+          # Having this would avoid running benchmark for more than 1 hour.
+          #
+          # The benchtime is adjusted to 500 ms to speed up the benchmark time.
+          # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
+          run: make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
