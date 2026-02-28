@@ -334,11 +334,14 @@ func (r *Record) attrIndex() map[string]int {
 // duplication of attributes, these tasks are left to the caller to handle
 // prior to calling.
 func (r *Record) addAttrs(attrs []log.KeyValue) {
-	var i int
-	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
-		a := attrs[i]
+	i := 0
+	for _, a := range attrs {
+		if r.nFront >= len(r.front) {
+			break
+		}
 		r.front[r.nFront] = r.applyAttrLimitsAndDedup(a)
 		r.nFront++
+		i++
 	}
 
 	// Make a copy to avoid modifying the original.
