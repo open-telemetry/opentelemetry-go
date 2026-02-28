@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
+	"unsafe"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -44,6 +46,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// SLICE is a slice of Value types.
+	SLICE
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +117,11 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+// SliceValue creates a SLICE Value.
+func SliceValue(v []Value) Value {
+	return Value{vtype: SLICE, slice: attribute.SliceValue(v)}
 }
 
 // Type returns a type of the Value.
@@ -196,6 +205,59 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsStringSlice(v.slice)
 }
 
+// AsSlice returns the []Value value. Make sure that the Value's type is
+// SLICE.
+func (v Value) AsSlice() []Value {
+	if v.vtype != SLICE {
+		return nil
+	}
+	return v.asSlice()
+}
+
+func (v Value) asSlice() []Value {
+	if val := attribute.AsSlice(v.slice); val != nil {
+		return val.([]Value)
+	}
+	return nil
+}
+
+// UnsafeAsSlice returns the []Value value without additional heap allocations.
+// Make sure that the Value's type is SLICE.
+// The returned slice references the underlying array and must not be modified by the caller.
+func (v Value) UnsafeAsSlice() []Value {
+	if v.vtype != SLICE {
+		return nil
+	}
+	return v.unsafeAsSlice()
+}
+
+func (v Value) unsafeAsSlice() []Value {
+	rv := reflect.ValueOf(v.slice)
+	if rv.Type().Kind() != reflect.Array {
+		return nil
+	}
+	n := rv.Len()
+	if n == 0 {
+		return []Value{}
+	}
+
+	// To create a slice view without copying, we need the array to be addressable.
+	// Arrays stored in interfaces are not directly addressable, so we need to
+	// extract the interface's data pointer using unsafe.
+	type iface struct {
+		typ  unsafe.Pointer
+		data unsafe.Pointer
+	}
+
+	// Extract the data pointer from the interface
+	ei := (*iface)(unsafe.Pointer(&v.slice))
+	dataPtr := ei.data
+
+	// Use unsafe.Slice to create a slice view from the array data pointer.
+	// This is the recommended way to create slices from pointers in modern Go.
+	return unsafe.Slice((*Value)(dataPtr), n)
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -217,6 +279,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case SLICE:
+		return v.asSlice()
 	}
 	return unknownValueType{}
 }
@@ -252,6 +316,27 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case SLICE:
+		slice := v.asSlice()
+		if len(slice) == 0 {
+			return "[]"
+		}
+		var b strings.Builder
+		b.WriteRune('[') //nolint:revive // No need to check error for strings.Builder.
+		for i, val := range slice {
+			if i > 0 {
+				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+			}
+			if val.Type() == STRING {
+				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
+				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
+				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
+			} else {
+				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
+			}
+		}
+		b.WriteRune(']') //nolint:revive // No need to check error for strings.Builder.
+		return b.String()
 	default:
 		return "unknown"
 	}
