@@ -86,6 +86,12 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name:      "Key.Bytes() correctly returns keys's internal []byte value",
+			value:     k.Bytes([]byte("hello world")).Value,
+			wantType:  attribute.BYTES,
+			wantValue: []byte("hello world"),
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
@@ -142,6 +148,10 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.Bytes("Bytes", []byte("one")),
+			attribute.Bytes("Bytes", []byte("one")),
 		},
 	}
 
@@ -205,4 +215,9 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.StringSlice("StringSlice", ss1)
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
+
+	b1 := []byte("one")
+	kv = attribute.Bytes("Bytes", b1)
+	b2 := kv.Value.AsBytes()
+	assert.Equal(t, b1, b2)
 }
