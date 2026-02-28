@@ -395,9 +395,7 @@ func (i *inserter[N]) cachedAggregator(
 		b.Filter = stream.AttributeFilter
 		// A value less than or equal to zero will disable the aggregation
 		// limits for the builder (an all the created aggregates).
-		// cardinalityLimit will be 0 by default if unset (or
-		// unrecognized input). Use that value directly.
-		b.AggregationLimit = i.pipeline.cardinalityLimit
+		b.AggregationLimit = i.getCardinalityLimit(kind)
 		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
 		if err != nil {
 			return aggVal[N]{0, nil, err}
@@ -417,6 +415,21 @@ func (i *inserter[N]) cachedAggregator(
 		return aggVal[N]{id, in, err}
 	})
 	return cv.Measure, cv.ID, cv.Err
+}
+
+// getCardinalityLimit returns the cardinality limit for the given instrument kind.
+// If no limit is set for the instrument kind, the provider's global limit is used.
+// If no global limit is set, the default limit is used.
+func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
+	if limit := i.pipeline.reader.cardinalityLimit(kind); limit > 0 {
+		return limit
+	}
+	// Fall back to pipeline's global limit (from provider).
+	if i.pipeline.cardinalityLimit > 0 {
+		return i.pipeline.cardinalityLimit
+	}
+	// Fall back to default limit.
+	return defaultCardinalityLimit
 }
 
 // logConflict validates if an instrument with the same case-insensitive name

@@ -59,6 +59,13 @@ type Reader interface {
 	// Reader methods.
 	aggregation(InstrumentKind) Aggregation // nolint:revive  // import-shadow for method scoped by type.
 
+	// cardinalityLimit returns the cardinality limit for an instrument kind.
+	// A value of 0 or less means no limit is applied.
+	//
+	// This method needs to be concurrent safe with itself and all the other
+	// Reader methods.
+	cardinalityLimit(InstrumentKind) int
+
 	// Collect gathers and returns all metric data related to the Reader from
 	// the SDK and stores it in rm. An error is returned if this is called
 	// after Shutdown or if rm is nil.
@@ -192,6 +199,22 @@ func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 	panic("unknown instrument kind")
 }
 
+// CardinalityLimitSelector selects the cardinality limit to use based on the
+// InstrumentKind. The cardinality limit is the maximum number of distinct
+// attribute sets that can be recorded for a single instrument.
+//
+// A return value of 0 means the pipeline should fall back to the provider's
+// global cardinality limit.
+type CardinalityLimitSelector func(InstrumentKind) int
+
+// DefaultCardinalityLimitSelector is the default CardinalityLimitSelector used
+// if WithCardinalityLimitSelector is not provided. It returns 0 for all
+// instrument kinds, allowing the pipeline to fall back to the provider's
+// global limit.
+func DefaultCardinalityLimitSelector(_ InstrumentKind) int {
+	return 0
+}
+
 // ReaderOption is an option which can be applied to manual or Periodic
 // readers.
 type ReaderOption interface {
@@ -218,5 +241,32 @@ func (o producerOption) applyManual(c manualReaderConfig) manualReaderConfig {
 // applyPeriodic returns a periodicReaderConfig with option applied.
 func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
 	c.producers = append(c.producers, o.p)
+	return c
+}
+
+// WithCardinalityLimitSelector sets the CardinalityLimitSelector a reader will
+// use to determine the cardinality limit for an instrument based on its kind.
+// If this option is not used, the reader will use the
+// DefaultCardinalityLimitSelector.
+//
+// The selector should return 0 for instrument kinds that should fall back to
+// the provider's global cardinality limit.
+func WithCardinalityLimitSelector(selector CardinalityLimitSelector) ReaderOption {
+	return cardinalityLimitSelectorOption{selector: selector}
+}
+
+type cardinalityLimitSelectorOption struct {
+	selector CardinalityLimitSelector
+}
+
+// applyManual returns a manualReaderConfig with option applied.
+func (o cardinalityLimitSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
+	c.cardinalityLimitSelector = o.selector
+	return c
+}
+
+// applyPeriodic returns a periodicReaderConfig with option applied.
+func (o cardinalityLimitSelectorOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
+	c.cardinalityLimitSelector = o.selector
 	return c
 }

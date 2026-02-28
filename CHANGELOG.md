@@ -14,6 +14,7 @@ The next release will require at least [Go 1.25].
 ### Added
 
 - Support testing of [Go 1.26]. (#7902)
+- Add `WithCardinalityLimitSelector` for metric reader for configuring cardinality limits specific to the instrument kind. (#7855)
 
 ### Fixed
 
