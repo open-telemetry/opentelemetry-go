@@ -86,18 +86,84 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name: "Key.Map() correctly returns keys's internal map[string]Value value",
+			value: k.Map(map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}).Value,
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			},
+		},
+		{
+			name:      "MapValue with nil map",
+			value:     attribute.MapValue(nil),
+			wantType:  attribute.MAP,
+			wantValue: map[string]attribute.Value{},
+		},
+		{
+			name:      "MapValue with empty map",
+			value:     attribute.MapValue(map[string]attribute.Value{}),
+			wantType:  attribute.MAP,
+			wantValue: map[string]attribute.Value{},
+		},
+		{
+			name:     "MapValue with single item",
+			value:    attribute.MapValue(map[string]attribute.Value{"key": attribute.StringValue("val")}),
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"key": attribute.StringValue("val"),
+			},
+		},
+		{
+			name: "MapValue with multiple items",
+			value: attribute.MapValue(map[string]attribute.Value{
+				"string": attribute.StringValue("test"),
+				"int":    attribute.Int64Value(123),
+				"float":  attribute.Float64Value(3.14),
+				"bool":   attribute.BoolValue(true),
+			}),
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"string": attribute.StringValue("test"),
+				"int":    attribute.Int64Value(123),
+				"float":  attribute.Float64Value(3.14),
+				"bool":   attribute.BoolValue(true),
+			},
+		},
+		{
+			name: "MapValue with nested maps",
+			value: attribute.MapValue(map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested value"),
+				}),
+				"top": attribute.StringValue("top level"),
+			}),
+			wantType: attribute.MAP,
+			wantValue: map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested value"),
+				}),
+				"top": attribute.StringValue("top level"),
+			},
+		},
 	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		if testcase.wantType == attribute.INVALID {
-			continue
-		}
-		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.value.Type() != testcase.wantType {
+				t.Errorf(
+					"wrong value type, got %#v, expected %#v",
+					testcase.value.Type(),
+					testcase.wantType,
+				)
+			}
+			got := testcase.value.AsInterface()
+			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
+		})
 	}
 }
 
@@ -142,6 +208,30 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.Map("Map", map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}),
+			attribute.Map("Map", map[string]attribute.Value{
+				"key1": attribute.StringValue("value1"),
+				"key2": attribute.Int64Value(42),
+			}),
+		},
+		{
+			attribute.Map("NestedMap", map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested"),
+				}),
+				"top": attribute.BoolValue(true),
+			}),
+			attribute.Map("NestedMap", map[string]attribute.Value{
+				"outer": attribute.MapValue(map[string]attribute.Value{
+					"inner": attribute.StringValue("nested"),
+				}),
+				"top": attribute.BoolValue(true),
+			}),
 		},
 	}
 
@@ -205,4 +295,13 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.StringSlice("StringSlice", ss1)
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
+
+	m1 := map[string]attribute.Value{
+		"key1": attribute.StringValue("value1"),
+		"key2": attribute.Int64Value(42),
+		"key3": attribute.BoolValue(true),
+	}
+	kv = attribute.Map("Map", m1)
+	m2 := kv.Value.AsMap()
+	assert.Equal(t, m1, m2)
 }

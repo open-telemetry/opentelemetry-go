@@ -58,6 +58,25 @@ func TestKeyValueConstructors(t *testing.T) {
 				Value: attribute.IntValue(123),
 			},
 		},
+		{
+			name: "Map",
+			actual: attribute.Map(
+				"k1",
+				map[string]attribute.Value{
+					"a": attribute.BoolValue(true),
+					"b": attribute.Int64Value(42),
+				},
+			),
+			expected: attribute.KeyValue{
+				Key: "k1",
+				Value: attribute.MapValue(
+					map[string]attribute.Value{
+						"a": attribute.BoolValue(true),
+						"b": attribute.Int64Value(42),
+					},
+				),
+			},
+		},
 	}
 
 	for _, test := range tt {
@@ -152,6 +171,10 @@ func TestIncorrectCast(t *testing.T) {
 			name: "StringSlice",
 			val:  attribute.BoolSliceValue([]bool{true}),
 		},
+		{
+			name: "Map",
+			val:  attribute.MapValue(map[string]attribute.Value{"a": attribute.BoolValue(true)}),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,6 +188,7 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInterface()
 				tt.val.AsString()
 				tt.val.AsStringSlice()
+				tt.val.AsMap()
 			})
 		})
 	}

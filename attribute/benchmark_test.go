@@ -272,6 +272,37 @@ func BenchmarkStringSlice(b *testing.B) {
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
+func BenchmarkMap(b *testing.B) {
+	k, v := "map", map[string]attribute.Value{
+		"string":  attribute.StringValue("value"),
+		"int":     attribute.Int64Value(42),
+		"float":   attribute.Float64Value(3.14),
+		"bool":    attribute.BoolValue(true),
+		"strings": attribute.StringSliceValue([]string{"a", "b", "c"}),
+	}
+	kv := attribute.Map(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			attribute.MapValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			attribute.Map(k, v)
+		}
+	})
+	b.Run("AsMap", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			kv.Value.AsMap()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
+}
+
 func BenchmarkSetEquals(b *testing.B) {
 	b.Run("Empty", func(b *testing.B) {
 		benchmarkSetEquals(b, attribute.EmptySet())
