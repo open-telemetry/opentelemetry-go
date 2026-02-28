@@ -18,6 +18,10 @@ import (
 type Type int // nolint: revive  // redefines builtin Type.
 
 // Value represents the value part in key-value pairs.
+//
+// Note that the zero value is invalid.
+// Use [EmptyValue] to create an empty Value
+// or [Empty] to create an [KeyValue] with an empty Value.
 type Value struct {
 	vtype    Type
 	numeric  uint64
@@ -44,6 +48,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// EMPTY is used for a Value with no value set.
+	EMPTY
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +119,11 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+// EmptyValue creates an EMPTY Value.
+func EmptyValue() Value {
+	return Value{vtype: EMPTY}
 }
 
 // Type returns a type of the Value.
@@ -217,6 +228,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case EMPTY:
+		return nil
 	}
 	return unknownValueType{}
 }
@@ -252,6 +265,8 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case EMPTY:
+		return ""
 	default:
 		return "unknown"
 	}

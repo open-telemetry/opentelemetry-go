@@ -108,6 +108,11 @@ func TestEmit(t *testing.T) {
 			v:    attribute.StringSliceValue([]string{"foo", "bar"}),
 			want: `["foo","bar"]`,
 		},
+		{
+			name: `test Key.Emit() can emit a string representing self.EMPTY`,
+			v:    attribute.EmptyValue(),
+			want: "",
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {
