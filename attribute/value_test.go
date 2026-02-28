@@ -86,18 +86,74 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name:      "Key.Slice() correctly returns keys's internal []Value value",
+			value:     k.Slice([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")}).Value,
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
+		},
+		{
+			name:      "SliceValue with nil slice",
+			value:     attribute.SliceValue(nil),
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{},
+		},
+		{
+			name:      "SliceValue with empty slice",
+			value:     attribute.SliceValue([]attribute.Value{}),
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{},
+		},
+		{
+			name:      "SliceValue with single item",
+			value:     attribute.SliceValue([]attribute.Value{attribute.StringValue("hello")}),
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{attribute.StringValue("hello")},
+		},
+		{
+			name: "SliceValue with multiple items",
+			value: attribute.SliceValue([]attribute.Value{
+				attribute.IntValue(1),
+				attribute.StringValue("two"),
+				attribute.Float64Value(3.0),
+			}),
+			wantType: attribute.SLICE,
+			wantValue: []attribute.Value{
+				attribute.IntValue(1),
+				attribute.StringValue("two"),
+				attribute.Float64Value(3.0),
+			},
+		},
+		{
+			name: "SliceValue with nested slices",
+			value: attribute.SliceValue([]attribute.Value{
+				attribute.IntValue(1),
+				attribute.SliceValue([]attribute.Value{
+					attribute.StringValue("nested1"),
+					attribute.StringValue("nested2"),
+				}),
+				attribute.BoolValue(true),
+			}),
+			wantType: attribute.SLICE,
+			wantValue: []attribute.Value{
+				attribute.IntValue(1),
+				attribute.SliceValue([]attribute.Value{
+					attribute.StringValue("nested1"),
+					attribute.StringValue("nested2"),
+				}),
+				attribute.BoolValue(true),
+			},
+		},
 	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		if testcase.wantType == attribute.INVALID {
-			continue
-		}
-		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.value.Type() != testcase.wantType {
+				t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+			}
+			got := testcase.value.AsInterface()
+			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
+		})
 	}
 }
 
@@ -142,6 +198,20 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+		},
+		{
+			attribute.Slice("NestedSlice", []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.SliceValue([]attribute.Value{attribute.IntValue(3), attribute.StringValue("nested")}),
+			}),
+			attribute.Slice("NestedSlice", []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.SliceValue([]attribute.Value{attribute.IntValue(3), attribute.StringValue("nested")}),
+			}),
 		},
 	}
 
@@ -205,4 +275,9 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.StringSlice("StringSlice", ss1)
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
+
+	vs1 := []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("test")}
+	kv = attribute.Slice("Slice", vs1)
+	vs2 := kv.Value.AsSlice()
+	assert.Equal(t, vs1, vs2)
 }

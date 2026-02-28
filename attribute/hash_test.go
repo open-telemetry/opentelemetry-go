@@ -36,6 +36,14 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return String(k, "bar") },
 	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
+	func(k string) KeyValue { return Slice(k, []Value{BoolValue(true), IntValue(42)}) },
+	func(k string) KeyValue {
+		return Slice(k, []Value{StringValue("nested"), SliceValue([]Value{IntValue(1), IntValue(2)})})
+	},
+	func(k string) KeyValue { return Slice(k, []Value{}) },
+	func(k string) KeyValue {
+		return Slice(k, []Value{Float64Value(3.14), BoolValue(false), StringValue("test")})
+	},
 }
 
 func TestHashKVsEquality(t *testing.T) {
@@ -237,16 +245,38 @@ func FuzzHashKVs(f *testing.F) {
 			kvs = append(kvs, StringSlice("stringslice", strings))
 		}
 
+		// Add Slice (heterogeneous array).
+		if numAttrs > 7 {
+			sliceLen := len(k2) % 4 // 0-3 elements
+			values := make([]Value, sliceLen)
+			for i := range values {
+				switch i % 5 {
+				case 0:
+					values[i] = BoolValue((i+len(k1))%2 == 0)
+				case 1:
+					values[i] = IntValue(i + len(k2))
+				case 2:
+					values[i] = StringValue(fmt.Sprintf("item_%d", i))
+				case 3:
+					values[i] = Float64Value(fVal + float64(i))
+				case 4:
+					// Nested slice
+					values[i] = SliceValue([]Value{IntValue(i), BoolValue(true)})
+				}
+			}
+			kvs = append(kvs, Slice("slice", values))
+		}
+
 		// Test duplicate keys (should be handled by Set construction).
-		if numAttrs > 7 && k1 != "" {
+		if numAttrs > 8 && k1 != "" {
 			kvs = append(kvs, String(k1, "duplicate_key_value"))
 		}
 
 		// Add more attributes with Unicode keys.
-		if numAttrs > 8 {
+		if numAttrs > 9 {
 			kvs = append(kvs, String("🔑", "unicode_key"))
 		}
-		if numAttrs > 9 {
+		if numAttrs > 10 {
 			kvs = append(kvs, String("empty", ""))
 		}
 
@@ -300,6 +330,22 @@ func FuzzHashKVs(f *testing.F) {
 					val := modifiedKvs[0].Value.AsFloat64()
 					if !math.IsNaN(val) && !math.IsInf(val, 0) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
+					}
+				case SLICE:
+					origSlice := modifiedKvs[0].Value.AsSlice()
+					if len(origSlice) > 0 {
+						// Modify the first element in the slice.
+						newSlice := make([]Value, len(origSlice))
+						copy(newSlice, origSlice)
+						switch newSlice[0].Type() {
+						case INT64:
+							newSlice[0] = Int64Value(newSlice[0].AsInt64() + 1)
+						case BOOL:
+							newSlice[0] = BoolValue(!newSlice[0].AsBool())
+						case STRING:
+							newSlice[0] = StringValue(newSlice[0].AsString() + "_mod")
+						}
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice)
 					}
 				}
 
