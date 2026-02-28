@@ -115,10 +115,21 @@ func (m {{ name }}) Add(
 	incr {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+{%- if req_attr | length > 0 %}
+	if len(attrs) == 0 {
+		m.{{ inst }}.Add(ctx, incr, metric.WithAttributes(
+{%- for attr in req_attr %}
+			{{ to_attribute(attr, pkg) }}
+{%- endfor %}
+		))
+		return
+	}
+{%- else %}
 	if len(attrs) == 0 {
 		m.{{ inst }}.Add(ctx, incr)
 		return
 	}
+{%- endif %}
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
@@ -200,10 +211,21 @@ func (m {{ name }}) Record(
 	val {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+{%- if req_attr | length > 0 %}
+	if len(attrs) == 0 {
+		m.{{ inst }}.Record(ctx, val, metric.WithAttributes(
+{%- for attr in req_attr %}
+			{{ to_attribute(attr, pkg) }}
+{%- endfor %}
+		))
+		return
+	}
+{%- else %}
 	if len(attrs) == 0 {
 		m.{{ inst }}.Record(ctx, val)
 		return
 	}
+{%- endif %}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
