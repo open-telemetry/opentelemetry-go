@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -585,6 +586,10 @@ func (uo *unwrapObs) ObserveFloat64(inst metric.Float64Observable, value float64
 
 func (uo *unwrapObs) ObserveInt64(inst metric.Int64Observable, value int64, opts ...metric.ObserveOption) {
 	uo.obs.ObserveInt64(unwrapInt64Observable(inst), value, opts...)
+}
+
+func (uo *unwrapObs) WithAttributes(kvs ...attribute.KeyValue) metric.Observer {
+	return uo.obs.WithAttributes(kvs...)
 }
 
 func unwrapCallback(f metric.Callback) metric.Callback {

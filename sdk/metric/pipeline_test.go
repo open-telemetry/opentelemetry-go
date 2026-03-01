@@ -116,7 +116,7 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 			}
 			var oID observableID[int64]
 			m, _ := b.PrecomputedSum(false)
-			measures := []aggregate.Measure[int64]{}
+			measures := []aggregate.Lookup[int64]{}
 			measures = append(measures, m)
 			pipe.addInt64Measure(oID, measures)
 		}()
@@ -163,7 +163,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
-					in(t.Context(), 1, *attribute.EmptySet())
+					in(nil)(t.Context(), 1)
 				}
 
 				out := metricdata.ResourceMetrics{}
@@ -629,7 +629,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 	var testObsID observableID[int64]
 	aggBuilder := aggregate.Builder[int64]{Temporality: metricdata.CumulativeTemporality}
 	measure, _ := aggBuilder.Sum(true)
-	pipe.addInt64Measure(testObsID, []aggregate.Measure[int64]{measure})
+	pipe.addInt64Measure(testObsID, []aggregate.Lookup[int64]{measure})
 
 	// Add an aggregation that just sets the data point value to the number of times the aggregation is invoked
 	aggCallCount := 0
@@ -660,7 +660,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 		func(ctx context.Context) error {
 			callbackCounts[0]++
 			for _, m := range pipe.int64Measures[testObsID] {
-				m(ctx, 123, *attribute.EmptySet())
+				m(nil)(ctx, 123)
 			}
 			return nil
 		},

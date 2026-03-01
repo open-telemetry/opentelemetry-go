@@ -228,8 +228,9 @@ type limitedSyncMap struct {
 	lenMux   sync.Mutex
 }
 
-func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
-	actual, loaded := m.Load(fltrAttr.Equivalent())
+func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr []attribute.KeyValue, newValue func(attribute.Set) any) any {
+	distinct := attribute.NewDistinct(fltrAttr...)
+	actual, loaded := m.Load(distinct)
 	if loaded {
 		return actual
 	}
@@ -246,15 +247,17 @@ func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(a
 	// re-fetch now that we hold the lock to ensure we don't use the overflow
 	// set unless we are sure the attribute set isn't being written
 	// concurrently.
-	actual, loaded = m.Load(fltrAttr.Equivalent())
+	actual, loaded = m.Load(distinct)
 	if loaded {
 		return actual
 	}
-
+	var set attribute.Set
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
-		fltrAttr = overflowSet
+		set = overflowSet
+	} else {
+		set = attribute.NewSet(fltrAttr...)
 	}
-	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
+	actual, loaded = m.LoadOrStore(set.Equivalent(), newValue(set))
 	if !loaded {
 		m.len++
 	}

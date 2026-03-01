@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -215,6 +216,14 @@ type Float64Observer interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Observe(value float64, options ...ObserveOption)
+
+	// WithAttributes binds attributes to the returned Float64Observer.
+	// Subsequent calls to Add on the returned Float64Observer will include th
+	// provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Float64Observer it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Float64Observer
 }
 
 // Float64Callback is a function registered with a Meter that makes

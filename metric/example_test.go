@@ -55,7 +55,7 @@ func ExampleMeter_asynchronous_single() {
 			//
 			// For demonstration purpose, a static value is used here.
 			usage := 75000
-			obsrv.Observe(int64(usage), metric.WithAttributes(attribute.Int("disk.id", 3)))
+			obsrv.WithAttributes(attribute.Int("disk.id", 3)).Observe(int64(usage))
 			return nil
 		}),
 	)
@@ -84,8 +84,8 @@ func ExampleMeter_asynchronous_multiple() {
 			// This call does work
 			runtime.ReadMemStats(memStats)
 
-			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
-			o.ObserveInt64(gcCount, int64(memStats.NumGC))
+			o.WithAttributes(attribute.String("subsystem", "memory")).ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
+			o.WithAttributes(attribute.String("subsystem", "gc")).ObserveInt64(gcCount, int64(memStats.NumGC))
 
 			return nil
 		},
@@ -111,7 +111,7 @@ func ExampleMeter_counter() {
 		panic(err)
 	}
 	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
-		apiCounter.Add(r.Context(), 1)
+		apiCounter.WithAttributes(attribute.String("http.method", r.Method)).Add(r.Context(), 1)
 
 		// do some work in an API call
 	})
@@ -133,10 +133,10 @@ func ExampleMeter_upDownCounter() {
 	}
 
 	// Add an item to the collection.
-	itemsCounter.Add(context.Background(), 1)
+	itemsCounter.WithAttributes(attribute.String("color", "red")).Add(context.Background(), 1)
 
 	// Remove an item from the collection.
-	itemsCounter.Add(context.Background(), -1)
+	itemsCounter.WithAttributes(attribute.String("color", "red")).Add(context.Background(), -1)
 }
 
 // Gauges can be used to record non-additive values when changes occur.
@@ -172,6 +172,8 @@ func ExampleMeter_gauge() {
 		}
 	}()
 
+	speedGauge = speedGauge.WithAttributes(attribute.String("fan.direction", "clockwise"))
+
 	ctx := context.Background()
 	for fanSpeed := range fanSpeedSubscription {
 		speedGauge.Record(ctx, fanSpeed)
@@ -197,7 +199,7 @@ func ExampleMeter_histogram() {
 		// do some work in an API call
 
 		duration := time.Since(start)
-		histogram.Record(r.Context(), duration.Seconds())
+		histogram.WithAttributes(attribute.String("http.method", r.Method)).Record(r.Context(), duration.Seconds())
 	})
 }
 
@@ -212,7 +214,7 @@ func ExampleMeter_observableCounter() {
 		metric.WithDescription("The duration since the application started."),
 		metric.WithUnit("s"),
 		metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
-			o.Observe(float64(time.Since(start).Seconds()))
+			o.WithAttributes(attribute.String("foo", "bar")).Observe(float64(time.Since(start).Seconds()))
 			return nil
 		}),
 	); err != nil {
@@ -247,8 +249,8 @@ func ExampleMeter_observableUpDownCounter() {
 	_, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
 			stats := db.Stats()
-			o.ObserveInt64(m, int64(stats.MaxOpenConnections))
-			o.ObserveInt64(waitTime, int64(stats.WaitDuration))
+			o.WithAttributes(attribute.String("foo", "bar")).ObserveInt64(m, int64(stats.MaxOpenConnections))
+			o.WithAttributes(attribute.String("foo", "bar")).ObserveInt64(waitTime, int64(stats.WaitDuration))
 			return nil
 		},
 		m,
@@ -273,7 +275,7 @@ func ExampleMeter_observableGauge() {
 		metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			o.Observe(int64(m.HeapAlloc))
+			o.WithAttributes(attribute.String("foo", "bar")).Observe(int64(m.HeapAlloc))
 			return nil
 		}),
 	); err != nil {
@@ -297,7 +299,6 @@ func ExampleMeter_attributes() {
 		// do some work in an API call and set the response HTTP status code
 		statusCode := http.StatusOK
 
-		apiCounter.Add(r.Context(), 1,
-			metric.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)))
+		apiCounter.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)).Add(r.Context(), 1)
 	})
 }

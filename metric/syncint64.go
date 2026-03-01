@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -37,6 +38,14 @@ type Int64Counter interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Int64Counter.
+	// Subsequent calls to Add on the returned Int64Counter will include the
+	// provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Int64Counter it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Int64Counter
 }
 
 // Int64CounterConfig contains options for synchronous counter instruments that
@@ -102,6 +111,14 @@ type Int64UpDownCounter interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Int64UpDownCounter.
+	// Subsequent calls to Add on the returned Int64UpDownCounter will include the
+	// provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Int64UpDownCounter it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Int64UpDownCounter
 }
 
 // Int64UpDownCounterConfig contains options for synchronous counter
@@ -167,6 +184,14 @@ type Int64Histogram interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Int64Histogram.
+	// Subsequent calls to Record on the returned Int64Histogram will include
+	// the provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Int64Histogram it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Int64Histogram
 }
 
 // Int64HistogramConfig contains options for synchronous histogram instruments
@@ -237,6 +262,14 @@ type Int64Gauge interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Int64Gauge.
+	// Subsequent calls to Record on the returned Int64Gauge will include
+	// the provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Int64Gauge it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Int64Gauge
 }
 
 // Int64GaugeConfig contains options for synchronous gauge instruments that

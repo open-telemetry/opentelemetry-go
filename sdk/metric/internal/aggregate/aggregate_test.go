@@ -86,22 +86,24 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
-		value, attr := N(1), alice
-		run := func(b Builder[N], wantF attribute.Set, wantD []attribute.KeyValue) func(*testing.T) {
+		value, attr := N(1), alice.ToSlice()
+		run := func(b Builder[N], wantF []attribute.KeyValue, wantD []attribute.KeyValue) func(*testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, f attribute.Set, d []attribute.KeyValue) {
-					assert.Equal(t, value, v, "measured incorrect value")
+				lookup := b.filter(func(f []attribute.KeyValue, d []attribute.KeyValue) Measure[N] {
 					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
 					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
+					return func(_ context.Context, v N) {
+						assert.Equal(t, value, v, "measured incorrect value")
+					}
 				})
-				meas(t.Context(), value, attr)
+				lookup(attr)(t.Context(), value)
 			}
 		}
 
 		t.Run("NoFilter", run(Builder[N]{}, attr, nil))
-		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
+		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice.ToSlice(), []attribute.KeyValue{adminTrue}))
 	}
 }
 
@@ -122,14 +124,14 @@ type teststep[N int64 | float64] struct {
 	expect output
 }
 
-func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []teststep[N]) func(*testing.T) {
+func test[N int64 | float64](meas Lookup[N], comp ComputeAggregation, steps []teststep[N]) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
 		got := new(metricdata.Aggregation)
 		for i, step := range steps {
 			for _, args := range step.input {
-				meas(args.ctx, args.value, args.attr)
+				meas(args.attr.ToSlice())(args.ctx, args.value)
 			}
 
 			t.Logf("step: %d", i)
@@ -140,7 +142,7 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 }
 
 func testAggergationConcurrentSafe[N int64 | float64](
-	meas Measure[N],
+	meas Lookup[N],
 	comp ComputeAggregation,
 	validate func(t *testing.T, agg metricdata.Aggregation),
 ) func(*testing.T) {
@@ -164,7 +166,7 @@ func testAggergationConcurrentSafe[N int64 | float64](
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				meas(args.ctx, args.value, args.attr)
+				meas(args.attr.ToSlice())(args.ctx, args.value)
 			}()
 		}
 		wg.Add(1)
@@ -182,7 +184,7 @@ func testAggergationConcurrentSafe[N int64 | float64](
 	}
 }
 
-func benchmarkAggregate[N int64 | float64](factory func() (Measure[N], ComputeAggregation)) func(*testing.B) {
+func benchmarkAggregate[N int64 | float64](factory func() (Lookup[N], ComputeAggregation)) func(*testing.B) {
 	counts := []int{1, 10, 100}
 	return func(b *testing.B) {
 		for _, n := range counts {
@@ -195,14 +197,14 @@ func benchmarkAggregate[N int64 | float64](factory func() (Measure[N], ComputeAg
 
 var bmarkRes metricdata.Aggregation
 
-func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measure[N], ComputeAggregation), count int) {
+func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Lookup[N], ComputeAggregation), count int) {
 	ctx := b.Context()
-	attrs := make([]attribute.Set, count)
+	attrs := make([][]attribute.KeyValue, count)
 	for i := range attrs {
-		attrs[i] = attribute.NewSet(attribute.Int("value", i))
+		attrs[i] = []attribute.KeyValue{attribute.Int("value", i)}
 	}
 
-	b.Run("Measure", func(b *testing.B) {
+	b.Run("LookupAndMeasure", func(b *testing.B) {
 		got := &bmarkRes
 		meas, comp := factory()
 		b.ReportAllocs()
@@ -210,7 +212,26 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 
 		for n := 0; n < b.N; n++ {
 			for _, attr := range attrs {
-				meas(ctx, 1, attr)
+				meas(attr)(ctx, 1)
+			}
+		}
+
+		comp(got)
+	})
+
+	b.Run("OnlyMeasure", func(b *testing.B) {
+		got := &bmarkRes
+		meas, comp := factory()
+		measures := make([]Measure[N], 0, len(attrs))
+		for _, attr := range attrs {
+			measures = append(measures, meas(attr))
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			for _, measure := range measures {
+				measure(ctx, 1)
 			}
 		}
 
@@ -222,7 +243,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 		for n := range comps {
 			meas, comp := factory()
 			for _, attr := range attrs {
-				meas(ctx, 1, attr)
+				meas(attr)(ctx, 1)
 			}
 			comps[n] = comp
 		}

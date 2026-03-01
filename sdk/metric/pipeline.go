@@ -50,8 +50,8 @@ func newPipeline(
 		resource:         res,
 		reader:           reader,
 		views:            views,
-		int64Measures:    map[observableID[int64]][]aggregate.Measure[int64]{},
-		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
+		int64Measures:    map[observableID[int64]][]aggregate.Lookup[int64]{},
+		float64Measures:  map[observableID[float64]][]aggregate.Lookup[float64]{},
 		exemplarFilter:   exemplarFilter,
 		cardinalityLimit: cardinalityLimit,
 		// aggregations is lazy allocated when needed.
@@ -71,8 +71,8 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
-	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
-	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
+	int64Measures    map[observableID[int64]][]aggregate.Lookup[int64]
+	float64Measures  map[observableID[float64]][]aggregate.Lookup[float64]
 	aggregations     map[instrumentation.Scope][]instrumentSync
 	callbacks        []func(context.Context) error
 	multiCallbacks   list.List
@@ -81,14 +81,14 @@ type pipeline struct {
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
-func (p *pipeline) addInt64Measure(id observableID[int64], m []aggregate.Measure[int64]) {
+func (p *pipeline) addInt64Measure(id observableID[int64], m []aggregate.Lookup[int64]) {
 	p.Lock()
 	defer p.Unlock()
 	p.int64Measures[id] = m
 }
 
 // addFloat64Measure adds a new float64 measure to the pipeline for each observer.
-func (p *pipeline) addFloat64Measure(id observableID[float64], m []aggregate.Measure[float64]) {
+func (p *pipeline) addFloat64Measure(id observableID[float64], m []aggregate.Lookup[float64]) {
 	p.Lock()
 	defer p.Unlock()
 	p.float64Measures[id] = m
@@ -236,10 +236,10 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *ins
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation) ([]aggregate.Measure[N], error) {
+func (i *inserter[N]) Instrument(inst Instrument, readerAggregation Aggregation) ([]aggregate.Lookup[N], error) {
 	var (
 		matched  bool
-		measures []aggregate.Measure[N]
+		measures []aggregate.Lookup[N]
 	)
 
 	var err error
@@ -305,9 +305,9 @@ var aggIDCount uint64
 
 // aggVal is the cached value in an aggregators cache.
 type aggVal[N int64 | float64] struct {
-	ID      uint64
-	Measure aggregate.Measure[N]
-	Err     error
+	ID     uint64
+	Lookup aggregate.Lookup[N]
+	Err    error
 }
 
 // readerDefaultAggregation returns the default aggregation for the instrument
@@ -354,7 +354,7 @@ func (i *inserter[N]) cachedAggregator(
 	kind InstrumentKind,
 	stream Stream,
 	readerAggregation Aggregation,
-) (meas aggregate.Measure[N], aggID uint64, err error) {
+) (meas aggregate.Lookup[N], aggID uint64, err error) {
 	switch stream.Aggregation.(type) {
 	case nil:
 		// The aggregation was not overridden with a view. Use the aggregation
@@ -416,7 +416,7 @@ func (i *inserter[N]) cachedAggregator(
 		id := atomic.AddUint64(&aggIDCount, 1)
 		return aggVal[N]{id, in, err}
 	})
-	return cv.Measure, cv.ID, cv.Err
+	return cv.Lookup, cv.ID, cv.Err
 }
 
 // logConflict validates if an instrument with the same case-insensitive name
@@ -484,7 +484,7 @@ func (i *inserter[N]) aggregateFunc(
 	b aggregate.Builder[N],
 	agg Aggregation,
 	kind InstrumentKind,
-) (meas aggregate.Measure[N], comp aggregate.ComputeAggregation, err error) {
+) (meas aggregate.Lookup[N], comp aggregate.ComputeAggregation, err error) {
 	switch a := agg.(type) {
 	case AggregationDefault:
 		return i.aggregateFunc(b, DefaultAggregationSelector(kind), kind)
@@ -651,8 +651,8 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) {
-	var measures []aggregate.Measure[N]
+func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Lookup[N], error) {
+	var measures []aggregate.Lookup[N]
 
 	var err error
 	for _, i := range r.inserters {
@@ -668,8 +668,8 @@ func (r resolver[N]) Aggregators(id Instrument) ([]aggregate.Measure[N], error) 
 // HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
 // defined by key. If boundaries were provided on instrument instantiation, those take precedence
 // over boundaries provided by the reader.
-func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64) ([]aggregate.Measure[N], error) {
-	var measures []aggregate.Measure[N]
+func (r resolver[N]) HistogramAggregators(id Instrument, boundaries []float64) ([]aggregate.Lookup[N], error) {
+	var measures []aggregate.Lookup[N]
 
 	var err error
 	for _, i := range r.inserters {

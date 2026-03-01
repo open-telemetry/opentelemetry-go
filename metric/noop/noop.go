@@ -15,6 +15,7 @@ package noop // import "go.opentelemetry.io/otel/metric/noop"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
@@ -176,6 +177,11 @@ func (Observer) ObserveFloat64(metric.Float64Observable, float64, ...metric.Obse
 func (Observer) ObserveInt64(metric.Int64Observable, int64, ...metric.ObserveOption) {
 }
 
+// WithAttributes performs no operation.
+func (Observer) WithAttributes(...attribute.KeyValue) metric.Observer {
+	return Observer{}
+}
+
 // Registration is the registration of a Callback with a No-Op Meter.
 type Registration struct{ embedded.Registration }
 
@@ -194,6 +200,11 @@ func (Int64Counter) Add(context.Context, int64, ...metric.AddOption) {}
 // Enabled performs no operation.
 func (Int64Counter) Enabled(context.Context) bool { return false }
 
+// WithAttributes performs no operation.
+func (Int64Counter) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Counter {
+	return Int64Counter{}
+}
+
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
 type Float64Counter struct{ embedded.Float64Counter }
@@ -203,6 +214,11 @@ func (Float64Counter) Add(context.Context, float64, ...metric.AddOption) {}
 
 // Enabled performs no operation.
 func (Float64Counter) Enabled(context.Context) bool { return false }
+
+// WithAttributes performs no operation.
+func (Float64Counter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Counter {
+	return Float64Counter{}
+}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
@@ -214,6 +230,11 @@ func (Int64UpDownCounter) Add(context.Context, int64, ...metric.AddOption) {}
 // Enabled performs no operation.
 func (Int64UpDownCounter) Enabled(context.Context) bool { return false }
 
+// WithAttributes performs no operation.
+func (Int64UpDownCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Int64UpDownCounter {
+	return Int64UpDownCounter{}
+}
+
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
 type Float64UpDownCounter struct{ embedded.Float64UpDownCounter }
@@ -223,6 +244,11 @@ func (Float64UpDownCounter) Add(context.Context, float64, ...metric.AddOption) {
 
 // Enabled performs no operation.
 func (Float64UpDownCounter) Enabled(context.Context) bool { return false }
+
+// WithAttributes performs no operation.
+func (Float64UpDownCounter) WithAttributes(kvs ...attribute.KeyValue) metric.Float64UpDownCounter {
+	return Float64UpDownCounter{}
+}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
@@ -234,6 +260,11 @@ func (Int64Histogram) Record(context.Context, int64, ...metric.RecordOption) {}
 // Enabled performs no operation.
 func (Int64Histogram) Enabled(context.Context) bool { return false }
 
+// WithAttributes performs no operation.
+func (Int64Histogram) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Histogram {
+	return Int64Histogram{}
+}
+
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
 type Float64Histogram struct{ embedded.Float64Histogram }
@@ -243,6 +274,11 @@ func (Float64Histogram) Record(context.Context, float64, ...metric.RecordOption)
 
 // Enabled performs no operation.
 func (Float64Histogram) Enabled(context.Context) bool { return false }
+
+// WithAttributes performs no operation.
+func (Float64Histogram) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Histogram {
+	return Float64Histogram{}
+}
 
 // Int64Gauge is an OpenTelemetry Gauge used to record instantaneous int64
 // measurements. It produces no telemetry.
@@ -254,6 +290,9 @@ func (Int64Gauge) Record(context.Context, int64, ...metric.RecordOption) {}
 // Enabled performs no operation.
 func (Int64Gauge) Enabled(context.Context) bool { return false }
 
+// WithAttributes performs no operation.
+func (Int64Gauge) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Gauge { return Int64Gauge{} }
+
 // Float64Gauge is an OpenTelemetry Gauge used to record instantaneous float64
 // measurements. It produces no telemetry.
 type Float64Gauge struct{ embedded.Float64Gauge }
@@ -263,6 +302,11 @@ func (Float64Gauge) Record(context.Context, float64, ...metric.RecordOption) {}
 
 // Enabled performs no operation.
 func (Float64Gauge) Enabled(context.Context) bool { return false }
+
+// WithAttributes performs no operation.
+func (Float64Gauge) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Gauge {
+	return Float64Gauge{}
+}
 
 // Int64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // int64 measurements. It produces no telemetry.
@@ -312,9 +356,19 @@ type Int64Observer struct{ embedded.Int64Observer }
 // Observe performs no operation.
 func (Int64Observer) Observe(int64, ...metric.ObserveOption) {}
 
+// WithAttributes performs no operation.
+func (Int64Observer) WithAttributes(kvs ...attribute.KeyValue) metric.Int64Observer {
+	return Int64Observer{}
+}
+
 // Float64Observer is a recorder of float64 measurements that performs no
 // operation.
 type Float64Observer struct{ embedded.Float64Observer }
 
 // Observe performs no operation.
 func (Float64Observer) Observe(float64, ...metric.ObserveOption) {}
+
+// WithAttributes performs no operation.
+func (Float64Observer) WithAttributes(kvs ...attribute.KeyValue) metric.Float64Observer {
+	return Float64Observer{}
+}

@@ -308,7 +308,7 @@ func hPointSummed[N int64 | float64](
 }
 
 // hPoint returns an HistogramDataPoint that started and ended now with multi
-// number of measurements values v. It includes a min and max (set to v).
+// number of lookupments values v. It includes a min and max (set to v).
 func hPoint[N int64 | float64](
 	a attribute.Set,
 	v N,
@@ -341,7 +341,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	b[0] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the bounds argument should not change the bounds")
 
-	h.measure(t.Context(), 5, alice, nil)
+	h.lookup(alice.ToSlice(), nil)(t.Context(), 5)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -352,7 +352,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 
 func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h := newCumulativeHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
-	h.measure(t.Context(), 5, alice, nil)
+	h.lookup(alice.ToSlice(), nil)(t.Context(), 5)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -395,7 +395,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	require.Equal(t, 0, h.collect(&data))
 	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
-	h.measure(t.Context(), 1, alice, nil)
+	h.lookup(alice.ToSlice(), nil)(t.Context(), 1)
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1, now(), now())}
@@ -408,29 +408,29 @@ func TestDeltaHistogramReset(t *testing.T) {
 	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
-	h.measure(t.Context(), 1, bob, nil)
+	h.lookup(bob.ToSlice(), nil)(t.Context(), 1)
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1, now(), now())}
 	h.collect(&data)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
 }
 
 func BenchmarkHistogram(b *testing.B) {
-	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Lookup[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
-	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+	b.Run("Int64/Delta", benchmarkAggregate(func() (Lookup[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
+	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Lookup[float64], ComputeAggregation) {
 		return Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
+	b.Run("Float64/Delta", benchmarkAggregate(func() (Lookup[float64], ComputeAggregation) {
 		return Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)

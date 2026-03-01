@@ -102,10 +102,18 @@ type deltaHistogram[N int64 | float64] struct {
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
+func (s *deltaHistogram[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
+	// TODO: This isn't actually a performance improvement. This needs to be
+	// refactored to offer benefits.
+	return func(ctx context.Context, value N) {
+		s.measure(ctx, value, fltrAttr, droppedAttr)
+	}
+}
+
 func (s *deltaHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	fltrAttr []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
@@ -273,12 +281,7 @@ func newCumulativeHistogram[N int64 | float64](
 	}
 }
 
-func (s *cumulativeHistogram[N]) measure(
-	ctx context.Context,
-	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
-) {
+func (s *cumulativeHistogram[N]) lookup(fltrAttr []attribute.KeyValue, droppedAttr []attribute.KeyValue) Measure[N] {
 	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
@@ -301,25 +304,26 @@ func (s *cumulativeHistogram[N]) measure(
 		}
 		return hPt
 	}).(*hotColdHistogramPoint[N])
+	return func(ctx context.Context, value N) {
+		// This search will return an index in the range [0, len(s.bounds)], where
+		// it will return len(s.bounds) if value is greater than the last element
+		// of s.bounds. This aligns with the histogramPoint in that the length of histogramPoint
+		// is len(s.bounds)+1, with the last bucket representing:
+		// (s.bounds[len(s.bounds)-1], +∞).
+		idx := sort.SearchFloat64s(s.bounds, float64(value))
 
-	// This search will return an index in the range [0, len(s.bounds)], where
-	// it will return len(s.bounds) if value is greater than the last element
-	// of s.bounds. This aligns with the histogramPoint in that the length of histogramPoint
-	// is len(s.bounds)+1, with the last bucket representing:
-	// (s.bounds[len(s.bounds)-1], +∞).
-	idx := sort.SearchFloat64s(s.bounds, float64(value))
+		hotIdx := h.hcwg.start()
+		defer h.hcwg.done(hotIdx)
 
-	hotIdx := h.hcwg.start()
-	defer h.hcwg.done(hotIdx)
-
-	h.hotColdPoint[hotIdx].counts[idx].Add(1)
-	if !s.noMinMax {
-		h.hotColdPoint[hotIdx].minMax.Update(value)
+		h.hotColdPoint[hotIdx].counts[idx].Add(1)
+		if !s.noMinMax {
+			h.hotColdPoint[hotIdx].minMax.Update(value)
+		}
+		if !s.noSum {
+			h.hotColdPoint[hotIdx].total.add(value)
+		}
+		h.res.Offer(ctx, value, droppedAttr)
 	}
-	if !s.noSum {
-		h.hotColdPoint[hotIdx].total.add(value)
-	}
-	h.res.Offer(ctx, value, droppedAttr)
 }
 
 func (s *cumulativeHistogram[N]) collect(
