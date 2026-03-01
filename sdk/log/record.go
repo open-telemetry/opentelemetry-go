@@ -27,7 +27,7 @@ var logAttrDropped = sync.OnceFunc(func() {
 	global.Warn("limit reached: dropping log Record attributes")
 })
 
-var logKeyValuePairDropped = sync.OnceFunc(func() {
+var logKeyDuplicate = sync.OnceFunc(func() {
 	global.Warn("key duplication: dropping key-value pair")
 })
 
