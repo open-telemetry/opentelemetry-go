@@ -34,6 +34,7 @@ The next release will require at least [Go 1.25].
 - Add `go.opentelemetry.io/otel/semconv/v1.39.0` package.
   The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.` (#7783, #7789)
+- Add experimental observability metrics in `go.opentelemetry.io/otel/sdk/log`. (#7124)
 
 ### Changed
 
