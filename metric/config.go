@@ -96,7 +96,7 @@ func WithInstrumentationAttributeSet(set attribute.Set) MeterOption {
 		if config.attrs.Len() == 0 {
 			config.attrs = set
 		} else {
-			config.attrs = mergeSets(config.attrs, set)
+			config.attrs = attribute.NewSet(mergeSets(config.attrs, set)...)
 		}
 		return config
 	})
