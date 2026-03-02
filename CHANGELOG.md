@@ -14,6 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.40.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0`. (#7985)
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.41.0/0.63.0/0.17.0/0.0.15] 2026-03-02
 
 This release is the last to support [Go 1.24].
@@ -31,9 +34,6 @@ The next release will require at least [Go 1.25].
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7914)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7914)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7914)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.40.0/0.62.0/0.16.0] 2026-02-02
 
