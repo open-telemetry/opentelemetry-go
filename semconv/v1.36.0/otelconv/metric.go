@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package otelconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "otel" namespace.
 package otelconv
 
@@ -190,7 +190,7 @@ func NewSDKExporterLogExported(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterLogExported{noop.Int64Counter{}}, err
+		return SDKExporterLogExported{noop.Int64Counter{}}, err
 	}
 	return SDKExporterLogExported{i}, nil
 }
@@ -337,7 +337,7 @@ func NewSDKExporterLogInflight(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterLogInflight{noop.Int64UpDownCounter{}}, err
+		return SDKExporterLogInflight{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKExporterLogInflight{i}, nil
 }
@@ -468,7 +468,7 @@ func NewSDKExporterMetricDataPointExported(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterMetricDataPointExported{noop.Int64Counter{}}, err
+		return SDKExporterMetricDataPointExported{noop.Int64Counter{}}, err
 	}
 	return SDKExporterMetricDataPointExported{i}, nil
 }
@@ -617,7 +617,7 @@ func NewSDKExporterMetricDataPointInflight(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterMetricDataPointInflight{noop.Int64UpDownCounter{}}, err
+		return SDKExporterMetricDataPointInflight{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKExporterMetricDataPointInflight{i}, nil
 }
@@ -747,7 +747,7 @@ func NewSDKExporterOperationDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterOperationDuration{noop.Float64Histogram{}}, err
+		return SDKExporterOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return SDKExporterOperationDuration{i}, nil
 }
@@ -825,6 +825,7 @@ func (m SDKExporterOperationDuration) Record(
 func (m SDKExporterOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -911,7 +912,7 @@ func NewSDKExporterSpanExported(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterSpanExported{noop.Int64Counter{}}, err
+		return SDKExporterSpanExported{noop.Int64Counter{}}, err
 	}
 	return SDKExporterSpanExported{i}, nil
 }
@@ -1058,7 +1059,7 @@ func NewSDKExporterSpanInflight(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKExporterSpanInflight{noop.Int64UpDownCounter{}}, err
+		return SDKExporterSpanInflight{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKExporterSpanInflight{i}, nil
 }
@@ -1187,7 +1188,7 @@ func NewSDKLogCreated(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKLogCreated{noop.Int64Counter{}}, err
+		return SDKLogCreated{noop.Int64Counter{}}, err
 	}
 	return SDKLogCreated{i}, nil
 }
@@ -1273,7 +1274,7 @@ func NewSDKMetricReaderCollectionDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKMetricReaderCollectionDuration{noop.Float64Histogram{}}, err
+		return SDKMetricReaderCollectionDuration{noop.Float64Histogram{}}, err
 	}
 	return SDKMetricReaderCollectionDuration{i}, nil
 }
@@ -1343,6 +1344,7 @@ func (m SDKMetricReaderCollectionDuration) Record(
 func (m SDKMetricReaderCollectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1402,7 +1404,7 @@ func NewSDKProcessorLogProcessed(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogProcessed{noop.Int64Counter{}}, err
+		return SDKProcessorLogProcessed{noop.Int64Counter{}}, err
 	}
 	return SDKProcessorLogProcessed{i}, nil
 }
@@ -1534,7 +1536,7 @@ func NewSDKProcessorLogQueueCapacity(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogQueueCapacity{noop.Int64ObservableUpDownCounter{}}, err
+		return SDKProcessorLogQueueCapacity{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorLogQueueCapacity{i}, nil
 }
@@ -1599,7 +1601,7 @@ func NewSDKProcessorLogQueueSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorLogQueueSize{noop.Int64ObservableUpDownCounter{}}, err
+		return SDKProcessorLogQueueSize{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorLogQueueSize{i}, nil
 }
@@ -1665,7 +1667,7 @@ func NewSDKProcessorSpanProcessed(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanProcessed{noop.Int64Counter{}}, err
+		return SDKProcessorSpanProcessed{noop.Int64Counter{}}, err
 	}
 	return SDKProcessorSpanProcessed{i}, nil
 }
@@ -1797,7 +1799,7 @@ func NewSDKProcessorSpanQueueCapacity(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanQueueCapacity{noop.Int64ObservableUpDownCounter{}}, err
+		return SDKProcessorSpanQueueCapacity{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorSpanQueueCapacity{i}, nil
 }
@@ -1863,7 +1865,7 @@ func NewSDKProcessorSpanQueueSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKProcessorSpanQueueSize{noop.Int64ObservableUpDownCounter{}}, err
+		return SDKProcessorSpanQueueSize{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return SDKProcessorSpanQueueSize{i}, nil
 }
@@ -1928,7 +1930,7 @@ func NewSDKSpanLive(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKSpanLive{noop.Int64UpDownCounter{}}, err
+		return SDKSpanLive{noop.Int64UpDownCounter{}}, err
 	}
 	return SDKSpanLive{i}, nil
 }
@@ -2031,7 +2033,7 @@ func NewSDKSpanStarted(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SDKSpanStarted{noop.Int64Counter{}}, err
+		return SDKSpanStarted{noop.Int64Counter{}}, err
 	}
 	return SDKSpanStarted{i}, nil
 }

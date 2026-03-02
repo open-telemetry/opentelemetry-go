@@ -53,12 +53,12 @@ func TestHashKVsEquality(t *testing.T) {
 	result = append(result, testcase{hashKVs(nil), nil})
 
 	for _, key := range keys {
-		for i := 0; i < len(keyVals); i++ {
+		for i := range keyVals {
 			kvs := []KeyValue{keyVals[i](key)}
 			hash := hashKVs(kvs)
 			result = append(result, testcase{hash, kvs})
 
-			for j := 0; j < len(keyVals); j++ {
+			for j := range keyVals {
 				kvs := []KeyValue{
 					keyVals[i](key),
 					keyVals[j](key),
@@ -66,7 +66,7 @@ func TestHashKVsEquality(t *testing.T) {
 				hash := hashKVs(kvs)
 				result = append(result, testcase{hash, kvs})
 
-				for k := 0; k < len(keyVals); k++ {
+				for k := range keyVals {
 					kvs := []KeyValue{
 						keyVals[i](key),
 						keyVals[j](key),

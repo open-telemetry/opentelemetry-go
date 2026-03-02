@@ -52,8 +52,14 @@ var ourTransport = &http.Transport{
 	ExpectContinueTimeout: 1 * time.Second,
 }
 
+var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
+
 // newClient creates a new HTTP metric client.
 func newClient(cfg oconf.Config) (*client, error) {
+	if cfg.Metrics.Insecure && cfg.Metrics.TLSCfg != nil {
+		return nil, errInsecureEndpointWithTLS
+	}
+
 	httpClient := cfg.Metrics.HTTPClient
 	if httpClient == nil {
 		httpClient = &http.Client{
@@ -146,6 +152,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		}
 
 		request.reset(iCtx)
+		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.httpClient.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {

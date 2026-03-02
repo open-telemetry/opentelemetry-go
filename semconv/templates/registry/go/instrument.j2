@@ -265,6 +265,7 @@ func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lowe
 func (m {{ name }}) RecordSet(ctx context.Context, val {{ value_type(metric) | lower }}, set attribute.Set) {
 	if set.Len() == 0 {
 		m.{{ inst }}.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

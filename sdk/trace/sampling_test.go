@@ -245,3 +245,64 @@ func TestTracestateIsPassed(t *testing.T) {
 		})
 	}
 }
+
+func TestAlwaysRecordSamplingDecision(t *testing.T) {
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+
+	testCases := []struct {
+		name             string
+		rootSampler      Sampler
+		expectedDecision SamplingDecision
+	}{
+		{
+			name:             "when root sampler decision is RecordAndSample, AlwaysRecord returns RecordAndSample",
+			rootSampler:      AlwaysSample(),
+			expectedDecision: RecordAndSample,
+		},
+		{
+			name:             "when root sampler decision is Drop, AlwaysRecord returns RecordOnly",
+			rootSampler:      NeverSample(),
+			expectedDecision: RecordOnly,
+		},
+		{
+			name:             "when root sampler decision is RecordOnly, AlwaysRecord returns RecordOnly",
+			rootSampler:      RecordingOnly(),
+			expectedDecision: RecordOnly,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sampler := AlwaysRecord(tc.rootSampler)
+			parentCtx := trace.ContextWithSpanContext(
+				t.Context(),
+				trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    traceID,
+					SpanID:     spanID,
+					TraceFlags: trace.FlagsSampled,
+				}),
+			)
+			samplingResult := sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx})
+			if samplingResult.Decision != tc.expectedDecision {
+				t.Errorf("Sampling decision should be %v, got %v instead",
+					tc.expectedDecision,
+					samplingResult.Decision,
+				)
+			}
+		})
+	}
+}
+
+func TestAlwaysRecordDefaultDescription(t *testing.T) {
+	sampler := AlwaysRecord(NeverSample())
+
+	expectedDescription := fmt.Sprintf("AlwaysRecord{root:%s}", NeverSample().Description())
+
+	if sampler.Description() != expectedDescription {
+		t.Errorf("Sampler description should be %s, got '%s' instead",
+			expectedDescription,
+			sampler.Description(),
+		)
+	}
+}

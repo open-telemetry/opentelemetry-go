@@ -314,7 +314,7 @@ func TestLookup(t *testing.T) {
 }
 
 func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
-	rType := reflect.TypeOf((*attribute.Set)(nil))
+	rType := reflect.TypeFor[*attribute.Set]()
 	rVal := reflect.ValueOf(&attribute.Set{})
 	for n := 0; n < rType.NumMethod(); n++ {
 		mType := rType.Method(n)
@@ -552,12 +552,12 @@ func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	valueBase := ""
 
 	// Build key base string
-	for i := 0; i < keyLen; i++ {
+	for i := range keyLen {
 		keyBase += string(rune('a' + i%26))
 	}
 
 	// Build value base string
-	for i := 0; i < valueLen; i++ {
+	for i := range valueLen {
 		valueBase += string(rune('0' + i%10))
 	}
 

@@ -5,6 +5,7 @@ package observ
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,9 +20,55 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
 )
+
+func TestNextExporterID(t *testing.T) {
+	SetSimpleProcessorID(0)
+
+	var expected int64
+	for range 10 {
+		id := NextSimpleProcessorID()
+		assert.Equal(t, expected, id)
+		expected++
+	}
+}
+
+func TestSetExporterID(t *testing.T) {
+	SetSimpleProcessorID(0)
+
+	prev := SetSimpleProcessorID(42)
+	assert.Equal(t, int64(0), prev)
+
+	id := NextSimpleProcessorID()
+	assert.Equal(t, int64(42), id)
+}
+
+func TestNextExporterIDConcurrentSafe(t *testing.T) {
+	SetSimpleProcessorID(0)
+
+	const goroutines = 100
+	const increments = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			for range increments {
+				NextSimpleProcessorID()
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	expected := int64(goroutines * increments)
+	id := NextSimpleProcessorID()
+	assert.Equal(t, expected, id)
+}
 
 type errMeterProvider struct {
 	mapi.MeterProvider

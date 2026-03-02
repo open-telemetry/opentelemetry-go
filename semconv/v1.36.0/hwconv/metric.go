@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package hwconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "hw" namespace.
 package hwconv
 
@@ -104,7 +104,7 @@ func NewEnergy(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Energy{noop.Int64Counter{}}, err
+		return Energy{noop.Int64Counter{}}, err
 	}
 	return Energy{i}, nil
 }
@@ -224,7 +224,7 @@ func NewErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Errors{noop.Int64Counter{}}, err
+		return Errors{noop.Int64Counter{}}, err
 	}
 	return Errors{i}, nil
 }
@@ -350,7 +350,7 @@ func NewHostAmbientTemperature(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostAmbientTemperature{noop.Int64Gauge{}}, err
+		return HostAmbientTemperature{noop.Int64Gauge{}}, err
 	}
 	return HostAmbientTemperature{i}, nil
 }
@@ -415,6 +415,7 @@ func (m HostAmbientTemperature) Record(
 func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -465,7 +466,7 @@ func NewHostEnergy(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostEnergy{noop.Int64Counter{}}, err
+		return HostEnergy{noop.Int64Counter{}}, err
 	}
 	return HostEnergy{i}, nil
 }
@@ -592,7 +593,7 @@ func NewHostHeatingMargin(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostHeatingMargin{noop.Int64Gauge{}}, err
+		return HostHeatingMargin{noop.Int64Gauge{}}, err
 	}
 	return HostHeatingMargin{i}, nil
 }
@@ -657,6 +658,7 @@ func (m HostHeatingMargin) Record(
 func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -707,7 +709,7 @@ func NewHostPower(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return HostPower{noop.Int64Gauge{}}, err
+		return HostPower{noop.Int64Gauge{}}, err
 	}
 	return HostPower{i}, nil
 }
@@ -782,6 +784,7 @@ func (m HostPower) Record(
 func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -832,7 +835,7 @@ func NewPower(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Power{noop.Int64Gauge{}}, err
+		return Power{noop.Int64Gauge{}}, err
 	}
 	return Power{i}, nil
 }
@@ -905,6 +908,7 @@ func (m Power) Record(
 func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -955,7 +959,7 @@ func NewStatus(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Status{noop.Int64UpDownCounter{}}, err
+		return Status{noop.Int64UpDownCounter{}}, err
 	}
 	return Status{i}, nil
 }

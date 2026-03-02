@@ -64,6 +64,11 @@ func TestEmit(t *testing.T) {
 			want: "true",
 		},
 		{
+			name: `test Key.Emit() can emit a string representing self.BOOLSLICE`,
+			v:    attribute.BoolSliceValue([]bool{true, false, true}),
+			want: `[true false true]`,
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.INT64SLICE`,
 			v:    attribute.Int64SliceValue([]int64{1, 42}),
 			want: `[1,42]`,
@@ -72,6 +77,16 @@ func TestEmit(t *testing.T) {
 			name: `test Key.Emit() can emit a string representing self.INT64`,
 			v:    attribute.Int64Value(42),
 			want: "42",
+		},
+		{
+			name: `test Key.Emit() can representing an int value`,
+			v:    attribute.IntValue(7),
+			want: "7",
+		},
+		{
+			name: `test Key.Emit() can represent an []int value`,
+			v:    attribute.IntSliceValue([]int{1, 2, 3}),
+			want: `[1,2,3]`,
 		},
 		{
 			name: `test Key.Emit() can emit a string representing self.FLOAT64SLICE`,

@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package signalrconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "signalr" namespace.
 package signalrconv
 
@@ -73,7 +76,7 @@ func NewServerActiveConnections(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerActiveConnections{noop.Int64UpDownCounter{}}, err
+		return ServerActiveConnections{noop.Int64UpDownCounter{}}, err
 	}
 	return ServerActiveConnections{i}, nil
 }
@@ -165,7 +168,7 @@ func NewServerConnectionDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerConnectionDuration{noop.Float64Histogram{}}, err
+		return ServerConnectionDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerConnectionDuration{i}, nil
 }

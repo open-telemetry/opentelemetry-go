@@ -18,7 +18,6 @@ import (
 //
 //	ErrorType() string
 //
-//
 // then the returned attribute has the value of err.ErrorType(). Otherwise, the
 // returned attribute has a value derived from the concrete type of err.
 //

@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 var (
@@ -194,6 +194,33 @@ func TestMerge(t *testing.T) {
 	}
 }
 
+func TestMergeIdempotent(t *testing.T) {
+	r := resource.NewSchemaless(
+		attribute.String("k1", "v1"),
+		attribute.String("k2", "v2"),
+	)
+
+	merged, err := resource.Merge(r, r)
+	require.NoError(t, err)
+
+	require.True(t, r.Equal(merged))
+	require.Equal(t, r.SchemaURL(), merged.SchemaURL())
+}
+
+func TestMergeIdempotentWithSchema(t *testing.T) {
+	r := resource.NewWithAttributes(
+		"https://opentelemetry.io/schemas/1.21.0",
+		attribute.String("k1", "v1"),
+		attribute.String("k2", "v2"),
+	)
+
+	merged, err := resource.Merge(r, r)
+	require.NoError(t, err)
+
+	require.True(t, r.Equal(merged))
+	require.Equal(t, r.SchemaURL(), merged.SchemaURL())
+}
+
 func TestEmpty(t *testing.T) {
 	var res *resource.Resource
 	assert.Empty(t, res.SchemaURL())
@@ -218,6 +245,21 @@ func TestDefault(t *testing.T) {
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(sdk.Version()))
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
+}
+
+func TestEquivalentStability(t *testing.T) {
+	r1 := resource.NewSchemaless(
+		attribute.String("a", "1"),
+		attribute.String("b", "2"),
+	)
+
+	r2 := resource.NewSchemaless(
+		attribute.String("b", "2"),
+		attribute.String("a", "1"),
+	)
+
+	require.Equal(t, r1.Equivalent(), r2.Equivalent())
+	require.True(t, r1.Equal(r2))
 }
 
 func TestString(t *testing.T) {
