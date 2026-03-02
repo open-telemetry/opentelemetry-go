@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.41.0/0.63.0/0.17.0/0.0.15] 2026-03-02
+
 This release is the last to support [Go 1.24].
 The next release will require at least [Go 1.25].
 
@@ -3548,7 +3550,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.40.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.41.0...HEAD
+[1.41.0/0.63.0/0.17.0/0.0.15]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.41.0
 [1.40.0/0.62.0/0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.40.0
 [1.39.0/0.61.0/0.15.0/0.0.14]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.39.0
 [1.38.0/0.60.0/0.14.0/0.0.13]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.38.0
