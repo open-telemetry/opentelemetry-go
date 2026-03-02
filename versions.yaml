@@ -64,3 +64,6 @@ modules:
   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp:
     version-refs:
       - ./internal/version.go
+  go.opentelemetry.io/otel/exporters/stdout/stdoutlog:
+    version-refs:
+      - ./internal/version.go
