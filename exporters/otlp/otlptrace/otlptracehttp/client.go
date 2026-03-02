@@ -174,6 +174,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		}
 
 		request.reset(ctx)
+		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := d.client.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {
