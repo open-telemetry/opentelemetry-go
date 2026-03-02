@@ -270,7 +270,7 @@ func TestNotEquivalence(t *testing.T) {
 			assert.Falsef(
 				t,
 				ok,
-				"Set comparison of %s type: t equivalent: %s == %s",
+				"Set comparison of %s type: equivalent: %s == %s",
 				p[0].Value.Type(),
 				s0.Encoded(attribute.DefaultEncoder()),
 				s1.Encoded(attribute.DefaultEncoder()),
