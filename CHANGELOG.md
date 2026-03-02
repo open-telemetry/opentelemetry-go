@@ -17,6 +17,9 @@ The next release will require at least [Go 1.25].
 
 ### Fixed
 
+- Update `Baggage` in `go.opentelemetry.io/otel/propagation` and `Parse` and `New` in `go.opentelemetry.io/otel/baggage` to comply with W3C Baggage specification limits.
+  `New` and `Parse` now return partial baggage along with an error when limits are exceeded.
+  Errors from baggage extraction are reported to the global error handler. (#7880)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7914)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7914)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7914)
