@@ -22,11 +22,9 @@ func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
 		10.55,
 		42.4,
 	} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			aSum.add(in)
-		}()
+		})
 	}
 	wg.Wait()
 	assert.Equal(t, float64(55), math.Round(aSum.load()))
@@ -42,11 +40,9 @@ func TestAtomicSumAddIntConcurrentSafe(t *testing.T) {
 		4,
 		5,
 	} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			aSum.add(in)
-		}()
+		})
 	}
 	wg.Wait()
 	assert.Equal(t, int64(15), aSum.load())
@@ -84,13 +80,11 @@ func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 	hcwg := &hotColdWaitGroup{}
 	var data [2]uint64
 	for range 5 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			hotIdx := hcwg.start()
 			defer hcwg.done(hotIdx)
 			atomic.AddUint64(&data[hotIdx], 1)
-		}()
+		})
 	}
 	for range 2 {
 		readIdx := hcwg.swapHotAndWait()
@@ -129,22 +123,16 @@ func testAtomicNConcurrentSafe[N int64 | float64](t *testing.T) {
 	var v atomicN[N]
 
 	for range 2 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			got := v.Load()
 			assert.Equal(t, int64(0), int64(got)%6)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			v.Store(12)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			v.CompareAndSwap(0, 6)
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -202,11 +190,9 @@ func testAtomicMinMaxConcurrentSafe[N int64 | float64](t *testing.T) {
 
 	assert.False(t, minMax.set.Load())
 	for _, i := range []float64{2, 4, 6, 8, -3, 0, 8, 0} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			minMax.Update(N(i))
-		}()
+		})
 	}
 	wg.Wait()
 
