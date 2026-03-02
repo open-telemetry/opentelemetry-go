@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/metric"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/embedded"
 )
 
@@ -37,6 +38,14 @@ type Float64Counter interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Float64Counter.
+	// Subsequent calls to Add on the returned Float64Counter will include the
+	// provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Float64Counter it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Float64Counter
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -102,6 +111,14 @@ type Float64UpDownCounter interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Float64UpDownCounter.
+	// Subsequent calls to Add on the returned Float64UpDownCounter will
+	// include the provided attributes. Calling WithAttributes again on the
+	// returned counter appends additional attributes, or overrides existing
+	// attributes if they are already present. WithAttributes does not modify
+	// the Float64UpDownCounter it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Float64UpDownCounter
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -167,6 +184,14 @@ type Float64Histogram interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Float64Histogram.
+	// Subsequent calls to Record on the returned Float64Histogram will include
+	// the provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Float64Histogram it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Float64Histogram
 }
 
 // Float64HistogramConfig contains options for synchronous histogram
@@ -237,6 +262,14 @@ type Float64Gauge interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// WithAttributes binds attributes to the returned Float64Gauge.
+	// Subsequent calls to Record on the returned Float64Gauge will include
+	// the provided attributes. Calling WithAttributes again on the returned
+	// counter appends additional attributes, or overrides existing attributes
+	// if they are already present. WithAttributes does not modify the
+	// Float64Gauge it is invoked on.
+	WithAttributes(kvs ...attribute.KeyValue) Float64Gauge
 }
 
 // Float64GaugeConfig contains options for synchronous gauge instruments that

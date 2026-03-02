@@ -36,7 +36,7 @@ func (invalidAggregation) err() error {
 func requireN[N int64 | float64](
 	t *testing.T,
 	n int,
-	m []aggregate.Measure[N],
+	m []aggregate.Lookup[N],
 	comps []aggregate.ComputeAggregation,
 	err error,
 ) {
@@ -51,15 +51,15 @@ func assertSum[N int64 | float64](
 	temp metricdata.Temporality,
 	mono bool,
 	v [2]N,
-) func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error) {
-	return func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+) func(*testing.T, []aggregate.Lookup[N], []aggregate.ComputeAggregation, error) {
+	return func(t *testing.T, meas []aggregate.Lookup[N], comps []aggregate.ComputeAggregation, err error) {
 		t.Helper()
 		requireN[N](t, n, meas, comps, err)
 
 		for m := range n {
 			t.Logf("input/output number: %d", m)
 			in, out := meas[m], comps[m]
-			in(t.Context(), 1, *attribute.EmptySet())
+			in(nil)(t.Context(), 1)
 
 			var got metricdata.Aggregation
 			assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -69,7 +69,7 @@ func assertSum[N int64 | float64](
 				DataPoints:  []metricdata.DataPoint[N]{{Value: v[0]}},
 			}, got, metricdatatest.IgnoreTimestamp())
 
-			in(t.Context(), 3, *attribute.EmptySet())
+			in(nil)(t.Context(), 3)
 
 			assert.Equal(t, 1, out(&got), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
@@ -83,13 +83,13 @@ func assertSum[N int64 | float64](
 
 func assertHist[N int64 | float64](
 	temp metricdata.Temporality,
-) func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error) {
-	return func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+) func(*testing.T, []aggregate.Lookup[N], []aggregate.ComputeAggregation, error) {
+	return func(t *testing.T, meas []aggregate.Lookup[N], comps []aggregate.ComputeAggregation, err error) {
 		t.Helper()
 		requireN[N](t, 1, meas, comps, err)
 
 		in, out := meas[0], comps[0]
-		in(t.Context(), 1, *attribute.EmptySet())
+		in(nil)(t.Context(), 1)
 
 		var got metricdata.Aggregation
 		assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -107,7 +107,7 @@ func assertHist[N int64 | float64](
 			}},
 		}, got, metricdatatest.IgnoreTimestamp())
 
-		in(t.Context(), 1, *attribute.EmptySet())
+		in(nil)(t.Context(), 1)
 
 		if temp == metricdata.CumulativeTemporality {
 			buckets[1] = 2
@@ -130,7 +130,7 @@ func assertHist[N int64 | float64](
 
 func assertLastValue[N int64 | float64](
 	t *testing.T,
-	meas []aggregate.Measure[N],
+	meas []aggregate.Lookup[N],
 	comps []aggregate.ComputeAggregation,
 	err error,
 ) {
@@ -138,8 +138,8 @@ func assertLastValue[N int64 | float64](
 	requireN[N](t, 1, meas, comps, err)
 
 	in, out := meas[0], comps[0]
-	in(t.Context(), 10, *attribute.EmptySet())
-	in(t.Context(), 1, *attribute.EmptySet())
+	in(nil)(t.Context(), 10)
+	in(nil)(t.Context(), 1)
 
 	var got metricdata.Aggregation
 	assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -178,7 +178,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 		reader   Reader
 		views    []View
 		inst     Instrument
-		validate func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error)
+		validate func(*testing.T, []aggregate.Lookup[N], []aggregate.ComputeAggregation, error)
 	}{
 		{
 			name: "Default/Drop",
@@ -186,7 +186,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
 			),
 			inst: instruments[InstrumentKindCounter],
-			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+			validate: func(t *testing.T, meas []aggregate.Lookup[N], comps []aggregate.ComputeAggregation, err error) {
 				t.Helper()
 				assert.NoError(t, err)
 				assert.Empty(t, meas)
@@ -282,12 +282,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader: NewManualReader(),
 			views:  []View{changeAggView},
 			inst:   instruments[InstrumentKindCounter],
-			validate: func(t *testing.T, meas []aggregate.Measure[N], comps []aggregate.ComputeAggregation, err error) {
+			validate: func(t *testing.T, meas []aggregate.Lookup[N], comps []aggregate.ComputeAggregation, err error) {
 				t.Helper()
 				requireN[N](t, 1, meas, comps, err)
 
 				in, out := meas[0], comps[0]
-				in(t.Context(), 1, *attribute.EmptySet())
+				in(nil)(t.Context(), 1)
 
 				var got metricdata.Aggregation
 				assert.Equal(t, 1, out(&got), "1 data-point expected")
@@ -301,7 +301,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 					}},
 				}, got, metricdatatest.IgnoreTimestamp())
 
-				in(t.Context(), 1, *attribute.EmptySet())
+				in(nil)(t.Context(), 1)
 
 				assert.Equal(t, 1, out(&got), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
@@ -383,7 +383,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			reader: NewManualReader(),
 			views:  []View{invalidAggView},
 			inst:   instruments[InstrumentKindCounter],
-			validate: func(t *testing.T, _ []aggregate.Measure[N], _ []aggregate.ComputeAggregation, err error) {
+			validate: func(t *testing.T, _ []aggregate.Lookup[N], _ []aggregate.ComputeAggregation, err error) {
 				assert.ErrorIs(t, err, errCreatingAggregators)
 			},
 		},
