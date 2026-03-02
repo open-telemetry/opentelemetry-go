@@ -18,6 +18,12 @@ The next release will require at least [Go 1.25].
   The package contains semantic conventions from the `v1.40.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0.`(#7929)
 
+### Fixed
+
+- Update `Baggage` in `go.opentelemetry.io/otel/propagation` and `Parse` and `New` in `go.opentelemetry.io/otel/baggage` to comply with W3C Baggage specification limits.
+  `New` and `Parse` now return partial baggage along with an error when limits are exceeded.
+  Errors from baggage extraction are reported to the global error handler. (#7880)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
