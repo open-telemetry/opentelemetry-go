@@ -38,9 +38,7 @@ func TestFixedSizeExemplarConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range goRoutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for {
 				select {
 				case <-ctx.Done():
@@ -49,7 +47,7 @@ func TestFixedSizeExemplarConcurrentSafe(t *testing.T) {
 					require.NotPanics(t, add)
 				}
 			}
-		}()
+		})
 	}
 
 	const collections = 100

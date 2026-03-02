@@ -2,7 +2,7 @@
 // See the blog post "Deprecating Zipkin Exporter": https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/
 module go.opentelemetry.io/otel/exporters/zipkin
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/go-logr/logr v1.4.3
