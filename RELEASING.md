@@ -7,7 +7,9 @@ Create a `Version Release` issue to track the release process.
 ## Semantic Convention Generation
 
 New versions of the [OpenTelemetry Semantic Conventions] mean new versions of the `semconv` package need to be generated.
-The `semconv-generate` make target is used for this.
+This is automatically done each day by CI pipeline [semconv-update.yml](.github/workflows/semconv-update.yml), which opens a PR adding the generated package if it finds an upstream update. You can also trigger the pipeline manually via `workflow_dispatch`.
+
+However you can still use `semconv-generate` make target to generate the package.
 
 1. Set the `TAG` environment variable to the semantic convention tag you want to generate.
 2. Run the `make semconv-generate ...` target from this repository.
@@ -15,7 +17,7 @@ The `semconv-generate` make target is used for this.
 For example,
 
 ```sh
-export TAG="v1.30.0" # Change to the release version you are generating.
+export TAG="v1.36.0" # Change to the release version you are generating.
 make semconv-generate # Uses the exported TAG.
 ```
 
