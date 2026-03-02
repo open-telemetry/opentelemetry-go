@@ -191,6 +191,10 @@ func TestEquivalence(t *testing.T) {
 func TestNotEquivalence(t *testing.T) {
 	pairs := [][2]attribute.KeyValue{
 		{
+			attribute.Int("Key", 0),
+			attribute.Bool("Key", false),
+		},
+		{
 			attribute.Bool("Bool", true),
 			attribute.Bool("Bool", false),
 		},
