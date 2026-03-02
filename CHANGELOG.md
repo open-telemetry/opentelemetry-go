@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Drop support for [Go 1.24]. (#TBD)
+
 ## [1.41.0/0.63.0/0.17.0/0.0.15] 2026-03-02
 
 This release is the last to support [Go 1.24].
