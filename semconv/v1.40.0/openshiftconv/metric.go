@@ -992,7 +992,7 @@ func (m ClusterquotaHugepageCountRequestHard) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.hugepage.size", k8sHugepageSize),
 			)...,
 		),
@@ -1118,7 +1118,7 @@ func (m ClusterquotaHugepageCountRequestUsed) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.hugepage.size", k8sHugepageSize),
 			)...,
 		),
@@ -1685,7 +1685,7 @@ func (m ClusterquotaObjectCountHard) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.resourcequota.resource_name", k8sResourcequotaResourceName),
 			)...,
 		),
@@ -1812,7 +1812,7 @@ func (m ClusterquotaObjectCountUsed) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.resourcequota.resource_name", k8sResourcequotaResourceName),
 			)...,
 		),

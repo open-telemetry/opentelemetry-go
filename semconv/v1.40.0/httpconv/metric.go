@@ -174,7 +174,7 @@ func (m ClientActiveRequests) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
 			)...,
@@ -314,7 +314,7 @@ func (m ClientConnectionDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
 			)...,
@@ -457,7 +457,7 @@ func (m ClientOpenConnections) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.connection.state", string(connectionState)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -606,7 +606,7 @@ func (m ClientRequestBodySize) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -782,7 +782,7 @@ func (m ClientRequestDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -958,7 +958,7 @@ func (m ClientResponseBodySize) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("server.address", serverAddress),
 				attribute.Int("server.port", serverPort),
@@ -1132,7 +1132,7 @@ func (m ServerActiveRequests) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -1269,7 +1269,7 @@ func (m ServerRequestBodySize) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -1453,7 +1453,7 @@ func (m ServerRequestDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,
@@ -1637,7 +1637,7 @@ func (m ServerResponseBodySize) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("http.request.method", string(requestMethod)),
 				attribute.String("url.scheme", urlScheme),
 			)...,

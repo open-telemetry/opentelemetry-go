@@ -258,7 +258,7 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.operation.name", dbOperationName),
 			)...,
 		),

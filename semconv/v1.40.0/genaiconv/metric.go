@@ -233,7 +233,7 @@ func (m ClientOperationDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.provider.name", string(providerName)),
 			)...,
@@ -384,7 +384,7 @@ func (m ClientTokenUsage) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.provider.name", string(providerName)),
 				attribute.String("gen_ai.token.type", string(tokenType)),
@@ -527,7 +527,7 @@ func (m ServerRequestDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.provider.name", string(providerName)),
 			)...,
@@ -676,7 +676,7 @@ func (m ServerTimePerOutputToken) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.provider.name", string(providerName)),
 			)...,
@@ -817,7 +817,7 @@ func (m ServerTimeToFirstToken) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("gen_ai.operation.name", string(operationName)),
 				attribute.String("gen_ai.provider.name", string(providerName)),
 			)...,

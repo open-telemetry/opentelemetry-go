@@ -177,7 +177,7 @@ func (m PipelineRunActive) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("cicd.pipeline.name", pipelineName),
 				attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
 			)...,
@@ -293,7 +293,7 @@ func (m PipelineRunDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("cicd.pipeline.name", pipelineName),
 				attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
 			)...,
@@ -425,7 +425,7 @@ func (m PipelineRunErrors) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("cicd.pipeline.name", pipelineName),
 				attribute.String("error.type", string(errorType)),
 			)...,
@@ -545,7 +545,7 @@ func (m SystemErrors) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("cicd.system.component", systemComponent),
 				attribute.String("error.type", string(errorType)),
 			)...,
@@ -657,7 +657,7 @@ func (m WorkerCount) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("cicd.worker.state", string(workerState)),
 			)...,
 		),

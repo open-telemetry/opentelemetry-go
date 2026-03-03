@@ -115,7 +115,7 @@ func (m LookupDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("dns.question.name", questionName),
 			)...,
 		),
