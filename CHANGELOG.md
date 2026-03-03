@@ -41,7 +41,6 @@ The next release will require at least [Go 1.25].
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#7914)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7914)
 - Return an error when the endpoint is configured as insecure and with TLS configuration in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#7914)
-- Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` to correctly handle HTTP2 GOAWAY frame. (#7931)
 
 ## [1.40.0/0.62.0/0.16.0] 2026-02-02
 
