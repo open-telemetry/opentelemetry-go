@@ -19,8 +19,10 @@ import (
 //
 //	ErrorType() string
 //
-// then the returned attribute has that method's return value. Otherwise, the
-// returned attribute has a value derived from the concrete type of err.
+// the returned attribute has that method's return value. If multiple errors in
+// the chain implement this method, the value from the first match found by
+// [errors.As] is used. Otherwise, the returned attribute has a value derived
+// from the concrete type of err.
 //
 // The key of the returned attribute is [ErrorTypeKey].
 func ErrorType(err error) attribute.KeyValue {
