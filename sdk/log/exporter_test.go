@@ -219,15 +219,12 @@ func TestExportSync(t *testing.T) {
 		done := exportSync(in, exp)
 
 		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			in <- exportData{
 				ctx:     t.Context(),
 				records: make([]Record, 1),
 			}
-		}()
+		})
 
 		wg.Wait()
 		close(in)
@@ -339,9 +336,7 @@ func TestBufferExporter(t *testing.T) {
 		stop := make(chan struct{})
 		var wg sync.WaitGroup
 		for range goRoutines {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for {
 					select {
 					case <-stop:
@@ -352,7 +347,7 @@ func TestBufferExporter(t *testing.T) {
 						_ = e.ForceFlush(ctx)
 					}
 				}
-			}()
+			})
 		}
 
 		assert.Eventually(t, func() bool {
