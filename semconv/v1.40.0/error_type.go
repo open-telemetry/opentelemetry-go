@@ -35,10 +35,16 @@ func ErrorType(err error) attribute.KeyValue {
 
 func errorType(err error) string {
 	var s string
-	var et interface{ ErrorType() string }
-	if errors.As(err, &et) {
-		// Prioritize the ErrorType method if available.
+	if et, ok := err.(interface{ ErrorType() string }); ok {
+		// Fast path: check the top-level error first.
 		s = et.ErrorType()
+	} else {
+		// Fallback: search the error chain for an ErrorType method.
+		var et interface{ ErrorType() string }
+		if errors.As(err, &et) {
+			// Prioritize the ErrorType method if available.
+			s = et.ErrorType()
+		}
 	}
 	if s == "" {
 		// Fallback to reflection if the ErrorType method is not supported or
