@@ -222,7 +222,7 @@ func TestRecordBody(t *testing.T) {
 		{
 			name: "bytes value",
 			body: log.BytesValue([]byte("test")),
-			want: log.BytesValue([]byte("")),
+			want: log.BytesValue([]byte("test")),
 		},
 		{
 			name: "empty slice",
@@ -1225,7 +1225,7 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 				log.BoolValue(true),
 				log.Float64Value(1.3),
 				log.Int64Value(43),
-				log.BytesValue([]byte("hello")),
+				log.BytesValue([]byte("")),
 				log.StringValue(""),
 				log.StringValue(""),
 				log.SliceValue(log.StringValue("")),
@@ -1249,7 +1249,7 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 				log.Bool("0", true),
 				log.Float64("1", 1.3),
 				log.Int64("2", 43),
-				log.Bytes("3", []byte("hello")),
+				log.Bytes("3", []byte("")),
 				log.String("4", ""),
 				log.String("5", ""),
 				log.Slice("6", log.StringValue("")),
@@ -1266,7 +1266,7 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 			name:  "LongBytesTruncated",
 			limit: 5,
 			input: log.BytesValue([]byte("This is a very long byte array")),
-			want:  log.BytesValue([]byte("This is a very long byte array")),
+			want:  log.BytesValue([]byte("This ")),
 		},
 		{
 			name:  "TruncationInNestedMap",
