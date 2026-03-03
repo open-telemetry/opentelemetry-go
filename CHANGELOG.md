@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
+
 ## [1.41.0/0.63.0/0.17.0/0.0.15] 2026-03-02
 
 This release is the last to support [Go 1.24].
@@ -16,7 +20,6 @@ The next release will require at least [Go 1.25].
 ### Added
 
 - Support testing of [Go 1.26]. (#7902)
-- Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 
 ### Fixed
 
