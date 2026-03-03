@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` to correctly handle HTTP2 GOAWAY frame. (#7931)
-- Preserve W3C TraceFlags bitmask (including the random Trace ID flag) during trace context extraction and injection in `go.opentelemetry.io/otel/propagation`. (#7635)
+- Preserve W3C TraceFlags bitmask (including the random Trace ID flag) during trace context extraction and injection in `go.opentelemetry.io/otel/propagation`. (#7834)
 
 ### Removed
 
