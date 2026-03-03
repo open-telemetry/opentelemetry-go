@@ -16,6 +16,7 @@ The next release will require at least [Go 1.25].
 ### Added
 
 - Support testing of [Go 1.26]. (#7902)
+- Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 
 ### Fixed
 
