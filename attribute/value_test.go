@@ -244,6 +244,10 @@ func TestNotEquivalence(t *testing.T) {
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two"}),
 		},
+		{
+			attribute.Empty("Empty"),
+			attribute.KeyValue{Key: "Empty"},
+		},
 	}
 
 	t.Run("Distinct", func(t *testing.T) {
