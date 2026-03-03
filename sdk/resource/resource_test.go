@@ -820,6 +820,24 @@ func TestWithContainer(t *testing.T) {
 	}, toMap(res))
 }
 
+func TestWithService(t *testing.T) {
+	res, err := resource.New(t.Context(),
+		resource.WithService(),
+	)
+
+	assert.NoError(t, err)
+
+	resMap := toMap(res)
+
+	// Verify service.name exists
+	_, ok := resMap[string(semconv.ServiceNameKey)]
+	require.True(t, ok, "service.name should be present")
+
+	// Verify service.instance.id exists
+	_, ok = resMap[string(semconv.ServiceInstanceIDKey)]
+	require.True(t, ok, "service.instance.id should be present")
+}
+
 func TestResourceConcurrentSafe(t *testing.T) {
 	// Creating Resources should also be free of any data races,
 	// because Resources are immutable.
