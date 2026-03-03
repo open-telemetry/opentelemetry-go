@@ -94,10 +94,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	runs := new(uint64)
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			r := make([]log.Record, 1)
 			for {
 				select {
@@ -109,7 +106,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 					atomic.AddUint64(runs, 1)
 				}
 			}
-		}()
+		})
 	}
 
 	for atomic.LoadUint64(runs) == 0 {

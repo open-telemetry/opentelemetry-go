@@ -1162,12 +1162,10 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	concurrencyLevel := 10
 	for range concurrencyLevel {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, err := registry.Gather() // this calls collector.Collect
 			assert.NoError(t, err)
-		}()
+		})
 	}
 
 	wg.Wait()
