@@ -1521,10 +1521,7 @@ func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			r := &Record{
 				attributeValueLengthLimit: 10,
 				attributeCountLimit:       4,
@@ -1565,7 +1562,7 @@ func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 			if !gotBody.Equal(wantBody) {
 				t.Errorf("Body does not match.\ngot:\n%v\nwant:\n%v", gotBody, wantBody)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

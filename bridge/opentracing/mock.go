@@ -52,6 +52,7 @@ var (
 
 func newMockTracer() *mockTracer {
 	u := rand.Uint32()
+	// nolint:gosec // Intentional byte extraction from uint32
 	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
 	return &mockTracer{
 		FinishedSpans:         nil,
