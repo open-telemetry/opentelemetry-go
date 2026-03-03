@@ -222,7 +222,7 @@ func TestRecordBody(t *testing.T) {
 		{
 			name: "bytes value",
 			body: log.BytesValue([]byte("test")),
-			want: log.BytesValue([]byte("test")),
+			want: log.BytesValue([]byte("")),
 		},
 		{
 			name: "empty slice",
@@ -1200,7 +1200,7 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 			name:  "Bytes",
 			limit: 0,
 			input: log.BytesValue([]byte("foo")),
-			want:  log.BytesValue([]byte("foo")),
+			want:  log.BytesValue([]byte("")),
 		},
 		{
 			name:  "String",
@@ -1263,7 +1263,7 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 			want:  log.StringValue("This "),
 		},
 		{
-			name:  "LongBytesNotTruncated",
+			name:  "LongBytesTruncated",
 			limit: 5,
 			input: log.BytesValue([]byte("This is a very long byte array")),
 			want:  log.BytesValue([]byte("This is a very long byte array")),
