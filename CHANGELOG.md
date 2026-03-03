@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `go.opentelemetry.io/otel/semconv/v1.40.0` package.
+  The package contains semantic conventions from the `v1.40.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0`. (#7985)
+
 ### Removed
 
 - Drop support for [Go 1.24]. (#7984)
