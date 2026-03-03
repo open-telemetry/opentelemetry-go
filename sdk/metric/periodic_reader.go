@@ -107,7 +107,9 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // exporter. That is left to the user to accomplish.
 func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *PeriodicReader {
 	conf := newPeriodicReaderConfig(options)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(
+		context.Background(),
+	) //nolint:gosec  // cancel called during PeriodicReader shutdown.
 	r := &PeriodicReader{
 		interval: conf.interval,
 		timeout:  conf.timeout,
