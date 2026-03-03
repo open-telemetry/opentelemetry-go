@@ -978,9 +978,7 @@ func (m ClusterquotaHugepageCountRequestHard) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.hugepage.size", k8sHugepageSize),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -1106,9 +1104,7 @@ func (m ClusterquotaHugepageCountRequestUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.hugepage.size", k8sHugepageSize),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -1675,9 +1671,7 @@ func (m ClusterquotaObjectCountHard) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.resourcequota.resource_name", k8sResourcequotaResourceName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -1804,9 +1798,7 @@ func (m ClusterquotaObjectCountUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.resourcequota.resource_name", k8sResourcequotaResourceName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 

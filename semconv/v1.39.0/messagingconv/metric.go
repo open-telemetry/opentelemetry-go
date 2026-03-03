@@ -169,10 +169,7 @@ func (m ClientConsumedMessages) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("messaging.operation.name", operationName),
-			attribute.String("messaging.system", string(system)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -354,10 +351,7 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
-			attribute.String("messaging.operation.name", operationName),
-			attribute.String("messaging.system", string(system)),
-		))
+		m.Float64Histogram.Record(ctx, val)
 		return
 	}
 
@@ -541,10 +535,7 @@ func (m ClientSentMessages) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("messaging.operation.name", operationName),
-			attribute.String("messaging.system", string(system)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -707,10 +698,7 @@ func (m ProcessDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
-			attribute.String("messaging.operation.name", operationName),
-			attribute.String("messaging.system", string(system)),
-		))
+		m.Float64Histogram.Record(ctx, val)
 		return
 	}
 

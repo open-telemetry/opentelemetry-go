@@ -1332,9 +1332,7 @@ func (m ContainerStatusReason) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.container.status.reason", string(containerStatusReason)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -1453,9 +1451,7 @@ func (m ContainerStatusState) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.container.status.state", string(containerStatusState)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -3825,9 +3821,7 @@ func (m NamespacePhase) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.namespace.phase", string(namespacePhase)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -3943,10 +3937,7 @@ func (m NodeConditionStatus) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.node.condition.status", string(nodeConditionStatus)),
-			attribute.String("k8s.node.condition.type", string(nodeConditionType)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7148,9 +7139,7 @@ func (m PodStatusPhase) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.pod.status.phase", string(podStatusPhase)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7269,9 +7258,7 @@ func (m PodStatusReason) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.pod.status.reason", string(podStatusReason)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7493,9 +7480,7 @@ func (m PodVolumeAvailable) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.volume.name", volumeName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7627,9 +7612,7 @@ func (m PodVolumeCapacity) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.volume.name", volumeName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7761,9 +7744,7 @@ func (m PodVolumeInodeCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.volume.name", volumeName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7895,9 +7876,7 @@ func (m PodVolumeInodeFree) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.volume.name", volumeName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -8032,9 +8011,7 @@ func (m PodVolumeInodeUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.volume.name", volumeName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -8171,9 +8148,7 @@ func (m PodVolumeUsage) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.volume.name", volumeName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -9563,9 +9538,7 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.hugepage.size", hugepageSize),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -9687,9 +9660,7 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.hugepage.size", hugepageSize),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -10231,9 +10202,7 @@ func (m ResourceQuotaObjectCountHard) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -10355,9 +10324,7 @@ func (m ResourceQuotaObjectCountUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 

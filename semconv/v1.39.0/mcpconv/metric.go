@@ -224,9 +224,7 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
-			attribute.String("mcp.method.name", string(methodName)),
-		))
+		m.Float64Histogram.Record(ctx, val)
 		return
 	}
 
@@ -594,9 +592,7 @@ func (m ServerOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
-			attribute.String("mcp.method.name", string(methodName)),
-		))
+		m.Float64Histogram.Record(ctx, val)
 		return
 	}
 

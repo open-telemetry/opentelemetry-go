@@ -256,9 +256,7 @@ func (m BatteryCharge) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -411,9 +409,7 @@ func (m BatteryChargeLimit) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -579,10 +575,7 @@ func (m BatteryTimeLeft) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.state", string(state)),
-		))
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -741,9 +734,7 @@ func (m CPUSpeed) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -880,9 +871,7 @@ func (m CPUSpeedLimit) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1028,10 +1017,7 @@ func (m Energy) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.type", string(hwType)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -1159,10 +1145,7 @@ func (m Errors) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.type", string(hwType)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -1300,9 +1283,7 @@ func (m FanSpeed) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1432,9 +1413,7 @@ func (m FanSpeedLimit) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1570,9 +1549,7 @@ func (m FanSpeedRatio) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1705,10 +1682,7 @@ func (m GpuIO) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("network.io.direction", string(networkIoDirection)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -1867,9 +1841,7 @@ func (m GpuMemoryLimit) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -2026,9 +1998,7 @@ func (m GpuMemoryUsage) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -2186,9 +2156,7 @@ func (m GpuMemoryUtilization) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -2346,9 +2314,7 @@ func (m GpuUtilization) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -2512,9 +2478,7 @@ func (m HostAmbientTemperature) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -2643,9 +2607,7 @@ func (m HostEnergy) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -2775,9 +2737,7 @@ func (m HostHeatingMargin) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -2906,9 +2866,7 @@ func (m HostPower) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -3037,9 +2995,7 @@ func (m LogicalDiskLimit) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -3173,10 +3129,7 @@ func (m LogicalDiskUsage) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.logical_disk.state", string(logicalDiskState)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -3311,10 +3264,7 @@ func (m LogicalDiskUtilization) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.logical_disk.state", string(logicalDiskState)),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -3446,9 +3396,7 @@ func (m MemorySize) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -3598,9 +3546,7 @@ func (m NetworkBandwidthLimit) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -3759,9 +3705,7 @@ func (m NetworkBandwidthUtilization) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -3922,10 +3866,7 @@ func (m NetworkIO) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("network.io.direction", string(networkIoDirection)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -4087,10 +4028,7 @@ func (m NetworkPackets) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("network.io.direction", string(networkIoDirection)),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -4249,9 +4187,7 @@ func (m NetworkUp) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -4413,10 +4349,7 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.physical_disk.state", string(physicalDiskState)),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -4575,9 +4508,7 @@ func (m PhysicalDiskSize) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -4738,9 +4669,7 @@ func (m PhysicalDiskSmart) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -4913,10 +4842,7 @@ func (m Power) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.type", string(hwType)),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -5043,9 +4969,7 @@ func (m PowerSupplyLimit) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -5195,9 +5119,7 @@ func (m PowerSupplyUsage) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -5342,9 +5264,7 @@ func (m PowerSupplyUtilization) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -5502,11 +5422,7 @@ func (m Status) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-			attribute.String("hw.state", string(state)),
-			attribute.String("hw.type", string(hwType)),
-		))
+		m.Int64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -5640,9 +5556,7 @@ func (m TapeDriveOperations) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -5793,9 +5707,7 @@ func (m Temperature) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -5925,9 +5837,7 @@ func (m TemperatureLimit) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -6063,9 +5973,7 @@ func (m Voltage) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -6195,9 +6103,7 @@ func (m VoltageLimit) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -6333,9 +6239,7 @@ func (m VoltageNominal) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
-			attribute.String("hw.id", id),
-		))
+		m.Int64Gauge.Record(ctx, val)
 		return
 	}
 
