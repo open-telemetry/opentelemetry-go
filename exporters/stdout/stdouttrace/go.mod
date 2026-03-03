@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/stdout/stdouttrace
 
-go 1.24.0
+go 1.25.0
 
 replace (
 	go.opentelemetry.io/otel => ../../..
@@ -9,11 +9,11 @@ replace (
 
 require (
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/metric v1.40.0
-	go.opentelemetry.io/otel/sdk v1.40.0
-	go.opentelemetry.io/otel/sdk/metric v1.40.0
-	go.opentelemetry.io/otel/trace v1.40.0
+	go.opentelemetry.io/otel v1.41.0
+	go.opentelemetry.io/otel/metric v1.41.0
+	go.opentelemetry.io/otel/sdk v1.41.0
+	go.opentelemetry.io/otel/sdk/metric v1.41.0
+	go.opentelemetry.io/otel/trace v1.41.0
 )
 
 require (
