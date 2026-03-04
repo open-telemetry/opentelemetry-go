@@ -116,7 +116,15 @@ func (m {{ name }}) Add(
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
 	if len(attrs) == 0 {
+{%- if req_attr | length > 0 %}
+		m.{{ inst }}.Add(ctx, incr, metric.WithAttributes(
+{%- for attr in req_attr %}
+			{{ to_attribute(attr, pkg) }}
+{%- endfor %}
+		))
+{%- else %}
 		m.{{ inst }}.Add(ctx, incr)
+{%- endif %}
 		return
 	}
 
@@ -201,7 +209,15 @@ func (m {{ name }}) Record(
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
 	if len(attrs) == 0 {
+{%- if req_attr | length > 0 %}
+		m.{{ inst }}.Record(ctx, val, metric.WithAttributes(
+{%- for attr in req_attr %}
+			{{ to_attribute(attr, pkg) }}
+{%- endfor %}
+		))
+{%- else %}
 		m.{{ inst }}.Record(ctx, val)
+{%- endif %}
 		return
 	}
 

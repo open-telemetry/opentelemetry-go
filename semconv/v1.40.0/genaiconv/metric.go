@@ -219,7 +219,10 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("gen_ai.operation.name", string(operationName)),
+			attribute.String("gen_ai.provider.name", string(providerName)),
+		))
 		return
 	}
 
@@ -370,7 +373,11 @@ func (m ClientTokenUsage) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Histogram.Record(ctx, val)
+		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("gen_ai.operation.name", string(operationName)),
+			attribute.String("gen_ai.provider.name", string(providerName)),
+			attribute.String("gen_ai.token.type", string(tokenType)),
+		))
 		return
 	}
 
@@ -513,7 +520,10 @@ func (m ServerRequestDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("gen_ai.operation.name", string(operationName)),
+			attribute.String("gen_ai.provider.name", string(providerName)),
+		))
 		return
 	}
 
@@ -662,7 +672,10 @@ func (m ServerTimePerOutputToken) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("gen_ai.operation.name", string(operationName)),
+			attribute.String("gen_ai.provider.name", string(providerName)),
+		))
 		return
 	}
 
@@ -803,7 +816,10 @@ func (m ServerTimeToFirstToken) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("gen_ai.operation.name", string(operationName)),
+			attribute.String("gen_ai.provider.name", string(providerName)),
+		))
 		return
 	}
 

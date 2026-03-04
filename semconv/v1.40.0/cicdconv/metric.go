@@ -163,7 +163,10 @@ func (m PipelineRunActive) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("cicd.pipeline.name", pipelineName),
+			attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
+		))
 		return
 	}
 
@@ -279,7 +282,10 @@ func (m PipelineRunDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("cicd.pipeline.name", pipelineName),
+			attribute.String("cicd.pipeline.run.state", string(pipelineRunState)),
+		))
 		return
 	}
 
@@ -411,7 +417,10 @@ func (m PipelineRunErrors) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("cicd.pipeline.name", pipelineName),
+			attribute.String("error.type", string(errorType)),
+		))
 		return
 	}
 
@@ -531,7 +540,10 @@ func (m SystemErrors) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("cicd.system.component", systemComponent),
+			attribute.String("error.type", string(errorType)),
+		))
 		return
 	}
 
@@ -643,7 +655,9 @@ func (m WorkerCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("cicd.worker.state", string(workerState)),
+		))
 		return
 	}
 
