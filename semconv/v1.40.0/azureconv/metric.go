@@ -244,7 +244,9 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Histogram.Record(ctx, val)
+		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.operation.name", dbOperationName),
+		))
 		return
 	}
 
