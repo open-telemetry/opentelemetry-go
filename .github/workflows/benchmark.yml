@@ -41,7 +41,7 @@ jobs:
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@7fa35d2e6d3c02af655afd4561807edbce71fcfd
+        uses: CodSpeedHQ/action@f5e5fb3fb96b1855449c231a9d69e8c4bcba227a
         with:
           mode: walltime
           allow-empty: true
