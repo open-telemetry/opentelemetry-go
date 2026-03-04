@@ -5,7 +5,6 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -122,45 +121,31 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 	_ = enabled
 }
 
-func BenchmarkLoggerEmitExceptionAttributes(b *testing.B) {
+func BenchmarkLoggerSetErrAndEmit(b *testing.B) {
 	logger := newTestLogger(b)
-
 	err := errors.New("boom")
 
-	// Mimic otellogr logsink behavior: logger attributes + converted kv attrs.
-	loggerAttrs := []log.KeyValue{
-		log.String("logger.name", "example"),
-		log.String("service.name", "svc"),
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.SetErr(err)
+		logger.Emit(b.Context(), r)
 	}
-	keysAndValues := []any{
-		"key1", "value1",
-		"key2", 2,
-		"key3", true,
-	}
+}
 
-	run := func(withErr bool) func(b *testing.B) {
-		return func(b *testing.B) {
-			ctx := b.Context()
-			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				var record log.Record
-				record.SetBody(log.StringValue("boom"))
-				record.SetSeverity(log.SeverityError)
-				if withErr {
-					record.SetErr(err)
-				} else {
-					record.AddAttributes(log.String(string(semconv.ExceptionMessageKey), err.Error()))
-				}
-				record.AddAttributes(loggerAttrs...)
-				record.AddAttributes(convertKVsBenchmark(keysAndValues...)...)
-				logger.Emit(ctx, record)
-			}
-		}
-	}
+func BenchmarkLoggerSetExceptionAttributesAndEmit(b *testing.B) {
+	logger := newTestLogger(b)
+	err := errors.New("boom")
 
-	b.Run("Manual", run(false))
-	b.Run("SetError", run(true))
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), err.Error()))
+		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), errorType(err)))
+		logger.Emit(b.Context(), r)
+	}
 }
 
 func newTestLogger(t testing.TB) log.Logger {
@@ -169,33 +154,4 @@ func newTestLogger(t testing.TB) log.Logger {
 		WithProcessor(newFltrProcessor("1", true)),
 	)
 	return provider.Logger(t.Name())
-}
-
-func convertKVsBenchmark(keysAndValues ...any) []log.KeyValue {
-	if len(keysAndValues) == 0 {
-		return nil
-	}
-	if len(keysAndValues)%2 != 0 {
-		keysAndValues = append(keysAndValues, nil)
-	}
-	kvs := make([]log.KeyValue, 0, len(keysAndValues)/2)
-	for i := 0; i < len(keysAndValues); i += 2 {
-		key, ok := keysAndValues[i].(string)
-		if !ok {
-			key = fmt.Sprintf("%v", keysAndValues[i])
-		}
-		switch v := keysAndValues[i+1].(type) {
-		case string:
-			kvs = append(kvs, log.String(key, v))
-		case bool:
-			kvs = append(kvs, log.Bool(key, v))
-		case int:
-			kvs = append(kvs, log.Int(key, v))
-		case error:
-			kvs = append(kvs, log.String(key, v.Error()))
-		default:
-			kvs = append(kvs, log.String(key, fmt.Sprintf("%v", v)))
-		}
-	}
-	return kvs
 }

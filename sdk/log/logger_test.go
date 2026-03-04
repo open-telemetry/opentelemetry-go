@@ -314,40 +314,39 @@ func TestLoggerEmit(t *testing.T) {
 	}
 }
 
-func TestAddExceptionAttrsFromError(t *testing.T) {
-	t.Run("AddsMissing", func(t *testing.T) {
-		r := &Record{}
-		r.attributeValueLengthLimit = -1
-		addExceptionAttrsFromError(r, errors.New("boom"))
+func TestNewRecordAddsExceptionAttrs(t *testing.T) {
+	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
-		var gotType, gotMessage, gotStack string
-		r.WalkAttributes(func(kv log.KeyValue) bool {
-			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
-				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
-				gotMessage = kv.Value.AsString()
-			case string(semconv.ExceptionStacktraceKey):
-				gotStack = kv.Value.AsString()
-			}
+	t.Run("AddsMissing", func(t *testing.T) {
+		var in log.Record
+		in.SetBody(log.StringValue("boom"))
+		in.SetSeverity(log.SeverityError)
+		in.SetErr(errors.New("boom"))
+		got := l.newRecord(t.Context(), in)
+
+		var gotAttrs []log.KeyValue
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			gotAttrs = append(gotAttrs, kv)
 			return true
 		})
 
-		assert.Equal(t, "*errors.errorString", gotType)
-		assert.Equal(t, "boom", gotMessage)
-		assert.Empty(t, gotStack)
+		assert.Len(t, gotAttrs, 2)
+		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
+		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionMessageKey), "boom"))
 	})
 
 	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
-		r := &Record{}
-		r.attributeValueLengthLimit = -1
-		r.attributeCountLimit = 2
-		r.AddAttributes(log.String("k1", "v1"))
+		var in log.Record
+		in.SetBody(log.StringValue("boom"))
+		in.SetSeverity(log.SeverityError)
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(log.String("k1", "v1"))
 
-		addExceptionAttrsFromError(r, errors.New("boom"))
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(2)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
 
 		var gotType, gotMessage string
-		r.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv log.KeyValue) bool {
 			switch kv.Key {
 			case string(semconv.ExceptionTypeKey):
 				gotType = kv.Value.AsString()
@@ -362,15 +361,16 @@ func TestAddExceptionAttrsFromError(t *testing.T) {
 	})
 
 	t.Run("NoSlotsLeft", func(t *testing.T) {
-		r := &Record{}
-		r.attributeValueLengthLimit = -1
-		r.attributeCountLimit = 1
-		r.AddAttributes(log.String("k1", "v1"))
-
-		addExceptionAttrsFromError(r, errors.New("boom"))
+		var in log.Record
+		in.SetBody(log.StringValue("boom"))
+		in.SetSeverity(log.SeverityError)
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(log.String("k1", "v1"))
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
 
 		var gotType, gotMessage string
-		r.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv log.KeyValue) bool {
 			switch kv.Key {
 			case string(semconv.ExceptionTypeKey):
 				gotType = kv.Value.AsString()

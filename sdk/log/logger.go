@@ -127,13 +127,13 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	})
 
 	if !hasExceptionAttr {
-		addExceptionAttrsFromError(&newRecord, r.Err())
+		addExceptionAttrs(&newRecord, r.Err())
 	}
 
 	return newRecord
 }
 
-func addExceptionAttrsFromError(r *Record, err error) {
+func addExceptionAttrs(r *Record, err error) {
 	if r == nil || err == nil {
 		return
 	}
@@ -178,6 +178,9 @@ func errorType(err error) string {
 		return pkg + "." + name
 	}
 
+	// The type has no package path or name (predeclared, not-defined,
+	// or alias for a not-defined type).
+	//
 	// This is not guaranteed to be unique, but is a best effort.
 	return t.String()
 }
