@@ -245,7 +245,7 @@ func (m ClientOperationDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("mcp.method.name", string(methodName)),
 			)...,
 		),
@@ -615,7 +615,7 @@ func (m ServerOperationDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("mcp.method.name", string(methodName)),
 			)...,
 		),

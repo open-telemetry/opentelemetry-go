@@ -1379,7 +1379,7 @@ func (m ContainerStatusReason) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.container.status.reason", string(containerStatusReason)),
 			)...,
 		),
@@ -1500,7 +1500,7 @@ func (m ContainerStatusState) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.container.status.state", string(containerStatusState)),
 			)...,
 		),
@@ -3872,7 +3872,7 @@ func (m NamespacePhase) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.namespace.phase", string(namespacePhase)),
 			)...,
 		),
@@ -3991,7 +3991,7 @@ func (m NodeConditionStatus) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.node.condition.status", string(nodeConditionStatus)),
 				attribute.String("k8s.node.condition.type", string(nodeConditionType)),
 			)...,
@@ -7195,7 +7195,7 @@ func (m PodStatusPhase) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.pod.status.phase", string(podStatusPhase)),
 			)...,
 		),
@@ -7316,7 +7316,7 @@ func (m PodStatusReason) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.pod.status.reason", string(podStatusReason)),
 			)...,
 		),
@@ -7540,7 +7540,7 @@ func (m PodVolumeAvailable) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.volume.name", volumeName),
 			)...,
 		),
@@ -7674,7 +7674,7 @@ func (m PodVolumeCapacity) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.volume.name", volumeName),
 			)...,
 		),
@@ -7808,7 +7808,7 @@ func (m PodVolumeInodeCount) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.volume.name", volumeName),
 			)...,
 		),
@@ -7942,7 +7942,7 @@ func (m PodVolumeInodeFree) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.volume.name", volumeName),
 			)...,
 		),
@@ -8079,7 +8079,7 @@ func (m PodVolumeInodeUsed) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.volume.name", volumeName),
 			)...,
 		),
@@ -8218,7 +8218,7 @@ func (m PodVolumeUsage) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.volume.name", volumeName),
 			)...,
 		),
@@ -9610,7 +9610,7 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.hugepage.size", hugepageSize),
 			)...,
 		),
@@ -9734,7 +9734,7 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.hugepage.size", hugepageSize),
 			)...,
 		),
@@ -10278,7 +10278,7 @@ func (m ResourceQuotaObjectCountHard) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
 			)...,
 		),
@@ -10402,7 +10402,7 @@ func (m ResourceQuotaObjectCountUsed) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
 			)...,
 		),
@@ -11094,7 +11094,7 @@ func (m ServiceEndpointCount) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("k8s.service.endpoint.address_type", string(serviceEndpointAddressType)),
 				attribute.String("k8s.service.endpoint.condition", string(serviceEndpointCondition)),
 			)...,

@@ -144,7 +144,7 @@ func (m ClientCallDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("rpc.system.name", string(systemName)),
 			)...,
 		),
@@ -296,7 +296,7 @@ func (m ServerCallDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("rpc.system.name", string(systemName)),
 			)...,
 		),

@@ -241,7 +241,7 @@ func (m ChangeCount) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.change.state", string(changeState)),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -390,7 +390,7 @@ func (m ChangeDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.change.state", string(changeState)),
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
@@ -536,7 +536,7 @@ func (m ChangeTimeToApproval) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -710,7 +710,7 @@ func (m ChangeTimeToMerge) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -877,7 +877,7 @@ func (m ContributorCount) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
 		),
@@ -1019,7 +1019,7 @@ func (m RefCount) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.ref.type", string(refType)),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),
 			)...,
@@ -1192,7 +1192,7 @@ func (m RefLinesDelta) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.line_change.type", string(lineChangeType)),
 				attribute.String("vcs.ref.base.name", refBaseName),
 				attribute.String("vcs.ref.base.type", string(refBaseType)),
@@ -1381,7 +1381,7 @@ func (m RefRevisionsDelta) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.ref.base.name", refBaseName),
 				attribute.String("vcs.ref.base.type", string(refBaseType)),
 				attribute.String("vcs.ref.head.name", refHeadName),
@@ -1548,7 +1548,7 @@ func (m RefTime) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("vcs.ref.head.name", refHeadName),
 				attribute.String("vcs.ref.head.type", string(refHeadType)),
 				attribute.String("vcs.repository.url.full", repositoryUrlFull),

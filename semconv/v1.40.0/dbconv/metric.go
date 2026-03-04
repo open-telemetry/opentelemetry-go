@@ -311,7 +311,7 @@ func (m ClientConnectionCount) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 				attribute.String("db.client.connection.state", string(clientConnectionState)),
 			)...,
@@ -429,7 +429,7 @@ func (m ClientConnectionCreateTime) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -545,7 +545,7 @@ func (m ClientConnectionIdleMax) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -661,7 +661,7 @@ func (m ClientConnectionIdleMin) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -777,7 +777,7 @@ func (m ClientConnectionMax) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -895,7 +895,7 @@ func (m ClientConnectionPendingRequests) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -1012,7 +1012,7 @@ func (m ClientConnectionTimeouts) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -1129,7 +1129,7 @@ func (m ClientConnectionUseTime) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -1245,7 +1245,7 @@ func (m ClientConnectionWaitTime) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
 			)...,
 		),
@@ -1360,7 +1360,7 @@ func (m ClientOperationDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.system.name", string(systemName)),
 			)...,
 		),
@@ -1557,7 +1557,7 @@ func (m ClientResponseReturnedRows) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("db.system.name", string(systemName)),
 			)...,
 		),

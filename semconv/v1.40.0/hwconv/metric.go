@@ -272,7 +272,7 @@ func (m BatteryCharge) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -427,7 +427,7 @@ func (m BatteryChargeLimit) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -596,7 +596,7 @@ func (m BatteryTimeLeft) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.state", string(state)),
 			)...,
@@ -757,7 +757,7 @@ func (m CPUSpeed) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -896,7 +896,7 @@ func (m CPUSpeedLimit) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -1045,7 +1045,7 @@ func (m Energy) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.type", string(hwType)),
 			)...,
@@ -1176,7 +1176,7 @@ func (m Errors) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.type", string(hwType)),
 			)...,
@@ -1316,7 +1316,7 @@ func (m FanSpeed) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -1448,7 +1448,7 @@ func (m FanSpeedLimit) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -1586,7 +1586,7 @@ func (m FanSpeedRatio) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -1722,7 +1722,7 @@ func (m GpuIO) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("network.io.direction", string(networkIoDirection)),
 			)...,
@@ -1883,7 +1883,7 @@ func (m GpuMemoryLimit) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2042,7 +2042,7 @@ func (m GpuMemoryUsage) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2202,7 +2202,7 @@ func (m GpuMemoryUtilization) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2362,7 +2362,7 @@ func (m GpuUtilization) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2528,7 +2528,7 @@ func (m HostAmbientTemperature) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2659,7 +2659,7 @@ func (m HostEnergy) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2791,7 +2791,7 @@ func (m HostHeatingMargin) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -2922,7 +2922,7 @@ func (m HostPower) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -3053,7 +3053,7 @@ func (m LogicalDiskLimit) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -3190,7 +3190,7 @@ func (m LogicalDiskUsage) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.logical_disk.state", string(logicalDiskState)),
 			)...,
@@ -3328,7 +3328,7 @@ func (m LogicalDiskUtilization) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.logical_disk.state", string(logicalDiskState)),
 			)...,
@@ -3462,7 +3462,7 @@ func (m MemorySize) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -3614,7 +3614,7 @@ func (m NetworkBandwidthLimit) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -3775,7 +3775,7 @@ func (m NetworkBandwidthUtilization) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -3939,7 +3939,7 @@ func (m NetworkIO) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("network.io.direction", string(networkIoDirection)),
 			)...,
@@ -4104,7 +4104,7 @@ func (m NetworkPackets) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("network.io.direction", string(networkIoDirection)),
 			)...,
@@ -4265,7 +4265,7 @@ func (m NetworkUp) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -4430,7 +4430,7 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.physical_disk.state", string(physicalDiskState)),
 			)...,
@@ -4591,7 +4591,7 @@ func (m PhysicalDiskSize) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -4754,7 +4754,7 @@ func (m PhysicalDiskSmart) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -4930,7 +4930,7 @@ func (m Power) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.type", string(hwType)),
 			)...,
@@ -5059,7 +5059,7 @@ func (m PowerSupplyLimit) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -5211,7 +5211,7 @@ func (m PowerSupplyUsage) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -5358,7 +5358,7 @@ func (m PowerSupplyUtilization) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -5520,7 +5520,7 @@ func (m Status) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 				attribute.String("hw.state", string(state)),
 				attribute.String("hw.type", string(hwType)),
@@ -5656,7 +5656,7 @@ func (m TapeDriveOperations) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -5809,7 +5809,7 @@ func (m Temperature) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -5941,7 +5941,7 @@ func (m TemperatureLimit) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -6079,7 +6079,7 @@ func (m Voltage) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -6211,7 +6211,7 @@ func (m VoltageLimit) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),
@@ -6349,7 +6349,7 @@ func (m VoltageNominal) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("hw.id", id),
 			)...,
 		),

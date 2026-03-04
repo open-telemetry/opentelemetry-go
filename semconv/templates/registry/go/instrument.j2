@@ -95,7 +95,7 @@ Int64
 {{ prefix }}metric.WithAttributes(
 {%- if attrs | required | length > 0 %}
 {{ prefix }}	append(
-{{ prefix }}		attrs,
+{{ prefix }}		attrs[:len(attrs):len(attrs)],
 {%- for attr in attrs | required | attribute_sort %}
 {{ prefix }}		{{ to_attribute(attr, pkg) }}
 {%- endfor %}
