@@ -825,13 +825,11 @@ func TestResourceConcurrentSafe(t *testing.T) {
 	// because Resources are immutable.
 	var wg sync.WaitGroup
 	for range 2 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			d := &fakeDetector{}
 			_, err := resource.Detect(t.Context(), d)
 			assert.NoError(t, err)
-		}()
+		})
 	}
 	wg.Wait()
 }
