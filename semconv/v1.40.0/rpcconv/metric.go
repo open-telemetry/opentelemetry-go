@@ -128,7 +128,9 @@ func (m ClientCallDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("rpc.system.name", string(systemName)),
+		))
 		return
 	}
 
@@ -142,7 +144,7 @@ func (m ClientCallDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("rpc.system.name", string(systemName)),
 			)...,
 		),
@@ -278,7 +280,9 @@ func (m ServerCallDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("rpc.system.name", string(systemName)),
+		))
 		return
 	}
 
@@ -292,7 +296,7 @@ func (m ServerCallDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("rpc.system.name", string(systemName)),
 			)...,
 		),
