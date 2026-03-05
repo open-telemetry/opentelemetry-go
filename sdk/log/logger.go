@@ -127,7 +127,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	})
 
 	if err := r.Err(); err != nil && !hasExceptionAttr {
-		addExceptionAttrsFromError(&newRecord, err)
+		addExceptionAttrs(&newRecord, err)
 	}
 
 	return newRecord
