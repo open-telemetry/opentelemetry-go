@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0`. (#7985)
 - Add `Err` and `SetErr` on `Record` in `go.opentelemetry.io/otel/log` to attach an error and set record exception attributes in `go.opentelemetry.io/otel/log/sdk`. (#7924)
 
+### Changed
+
+- `TracerProvider.ForceFlush` in `go.opentelemetry.io/otel/sdk/trace` joins errors together and continues iteration through SpanProcessors as opposed to returning the first encountered error without attempting exports on subsequent SpanProcessors. (#7856)
+
 ### Fixed
 
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` to correctly handle HTTP2 GOAWAY frame. (#7931)
