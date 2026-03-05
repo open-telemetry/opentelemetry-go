@@ -126,23 +126,19 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		return true
 	})
 
-	if !hasExceptionAttr {
-		addExceptionAttrs(&newRecord, r.Err())
+	if err := r.Err(); err != nil && !hasExceptionAttr {
+		addExceptionAttrsFromError(&newRecord, err)
 	}
 
 	return newRecord
 }
 
 func addExceptionAttrs(r *Record, err error) {
-	if r == nil || err == nil {
-		return
-	}
-
 	var attrs [2]log.KeyValue
 	n := 0
 	if msg := err.Error(); msg != "" {
-		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < 1 {
-			return
+		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
+			goto flush
 		}
 		attrs[n] = log.String(exceptionMessageKey, msg)
 		n++
@@ -178,6 +174,9 @@ func errorType(err error) string {
 		return pkg + "." + name
 	}
 
+	// The type has no package path or name (predeclared, not-defined,
+	// or alias for a not-defined type).
+	//
 	// The type has no package path or name (predeclared, not-defined,
 	// or alias for a not-defined type).
 	//
