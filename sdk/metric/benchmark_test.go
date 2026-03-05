@@ -599,7 +599,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					b.Run("Precomputed/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						precomputedOpts := []metric.AddOption{
-							metric.WithAttributeSet(attribute.NewSet(getAttributes(attrsLen)...)),
+							metric.WithAttributeSet(attribute.NewSet(attributes(attrsLen)...)),
 						}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
@@ -614,7 +614,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#cache-common-attribute-sets-for-repeated-measurements
 					b.Run("Precomputed/WithAttributes", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
-						precomputedOpts := []metric.AddOption{metric.WithAttributes(getAttributes(attrsLen)...)}
+						precomputedOpts := []metric.AddOption{metric.WithAttributes(attributes(attrsLen)...)}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
@@ -688,7 +688,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
-								counter.Add(ctx, 1, metric.WithAttributes(getAttributes(attrsLen)...))
+								counter.Add(ctx, 1, metric.WithAttributes(attributes(attrsLen)...))
 							}
 						})
 					})
@@ -698,7 +698,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 	}
 }
 
-func getAttributes(number int) []attribute.KeyValue {
+func attributes(number int) []attribute.KeyValue {
 	return appendAttributes(make([]attribute.KeyValue, 0, number), number)
 }
 
