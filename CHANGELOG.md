@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.40.0` package.
   The package contains semantic conventions from the `v1.40.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0`. (#7985)
+- Add `Err` and `SetErr` on `Record` in `go.opentelemetry.io/otel/log` to attach an error and let the SDK record exception attributes. (#7924)
 
 ### Fixed
 
@@ -35,7 +36,6 @@ The next release will require at least [Go 1.25].
 ### Added
 
 - Support testing of [Go 1.26]. (#7902)
-- Add `Err` and `SetErr` on `Record` in `go.opentelemetry.io/otel/log` to attach an error and let the SDK record exception attributes. (#7924)
 
 ### Fixed
 
