@@ -27,7 +27,7 @@ TOOLS = $(CURDIR)/.tools
 
 $(TOOLS):
 	@mkdir -p $@
-$(TOOLS)/%: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum | $(TOOLS)
+$(TOOLS)/%: $(TOOLS_MOD_DIR)/go.mod | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
 	$(GO) build -o $@ $(PACKAGE)
 
