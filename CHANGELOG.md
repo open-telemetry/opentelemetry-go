@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.40.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0`. (#7985)
 
+### Changed
+
+- `TracerProvider.ForceFlush` in `go.opentelemetry.io/otel/sdk/trace` joins errors together and continues iteration through SpanProcessors as opposed to returning the first encountered error without attempting exports on subsequent SpanProcessors. (#7856)
+
 ### Fixed
 
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` to correctly handle HTTP2 GOAWAY frame. (#7931)
