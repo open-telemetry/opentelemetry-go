@@ -33,7 +33,7 @@ type testExporter struct {
 	ExportTrigger chan struct{}
 
 	// Counts of method calls.
-	exportN, shutdownN, forceFlushN *int32
+	exportN, shutdownN, forceFlushN atomic.Int32
 
 	stopped atomic.Bool
 	inputMu sync.Mutex
@@ -43,11 +43,8 @@ type testExporter struct {
 
 func newTestExporter(err error) *testExporter {
 	e := &testExporter{
-		Err:         err,
-		exportN:     new(int32),
-		shutdownN:   new(int32),
-		forceFlushN: new(int32),
-		input:       make(chan instruction),
+		Err:   err,
+		input: make(chan instruction),
 	}
 	e.done = run(e.input)
 
@@ -81,7 +78,7 @@ func (e *testExporter) Records() [][]Record {
 }
 
 func (e *testExporter) Export(ctx context.Context, r []Record) error {
-	atomic.AddInt32(e.exportN, 1)
+	e.exportN.Add(1)
 	if e.ExportTrigger != nil {
 		select {
 		case <-e.ExportTrigger:
@@ -98,7 +95,7 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 }
 
 func (e *testExporter) ExportN() int {
-	return int(atomic.LoadInt32(e.exportN))
+	return int(e.exportN.Load())
 }
 
 func (e *testExporter) Stop() {
@@ -113,21 +110,21 @@ func (e *testExporter) Stop() {
 }
 
 func (e *testExporter) Shutdown(context.Context) error {
-	atomic.AddInt32(e.shutdownN, 1)
+	e.shutdownN.Add(1)
 	return e.Err
 }
 
 func (e *testExporter) ShutdownN() int {
-	return int(atomic.LoadInt32(e.shutdownN))
+	return int(e.shutdownN.Load())
 }
 
 func (e *testExporter) ForceFlush(context.Context) error {
-	atomic.AddInt32(e.forceFlushN, 1)
+	e.forceFlushN.Add(1)
 	return e.Err
 }
 
 func (e *testExporter) ForceFlushN() int {
-	return int(atomic.LoadInt32(e.forceFlushN))
+	return int(e.forceFlushN.Load())
 }
 
 func TestChunker(t *testing.T) {

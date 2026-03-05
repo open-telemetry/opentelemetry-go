@@ -169,7 +169,10 @@ func (m ClientConsumedMessages) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -183,7 +186,7 @@ func (m ClientConsumedMessages) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("messaging.operation.name", operationName),
 				attribute.String("messaging.system", string(system)),
 			)...,
@@ -351,7 +354,10 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -365,7 +371,7 @@ func (m ClientOperationDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("messaging.operation.name", operationName),
 				attribute.String("messaging.system", string(system)),
 			)...,
@@ -535,7 +541,10 @@ func (m ClientSentMessages) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -549,7 +558,7 @@ func (m ClientSentMessages) Add(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("messaging.operation.name", operationName),
 				attribute.String("messaging.system", string(system)),
 			)...,
@@ -698,7 +707,10 @@ func (m ProcessDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -712,7 +724,7 @@ func (m ProcessDuration) Record(
 		*o,
 		metric.WithAttributes(
 			append(
-				attrs,
+				attrs[:len(attrs):len(attrs)],
 				attribute.String("messaging.operation.name", operationName),
 				attribute.String("messaging.system", string(system)),
 			)...,
