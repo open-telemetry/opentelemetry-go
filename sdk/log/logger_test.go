@@ -314,6 +314,163 @@ func TestLoggerEmit(t *testing.T) {
 	}
 }
 
+func TestNewRecordAddsExceptionAttrs(t *testing.T) {
+	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+
+	t.Run("AddsMissing", func(t *testing.T) {
+		var in log.Record
+		in.SetBody(log.StringValue("boom"))
+		in.SetSeverity(log.SeverityError)
+		in.SetErr(errors.New("boom"))
+		got := l.newRecord(t.Context(), in)
+
+		var gotAttrs []log.KeyValue
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			gotAttrs = append(gotAttrs, kv)
+			return true
+		})
+
+		assert.Len(t, gotAttrs, 2)
+		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
+		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionMessageKey), "boom"))
+	})
+
+	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
+		var in log.Record
+		in.SetBody(log.StringValue("boom"))
+		in.SetSeverity(log.SeverityError)
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(log.String("k1", "v1"))
+
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(2)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		var gotType, gotMessage string
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Empty(t, gotType)
+		assert.Equal(t, "boom", gotMessage)
+	})
+
+	t.Run("NoSlotsLeft", func(t *testing.T) {
+		var in log.Record
+		in.SetBody(log.StringValue("boom"))
+		in.SetSeverity(log.SeverityError)
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(log.String("k1", "v1"))
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		var gotType, gotMessage string
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Empty(t, gotType)
+		assert.Empty(t, gotMessage)
+	})
+}
+
+func TestErrorType(t *testing.T) {
+	t.Run("UsesErrorTypeMethod", func(t *testing.T) {
+		err := errWithType{msg: "boom", typ: "custom.type"}
+		assert.Equal(t, "custom.type", errorType(err))
+	})
+
+	t.Run("FallsBackWhenErrorTypeEmpty", func(t *testing.T) {
+		err := errWithType{msg: "boom", typ: ""}
+		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+	})
+
+	t.Run("NilError", func(t *testing.T) {
+		assert.Empty(t, errorType(nil))
+	})
+
+	t.Run("UnnamedType", func(t *testing.T) {
+		var err error = struct{ baseErr }{}
+		assert.Contains(t, errorType(err), "struct")
+	})
+}
+
+type errWithType struct {
+	msg string
+	typ string
+}
+
+func (e errWithType) Error() string { return e.msg }
+
+func (e errWithType) ErrorType() string { return e.typ }
+
+type baseErr struct{}
+
+func (baseErr) Error() string { return "boom" }
+
+func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
+	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+
+	t.Run("ExistingMessage", func(t *testing.T) {
+		var r log.Record
+		r.SetBody(log.StringValue("boom"))
+		r.SetSeverity(log.SeverityError)
+		r.SetErr(errors.New("boom"))
+		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), "existing.message"))
+
+		got := l.newRecord(t.Context(), r)
+
+		var gotType, gotMessage string
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "existing.message", gotMessage)
+		assert.Empty(t, gotType)
+	})
+
+	t.Run("ExistingType", func(t *testing.T) {
+		var r log.Record
+		r.SetBody(log.StringValue("boom"))
+		r.SetSeverity(log.SeverityError)
+		r.SetErr(errors.New("boom"))
+		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), "existing.type"))
+
+		got := l.newRecord(t.Context(), r)
+
+		var gotType, gotMessage string
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			switch kv.Key {
+			case string(semconv.ExceptionTypeKey):
+				gotType = kv.Value.AsString()
+			case string(semconv.ExceptionMessageKey):
+				gotMessage = kv.Value.AsString()
+			}
+			return true
+		})
+
+		assert.Equal(t, "existing.type", gotType)
+		assert.Empty(t, gotMessage)
+	})
+}
+
 func TestLoggerEnabled(t *testing.T) {
 	p0 := newFltrProcessor("0", true)
 	p1 := newFltrProcessor("1", true)
