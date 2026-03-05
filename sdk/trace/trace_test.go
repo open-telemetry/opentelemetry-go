@@ -29,8 +29,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1180,9 +1180,9 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 	tp := NewTracerProvider(WithSampler(AlwaysSample()))
 	tr := tp.Tracer("TestRecordingSpanRuntimeTracerTaskEnd")
 
-	var n uint64
+	var n atomic.Uint64
 	executionTracerTaskEnd := func() {
-		atomic.AddUint64(&n, 1)
+		n.Add(1)
 	}
 	_, apiSpan := tr.Start(t.Context(), "foo")
 	s, ok := apiSpan.(*recordingSpan)
@@ -1193,7 +1193,7 @@ func TestRecordingSpanRuntimeTracerTaskEnd(t *testing.T) {
 	s.executionTracerTaskEnd = executionTracerTaskEnd
 	s.End()
 
-	if n != 1 {
+	if n.Load() != 1 {
 		t.Error("recording span did not end runtime trace task")
 	}
 }
