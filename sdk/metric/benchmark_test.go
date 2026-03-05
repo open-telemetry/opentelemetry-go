@@ -638,7 +638,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
-									appendAttributes(attrsLen, attrsSlice)
+									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
 										*addOpt = (*addOpt)[:0]
@@ -668,7 +668,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
-									appendAttributes(attrsLen, attrsSlice)
+									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
 										*addOpt = (*addOpt)[:0]
@@ -699,19 +699,17 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 }
 
 func getAttributes(number int) []attribute.KeyValue {
-	kvs := make([]attribute.KeyValue, 0, number)
-	appendAttributes(number, &kvs)
-	return kvs
+	return appendAttributes(make([]attribute.KeyValue, 0, number), number)
 }
 
-func appendAttributes(number int, kvs *[]attribute.KeyValue) {
+func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue {
 	switch number {
 	case 1:
-		*kvs = append(*kvs,
+		return append(kvs,
 			attribute.String("a", "a"),
 		)
 	case 5:
-		*kvs = append(*kvs,
+		return append(kvs,
 			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
@@ -719,7 +717,7 @@ func appendAttributes(number int, kvs *[]attribute.KeyValue) {
 			attribute.String("e", "e"),
 		)
 	case 10:
-		*kvs = append(*kvs,
+		return append(kvs,
 			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
