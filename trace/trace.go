@@ -202,9 +202,7 @@ func (tf TraceFlags) IsRandom() bool {
 }
 
 // WithRandom sets the random bit in a new copy of the TraceFlags.
-func (tf TraceFlags) WithRandom(
-	random bool,
-) TraceFlags { // nolint:revive  // random is the value to set, not a control flag.
+func (tf TraceFlags) WithRandom(random bool) TraceFlags { // nolint:revive  // random is not a control flag.
 	if random {
 		return tf | FlagsRandom
 	}
