@@ -205,7 +205,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 		t.Skipf("Skipping this long running test")
 	}
 
-	ln, err := net.Listen("tcp", "localhost:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Failed to grab an available port: %v", err)
 	}
