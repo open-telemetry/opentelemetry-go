@@ -98,7 +98,7 @@ func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
 		t:       t,
 		closing: false,
 	}
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	collector.url = fmt.Sprintf("http://%s", listener.Addr().String())
 	server := &http.Server{
@@ -366,7 +366,7 @@ func TestLogrFormatting(t *testing.T) {
 
 	var buf bytes.Buffer
 	l := funcr.New(func(prefix, args string) {
-		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+		_, _ = fmt.Fprint(&buf, prefix, args)
 	}, funcr.Options{})
 	exp, err := New("", WithLogr(l))
 	require.NoError(t, err)
