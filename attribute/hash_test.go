@@ -36,6 +36,7 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return String(k, "bar") },
 	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
+	Empty,
 }
 
 func TestHashKVsEquality(t *testing.T) {
@@ -155,8 +156,8 @@ func FuzzHashKVs(f *testing.F) {
 		0, int64(0), math.Inf(1), false, uint8(2))
 
 	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, fVal float64, b bool, sliceType uint8) {
-		// Test variable number of attributes (0-10).
-		numAttrs := len(k1) % 11 // Use key length to determine number of attributes.
+		// Test variable number of attributes (0-11).
+		numAttrs := len(k1) % 12 // Use key length to determine number of attributes.
 		if numAttrs == 0 && k1 == "" {
 			// Test empty set.
 			h := hashKVs(nil)
@@ -249,6 +250,9 @@ func FuzzHashKVs(f *testing.F) {
 		if numAttrs > 9 {
 			kvs = append(kvs, String("empty", ""))
 		}
+		if numAttrs > 10 {
+			kvs = append(kvs, Empty("empty_type"))
+		}
 
 		// Sort to ensure consistent ordering (as Set would do).
 		slices.SortFunc(kvs, func(a, b KeyValue) int {
@@ -301,6 +305,8 @@ func FuzzHashKVs(f *testing.F) {
 					if !math.IsNaN(val) && !math.IsInf(val, 0) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
 					}
+				case EMPTY:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
 				}
 
 				h3 := hashKVs(modifiedKvs)

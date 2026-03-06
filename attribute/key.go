@@ -117,6 +117,17 @@ func (k Key) StringSlice(v []string) KeyValue {
 	}
 }
 
+// Empty creates a KeyValue instance with an EMPTY Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Empty(name).
+func (k Key) Empty() KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: EmptyValue(),
+	}
+}
+
 // Defined reports whether the key is not empty.
 func (k Key) Defined() bool {
 	return len(k) != 0

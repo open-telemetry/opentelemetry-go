@@ -58,6 +58,14 @@ func TestKeyValueConstructors(t *testing.T) {
 				Value: attribute.IntValue(123),
 			},
 		},
+		{
+			name:   "Empty",
+			actual: attribute.Empty("k1"),
+			expected: attribute.KeyValue{
+				Key:   "k1",
+				Value: attribute.EmptyValue(),
+			},
+		},
 	}
 
 	for _, test := range tt {
@@ -114,6 +122,11 @@ func TestKeyValueValid(t *testing.T) {
 			valid: true,
 			kv:    attribute.String("string", ""),
 		},
+		{
+			desc:  "non-empty key with EMPTY type Value should be valid",
+			valid: true,
+			kv:    attribute.Empty("empty"),
+		},
 	}
 
 	for _, test := range tests {
@@ -151,6 +164,10 @@ func TestIncorrectCast(t *testing.T) {
 		{
 			name: "StringSlice",
 			val:  attribute.BoolSliceValue([]bool{true}),
+		},
+		{
+			name: "Empty",
+			val:  attribute.EmptyValue(),
 		},
 	}
 	for _, tt := range testCases {

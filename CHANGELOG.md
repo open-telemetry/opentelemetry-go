@@ -13,6 +13,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.40.0` package.
   The package contains semantic conventions from the `v1.40.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.40.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.39.0`. (#7985)
+- Add `Empty` and `EmptyValue` functions for new `EMPTY Type` in `go.opentelemetry.io/otel/attribute`.
+  Note that the zero value of `Value` is still invalid. (#7942)
 - Add `Err` and `SetErr` on `Record` in `go.opentelemetry.io/otel/log` to attach an error and set record exception attributes in `go.opentelemetry.io/otel/log/sdk`. (#7924)
 
 ### Changed
