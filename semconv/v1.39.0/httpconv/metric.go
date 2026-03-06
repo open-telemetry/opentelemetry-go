@@ -715,6 +715,7 @@ type ClientRequestDuration struct {
 var newClientRequestDurationOpts = []metric.Float64HistogramOption{
 	metric.WithDescription("Duration of HTTP client requests."),
 	metric.WithUnit("s"),
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewClientRequestDuration returns a new ClientRequestDuration instrument.
@@ -1264,13 +1265,12 @@ func (ServerRequestBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-//
 // The size of the request payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerRequestBodySize) Record(
 	ctx context.Context,
@@ -1402,6 +1402,7 @@ type ServerRequestDuration struct {
 var newServerRequestDurationOpts = []metric.Float64HistogramOption{
 	metric.WithDescription("Duration of HTTP server requests."),
 	metric.WithUnit("s"),
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewServerRequestDuration returns a new ServerRequestDuration instrument.
@@ -1638,13 +1639,12 @@ func (ServerResponseBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-//
 // The size of the response payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerResponseBodySize) Record(
 	ctx context.Context,
