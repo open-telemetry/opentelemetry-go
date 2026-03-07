@@ -20,13 +20,14 @@ import (
 )
 
 type reader struct {
-	producer          sdkProducer
-	externalProducers []Producer
-	temporalityFunc   TemporalitySelector
-	aggregationFunc   AggregationSelector
-	collectFunc       func(context.Context, *metricdata.ResourceMetrics) error
-	forceFlushFunc    func(context.Context) error
-	shutdownFunc      func(context.Context) error
+	producer             sdkProducer
+	externalProducers    []Producer
+	temporalityFunc      TemporalitySelector
+	aggregationFunc      AggregationSelector
+	cardinalityLimitFunc func(InstrumentKind) int
+	collectFunc          func(context.Context, *metricdata.ResourceMetrics) error
+	forceFlushFunc       func(context.Context) error
+	shutdownFunc         func(context.Context) error
 }
 
 const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
@@ -43,6 +44,10 @@ func (r *reader) register(p sdkProducer)      { r.producer = p }
 func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
+}
+
+func (r *reader) cardinalityLimit(kind InstrumentKind) int {
+	return r.cardinalityLimitFunc(kind)
 }
 
 func (r *reader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
