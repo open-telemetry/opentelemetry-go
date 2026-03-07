@@ -5,6 +5,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -216,11 +217,11 @@ func (ts *periodicReaderTestSuite) TearDownTest() {
 }
 
 func (ts *periodicReaderTestSuite) TestForceFlushPropagated() {
-	ts.Equal(assert.AnError, ts.ErrReader.ForceFlush(context.Background()))
+	ts.ErrorIs(ts.ErrReader.ForceFlush(context.Background()), assert.AnError)
 }
 
 func (ts *periodicReaderTestSuite) TestShutdownPropagated() {
-	ts.Equal(assert.AnError, ts.ErrReader.Shutdown(context.Background()))
+	ts.ErrorIs(ts.ErrReader.Shutdown(context.Background()), assert.AnError)
 }
 
 func TestPeriodicReader(t *testing.T) {
@@ -291,7 +292,92 @@ func TestPeriodicReaderRun(t *testing.T) {
 	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 	r.register(testSDKProducer{})
 	trigger <- time.Now()
-	assert.Equal(t, assert.AnError, <-eh.Err)
+	assert.ErrorIs(t, <-eh.Err, assert.AnError)
+
+	// Ensure Reader is allowed clean up attempt.
+	_ = r.Shutdown(t.Context())
+}
+
+func TestPeriodicReaderBatching(t *testing.T) {
+	trigger := triggerTicker(t)
+
+	// Register an error handler to validate export errors are passed to
+	// otel.Handle.
+	defer func(orig otel.ErrorHandler) {
+		otel.SetErrorHandler(orig)
+	}(otel.GetErrorHandler())
+	eh := newChErrorHandler()
+	otel.SetErrorHandler(eh)
+
+	expectations := []metricdata.ResourceMetrics{
+		testResourceMetricsAB,
+		testResourceMetricsC1,
+		testResourceMetricsC2,
+	}
+
+	expectationIdx := 0
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+			// collectAndExport is potentially called multiple times, so just
+			// make sure batches are split correctly and are in order.
+			expect := expectations[expectationIdx%len(expectations)]
+			// The testSDKProducer produces three batches of metrics.
+			assert.Equal(t, expect, *m, fmt.Sprintf("expectations[%d] not equal", expectationIdx))
+			expectationIdx++
+			return assert.AnError
+		},
+	}
+
+	r := NewPeriodicReader(
+		exp,
+		WithMaxExportBatchSize(2),
+		WithProducer(testExternalProducer{}),
+		WithProducer(testExternalProducer{
+			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+				// Splitting modifies the batch, so we need to create a new one each time.
+				return []metricdata.ScopeMetrics{metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+					Metrics: []metricdata.Metrics{{
+						Name:        "metric1",
+						Description: "first of multiple metrics",
+						Unit:        "ms",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{{
+								Attributes: attribute.NewSet(attribute.String("user", "david")),
+								StartTime:  ts1,
+								Time:       ts1.Add(time.Second),
+								Value:      1,
+							}},
+						},
+					}, {
+						Name:        "metric2",
+						Description: "second of multiple metrics",
+						Unit:        "ms",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("user", "tyler")),
+									StartTime:  ts2,
+									Time:       ts2.Add(time.Second),
+									Value:      10,
+								},
+								{
+									Attributes: attribute.NewSet(attribute.String("user", "robert")),
+									StartTime:  ts3,
+									Time:       ts3.Add(time.Second),
+									Value:      100,
+								},
+							},
+						},
+					}},
+				}}, nil
+			},
+		}))
+	r.register(testSDKProducer{})
+	trigger <- time.Now()
+	assert.Equal(t, <-eh.Err, errors.Join(errors.Join(errors.Join(assert.AnError), assert.AnError), assert.AnError))
+	trigger <- time.Now()
+	assert.Equal(t, <-eh.Err, errors.Join(errors.Join(errors.Join(assert.AnError), assert.AnError), assert.AnError))
 
 	// Ensure Reader is allowed clean up attempt.
 	_ = r.Shutdown(t.Context())
@@ -318,7 +404,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		exp, called := expFunc(t)
 		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{})
-		assert.Equal(t, assert.AnError, r.ForceFlush(t.Context()), "export error not returned")
+		assert.ErrorIs(t, r.ForceFlush(t.Context()), assert.AnError, "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 
 		// Ensure Reader is allowed clean up attempt.
@@ -374,7 +460,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		exp, called := expFunc(t)
 		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{})
-		assert.Equal(t, assert.AnError, r.Shutdown(t.Context()), "export error not returned")
+		assert.ErrorIs(t, r.Shutdown(t.Context()), assert.AnError, "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 	})
 
