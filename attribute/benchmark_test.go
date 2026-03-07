@@ -272,6 +272,37 @@ func BenchmarkStringSlice(b *testing.B) {
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
+func BenchmarkSlice(b *testing.B) {
+	k, v := "slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("test")}
+	kv := attribute.Slice(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			attribute.SliceValue(v)
+		}
+	})
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			attribute.Slice(k, v)
+		}
+	})
+	b.Run("AsSlice", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			kv.Value.AsSlice()
+		}
+	})
+	b.Run("UnsafeAsSlice", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			kv.Value.UnsafeAsSlice()
+		}
+	})
+	b.Run("Emit", benchmarkEmit(kv))
+}
+
 func BenchmarkSetEquals(b *testing.B) {
 	b.Run("Empty", func(b *testing.B) {
 		benchmarkSetEquals(b, attribute.EmptySet())
