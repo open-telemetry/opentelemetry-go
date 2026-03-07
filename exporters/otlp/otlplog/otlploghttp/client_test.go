@@ -46,8 +46,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 var (
@@ -745,6 +745,16 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
 		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
+		exp, err := New(t.Context(),
+			WithEndpoint("localhost:4318"),
+			WithInsecure(),
+			WithTLSClientConfig(&tls.Config{}),
+		)
+		require.ErrorIs(t, err, errInsecureEndpointWithTLS)
+		assert.Nil(t, exp)
 	})
 
 	t.Run("WithCustomUserAgent", func(t *testing.T) {
