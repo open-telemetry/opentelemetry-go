@@ -272,6 +272,34 @@ func BenchmarkStringSlice(b *testing.B) {
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
+func BenchmarkBytes(b *testing.B) {
+	k, v := "bytes", []byte("forty-two")
+	kv := attribute.Bytes(k, v)
+
+	b.Run("Value", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			attribute.BytesValue(v)
+		}
+	})
+
+	b.Run("KeyValue", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			attribute.Bytes(k, v)
+		}
+	})
+
+	b.Run("AsBytes", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			kv.Value.AsBytes()
+		}
+	})
+
+	b.Run("Emit", benchmarkEmit(kv))
+}
+
 func BenchmarkSetEquals(b *testing.B) {
 	b.Run("Empty", func(b *testing.B) {
 		benchmarkSetEquals(b, attribute.EmptySet())
