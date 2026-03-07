@@ -195,7 +195,8 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 	})
 }
 
-// WithProcessor associates Processor with a LoggerProvider.
+// WithProcessor associates Processor with a LoggerProvider. A processor
+// chain wraps an Exporter to provide a destination for logs.
 //
 // By default, if this option is not used, the LoggerProvider will perform no
 // operations; no data will be exported without a processor.
@@ -205,6 +206,10 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 //
 // For production, use [NewBatchProcessor] to batch log records before they are exported.
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.
+//
+// The optional environment exporter selection variable `OTEL_LOG_EXPORTER`
+// from the OpenTelemetry specification is _not_ supported by the Go
+// OpenTelemetry SDK for provider selection and will be silently ignored.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.processors = append(cfg.processors, processor)
