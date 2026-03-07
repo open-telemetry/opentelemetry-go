@@ -263,7 +263,7 @@ func newHTTPCollector(
 		opt(c)
 	}
 
-	c.listener, err = net.Listen("tcp", u.Host)
+	c.listener, err = (&net.ListenConfig{}).Listen(context.Background(), "tcp", u.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +492,7 @@ func TestClient(t *testing.T) {
 		addr := coll.Addr().String()
 		opts := []Option{WithEndpoint(addr), WithInsecure()}
 		cfg := newConfig(opts)
-		client, err := newHTTPClient(cfg)
+		client, err := newHTTPClient(t.Context(), cfg)
 		require.NoError(t, err)
 		return client, coll
 	}
@@ -573,7 +573,7 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	addr := coll.Addr().String()
 	opts := []Option{WithEndpoint(addr), WithInsecure()}
 	cfg := newConfig(opts)
-	client, err := newHTTPClient(cfg)
+	client, err := newHTTPClient(t.Context(), cfg)
 	require.NoError(t, err)
 
 	require.NoError(t, client.uploadLogs(ctx, make([]*lpb.ResourceLogs, 1)))
@@ -850,7 +850,7 @@ func newFactory(t testing.TB) func(rCh <-chan exportResult) (*client, *httpColle
 		addr := coll.Addr().String()
 		opts := []Option{WithEndpoint(addr), WithInsecure()}
 		cfg := newConfig(opts)
-		client, err := newHTTPClient(cfg)
+		client, err := newHTTPClient(t.Context(), cfg)
 		require.NoError(t, err)
 		return client, coll, addr
 	}
