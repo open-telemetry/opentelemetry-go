@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -44,6 +45,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// SLICE is a slice of Value types.
+	SLICE
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +116,24 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+// SliceValue creates a SLICE Value.
+func SliceValue(v []Value) Value {
+	return Value{vtype: SLICE, slice: sliceValue(v)}
+}
+
+// sliceValue converts a Value slice into an array with same elements as slice.
+func sliceValue(v []Value) any {
+	rv := reflect.ValueOf(v)
+	n := rv.Len()
+	if n == 0 {
+		// Return a zero-length array to maintain type information.
+		return reflect.New(reflect.ArrayOf(0, rv.Type().Elem())).Elem().Interface()
+	}
+	cp := reflect.New(reflect.ArrayOf(n, rv.Type().Elem())).Elem()
+	reflect.Copy(cp, rv)
+	return cp.Interface()
 }
 
 // Type returns a type of the Value.
@@ -196,6 +217,30 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsStringSlice(v.slice)
 }
 
+// AsSlice returns the []Value value. Make sure that the Value's type is
+// SLICE.
+func (v Value) AsSlice() []Value {
+	if v.vtype != SLICE {
+		return nil
+	}
+	return v.asSlice()
+}
+
+func (v Value) asSlice() []Value {
+	rv := reflect.ValueOf(v.slice)
+	if rv.Type().Kind() != reflect.Array {
+		return nil
+	}
+	n := rv.Len()
+	if n == 0 {
+		// Return a zero-length slice to maintain type information.
+		return []Value{}
+	}
+	cpy := make([]Value, n)
+	reflect.Copy(reflect.ValueOf(cpy), rv)
+	return cpy
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -217,6 +262,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case SLICE:
+		return v.asSlice()
 	}
 	return unknownValueType{}
 }
@@ -252,6 +299,27 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case SLICE:
+		slice := v.asSlice()
+		if len(slice) == 0 {
+			return "[]"
+		}
+		var b strings.Builder
+		b.WriteRune('[') //nolint:revive // No need to check error for strings.Builder.
+		for i, val := range slice {
+			if i > 0 {
+				b.WriteRune(',') //nolint:revive // No need to check error for strings.Builder.
+			}
+			if val.Type() == STRING {
+				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
+				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
+				b.WriteRune('"')          //nolint:revive // No need to check error for strings.Builder.
+			} else {
+				b.WriteString(val.Emit()) //nolint:revive // No need to check error for strings.Builder.
+			}
+		}
+		b.WriteRune(']') //nolint:revive // No need to check error for strings.Builder.
+		return b.String()
 	default:
 		return "unknown"
 	}
