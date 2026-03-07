@@ -366,7 +366,7 @@ func TestLogrFormatting(t *testing.T) {
 
 	var buf bytes.Buffer
 	l := funcr.New(func(prefix, args string) {
-		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+		_, _ = fmt.Fprint(&buf, prefix, args)
 	}, funcr.Options{})
 	exp, err := New("", WithLogr(l))
 	require.NoError(t, err)
