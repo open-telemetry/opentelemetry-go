@@ -50,7 +50,18 @@ func errorType(err error) string {
 		// Fallback to reflection if the ErrorType method is not supported or
 		// returns an empty value.
 
-		t := reflect.TypeOf(err)
+		// Walk the error chain using errors.Unwrap to avoid reporting wrapper
+		// types (e.g., *fmt.wrapError).
+		curr := err
+		for {
+			u := errors.Unwrap(curr)
+			if u == nil {
+				break
+			}
+			curr = u
+		}
+
+		t := reflect.TypeOf(curr)
 		pkg, name := t.PkgPath(), t.Name()
 		if pkg != "" && name != "" {
 			s = pkg + "." + name
