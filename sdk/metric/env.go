@@ -6,6 +6,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -17,6 +18,8 @@ const (
 	envInterval = "OTEL_METRIC_EXPORT_INTERVAL"
 	// Maximum allowed time (in milliseconds) to export data.
 	envTimeout = "OTEL_METRIC_EXPORT_TIMEOUT"
+	// Execution mode for callbacks, can be one of "default", "raw", or "safe" (default: "default")
+	envCallbackMode = "OTEL_GO_METRIC_CALLBACK_MODE"
 )
 
 // envDuration returns an environment variable's value as duration in milliseconds if it is exists,
@@ -36,4 +39,8 @@ func envDuration(key string, defaultValue time.Duration) time.Duration {
 		return defaultValue
 	}
 	return time.Duration(d) * time.Millisecond
+}
+
+func envString(key string) string {
+	return strings.TrimSpace(os.Getenv(key))
 }

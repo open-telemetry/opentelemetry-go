@@ -617,37 +617,82 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 }
 
 func TestPipelinePanics(t *testing.T) {
-	pipeReader := NewManualReader()
-	mp := NewMeterProvider(WithReader(pipeReader))
-	m := mp.Meter("test")
-
-	oc, err := m.Int64ObservableCounter("int64-observable-counter")
-	require.NoError(t, err)
-
-	reg1, err := m.RegisterCallback(
-		func(_ context.Context, o metric.Observer) error {
-			panic("unexpected error")
-			return nil
-		}, oc)
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, reg1.Unregister()) })
-
-	reg2, err := m.RegisterCallback(
-		func(_ context.Context, o metric.Observer) error {
-			o.ObserveInt64(oc, 7)
-			return nil
-		}, oc)
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, reg2.Unregister()) })
-
-	ctx := t.Context()
-	rm := new(metricdata.ResourceMetrics)
-	err = pipeReader.Collect(ctx, rm)
-	require.ErrorContains(t, err, "unexpected error")
-	if assert.Len(t, rm.ScopeMetrics, 1) &&
-		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
-		assert.Equal(t, int64(7), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+	testcases := []struct {
+		name      string
+		env       string
+		wantPanic bool
+	}{
+		{
+			"empty",
+			"",
+			true,
+		},
+		{
+			"default",
+			"default",
+			true,
+		},
+		{
+			"explicit raw",
+			"raw",
+			true,
+		},
+		{
+			"explicit safe",
+			"safe",
+			false,
+		},
 	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(envCallbackMode, tc.env)
+			resetInvoke()                    // Reload callback mode.
+			defer func() { resetInvoke() }() // Also restore after test.
+
+			pipeReader := NewManualReader()
+			mp := NewMeterProvider(WithReader(pipeReader))
+			m := mp.Meter("test")
+
+			oc, err := m.Int64ObservableCounter("int64-observable-counter")
+			require.NoError(t, err)
+
+			reg1, err := m.RegisterCallback(
+				func(_ context.Context, o metric.Observer) error {
+					panic("unexpected error")
+					return nil
+				}, oc)
+			require.NoError(t, err)
+			t.Cleanup(func() { assert.NoError(t, reg1.Unregister()) })
+
+			reg2, err := m.RegisterCallback(
+				func(_ context.Context, o metric.Observer) error {
+					o.ObserveInt64(oc, 7)
+					return nil
+				}, oc)
+			require.NoError(t, err)
+			t.Cleanup(func() { assert.NoError(t, reg2.Unregister()) })
+
+			ctx := t.Context()
+			rm := new(metricdata.ResourceMetrics)
+			p, err := pipeReaderCollect(pipeReader, ctx, rm)
+			assert.Equal(t, p, tc.wantPanic)
+			if !tc.wantPanic {
+				assert.ErrorContains(t, err, "unexpected error")
+				if assert.Len(t, rm.ScopeMetrics, 1) &&
+					assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
+					assert.Equal(t, int64(7), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
+				}
+			}
+		})
+	}
+}
+
+func pipeReaderCollect(pipeReader *ManualReader, ctx context.Context, rm *metricdata.ResourceMetrics) (panicked bool, err error) {
+	defer func() {
+		panicked = recover() != nil
+	}()
+	err = pipeReader.Collect(ctx, rm)
+	return
 }
 
 // TestPipelineProduceErrors tests the issue described in https://github.com/open-telemetry/opentelemetry-go/issues/6344.

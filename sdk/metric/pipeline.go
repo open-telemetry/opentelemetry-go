@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -26,6 +27,12 @@ var (
 	errIncompatibleAggregation = errors.New("incompatible aggregation")
 	errUnknownAggregation      = errors.New("unrecognized aggregation")
 )
+
+var invoke func(context.Context, func(context.Context) error) error
+
+func init() {
+	resetInvoke()
+}
 
 // instrumentSync is a synchronization point between a pipeline and an
 // instrument's aggregate function.
@@ -140,6 +147,23 @@ func safeInvoke(ctx context.Context, f func(context.Context) error) (err error) 
 	return f(ctx)
 }
 
+func rawInvoke(ctx context.Context, f func(context.Context) error) error {
+	return f(ctx)
+}
+
+func resetInvoke() {
+	switch strings.ToLower(envString(envCallbackMode)) {
+	case "safe":
+		invoke = safeInvoke
+	case "raw":
+		fallthrough
+	case "default":
+		fallthrough
+	default:
+		invoke = rawInvoke
+	}
+}
+
 // produce returns aggregated metrics from a single collection.
 //
 // This method is safe to call concurrently.
@@ -158,14 +182,14 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	var err error
 	for _, c := range p.callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if e := safeInvoke(ctx, c); e != nil {
+		if e := invoke(ctx, c); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
 		// TODO make the callbacks parallel. ( #3034 )
 		f := e.Value.(multiCallback)
-		if e := safeInvoke(ctx, f); e != nil {
+		if e := invoke(ctx, f); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
