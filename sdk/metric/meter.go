@@ -475,6 +475,9 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 // instruments, asynchronous callbacks can "forget" attribute sets that are no
 // longer relevant by omitting the observation during the callback.
 //
+// If f panics, the entire binary panics. Setting `OTEL_GO_CALLBACK_MODE=safe`
+// will trap all panics and report them as errors instead.
+//
 // The returned Registration can be used to unregister f.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) (metric.Registration, error) {
 	if len(insts) == 0 {
