@@ -659,7 +659,6 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
-							i := 0
 							for pb.Next() {
 								// Wrap in a function so we can use defer.
 								func() {
@@ -674,9 +673,9 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
-									counter.Add(ctx, 1, metric.WithAttributes(*attrsSlice...))
+									*addOpt = append(*addOpt, metric.WithAttributes(*attrsSlice...))
+									counter.Add(ctx, 1, *addOpt...)
 								}()
-								i++
 							}
 						})
 					})
