@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -20,11 +21,6 @@ const (
 	expoMinScale = -10
 
 	smallestNonZeroNormalFloat64 = 0x1p-1022
-
-	// These redefine the Math constants with a type, so the compiler won't coerce
-	// them into an int on 32 bit platforms.
-	maxInt64 int64 = math.MaxInt64
-	minInt64 int64 = math.MinInt64
 )
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
@@ -32,19 +28,18 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
 
-	min N
-	max N
-	sum N
+	minMax atomicMinMax[N]
+	sum    atomicCounter[N]
 
 	maxSize  int
 	noMinMax bool
 	noSum    bool
 
-	scale int32
+	scale atomic.Int32
 
 	posBuckets expoBuckets
 	negBuckets expoBuckets
-	zeroCount  uint64
+	zeroCount  atomic.Uint64
 }
 
 func newExpoHistogramDataPoint[N int64 | float64](
@@ -53,42 +48,29 @@ func newExpoHistogramDataPoint[N int64 | float64](
 	maxScale int32,
 	noMinMax, noSum bool,
 ) *expoHistogramDataPoint[N] { // nolint:revive // we need this control flag
-	f := math.MaxFloat64
-	ma := N(f) // if N is int64, max will overflow to -9223372036854775808
-	mi := N(-f)
-	if N(maxInt64) > N(f) {
-		ma = N(maxInt64)
-		mi = N(minInt64)
-	}
-	return &expoHistogramDataPoint[N]{
+	dp := &expoHistogramDataPoint[N]{
 		attrs:    attrs,
-		min:      ma,
-		max:      mi,
 		maxSize:  maxSize,
 		noMinMax: noMinMax,
 		noSum:    noSum,
-		scale:    maxScale,
 	}
+	dp.scale.Store(maxScale)
+	return dp
 }
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
 	if !p.noMinMax {
-		if v < p.min {
-			p.min = v
-		}
-		if v > p.max {
-			p.max = v
-		}
+		p.minMax.Update(v)
 	}
 	if !p.noSum {
-		p.sum += v
+		p.sum.add(v)
 	}
 
 	absV := math.Abs(float64(v))
 
 	if float64(absV) == 0.0 {
-		p.zeroCount++
+		p.zeroCount.Add(1)
 		return
 	}
 
@@ -102,14 +84,15 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
 	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
-		if p.scale-scaleDelta < expoMinScale {
+		currentScale := p.scale.Load()
+		if currentScale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
 			// This can only happen if there is a max size of 1.
 			otel.Handle(errors.New("exponential histogram scale underflow"))
 			return
 		}
 		// Downscale
-		p.scale -= scaleDelta
+		p.scale.Add(-scaleDelta)
 		p.posBuckets.downscale(scaleDelta)
 		p.negBuckets.downscale(scaleDelta)
 
@@ -124,7 +107,8 @@ func (p *expoHistogramDataPoint[N]) getBin(v float64) int32 {
 	frac, expInt := math.Frexp(v)
 	// 11-bit exponential.
 	exp := int32(expInt) // nolint: gosec
-	if p.scale <= 0 {
+	scale := p.scale.Load()
+	if scale <= 0 {
 		// Because of the choice of fraction is always 1 power of two higher than we want.
 		var correction int32 = 1
 		if frac == .5 {
@@ -132,9 +116,9 @@ func (p *expoHistogramDataPoint[N]) getBin(v float64) int32 {
 			// will be one higher than we want.
 			correction = 2
 		}
-		return (exp - correction) >> (-p.scale)
+		return (exp - correction) >> (-scale)
 	}
-	return exp<<p.scale + int32(math.Log(frac)*scaleFactors[p.scale]) - 1
+	return exp<<scale + int32(math.Log(frac)*scaleFactors[scale]) - 1
 }
 
 // scaleFactors are constants used in calculating the logarithm index. They are
@@ -191,7 +175,7 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int)
 }
 
 func (p *expoHistogramDataPoint[N]) count() uint64 {
-	return p.posBuckets.count() + p.negBuckets.count() + p.zeroCount
+	return p.posBuckets.count() + p.negBuckets.count() + p.zeroCount.Load()
 }
 
 // expoBuckets is a set of buckets in an exponential histogram.
@@ -386,8 +370,8 @@ func (e *expoHistogram[N]) delta(
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count()
-		hDPts[i].Scale = val.scale
-		hDPts[i].ZeroCount = val.zeroCount
+		hDPts[i].Scale = val.scale.Load()
+		hDPts[i].ZeroCount = val.zeroCount.Load()
 		hDPts[i].ZeroThreshold = 0.0
 
 		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
@@ -407,11 +391,13 @@ func (e *expoHistogram[N]) delta(
 		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
 
 		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			hDPts[i].Sum = val.sum.load()
 		}
 		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			if val.minMax.set.Load() {
+				hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+				hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+			}
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
@@ -449,8 +435,8 @@ func (e *expoHistogram[N]) cumulative(
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count()
-		hDPts[i].Scale = val.scale
-		hDPts[i].ZeroCount = val.zeroCount
+		hDPts[i].Scale = val.scale.Load()
+		hDPts[i].ZeroCount = val.zeroCount.Load()
 		hDPts[i].ZeroThreshold = 0.0
 
 		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
@@ -470,11 +456,13 @@ func (e *expoHistogram[N]) cumulative(
 		copy(hDPts[i].NegativeBucket.Counts, val.negBuckets.counts)
 
 		if !e.noSum {
-			hDPts[i].Sum = val.sum
+			hDPts[i].Sum = val.sum.load()
 		}
 		if !e.noMinMax {
-			hDPts[i].Min = metricdata.NewExtrema(val.min)
-			hDPts[i].Max = metricdata.NewExtrema(val.max)
+			if val.minMax.set.Load() {
+				hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+				hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+			}
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
