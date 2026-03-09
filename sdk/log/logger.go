@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -164,7 +165,7 @@ func errorType(err error) string {
 		}
 	}
 
-	t := reflect.TypeOf(err)
+	t := reflect.TypeOf(rootError(err))
 	if t == nil {
 		return ""
 	}
@@ -182,4 +183,17 @@ func errorType(err error) string {
 	//
 	// This is not guaranteed to be unique, but is a best effort.
 	return t.String()
+}
+
+// rootError walks the error chain using errors.Unwrap to avoid reporting
+// wrapper types (e.g., *fmt.wrapError).
+func rootError(err error) error {
+	curr := err
+	for {
+		u := errors.Unwrap(curr)
+		if u == nil {
+			return curr
+		}
+		curr = u
+	}
 }
