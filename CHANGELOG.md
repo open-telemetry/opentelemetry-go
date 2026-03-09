@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `ErrorType` now unwraps error chains when deriving `error.type` in `go.opentelemetry.io/otel/semconv` and `go.opentelemetry.io/otel/sdk/log`. (#8018)
+- `ErrorType` now unwraps error chains when deriving `error.type` in `go.opentelemetry.io/otel/semconv`. (#8018)
+- `ErrorType` now unwraps error chains when deriving `error.type` in `go.opentelemetry.io/otel/sdk/log`. (#8018)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
