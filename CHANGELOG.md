@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add SDK attribute value limit to the BYTES attribute type in sdk/trace and sdk/log. (#7990)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

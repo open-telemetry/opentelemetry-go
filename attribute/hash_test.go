@@ -36,6 +36,8 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return String(k, "bar") },
 	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
+	func(k string) KeyValue { return Bytes(k, []byte("foo")) },
+	func(k string) KeyValue { return Bytes(k, []byte("[]i1")) },
 }
 
 func TestHashKVsEquality(t *testing.T) {
@@ -187,7 +189,7 @@ func FuzzHashKVs(f *testing.F) {
 
 		// Add slice types based on sliceType parameter
 		if numAttrs > 5 {
-			switch sliceType % 4 {
+			switch sliceType % 5 {
 			case 0:
 				// Test BoolSlice with variable length.
 				bools := make([]bool, len(s)%5) // 0-4 elements
@@ -225,6 +227,13 @@ func FuzzHashKVs(f *testing.F) {
 					}
 				}
 				kvs = append(kvs, Float64Slice("float64slice", float64s))
+			case 4:
+				// Test Bytes with variable length.
+				bytes := make([]byte, len(s)%5)
+				for i := range bytes {
+					bytes[i] = byte(i + len(k1))
+				}
+				kvs = append(kvs, Bytes("bytes", bytes))
 			}
 		}
 
