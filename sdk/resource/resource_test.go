@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 var (
@@ -825,13 +825,11 @@ func TestResourceConcurrentSafe(t *testing.T) {
 	// because Resources are immutable.
 	var wg sync.WaitGroup
 	for range 2 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			d := &fakeDetector{}
 			_, err := resource.Detect(t.Context(), d)
 			assert.NoError(t, err)
-		}()
+		})
 	}
 	wg.Wait()
 }

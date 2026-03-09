@@ -28,6 +28,7 @@ type basicSpanProcessor struct {
 	flushed             bool
 	closed              bool
 	injectShutdownError error
+	injectExportError   error
 }
 
 func (t *basicSpanProcessor) Shutdown(context.Context) error {
@@ -39,7 +40,7 @@ func (*basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 func (*basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (t *basicSpanProcessor) ForceFlush(context.Context) error {
 	t.flushed = true
-	return nil
+	return t.injectExportError
 }
 
 type shutdownSpanProcessor struct {
@@ -225,6 +226,59 @@ func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
 	sp2 := &basicSpanProcessor{}
 	stp.RegisterSpanProcessor(sp2) // no-op
 	assert.Empty(t, stp.getSpanProcessors())
+}
+
+func TestTracerProviderForceFlush(t *testing.T) {
+	t.Run("AfterShutdown", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		ctx := t.Context()
+
+		require.NoError(t, stp.ForceFlush(ctx))
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
+
+		sp1.flushed = false
+		require.NoError(t, stp.Shutdown(ctx))
+
+		require.NoError(t, stp.ForceFlush(ctx))
+		assert.False(t, sp1.flushed, "SpanProcessor ForceFlush called after Shutdown")
+	})
+
+	t.Run("Multi", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		sp2 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		stp.RegisterSpanProcessor(sp2)
+		ctx := t.Context()
+
+		require.NoError(t, stp.ForceFlush(ctx))
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
+		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{injectExportError: assert.AnError}
+		sp2 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		stp.RegisterSpanProcessor(sp2)
+		ctx := t.Context()
+
+		assert.ErrorIs(t, stp.ForceFlush(ctx), assert.AnError, "span processor error not returned")
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
+		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
+	})
+
+	t.Run("WithCancel", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		assert.ErrorIs(t, stp.ForceFlush(ctx), context.Canceled)
+	})
 }
 
 func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {

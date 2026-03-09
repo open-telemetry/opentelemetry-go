@@ -498,9 +498,7 @@ func TestBatchProcessor(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		var wg sync.WaitGroup
 		for range goRoutines - 1 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for {
 					select {
 					case <-ctx.Done():
@@ -511,19 +509,17 @@ func TestBatchProcessor(t *testing.T) {
 						_ = b.ForceFlush(ctx)
 					}
 				}
-			}()
+			})
 		}
 
 		require.Eventually(t, func() bool {
 			return e.ExportN() > 0
 		}, 2*time.Second, time.Microsecond, "export before shutdown")
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			assert.NoError(t, b.Shutdown(ctx))
 			cancel()
-		}()
+		})
 
 		wg.Wait()
 	})
