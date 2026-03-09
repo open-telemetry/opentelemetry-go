@@ -32,7 +32,7 @@ The `CHANGELOG.md` should also be updated to reflect the new changes:
 
 > **Tip:** Change to the release and prior version to match the changes
 
-### Update Semconv imports
+### Update semconv imports
 
 Once the new semconv module has been generated, update all semconv imports throughout the codebase to reference the new version:
 
