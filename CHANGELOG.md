@@ -12,6 +12,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 
+### Changed
+
+- Rename the `INVALID Type` to `EMPTY` in `go.opentelemetry.io/otel/attribute` to better reflect that an empty value is now a valid value. (#8038)
+
+### Deprecated
+
+- Deprecate `INVALID` in `go.opentelemetry.io/otel/attribute`. Use `EMPTY` instead. (#8038)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
