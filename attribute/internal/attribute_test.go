@@ -10,37 +10,37 @@ import (
 
 var wrapFloat64SliceValue = func(v any) any {
 	if vi, ok := v.([]float64); ok {
-		return Float64SliceValue(vi)
+		return SliceValue(vi)
 	}
 	return nil
 }
 
 var wrapInt64SliceValue = func(v any) any {
 	if vi, ok := v.([]int64); ok {
-		return Int64SliceValue(vi)
+		return SliceValue(vi)
 	}
 	return nil
 }
 
 var wrapBoolSliceValue = func(v any) any {
 	if vi, ok := v.([]bool); ok {
-		return BoolSliceValue(vi)
+		return SliceValue(vi)
 	}
 	return nil
 }
 
 var wrapStringSliceValue = func(v any) any {
 	if vi, ok := v.([]string); ok {
-		return StringSliceValue(vi)
+		return SliceValue(vi)
 	}
 	return nil
 }
 
 var (
-	wrapAsBoolSlice    = func(v any) any { return AsBoolSlice(v) }
-	wrapAsInt64Slice   = func(v any) any { return AsInt64Slice(v) }
-	wrapAsFloat64Slice = func(v any) any { return AsFloat64Slice(v) }
-	wrapAsStringSlice  = func(v any) any { return AsStringSlice(v) }
+	wrapAsBoolSlice    = func(v any) any { return AsSlice[bool](v) }
+	wrapAsInt64Slice   = func(v any) any { return AsSlice[int64](v) }
+	wrapAsFloat64Slice = func(v any) any { return AsSlice[float64](v) }
+	wrapAsStringSlice  = func(v any) any { return AsSlice[string](v) }
 )
 
 func TestSliceValue(t *testing.T) {
@@ -95,6 +95,28 @@ func TestSliceValue(t *testing.T) {
 	}
 }
 
+func TestAsSliceMismatchedType(t *testing.T) {
+	tests := []struct {
+		name string
+		fn   func() any
+	}{
+		{name: "bool from int64 array", fn: func() any { return AsSlice[bool]([2]int64{1, 2}) }},
+		{name: "int64 from float64 array", fn: func() any { return AsSlice[int64]([2]float64{1, 2}) }},
+		{name: "float64 from string array", fn: func() any { return AsSlice[float64]([2]string{"1", "2"}) }},
+		{name: "string from bool array", fn: func() any { return AsSlice[string]([2]bool{true, false}) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.fn()
+			rv := reflect.ValueOf(got)
+			if !rv.IsNil() {
+				t.Fatalf("got %v, want nil", got)
+			}
+		})
+	}
+}
+
 // sync is a global used to ensure the benchmark are not optimized away.
 var sync any
 
@@ -103,7 +125,7 @@ func BenchmarkBoolSliceValue(b *testing.B) {
 	s := []bool{true, false, true, false}
 
 	for b.Loop() {
-		sync = BoolSliceValue(s)
+		sync = SliceValue(s)
 	}
 }
 
@@ -112,7 +134,7 @@ func BenchmarkInt64SliceValue(b *testing.B) {
 	s := []int64{1, 2, 3, 4}
 
 	for b.Loop() {
-		sync = Int64SliceValue(s)
+		sync = SliceValue(s)
 	}
 }
 
@@ -121,7 +143,7 @@ func BenchmarkFloat64SliceValue(b *testing.B) {
 	s := []float64{1.2, 3.4, 5.6, 7.8}
 
 	for b.Loop() {
-		sync = Float64SliceValue(s)
+		sync = SliceValue(s)
 	}
 }
 
@@ -130,7 +152,7 @@ func BenchmarkStringSliceValue(b *testing.B) {
 	s := []string{"a", "b", "c", "d"}
 
 	for b.Loop() {
-		sync = StringSliceValue(s)
+		sync = SliceValue(s)
 	}
 }
 
@@ -139,6 +161,6 @@ func BenchmarkAsFloat64Slice(b *testing.B) {
 	var in any = [2]float64{1, 2.3}
 
 	for b.Loop() {
-		sync = AsFloat64Slice(in)
+		sync = AsSlice[float64](in)
 	}
 }
