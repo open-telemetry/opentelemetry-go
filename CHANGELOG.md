@@ -10,11 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-<<<<<<< attribute-stringer
 - Add `String` method to `attribute.Value` and `KeyValue` in `go.opentelemetry.io/otel/attribute`. (#7812)
-=======
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
->>>>>>> main
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
