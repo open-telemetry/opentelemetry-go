@@ -13,6 +13,10 @@ import (
 
 // SliceValue converts a slice into an array with the same elements.
 func SliceValue[T any](v []T) any {
+	// Keep the common tiny-slice cases out of reflection. This matches the
+	// short lengths that show up most often in local benchmarks and semantic
+	// convention examples while leaving larger, less predictable slices on the
+	// generic reflective path.
 	switch len(v) {
 	case 0:
 		return [0]T{}
@@ -31,6 +35,7 @@ func SliceValue[T any](v []T) any {
 
 // AsSlice converts an array into a slice with the same elements.
 func AsSlice[T any](v any) []T {
+	// Mirror the small fixed-array fast path used by SliceValue.
 	switch a := v.(type) {
 	case [0]T:
 		return []T{}
