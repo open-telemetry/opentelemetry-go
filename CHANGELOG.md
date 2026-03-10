@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Rename the `INVALID Type` to `EMPTY` in `go.opentelemetry.io/otel/attribute` to better reflect that an empty value is now a valid value. (#8038)
+- Rename the `INVALID Type` to `EMPTY` in `go.opentelemetry.io/otel/attribute` to reflect that an empty value is now a valid value. (#8038)
 
 ### Deprecated
 
