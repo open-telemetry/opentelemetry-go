@@ -70,10 +70,7 @@ var (
 	kvFloat64Slice = &cpb.KeyValue{Key: "float64 slice", Value: valDblSlice}
 	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
 	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
-	kvEmpty        = &cpb.KeyValue{
-		Key:   "empty",
-		Value: &cpb.AnyValue{},
-	}
+	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
 
 func TestAttrTransforms(t *testing.T) {
