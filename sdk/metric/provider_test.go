@@ -248,13 +248,25 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 	const uniqueAttributesCount = 10
 
-	testCases := []struct {
+	type metricSpec struct {
+		kind InstrumentKind
+		name string
+	}
+
+	type metricExpectation struct {
+		name       string
+		wantPoints int
+	}
+
+	type testCase struct {
 		name        string
 		selector    CardinalityLimitSelector
 		globalLimit int
-		build       func(t *testing.T, meter api.Meter)
-		validate    func(t *testing.T, rm metricdata.ResourceMetrics)
-	}{
+		metrics     []metricSpec
+		expect      []metricExpectation
+	}
+
+	testCases := []testCase{
 		{
 			name: "counter uses counter-specific limit",
 			selector: func(kind InstrumentKind) (int, bool) {
@@ -264,17 +276,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				counter, err := meter.Int64Counter("counter-metric")
-				require.NoError(t, err)
-
-				for i := range uniqueAttributesCount {
-					counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
-				}
+			metrics: []metricSpec{
+				{kind: InstrumentKindCounter, name: "counter-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				assert.Len(t, sumData.DataPoints, 3, "counter should use counter-specific limit of 3")
+			expect: []metricExpectation{
+				{name: "counter-metric", wantPoints: 3},
 			},
 		},
 		{
@@ -286,17 +292,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				histogram, err := meter.Int64Histogram("histogram-metric")
-				require.NoError(t, err)
-
-				for i := range uniqueAttributesCount {
-					histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
-				}
+			metrics: []metricSpec{
+				{kind: InstrumentKindHistogram, name: "histogram-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				histData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
-				assert.Len(t, histData.DataPoints, 4, "histogram should use histogram-specific limit of 4")
+			expect: []metricExpectation{
+				{name: "histogram-metric", wantPoints: 4},
 			},
 		},
 		{
@@ -308,17 +308,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				gauge, err := meter.Int64Gauge("gauge-metric")
-				require.NoError(t, err)
-
-				for i := range uniqueAttributesCount {
-					gauge.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
-				}
+			metrics: []metricSpec{
+				{kind: InstrumentKindGauge, name: "gauge-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				gaugeData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64])
-				assert.Len(t, gaugeData.DataPoints, 5, "gauge should use gauge-specific limit of 5")
+			expect: []metricExpectation{
+				{name: "gauge-metric", wantPoints: 5},
 			},
 		},
 		{
@@ -330,17 +324,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				upDownCounter, err := meter.Int64UpDownCounter("updowncounter-metric")
-				require.NoError(t, err)
-
-				for i := range uniqueAttributesCount {
-					upDownCounter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
-				}
+			metrics: []metricSpec{
+				{kind: InstrumentKindUpDownCounter, name: "updowncounter-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				assert.Len(t, sumData.DataPoints, 2, "up down counter should use updowncounter-specific limit of 2")
+			expect: []metricExpectation{
+				{name: "updowncounter-metric", wantPoints: 2},
 			},
 		},
 		{
@@ -352,32 +340,13 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true // fall back to global limit
 			},
 			globalLimit: 6,
-			build: func(t *testing.T, meter api.Meter) {
-				counter, err := meter.Int64Counter("counter-metric")
-				require.NoError(t, err)
-
-				histogram, err := meter.Int64Histogram("histogram-metric")
-				require.NoError(t, err)
-
-				for i := range uniqueAttributesCount {
-					counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
-					histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
-				}
+			metrics: []metricSpec{
+				{kind: InstrumentKindCounter, name: "counter-metric"},
+				{kind: InstrumentKindHistogram, name: "histogram-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				require.Len(t, rm.ScopeMetrics, 1)
-				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
-
-				for _, m := range rm.ScopeMetrics[0].Metrics {
-					switch m.Name {
-					case "counter-metric":
-						sumData := m.Data.(metricdata.Sum[int64])
-						assert.Len(t, sumData.DataPoints, 3, "counter should use counter-specific limit of 3")
-					case "histogram-metric":
-						histData := m.Data.(metricdata.Histogram[int64])
-						assert.Len(t, histData.DataPoints, 6, "histogram should fall back to global limit of 6")
-					}
-				}
+			expect: []metricExpectation{
+				{name: "counter-metric", wantPoints: 3},
+				{name: "histogram-metric", wantPoints: 6},
 			},
 		},
 		{
@@ -389,22 +358,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				obs, err := meter.Int64ObservableCounter(
-					"observable-counter-metric",
-					api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
-						for i := range uniqueAttributesCount {
-							o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
-						}
-						return nil
-					}),
-				)
-				require.NoError(t, err)
-				require.NotNil(t, obs)
+			metrics: []metricSpec{
+				{kind: InstrumentKindObservableCounter, name: "observable-counter-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				assert.Len(t, sumData.DataPoints, 4, "observable counter should use observable-counter-specific limit of 4")
+			expect: []metricExpectation{
+				{name: "observable-counter-metric", wantPoints: 4},
 			},
 		},
 		{
@@ -416,22 +374,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				obs, err := meter.Int64ObservableGauge(
-					"observable-gauge-metric",
-					api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
-						for i := range uniqueAttributesCount {
-							o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
-						}
-						return nil
-					}),
-				)
-				require.NoError(t, err)
-				require.NotNil(t, obs)
+			metrics: []metricSpec{
+				{kind: InstrumentKindObservableGauge, name: "observable-gauge-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				gaugeData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64])
-				assert.Len(t, gaugeData.DataPoints, 5, "observable gauge should use observable-gauge-specific limit of 5")
+			expect: []metricExpectation{
+				{name: "observable-gauge-metric", wantPoints: 5},
 			},
 		},
 		{
@@ -443,27 +390,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true
 			},
 			globalLimit: 8,
-			build: func(t *testing.T, meter api.Meter) {
-				obs, err := meter.Int64ObservableUpDownCounter(
-					"observable-updowncounter-metric",
-					api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
-						for i := range uniqueAttributesCount {
-							o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
-						}
-						return nil
-					}),
-				)
-				require.NoError(t, err)
-				require.NotNil(t, obs)
+			metrics: []metricSpec{
+				{kind: InstrumentKindObservableUpDownCounter, name: "observable-updowncounter-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				sumData := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				assert.Len(
-					t,
-					sumData.DataPoints,
-					3,
-					"observable up down counter should use observable-updowncounter-specific limit of 3",
-				)
+			expect: []metricExpectation{
+				{name: "observable-updowncounter-metric", wantPoints: 3},
 			},
 		},
 		{
@@ -475,35 +406,13 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 				return 0, true // fallback to global limit
 			},
 			globalLimit: 3,
-			build: func(t *testing.T, meter api.Meter) {
-				const manyAttributes = 10
-
-				counter, err := meter.Int64Counter("counter-metric")
-				require.NoError(t, err)
-				histogram, err := meter.Int64Histogram("histogram-metric")
-				require.NoError(t, err)
-
-				for i := range manyAttributes {
-					counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
-					histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
-				}
+			metrics: []metricSpec{
+				{kind: InstrumentKindCounter, name: "counter-metric"},
+				{kind: InstrumentKindHistogram, name: "histogram-metric"},
 			},
-			validate: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				require.Len(t, rm.ScopeMetrics, 1)
-				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
-
-				for _, m := range rm.ScopeMetrics[0].Metrics {
-					switch m.Name {
-					case "counter-metric":
-						sumData := m.Data.(metricdata.Sum[int64])
-						assert.Len(t, sumData.DataPoints, uniqueAttributesCount,
-							"counter with (0, false) should be unlimited and keep all datapoints")
-					case "histogram-metric":
-						histData := m.Data.(metricdata.Histogram[int64])
-						assert.Len(t, histData.DataPoints, 3,
-							"histogram falling back to global should use limit of 3")
-					}
-				}
+			expect: []metricExpectation{
+				{name: "counter-metric", wantPoints: uniqueAttributesCount},
+				{name: "histogram-metric", wantPoints: 3},
 			},
 		},
 	}
@@ -519,13 +428,102 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 			)
 
 			meter := mp.Meter("test-meter")
-			tc.build(t, meter)
+
+			// Create instruments and record/observe data based on metric specs.
+			for _, ms := range tc.metrics {
+				switch ms.kind {
+				case InstrumentKindCounter:
+					counter, err := meter.Int64Counter(ms.name)
+					require.NoError(t, err)
+					for i := range uniqueAttributesCount {
+						counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+					}
+				case InstrumentKindHistogram:
+					histogram, err := meter.Int64Histogram(ms.name)
+					require.NoError(t, err)
+					for i := range uniqueAttributesCount {
+						histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+					}
+				case InstrumentKindGauge:
+					gauge, err := meter.Int64Gauge(ms.name)
+					require.NoError(t, err)
+					for i := range uniqueAttributesCount {
+						gauge.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+					}
+				case InstrumentKindUpDownCounter:
+					upDownCounter, err := meter.Int64UpDownCounter(ms.name)
+					require.NoError(t, err)
+					for i := range uniqueAttributesCount {
+						upDownCounter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+					}
+				case InstrumentKindObservableCounter:
+					obs, err := meter.Int64ObservableCounter(
+						ms.name,
+						api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+							for i := range uniqueAttributesCount {
+								o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+							}
+							return nil
+						}),
+					)
+					require.NoError(t, err)
+					require.NotNil(t, obs)
+				case InstrumentKindObservableGauge:
+					obs, err := meter.Int64ObservableGauge(
+						ms.name,
+						api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+							for i := range uniqueAttributesCount {
+								o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+							}
+							return nil
+						}),
+					)
+					require.NoError(t, err)
+					require.NotNil(t, obs)
+				case InstrumentKindObservableUpDownCounter:
+					obs, err := meter.Int64ObservableUpDownCounter(
+						ms.name,
+						api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+							for i := range uniqueAttributesCount {
+								o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+							}
+							return nil
+						}),
+					)
+					require.NoError(t, err)
+					require.NotNil(t, obs)
+				default:
+					t.Fatalf("unexpected instrument kind %v", ms.kind)
+				}
+			}
 
 			var rm metricdata.ResourceMetrics
 			err := reader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
-			tc.validate(t, rm)
+			require.NotEmpty(t, rm.ScopeMetrics)
+			metrics := rm.ScopeMetrics[0].Metrics
+
+			for _, exp := range tc.expect {
+				var found bool
+				for _, m := range metrics {
+					if m.Name != exp.name {
+						continue
+					}
+					found = true
+					switch data := m.Data.(type) {
+					case metricdata.Sum[int64]:
+						assert.Len(t, data.DataPoints, exp.wantPoints, tc.name)
+					case metricdata.Histogram[int64]:
+						assert.Len(t, data.DataPoints, exp.wantPoints, tc.name)
+					case metricdata.Gauge[int64]:
+						assert.Len(t, data.DataPoints, exp.wantPoints, tc.name)
+					default:
+						t.Fatalf("unexpected data type %T", data)
+					}
+				}
+				require.Truef(t, found, "metric %q not found in results", exp.name)
+			}
 		})
 	}
 }
