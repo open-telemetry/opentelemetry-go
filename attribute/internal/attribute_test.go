@@ -121,46 +121,86 @@ func TestAsSliceMismatchedType(t *testing.T) {
 var sync any
 
 func BenchmarkBoolSliceValue(b *testing.B) {
-	b.ReportAllocs()
-	s := []bool{true, false, true, false}
-
-	for b.Loop() {
-		sync = SliceValue(s)
+	for _, bench := range []struct {
+		name string
+		s    []bool
+	}{
+		{name: "Len2", s: []bool{true, false}},
+		{name: "Len8", s: []bool{true, false, true, false, true, false, true, false}},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				sync = SliceValue(bench.s)
+			}
+		})
 	}
 }
 
 func BenchmarkInt64SliceValue(b *testing.B) {
-	b.ReportAllocs()
-	s := []int64{1, 2, 3, 4}
-
-	for b.Loop() {
-		sync = SliceValue(s)
+	for _, bench := range []struct {
+		name string
+		s    []int64
+	}{
+		{name: "Len2", s: []int64{1, 2}},
+		{name: "Len8", s: []int64{1, 2, 3, 4, 5, 6, 7, 8}},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				sync = SliceValue(bench.s)
+			}
+		})
 	}
 }
 
 func BenchmarkFloat64SliceValue(b *testing.B) {
-	b.ReportAllocs()
-	s := []float64{1.2, 3.4, 5.6, 7.8}
-
-	for b.Loop() {
-		sync = SliceValue(s)
+	for _, bench := range []struct {
+		name string
+		s    []float64
+	}{
+		{name: "Len2", s: []float64{1.2, 3.4}},
+		{name: "Len8", s: []float64{1.2, 3.4, 5.6, 7.8, 9.1, 2.3, 4.5, 6.7}},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				sync = SliceValue(bench.s)
+			}
+		})
 	}
 }
 
 func BenchmarkStringSliceValue(b *testing.B) {
-	b.ReportAllocs()
-	s := []string{"a", "b", "c", "d"}
-
-	for b.Loop() {
-		sync = SliceValue(s)
+	for _, bench := range []struct {
+		name string
+		s    []string
+	}{
+		{name: "Len2", s: []string{"a", "b"}},
+		{name: "Len8", s: []string{"a", "b", "c", "d", "e", "f", "g", "h"}},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				sync = SliceValue(bench.s)
+			}
+		})
 	}
 }
 
 func BenchmarkAsFloat64Slice(b *testing.B) {
-	b.ReportAllocs()
-	var in any = [2]float64{1, 2.3}
-
-	for b.Loop() {
-		sync = AsSlice[float64](in)
+	for _, bench := range []struct {
+		name string
+		in   any
+	}{
+		{name: "Len2", in: [2]float64{1, 2.3}},
+		{name: "Len8", in: [8]float64{1, 2.3, 3.4, 4.5, 5.6, 6.7, 7.8, 8.9}},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				sync = AsSlice[float64](bench.in)
+			}
+		})
 	}
 }
