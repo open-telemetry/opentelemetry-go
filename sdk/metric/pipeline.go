@@ -424,12 +424,7 @@ func (i *inserter[N]) cachedAggregator(
 func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
 	limit, fallback := i.pipeline.reader.cardinalityLimit(kind)
 	if fallback {
-		// Try pipeline's global limit (from provider).
-		if i.pipeline.cardinalityLimit > 0 {
-			return i.pipeline.cardinalityLimit
-		}
-		// Fall back to default limit.
-		return defaultCardinalityLimit
+		return i.pipeline.cardinalityLimit
 	}
 	return limit
 }
