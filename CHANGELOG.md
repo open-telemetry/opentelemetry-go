@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `IsRandom` and `WithRandom` on `TraceFlags`, and `IsRandom` on `SpanContext` in `go.opentelemetry.io/otel/trace` for W3C tracecontext random flag support. (#8012)
+- Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
