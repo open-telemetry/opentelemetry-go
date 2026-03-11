@@ -65,14 +65,28 @@ func IntValue(v int) Value {
 
 // IntSliceValue creates an INT64SLICE Value.
 func IntSliceValue(v []int) Value {
-	cp := make([]int64, len(v))
-	for i, val := range v {
-		cp[i] = int64(val)
+	val := Value{vtype: INT64SLICE}
+
+	// Avoid the common tiny-slice cases from allocating a new slice.
+	switch len(v) {
+	case 0:
+		val.slice = [0]int64{}
+	case 1:
+		val.slice = [1]int64{int64(v[0])}
+	case 2:
+		val.slice = [2]int64{int64(v[0]), int64(v[1])}
+	case 3:
+		val.slice = [3]int64{int64(v[0]), int64(v[1]), int64(v[2])}
+	default:
+		// Fallback to a new slice for larger slices.
+		cp := make([]int64, len(v))
+		for i, val := range v {
+			cp[i] = int64(val)
+		}
+		val.slice = attribute.SliceValue(cp)
 	}
-	return Value{
-		vtype: INT64SLICE,
-		slice: attribute.SliceValue(cp),
-	}
+
+	return val
 }
 
 // Int64Value creates an INT64 Value.
