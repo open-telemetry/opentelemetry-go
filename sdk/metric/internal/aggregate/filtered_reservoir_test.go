@@ -37,11 +37,9 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			reservoir := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, tc.reservoir)
 			var wg sync.WaitGroup
 			for range 5 {
-				wg.Add(1)
-				go func() {
+				wg.Go(func() {
 					reservoir.Offer(t.Context(), 25, []attribute.KeyValue{})
-					wg.Done()
-				}()
+				})
 			}
 			into := []exemplar.Exemplar{}
 			for range 2 {

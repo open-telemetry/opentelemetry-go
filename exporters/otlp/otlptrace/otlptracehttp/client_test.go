@@ -5,6 +5,7 @@ package otlptracehttp_test
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 const (
@@ -251,6 +252,17 @@ func TestTimeout(t *testing.T) {
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	assert.ErrorContains(t, err, "Client.Timeout exceeded while awaiting headers")
+}
+
+func TestInsecureWithTLSClientConfig(t *testing.T) {
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint("localhost:4318"),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithTLSClientConfig(&tls.Config{}),
+	)
+	exp, err := otlptrace.New(t.Context(), client)
+	require.ErrorContains(t, err, "insecure HTTP endpoint cannot use TLS client configuration")
+	assert.Nil(t, exp)
 }
 
 func TestNoRetry(t *testing.T) {

@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Bytes` and `BytesValue` functions for new `BYTES Type` in `go.opentelemetry.io/otel/attribute`. (#7948)
+- Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

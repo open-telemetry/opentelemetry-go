@@ -160,7 +160,6 @@ func TestEquivalence(t *testing.T) {
 			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 			m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
 			_, ok := m[s1.Equivalent()]
-			assert.Truef(t, ok, "Distinct comparison of %s type: not equivalent", p[0].Value.Type())
 			assert.Truef(
 				t,
 				ok,
@@ -169,6 +168,15 @@ func TestEquivalence(t *testing.T) {
 				s0.Encoded(attribute.DefaultEncoder()),
 				s1.Encoded(attribute.DefaultEncoder()),
 			)
+		}
+	})
+
+	t.Run("Equality operator", func(t *testing.T) {
+		// Maintain backwards compatibility.
+		for _, p := range pairs {
+			if p[0] != p[1] {
+				t.Errorf("Expected %v to be equal to %v", p[0], p[1])
+			}
 		}
 	})
 
