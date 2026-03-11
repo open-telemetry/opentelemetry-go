@@ -39,7 +39,7 @@ func StringSliceValue(v []string) any {
 	return cp.Interface()
 }
 
-// BytesValue converts a bytes slice into an array with same elements as slice.
+// BytesValue converts v into an array with the same elements.
 func BytesValue(v []byte) any {
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeFor[byte]())).Elem()
 	reflect.Copy(cp, reflect.ValueOf(v))

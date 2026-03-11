@@ -83,10 +83,7 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		}
 	case BYTES:
 		h = h.Uint64(bytesID)
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Uint64(rv.Index(i).Uint())
-		}
+		h = h.Bytes(kv.Value.asBytes())
 	case INVALID:
 	default:
 		// Logging is an alternative, but using the internal logger here
