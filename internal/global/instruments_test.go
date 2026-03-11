@@ -111,7 +111,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v float64) {
 				delegate.Add(t.Context(), v, bobOpt)
 				delegate.Add(t.Context(), v, aliceOpt)
-				delegate.Remove(t.Context(), bobOpt)
+				delegate.Finish(t.Context(), bobOpt)
 			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -121,7 +121,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v float64) {
 				delegate.Add(t.Context(), v, aliceOpt)
 				delegate.Add(t.Context(), v, bobOpt)
-				delegate.Remove(t.Context(), aliceOpt)
+				delegate.Finish(t.Context(), aliceOpt)
 			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -131,7 +131,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v float64) {
 				delegate.Record(t.Context(), v, aliceOpt)
 				delegate.Record(t.Context(), v, bobOpt)
-				delegate.Remove(t.Context(), aliceOpt)
+				delegate.Finish(t.Context(), aliceOpt)
 			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -141,7 +141,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v float64) {
 				delegate.Record(t.Context(), v, bobOpt)
 				delegate.Record(t.Context(), v, aliceOpt)
-				delegate.Remove(t.Context(), bobOpt)
+				delegate.Finish(t.Context(), bobOpt)
 			}
 			testFloat64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -155,7 +155,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v int64) {
 				delegate.Add(t.Context(), v, aliceOpt)
 				delegate.Add(t.Context(), v, bobOpt)
-				delegate.Remove(t.Context(), aliceOpt)
+				delegate.Finish(t.Context(), aliceOpt)
 			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -165,7 +165,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v int64) {
 				delegate.Add(t.Context(), v, aliceOpt)
 				delegate.Add(t.Context(), v, bobOpt)
-				delegate.Remove(t.Context(), aliceOpt)
+				delegate.Finish(t.Context(), aliceOpt)
 			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -175,7 +175,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v int64) {
 				delegate.Record(t.Context(), v, aliceOpt)
 				delegate.Record(t.Context(), v, bobOpt)
-				delegate.Remove(t.Context(), aliceOpt)
+				delegate.Finish(t.Context(), aliceOpt)
 			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -185,7 +185,7 @@ func TestSyncInstrumentSetDelegateConcurrentSafe(t *testing.T) {
 			f := func(v int64) {
 				delegate.Record(t.Context(), v, aliceOpt)
 				delegate.Record(t.Context(), v, bobOpt)
-				delegate.Remove(t.Context(), aliceOpt)
+				delegate.Finish(t.Context(), aliceOpt)
 			}
 			testInt64ConcurrentSafe(f, delegate.setDelegate)
 		})
@@ -213,11 +213,15 @@ func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric
 	i.count++
 }
 
-func (*testCountingFloatInstrument) Remove(context.Context, ...metric.MeasurementOption) {
+func (*testCountingFloatInstrument) Finish(context.Context, ...metric.MeasurementOption) {
 }
 
 func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
 	i.count++
+}
+
+func (*testCountingFloatInstrument) Enabled(context.Context) bool {
+	return true
 }
 
 type testCountingIntInstrument struct {
@@ -237,7 +241,7 @@ func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOpt
 	i.count++
 }
 
-func (*testCountingIntInstrument) Remove(context.Context, ...metric.MeasurementOption) {
+func (*testCountingIntInstrument) Finish(context.Context, ...metric.MeasurementOption) {
 }
 
 func (i *testCountingIntInstrument) observe() {
@@ -246,4 +250,8 @@ func (i *testCountingIntInstrument) observe() {
 
 func (i *testCountingIntInstrument) Record(context.Context, int64, ...metric.RecordOption) {
 	i.count++
+}
+
+func (*testCountingIntInstrument) Enabled(context.Context) bool {
+	return true
 }

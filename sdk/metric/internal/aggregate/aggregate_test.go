@@ -162,15 +162,12 @@ func testAggergationConcurrentSafe[N int64 | float64](
 			{ctx, 3, bob, false},
 			{ctx, 6, bob, false},
 		} {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			args := args
+			wg.Go(func() {
 				meas(args.ctx, args.value, args.attr, args.remove)
-			}()
+			})
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range 2 {
 				comp(got)
 				// We do not check expected output for each step because
@@ -178,7 +175,7 @@ func testAggergationConcurrentSafe[N int64 | float64](
 				// we validate that the output is a valid possible output.
 				validate(t, *got)
 			}
-		}()
+		})
 		wg.Wait()
 	}
 }

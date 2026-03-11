@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
-	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 )
 
 var zeroScope instrumentation.Scope
@@ -191,7 +190,6 @@ var (
 	_ metric.Int64UpDownCounter = (*int64Inst)(nil)
 	_ metric.Int64Histogram     = (*int64Inst)(nil)
 	_ metric.Int64Gauge         = (*int64Inst)(nil)
-	_ x.EnabledInstrument       = (*int64Inst)(nil)
 )
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
@@ -199,7 +197,7 @@ func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *int64Inst) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *int64Inst) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
 	var addOpts []metric.AddOption
 	var recordOpts []metric.RecordOption
 	for _, opt := range opts {
@@ -260,7 +258,6 @@ var (
 	_ metric.Float64UpDownCounter = (*float64Inst)(nil)
 	_ metric.Float64Histogram     = (*float64Inst)(nil)
 	_ metric.Float64Gauge         = (*float64Inst)(nil)
-	_ x.EnabledInstrument         = (*float64Inst)(nil)
 )
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
@@ -268,7 +265,7 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *float64Inst) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *float64Inst) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
 	var addOpts []metric.AddOption
 	var recordOpts []metric.RecordOption
 	for _, opt := range opts {

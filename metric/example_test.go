@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 var meter = otel.Meter("my-service-meter")
@@ -143,8 +143,8 @@ func ExampleMeter_upDownCounter() {
 	// Add another item to the collection with different attributes
 	itemsCounter.Add(context.Background(), 1, metric.WithAttributes(attribute.String("location", "living room")))
 
-	// Remove a counter with some attributes
-	itemsCounter.Remove(context.Background(), metric.WithAttributes(attribute.String("location", "kitchen")))
+	// Finish a counter attribute set.
+	itemsCounter.Finish(context.Background(), metric.WithAttributes(attribute.String("location", "kitchen")))
 }
 
 // Gauges can be used to record non-additive values when changes occur.

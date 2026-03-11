@@ -24,13 +24,28 @@ type Int64Counter interface {
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
 	Add(ctx context.Context, incr int64, options ...AddOption)
 
-	// Remove unregisters an instrument.
+	// Enabled reports whether the instrument will process measurements for the given context.
+	//
+	// This function can be used in places where measuring an instrument
+	// would result in computationally expensive operations.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to include measurement attributes.
-	Remove(ctx context.Context, options ...MeasurementOption)
+	// the WithAttributes) option to identify the attribute set.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...MeasurementOption)
 }
 
 // Int64CounterConfig contains options for synchronous counter instruments that
@@ -83,13 +98,28 @@ type Int64UpDownCounter interface {
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
 	Add(ctx context.Context, incr int64, options ...AddOption)
 
-	// Remove unregisters an instrument.
+	// Enabled reports whether the instrument will process measurements for the given context.
+	//
+	// This function can be used in places where measuring an instrument
+	// would result in computationally expensive operations.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to include measurement attributes.
-	Remove(ctx context.Context, options ...MeasurementOption)
+	// the WithAttributes) option to identify the attribute set.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...MeasurementOption)
 }
 
 // Int64UpDownCounterConfig contains options for synchronous counter
@@ -142,13 +172,28 @@ type Int64Histogram interface {
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
 	Record(ctx context.Context, incr int64, options ...RecordOption)
 
-	// Remove unregisters an instrument.
+	// Enabled reports whether the instrument will process measurements for the given context.
+	//
+	// This function can be used in places where measuring an instrument
+	// would result in computationally expensive operations.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to include measurement attributes.
-	Remove(ctx context.Context, options ...MeasurementOption)
+	// the WithAttributes) option to identify the attribute set.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...MeasurementOption)
 }
 
 // Int64HistogramConfig contains options for synchronous histogram instruments
@@ -206,13 +251,28 @@ type Int64Gauge interface {
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
 	Record(ctx context.Context, value int64, options ...RecordOption)
 
-	// Remove unregisters an instrument.
+	// Enabled reports whether the instrument will process measurements for the given context.
+	//
+	// This function can be used in places where measuring an instrument
+	// would result in computationally expensive operations.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to include measurement attributes.
-	Remove(ctx context.Context, options ...MeasurementOption)
+	// the WithAttributes) option to identify the attribute set.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...MeasurementOption)
 }
 
 // Int64GaugeConfig contains options for synchronous gauge instruments that

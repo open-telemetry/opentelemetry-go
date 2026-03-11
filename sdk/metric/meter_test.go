@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
-	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -389,9 +388,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -411,9 +408,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -462,9 +457,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -484,9 +477,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -551,7 +542,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 	}
 }
 
-func TestRemoveInstruments(t *testing.T) {
+func TestFinishInstruments(t *testing.T) {
 	// The synchronous measurement methods must ignore the context cancellation.
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -579,12 +570,12 @@ func TestRemoveInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
 				require.True(t, ok)
 				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 3, optAlice)
 				ctr.Add(ctx, 5, optBob)
-				ctr.Remove(ctx, optBob)
+				ctr.Finish(ctx, optBob)
 			},
 			want: metricdata.Metrics{
 				Name: "sint",
@@ -603,12 +594,12 @@ func TestRemoveInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
 				require.True(t, ok)
 				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 3, optAlice)
 				ctr.Add(ctx, 5, optBob)
-				ctr.Remove(ctx, optBob)
+				ctr.Finish(ctx, optBob)
 			},
 			want: metricdata.Metrics{
 				Name: "sint",
@@ -629,7 +620,7 @@ func TestRemoveInstruments(t *testing.T) {
 
 				histo.Record(ctx, 7, optAlice)
 				histo.Record(ctx, 5, optBob)
-				histo.Remove(ctx, optBob)
+				histo.Finish(ctx, optBob)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
@@ -658,12 +649,12 @@ func TestRemoveInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
 				require.True(t, ok)
 				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 3, optAlice)
 				ctr.Add(ctx, 5, optBob)
-				ctr.Remove(ctx, optBob)
+				ctr.Finish(ctx, optBob)
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -682,12 +673,12 @@ func TestRemoveInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
 				require.True(t, ok)
 				assert.True(t, c.Enabled(t.Context()))
 				ctr.Add(ctx, 11, optAlice)
 				ctr.Add(ctx, 12, optBob)
-				ctr.Remove(ctx, optBob)
+				ctr.Finish(ctx, optBob)
 			},
 			want: metricdata.Metrics{
 				Name: "sfloat",
@@ -708,7 +699,7 @@ func TestRemoveInstruments(t *testing.T) {
 
 				histo.Record(ctx, 7, optAlice)
 				histo.Record(ctx, 5, optBob)
-				histo.Remove(ctx, optBob)
+				histo.Finish(ctx, optBob)
 			},
 			want: metricdata.Metrics{
 				Name: "histogram",
@@ -818,7 +809,9 @@ func TestMeterWithDropView(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.fn(t)
 			require.NoError(t, err)
-			c, ok := got.(x.EnabledInstrument)
+			c, ok := got.(interface {
+				Enabled(context.Context) bool
+			})
 			require.True(t, ok)
 			assert.False(t, c.Enabled(t.Context()))
 		})
@@ -2835,4 +2828,47 @@ func TestExemplarFilter(t *testing.T) {
 	err = rdr.Collect(t.Context(), &got)
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+}
+
+func TestFinishResetsCumulativeStartTime(t *testing.T) {
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+	ctr, err := mp.Meter("test").Int64Counter("count")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	attrs := attribute.NewSet(attribute.String("name", "Alice"))
+	opt := metric.WithAttributeSet(attrs)
+
+	ctr.Add(ctx, 1, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	points := func(rm metricdata.ResourceMetrics) []metricdata.DataPoint[int64] {
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != "count" {
+					continue
+				}
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				if ok {
+					return sum.DataPoints
+				}
+			}
+		}
+		return nil
+	}
+
+	dp := points(rm)[0]
+	firstStart := dp.StartTime
+
+	ctr.Finish(ctx, opt)
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	require.Empty(t, points(rm))
+
+	ctr.Add(ctx, 2, opt)
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	dp = points(rm)[0]
+	assert.True(t, dp.StartTime.After(firstStart))
+	assert.Equal(t, int64(2), dp.Value)
 }

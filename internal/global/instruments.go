@@ -229,9 +229,16 @@ func (i *sfCounter) Add(ctx context.Context, incr float64, opts ...metric.AddOpt
 	}
 }
 
-func (i *sfCounter) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *sfCounter) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Float64Counter).Remove(ctx, opts...)
+		return ctr.(metric.Float64Counter).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *sfCounter) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Counter).Finish(ctx, opts...)
 	}
 }
 
@@ -261,9 +268,16 @@ func (i *sfUpDownCounter) Add(ctx context.Context, incr float64, opts ...metric.
 	}
 }
 
-func (i *sfUpDownCounter) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *sfUpDownCounter) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Float64UpDownCounter).Remove(ctx, opts...)
+		return ctr.(metric.Float64UpDownCounter).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *sfUpDownCounter) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64UpDownCounter).Finish(ctx, opts...)
 	}
 }
 
@@ -293,9 +307,16 @@ func (i *sfHistogram) Record(ctx context.Context, x float64, opts ...metric.Reco
 	}
 }
 
-func (i *sfHistogram) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *sfHistogram) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Float64Histogram).Remove(ctx, opts...)
+		return ctr.(metric.Float64Histogram).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *sfHistogram) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Histogram).Finish(ctx, opts...)
 	}
 }
 
@@ -325,9 +346,16 @@ func (i *sfGauge) Record(ctx context.Context, x float64, opts ...metric.RecordOp
 	}
 }
 
-func (i *sfGauge) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *sfGauge) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Float64Gauge).Remove(ctx, opts...)
+		return ctr.(metric.Float64Gauge).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *sfGauge) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Gauge).Finish(ctx, opts...)
 	}
 }
 
@@ -357,9 +385,16 @@ func (i *siCounter) Add(ctx context.Context, x int64, opts ...metric.AddOption) 
 	}
 }
 
-func (i *siCounter) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *siCounter) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Int64Counter).Remove(ctx, opts...)
+		return ctr.(metric.Int64Counter).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *siCounter) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64Counter).Finish(ctx, opts...)
 	}
 }
 
@@ -389,9 +424,16 @@ func (i *siUpDownCounter) Add(ctx context.Context, x int64, opts ...metric.AddOp
 	}
 }
 
-func (i *siUpDownCounter) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *siUpDownCounter) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Int64UpDownCounter).Remove(ctx, opts...)
+		return ctr.(metric.Int64UpDownCounter).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *siUpDownCounter) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64UpDownCounter).Finish(ctx, opts...)
 	}
 }
 
@@ -421,9 +463,16 @@ func (i *siHistogram) Record(ctx context.Context, x int64, opts ...metric.Record
 	}
 }
 
-func (i *siHistogram) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *siHistogram) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Int64Histogram).Remove(ctx, opts...)
+		return ctr.(metric.Int64Histogram).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *siHistogram) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64Histogram).Finish(ctx, opts...)
 	}
 }
 
@@ -453,8 +502,15 @@ func (i *siGauge) Record(ctx context.Context, x int64, opts ...metric.RecordOpti
 	}
 }
 
-func (i *siGauge) Remove(ctx context.Context, opts ...metric.MeasurementOption) {
+func (i *siGauge) Enabled(ctx context.Context) bool {
 	if ctr := i.delegate.Load(); ctr != nil {
-		ctr.(metric.Int64Gauge).Remove(ctx, opts...)
+		return ctr.(metric.Int64Gauge).Enabled(ctx)
+	}
+	return false
+}
+
+func (i *siGauge) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64Gauge).Finish(ctx, opts...)
 	}
 }

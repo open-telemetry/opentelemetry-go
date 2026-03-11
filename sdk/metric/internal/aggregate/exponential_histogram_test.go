@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 type noErrorHandler struct{ t *testing.T }
@@ -706,7 +707,6 @@ func TestSubNormal(t *testing.T) {
 	want := &expoHistogramDataPoint[float64]{
 		attrs:   alice,
 		maxSize: 4,
-		count:   3,
 		min:     math.SmallestNonzeroFloat64,
 		max:     math.SmallestNonzeroFloat64,
 		sum:     3 * math.SmallestNonzeroFloat64,
@@ -1164,4 +1164,68 @@ func lowerBound(index, scale int32) float64 {
 	// For example lowerBound(getBin(Math.SmallestNonzeroFloat64, 7), 7) == 0.0
 	// 2 ^ (index * 2 ^ (-scale))
 	return math.Exp2(math.Ldexp(float64(index), -int(scale)))
+}
+
+func TestCumulativeExponentialHistogramFinishResetsStartTime(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, out := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		Filter:      attrFltr,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := context.Background()
+	in(ctx, 4, alice, false)
+
+	var got metricdata.Aggregation = metricdata.ExponentialHistogram[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(0),
+				Time:       y2kPlus(1),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+
+	in(ctx, 0, alice, true)
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{},
+	}, got)
+
+	in(ctx, 4, alice, false)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(3),
+				Time:       y2kPlus(4),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
 }

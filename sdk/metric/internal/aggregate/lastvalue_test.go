@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestLastValue(t *testing.T) {
@@ -545,4 +546,47 @@ func testCumulativePrecomputedLastValueConcurrentSafe[N int64 | float64]() func(
 func BenchmarkLastValue(b *testing.B) {
 	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
 	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
+}
+
+func TestCumulativeLastValueFinishResetsStartTime(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, out := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		Filter:      attrFltr,
+	}.LastValue()
+
+	ctx := context.Background()
+	in(ctx, 1, alice, false)
+
+	var got metricdata.Aggregation = metricdata.Gauge[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(0),
+				Time:       y2kPlus(1),
+				Value:      1,
+			},
+		},
+	}, got)
+
+	in(ctx, 0, alice, true)
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{}, got)
+
+	in(ctx, 3, alice, false)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(3),
+				Time:       y2kPlus(4),
+				Value:      3,
+			},
+		},
+	}, got)
 }
