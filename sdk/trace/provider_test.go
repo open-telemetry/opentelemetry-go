@@ -150,7 +150,7 @@ func TestFailedProcessorShutdown(t *testing.T) {
 
 	err := stp.Shutdown(t.Context())
 	assert.Error(t, err)
-	assert.Equal(t, err, spErr)
+	assert.ErrorIs(t, err, spErr)
 	assert.True(t, stp.isShutdown.Load())
 }
 
@@ -169,7 +169,8 @@ func TestFailedProcessorsShutdown(t *testing.T) {
 
 	err := stp.Shutdown(t.Context())
 	assert.Error(t, err)
-	assert.EqualError(t, err, "basic span processor shutdown failure1; basic span processor shutdown failure2")
+	assert.ErrorIs(t, err, spErr1)
+	assert.ErrorIs(t, err, spErr2)
 	assert.True(t, sp1.closed)
 	assert.True(t, sp2.closed)
 	assert.True(t, stp.isShutdown.Load())
