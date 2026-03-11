@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
+- Add support to finish synchronous instrument attribute sets in `go.opentelemetry.io/otel/sdk/metric`. (#8050)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -117,7 +118,6 @@ The next release will require at least [Go 1.25].
 - The `go.opentelemetry.io/otel/semconv/v1.38.0` package.
   The package contains semantic conventions from the `v1.38.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.38.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.37.0.`(#7648)
-- Add support to finish synchronous instrument attribute sets in `go.opentelemetry.io/otel/sdk/metric`. (#7541)
 
 ### Changed
 
