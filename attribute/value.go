@@ -263,7 +263,7 @@ func (v Value) Emit() string {
 	case EMPTY:
 		return ""
 	default:
-		panic(fmt.Sprintf("attribute.Value.Emit: unexpected type %v", v.Type()))
+		return "unknown"
 	}
 }
 
