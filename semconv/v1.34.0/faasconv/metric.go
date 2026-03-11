@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package faasconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "faas" namespace.
 package faasconv
 
@@ -63,7 +66,7 @@ func NewColdstarts(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Coldstarts{noop.Int64Counter{}}, err
+		return Coldstarts{noop.Int64Counter{}}, err
 	}
 	return Coldstarts{i}, nil
 }
@@ -144,7 +147,7 @@ func NewCPUUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CPUUsage{noop.Float64Histogram{}}, err
+		return CPUUsage{noop.Float64Histogram{}}, err
 	}
 	return CPUUsage{i}, nil
 }
@@ -225,7 +228,7 @@ func NewErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Errors{noop.Int64Counter{}}, err
+		return Errors{noop.Int64Counter{}}, err
 	}
 	return Errors{i}, nil
 }
@@ -306,7 +309,7 @@ func NewInitDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return InitDuration{noop.Float64Histogram{}}, err
+		return InitDuration{noop.Float64Histogram{}}, err
 	}
 	return InitDuration{i}, nil
 }
@@ -387,7 +390,7 @@ func NewInvocations(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Invocations{noop.Int64Counter{}}, err
+		return Invocations{noop.Int64Counter{}}, err
 	}
 	return Invocations{i}, nil
 }
@@ -468,7 +471,7 @@ func NewInvokeDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return InvokeDuration{noop.Float64Histogram{}}, err
+		return InvokeDuration{noop.Float64Histogram{}}, err
 	}
 	return InvokeDuration{i}, nil
 }
@@ -549,7 +552,7 @@ func NewMemUsage(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return MemUsage{noop.Int64Histogram{}}, err
+		return MemUsage{noop.Int64Histogram{}}, err
 	}
 	return MemUsage{i}, nil
 }
@@ -630,7 +633,7 @@ func NewNetIO(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return NetIO{noop.Int64Histogram{}}, err
+		return NetIO{noop.Int64Histogram{}}, err
 	}
 	return NetIO{i}, nil
 }
@@ -711,7 +714,7 @@ func NewTimeouts(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return Timeouts{noop.Int64Counter{}}, err
+		return Timeouts{noop.Int64Counter{}}, err
 	}
 	return Timeouts{i}, nil
 }

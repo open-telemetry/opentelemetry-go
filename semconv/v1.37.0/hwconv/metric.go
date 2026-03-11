@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package hwconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "hw" namespace.
 package hwconv
 
@@ -218,7 +218,7 @@ func NewBatteryCharge(
 		opt...,
 	)
 	if err != nil {
-	    return BatteryCharge{noop.Int64Gauge{}}, err
+		return BatteryCharge{noop.Int64Gauge{}}, err
 	}
 	return BatteryCharge{i}, nil
 }
@@ -283,6 +283,7 @@ func (m BatteryCharge) Record(
 func (m BatteryCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -370,7 +371,7 @@ func NewBatteryChargeLimit(
 		opt...,
 	)
 	if err != nil {
-	    return BatteryChargeLimit{noop.Int64Gauge{}}, err
+		return BatteryChargeLimit{noop.Int64Gauge{}}, err
 	}
 	return BatteryChargeLimit{i}, nil
 }
@@ -435,6 +436,7 @@ func (m BatteryChargeLimit) Record(
 func (m BatteryChargeLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -532,7 +534,7 @@ func NewBatteryTimeLeft(
 		opt...,
 	)
 	if err != nil {
-	    return BatteryTimeLeft{noop.Float64Gauge{}}, err
+		return BatteryTimeLeft{noop.Float64Gauge{}}, err
 	}
 	return BatteryTimeLeft{i}, nil
 }
@@ -601,6 +603,7 @@ func (m BatteryTimeLeft) Record(
 func (m BatteryTimeLeft) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -693,7 +696,7 @@ func NewCPUSpeed(
 		opt...,
 	)
 	if err != nil {
-	    return CPUSpeed{noop.Int64Gauge{}}, err
+		return CPUSpeed{noop.Int64Gauge{}}, err
 	}
 	return CPUSpeed{i}, nil
 }
@@ -758,6 +761,7 @@ func (m CPUSpeed) Record(
 func (m CPUSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -829,7 +833,7 @@ func NewCPUSpeedLimit(
 		opt...,
 	)
 	if err != nil {
-	    return CPUSpeedLimit{noop.Int64Gauge{}}, err
+		return CPUSpeedLimit{noop.Int64Gauge{}}, err
 	}
 	return CPUSpeedLimit{i}, nil
 }
@@ -894,6 +898,7 @@ func (m CPUSpeedLimit) Record(
 func (m CPUSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -971,7 +976,7 @@ func NewEnergy(
 		opt...,
 	)
 	if err != nil {
-	    return Energy{noop.Int64Counter{}}, err
+		return Energy{noop.Int64Counter{}}, err
 	}
 	return Energy{i}, nil
 }
@@ -1099,7 +1104,7 @@ func NewErrors(
 		opt...,
 	)
 	if err != nil {
-	    return Errors{noop.Int64Counter{}}, err
+		return Errors{noop.Int64Counter{}}, err
 	}
 	return Errors{i}, nil
 }
@@ -1240,7 +1245,7 @@ func NewFanSpeed(
 		opt...,
 	)
 	if err != nil {
-	    return FanSpeed{noop.Int64Gauge{}}, err
+		return FanSpeed{noop.Int64Gauge{}}, err
 	}
 	return FanSpeed{i}, nil
 }
@@ -1305,6 +1310,7 @@ func (m FanSpeed) Record(
 func (m FanSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1369,7 +1375,7 @@ func NewFanSpeedLimit(
 		opt...,
 	)
 	if err != nil {
-	    return FanSpeedLimit{noop.Int64Gauge{}}, err
+		return FanSpeedLimit{noop.Int64Gauge{}}, err
 	}
 	return FanSpeedLimit{i}, nil
 }
@@ -1434,6 +1440,7 @@ func (m FanSpeedLimit) Record(
 func (m FanSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1504,7 +1511,7 @@ func NewFanSpeedRatio(
 		opt...,
 	)
 	if err != nil {
-	    return FanSpeedRatio{noop.Int64Gauge{}}, err
+		return FanSpeedRatio{noop.Int64Gauge{}}, err
 	}
 	return FanSpeedRatio{i}, nil
 }
@@ -1569,6 +1576,7 @@ func (m FanSpeedRatio) Record(
 func (m FanSpeedRatio) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1633,7 +1641,7 @@ func NewGpuIO(
 		opt...,
 	)
 	if err != nil {
-	    return GpuIO{noop.Int64Counter{}}, err
+		return GpuIO{noop.Int64Counter{}}, err
 	}
 	return GpuIO{i}, nil
 }
@@ -1795,7 +1803,7 @@ func NewGpuMemoryLimit(
 		opt...,
 	)
 	if err != nil {
-	    return GpuMemoryLimit{noop.Int64UpDownCounter{}}, err
+		return GpuMemoryLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return GpuMemoryLimit{i}, nil
 }
@@ -1952,7 +1960,7 @@ func NewGpuMemoryUsage(
 		opt...,
 	)
 	if err != nil {
-	    return GpuMemoryUsage{noop.Int64UpDownCounter{}}, err
+		return GpuMemoryUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return GpuMemoryUsage{i}, nil
 }
@@ -2110,7 +2118,7 @@ func NewGpuMemoryUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return GpuMemoryUtilization{noop.Int64Gauge{}}, err
+		return GpuMemoryUtilization{noop.Int64Gauge{}}, err
 	}
 	return GpuMemoryUtilization{i}, nil
 }
@@ -2175,6 +2183,7 @@ func (m GpuMemoryUtilization) Record(
 func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2267,7 +2276,7 @@ func NewGpuUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return GpuUtilization{noop.Int64Gauge{}}, err
+		return GpuUtilization{noop.Int64Gauge{}}, err
 	}
 	return GpuUtilization{i}, nil
 }
@@ -2332,6 +2341,7 @@ func (m GpuUtilization) Record(
 func (m GpuUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2430,7 +2440,7 @@ func NewHostAmbientTemperature(
 		opt...,
 	)
 	if err != nil {
-	    return HostAmbientTemperature{noop.Int64Gauge{}}, err
+		return HostAmbientTemperature{noop.Int64Gauge{}}, err
 	}
 	return HostAmbientTemperature{i}, nil
 }
@@ -2495,6 +2505,7 @@ func (m HostAmbientTemperature) Record(
 func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2553,7 +2564,7 @@ func NewHostEnergy(
 		opt...,
 	)
 	if err != nil {
-	    return HostEnergy{noop.Int64Counter{}}, err
+		return HostEnergy{noop.Int64Counter{}}, err
 	}
 	return HostEnergy{i}, nil
 }
@@ -2688,7 +2699,7 @@ func NewHostHeatingMargin(
 		opt...,
 	)
 	if err != nil {
-	    return HostHeatingMargin{noop.Int64Gauge{}}, err
+		return HostHeatingMargin{noop.Int64Gauge{}}, err
 	}
 	return HostHeatingMargin{i}, nil
 }
@@ -2753,6 +2764,7 @@ func (m HostHeatingMargin) Record(
 func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2811,7 +2823,7 @@ func NewHostPower(
 		opt...,
 	)
 	if err != nil {
-	    return HostPower{noop.Int64Gauge{}}, err
+		return HostPower{noop.Int64Gauge{}}, err
 	}
 	return HostPower{i}, nil
 }
@@ -2886,6 +2898,7 @@ func (m HostPower) Record(
 func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2944,7 +2957,7 @@ func NewLogicalDiskLimit(
 		opt...,
 	)
 	if err != nil {
-	    return LogicalDiskLimit{noop.Int64UpDownCounter{}}, err
+		return LogicalDiskLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return LogicalDiskLimit{i}, nil
 }
@@ -3075,7 +3088,7 @@ func NewLogicalDiskUsage(
 		opt...,
 	)
 	if err != nil {
-	    return LogicalDiskUsage{noop.Int64UpDownCounter{}}, err
+		return LogicalDiskUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return LogicalDiskUsage{i}, nil
 }
@@ -3210,7 +3223,7 @@ func NewLogicalDiskUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return LogicalDiskUtilization{noop.Int64Gauge{}}, err
+		return LogicalDiskUtilization{noop.Int64Gauge{}}, err
 	}
 	return LogicalDiskUtilization{i}, nil
 }
@@ -3279,6 +3292,7 @@ func (m LogicalDiskUtilization) Record(
 func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -3344,7 +3358,7 @@ func NewMemorySize(
 		opt...,
 	)
 	if err != nil {
-	    return MemorySize{noop.Int64UpDownCounter{}}, err
+		return MemorySize{noop.Int64UpDownCounter{}}, err
 	}
 	return MemorySize{i}, nil
 }
@@ -3494,7 +3508,7 @@ func NewNetworkBandwidthLimit(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkBandwidthLimit{noop.Int64UpDownCounter{}}, err
+		return NetworkBandwidthLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return NetworkBandwidthLimit{i}, nil
 }
@@ -3653,7 +3667,7 @@ func NewNetworkBandwidthUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkBandwidthUtilization{noop.Int64Gauge{}}, err
+		return NetworkBandwidthUtilization{noop.Int64Gauge{}}, err
 	}
 	return NetworkBandwidthUtilization{i}, nil
 }
@@ -3718,6 +3732,7 @@ func (m NetworkBandwidthUtilization) Record(
 func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -3810,7 +3825,7 @@ func NewNetworkIO(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64Counter{}}, err
+		return NetworkIO{noop.Int64Counter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
@@ -3972,7 +3987,7 @@ func NewNetworkPackets(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkPackets{noop.Int64Counter{}}, err
+		return NetworkPackets{noop.Int64Counter{}}, err
 	}
 	return NetworkPackets{i}, nil
 }
@@ -4134,7 +4149,7 @@ func NewNetworkUp(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkUp{noop.Int64UpDownCounter{}}, err
+		return NetworkUp{noop.Int64UpDownCounter{}}, err
 	}
 	return NetworkUp{i}, nil
 }
@@ -4293,7 +4308,7 @@ func NewPhysicalDiskEnduranceUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return PhysicalDiskEnduranceUtilization{noop.Int64Gauge{}}, err
+		return PhysicalDiskEnduranceUtilization{noop.Int64Gauge{}}, err
 	}
 	return PhysicalDiskEnduranceUtilization{i}, nil
 }
@@ -4362,6 +4377,7 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4454,7 +4470,7 @@ func NewPhysicalDiskSize(
 		opt...,
 	)
 	if err != nil {
-	    return PhysicalDiskSize{noop.Int64UpDownCounter{}}, err
+		return PhysicalDiskSize{noop.Int64UpDownCounter{}}, err
 	}
 	return PhysicalDiskSize{i}, nil
 }
@@ -4615,7 +4631,7 @@ func NewPhysicalDiskSmart(
 		opt...,
 	)
 	if err != nil {
-	    return PhysicalDiskSmart{noop.Int64Gauge{}}, err
+		return PhysicalDiskSmart{noop.Int64Gauge{}}, err
 	}
 	return PhysicalDiskSmart{i}, nil
 }
@@ -4680,6 +4696,7 @@ func (m PhysicalDiskSmart) Record(
 func (m PhysicalDiskSmart) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4782,7 +4799,7 @@ func NewPower(
 		opt...,
 	)
 	if err != nil {
-	    return Power{noop.Int64Gauge{}}, err
+		return Power{noop.Int64Gauge{}}, err
 	}
 	return Power{i}, nil
 }
@@ -4855,6 +4872,7 @@ func (m Power) Record(
 func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -4913,7 +4931,7 @@ func NewPowerSupplyLimit(
 		opt...,
 	)
 	if err != nil {
-	    return PowerSupplyLimit{noop.Int64UpDownCounter{}}, err
+		return PowerSupplyLimit{noop.Int64UpDownCounter{}}, err
 	}
 	return PowerSupplyLimit{i}, nil
 }
@@ -5063,7 +5081,7 @@ func NewPowerSupplyUsage(
 		opt...,
 	)
 	if err != nil {
-	    return PowerSupplyUsage{noop.Int64UpDownCounter{}}, err
+		return PowerSupplyUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return PowerSupplyUsage{i}, nil
 }
@@ -5208,7 +5226,7 @@ func NewPowerSupplyUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return PowerSupplyUtilization{noop.Int64Gauge{}}, err
+		return PowerSupplyUtilization{noop.Int64Gauge{}}, err
 	}
 	return PowerSupplyUtilization{i}, nil
 }
@@ -5273,6 +5291,7 @@ func (m PowerSupplyUtilization) Record(
 func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5351,7 +5370,7 @@ func NewStatus(
 		opt...,
 	)
 	if err != nil {
-	    return Status{noop.Int64UpDownCounter{}}, err
+		return Status{noop.Int64UpDownCounter{}}, err
 	}
 	return Status{i}, nil
 }
@@ -5499,7 +5518,7 @@ func NewTapeDriveOperations(
 		opt...,
 	)
 	if err != nil {
-	    return TapeDriveOperations{noop.Int64Counter{}}, err
+		return TapeDriveOperations{noop.Int64Counter{}}, err
 	}
 	return TapeDriveOperations{i}, nil
 }
@@ -5650,7 +5669,7 @@ func NewTemperature(
 		opt...,
 	)
 	if err != nil {
-	    return Temperature{noop.Int64Gauge{}}, err
+		return Temperature{noop.Int64Gauge{}}, err
 	}
 	return Temperature{i}, nil
 }
@@ -5715,6 +5734,7 @@ func (m Temperature) Record(
 func (m Temperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5779,7 +5799,7 @@ func NewTemperatureLimit(
 		opt...,
 	)
 	if err != nil {
-	    return TemperatureLimit{noop.Int64Gauge{}}, err
+		return TemperatureLimit{noop.Int64Gauge{}}, err
 	}
 	return TemperatureLimit{i}, nil
 }
@@ -5844,6 +5864,7 @@ func (m TemperatureLimit) Record(
 func (m TemperatureLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -5914,7 +5935,7 @@ func NewVoltage(
 		opt...,
 	)
 	if err != nil {
-	    return Voltage{noop.Int64Gauge{}}, err
+		return Voltage{noop.Int64Gauge{}}, err
 	}
 	return Voltage{i}, nil
 }
@@ -5979,6 +6000,7 @@ func (m Voltage) Record(
 func (m Voltage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -6043,7 +6065,7 @@ func NewVoltageLimit(
 		opt...,
 	)
 	if err != nil {
-	    return VoltageLimit{noop.Int64Gauge{}}, err
+		return VoltageLimit{noop.Int64Gauge{}}, err
 	}
 	return VoltageLimit{i}, nil
 }
@@ -6108,6 +6130,7 @@ func (m VoltageLimit) Record(
 func (m VoltageLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -6178,7 +6201,7 @@ func NewVoltageNominal(
 		opt...,
 	)
 	if err != nil {
-	    return VoltageNominal{noop.Int64Gauge{}}, err
+		return VoltageNominal{noop.Int64Gauge{}}, err
 	}
 	return VoltageNominal{i}, nil
 }
@@ -6243,6 +6266,7 @@ func (m VoltageNominal) Record(
 func (m VoltageNominal) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

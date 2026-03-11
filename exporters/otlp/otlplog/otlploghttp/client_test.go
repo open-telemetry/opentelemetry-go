@@ -46,8 +46,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 var (
@@ -747,6 +747,16 @@ func TestConfig(t *testing.T) {
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
+	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
+		exp, err := New(t.Context(),
+			WithEndpoint("localhost:4318"),
+			WithInsecure(),
+			WithTLSClientConfig(&tls.Config{}),
+		)
+		require.ErrorIs(t, err, errInsecureEndpointWithTLS)
+		assert.Nil(t, exp)
+	})
+
 	t.Run("WithCustomUserAgent", func(t *testing.T) {
 		key := http.CanonicalHeaderKey("user-agent")
 		headers := map[string]string{key: "custom-user-agent"}
@@ -879,7 +889,8 @@ func TestClientInstrumentation(t *testing.T) {
 
 	client, coll, addr := factory(rCh)
 	t.Cleanup(func() {
-		assert.NoError(t, coll.Shutdown(t.Context()))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, coll.Shutdown(ctx))
 	})
 	assert.ErrorIs(t, client.UploadLogs(t.Context(), resourceLogs), internal.PartialSuccess{})
 

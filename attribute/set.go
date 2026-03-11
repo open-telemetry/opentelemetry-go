@@ -10,7 +10,7 @@ import (
 	"slices"
 	"sort"
 
-	"go.opentelemetry.io/otel/attribute/internal/fnv"
+	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 	// instead of a Set directly. Set has relatively poor performance when used
 	// as a map key compared to Distinct.
 	Set struct {
-		hash fnv.Hash
+		hash uint64
 		data any
 	}
 
@@ -37,7 +37,7 @@ type (
 	// Distinct should be used as a map key instead of a Set for to provide better
 	// performance for map operations.
 	Distinct struct {
-		hash fnv.Hash
+		hash uint64
 	}
 
 	// Sortable implements sort.Interface, used for sorting KeyValue.
@@ -58,7 +58,10 @@ func isComparable[T comparable](t T) T { return t }
 
 var (
 	// keyValueType is used in computeDistinctReflect.
-	keyValueType = reflect.TypeOf(KeyValue{})
+	keyValueType = reflect.TypeFor[KeyValue]()
+
+	// emptyHash is the hash of an empty set.
+	emptyHash = xxhash.New().Sum64()
 
 	// userDefinedEmptySet is an empty set. It was mistakenly exposed to users
 	// as something they can assign to, so it must remain addressable and
@@ -66,12 +69,12 @@ var (
 	//
 	// This is kept for backwards compatibility, but should not be used in new code.
 	userDefinedEmptySet = &Set{
-		hash: fnv.New(),
+		hash: emptyHash,
 		data: [0]KeyValue{},
 	}
 
 	emptySet = Set{
-		hash: fnv.New(),
+		hash: emptyHash,
 		data: [0]KeyValue{},
 	}
 )

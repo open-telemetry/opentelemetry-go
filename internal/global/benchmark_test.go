@@ -13,8 +13,8 @@ func BenchmarkStartEndSpanNoSDK(b *testing.B) {
 	ResetForTest(b)
 	t := TracerProvider().Tracer("Benchmark StartEndSpan")
 	ctx := b.Context()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, span := t.Start(ctx, "/foo")
 		span.End()
 	}

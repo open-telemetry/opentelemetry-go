@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package vcsconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "vcs" namespace.
 package vcsconv
 
@@ -171,7 +171,7 @@ func NewChangeCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeCount{noop.Int64UpDownCounter{}}, err
+		return ChangeCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ChangeCount{i}, nil
 }
@@ -303,7 +303,7 @@ func NewChangeDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeDuration{noop.Float64Gauge{}}, err
+		return ChangeDuration{noop.Float64Gauge{}}, err
 	}
 	return ChangeDuration{i}, nil
 }
@@ -382,6 +382,7 @@ func (m ChangeDuration) Record(
 func (m ChangeDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -441,7 +442,7 @@ func NewChangeTimeToApproval(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeTimeToApproval{noop.Float64Gauge{}}, err
+		return ChangeTimeToApproval{noop.Float64Gauge{}}, err
 	}
 	return ChangeTimeToApproval{i}, nil
 }
@@ -515,6 +516,7 @@ func (m ChangeTimeToApproval) Record(
 func (m ChangeTimeToApproval) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -603,7 +605,7 @@ func NewChangeTimeToMerge(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeTimeToMerge{noop.Float64Gauge{}}, err
+		return ChangeTimeToMerge{noop.Float64Gauge{}}, err
 	}
 	return ChangeTimeToMerge{i}, nil
 }
@@ -677,6 +679,7 @@ func (m ChangeTimeToMerge) Record(
 func (m ChangeTimeToMerge) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -764,7 +767,7 @@ func NewContributorCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ContributorCount{noop.Int64Gauge{}}, err
+		return ContributorCount{noop.Int64Gauge{}}, err
 	}
 	return ContributorCount{i}, nil
 }
@@ -832,6 +835,7 @@ func (m ContributorCount) Record(
 func (m ContributorCount) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -890,7 +894,7 @@ func NewRefCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefCount{noop.Int64UpDownCounter{}}, err
+		return RefCount{noop.Int64UpDownCounter{}}, err
 	}
 	return RefCount{i}, nil
 }
@@ -1023,7 +1027,7 @@ func NewRefLinesDelta(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefLinesDelta{noop.Int64Gauge{}}, err
+		return RefLinesDelta{noop.Int64Gauge{}}, err
 	}
 	return RefLinesDelta{i}, nil
 }
@@ -1132,6 +1136,7 @@ func (m RefLinesDelta) Record(
 func (m RefLinesDelta) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1199,7 +1204,7 @@ func NewRefRevisionsDelta(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefRevisionsDelta{noop.Int64Gauge{}}, err
+		return RefRevisionsDelta{noop.Int64Gauge{}}, err
 	}
 	return RefRevisionsDelta{i}, nil
 }
@@ -1303,6 +1308,7 @@ func (m RefRevisionsDelta) Record(
 func (m RefRevisionsDelta) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1370,7 +1376,7 @@ func NewRefTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefTime{noop.Float64Gauge{}}, err
+		return RefTime{noop.Float64Gauge{}}, err
 	}
 	return RefTime{i}, nil
 }
@@ -1449,6 +1455,7 @@ func (m RefTime) Record(
 func (m RefTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1507,7 +1514,7 @@ func NewRepositoryCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RepositoryCount{noop.Int64UpDownCounter{}}, err
+		return RepositoryCount{noop.Int64UpDownCounter{}}, err
 	}
 	return RepositoryCount{i}, nil
 }

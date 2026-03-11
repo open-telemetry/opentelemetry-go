@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package containerconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "container" namespace.
 package containerconv
 
@@ -104,7 +104,7 @@ func NewCPUTime(
 		opt...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64Counter{}}, err
+		return CPUTime{noop.Float64Counter{}}, err
 	}
 	return CPUTime{i}, nil
 }
@@ -220,7 +220,7 @@ func NewCPUUsage(
 		opt...,
 	)
 	if err != nil {
-	    return CPUUsage{noop.Int64Gauge{}}, err
+		return CPUUsage{noop.Int64Gauge{}}, err
 	}
 	return CPUUsage{i}, nil
 }
@@ -284,6 +284,7 @@ func (m CPUUsage) Record(
 func (m CPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -337,7 +338,7 @@ func NewDiskIO(
 		opt...,
 	)
 	if err != nil {
-	    return DiskIO{noop.Int64Counter{}}, err
+		return DiskIO{noop.Int64Counter{}}, err
 	}
 	return DiskIO{i}, nil
 }
@@ -459,7 +460,7 @@ func NewFilesystemAvailable(
 		opt...,
 	)
 	if err != nil {
-	    return FilesystemAvailable{noop.Int64UpDownCounter{}}, err
+		return FilesystemAvailable{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemAvailable{i}, nil
 }
@@ -567,7 +568,7 @@ func NewFilesystemCapacity(
 		opt...,
 	)
 	if err != nil {
-	    return FilesystemCapacity{noop.Int64UpDownCounter{}}, err
+		return FilesystemCapacity{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemCapacity{i}, nil
 }
@@ -675,7 +676,7 @@ func NewFilesystemUsage(
 		opt...,
 	)
 	if err != nil {
-	    return FilesystemUsage{noop.Int64UpDownCounter{}}, err
+		return FilesystemUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return FilesystemUsage{i}, nil
 }
@@ -787,7 +788,7 @@ func NewMemoryUsage(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64Counter{}}, err
+		return MemoryUsage{noop.Int64Counter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
@@ -883,7 +884,7 @@ func NewNetworkIO(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64Counter{}}, err
+		return NetworkIO{noop.Int64Counter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
@@ -1005,7 +1006,7 @@ func NewUptime(
 		opt...,
 	)
 	if err != nil {
-	    return Uptime{noop.Float64Gauge{}}, err
+		return Uptime{noop.Float64Gauge{}}, err
 	}
 	return Uptime{i}, nil
 }
@@ -1059,6 +1060,7 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

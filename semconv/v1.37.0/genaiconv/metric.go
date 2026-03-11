@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package genaiconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "gen_ai" namespace.
 package genaiconv
 
@@ -173,7 +173,7 @@ func NewClientOperationDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ClientOperationDuration{noop.Float64Histogram{}}, err
+		return ClientOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientOperationDuration{i}, nil
 }
@@ -242,6 +242,7 @@ func (m ClientOperationDuration) Record(
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -320,7 +321,7 @@ func NewClientTokenUsage(
 		opt...,
 	)
 	if err != nil {
-	    return ClientTokenUsage{noop.Int64Histogram{}}, err
+		return ClientTokenUsage{noop.Int64Histogram{}}, err
 	}
 	return ClientTokenUsage{i}, nil
 }
@@ -393,6 +394,7 @@ func (m ClientTokenUsage) Record(
 func (m ClientTokenUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -465,7 +467,7 @@ func NewServerRequestDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ServerRequestDuration{noop.Float64Histogram{}}, err
+		return ServerRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerRequestDuration{i}, nil
 }
@@ -534,6 +536,7 @@ func (m ServerRequestDuration) Record(
 func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -613,7 +616,7 @@ func NewServerTimePerOutputToken(
 		opt...,
 	)
 	if err != nil {
-	    return ServerTimePerOutputToken{noop.Float64Histogram{}}, err
+		return ServerTimePerOutputToken{noop.Float64Histogram{}}, err
 	}
 	return ServerTimePerOutputToken{i}, nil
 }
@@ -682,6 +685,7 @@ func (m ServerTimePerOutputToken) Record(
 func (m ServerTimePerOutputToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -753,7 +757,7 @@ func NewServerTimeToFirstToken(
 		opt...,
 	)
 	if err != nil {
-	    return ServerTimeToFirstToken{noop.Float64Histogram{}}, err
+		return ServerTimeToFirstToken{noop.Float64Histogram{}}, err
 	}
 	return ServerTimeToFirstToken{i}, nil
 }
@@ -822,6 +826,7 @@ func (m ServerTimeToFirstToken) Record(
 func (m ServerTimeToFirstToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

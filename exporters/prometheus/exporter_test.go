@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -797,6 +797,51 @@ func TestMultiScopes(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestBridgeScopeIgnored(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+		WithRegisterer(registry),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+
+	fooCounter, err := provider.Meter(bridgeScopeName, otelmetric.WithInstrumentationVersion("v0.1.0")).
+		Int64Counter(
+			"foo",
+			otelmetric.WithUnit("s"),
+			otelmetric.WithDescription("meter foo counter"))
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
+
+	file, err := os.Open("testdata/just_target_info.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, handledError, errBridgeNotSupported)
+}
+
 func TestDuplicateMetrics(t *testing.T) {
 	ab := attribute.NewSet(attribute.String("A", "B"))
 	withAB := otelmetric.WithAttributeSet(ab)
@@ -1117,12 +1162,10 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	concurrencyLevel := 10
 	for range concurrencyLevel {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, err := registry.Gather() // this calls collector.Collect
 			assert.NoError(t, err)
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -2704,11 +2747,11 @@ func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 	const numOperations = 100
 	var wg sync.WaitGroup
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
+			for j := range numOperations {
 				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.Int("goroutine", id)))
 
 				// Occasionally trigger collection
