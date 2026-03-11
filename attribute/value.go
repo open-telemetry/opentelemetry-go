@@ -4,9 +4,12 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
+	"sort"
 	"strconv"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
@@ -44,6 +47,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// MAP is a map of string keys to Values Type Value.
+	MAP
 )
 
 // BoolValue creates a BOOL Value.
@@ -113,6 +118,39 @@ func StringValue(v string) Value {
 // StringSliceValue creates a STRINGSLICE Value.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.StringSliceValue(v)}
+}
+
+// MapValue creates a MAP Value.
+//
+// A nil map is treated the same as an empty map. Both will round-trip via
+// AsMap as an empty (non-nil) map[string]Value. This is consistent with
+// how nil slices are handled by the other slice-typed constructors.
+func MapValue(v map[string]Value) Value {
+	return Value{vtype: MAP, slice: mapValue(v)}
+}
+
+// mapValue converts a map into a sorted array of KeyValue stored as any.
+func mapValue(v map[string]Value) any {
+	n := len(v)
+	if n == 0 {
+		// Return a zero-length array to maintain type information.
+		return reflect.New(reflect.ArrayOf(0, reflect.TypeFor[KeyValue]())).Elem().Interface()
+	}
+
+	keys := make([]string, 0, n)
+	for k := range v {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	entries := make([]KeyValue, n)
+	for i, k := range keys {
+		entries[i] = KeyValue{Key: Key(k), Value: v[k]}
+	}
+
+	cp := reflect.New(reflect.ArrayOf(n, reflect.TypeFor[KeyValue]())).Elem()
+	reflect.Copy(cp, reflect.ValueOf(entries))
+	return cp.Interface()
 }
 
 // Type returns a type of the Value.
@@ -196,6 +234,41 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsStringSlice(v.slice)
 }
 
+// AsMap returns the map[string]Value value. Make sure that the Value's type is
+// MAP.
+func (v Value) AsMap() map[string]Value {
+	if v.vtype != MAP {
+		return nil
+	}
+	return v.asMap()
+}
+
+func (v Value) asMap() map[string]Value {
+	entries := v.asMapKeyValues()
+	if entries == nil {
+		return nil
+	}
+	result := make(map[string]Value, len(entries))
+	for _, kv := range entries {
+		result[string(kv.Key)] = kv.Value
+	}
+	return result
+}
+
+func (v Value) asMapKeyValues() []KeyValue {
+	rv := reflect.ValueOf(v.slice)
+	if rv.Type().Kind() != reflect.Array {
+		return nil
+	}
+	n := rv.Len()
+	if n == 0 {
+		return []KeyValue{}
+	}
+	cpy := make([]KeyValue, n)
+	reflect.Copy(reflect.ValueOf(cpy), rv)
+	return cpy
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -217,8 +290,16 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case MAP:
+		return v.asMap()
 	}
 	return unknownValueType{}
+}
+
+func encodeString(s string) []byte {
+	// json.Marshal for a plain string never errors.
+	b, _ := json.Marshal(s)
+	return b
 }
 
 // Emit returns a string representation of Value's data.
@@ -252,6 +333,53 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case MAP:
+		entries := v.asMapKeyValues()
+		if len(entries) == 0 {
+			return "{}"
+		}
+
+		var b bytes.Buffer
+		_ = b.WriteByte('{') // bytes.Buffer.WriteByte never errors.
+		for i, kv := range entries {
+			if i > 0 {
+				_ = b.WriteByte(',')
+			}
+
+			// Encode the key as a quoted JSON string.
+			_, _ = b.Write(encodeString(string(kv.Key)))
+			_ = b.WriteByte(':')
+
+			// Encode the value based on its type.
+			switch kv.Value.Type() {
+			case INVALID:
+				_, _ = b.WriteString("null")
+
+			case STRING:
+				_, _ = b.Write(encodeString(kv.Value.stringly))
+
+			case FLOAT64:
+				// NaN and Inf are not valid JSON — represent them as strings
+				// to avoid silent encoding errors or panics.
+				f := kv.Value.AsFloat64()
+				switch {
+				case math.IsNaN(f):
+					_, _ = b.WriteString(`"NaN"`)
+				case math.IsInf(f, 1):
+					_, _ = b.WriteString(`"Infinity"`)
+				case math.IsInf(f, -1):
+					_, _ = b.WriteString(`"-Infinity"`)
+				default:
+					_, _ = b.WriteString(kv.Value.Emit())
+				}
+
+			default:
+				_, _ = b.WriteString(kv.Value.Emit())
+			}
+		}
+		_ = b.WriteByte('}')
+		return b.String()
+
 	default:
 		return "unknown"
 	}
