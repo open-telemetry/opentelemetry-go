@@ -557,7 +557,7 @@ func TestCumulativeLastValueFinishResetsStartTime(t *testing.T) {
 		Filter:      attrFltr,
 	}.LastValue()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	in(ctx, 1, alice, false)
 
 	var got metricdata.Aggregation = metricdata.Gauge[int64]{}

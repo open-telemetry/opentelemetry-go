@@ -289,7 +289,7 @@ func (m *limitedSyncMap) Clear() {
 func (m *limitedSyncMap) Delete(key any) bool {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
-	if _, loaded := m.Map.LoadAndDelete(key); loaded {
+	if _, loaded := m.LoadAndDelete(key); loaded {
 		m.len--
 		return true
 	}

@@ -215,6 +215,7 @@ func (s *cumulativeSum[N]) collect(
 	return i
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *cumulativeSum[N]) measure(
 	ctx context.Context,
 	value N,

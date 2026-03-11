@@ -292,6 +292,7 @@ func (s *cumulativeHistogram[N]) startFor(key attribute.Distinct) time.Time {
 	return s.start
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *cumulativeHistogram[N]) measure(
 	ctx context.Context,
 	value N,

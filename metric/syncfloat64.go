@@ -45,7 +45,7 @@ type Float64Counter interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -119,7 +119,7 @@ type Float64UpDownCounter interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -193,7 +193,7 @@ type Float64Histogram interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64HistogramConfig contains options for synchronous histogram
@@ -272,7 +272,7 @@ type Float64Gauge interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64GaugeConfig contains options for synchronous gauge instruments that

@@ -40,6 +40,10 @@ func TestConfigAttrs(t *testing.T) {
 		}
 		return NewObserveConfig(opts)
 	}))
+
+	t.Run("FinishConfig", testFinishConfAttr(func(fo ...FinishOption) attrConf {
+		return NewFinishConfig(fo)
+	}))
 }
 
 func testConfAttr(newConf func(...MeasurementOption) attrConf) func(t *testing.T) {
@@ -79,6 +83,54 @@ func testConfAttr(newConf func(...MeasurementOption) attrConf) func(t *testing.T
 		})
 
 		t.Run("MultiWithAttributeSet", func(t *testing.T) {
+			c := newConf(WithAttributes(aliceAttr), WithAttributes(bobAttr))
+			assert.Equal(t, bob, c.Attributes())
+		})
+
+		t.Run("MergedEmpty", func(t *testing.T) {
+			c := newConf(WithAttributeSet(alice), WithAttributeSet(*attribute.EmptySet()))
+			assert.Equal(t, alice, c.Attributes())
+		})
+	}
+}
+
+func testFinishConfAttr(newConf func(...FinishOption) attrConf) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Run("ZeroConfigEmpty", func(t *testing.T) {
+			c := newConf()
+			assert.Equal(t, *attribute.EmptySet(), c.Attributes())
+		})
+
+		t.Run("EmptySet", func(t *testing.T) {
+			c := newConf(WithAttributeSet(*attribute.EmptySet()))
+			assert.Equal(t, *attribute.EmptySet(), c.Attributes())
+		})
+
+		aliceAttr := attribute.String("user", "Alice")
+		alice := attribute.NewSet(aliceAttr)
+		t.Run("SingleWithAttributeSet", func(t *testing.T) {
+			c := newConf(WithAttributeSet(alice))
+			assert.Equal(t, alice, c.Attributes())
+		})
+
+		t.Run("SingleWithAttributes", func(t *testing.T) {
+			c := newConf(WithAttributes(aliceAttr))
+			assert.Equal(t, alice, c.Attributes())
+		})
+
+		bobAttr := attribute.String("user", "Bob")
+		bob := attribute.NewSet(bobAttr)
+		t.Run("MultiWithAttributeSet", func(t *testing.T) {
+			c := newConf(WithAttributeSet(alice), WithAttributeSet(bob))
+			assert.Equal(t, bob, c.Attributes())
+		})
+
+		t.Run("MergedWithAttributes", func(t *testing.T) {
+			c := newConf(WithAttributes(aliceAttr, bobAttr))
+			assert.Equal(t, bob, c.Attributes())
+		})
+
+		t.Run("MultiWithAttributes", func(t *testing.T) {
 			c := newConf(WithAttributes(aliceAttr), WithAttributes(bobAttr))
 			assert.Equal(t, bob, c.Attributes())
 		})

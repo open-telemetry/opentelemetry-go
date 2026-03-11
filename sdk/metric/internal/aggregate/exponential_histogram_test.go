@@ -1175,7 +1175,7 @@ func TestCumulativeExponentialHistogramFinishResetsStartTime(t *testing.T) {
 		Filter:      attrFltr,
 	}.ExponentialBucketHistogram(4, 20, false, false)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	in(ctx, 4, alice, false)
 
 	var got metricdata.Aggregation = metricdata.ExponentialHistogram[int64]{}

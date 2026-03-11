@@ -195,7 +195,7 @@ func (Int64Counter) Add(context.Context, int64, ...metric.AddOption) {}
 func (Int64Counter) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Int64Counter) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Int64Counter) Finish(context.Context, ...metric.FinishOption) {}
 
 // Float64Counter is an OpenTelemetry Counter used to record float64
 // measurements. It produces no telemetry.
@@ -208,7 +208,7 @@ func (Float64Counter) Add(context.Context, float64, ...metric.AddOption) {}
 func (Float64Counter) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Float64Counter) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Float64Counter) Finish(context.Context, ...metric.FinishOption) {}
 
 // Int64UpDownCounter is an OpenTelemetry UpDownCounter used to record int64
 // measurements. It produces no telemetry.
@@ -221,7 +221,7 @@ func (Int64UpDownCounter) Add(context.Context, int64, ...metric.AddOption) {}
 func (Int64UpDownCounter) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Int64UpDownCounter) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Int64UpDownCounter) Finish(context.Context, ...metric.FinishOption) {}
 
 // Float64UpDownCounter is an OpenTelemetry UpDownCounter used to record
 // float64 measurements. It produces no telemetry.
@@ -234,7 +234,7 @@ func (Float64UpDownCounter) Add(context.Context, float64, ...metric.AddOption) {
 func (Float64UpDownCounter) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Float64UpDownCounter) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Float64UpDownCounter) Finish(context.Context, ...metric.FinishOption) {}
 
 // Int64Histogram is an OpenTelemetry Histogram used to record int64
 // measurements. It produces no telemetry.
@@ -247,7 +247,7 @@ func (Int64Histogram) Record(context.Context, int64, ...metric.RecordOption) {}
 func (Int64Histogram) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Int64Histogram) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Int64Histogram) Finish(context.Context, ...metric.FinishOption) {}
 
 // Float64Histogram is an OpenTelemetry Histogram used to record float64
 // measurements. It produces no telemetry.
@@ -260,7 +260,7 @@ func (Float64Histogram) Record(context.Context, float64, ...metric.RecordOption)
 func (Float64Histogram) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Float64Histogram) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Float64Histogram) Finish(context.Context, ...metric.FinishOption) {}
 
 // Int64Gauge is an OpenTelemetry Gauge used to record instantaneous int64
 // measurements. It produces no telemetry.
@@ -273,7 +273,7 @@ func (Int64Gauge) Record(context.Context, int64, ...metric.RecordOption) {}
 func (Int64Gauge) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Int64Gauge) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Int64Gauge) Finish(context.Context, ...metric.FinishOption) {}
 
 // Float64Gauge is an OpenTelemetry Gauge used to record instantaneous float64
 // measurements. It produces no telemetry.
@@ -286,7 +286,7 @@ func (Float64Gauge) Record(context.Context, float64, ...metric.RecordOption) {}
 func (Float64Gauge) Enabled(context.Context) bool { return false }
 
 // Finish performs no operation.
-func (Float64Gauge) Finish(context.Context, ...metric.MeasurementOption) {}
+func (Float64Gauge) Finish(context.Context, ...metric.FinishOption) {}
 
 // Int64ObservableCounter is an OpenTelemetry ObservableCounter used to record
 // int64 measurements. It produces no telemetry.

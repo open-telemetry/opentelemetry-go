@@ -169,6 +169,7 @@ func (s *cumulativeLastValue[N]) startFor(key attribute.Distinct) time.Time {
 	return s.start
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *cumulativeLastValue[N]) measure(
 	ctx context.Context,
 	value N,

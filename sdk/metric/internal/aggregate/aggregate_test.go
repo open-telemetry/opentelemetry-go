@@ -162,7 +162,6 @@ func testAggergationConcurrentSafe[N int64 | float64](
 			{ctx, 3, bob, false},
 			{ctx, 6, bob, false},
 		} {
-			args := args
 			wg.Go(func() {
 				meas(args.ctx, args.value, args.attr, args.remove)
 			})

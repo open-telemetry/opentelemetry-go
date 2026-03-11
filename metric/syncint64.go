@@ -45,7 +45,7 @@ type Int64Counter interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Int64CounterConfig contains options for synchronous counter instruments that
@@ -119,7 +119,7 @@ type Int64UpDownCounter interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Int64UpDownCounterConfig contains options for synchronous counter
@@ -193,7 +193,7 @@ type Int64Histogram interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Int64HistogramConfig contains options for synchronous histogram instruments
@@ -272,7 +272,7 @@ type Int64Gauge interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Finish(ctx context.Context, options ...MeasurementOption)
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Int64GaugeConfig contains options for synchronous gauge instruments that

@@ -671,7 +671,7 @@ func TestCumulativeSumFinishResetsStartTime(t *testing.T) {
 		Filter:      attrFltr,
 	}.Sum(false)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	in(ctx, 1, alice, false)
 
 	var got metricdata.Aggregation = metricdata.Sum[int64]{}

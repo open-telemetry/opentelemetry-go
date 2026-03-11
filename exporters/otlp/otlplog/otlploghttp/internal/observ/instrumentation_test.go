@@ -292,6 +292,8 @@ type upDownCounterSpy struct {
 
 func (c upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.markCalled() }
 
+func (upDownCounterSpy) Finish(context.Context, ...mapi.FinishOption) {}
+
 type counterSpy struct {
 	embedded.Int64Counter
 	spy
@@ -299,12 +301,16 @@ type counterSpy struct {
 
 func (c counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.markCalled() }
 
+func (counterSpy) Finish(context.Context, ...mapi.FinishOption) {}
+
 type histogramSpy struct {
 	embedded.Float64Histogram
 	spy
 }
 
 func (h histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.markCalled() }
+
+func (histogramSpy) Finish(context.Context, ...mapi.FinishOption) {}
 
 func TestEndSkipsDisabledInstruments(t *testing.T) {
 	const n = 10

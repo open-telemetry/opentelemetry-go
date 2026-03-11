@@ -213,7 +213,7 @@ func (i *testCountingFloatInstrument) Record(context.Context, float64, ...metric
 	i.count++
 }
 
-func (*testCountingFloatInstrument) Finish(context.Context, ...metric.MeasurementOption) {
+func (*testCountingFloatInstrument) Finish(context.Context, ...metric.FinishOption) {
 }
 
 func (i *testCountingFloatInstrument) Add(context.Context, float64, ...metric.AddOption) {
@@ -241,7 +241,7 @@ func (i *testCountingIntInstrument) Add(context.Context, int64, ...metric.AddOpt
 	i.count++
 }
 
-func (*testCountingIntInstrument) Finish(context.Context, ...metric.MeasurementOption) {
+func (*testCountingIntInstrument) Finish(context.Context, ...metric.FinishOption) {
 }
 
 func (i *testCountingIntInstrument) observe() {

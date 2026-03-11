@@ -197,23 +197,8 @@ func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *int64Inst) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
-	var addOpts []metric.AddOption
-	var recordOpts []metric.RecordOption
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case metric.AddOption:
-			addOpts = append(addOpts, o)
-		case metric.RecordOption:
-			recordOpts = append(recordOpts, o)
-		}
-	}
-	if len(addOpts) > 0 {
-		i.remove(ctx, metric.NewAddConfig(addOpts).Attributes())
-	}
-	if len(recordOpts) > 0 {
-		i.remove(ctx, metric.NewRecordConfig(recordOpts).Attributes())
-	}
+func (i *int64Inst) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	i.remove(ctx, metric.NewFinishConfig(opts).Attributes())
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
@@ -265,23 +250,8 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 	i.aggregate(ctx, val, c.Attributes())
 }
 
-func (i *float64Inst) Finish(ctx context.Context, opts ...metric.MeasurementOption) {
-	var addOpts []metric.AddOption
-	var recordOpts []metric.RecordOption
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case metric.AddOption:
-			addOpts = append(addOpts, o)
-		case metric.RecordOption:
-			recordOpts = append(recordOpts, o)
-		}
-	}
-	if len(addOpts) > 0 {
-		i.remove(ctx, metric.NewAddConfig(addOpts).Attributes())
-	}
-	if len(recordOpts) > 0 {
-		i.remove(ctx, metric.NewRecordConfig(recordOpts).Attributes())
-	}
+func (i *float64Inst) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	i.remove(ctx, metric.NewFinishConfig(opts).Attributes())
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
