@@ -92,7 +92,7 @@ func (mr *ManualReader) aggregation(
 }
 
 // cardinalityLimit returns the cardinality limit for kind.
-func (mr *ManualReader) cardinalityLimit(kind InstrumentKind) int {
+func (mr *ManualReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 	return mr.cardinalityLimitSelector(kind)
 }
 

@@ -250,11 +250,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("counter uses counter-specific limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindCounter {
-					return 3
+					return 3, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(
@@ -283,11 +283,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("histogram uses histogram-specific limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindHistogram {
-					return 4
+					return 4, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(
@@ -316,11 +316,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("gauge uses gauge-specific limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindGauge {
-					return 5
+					return 5, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(
@@ -349,11 +349,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("up down counter uses updowncounter-specific limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindUpDownCounter {
-					return 2
+					return 2, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(
@@ -382,11 +382,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("instrument without specific limit falls back to global limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindCounter {
-					return 3
+					return 3, false
 				}
-				return 0 // fall back to global limit
+				return 0, true // fall back to global limit
 			}),
 		)
 		mp := NewMeterProvider(
@@ -428,11 +428,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("observable counter uses observable-counter-specific limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindObservableCounter {
-					return 4
+					return 4, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(
@@ -466,11 +466,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("observable gauge uses observable-gauge-specific limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindObservableGauge {
-					return 5
+					return 5, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(
@@ -504,11 +504,11 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 
 	t.Run("observable up down counter uses limit", func(t *testing.T) {
 		reader := NewManualReader(
-			WithCardinalityLimitSelector(func(kind InstrumentKind) int {
+			WithCardinalityLimitSelector(func(kind InstrumentKind) (int, bool) {
 				if kind == InstrumentKindObservableUpDownCounter {
-					return 3
+					return 3, false
 				}
-				return 0
+				return 0, true
 			}),
 		)
 		mp := NewMeterProvider(

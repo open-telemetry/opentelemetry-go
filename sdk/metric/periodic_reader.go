@@ -226,7 +226,7 @@ func (r *PeriodicReader) aggregation(
 }
 
 // cardinalityLimit returns the cardinality limit for kind.
-func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) int {
+func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 	return r.cardinalityLimitSelector(kind)
 }
 

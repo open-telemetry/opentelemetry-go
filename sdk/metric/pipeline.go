@@ -418,18 +418,20 @@ func (i *inserter[N]) cachedAggregator(
 }
 
 // getCardinalityLimit returns the cardinality limit for the given instrument kind.
-// If no limit is set for the instrument kind, the provider's global limit is used.
-// If no global limit is set, the default limit is used.
+// When the reader's selector returns fallback = true, the pipeline's global
+// limit is used, then the default if global is unset. When fallback is false,
+// the selector's limit is used (0 or less means unlimited).
 func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
-	if limit := i.pipeline.reader.cardinalityLimit(kind); limit > 0 {
-		return limit
+	limit, fallback := i.pipeline.reader.cardinalityLimit(kind)
+	if fallback {
+		// Try pipeline's global limit (from provider).
+		if i.pipeline.cardinalityLimit > 0 {
+			return i.pipeline.cardinalityLimit
+		}
+		// Fall back to default limit.
+		return defaultCardinalityLimit
 	}
-	// Fall back to pipeline's global limit (from provider).
-	if i.pipeline.cardinalityLimit > 0 {
-		return i.pipeline.cardinalityLimit
-	}
-	// Fall back to default limit.
-	return defaultCardinalityLimit
+	return limit
 }
 
 // logConflict validates if an instrument with the same case-insensitive name
