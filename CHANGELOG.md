@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 
+### Changed
+
+- Add `depguard` linter rule to enforce importing only the latest `semconv` version. (#7842)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
