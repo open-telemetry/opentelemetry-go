@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -366,7 +366,7 @@ func TestLogrFormatting(t *testing.T) {
 
 	var buf bytes.Buffer
 	l := funcr.New(func(prefix, args string) {
-		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+		_, _ = fmt.Fprint(&buf, prefix, args)
 	}, funcr.Options{})
 	exp, err := New("", WithLogr(l))
 	require.NoError(t, err)

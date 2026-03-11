@@ -103,7 +103,7 @@ func TestEmptyMeterName(t *testing.T) {
 	var buf strings.Builder
 	warnLevel := 1
 	l := funcr.New(func(prefix, args string) {
-		_, _ = buf.WriteString(fmt.Sprint(prefix, args))
+		_, _ = fmt.Fprint(&buf, prefix, args)
 	}, funcr.Options{Verbosity: warnLevel})
 	otel.SetLogger(l)
 	mp := NewMeterProvider()
