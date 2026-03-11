@@ -39,7 +39,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 		interval: envDuration(envInterval, defaultInterval),
 		timeout:  envDuration(envTimeout, defaultTimeout),
 	}
-	c.cardinalityLimitSelector = DefaultCardinalityLimitSelector
+	c.cardinalityLimitSelector = defaultCardinalityLimitSelector
 	for _, o := range options {
 		c = o.applyPeriodic(c)
 	}

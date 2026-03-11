@@ -197,7 +197,7 @@ func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 	cfg := manualReaderConfig{
 		temporalitySelector:      DefaultTemporalitySelector,
 		aggregationSelector:      DefaultAggregationSelector,
-		cardinalityLimitSelector: DefaultCardinalityLimitSelector,
+		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
 	for _, opt := range opts {
 		cfg = opt.applyManual(cfg)

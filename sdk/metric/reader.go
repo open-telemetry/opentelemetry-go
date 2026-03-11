@@ -212,11 +212,11 @@ func DefaultAggregationSelector(ik InstrumentKind) Aggregation {
 // To avoid overriding the provider's global limit, return (0, true).
 type CardinalityLimitSelector func(InstrumentKind) (limit int, fallback bool)
 
-// DefaultCardinalityLimitSelector is the default CardinalityLimitSelector used
+// defaultCardinalityLimitSelector is the default CardinalityLimitSelector used
 // if WithCardinalityLimitSelector is not provided. It returns (0, true) for all
 // instrument kinds, allowing the pipeline to fall back to the provider's global
 // limit.
-func DefaultCardinalityLimitSelector(_ InstrumentKind) (int, bool) {
+func defaultCardinalityLimitSelector(_ InstrumentKind) (int, bool) {
 	return 0, true
 }
 
@@ -252,7 +252,7 @@ func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConf
 // WithCardinalityLimitSelector sets the CardinalityLimitSelector a reader will
 // use to determine the cardinality limit for an instrument based on its kind.
 // If this option is not used, the reader will use the
-// DefaultCardinalityLimitSelector.
+// defaultCardinalityLimitSelector.
 //
 // The selector should return (limit, false) to set a positive limit,
 // (0, false) to explicitly specify unlimited, or
