@@ -17,11 +17,12 @@ func _() {
 	_ = x[INT64SLICE-6]
 	_ = x[FLOAT64SLICE-7]
 	_ = x[STRINGSLICE-8]
+	_ = x[SLICE-9]
 }
 
-const _Type_name = "INVALIDBOOLINT64FLOAT64STRINGBOOLSLICEINT64SLICEFLOAT64SLICESTRINGSLICE"
+const _Type_name = "INVALIDBOOLINT64FLOAT64STRINGBOOLSLICEINT64SLICEFLOAT64SLICESTRINGSLICESLICE"
 
-var _Type_index = [...]uint8{0, 7, 11, 16, 23, 29, 38, 48, 60, 71}
+var _Type_index = [...]uint8{0, 7, 11, 16, 23, 29, 38, 48, 60, 71, 76}
 
 func (i Type) String() string {
 	idx := int(i) - 0
