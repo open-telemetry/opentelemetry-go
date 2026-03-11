@@ -296,7 +296,7 @@ func BenchmarkStringSlice(b *testing.B) {
 		{name: "Len8", v: []string{"forty-two", "negative three", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen"}},
 	} {
 		b.Run(bench.name, func(b *testing.B) {
-			k, v := "float64 slice", bench.v
+			k, v := "string slice", bench.v
 			kv := attribute.StringSlice(k, v)
 
 			b.Run("Value", func(b *testing.B) {
