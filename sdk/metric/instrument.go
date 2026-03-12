@@ -197,6 +197,10 @@ func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption
 	i.aggregate(ctx, val, c.Attributes())
 }
 
+func (i *int64Inst) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	i.remove(ctx, metric.NewFinishConfig(opts).Attributes())
+}
+
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
@@ -212,7 +216,16 @@ func (i *int64Inst) aggregate(
 	s attribute.Set,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, s, false)
+	}
+}
+
+func (i *int64Inst) remove(
+	ctx context.Context,
+	s attribute.Set,
+) { // nolint:revive  // okay to shadow pkg with method.
+	for _, in := range i.measures {
+		in(ctx, 0, s, true)
 	}
 }
 
@@ -237,6 +250,10 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 	i.aggregate(ctx, val, c.Attributes())
 }
 
+func (i *float64Inst) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	i.remove(ctx, metric.NewFinishConfig(opts).Attributes())
+}
+
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	i.aggregate(ctx, val, c.Attributes())
@@ -248,7 +265,13 @@ func (i *float64Inst) Enabled(context.Context) bool {
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, s, false)
+	}
+}
+
+func (i *float64Inst) remove(ctx context.Context, s attribute.Set) {
+	for _, in := range i.measures {
+		in(ctx, 0, s, true)
 	}
 }
 
@@ -339,7 +362,7 @@ type measures[N int64 | float64] []aggregate.Measure[N]
 // observe records the val for the set of attrs.
 func (m measures[N]) observe(val N, s attribute.Set) {
 	for _, in := range m {
-		in(context.Background(), val, s)
+		in(context.Background(), val, s, false)
 	}
 }
 

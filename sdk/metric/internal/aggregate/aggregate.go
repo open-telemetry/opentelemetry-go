@@ -16,7 +16,7 @@ import (
 var now = time.Now
 
 // Measure receives measurements to be aggregated.
-type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
+type Measure[N int64 | float64] func(context.Context, N, attribute.Set, bool)
 
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
@@ -57,18 +57,18 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	return dropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue, remove bool)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
 		fltr := b.Filter // Copy to make it immutable after assignment.
-		return func(ctx context.Context, n N, a attribute.Set) {
+		return func(ctx context.Context, n N, a attribute.Set, remove bool) {
 			fAttr, dropped := a.Filter(fltr)
-			f(ctx, n, fAttr, dropped)
+			f(ctx, n, fAttr, dropped, remove)
 		}
 	}
-	return func(ctx context.Context, n N, a attribute.Set) {
-		f(ctx, n, a, nil)
+	return func(ctx context.Context, n N, a attribute.Set, remove bool) {
+		f(ctx, n, a, nil, remove)
 	}
 }
 
@@ -143,11 +143,14 @@ func (b Builder[N]) ExponentialBucketHistogram(
 	maxSize, maxScale int32,
 	noMinMax, noSum bool,
 ) (Measure[N], ComputeAggregation) {
-	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
+		h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
+		h.pointStart = func(attribute.Distinct) time.Time { return time.Time{} }
 		return b.filter(h.measure), h.delta
 	default:
+		h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
+		h.pointStart = h.startFor
 		return b.filter(h.measure), h.cumulative
 	}
 }

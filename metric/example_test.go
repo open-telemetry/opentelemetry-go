@@ -137,6 +137,14 @@ func ExampleMeter_upDownCounter() {
 
 	// Remove an item from the collection.
 	itemsCounter.Add(context.Background(), -1)
+
+	// Add an item to the collection with some attributes
+	itemsCounter.Add(context.Background(), 1, metric.WithAttributes(attribute.String("location", "kitchen")))
+	// Add another item to the collection with different attributes
+	itemsCounter.Add(context.Background(), 1, metric.WithAttributes(attribute.String("location", "living room")))
+
+	// Finish a counter attribute set.
+	itemsCounter.Finish(context.Background(), metric.WithAttributes(attribute.String("location", "kitchen")))
 }
 
 // Gauges can be used to record non-additive values when changes occur.

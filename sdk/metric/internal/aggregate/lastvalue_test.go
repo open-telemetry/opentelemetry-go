@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestLastValue(t *testing.T) {
@@ -50,11 +51,11 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -81,8 +82,8 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -105,11 +106,11 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -154,11 +155,13 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, carol, false},
+				{ctx, 1, carol, true},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -203,8 +206,8 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -227,11 +230,11 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -276,11 +279,11 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -307,8 +310,8 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -331,11 +334,11 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -380,11 +383,11 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -411,8 +414,8 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			expect: output{n: 0, agg: metricdata.Gauge[N]{}},
 		}, {
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -435,11 +438,11 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 			},
 		}, {
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -543,4 +546,47 @@ func testCumulativePrecomputedLastValueConcurrentSafe[N int64 | float64]() func(
 func BenchmarkLastValue(b *testing.B) {
 	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
 	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
+}
+
+func TestCumulativeLastValueFinishResetsStartTime(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, out := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		Filter:      attrFltr,
+	}.LastValue()
+
+	ctx := t.Context()
+	in(ctx, 1, alice, false)
+
+	var got metricdata.Aggregation = metricdata.Gauge[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(0),
+				Time:       y2kPlus(1),
+				Value:      1,
+			},
+		},
+	}, got)
+
+	in(ctx, 0, alice, true)
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{}, got)
+
+	in(ctx, 3, alice, false)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(3),
+				Time:       y2kPlus(4),
+				Value:      3,
+			},
+		},
+	}, got)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestSum(t *testing.T) {
@@ -62,11 +63,11 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, alice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -92,8 +93,8 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -131,11 +132,11 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -190,11 +191,11 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, alice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -220,8 +221,8 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -248,8 +249,8 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		{
 			input: []arg[N]{
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -304,11 +305,11 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -334,9 +335,9 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, fltrAlice},
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -374,11 +375,11 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -433,11 +434,11 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, -1, bob},
-				{ctx, 1, fltrAlice},
-				{ctx, 2, alice},
-				{ctx, -10, bob},
+				{ctx, 1, alice, false},
+				{ctx, -1, bob, false},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 2, alice, false},
+				{ctx, -10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -463,9 +464,9 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, fltrAlice},
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 1, fltrAlice, false},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -503,11 +504,11 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -659,4 +660,52 @@ func BenchmarkSum(b *testing.B) {
 			Temporality: metricdata.DeltaTemporality,
 		}.PrecomputedSum(false)
 	}))
+}
+
+func TestCumulativeSumFinishResetsStartTime(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, out := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		Filter:      attrFltr,
+	}.Sum(false)
+
+	ctx := t.Context()
+	in(ctx, 1, alice, false)
+
+	var got metricdata.Aggregation = metricdata.Sum[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(0),
+				Time:       y2kPlus(1),
+				Value:      1,
+			},
+		},
+	}, got)
+
+	in(ctx, 0, alice, true)
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.DataPoint[int64]{},
+	}, got)
+
+	in(ctx, 3, alice, false)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(3),
+				Time:       y2kPlus(4),
+				Value:      3,
+			},
+		},
+	}, got)
 }

@@ -15,23 +15,32 @@ type sumValue[N int64 | float64] struct {
 	n     atomicCounter[N]
 	res   FilteredExemplarReservoir[N]
 	attrs attribute.Set
+	start time.Time
 }
 
 type sumValueMap[N int64 | float64] struct {
 	values limitedSyncMap
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	start  func(attribute.Distinct) time.Time
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
+	if remove {
+		s.values.Delete(fltrAttr.Equivalent())
+		return
+	}
 	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &sumValue[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			start: s.start(attr.Equivalent()),
 		}
 	}).(*sumValue[N])
 	sv.n.add(value)
@@ -56,10 +65,12 @@ func newDeltaSum[N int64 | float64](
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
+				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
+				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 		},
 	}
@@ -74,10 +85,16 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]sumValueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+func (s *deltaSum[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+	remove bool,
+) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr, remove)
 }
 
 func (s *deltaSum[N]) collect(
@@ -127,7 +144,7 @@ func newCumulativeSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *cumulativeSum[N] {
-	return &cumulativeSum[N]{
+	s := &cumulativeSum[N]{
 		monotonic: monotonic,
 		start:     now(),
 		sumValueMap: sumValueMap[N]{
@@ -135,14 +152,27 @@ func newCumulativeSum[N int64 | float64](
 			newRes: r,
 		},
 	}
+	s.sumValueMap.start = s.startFor
+	return s
 }
 
 // deltaSum is the storage for sums which never reset.
 type cumulativeSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
+	finished  restartTimes
 
 	sumValueMap[N]
+}
+
+func (s *cumulativeSum[N]) startFor(key attribute.Distinct) time.Time {
+	if start, ok := s.finished.LoadAndDelete(key); ok {
+		if start.IsZero() {
+			return now()
+		}
+		return start
+	}
+	return s.start
 }
 
 func (s *cumulativeSum[N]) collect(
@@ -165,7 +195,7 @@ func (s *cumulativeSum[N]) collect(
 		val := value.(*sumValue[N])
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  s.start,
+			StartTime:  val.start,
 			Time:       t,
 			Value:      val.n.load(),
 		}
@@ -183,6 +213,23 @@ func (s *cumulativeSum[N]) collect(
 	*dest = sData
 
 	return i
+}
+
+// nolint:revive // internal control flag intentionally affects behavior.
+func (s *cumulativeSum[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+	remove bool,
+) {
+	if remove {
+		if s.values.Delete(fltrAttr.Equivalent()) {
+			s.finished.Store(fltrAttr.Equivalent(), time.Time{})
+		}
+		return
+	}
+	s.sumValueMap.measure(ctx, value, fltrAttr, droppedAttr, false)
 }
 
 // newPrecomputedSum returns an aggregator that summarizes a set of

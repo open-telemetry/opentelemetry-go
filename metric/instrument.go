@@ -295,6 +295,36 @@ type MeasurementOption interface {
 	ObserveOption
 }
 
+// FinishOption applies options to a synchronous instrument finish operation.
+type FinishOption interface {
+	applyFinish(FinishConfig) FinishConfig
+}
+
+// AttributeSetOption applies attribute options to measurement and finish calls.
+type AttributeSetOption interface {
+	MeasurementOption
+	FinishOption
+}
+
+// FinishConfig contains options for a finish operation.
+type FinishConfig struct {
+	attrs attribute.Set
+}
+
+// NewFinishConfig returns a new [FinishConfig] with all opts applied.
+func NewFinishConfig(opts []FinishOption) FinishConfig {
+	config := FinishConfig{attrs: *attribute.EmptySet()}
+	for _, o := range opts {
+		config = o.applyFinish(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c FinishConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
 type attrOpt struct {
 	set attribute.Set
 }
@@ -344,13 +374,24 @@ func (o attrOpt) applyObserve(c ObserveConfig) ObserveConfig {
 	return c
 }
 
+func (o attrOpt) applyFinish(c FinishConfig) FinishConfig {
+	switch {
+	case o.set.Len() == 0:
+	case c.attrs.Len() == 0:
+		c.attrs = o.set
+	default:
+		c.attrs = mergeSets(c.attrs, o.set)
+	}
+	return c
+}
+
 // WithAttributeSet sets the attribute Set associated with a measurement is
 // made with.
 //
 // If multiple WithAttributeSet or WithAttributes options are passed the
 // attributes will be merged together in the order they are passed. Attributes
 // with duplicate keys will use the last value passed.
-func WithAttributeSet(attributes attribute.Set) MeasurementOption {
+func WithAttributeSet(attributes attribute.Set) AttributeSetOption {
 	return attrOpt{set: attributes}
 }
 
@@ -369,7 +410,7 @@ func WithAttributeSet(attributes attribute.Set) MeasurementOption {
 //
 // See [WithAttributeSet] for information about how multiple WithAttributes are
 // merged.
-func WithAttributes(attributes ...attribute.KeyValue) MeasurementOption {
+func WithAttributes(attributes ...attribute.KeyValue) AttributeSetOption {
 	cp := make([]attribute.KeyValue, len(attributes))
 	copy(cp, attributes)
 	return attrOpt{set: attribute.NewSet(cp...)}

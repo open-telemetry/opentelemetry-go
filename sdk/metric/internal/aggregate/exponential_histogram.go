@@ -45,6 +45,7 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	posBuckets expoBuckets
 	negBuckets expoBuckets
 	zeroCount  uint64
+	start      time.Time
 }
 
 func newExpoHistogramDataPoint[N int64 | float64](
@@ -313,7 +314,8 @@ func newExponentialHistogram[N int64 | float64](
 		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
 		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
 
-		start: now(),
+		start:      now(),
+		pointStart: func(attribute.Distinct) time.Time { return now() },
 	}
 }
 
@@ -330,14 +332,28 @@ type expoHistogram[N int64 | float64] struct {
 	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
 	valuesMu sync.Mutex
 
-	start time.Time
+	start      time.Time
+	done       restartTimes
+	pointStart func(attribute.Distinct) time.Time
 }
 
+func (e *expoHistogram[N]) startFor(key attribute.Distinct) time.Time {
+	if start, ok := e.done.LoadAndDelete(key); ok {
+		if start.IsZero() {
+			return now()
+		}
+		return start
+	}
+	return e.start
+}
+
+// revive:disable-next-line:flag-parameter
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
@@ -346,6 +362,14 @@ func (e *expoHistogram[N]) measure(
 
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
+
+	if remove {
+		if _, ok := e.values[fltrAttr.Equivalent()]; ok {
+			delete(e.values, fltrAttr.Equivalent())
+			e.done.Store(fltrAttr.Equivalent(), time.Time{})
+		}
+		return
+	}
 
 	v, ok := e.values[fltrAttr.Equivalent()]
 	if !ok {
@@ -356,6 +380,7 @@ func (e *expoHistogram[N]) measure(
 		if !ok {
 			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 			v.res = e.newRes(fltrAttr)
+			v.start = e.pointStart(fltrAttr.Equivalent())
 
 			e.values[fltrAttr.Equivalent()] = v
 		}
@@ -446,7 +471,7 @@ func (e *expoHistogram[N]) cumulative(
 	var i int
 	for _, val := range e.values {
 		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
+		hDPts[i].StartTime = val.start
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count()
 		hDPts[i].Scale = val.scale

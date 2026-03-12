@@ -69,11 +69,11 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 10, bob},
-				{ctx, 2, alice},
-				{ctx, 2, alice},
-				{ctx, 10, bob},
+				{ctx, 2, alice, false},
+				{ctx, 10, bob, false},
+				{ctx, 2, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -88,8 +88,8 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 10, alice},
-				{ctx, 3, bob},
+				{ctx, 10, alice, false},
+				{ctx, 3, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -115,11 +115,11 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 1, alice},
-				{ctx, 1, bob},
+				{ctx, 1, alice, false},
+				{ctx, 1, bob, false},
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -156,11 +156,11 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 10, bob},
-				{ctx, 2, alice},
-				{ctx, 2, alice},
-				{ctx, 10, bob},
+				{ctx, 2, alice, false},
+				{ctx, 10, bob, false},
+				{ctx, 2, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -175,8 +175,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 10, bob},
+				{ctx, 2, alice, false},
+				{ctx, 10, bob, false},
 			},
 			expect: output{
 				n: 2,
@@ -205,8 +205,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		{
 			input: []arg[N]{
 				// These will exceed cardinality limit.
-				{ctx, 1, carol},
-				{ctx, 1, dave},
+				{ctx, 1, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 3,
@@ -341,7 +341,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	b[0] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the bounds argument should not change the bounds")
 
-	h.measure(t.Context(), 5, alice, nil)
+	h.measure(t.Context(), 5, alice, nil, false)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -352,7 +352,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 
 func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h := newCumulativeHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
-	h.measure(t.Context(), 5, alice, nil)
+	h.measure(t.Context(), 5, alice, nil, false)
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -395,7 +395,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	require.Equal(t, 0, h.collect(&data))
 	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
-	h.measure(t.Context(), 1, alice, nil)
+	h.measure(t.Context(), 1, alice, nil, false)
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1, now(), now())}
@@ -408,7 +408,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
-	h.measure(t.Context(), 1, bob, nil)
+	h.measure(t.Context(), 1, bob, nil, false)
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1, now(), now())}
 	h.collect(&data)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
@@ -435,4 +435,39 @@ func BenchmarkHistogram(b *testing.B) {
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
+}
+
+func TestCumulativeHistogramFinishResetsStartTime(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	h := newCumulativeHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
+	ctx := t.Context()
+
+	h.measure(ctx, 5, alice, nil, false)
+
+	var got metricdata.Aggregation = metricdata.Histogram[int64]{}
+	assert.Equal(t, 1, h.collect(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.HistogramDataPoint[int64]{
+			hPointSummed[int64](alice, 5, 1, y2kPlus(0), y2kPlus(1)),
+		},
+	}, got)
+
+	h.measure(ctx, 0, alice, nil, true)
+	assert.Equal(t, 0, h.collect(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.HistogramDataPoint[int64]{},
+	}, got)
+
+	h.measure(ctx, 5, alice, nil, false)
+	assert.Equal(t, 1, h.collect(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.HistogramDataPoint[int64]{
+			hPointSummed[int64](alice, 5, 1, y2kPlus(3), y2kPlus(4)),
+		},
+	}, got)
 }

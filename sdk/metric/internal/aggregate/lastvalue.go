@@ -16,24 +16,33 @@ type lastValuePoint[N int64 | float64] struct {
 	attrs attribute.Set
 	value atomicN[N]
 	res   FilteredExemplarReservoir[N]
+	start time.Time
 }
 
 // lastValueMap summarizes a set of measurements as the last one made.
 type lastValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	values limitedSyncMap
+	start  func(attribute.Distinct) time.Time
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *lastValueMap[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
+	if remove {
+		s.values.Delete(fltrAttr.Equivalent())
+		return
+	}
 	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &lastValuePoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			start: s.start(attr.Equivalent()),
 		}
 	}).(*lastValuePoint[N])
 
@@ -52,10 +61,12 @@ func newDeltaLastValue[N int64 | float64](
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
+				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
+				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 		},
 	}
@@ -75,10 +86,11 @@ func (s *deltaLastValue[N]) measure(
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr, remove)
 }
 
 func (s *deltaLastValue[N]) collect(
@@ -127,21 +139,51 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 
 // cumulativeLastValue summarizes a set of measurements as the last one made.
 type cumulativeLastValue[N int64 | float64] struct {
-	lastValueMap[N]
 	start time.Time
+	done  restartTimes
+	lastValueMap[N]
 }
 
 func newCumulativeLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *cumulativeLastValue[N] {
-	return &cumulativeLastValue[N]{
+	s := &cumulativeLastValue[N]{
+		start: now(),
 		lastValueMap: lastValueMap[N]{
 			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
 		},
-		start: now(),
 	}
+	s.lastValueMap.start = s.startFor
+	return s
+}
+
+func (s *cumulativeLastValue[N]) startFor(key attribute.Distinct) time.Time {
+	if start, ok := s.done.LoadAndDelete(key); ok {
+		if start.IsZero() {
+			return now()
+		}
+		return start
+	}
+	return s.start
+}
+
+// nolint:revive // internal control flag intentionally affects behavior.
+func (s *cumulativeLastValue[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+	remove bool,
+) {
+	if remove {
+		if s.values.Delete(fltrAttr.Equivalent()) {
+			s.done.Store(fltrAttr.Equivalent(), time.Time{})
+		}
+		return
+	}
+	s.lastValueMap.measure(ctx, value, fltrAttr, droppedAttr, false)
 }
 
 func (s *cumulativeLastValue[N]) collect(
@@ -161,7 +203,7 @@ func (s *cumulativeLastValue[N]) collect(
 		v := value.(*lastValuePoint[N])
 		newPt := metricdata.DataPoint[N]{
 			Attributes: v.attrs,
-			StartTime:  s.start,
+			StartTime:  v.start,
 			Time:       t,
 			Value:      v.value.Load(),
 		}

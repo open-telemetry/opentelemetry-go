@@ -29,6 +29,7 @@ type hotColdHistogramPoint[N int64 | float64] struct {
 
 	attrs attribute.Set
 	res   FilteredExemplarReservoir[N]
+	start time.Time
 }
 
 // histogramPointCounters contains only the atomic counter data, and is used by
@@ -69,7 +70,6 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 	if !noMinMax {
 		// Do not reset min or max because cumulative min and max only ever grow
 		// smaller or larger respectively.
-
 		if b.minMax.set.Load() {
 			into.minMax.Update(b.minMax.minimum.Load())
 			into.minMax.Update(b.minMax.maximum.Load())
@@ -102,14 +102,22 @@ type deltaHistogram[N int64 | float64] struct {
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *deltaHistogram[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
+
+	if remove {
+		s.hotColdValMap[hotIdx].Delete(fltrAttr.Equivalent())
+		return
+	}
+
 	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		hPt := &histogramPoint[N]{
 			res:   s.newRes(attr),
@@ -128,8 +136,8 @@ func (s *deltaHistogram[N]) measure(
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
-	// of s.bounds. This aligns with the histogramPoint in that the length of histogramPoint
-	// is len(s.bounds)+1, with the last bucket representing:
+	// of s.bounds. This aligns with the histogramPoint in that the length of
+	// histogramPoint is len(s.bounds)+1, with the last bucket representing:
 	// (s.bounds[len(s.bounds)-1], +∞).
 	idx := sort.SearchFloat64s(s.bounds, float64(value))
 	h.counts[idx].Add(1)
@@ -228,8 +236,8 @@ func (s *deltaHistogram[N]) collect(
 	return n
 }
 
-// cumulativeHistogram summarizes a set of measurements as an histogram with explicitly
-// defined histogramPoint.
+// cumulativeHistogram summarizes a set of measurements as a histogram with
+// explicitly defined buckets.
 //
 // cumulativeHistogram's measure is implemented without locking, even when
 // called concurrently with collect. This is done by maintaining two separate
@@ -242,11 +250,12 @@ func (s *deltaHistogram[N]) collect(
 type cumulativeHistogram[N int64 | float64] struct {
 	values limitedSyncMap
 
-	start    time.Time
 	noMinMax bool
 	noSum    bool
 	bounds   []float64
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
+	start    time.Time
+	finished restartTimes
 }
 
 // newCumulativeHistogram returns a histogram that accumulates measurements
@@ -264,25 +273,46 @@ func newCumulativeHistogram[N int64 | float64](
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
 	return &cumulativeHistogram[N]{
-		start:    now(),
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
 		values:   limitedSyncMap{aggLimit: limit},
+		start:    now(),
 	}
 }
 
+func (s *cumulativeHistogram[N]) startFor(key attribute.Distinct) time.Time {
+	if start, ok := s.finished.LoadAndDelete(key); ok {
+		if start.IsZero() {
+			return now()
+		}
+		return start
+	}
+	return s.start
+}
+
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *cumulativeHistogram[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
+	remove bool,
 ) {
+	if remove {
+		if s.values.Delete(fltrAttr.Equivalent()) {
+			s.finished.Store(fltrAttr.Equivalent(), time.Time{})
+		}
+		return
+	}
+
 	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		start := s.startFor(attr.Equivalent())
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			start: start,
 			// N+1 buckets. For example:
 			//
 			//   bounds = [0, 5, 10]
@@ -304,8 +334,8 @@ func (s *cumulativeHistogram[N]) measure(
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
-	// of s.bounds. This aligns with the histogramPoint in that the length of histogramPoint
-	// is len(s.bounds)+1, with the last bucket representing:
+	// of s.bounds. This aligns with the histogramPoint in that the length of
+	// histogramPoint is len(s.bounds)+1, with the last bucket representing:
 	// (s.bounds[len(s.bounds)-1], +∞).
 	idx := sort.SearchFloat64s(s.bounds, float64(value))
 
@@ -348,7 +378,7 @@ func (s *cumulativeHistogram[N]) collect(
 		count := val.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 		newPt := metricdata.HistogramDataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  s.start,
+			StartTime:  val.start,
 			Time:       t,
 			Count:      count,
 			Bounds:     bounds,
