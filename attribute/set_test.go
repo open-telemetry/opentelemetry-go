@@ -120,11 +120,11 @@ func TestSetDedup(t *testing.T) {
 				}
 			}
 		}
-		for _, strings := range d2s {
-			if strings[0] == s {
+		for _, strs := range d2s {
+			if strs[0] == s {
 				continue
 			}
-			for _, otherString := range strings {
+			for _, otherString := range strs {
 				require.NotEqual(t, otherString, s)
 			}
 		}
@@ -550,17 +550,18 @@ func BenchmarkNewSet(b *testing.B) {
 func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	// Generate base strings of specified lengths
 	var keyBase strings.Builder
-	valueBase := ""
 
 	// Build key base string
 	for i := range keyLen {
-		keyBase.WriteString(string(rune('a' + i%26)))
+		_, _ = keyBase.WriteString(string(rune('a' + i%26)))
 	}
 
 	// Build value base string
+	var sb strings.Builder
 	for i := range valueLen {
-		valueBase += string(rune('0' + i%10))
+		_ = sb.WriteByte(byte('0' + i%10))
 	}
+	valueBase := sb.String()
 
 	// Create 5 attributes with different suffixes to ensure uniqueness
 	attrs := []attribute.KeyValue{
