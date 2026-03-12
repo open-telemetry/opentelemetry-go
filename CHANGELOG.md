@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Introduce the `EMPTY` Type in `go.opentelemetry.io/otel/attribute` to reflect that an empty value is now a valid value, with `INVALID` remaining as a deprecated alias of `EMPTY`. (#8038)
+- Refactor slice handling in `go.opentelemetry.io/otel/attribute` to optimize short slice values with fixed-size fast paths. (#8039)
 
 ### Deprecated
 
@@ -26,10 +27,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Return spec-compliant `TraceIdRatioBased` description. This is a breaking behavioral change, but it is necessary to
   make the implementation [spec-compliant](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8027)
-
-### Changed
-
-- Refactor slice handling in `go.opentelemetry.io/otel/attribute` to optimize short slice values with fixed-size fast paths. (#8039)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
