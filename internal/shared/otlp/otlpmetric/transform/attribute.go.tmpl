@@ -81,6 +81,10 @@ func Value(v attribute.Value) *cpb.AnyValue {
 		av.Value = &cpb.AnyValue_StringValue{
 			StringValue: v.AsString(),
 		}
+	case attribute.BYTES:
+		av.Value = &cpb.AnyValue_BytesValue{
+			BytesValue: v.AsBytes(),
+		}
 	case attribute.STRINGSLICE:
 		av.Value = &cpb.AnyValue_ArrayValue{
 			ArrayValue: &cpb.ArrayValue{

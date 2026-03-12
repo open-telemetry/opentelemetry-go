@@ -21,19 +21,11 @@ var (
 	logAttrInt64   = log.Int64("int64", 1)
 	logAttrFloat64 = log.Float64("float64", 1)
 	logAttrString  = log.String("string", "o")
-	logAttrBytes   = log.Bytes("bytes", []byte("test"))
+	logAttrBytes   = log.Bytes("bytes", []byte("bytes"))
 	logAttrSlice   = log.Slice("slice", log.BoolValue(true))
 	logAttrMap     = log.Map("map", logAttrString)
 	logAttrEmpty   = log.Empty("")
 
-	kvBytes = &cpb.KeyValue{
-		Key: "bytes",
-		Value: &cpb.AnyValue{
-			Value: &cpb.AnyValue_BytesValue{
-				BytesValue: []byte("test"),
-			},
-		},
-	}
 	kvSlice = &cpb.KeyValue{
 		Key: "slice",
 		Value: &cpb.AnyValue{
