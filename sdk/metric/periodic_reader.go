@@ -36,10 +36,10 @@ type periodicReaderConfig struct {
 // options.
 func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfig {
 	c := periodicReaderConfig{
-		interval: envDuration(envInterval, defaultInterval),
-		timeout:  envDuration(envTimeout, defaultTimeout),
+		interval:                 envDuration(envInterval, defaultInterval),
+		timeout:                  envDuration(envTimeout, defaultTimeout),
+		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
-	c.cardinalityLimitSelector = defaultCardinalityLimitSelector
 	for _, o := range options {
 		c = o.applyPeriodic(c)
 	}

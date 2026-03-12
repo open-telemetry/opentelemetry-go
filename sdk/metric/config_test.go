@@ -20,14 +20,14 @@ import (
 )
 
 type reader struct {
-	producer             sdkProducer
-	externalProducers    []Producer
-	temporalityFunc      TemporalitySelector
-	aggregationFunc      AggregationSelector
+	producer                 sdkProducer
+	externalProducers        []Producer
+	temporalityFunc          TemporalitySelector
+	aggregationFunc          AggregationSelector
 	cardinalityLimitSelector CardinalityLimitSelector
-	collectFunc          func(context.Context, *metricdata.ResourceMetrics) error
-	forceFlushFunc       func(context.Context) error
-	shutdownFunc         func(context.Context) error
+	collectFunc              func(context.Context, *metricdata.ResourceMetrics) error
+	forceFlushFunc           func(context.Context) error
+	shutdownFunc             func(context.Context) error
 }
 
 const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
@@ -47,8 +47,8 @@ func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 }
 
 func (r *reader) cardinalityLimit(kind InstrumentKind) (int, bool) {
-	if r.cardinalityLimitFunc != nil {
-		return r.cardinalityLimitFunc(kind)
+	if r.cardinalityLimitSelector != nil {
+		return r.cardinalityLimitSelector(kind)
 	}
 	return 0, true
 }
