@@ -202,7 +202,7 @@ func testAggregationConcurrentSafe[N int64 | float64](
 
 		// Run computation concurrently with measurements to stress hot/cold swaps
 		wg.Go(func() {
-			for range 10 {
+			for range concurrentNumRecords {
 				got := new(metricdata.Aggregation)
 				comp(got)
 				results = append(results, *got)
