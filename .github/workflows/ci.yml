@@ -37,13 +37,18 @@ jobs:
           path: .tools
           key: ${{ runner.os }}-${{ env.DEFAULT_GO_VERSION }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       # The step below is needed to not rebuild all the build tools.
-      - name: Set internal/tools/go.mod timestamp
+      - name: Set internal/tools timestamps
         run: |
-          filename="internal/tools/go.mod"
-          unixtime=$(git log -1 --format="%at" -- "${filename}")
-          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
-          touch -t ${touchtime} "${filename}"
-          ls -la --time-style=full-iso "${filename}"
+          git ls-files \
+            internal/tools/go.mod \
+            internal/tools/semconvkit \
+            internal/tools/verifyreadmes \
+          | while IFS= read -r filename; do
+              unixtime=$(git log -1 --format="%at" -- "${filename}")
+              touchtime=$(date -d @"${unixtime}" +'%Y%m%d%H%M.%S')
+              touch -t "${touchtime}" "${filename}"
+              ls -la --time-style=full-iso "${filename}"
+            done
       - name: Generate
         run: make generate
       - name: Run linters
@@ -74,13 +79,18 @@ jobs:
           path: .tools
           key: ${{ runner.os }}-${{ env.DEFAULT_GO_VERSION }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       # The step below is needed to not rebuild all the build tools.
-      - name: Set internal/tools/go.mod timestamp
+      - name: Set internal/tools timestamps
         run: |
-          filename="internal/tools/go.mod"
-          unixtime=$(git log -1 --format="%at" -- "${filename}")
-          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
-          touch -t ${touchtime} "${filename}"
-          ls -la --time-style=full-iso "${filename}"
+          git ls-files \
+            internal/tools/go.mod \
+            internal/tools/semconvkit \
+            internal/tools/verifyreadmes \
+          | while IFS= read -r filename; do
+              unixtime=$(git log -1 --format="%at" -- "${filename}")
+              touchtime=$(date -d @"${unixtime}" +'%Y%m%d%H%M.%S')
+              touch -t "${touchtime}" "${filename}"
+              ls -la --time-style=full-iso "${filename}"
+            done
       - name: Run govulncheck
         run: make govulncheck
 
@@ -154,7 +164,7 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: coverage-artifacts-${{ env.DEFAULT_GO_VERSION }}
       - name: Upload coverage report
