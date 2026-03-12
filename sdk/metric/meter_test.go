@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -2865,6 +2866,12 @@ func TestFinishResetsCumulativeStartTime(t *testing.T) {
 	ctr.Finish(ctx, opt)
 	require.NoError(t, rdr.Collect(ctx, &rm))
 	require.Empty(t, points(rm))
+
+	deadline := time.Now().Add(2 * time.Second)
+	for !time.Now().After(firstStart) {
+		require.True(t, time.Now().Before(deadline), "wall clock did not advance past first start time")
+		time.Sleep(time.Millisecond)
+	}
 
 	ctr.Add(ctx, 2, opt)
 	require.NoError(t, rdr.Collect(ctx, &rm))
