@@ -6,6 +6,7 @@ package attribute_test
 import (
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -119,11 +120,11 @@ func TestSetDedup(t *testing.T) {
 				}
 			}
 		}
-		for _, strings := range d2s {
-			if strings[0] == s {
+		for _, strs := range d2s {
+			if strs[0] == s {
 				continue
 			}
-			for _, otherString := range strings {
+			for _, otherString := range strs {
 				require.NotEqual(t, otherString, s)
 			}
 		}
@@ -548,26 +549,27 @@ func BenchmarkNewSet(b *testing.B) {
 // generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths.
 func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	// Generate base strings of specified lengths
-	keyBase := ""
-	valueBase := ""
+	var keyBase strings.Builder
 
 	// Build key base string
 	for i := range keyLen {
-		keyBase += string(rune('a' + i%26))
+		_, _ = keyBase.WriteString(string(rune('a' + i%26)))
 	}
 
 	// Build value base string
+	var sb strings.Builder
 	for i := range valueLen {
-		valueBase += string(rune('0' + i%10))
+		_ = sb.WriteByte(byte('0' + i%10))
 	}
+	valueBase := sb.String()
 
 	// Create 5 attributes with different suffixes to ensure uniqueness
 	attrs := []attribute.KeyValue{
-		attribute.String(keyBase+"1", valueBase+"x"),
-		attribute.String(keyBase+"2", valueBase+"y"),
-		attribute.String(keyBase+"3", valueBase+"z"),
-		attribute.String(keyBase+"4", valueBase+"w"),
-		attribute.String(keyBase+"5", valueBase+"v"),
+		attribute.String(keyBase.String()+"1", valueBase+"x"),
+		attribute.String(keyBase.String()+"2", valueBase+"y"),
+		attribute.String(keyBase.String()+"3", valueBase+"z"),
+		attribute.String(keyBase.String()+"4", valueBase+"w"),
+		attribute.String(keyBase.String()+"5", valueBase+"v"),
 	}
 	return attrs
 }
