@@ -17,6 +17,8 @@ import (
 type Type int // nolint: revive  // redefines builtin Type.
 
 // Value represents the value part in key-value pairs.
+//
+// Note that the zero value is a valid empty value.
 type Value struct {
 	vtype    Type
 	numeric  uint64
@@ -25,8 +27,8 @@ type Value struct {
 }
 
 const (
-	// INVALID is used for a Value with no value set.
-	INVALID Type = iota
+	// EMPTY is used for a Value with no value set.
+	EMPTY Type = iota
 	// BOOL is a boolean Type Value.
 	BOOL
 	// INT64 is a 64-bit signed integral Type Value.
@@ -43,6 +45,10 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// INVALID is used for a Value with no value set.
+	//
+	// Deprecated: Use EMPTY instead as an empty value is a valid value.
+	INVALID = EMPTY
 )
 
 // BoolValue creates a BOOL Value.
@@ -230,6 +236,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case EMPTY:
+		return nil
 	}
 	return unknownValueType{}
 }
@@ -265,6 +273,8 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case EMPTY:
+		return ""
 	default:
 		return "unknown"
 	}
