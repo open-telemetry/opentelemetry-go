@@ -94,11 +94,11 @@ func TestKeyValueValid(t *testing.T) {
 			kv:    attribute.Key("").Bool(true),
 		},
 		{
-			desc:  "INVALID value type should be invalid",
-			valid: false,
+			desc:  "EMPTY value type should be valid",
+			valid: true,
 			kv: attribute.KeyValue{
 				Key: attribute.Key("valid key"),
-				// Default type is INVALID.
+				// Default type is EMPTY.
 				Value: attribute.Value{},
 			},
 		},
@@ -168,6 +168,8 @@ func TestIncorrectCast(t *testing.T) {
 		{
 			name: "Bytes",
 			val:  attribute.BytesValue([]byte{123}),
+			name: "Empty",
+			val:  attribute.Value{},
 		},
 	}
 	for _, tt := range testCases {

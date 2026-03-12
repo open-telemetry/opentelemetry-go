@@ -28,6 +28,7 @@ func TestAttributes(t *testing.T) {
 				attribute.String("string to string", "string"),
 				attribute.Bool("bool to bool", true),
 				attribute.Bytes("bytes to bytes", []byte("bytes")),
+				{Key: "empty to empty"},
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -77,6 +78,8 @@ func TestAttributes(t *testing.T) {
 							BytesValue: []byte("bytes"),
 						},
 					},
+					Key:   "empty to empty",
+					Value: &commonpb.AnyValue{},
 				},
 			},
 		},
@@ -111,18 +114,14 @@ func TestArrayAttributes(t *testing.T) {
 		{
 			[]attribute.KeyValue{
 				{
-					Key:   attribute.Key("invalid"),
+					Key:   attribute.Key("empty"),
 					Value: attribute.Value{},
 				},
 			},
 			[]*commonpb.KeyValue{
 				{
-					Key: "invalid",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_StringValue{
-							StringValue: "INVALID",
-						},
-					},
+					Key:   "empty",
+					Value: &commonpb.AnyValue{},
 				},
 			},
 		},

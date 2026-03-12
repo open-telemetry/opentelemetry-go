@@ -29,6 +29,8 @@ var (
 	attrBytes  = attribute.Bytes("bytes", []byte("bytes"))
 	attrInvalid      = attribute.KeyValue{
 		Key:   attribute.Key("invalid"),
+	attrEmpty        = attribute.KeyValue{
+		Key:   attribute.Key("empty"),
 		Value: attribute.Value{},
 	}
 
@@ -79,6 +81,7 @@ var (
 			Value: &cpb.AnyValue_StringValue{StringValue: "INVALID"},
 		},
 	}
+	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
 
 type attributeTest struct {
@@ -92,9 +95,9 @@ func TestAttributeTransforms(t *testing.T) {
 		{"nil", nil, nil},
 		{"empty", []attribute.KeyValue{}, nil},
 		{
-			"invalid",
-			[]attribute.KeyValue{attrInvalid},
-			[]*cpb.KeyValue{kvInvalid},
+			"empty",
+			[]attribute.KeyValue{attrEmpty},
+			[]*cpb.KeyValue{kvEmpty},
 		},
 		{
 			"bool",
@@ -166,6 +169,7 @@ func TestAttributeTransforms(t *testing.T) {
 				attrStringSlice,
         attrBytes,
 				attrInvalid,
+				attrEmpty,
 			},
 			[]*cpb.KeyValue{
 				kvBool,
@@ -180,6 +184,7 @@ func TestAttributeTransforms(t *testing.T) {
 				kvStringSlice,
         kvBytes,
 				kvInvalid,
+				kvEmpty,
 			},
 		},
 	} {

@@ -28,6 +28,7 @@ const (
 	float64SliceID uint64 = 7308324551835016539 // "[]double" (little endian)
 	stringSliceID  uint64 = 7453010373645655387 // "[]string" (little endian)
 	bytesID        uint64 = 6874028470941080415 // "_[]byte_" (little endian)
+	emptyID        uint64 = 7305809155345288421 // "__empty_" (little endian)
 )
 
 // hashKVs returns a new xxHash64 hash of kvs.
@@ -85,6 +86,8 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		h = h.Uint64(bytesID)
 		h = h.Bytes(kv.Value.asBytes())
 	case INVALID:
+	case EMPTY:
+		h = h.Uint64(emptyID)
 	default:
 		// Logging is an alternative, but using the internal logger here
 		// causes an import cycle so it is not done.

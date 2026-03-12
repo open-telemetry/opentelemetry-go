@@ -98,44 +98,32 @@ func TestWithAttributesConcurrentSafe(*testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		opt := []AddOption{WithAttributes(attrs...)}
 		_ = NewAddConfig(opt)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		opt := []AddOption{WithAttributes(attrs...)}
 		_ = NewAddConfig(opt)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		opt := []RecordOption{WithAttributes(attrs...)}
 		_ = NewRecordConfig(opt)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		opt := []RecordOption{WithAttributes(attrs...)}
 		_ = NewRecordConfig(opt)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		opt := []ObserveOption{WithAttributes(attrs...)}
 		_ = NewObserveConfig(opt)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		opt := []ObserveOption{WithAttributes(attrs...)}
 		_ = NewObserveConfig(opt)
-	}()
+	})
 
 	wg.Wait()
 }

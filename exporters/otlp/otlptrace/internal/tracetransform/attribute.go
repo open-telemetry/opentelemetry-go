@@ -97,6 +97,7 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 		av.Value = &commonpb.AnyValue_BytesValue{
 			BytesValue: v.AsBytes(),
 		}
+	case attribute.EMPTY:
 	default:
 		av.Value = &commonpb.AnyValue_StringValue{
 			StringValue: "INVALID",

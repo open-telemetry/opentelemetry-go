@@ -91,14 +91,15 @@ func TestValue(t *testing.T) {
 			value:     k.Bytes([]byte("hello world")).Value,
 			wantType:  attribute.BYTES,
 			wantValue: []byte("hello world"),
+			name:      "empty value",
+			value:     attribute.Value{},
+			wantType:  attribute.EMPTY,
+			wantValue: nil,
 		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
 			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		if testcase.wantType == attribute.INVALID {
-			continue
 		}
 		got := testcase.value.AsInterface()
 		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
@@ -152,6 +153,8 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.Bytes("Bytes", []byte("one")),
 			attribute.Bytes("Bytes", []byte("one")),
+			attribute.KeyValue{Key: "Empty"},
+			attribute.KeyValue{Key: "Empty"},
 		},
 	}
 
@@ -160,7 +163,6 @@ func TestEquivalence(t *testing.T) {
 			s0, s1 := attribute.NewSet(p[0]), attribute.NewSet(p[1])
 			m := map[attribute.Distinct]struct{}{s0.Equivalent(): {}}
 			_, ok := m[s1.Equivalent()]
-			assert.Truef(t, ok, "Distinct comparison of %s type: not equivalent", p[0].Value.Type())
 			assert.Truef(
 				t,
 				ok,
@@ -169,6 +171,15 @@ func TestEquivalence(t *testing.T) {
 				s0.Encoded(attribute.DefaultEncoder()),
 				s1.Encoded(attribute.DefaultEncoder()),
 			)
+		}
+	})
+
+	t.Run("Equality operator", func(t *testing.T) {
+		// Maintain backwards compatibility.
+		for _, p := range pairs {
+			if p[0] != p[1] {
+				t.Errorf("Expected %v to be equal to %v", p[0], p[1])
+			}
 		}
 	})
 
@@ -239,6 +250,10 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two"}),
+		},
+		{
+			attribute.KeyValue{Key: "Empty"},
+			attribute.String("Empty", ""),
 		},
 	}
 

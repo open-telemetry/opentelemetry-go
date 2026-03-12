@@ -4,6 +4,7 @@
 package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 func BenchmarkLoggerEmit(b *testing.B) {
@@ -117,6 +119,33 @@ func BenchmarkLoggerEnabled(b *testing.B) {
 	}
 
 	_ = enabled
+}
+
+func BenchmarkLoggerSetErrAndEmit(b *testing.B) {
+	logger := newTestLogger(b)
+	err := errors.New("boom")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.SetErr(err)
+		logger.Emit(b.Context(), r)
+	}
+}
+
+func BenchmarkLoggerSetExceptionAttributesAndEmit(b *testing.B) {
+	logger := newTestLogger(b)
+	err := errors.New("boom")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), err.Error()))
+		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), errorType(err)))
+		logger.Emit(b.Context(), r)
+	}
 }
 
 func newTestLogger(t testing.TB) log.Logger {
