@@ -232,6 +232,12 @@ func Empty() *Resource {
 // Default returns an instance of Resource with a default
 // "service.name" and OpenTelemetrySDK attributes.
 func Default() *Resource {
+	return DefaultWithContext(context.Background())
+}
+
+// DefaultWithContext returns an instance of Resource with a default
+// "service.name" and OpenTelemetrySDK attributes.
+func DefaultWithContext(ctx context.Context) *Resource {
 	defaultResourceOnce.Do(func() {
 		var err error
 		defaultDetectors := []Detector{
@@ -243,7 +249,7 @@ func Default() *Resource {
 			defaultDetectors = append([]Detector{defaultServiceInstanceIDDetector{}}, defaultDetectors...)
 		}
 		defaultResource, err = Detect(
-			context.Background(),
+			ctx,
 			defaultDetectors...,
 		)
 		if err != nil {
@@ -260,8 +266,14 @@ func Default() *Resource {
 // Environment returns an instance of Resource with attributes
 // extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
 func Environment() *Resource {
+	return EnvironmentWithContext(context.Background())
+}
+
+// EnvironmentWithContext returns an instance of Resource with attributes
+// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
+func EnvironmentWithContext(ctx context.Context) *Resource {
 	detector := &fromEnv{}
-	resource, err := detector.Detect(context.Background())
+	resource, err := detector.Detect(ctx)
 	if err != nil {
 		otel.Handle(err)
 	}
