@@ -24,7 +24,7 @@ type reader struct {
 	externalProducers    []Producer
 	temporalityFunc      TemporalitySelector
 	aggregationFunc      AggregationSelector
-	cardinalityLimitFunc func(InstrumentKind) (int, bool)
+	cardinalityLimitSelector CardinalityLimitSelector
 	collectFunc          func(context.Context, *metricdata.ResourceMetrics) error
 	forceFlushFunc       func(context.Context) error
 	shutdownFunc         func(context.Context) error
