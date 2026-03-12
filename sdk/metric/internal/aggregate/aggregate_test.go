@@ -178,7 +178,7 @@ func testAggregationConcurrentSafe[N int64 | float64](
 
 		// Use 10 different attribute sets to force overflow on the AggregationLimit
 		// which is typically set to 3.
-		attrs := make([]attribute.Set, 10)
+		attrs := make([]attribute.Set, concurrentNumGoroutines)
 		for i := range attrs {
 			attrs[i] = attribute.NewSet(attribute.String(keyUser, strconv.Itoa(i)))
 		}
