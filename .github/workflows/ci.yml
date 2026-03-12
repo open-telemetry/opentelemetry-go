@@ -37,13 +37,18 @@ jobs:
           path: .tools
           key: ${{ runner.os }}-${{ env.DEFAULT_GO_VERSION }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       # The step below is needed to not rebuild all the build tools.
-      - name: Set internal/tools/go.mod timestamp
+      - name: Set internal/tools timestamps
         run: |
-          filename="internal/tools/go.mod"
-          unixtime=$(git log -1 --format="%at" -- "${filename}")
-          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
-          touch -t ${touchtime} "${filename}"
-          ls -la --time-style=full-iso "${filename}"
+          git ls-files \
+            internal/tools/go.mod \
+            internal/tools/semconvkit \
+            internal/tools/verifyreadmes \
+          | while IFS= read -r filename; do
+              unixtime=$(git log -1 --format="%at" -- "${filename}")
+              touchtime=$(date -d @"${unixtime}" +'%Y%m%d%H%M.%S')
+              touch -t "${touchtime}" "${filename}"
+              ls -la --time-style=full-iso "${filename}"
+            done
       - name: Generate
         run: make generate
       - name: Run linters
@@ -74,13 +79,18 @@ jobs:
           path: .tools
           key: ${{ runner.os }}-${{ env.DEFAULT_GO_VERSION }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
       # The step below is needed to not rebuild all the build tools.
-      - name: Set internal/tools/go.mod timestamp
+      - name: Set internal/tools timestamps
         run: |
-          filename="internal/tools/go.mod"
-          unixtime=$(git log -1 --format="%at" -- "${filename}")
-          touchtime=$(date -d @$unixtime +'%Y%m%d%H%M.%S')
-          touch -t ${touchtime} "${filename}"
-          ls -la --time-style=full-iso "${filename}"
+          git ls-files \
+            internal/tools/go.mod \
+            internal/tools/semconvkit \
+            internal/tools/verifyreadmes \
+          | while IFS= read -r filename; do
+              unixtime=$(git log -1 --format="%at" -- "${filename}")
+              touchtime=$(date -d @"${unixtime}" +'%Y%m%d%H%M.%S')
+              touch -t "${touchtime}" "${filename}"
+              ls -la --time-style=full-iso "${filename}"
+            done
       - name: Run govulncheck
         run: make govulncheck
 
