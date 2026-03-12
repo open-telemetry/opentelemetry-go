@@ -140,6 +140,8 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 }
 
 func getConcurrentVals[N int64 | float64]() []N {
+	// Keep length of v in sync with concurrentNumRecords
+	// and expectedConcurrentSum.
 	switch any(*new(N)).(type) {
 	case float64:
 		v := []float64{2.5, 6.1, 4.4, 10.0, 22.0, -3.5, -6.5, 3.0, -6.0}
