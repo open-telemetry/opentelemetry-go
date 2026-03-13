@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       # Bare metal uses Ubuntu 24.04, which does not have `make` and `build-essential`
-      - name: Install make
+      - name: Install make and build-essential
         run: sudo apt-get update && sudo apt-get install -y make build-essential
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
