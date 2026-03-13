@@ -306,3 +306,13 @@ func TestAlwaysRecordDefaultDescription(t *testing.T) {
 		)
 	}
 }
+
+func TestDescriptions(t *testing.T) {
+	assert.Equal(t, "AlwaysOnSampler", AlwaysSample().Description())
+	assert.Equal(t, "AlwaysOffSampler", NeverSample().Description())
+	assert.Equal(t, "TraceIDRatioBased{0.5}", TraceIDRatioBased(0.5).Description())
+	assert.Equal(t, "TraceIDRatioBased{1}", TraceIDRatioBased(1).Description())
+	assert.Equal(t, "TraceIDRatioBased{1}", TraceIDRatioBased(1.5).Description())
+	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(0).Description())
+	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(-0.5).Description())
+}
