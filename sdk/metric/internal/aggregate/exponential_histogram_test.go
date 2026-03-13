@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -1052,7 +1053,7 @@ func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExponentialBucketHistogram(4, 20, false, false)
-	return testAggergationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+	return testAggregationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
 }
 
 func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
@@ -1061,45 +1062,69 @@ func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExponentialBucketHistogram(4, 20, false, false)
-	return testAggergationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+	return testAggregationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
 }
 
-func validateExponentialHistogram[N int64 | float64](t *testing.T, got metricdata.Aggregation) {
-	s, ok := got.(metricdata.ExponentialHistogram[N])
-	if !ok {
-		t.Fatalf("wrong aggregation type: %+v", got)
+func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metricdata.Aggregation) {
+	sums := make(map[attribute.Set]N)
+	counts := make(map[attribute.Set]uint64)
+	var isDelta bool
+	for i, agg := range aggs {
+		s, ok := agg.(metricdata.ExponentialHistogram[N])
+		require.True(t, ok)
+		if s.Temporality == metricdata.DeltaTemporality {
+			isDelta = true
+		}
+		require.LessOrEqual(t, len(s.DataPoints), 3, "AggregationLimit of 3 exceeded in a single cycle")
+		for _, dp := range s.DataPoints {
+			assert.False(t,
+				dp.Time.Before(dp.StartTime),
+				"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+			)
+
+			if s.Temporality == metricdata.DeltaTemporality {
+				sums[dp.Attributes] += dp.Sum
+				counts[dp.Attributes] += dp.Count
+			} else if i == len(aggs)-1 {
+				sums[dp.Attributes] = dp.Sum
+				counts[dp.Attributes] = dp.Count
+			}
+
+			var totalCount uint64
+			for _, bc := range dp.PositiveBucket.Counts {
+				totalCount += bc
+			}
+			for _, bc := range dp.NegativeBucket.Counts {
+				totalCount += bc
+			}
+			assert.Equal(t, totalCount, dp.Count)
+		}
 	}
-	for _, dp := range s.DataPoints {
-		assert.False(t,
-			dp.Time.Before(dp.StartTime),
-			"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
-		)
-		switch dp.Attributes {
-		case fltrAlice:
-			// alice observations are always a multiple of 2
-			assert.Equal(t, int64(0), int64(dp.Sum)%2)
-		case fltrBob:
-			// bob observations are always a multiple of 3
-			assert.Equal(t, int64(0), int64(dp.Sum)%3)
-		default:
-			t.Fatalf("wrong attributes %+v", dp.Attributes)
+
+	var totalSum N
+	var totalCount uint64
+	for attr, sum := range sums {
+		totalSum += sum
+		count := counts[attr]
+		totalCount += count
+
+		expectedSingleSum := expectedConcurrentSum[N]() / N(concurrentNumGoroutines)
+		expectedSingleCount := expectedConcurrentCount / uint64(concurrentNumGoroutines)
+
+		if !isDelta {
+			if attr == overflowSet {
+				// The overflow set contains all the goroutines that didn't make the limit of 3
+				assert.Equal(t, uint64(0), count%expectedSingleCount)
+				assert.Equal(t, count/expectedSingleCount*uint64(expectedSingleSum), uint64(sum))
+			} else {
+				// Individual attributes should have exactly one goroutine's worth of data
+				assert.Equal(t, expectedSingleSum, sum)
+				assert.Equal(t, expectedSingleCount, count)
+			}
 		}
-		avg := float64(dp.Sum) / float64(dp.Count)
-		if minVal, ok := dp.Min.Value(); ok {
-			assert.GreaterOrEqual(t, avg, float64(minVal))
-		}
-		if maxVal, ok := dp.Max.Value(); ok {
-			assert.LessOrEqual(t, avg, float64(maxVal))
-		}
-		var totalCount uint64
-		for _, bc := range dp.PositiveBucket.Counts {
-			totalCount += bc
-		}
-		for _, bc := range dp.NegativeBucket.Counts {
-			totalCount += bc
-		}
-		assert.Equal(t, totalCount, dp.Count)
 	}
+	assertSumEqual[N](t, expectedConcurrentSum[N](), totalSum)
+	assert.Equal(t, expectedConcurrentCount, totalCount)
 }
 
 func FuzzGetBin(f *testing.F) {
