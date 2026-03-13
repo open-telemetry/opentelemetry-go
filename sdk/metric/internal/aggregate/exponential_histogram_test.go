@@ -140,7 +140,7 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 
 			assert.Equal(t, tt.expectedBuckets, dp.posBuckets, "positive buckets")
 			assert.Equal(t, tt.expectedBuckets, dp.negBuckets, "negative buckets")
-			assert.Equal(t, tt.expectedScale, dp.scale, "scale")
+			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
 		})
 	}
 }
@@ -180,9 +180,9 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			}
 			dp := h.values[alice.Equivalent()]
 
-			assert.Equal(t, tt.expected.max, dp.max)
-			assert.Equal(t, tt.expected.min, dp.min)
-			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
+			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
+			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
+			assert.InDelta(t, tt.expected.sum, dp.sum.load(), 0.01)
 		})
 	}
 }
@@ -222,9 +222,9 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			}
 			dp := h.values[alice.Equivalent()]
 
-			assert.Equal(t, tt.expected.max, dp.max)
-			assert.Equal(t, tt.expected.min, dp.min)
-			assert.InDelta(t, tt.expected.sum, dp.sum, 0.01)
+			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
+			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
+			assert.InDelta(t, tt.expected.sum, dp.sum.load(), 0.01)
 		})
 	}
 }
@@ -315,7 +315,7 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 
 			assert.Equal(t, tt.expectedBuckets, dp.posBuckets)
 			assert.Equal(t, tt.expectedBuckets, dp.negBuckets)
-			assert.Equal(t, tt.expectedScale, dp.scale)
+			assert.Equal(t, tt.expectedScale, dp.scale.Load())
 		})
 	}
 }
@@ -708,15 +708,13 @@ func TestSubNormal(t *testing.T) {
 	want := &expoHistogramDataPoint[float64]{
 		attrs:   alice,
 		maxSize: 4,
-		min:     math.SmallestNonzeroFloat64,
-		max:     math.SmallestNonzeroFloat64,
-		sum:     3 * math.SmallestNonzeroFloat64,
-
-		scale: 20,
-		posBuckets: expoBuckets{
-			startBin: -1126170625,
-			counts:   []uint64{3},
-		},
+	}
+	want.minMax.Update(math.SmallestNonzeroFloat64)
+	want.sum.add(3 * math.SmallestNonzeroFloat64)
+	want.scale.Store(20)
+	want.posBuckets = expoBuckets{
+		startBin: -1126170625,
+		counts:   []uint64{3},
 	}
 
 	ehdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
@@ -1158,24 +1156,25 @@ func FuzzGetBin(f *testing.F) {
 
 		p := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
 		// scale range is -10 to 20.
-		p.scale = (scale%31+31)%31 - 10
+		scaleValue := (scale%31+31)%31 - 10
+		p.scale.Store(scaleValue)
 		got := p.getBin(v)
-		if v <= lowerBound(got, p.scale) {
+		if v <= lowerBound(got, scaleValue) {
 			t.Errorf(
 				"v=%x scale =%d had bin %d, but was below lower bound %x",
 				v,
-				p.scale,
+				scaleValue,
 				got,
-				lowerBound(got, p.scale),
+				lowerBound(got, scaleValue),
 			)
 		}
-		if v > lowerBound(got+1, p.scale) {
+		if v > lowerBound(got+1, scaleValue) {
 			t.Errorf(
 				"v=%x scale =%d had bin %d, but was above upper bound %x",
 				v,
-				p.scale,
+				scaleValue,
 				got,
-				lowerBound(got+1, p.scale),
+				lowerBound(got+1, scaleValue),
 			)
 		}
 	})
