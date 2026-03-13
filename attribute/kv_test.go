@@ -168,6 +168,8 @@ func TestIncorrectCast(t *testing.T) {
 		{
 			name: "Bytes",
 			val:  attribute.BytesValue([]byte{123}),
+		},
+		{
 			name: "Empty",
 			val:  attribute.Value{},
 		},

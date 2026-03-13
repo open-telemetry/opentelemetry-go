@@ -20,9 +20,9 @@ func _() {
 	_ = x[BYTES-9]
 }
 
-const _Type_name = "INVALIDBOOLINT64FLOAT64STRINGBOOLSLICEINT64SLICEFLOAT64SLICESTRINGSLICEBYTES"
+const _Type_name = "EMPTYBOOLINT64FLOAT64STRINGBOOLSLICEINT64SLICEFLOAT64SLICESTRINGSLICEBYTES"
 
-var _Type_index = [...]uint8{0, 7, 11, 16, 23, 29, 38, 48, 60, 71, 76}
+var _Type_index = [...]uint8{0, 5, 9, 14, 21, 27, 36, 46, 58, 69, 74}
 
 func (i Type) String() string {
 	idx := int(i) - 0

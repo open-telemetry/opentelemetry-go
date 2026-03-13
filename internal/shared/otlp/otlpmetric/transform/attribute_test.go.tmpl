@@ -27,8 +27,6 @@ var (
 	attrString       = attribute.String("string", "o")
 	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
 	attrBytes  = attribute.Bytes("bytes", []byte("bytes"))
-	attrInvalid      = attribute.KeyValue{
-		Key:   attribute.Key("invalid"),
 	attrEmpty        = attribute.KeyValue{
 		Key:   attribute.Key("empty"),
 		Value: attribute.Value{},
@@ -75,12 +73,6 @@ var (
 	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
 	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
 	kvBytes  = &cpb.KeyValue{Key: "bytes", Value: valBytes}
-	kvInvalid      = &cpb.KeyValue{
-		Key: "invalid",
-		Value: &cpb.AnyValue{
-			Value: &cpb.AnyValue_StringValue{StringValue: "INVALID"},
-		},
-	}
 	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
 
@@ -168,7 +160,6 @@ func TestAttributeTransforms(t *testing.T) {
 				attrString,
 				attrStringSlice,
         attrBytes,
-				attrInvalid,
 				attrEmpty,
 			},
 			[]*cpb.KeyValue{
@@ -183,7 +174,6 @@ func TestAttributeTransforms(t *testing.T) {
 				kvString,
 				kvStringSlice,
         kvBytes,
-				kvInvalid,
 				kvEmpty,
 			},
 		},

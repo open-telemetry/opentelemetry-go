@@ -46,11 +46,6 @@ func BytesValue(v []byte) any {
 	return cp.Interface()
 }
 
-// AsBoolSlice converts a bool array into a slice into with same elements as array.
-func AsBoolSlice(v any) []bool {
-	rv := reflect.ValueOf(v)
-	if rv.Type().Kind() != reflect.Array {
-		return nil
 // AsSlice converts an array into a slice with the same elements.
 func AsSlice[T sliceElem](v any) []T {
 	// Mirror the small fixed-array fast path used by SliceValue.

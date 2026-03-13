@@ -44,10 +44,6 @@ var wrapBytesValue = func(v any) any {
 }
 
 var (
-	wrapAsBoolSlice    = func(v any) any { return AsBoolSlice(v) }
-	wrapAsInt64Slice   = func(v any) any { return AsInt64Slice(v) }
-	wrapAsFloat64Slice = func(v any) any { return AsFloat64Slice(v) }
-	wrapAsStringSlice  = func(v any) any { return AsStringSlice(v) }
 	wrapAsBytes        = func(v any) any { return AsBytes(v) }
 	wrapAsBoolSlice    = func(v any) any { return AsSlice[bool](v) }
 	wrapAsInt64Slice   = func(v any) any { return AsSlice[int64](v) }

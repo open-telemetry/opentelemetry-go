@@ -78,6 +78,8 @@ func TestAttributes(t *testing.T) {
 							BytesValue: []byte("bytes"),
 						},
 					},
+				},
+				{
 					Key:   "empty to empty",
 					Value: &commonpb.AnyValue{},
 				},
