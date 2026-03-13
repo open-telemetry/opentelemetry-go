@@ -53,4 +53,4 @@ jobs:
           #
           # The benchtime is adjusted to 500 ms to speed up the benchmark time.
           # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
-          run: make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
+          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
