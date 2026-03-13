@@ -7,7 +7,11 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -64,24 +68,185 @@ type SamplingResult struct {
 }
 
 type traceIDRatioSampler struct {
-	traceIDUpperBound uint64
-	description       string
+	// threshold T is a rejection threshold with range [0, 1<<56).
+	// It is used to compare with a random value R, such as a random trace ID.
+	// Select when (R >= T).
+	// Drop when (R < T).
+	threshold uint64
+
+	// thkv is the encoded OTel tracestate threshold key-value pair in the "ot" key.
+	// Applying traceIdRatioBased sampler to a trace context will result in tracestate "ot" key value containing `th:<tvalue>`
+	// where <tvalue> is a hex digit string representing the threshold T.
+	thkv string
+
+	description string
+}
+
+// Determines whether there is a randomness "rv" sub-key in `otts` (the topc level OTel tracestate field).
+// If present, "rv" is a 56-bit unsigned integer, encoded in 14 hexdigits.
+func tracestateRandomness(otts string) (randomness uint64, hasRandomness bool) {
+	var start int // start index of the "rv" sub-key
+	if strings.HasPrefix(otts, "rv:") {
+		start = 3
+	} else if idx := strings.Index(otts, ";rv:"); idx != -1 {
+		start = idx + 4
+	} else {
+		return 0, false
+	}
+
+	if len(otts) < start+14 || (len(otts) > start+14 && otts[start+14] != ';') {
+		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %s", otts))
+		return 0, false
+	}
+
+	if rv, err := strconv.ParseUint(otts[start:start+14], 16, 56); err != nil {
+		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %s", otts))
+		return 0, false
+	} else {
+		randomness = rv
+		hasRandomness = true
+	}
+	return
 }
 
 func (ts traceIDRatioSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	state := trace.SpanContextFromContext(p.ParentContext).TraceState()
-	x := binary.BigEndian.Uint64(p.TraceID[8:16]) >> 1
-	if x < ts.traceIDUpperBound {
+	psc := trace.SpanContextFromContext(p.ParentContext)
+	state := psc.TraceState()
+
+	existingOtts := state.Get("ot")
+
+	var randomness uint64
+	var hasRandomness bool
+	// When there is an explicit rv value in tracestate, we always make use of it.
+	// Otherwise, we use the traceID if trace flags indicates it has randomness.
+	if existingOtts != "" {
+		randomness, hasRandomness = tracestateRandomness(existingOtts)
+	}
+
+	// TODO: rethink this and compare with the alternative of just assuming trace id is random.
+	if !hasRandomness {
+		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
+	}
+
+	if ts.threshold > randomness {
 		return SamplingResult{
-			Decision:   RecordAndSample,
+			Decision:   Drop,
 			Tracestate: state,
 		}
 	}
-	return SamplingResult{
-		Decision:   Drop,
-		Tracestate: state,
+	// If the trace flags do not indicate that the trace ID is random, we proceed with
+	// trace ID as the source of randomness regardless. However, this will not ensure that
+	// the span is sampled with a known probability.
+	// As per the general requirement of the spec, https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/#general-requirements
+	// "Sampling stages that yield spans with unknown sampling probability, ..., must erase
+	// the OpenTelemetry threshold value in their output."
+	var newOtts string
+	if !psc.TraceFlags().IsRandom() {
+		newOtts = eraseTraceStateThKeyValue(existingOtts)
+	} else {
+		newOtts = insertOrUpdateTraceStateThKeyValue(existingOtts, ts.thkv)
 	}
+
+	// If we are not able to update the tracestate, we drop the span.
+	// Think of the following scenario:
+	// If a span was previously sampled by a traceIdRatioBased sampler with a lower threshold,
+	// it should be updated to reflect to the higher threshold of the current sampler.
+	// All spans at this staged is already filtered by the higher threshold. If we are not able to
+	// update the tracestate of the SamplingResult and we do not drop but instead record and sample the span,
+	// when the span is exported and used to compute metrics, it'll be inappropriately adjusted.
+	// This skews the metrics and the failure is not loud.
+	// The alternative we chose (to DROP) is not perfect either. However, we do not expect the insert
+	// error to happen except perhapswith some internal error. In this case, fail-closed will at least be loud.
+	if combined, err := state.Insert("ot", newOtts); err != nil {
+		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
+		return SamplingResult{Decision: Drop, Tracestate: state}
+	} else {
+		state = combined
+	}
+	return SamplingResult{Decision: RecordAndSample, Tracestate: state}
 }
+
+func eraseTraceStateThKeyValue(otts string) string {
+	start := strings.Index(otts, "th:")
+	if start == -1 {
+		return otts
+	}
+	if start > 0 && otts[start-1] == ';' {
+		start--
+	}
+	end := -1
+	for end = start + 1; end < len(otts); end++ {
+		if otts[end] == ';' {
+			if start == 0 {
+				end++
+			}
+			break
+		}
+	}
+	if end == len(otts) {
+		return otts[0:start]
+	}
+	return otts[0:start] + otts[end:]
+}
+
+func insertOrUpdateTraceStateThKeyValue(existingOtts, thkv string) string {
+	if existingOtts == "" {
+		return thkv
+	}
+
+	start := -1
+	end := -1
+	if strings.HasPrefix(existingOtts, "th:") {
+		start = 0
+	} else if idx := strings.Index(existingOtts, ";th:"); idx != -1 {
+		start = idx + 1
+	}
+	if start == -1 {
+		return thkv + ";" + existingOtts
+	}
+
+	for end = start; end < len(existingOtts); end++ {
+		if existingOtts[end] == ';' {
+			end++
+			break
+		}
+	}
+
+	if end == len(existingOtts) {
+		return strings.TrimSuffix(thkv+";"+existingOtts[0:start], ";")
+	}
+	return thkv + ";" + existingOtts[0:start] + existingOtts[end:]
+}
+
+const (
+	DefaultSamplingPrecision = 4
+	maxAdjustedCount         = 1 << 56
+	// Mask the least significant 56 bits of the trace ID as per W3C Trace Context Level 2 Random Trace ID Flag.
+	// https://www.w3.org/TR/trace-context-2/#random-trace-id-flag
+	randomnessMask = maxAdjustedCount - 1
+
+	// probabilityZeroThreshold is the smallest probability that
+	// can be encoded by this implementation, and it defines the
+	// smallest interval between probabilities across the range.
+	// Probabilities below this threshold are treated as zero.
+	//
+	// This value corresponds with the size of a float64
+	// significand, because it simplifies this implementation to
+	// restrict the probability to use 52 bits (vs 56 bits).
+	probabilityZeroThreshold float64 = 1 / float64(maxAdjustedCount)
+
+	// probabilityOneThreshold is the number closest to 1.0 (i.e.,
+	// near 99.999999%) that is not equal to 1.0 in terms of the
+	// float64 representation, with 52 bits of significand.
+	// This is the largest float64 representable with only the 52 bits of significand.
+	// Probabilities above this threshold are treated as one.
+	// Other ways to express this number:
+	//
+	//   0x1.ffffffffffffe0p-01
+	//   0x0.fffffffffffff0p+00
+	//   math.Nextafter(1.0, 0.0)
+	probabilityOneThreshold float64 = 1 - 0x1p-52
+)
 
 func (ts traceIDRatioSampler) Description() string {
 	return ts.description
@@ -94,35 +259,79 @@ func (ts traceIDRatioSampler) Description() string {
 //
 //nolint:revive // revive complains about stutter of `trace.TraceIDRatioBased`
 func TraceIDRatioBased(fraction float64) Sampler {
-	// Cannot use AlwaysSample() and NeverSample(), must return spec-compliant descriptions.
-	// See https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased.
-	if fraction >= 1 {
-		return predeterminedSampler{
-			description: "TraceIDRatioBased{1}",
-			decision:    RecordAndSample,
-		}
+	const (
+		maxp  = 14 // maximum precision
+		defp  = DefaultSamplingPrecision
+		hbits = 4 // bits per hex digit
+	)
+	if fraction > probabilityOneThreshold {
+		return AlwaysSample()
+	}
+	if fraction < probabilityZeroThreshold {
+		return NeverSample()
 	}
 
-	if fraction <= 0 {
-		return predeterminedSampler{
-			description: "TraceIDRatioBased{0}",
-			decision:    Drop,
-		}
+	// Calculate the amount of precision needed to encode the
+	// threshold with reasonable precision.
+	//
+	// 13 hex digits is the maximum reasonable precision, since
+	// that equals 52 bits, the number of bits in the float64
+	// significand.
+	//
+	// Frexp() normalizes both the fraction and one-minus the
+	// fraction, because more digits of precision are needed in
+	// both cases -- in these cases the threshold has all leading
+	// '0' or 'f' characters.
+	//
+	// We know that `exp <= 0`.  If `exp <= -4`, there will be a
+	// leading hex `0` or `f`.  For every multiple of -4, another
+	// leading `0` or `f` appears, so this raises precision
+	// accordingly.
+	_, expF := math.Frexp(fraction)
+	_, expR := math.Frexp(1 - fraction)
+	precision := min(maxp, max(defp+expF/-hbits, defp+expR/-hbits))
+
+	// Compute the threshold
+	scaled := uint64(math.Round(fraction * float64(maxAdjustedCount)))
+	threshold := maxAdjustedCount - scaled
+
+	// Round to the specified precision, if less than the maximum.
+	if shift := hbits * (maxp - precision); shift != 0 {
+		half := uint64(1) << (shift - 1)
+		threshold += half
+		threshold >>= shift
+		threshold <<= shift
 	}
 
+	// Add maxAdjustedCount so that leading-zeros are formatted by
+	// the strconv library after an artificial leading "1".  Then,
+	// strip the leadingt "1", then remove trailing zeros.
+	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
 	return &traceIDRatioSampler{
-		traceIDUpperBound: uint64(fraction * (1 << 63)),
-		description:       fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
+		threshold:   threshold,
+		thkv:        "th:" + tvalue,
+		description: fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }
 
 type alwaysOnSampler struct{}
 
 func (alwaysOnSampler) ShouldSample(p SamplingParameters) SamplingResult {
-	return SamplingResult{
-		Decision:   RecordAndSample,
-		Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
+	ts := trace.SpanContextFromContext(p.ParentContext).TraceState()
+	if mod, err := ts.Insert("ot", insertOrUpdateTraceStateThKeyValue(ts.Get("ot"), "th:0")); err != nil {
+		otel.Handle(fmt.Errorf("could not update threshold (`ot.th`) in tracestate: %w", err))
+		// I feel this is a contentional decision, but I'm putting this here for discussion.
+		// The contention is:
+		// If we do this, we kind of violate what "alwaysOn" sampling means.
+		// On the other hand, I don't know whether the semantics should apply in internal error scenarios.
+		// In addition, if we are unable to update the threshold and the ts has an existing threshold,
+		// downstream span metrics will be wrong.
+		// Finally, I want to point out that the contention is probably moot as this path is not likely to happen.
+		// return SamplingResult{Decision: Drop, Tracestate: ts}
+	} else {
+		ts = mod
 	}
+	return SamplingResult{Decision: RecordAndSample, Tracestate: ts}
 }
 
 func (alwaysOnSampler) Description() string {
