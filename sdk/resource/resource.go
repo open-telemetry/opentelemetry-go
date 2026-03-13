@@ -237,6 +237,9 @@ func Default() *Resource {
 
 // DefaultWithContext returns an instance of Resource with a default
 // "service.name" and OpenTelemetrySDK attributes.
+//
+// If the default resource has already been initialized, the provided ctx
+// is ignored and the cached resource is returned.
 func DefaultWithContext(ctx context.Context) *Resource {
 	defaultResourceOnce.Do(func() {
 		var err error
