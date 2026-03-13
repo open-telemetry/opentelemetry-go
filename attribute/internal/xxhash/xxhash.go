@@ -58,6 +58,13 @@ func (h Hash) String(val string) Hash {
 	return h
 }
 
+func (h Hash) Bytes(val []byte) Hash {
+	if _, err := h.d.Write(val); err != nil {
+		panic("xxhash write of bytes failed: " + err.Error())
+	}
+	return h
+}
+
 // Sum64 returns the current hash value.
 func (h Hash) Sum64() uint64 {
 	return h.d.Sum64()

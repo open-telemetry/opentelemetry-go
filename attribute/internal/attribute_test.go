@@ -36,7 +36,15 @@ var wrapStringSliceValue = func(v any) any {
 	return nil
 }
 
+var wrapBytesValue = func(v any) any {
+	if vi, ok := v.([]byte); ok {
+		return BytesValue(vi)
+	}
+	return nil
+}
+
 var (
+	wrapAsBytes        = func(v any) any { return AsBytes(v) }
 	wrapAsBoolSlice    = func(v any) any { return AsSlice[bool](v) }
 	wrapAsInt64Slice   = func(v any) any { return AsSlice[int64](v) }
 	wrapAsFloat64Slice = func(v any) any { return AsSlice[float64](v) }
@@ -70,6 +78,10 @@ func TestSliceValue(t *testing.T) {
 			args: args{[]string{"123", "2"}}, want: [2]string{"123", "2"}, fn: wrapStringSliceValue,
 		},
 		{
+			name: "BytesValue() two items",
+			args: args{v: []byte{1, 2}}, want: [2]byte{1, 2}, fn: wrapBytesValue,
+		},
+		{
 			name: "AsBoolSlice() two items",
 			args: args{[2]bool{true, false}}, want: []bool{true, false}, fn: wrapAsBoolSlice,
 		},
@@ -84,6 +96,10 @@ func TestSliceValue(t *testing.T) {
 		{
 			name: "AsStringSlice() two items",
 			args: args{[2]string{"1234", "12"}}, want: []string{"1234", "12"}, fn: wrapAsStringSlice,
+		},
+		{
+			name: "AsBytes() two items",
+			args: args{[2]byte{1, 2}}, want: []byte{1, 2}, fn: wrapAsBytes,
 		},
 	}
 	for _, tt := range tests {
@@ -202,5 +218,23 @@ func BenchmarkAsFloat64Slice(b *testing.B) {
 				sync = AsSlice[float64](bench.in)
 			}
 		})
+	}
+}
+
+func BenchmarkBytesValue(b *testing.B) {
+	b.ReportAllocs()
+	bs := []byte("foo")
+
+	for b.Loop() {
+		BytesValue(bs)
+	}
+}
+
+func BenchmarkAsBytes(b *testing.B) {
+	b.ReportAllocs()
+	bs := [2]byte{1, 2}
+
+	for b.Loop() {
+		AsBytes(bs)
 	}
 }
