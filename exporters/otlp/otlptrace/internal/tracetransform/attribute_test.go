@@ -27,6 +27,7 @@ func TestAttributes(t *testing.T) {
 				attribute.Float64("float64 to double", 1.61),
 				attribute.String("string to string", "string"),
 				attribute.Bool("bool to bool", true),
+				attribute.Bytes("bytes to bytes", []byte("bytes")),
 				{Key: "empty to empty"},
 			},
 			[]*commonpb.KeyValue{
@@ -67,6 +68,14 @@ func TestAttributes(t *testing.T) {
 					Value: &commonpb.AnyValue{
 						Value: &commonpb.AnyValue_BoolValue{
 							BoolValue: true,
+						},
+					},
+				},
+				{
+					Key: "bytes to bytes",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_BytesValue{
+							BytesValue: []byte("bytes"),
 						},
 					},
 				},

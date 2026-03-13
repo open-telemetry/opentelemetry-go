@@ -117,6 +117,17 @@ func (k Key) StringSlice(v []string) KeyValue {
 	}
 }
 
+// Bytes creates a KeyValue instance with a BYTES Value.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Bytes(name, value).
+func (k Key) Bytes(v []byte) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: BytesValue(v),
+	}
+}
+
 // Defined reports whether the key is not empty.
 func (k Key) Defined() bool {
 	return len(k) != 0
