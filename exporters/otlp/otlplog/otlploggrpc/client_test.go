@@ -411,7 +411,7 @@ var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 // If errCh is not nil, the collector will respond to Export calls with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
+func newGRPCCollector(ctx context.Context, endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
 	if endpoint == "" {
 		endpoint = "localhost:0"
 	}
@@ -422,7 +422,7 @@ func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcColle
 	}
 
 	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
+	c.listener, err = (&net.ListenConfig{}).Listen(ctx, "tcp", endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func (c *grpcCollector) Collect() *storage {
 
 func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
 	t.Helper()
-	coll, err := newGRPCCollector("", rCh)
+	coll, err := newGRPCCollector(t.Context(), "", rCh)
 	require.NoError(t, err)
 
 	addr := coll.listener.Addr().String()
@@ -564,7 +564,7 @@ func TestClient(t *testing.T) {
 
 func TestConfig(t *testing.T) {
 	factoryFunc := func(rCh <-chan exportResult, o ...Option) (log.Exporter, *grpcCollector) {
-		coll, err := newGRPCCollector("", rCh)
+		coll, err := newGRPCCollector(t.Context(), "", rCh)
 		require.NoError(t, err)
 
 		ctx := t.Context()
@@ -1184,7 +1184,7 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 	const logRecordsCount = 100
 
 	run := func(b *testing.B) {
-		coll, err := newGRPCCollector("", nil)
+		coll, err := newGRPCCollector(b.Context(), "", nil)
 		require.NoError(b, err)
 		b.Cleanup(func() {
 			coll.srv.Stop()
