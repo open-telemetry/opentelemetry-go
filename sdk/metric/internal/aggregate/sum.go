@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type sumValue[N int64 | float64] struct {
-	n     atomicCounter[N]
-	res   FilteredExemplarReservoir[N]
-	attrs attribute.Set
+	n         atomicCounter[N]
+	res       FilteredExemplarReservoir[N]
+	attrs     attribute.Set
+	startTime time.Time
 }
 
 type sumValueMap[N int64 | float64] struct {
@@ -32,6 +34,12 @@ func (s *sumValueMap[N]) measure(
 		return &sumValue[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
+			startTime: func() time.Time {
+				if x.PerSeriesStartTimestamps.Enabled() {
+					return now()
+				}
+				return time.Time{}
+			}(),
 		}
 	}).(*sumValue[N])
 	sv.n.add(value)
@@ -160,12 +168,19 @@ func (s *cumulativeSum[N]) collect(
 	// current length for capacity.
 	dPts := reset(sData.DataPoints, 0, s.values.Len())
 
+	featureEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
+		
+		startTime := s.start
+		if featureEnabled {
+			startTime = val.startTime
+		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  s.start,
+			StartTime:  startTime,
 			Time:       t,
 			Value:      val.n.load(),
 		}
