@@ -300,12 +300,7 @@ func (s *cumulativeHistogram[N]) measure(
 					counts: make([]atomic.Uint64, len(s.bounds)+1),
 				},
 			},
-			startTime: func() time.Time {
-				if x.PerSeriesStartTimestamps.Enabled() {
-					return now()
-				}
-				return time.Time{}
-			}(),
+			startTime: now(),
 		}
 		return hPt
 	}).(*hotColdHistogramPoint[N])
@@ -347,14 +342,14 @@ func (s *cumulativeHistogram[N]) collect(
 	// current length for capacity.
 	hDPts := reset(h.DataPoints, 0, s.values.Len())
 
-	featureEnabled := x.PerSeriesStartTimestamps.Enabled()
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*hotColdHistogramPoint[N])
-		
+
 		startTime := s.start
-		if featureEnabled {
+		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
 		}
 		// swap, observe, and clear the point

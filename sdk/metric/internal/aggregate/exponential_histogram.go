@@ -51,18 +51,13 @@ func newExpoHistogramDataPoint[N int64 | float64](
 	noMinMax, noSum bool,
 ) *expoHistogramDataPoint[N] { // nolint:revive // we need this control flag
 	dp := &expoHistogramDataPoint[N]{
-		attrs:    attrs,
-		maxSize:  maxSize,
-		noMinMax: noMinMax,
-		noSum:    noSum,
+		attrs:     attrs,
+		maxSize:   maxSize,
+		noMinMax:  noMinMax,
+		noSum:     noSum,
+		startTime: now(),
 	}
 	dp.scale.Store(maxScale)
-	dp.startTime = func() time.Time {
-		if x.PerSeriesStartTimestamps.Enabled() {
-			return now()
-		}
-		return time.Time{}
-	}()
 	return dp
 }
 
@@ -437,14 +432,14 @@ func (e *expoHistogram[N]) cumulative(
 	n := len(e.values)
 	hDPts := reset(h.DataPoints, n, n)
 
-	featureEnabled := x.PerSeriesStartTimestamps.Enabled()
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
 	for _, val := range e.values {
 		hDPts[i].Attributes = val.attrs
-		
+
 		startTime := e.start
-		if featureEnabled {
+		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
 		}
 		hDPts[i].StartTime = startTime
