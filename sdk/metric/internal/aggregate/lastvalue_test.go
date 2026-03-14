@@ -22,9 +22,28 @@ func TestLastValue(t *testing.T) {
 	t.Run("Float64/DeltaLastValue", testDeltaLastValue[float64]())
 	c.Reset()
 
-	t.Run("Int64/CumulativeLastValue", testCumulativeLastValue[int64]())
+	t.Run("Int64/CumulativeLastValue", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeLastValue[int64](false)(t)
+	})
 	c.Reset()
-	t.Run("Float64/CumulativeLastValue", testCumulativeLastValue[float64]())
+
+	t.Run("Int64/CumulativeLastValue/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeLastValue[int64](true)(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeLastValue", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeLastValue[float64](false)(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeLastValue/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeLastValue[float64](true)(t)
+	})
 	c.Reset()
 
 	t.Run("Int64/DeltaPrecomputedLastValue", testDeltaPrecomputedLastValue[int64]())
@@ -141,12 +160,34 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 	})
 }
 
-func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
+//nolint:revive // perSeriesStartTimeEnabled used to test a feature gate.
+func testCumulativeLastValue[N int64 | float64](perSeriesStartTimeEnabled bool) func(*testing.T) {
 	in, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.LastValue()
+
+	aliceStartTime := y2kPlus(0)
+	bobStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	timeStep1 := y2kPlus(2)
+	timeStep2 := y2kPlus(3)
+	timeStep3 := y2kPlus(4)
+	timeStep4 := y2kPlus(5)
+
+	if perSeriesStartTimeEnabled {
+		aliceStartTime = y2kPlus(2)
+		bobStartTime = y2kPlus(3)
+		overflowStartTime = y2kPlus(7)
+
+		timeStep1 = y2kPlus(4)
+		timeStep2 = y2kPlus(5)
+		timeStep3 = y2kPlus(6)
+		timeStep4 = y2kPlus(8)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -167,14 +208,14 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  aliceStartTime,
+							Time:       timeStep1,
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  bobStartTime,
+							Time:       timeStep1,
 							Value:      -10,
 						},
 					},
@@ -189,14 +230,14 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  aliceStartTime,
+							Time:       timeStep2,
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  bobStartTime,
+							Time:       timeStep2,
 							Value:      -10,
 						},
 					},
@@ -213,14 +254,14 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  aliceStartTime,
+							Time:       timeStep3,
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  bobStartTime,
+							Time:       timeStep3,
 							Value:      3,
 						},
 					},
@@ -240,20 +281,20 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  aliceStartTime,
+							Time:       timeStep4,
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  bobStartTime,
+							Time:       timeStep4,
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  overflowStartTime,
+							Time:       timeStep4,
 							Value:      1,
 						},
 					},

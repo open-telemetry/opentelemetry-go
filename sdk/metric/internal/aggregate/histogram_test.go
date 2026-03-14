@@ -35,18 +35,67 @@ func TestHistogram(t *testing.T) {
 	t.Run("Float64/Delta/NoSum", testDeltaHist[float64](conf[float64]{noSum: true, hPt: hPoint[float64]}))
 	c.Reset()
 
-	t.Run("Int64/Cumulative/Sum", testCumulativeHist[int64](conf[int64]{hPt: hPointSummed[int64]}))
+	t.Run("Int64/Cumulative/Sum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeHist[int64](conf[int64]{hPt: hPointSummed[int64], perSeriesStartTimeEnabled: false})(t)
+	})
 	c.Reset()
-	t.Run("Int64/Cumulative/NoSum", testCumulativeHist[int64](conf[int64]{noSum: true, hPt: hPoint[int64]}))
+
+	t.Run("Int64/Cumulative/Sum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeHist[int64](conf[int64]{hPt: hPointSummed[int64], perSeriesStartTimeEnabled: true})(t)
+	})
 	c.Reset()
-	t.Run("Float64/Cumulative/Sum", testCumulativeHist[float64](conf[float64]{hPt: hPointSummed[float64]}))
+
+	t.Run("Int64/Cumulative/NoSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeHist[int64](conf[int64]{noSum: true, hPt: hPoint[int64], perSeriesStartTimeEnabled: false})(t)
+	})
 	c.Reset()
-	t.Run("Float64/Cumulative/NoSum", testCumulativeHist[float64](conf[float64]{noSum: true, hPt: hPoint[float64]}))
+
+	t.Run("Int64/Cumulative/NoSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeHist[int64](conf[int64]{noSum: true, hPt: hPoint[int64], perSeriesStartTimeEnabled: true})(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/Sum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeHist[float64](conf[float64]{hPt: hPointSummed[float64], perSeriesStartTimeEnabled: false})(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/Sum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeHist[float64](conf[float64]{hPt: hPointSummed[float64], perSeriesStartTimeEnabled: true})(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/NoSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeHist[float64](
+			conf[float64]{noSum: true, hPt: hPoint[float64], perSeriesStartTimeEnabled: false},
+		)(
+			t,
+		)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/NoSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeHist[float64](
+			conf[float64]{noSum: true, hPt: hPoint[float64], perSeriesStartTimeEnabled: true},
+		)(
+			t,
+		)
+	})
+	c.Reset()
 }
 
 type conf[N int64 | float64] struct {
-	noSum bool
-	hPt   func(attribute.Set, N, uint64, time.Time, time.Time) metricdata.HistogramDataPoint[N]
+	noSum                     bool
+	hPt                       func(attribute.Set, N, uint64, time.Time, time.Time) metricdata.HistogramDataPoint[N]
+	perSeriesStartTimeEnabled bool
 }
 
 func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
@@ -142,6 +191,27 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.ExplicitBucketHistogram(bounds, noMinMax, c.noSum)
+
+	aliceStartTime := y2kPlus(0)
+	bobStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	timeStep1 := y2kPlus(2)
+	timeStep2 := y2kPlus(3)
+	timeStep3 := y2kPlus(4)
+	timeStep4 := y2kPlus(5)
+
+	if c.perSeriesStartTimeEnabled {
+		aliceStartTime = y2kPlus(2)
+		bobStartTime = y2kPlus(3)
+		overflowStartTime = y2kPlus(7)
+
+		timeStep1 = y2kPlus(4)
+		timeStep2 = y2kPlus(5)
+		timeStep3 = y2kPlus(6)
+		timeStep4 = y2kPlus(8)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -167,8 +237,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 3, y2kPlus(0), y2kPlus(2)),
-						c.hPt(fltrBob, 10, 2, y2kPlus(0), y2kPlus(2)),
+						c.hPt(fltrAlice, 2, 3, aliceStartTime, timeStep1),
+						c.hPt(fltrBob, 10, 2, bobStartTime, timeStep1),
 					},
 				},
 			},
@@ -183,8 +253,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(3)),
-						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(3)),
+						c.hPt(fltrAlice, 2, 4, aliceStartTime, timeStep2),
+						c.hPt(fltrBob, 10, 3, bobStartTime, timeStep2),
 					},
 				},
 			},
@@ -196,8 +266,8 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(4)),
-						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(4)),
+						c.hPt(fltrAlice, 2, 4, aliceStartTime, timeStep3),
+						c.hPt(fltrBob, 10, 3, bobStartTime, timeStep3),
 					},
 				},
 			},
@@ -213,9 +283,9 @@ func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 				agg: metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{
-						c.hPt(fltrAlice, 2, 4, y2kPlus(0), y2kPlus(5)),
-						c.hPt(fltrBob, 10, 3, y2kPlus(0), y2kPlus(5)),
-						c.hPt(overflowSet, 1, 2, y2kPlus(0), y2kPlus(5)),
+						c.hPt(fltrAlice, 2, 4, aliceStartTime, timeStep4),
+						c.hPt(fltrBob, 10, 3, bobStartTime, timeStep4),
+						c.hPt(overflowSet, 1, 2, overflowStartTime, timeStep4),
 					},
 				},
 			},

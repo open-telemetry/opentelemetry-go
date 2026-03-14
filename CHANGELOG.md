@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 - Support attributes with empty value (`attribute.EMPTY`) in OTLP exporters (`go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`). (#8038)
 - Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8038)
+- Add support for per-series start time tracking for cumulative metrics in `go.opentelemetry.io/otel/sdk/metric`. Set `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` to enable. (#8060)
 
 ### Changed
 

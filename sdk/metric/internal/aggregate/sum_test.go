@@ -23,10 +23,28 @@ func TestSum(t *testing.T) {
 	t.Run("Float64/DeltaSum", testDeltaSum[float64]())
 	c.Reset()
 
-	t.Run("Int64/CumulativeSum", testCumulativeSum[int64]())
+	t.Run("Int64/CumulativeSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeSum[int64](false)(t)
+	})
 	c.Reset()
 
-	t.Run("Float64/CumulativeSum", testCumulativeSum[float64]())
+	t.Run("Int64/CumulativeSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeSum[int64](true)(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeSum[float64](false)(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeSum[float64](true)(t)
+	})
 	c.Reset()
 
 	t.Run("Int64/DeltaPrecomputedSum", testDeltaPrecomputedSum[int64]())
@@ -169,13 +187,34 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 	})
 }
 
-func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
+//nolint:revive // perSeriesStartTimeEnabled used to test a feature gate.
+func testCumulativeSum[N int64 | float64](perSeriesStartTimeEnabled bool) func(t *testing.T) {
 	mono := false
 	in, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.Sum(mono)
+
+	aliceStartTime := y2kPlus(0)
+	bobStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	timeStep1 := y2kPlus(2)
+	timeStep2 := y2kPlus(3)
+	timeStep3 := y2kPlus(4)
+
+	if perSeriesStartTimeEnabled {
+		// These values are empirical from failure logs.
+		aliceStartTime = y2kPlus(2)
+		bobStartTime = y2kPlus(3)
+		overflowStartTime = y2kPlus(6)
+
+		timeStep1 = y2kPlus(4)
+		timeStep2 = y2kPlus(5)
+		timeStep3 = y2kPlus(7)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -205,14 +244,14 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  aliceStartTime,
+							Time:       timeStep1,
 							Value:      4,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  bobStartTime,
+							Time:       timeStep1,
 							Value:      -11,
 						},
 					},
@@ -232,14 +271,14 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  aliceStartTime,
+							Time:       timeStep2,
 							Value:      14,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  bobStartTime,
+							Time:       timeStep2,
 							Value:      -8,
 						},
 					},
@@ -260,20 +299,20 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  aliceStartTime,
+							Time:       timeStep3,
 							Value:      14,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  bobStartTime,
+							Time:       timeStep3,
 							Value:      -8,
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  overflowStartTime,
+							Time:       timeStep3,
 							Value:      2,
 						},
 					},
