@@ -136,23 +136,36 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		return err
 	}
 
+	// Snapshot callbacks under the lock, then release before executing them.
+	// Callbacks may register new instruments (e.g. creating a counter inside
+	// an observable callback), which calls addSync and needs to acquire the
+	// pipeline lock. Holding the lock during callback execution would deadlock
+	// in that case.
 	p.Lock()
-	defer p.Unlock()
+	cbs := make([]func(context.Context) error, len(p.callbacks))
+	copy(cbs, p.callbacks)
+	var multiCbs []multiCallback
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		multiCbs = append(multiCbs, e.Value.(multiCallback))
+	}
+	p.Unlock()
 
 	var err error
-	for _, c := range p.callbacks {
+	for _, c := range cbs {
 		// TODO make the callbacks parallel. ( #3034 )
 		if e := c(ctx); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+	for _, f := range multiCbs {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
 		if e := f(ctx); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
+
+	p.Lock()
+	defer p.Unlock()
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
