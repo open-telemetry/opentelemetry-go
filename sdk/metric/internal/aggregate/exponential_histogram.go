@@ -57,12 +57,9 @@ func newExpoHistogramDataPoint[N int64 | float64](
 		noSum:    noSum,
 	}
 	dp.scale.Store(maxScale)
-	dp.startTime = func() time.Time {
-		if x.PerSeriesStartTimestamps.Enabled() {
-			return now()
-		}
-		return time.Time{}
-	}()
+	if x.PerSeriesStartTimestamps.Enabled() {
+		dp.startTime = now()
+	}
 	return dp
 }
 
@@ -437,14 +434,14 @@ func (e *expoHistogram[N]) cumulative(
 	n := len(e.values)
 	hDPts := reset(h.DataPoints, n, n)
 
-	featureEnabled := x.PerSeriesStartTimestamps.Enabled()
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
 	for _, val := range e.values {
 		hDPts[i].Attributes = val.attrs
-		
+
 		startTime := e.start
-		if featureEnabled {
+		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
 		}
 		hDPts[i].StartTime = startTime

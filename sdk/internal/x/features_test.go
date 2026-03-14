@@ -30,4 +30,3 @@ func TestPerSeriesStartTimestamps(t *testing.T) {
 	t.Run("false", run(setenv(key, "false"), assertDisabled(PerSeriesStartTimestamps)))
 	t.Run("empty", run(assertDisabled(PerSeriesStartTimestamps)))
 }
-

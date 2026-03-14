@@ -33,15 +33,14 @@ func (s *lastValueMap[N]) measure(
 	droppedAttr []attribute.KeyValue,
 ) {
 	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		var startTime time.Time
+		if x.PerSeriesStartTimestamps.Enabled() {
+			startTime = now()
+		}
 		return &lastValuePoint[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
-			startTime: func() time.Time {
-				if x.PerSeriesStartTimestamps.Enabled() {
-					return now()
-				}
-				return time.Time{}
-			}(),
+			res:       s.newRes(attr),
+			attrs:     attr,
+			startTime: startTime,
 		}
 	}).(*lastValuePoint[N])
 
@@ -164,14 +163,14 @@ func (s *cumulativeLastValue[N]) collect(
 	// current length for capacity.
 	dPts := reset(gData.DataPoints, 0, s.values.Len())
 
-	featureEnabled := x.PerSeriesStartTimestamps.Enabled()
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
 	s.values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
-		
+
 		startTime := s.start
-		if featureEnabled {
+		if perSeriesStartTimeEnabled {
 			startTime = v.startTime
 		}
 		newPt := metricdata.DataPoint[N]{

@@ -735,10 +735,29 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 	t.Run("Float64/Delta", testDeltaExpoHist[float64]())
 	c.Reset()
 
-	t.Run("Int64/Cumulative", testCumulativeExpoHist[int64]())
+	t.Run("Int64/Cumulative", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeExpoHist[int64](false)(t)
+	})
 	c.Reset()
 
-	t.Run("Float64/Cumulative", testCumulativeExpoHist[float64]())
+	t.Run("Int64/Cumulative/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeExpoHist[int64](true)(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		testCumulativeExpoHist[float64](false)(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		testCumulativeExpoHist[float64](true)(t)
+	})
+	c.Reset()
 }
 
 func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
@@ -868,12 +887,32 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 	})
 }
 
-func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
+//nolint:revive // perSeriesStartTimeEnabled used to test a feature gate.
+func testCumulativeExpoHist[N int64 | float64](perSeriesStartTimeEnabled bool) func(t *testing.T) {
 	in, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 2,
 	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	aliceStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	timeStep1 := y2kPlus(2)
+	timeStep2 := y2kPlus(3)
+	timeStep3 := y2kPlus(4)
+	timeStep4 := y2kPlus(5)
+
+	if perSeriesStartTimeEnabled {
+		aliceStartTime = y2kPlus(2)
+		overflowStartTime = y2kPlus(6)
+
+		timeStep1 = y2kPlus(3)
+		timeStep2 = y2kPlus(4)
+		timeStep3 = y2kPlus(5)
+		timeStep4 = y2kPlus(7)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -903,8 +942,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  aliceStartTime,
+							Time:       timeStep1,
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -936,8 +975,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  aliceStartTime,
+							Time:       timeStep2,
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -965,8 +1004,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  aliceStartTime,
+							Time:       timeStep3,
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -1002,8 +1041,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  aliceStartTime,
+							Time:       timeStep4,
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -1020,8 +1059,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  overflowStartTime,
+							Time:       timeStep4,
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
