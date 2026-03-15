@@ -84,11 +84,11 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 	case EMPTY:
 		h = h.Uint64(emptyID)
 	default:
-		// Logging is an alternative, but using the internal logger here
-		// causes an import cycle so it is not done.
-		v := kv.Value.AsInterface()
-		msg := fmt.Sprintf("unknown value type: %[1]v (%[1]T)", v)
-		panic(msg)
+		// This should be unreachable for all valid types.
+		// However, to prevent panics from corrupted data or future type additions,
+		// we handle unknown types gracefully by treating them as EMPTY.
+		// This maintains hash consistency while avoiding crashes.
+		h = h.Uint64(emptyID)
 	}
 	return h
 }
