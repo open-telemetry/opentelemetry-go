@@ -404,6 +404,23 @@ func TestErrorType(t *testing.T) {
 		var err error = struct{ baseErr }{}
 		assert.Contains(t, errorType(err), "struct")
 	})
+
+	t.Run("WrappedErrorType", func(t *testing.T) {
+		err := wrappedErr{err: errWithType{msg: "boom", typ: "wrapped.type"}}
+		assert.Equal(t, "wrapped.type", errorType(err))
+	})
+
+	t.Run("JoinedErrorType", func(t *testing.T) {
+		err := errors.Join(errWithType{msg: "left", typ: "left.type"}, errWithType{msg: "right", typ: "right.type"})
+		assert.Equal(t, "left.type", errorType(err))
+	})
+
+	t.Run("WrappedJoinedErrorType", func(t *testing.T) {
+		err := wrappedErr{
+			err: errors.Join(errWithType{msg: "left", typ: "left.type"}, errWithType{msg: "right", typ: "right.type"}),
+		}
+		assert.Equal(t, "left.type", errorType(err))
+	})
 }
 
 type errWithType struct {
@@ -418,6 +435,14 @@ func (e errWithType) ErrorType() string { return e.typ }
 type baseErr struct{}
 
 func (baseErr) Error() string { return "boom" }
+
+type wrappedErr struct {
+	err error
+}
+
+func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
+
+func (e wrappedErr) Unwrap() error { return e.err }
 
 func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
