@@ -68,12 +68,11 @@ func errorType(err error) string {
 // rootError walks the error chain using errors.Unwrap to avoid reporting
 // wrapper types (e.g., *fmt.wrapError).
 func rootError(err error) error {
-	curr := err
-	for {
-		u := errors.Unwrap(curr)
-		if u == nil {
-			return curr
+	for curr := err; ; {
+		if u := errors.Unwrap(curr); u != nil {
+			curr = u
+			continue
 		}
-		curr = u
+		return curr
 	}
 }
