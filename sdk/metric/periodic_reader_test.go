@@ -297,6 +297,85 @@ func TestPeriodicReaderRun(t *testing.T) {
 	_ = r.Shutdown(t.Context())
 }
 
+func TestPeriodicReaderBatching(t *testing.T) {
+	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "2")
+
+	var exported []metricdata.ResourceMetrics
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+			exported = append(exported, *m)
+			return nil
+		},
+	}
+
+	ts1, ts2, ts3 := time.Now(), time.Now(), time.Now()
+	testMetrics := []metricdata.ScopeMetrics{{
+		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+		Metrics: []metricdata.Metrics{{
+			Name: "metric1",
+			Data: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{{
+					Attributes: attribute.NewSet(attribute.String("user", "david")),
+					StartTime:  ts1, Time: ts1.Add(time.Second), Value: 1,
+				}},
+			},
+		}, {
+			Name: "metric2",
+			Data: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{
+					{
+						Attributes: attribute.NewSet(attribute.String("user", "tyler")),
+						StartTime:  ts2,
+						Time:       ts2.Add(time.Second),
+						Value:      10,
+					},
+					{
+						Attributes: attribute.NewSet(attribute.String("user", "robert")),
+						StartTime:  ts3,
+						Time:       ts3.Add(time.Second),
+						Value:      100,
+					},
+				},
+			},
+		}},
+	}}
+
+	r := NewPeriodicReader(
+		exp,
+		WithProducer(testExternalProducer{
+			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+				return testMetrics, nil
+			},
+		}),
+	)
+	// testSDKProducer generates 2 Data Points (testResourceMetricsAB)
+	r.register(testSDKProducer{})
+
+	// Trigger export via ForceFlush
+	assert.NoError(t, r.ForceFlush(t.Context()))
+
+	// We should have a total of 4 data points
+	// testSDKProducer: 1
+	// testExternalProducer: 3
+	// Max batch size is 2, so it should split into 2 batches (2 + 2)
+	assert.Len(t, exported, 2)
+
+	dpCount := 0
+	for _, batch := range exported {
+		batchPoints := 0
+		for _, sm := range batch.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				batchPoints += metricDPC(m)
+			}
+		}
+		assert.LessOrEqual(t, batchPoints, 2)
+		dpCount += batchPoints
+	}
+	assert.Equal(t, 4, dpCount)
+
+	_ = r.Shutdown(t.Context())
+}
+
 func TestPeriodicReaderFlushesPending(t *testing.T) {
 	// Override the ticker so tests are not flaky and rely on timing.
 	trigger := triggerTicker(t)

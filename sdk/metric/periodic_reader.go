@@ -128,7 +128,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 		},
 	}
 	if val, ok := x.MetricExportBatchSize.Lookup(); ok {
-		r.maxExportBatchSize = val
+		r.batcher = batcher{size: val}
 	}
 	r.externalProducers.Store(conf.producers)
 
@@ -166,11 +166,11 @@ type PeriodicReader struct {
 	isShutdown        bool
 	externalProducers atomic.Value
 
-	interval           time.Duration
-	timeout            time.Duration
-	maxExportBatchSize int
-	exporter           Exporter
-	flushCh            chan chan error
+	interval time.Duration
+	timeout  time.Duration
+	batcher  batcher
+	exporter Exporter
+	flushCh  chan chan error
 
 	done         chan struct{}
 	cancel       context.CancelFunc
@@ -244,8 +244,8 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	err := r.Collect(ctx, rm)
 	if err == nil {
-		if r.maxExportBatchSize > 0 {
-			batches := splitResourceMetrics(r.maxExportBatchSize, rm)
+		if r.batcher.size > 0 {
+			batches := r.batcher.splitResourceMetrics(rm)
 			for _, batch := range batches {
 				err = errors.Join(err, r.export(ctx, batch))
 			}
@@ -383,8 +383,8 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			err = r.collect(ctx, ph, m)
 			if err == nil {
-				if r.maxExportBatchSize > 0 {
-					batches := splitResourceMetrics(r.maxExportBatchSize, m)
+				if r.batcher.size > 0 {
+					batches := r.batcher.splitResourceMetrics(m)
 					for _, batch := range batches {
 						err = errors.Join(err, r.export(ctx, batch))
 					}
