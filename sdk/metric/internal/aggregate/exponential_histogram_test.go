@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,89 +44,67 @@ func TestExpoHistogramDataPointRecord(t *testing.T) {
 
 func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 	testCases := []struct {
-		maxSize         int
-		values          []N
-		expectedBuckets expoBuckets
-		expectedScale   int32
+		maxSize        int
+		values         []N
+		expectedStart  int32
+		expectedCounts []uint64
+		expectedScale  int32
 	}{
 		{
-			maxSize: 4,
-			values:  []N{2, 4, 1},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 1, 1},
-			},
-			expectedScale: 0,
+			maxSize:        4,
+			values:         []N{2, 4, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 1, 1},
+			expectedScale:  0,
 		},
 		{
-			maxSize: 4,
-			values:  []N{4, 4, 4, 2, 16, 1},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{1, 4, 1},
-			},
-			expectedScale: -1,
+			maxSize:        4,
+			values:         []N{4, 4, 4, 2, 16, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 4, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []N{1, 2, 4},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 2},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []N{1, 2, 4},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []N{1, 4, 2},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 2},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []N{1, 4, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []N{2, 4, 1},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 2},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []N{2, 4, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []N{2, 1, 4},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 2},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []N{2, 1, 4},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []N{4, 1, 2},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 2},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []N{4, 1, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []N{4, 2, 1},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-
-				counts: []uint64{1, 2},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []N{4, 2, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
 		},
 	}
 	for _, tt := range testCases {
@@ -139,8 +118,8 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 				dp.record(-v)
 			}
 
-			assert.Equal(t, tt.expectedBuckets, dp.posBuckets, "positive buckets")
-			assert.Equal(t, tt.expectedBuckets, dp.negBuckets, "negative buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.posBuckets, "positive buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.negBuckets, "negative buckets")
 			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
 		})
 	}
@@ -232,75 +211,62 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 	type TestCase struct {
-		maxSize         int
-		values          []float64
-		expectedBuckets expoBuckets
-		expectedScale   int32
+		maxSize        int
+		values         []float64
+		expectedStart  int32
+		expectedCounts []uint64
+		expectedScale  int32
 	}
 
 	testCases := []TestCase{
 		{
-			maxSize: 4,
-			values:  []float64{2, 2, 2, 1, 8, 0.5},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 3, 1},
-			},
-			expectedScale: -1,
+			maxSize:        4,
+			values:         []float64{2, 2, 2, 1, 8, 0.5},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 3, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []float64{1, 0.5, 2},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 1},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []float64{1, 0.5, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []float64{1, 2, 0.5},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 1},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []float64{1, 2, 0.5},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []float64{2, 0.5, 1},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 1},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []float64{2, 0.5, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []float64{2, 1, 0.5},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 1},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []float64{2, 1, 0.5},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []float64{0.5, 1, 2},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 1},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []float64{0.5, 1, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
 		},
 		{
-			maxSize: 2,
-			values:  []float64{0.5, 2, 1},
-			expectedBuckets: expoBuckets{
-				startBin: -1,
-				counts:   []uint64{2, 1},
-			},
-			expectedScale: -1,
+			maxSize:        2,
+			values:         []float64{0.5, 2, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
 		},
 	}
 	for _, tt := range testCases {
@@ -314,8 +280,9 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 				dp.record(-v)
 			}
 
-			assert.Equal(t, tt.expectedBuckets, dp.posBuckets)
-			assert.Equal(t, tt.expectedBuckets, dp.negBuckets)
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.posBuckets, "positive buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.negBuckets, "negative buckets")
+			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
 			assert.Equal(t, tt.expectedScale, dp.scale.Load())
 		})
 	}
@@ -347,219 +314,171 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 	}
 }
 
+func newBucket(startBin int32, counts []uint64) *expoBuckets {
+	b := &expoBuckets{startBin: startBin, counts: make([]atomic.Uint64, len(counts))}
+	for i, v := range counts {
+		b.counts[i].Store(v)
+	}
+	return b
+}
+
+func assertBuckets(t *testing.T, expectedStart int32, expectedCounts []uint64, actual expoBuckets, msg string) {
+	t.Helper()
+	assert.Equal(t, expectedStart, actual.startBin, "%s: startBin", msg)
+	var actualCounts []uint64
+	if len(actual.counts) > 0 {
+		actualCounts = make([]uint64, len(actual.counts))
+		for i := range actual.counts {
+			actualCounts[i] = actual.counts[i].Load()
+		}
+	}
+	assert.Equal(t, expectedCounts, actualCounts, "%s: counts", msg)
+}
+
 func TestExpoBucketDownscale(t *testing.T) {
 	tests := []struct {
-		name   string
-		bucket *expoBuckets
-		scale  int32
-		want   *expoBuckets
+		name       string
+		bucket     *expoBuckets
+		scale      int32
+		wantStart  int32
+		wantCounts []uint64
 	}{
 		{
-			name:   "Empty bucket",
-			bucket: &expoBuckets{},
-			scale:  3,
-			want:   &expoBuckets{},
+			name:       "Empty bucket",
+			bucket:     newBucket(0, nil),
+			scale:      3,
+			wantStart:  0,
+			wantCounts: nil,
 		},
 		{
-			name: "1 size bucket",
-			bucket: &expoBuckets{
-				startBin: 50,
-				counts:   []uint64{7},
-			},
-			scale: 4,
-			want: &expoBuckets{
-				startBin: 3,
-				counts:   []uint64{7},
-			},
+			name:       "1 size bucket",
+			bucket:     newBucket(50, []uint64{7}),
+			scale:      4,
+			wantStart:  3,
+			wantCounts: []uint64{7},
 		},
 		{
-			name: "zero scale",
-			bucket: &expoBuckets{
-				startBin: 50,
-				counts:   []uint64{7, 5},
-			},
-			scale: 0,
-			want: &expoBuckets{
-				startBin: 50,
-				counts:   []uint64{7, 5},
-			},
+			name:       "zero scale",
+			bucket:     newBucket(50, []uint64{7, 5}),
+			scale:      0,
+			wantStart:  50,
+			wantCounts: []uint64{7, 5},
 		},
 		{
-			name: "aligned bucket scale 1",
-			bucket: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			},
-			scale: 1,
-			want: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{3, 7, 11},
-			},
+			name:       "aligned bucket scale 1",
+			bucket:     newBucket(0, []uint64{1, 2, 3, 4, 5, 6}),
+			scale:      1,
+			wantStart:  0,
+			wantCounts: []uint64{3, 7, 11},
 		},
 		{
-			name: "aligned bucket scale 2",
-			bucket: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			},
-			scale: 2,
-			want: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{10, 11},
-			},
+			name:       "aligned bucket scale 2",
+			bucket:     newBucket(0, []uint64{1, 2, 3, 4, 5, 6}),
+			scale:      2,
+			wantStart:  0,
+			wantCounts: []uint64{10, 11},
 		},
 		{
-			name: "aligned bucket scale 3",
-			bucket: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			},
-			scale: 3,
-			want: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{21},
-			},
+			name:       "aligned bucket scale 3",
+			bucket:     newBucket(0, []uint64{1, 2, 3, 4, 5, 6}),
+			scale:      3,
+			wantStart:  0,
+			wantCounts: []uint64{21},
 		},
 		{
-			name: "unaligned bucket scale 1",
-			bucket: &expoBuckets{
-				startBin: 5,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			}, // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
-			scale: 1,
-			want: &expoBuckets{
-				startBin: 2,
-				counts:   []uint64{1, 5, 9, 6},
-			}, // This is equivalent to [0,0,1,5,9,6]
+			name:       "unaligned bucket scale 1",
+			bucket:     newBucket(5, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
+			scale:      1,
+			wantStart:  2,
+			wantCounts: []uint64{1, 5, 9, 6}, // This is equivalent to [0,0,1,5,9,6]
 		},
 		{
-			name: "unaligned bucket scale 2",
-			bucket: &expoBuckets{
-				startBin: 7,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			}, // This is equivalent to [0,0,0,0,0,0,0,1,2,3,4,5,6]
-			scale: 2,
-			want: &expoBuckets{
-				startBin: 1,
-				counts:   []uint64{1, 14, 6},
-			}, // This is equivalent to [0,1,14,6]
+			name:       "unaligned bucket scale 2",
+			bucket:     newBucket(7, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,0,0,1,2,3,4,5,6]
+			scale:      2,
+			wantStart:  1,
+			wantCounts: []uint64{1, 14, 6}, // This is equivalent to [0,1,14,6]
 		},
 		{
-			name: "unaligned bucket scale 3",
-			bucket: &expoBuckets{
-				startBin: 3,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			}, // This is equivalent to [0,0,0,1,2,3,4,5,6]
-			scale: 3,
-			want: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{15, 6},
-			}, // This is equivalent to [0,15,6]
+			name:       "unaligned bucket scale 3",
+			bucket:     newBucket(3, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,1,2,3,4,5,6]
+			scale:      3,
+			wantStart:  0,
+			wantCounts: []uint64{15, 6}, // This is equivalent to [0,15,6]
 		},
 		{
-			name: "unaligned bucket scale 1",
-			bucket: &expoBuckets{
-				startBin: 1,
-				counts:   []uint64{1, 0, 1},
-			},
-			scale: 1,
-			want: &expoBuckets{
-				startBin: 0,
-				counts:   []uint64{1, 1},
-			},
+			name:       "unaligned bucket scale 1",
+			bucket:     newBucket(1, []uint64{1, 0, 1}),
+			scale:      1,
+			wantStart:  0,
+			wantCounts: []uint64{1, 1},
 		},
 		{
-			name: "negative startBin",
-			bucket: &expoBuckets{
-				startBin: -1,
-				counts:   []uint64{1, 0, 3},
-			},
-			scale: 1,
-			want: &expoBuckets{
-				startBin: -1,
-				counts:   []uint64{1, 3},
-			},
+			name:       "negative startBin",
+			bucket:     newBucket(-1, []uint64{1, 0, 3}),
+			scale:      1,
+			wantStart:  -1,
+			wantCounts: []uint64{1, 3},
 		},
 		{
-			name: "negative startBin 2",
-			bucket: &expoBuckets{
-				startBin: -4,
-				counts:   []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-			},
-			scale: 1,
-			want: &expoBuckets{
-				startBin: -2,
-				counts:   []uint64{3, 7, 11, 15, 19},
-			},
+			name:       "negative startBin 2",
+			bucket:     newBucket(-4, []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+			scale:      1,
+			wantStart:  -2,
+			wantCounts: []uint64{3, 7, 11, 15, 19},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.bucket.downscale(tt.scale)
 
-			assert.Equal(t, tt.want, tt.bucket)
+			assertBuckets(t, tt.wantStart, tt.wantCounts, *tt.bucket, tt.name)
 		})
 	}
 }
 
 func TestExpoBucketRecord(t *testing.T) {
 	tests := []struct {
-		name   string
-		bucket *expoBuckets
-		bin    int32
-		want   *expoBuckets
+		name       string
+		bucket     *expoBuckets
+		bin        int32
+		wantStart  int32
+		wantCounts []uint64
 	}{
 		{
-			name:   "Empty Bucket creates first count",
-			bucket: &expoBuckets{},
-			bin:    -5,
-			want: &expoBuckets{
-				startBin: -5,
-				counts:   []uint64{1},
-			},
+			name:       "Empty Bucket creates first count",
+			bucket:     newBucket(0, nil),
+			bin:        -5,
+			wantStart:  -5,
+			wantCounts: []uint64{1},
 		},
 		{
-			name: "Bin is in the bucket",
-			bucket: &expoBuckets{
-				startBin: 3,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			},
-			bin: 5,
-			want: &expoBuckets{
-				startBin: 3,
-				counts:   []uint64{1, 2, 4, 4, 5, 6},
-			},
+			name:       "Bin is in the bucket",
+			bucket:     newBucket(3, []uint64{1, 2, 3, 4, 5, 6}),
+			bin:        5,
+			wantStart:  3,
+			wantCounts: []uint64{1, 2, 4, 4, 5, 6},
 		},
 		{
-			name: "Bin is before the start of the bucket",
-			bucket: &expoBuckets{
-				startBin: 1,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			},
-			bin: -2,
-			want: &expoBuckets{
-				startBin: -2,
-				counts:   []uint64{1, 0, 0, 1, 2, 3, 4, 5, 6},
-			},
+			name:       "Bin is before the start of the bucket",
+			bucket:     newBucket(1, []uint64{1, 2, 3, 4, 5, 6}),
+			bin:        -2,
+			wantStart:  -2,
+			wantCounts: []uint64{1, 0, 0, 1, 2, 3, 4, 5, 6},
 		},
 		{
-			name: "Bin is after the end of the bucket",
-			bucket: &expoBuckets{
-				startBin: -2,
-				counts:   []uint64{1, 2, 3, 4, 5, 6},
-			},
-			bin: 4,
-			want: &expoBuckets{
-				startBin: -2,
-				counts:   []uint64{1, 2, 3, 4, 5, 6, 1},
-			},
+			name:       "Bin is after the end of the bucket",
+			bucket:     newBucket(-2, []uint64{1, 2, 3, 4, 5, 6}),
+			bin:        4,
+			wantStart:  -2,
+			wantCounts: []uint64{1, 2, 3, 4, 5, 6, 1},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.bucket.record(tt.bin)
 
-			assert.Equal(t, tt.want, tt.bucket)
+			assertBuckets(t, tt.wantStart, tt.wantCounts, *tt.bucket, tt.name)
 		})
 	}
 }
@@ -713,10 +632,7 @@ func TestSubNormal(t *testing.T) {
 	want.minMax.Update(math.SmallestNonzeroFloat64)
 	want.sum.add(3 * math.SmallestNonzeroFloat64)
 	want.scale.Store(20)
-	want.posBuckets = expoBuckets{
-		startBin: -1126170625,
-		counts:   []uint64{3},
-	}
+	want.posBuckets = *newBucket(-1126170625, []uint64{3})
 
 	ehdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
 	ehdp.record(math.SmallestNonzeroFloat64)
