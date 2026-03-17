@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -52,6 +52,7 @@ var (
 
 func newMockTracer() *mockTracer {
 	u := rand.Uint32()
+	// nolint:gosec // Intentional byte extraction from uint32
 	seed := [32]byte{byte(u), byte(u >> 8), byte(u >> 16), byte(u >> 24)}
 	return &mockTracer{
 		FinishedSpans:         nil,
