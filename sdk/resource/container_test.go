@@ -61,6 +61,10 @@ func TestGetContainerIDFromLine(t *testing.T) {
 			line: "13:name=systemd:/podruntime/docker/kubepods/ac679f8a8319c8cf7d38e1adf263bc08d23zzzz",
 		},
 		{
+			name: "short hex rejected",
+			line: "13:name=systemd:/user.slice/user-1000.slice/user@1000.service/app.slice/podman.service",
+		},
+		{
 			name: "no container id - 1",
 			line: "pids: /",
 		},
@@ -461,7 +465,7 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 		},
 		{
 			name:          "podman cgroupv2 falls back to mountinfo",
-			cgroupContent: "0::/",
+			cgroupContent: "14:name=systemd:/user.slice/user-1000.slice/user@1000.service/app.slice/podman.service",
 			mountInfoContent: `1088 875 0:118 / / rw,noatime - fuse.fuse-overlayfs fuse-overlayfs rw
 1094 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hosts /etc/hosts rw - tmpfs tmpfs rw
 1096 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hostname /etc/hostname rw - tmpfs tmpfs rw`,

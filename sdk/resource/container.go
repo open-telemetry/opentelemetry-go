@@ -19,7 +19,7 @@ type containerIDProvider func() (string, error)
 
 var (
 	containerID         containerIDProvider = getContainerIDFromCGroup
-	cgroupContainerIDRe                     = regexp.MustCompile(`^.*/(?:.*[-:])?([0-9a-f]+)(?:\.|\s*$)`)
+	cgroupContainerIDRe                     = regexp.MustCompile(`^.*/(?:.*[-:])?([0-9a-f]{32,})(?:\.|\s*$)`)
 	mountInfoContainerIDRe                  = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 
