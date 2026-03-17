@@ -9,6 +9,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 ## Features
 
 - [Exemplars](#exemplars)
+- [Metric Export Batch Size](#metric-export-batch-size)
 
 ### Exemplars
 
@@ -69,6 +70,28 @@ Revert to the default exemplar filter (`"trace_based"`)
 
 ```console
 unset OTEL_METRICS_EXEMPLAR_FILTER
+```
+
+### Metric Export Batch Size
+
+The metric export can be split into batches before exporting by specifying a maximum number of data points per batch.
+
+This experimental feature can be enabled by setting the `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE` environment variable.
+The value MUST be a positive integer.
+All other values or an empty value will result in the default behavior of not batching.
+
+#### Examples
+
+Enable metrics to be batched by maximum export batch size of 200.
+
+```console
+export OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=200
+```
+
+Disable metric export batching.
+
+```console
+unset OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE
 ```
 
 ## Compatibility and Stability
