@@ -147,51 +147,46 @@ func TestGetContainerIDFromMountInfoLine(t *testing.T) {
 	}
 }
 
-func TestGetContainerIDFromHostnameLine(t *testing.T) {
+func TestGetLastHexSegment(t *testing.T) {
 	testCases := []struct {
-		name                string
-		line                string
-		expectedContainerID string
+		name     string
+		line     string
+		expected string
 	}{
 		{
-			name:                "docker",
-			line:                "473 456 254:1 /docker/containers/be522444b60caf2d3934b8b24b916a8a314f4b68d4595aa419874657e8d103f2/hostname /etc/hostname rw,relatime - ext4 /dev/vda1 rw",
-			expectedContainerID: "be522444b60caf2d3934b8b24b916a8a314f4b68d4595aa419874657e8d103f2",
+			name:     "docker containers path",
+			line:     "473 456 254:1 /docker/containers/be522444b60caf2d3934b8b24b916a8a314f4b68d4595aa419874657e8d103f2/hostname /etc/hostname rw,relatime - ext4 /dev/vda1 rw",
+			expected: "be522444b60caf2d3934b8b24b916a8a314f4b68d4595aa419874657e8d103f2",
 		},
 		{
-			name:                "docker in minikube",
-			line:                "929 920 254:1 /docker/volumes/minikube/_data/lib/docker/containers/0eaa6718003210b6520f7e82d14b4c8d4743057a958a503626240f8d1900bc33/hostname /etc/hostname rw,relatime - ext4 /dev/vda1 rw",
-			expectedContainerID: "0eaa6718003210b6520f7e82d14b4c8d4743057a958a503626240f8d1900bc33",
+			name:     "docker in minikube",
+			line:     "929 920 254:1 /docker/volumes/minikube/_data/lib/docker/containers/0eaa6718003210b6520f7e82d14b4c8d4743057a958a503626240f8d1900bc33/hostname /etc/hostname rw,relatime - ext4 /dev/vda1 rw",
+			expected: "0eaa6718003210b6520f7e82d14b4c8d4743057a958a503626240f8d1900bc33",
 		},
 		{
-			name:                "podman",
-			line:                "983 961 0:56 /containers/overlay-containers/2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6/userdata/hostname /etc/hostname ro,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,size=783888k",
-			expectedContainerID: "2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6",
+			name:     "podman overlay-containers",
+			line:     "983 961 0:56 /containers/overlay-containers/2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6/userdata/hostname /etc/hostname ro - tmpfs tmpfs rw",
+			expected: "2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6",
 		},
 		{
-			name:                "crio overlay-containers",
-			line:                "10312 10303 0:25 /containers/storage/overlay-containers/2ac4c84cb0d3c3beb04beeef6ccf71c17b5fdd0252ce3a2b66bc2fdd0aaa1814/userdata/hostname /etc/hostname rw,nosuid,nodev master:15 - tmpfs tmpfs rw",
-			expectedContainerID: "2ac4c84cb0d3c3beb04beeef6ccf71c17b5fdd0252ce3a2b66bc2fdd0aaa1814",
+			name:     "containerd minikube sandboxes",
+			line:     "1537 1517 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw",
+			expected: "fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6",
 		},
 		{
-			name:                "containerd minikube sandboxes",
-			line:                "1537 1517 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw",
-			expectedContainerID: "fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6",
-		},
-		{
-			name: "hostname but no 64-hex segment",
+			name: "no 64-hex segment",
 			line: "100 99 0:50 /some/path/hostname /etc/hostname rw - ext4 /dev/sda1 rw",
 		},
 		{
-			name: "hostname with invalid hex",
+			name: "invalid hex chars",
 			line: "100 99 0:50 /containerd/sandboxes/fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3fz9320f4402ae6/hostname /etc/hostname rw - ext4 /dev/sda1 rw",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			id := getContainerIDFromHostnameLine(tc.line)
-			assert.Equal(t, tc.expectedContainerID, id)
+			id := getLastHexSegment(tc.line)
+			assert.Equal(t, tc.expected, id)
 		})
 	}
 }
@@ -221,11 +216,25 @@ func TestGetContainerIDFromMountInfoReader(t *testing.T) {
 			expectedContainerID: "f2a44bc8e090f93a2b4d7f510bdaff0615ad52906e3287ee956dcf5aa5012a91",
 		},
 		{
+			name: "containerd prefix wins even when hostname line comes first",
+			content: `2023 2002 253:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/b136f3d296b4c2024b3e7ad816f2a804a47cf1acc3d445075c6d78cf159ef58d/hostname /etc/hostname rw,relatime - xfs /dev/mapper/ubuntu--vg-root rw
+2009 2008 0:32 /system.slice/containerd.service/kubepods-burstable-pod321c09bf_282b_44e4_a467_39daf144ef1f.slice:cri-containerd:f2a44bc8e090f93a2b4d7f510bdaff0615ad52906e3287ee956dcf5aa5012a91 /sys/fs/cgroup/systemd ro,nosuid,nodev,noexec,relatime master:11 - cgroup cgroup rw,xattr,name=systemd`,
+			expectedContainerID: "f2a44bc8e090f93a2b4d7f510bdaff0615ad52906e3287ee956dcf5aa5012a91",
+		},
+		{
 			name: "crio with prefix returns workload ID",
 			content: `7276 6904 0:507 / / rw,relatime - overlay overlay rw
 7282 7281 0:27 /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod8f215fa2_6177_4ab9_b1f4_c802d19657bc.slice/crio-f23ec1d4b715c6531a17e9c549222fbbe1f7ffff697a29a2212b3b4cdc37f52e.scope /sys/fs/cgroup/systemd ro,nosuid,nodev,noexec,relatime master:9 - cgroup cgroup rw
 7304 7276 0:25 /containers/storage/overlay-containers/757a1c14bdd68b907c41f15436c0c2f9ec5a4cd4317135fcc1c4a64188db98d0/userdata/hostname /etc/hostname rw,nosuid,nodev master:28 - tmpfs tmpfs rw`,
 			expectedContainerID: "f23ec1d4b715c6531a17e9c549222fbbe1f7ffff697a29a2212b3b4cdc37f52e",
+		},
+		{
+			name: "crio generic without prefix uses last containers match over hostname",
+			content: `10303 9025 0:676 / / rw,relatime master:2633 - overlay overlay rw
+10312 10303 0:25 /containers/storage/overlay-containers/2ac4c84cb0d3c3beb04beeef6ccf71c17b5fdd0252ce3a2b66bc2fdd0aaa1814/userdata/hostname /etc/hostname rw,nosuid,nodev master:15 - tmpfs tmpfs rw
+10314 10303 252:4 /ostree/deploy/rhcos/var/lib/kubelet/pods/0a947273-7214-4824-8411-875ebd7626e4/etc-hosts /etc/hosts rw,relatime - xfs /dev/vda4 rw
+10316 10303 0:25 /containers/storage/overlay-containers/a8f62e52ed7c2cd85242dcf0eb1d727b643540ceca7f328ad7d2f31aedf07731/userdata/run/secrets /run/secrets rw,nosuid,nodev - tmpfs tmpfs rw`,
+			expectedContainerID: "a8f62e52ed7c2cd85242dcf0eb1d727b643540ceca7f328ad7d2f31aedf07731",
 		},
 		{
 			name: "containerd minikube with hostname only",

@@ -113,10 +113,17 @@ func getContainerIDFromLine(line string) string {
 	return matches[1]
 }
 
-// getContainerIDFromMountInfoReader scans mountinfo lines for a container ID.
-// It tries runtime-specific prefix matches first (/crio-, cri-containerd:),
-// then falls back to a hostname-gated generic extraction.
+// getContainerIDFromMountInfoReader scans mountinfo lines for a container ID
+// using three strategies in priority order across the entire file:
+//
+//  1. Runtime-specific prefixes (/crio-, cri-containerd:) - first match wins.
+//  2. Generic /containers/ lines - last 64-hex path segment across all matching
+//     lines (handles CRI-O infra vs workload container ordering).
+//  3. Hostname-gated fallback - first 64-hex segment from a "hostname" line
+//     (catches containerd-minikube /sandboxes/ paths).
 func getContainerIDFromMountInfoReader(reader io.Reader) string {
+	var genericMatch, hostnameMatch string
+
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -125,13 +132,23 @@ func getContainerIDFromMountInfoReader(reader io.Reader) string {
 			return id
 		}
 
-		if strings.Contains(line, "hostname") {
-			if id := getContainerIDFromHostnameLine(line); id != "" {
-				return id
+		if strings.Contains(line, "/containers/") {
+			if id := getLastHexSegment(line); id != "" {
+				genericMatch = id
+			}
+		}
+
+		if hostnameMatch == "" && strings.Contains(line, "hostname") {
+			if id := getLastHexSegment(line); id != "" {
+				hostnameMatch = id
 			}
 		}
 	}
-	return ""
+
+	if genericMatch != "" {
+		return genericMatch
+	}
+	return hostnameMatch
 }
 
 // getContainerIDFromMountInfoLine extracts a container ID from a mountinfo
@@ -154,13 +171,14 @@ func getContainerIDFromMountInfoLine(line string) string {
 	return ""
 }
 
-// getContainerIDFromHostnameLine extracts a container ID from a mountinfo
-// hostname line by splitting on "/" and finding a 64-character hex segment.
-func getContainerIDFromHostnameLine(line string) string {
+// getLastHexSegment returns the last path segment in line that is a
+// 64-character lowercase hex string, or "" if none is found.
+func getLastHexSegment(line string) string {
+	var result string
 	for _, segment := range strings.Split(line, "/") {
 		if mountInfoContainerIDRe.MatchString(segment) {
-			return segment
+			result = segment
 		}
 	}
-	return ""
+	return result
 }
