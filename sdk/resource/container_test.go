@@ -306,6 +306,43 @@ func TestGetContainerIDFromMountInfoReader(t *testing.T) {
 			expectedContainerID: "6663b89b397dca3b1bc842cbeb31c5e3b1f27ec40ecb21ef15727300816e5158",
 		},
 		{
+			name: "minikube containerd mountinfo",
+			content: `1517 1428 0:208 / / rw,relatime master:510 - overlay overlay rw
+1518 1517 0:210 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+1522 1517 0:203 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro
+1524 1523 0:24 /kubepods/besteffort/pod28478e30-384f-41e5-9d85-eae249ae8506/58a77afcbf0b16959d526758f6696677c862517acc97a562dc5c5b09afbf5236 /sys/fs/cgroup/systemd ro,nosuid,nodev,noexec,relatime master:8 - cgroup cgroup rw
+1535 1517 8:1 /var/lib/kubelet/pods/28478e30-384f-41e5-9d85-eae249ae8506/etc-hosts /etc/hosts rw,relatime - ext4 /dev/sda1 rw
+1536 1519 8:1 /var/lib/kubelet/pods/28478e30-384f-41e5-9d85-eae249ae8506/containers/alpine/e3d5dec7 /dev/termination-log rw,relatime - ext4 /dev/sda1 rw
+1537 1517 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw
+1538 1517 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6/resolv.conf /etc/resolv.conf rw,relatime - ext4 /dev/sda1 rw
+1540 1517 0:194 / /run/secrets/kubernetes.io/serviceaccount ro,relatime - tmpfs tmpfs rw`,
+			expectedContainerID: "fb5916a02feca96bdeecd8e062df9e5e51d6617c8214b5e1f3ff9320f4402ae6",
+		},
+		{
+			name: "minikube docker mountinfo",
+			content: `2307 2150 0:225 / / rw,relatime master:726 - overlay overlay rw
+2308 2307 0:226 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+2311 2307 0:219 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro
+2325 2309 8:1 /var/lib/kubelet/pods/350bff31-89d4-429e-b653-86d8167bc60e/containers/alpine/199c4a93 /dev/termination-log rw,relatime - ext4 /dev/sda1 rw
+2326 2307 8:1 /var/lib/docker/containers/a1551a1d7e1881d6c18d2c9ec462cab6ad3666825f0adb2098e9d5b198fd7e19/resolv.conf /etc/resolv.conf rw,relatime - ext4 /dev/sda1 rw
+2327 2307 8:1 /var/lib/docker/containers/a1551a1d7e1881d6c18d2c9ec462cab6ad3666825f0adb2098e9d5b198fd7e19/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw
+2328 2307 8:1 /var/lib/kubelet/pods/350bff31-89d4-429e-b653-86d8167bc60e/etc-hosts /etc/hosts rw,relatime - ext4 /dev/sda1 rw
+2330 2307 0:212 / /run/secrets/kubernetes.io/serviceaccount ro,relatime - tmpfs tmpfs rw`,
+			expectedContainerID: "a1551a1d7e1881d6c18d2c9ec462cab6ad3666825f0adb2098e9d5b198fd7e19",
+		},
+		{
+			name: "podman mountinfo",
+			content: `1088 875 0:118 / / rw,noatime - fuse.fuse-overlayfs fuse-overlayfs rw
+1089 1088 0:121 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+1091 1088 0:123 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs rw
+1094 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hosts /etc/hosts rw,nosuid,nodev,relatime - tmpfs tmpfs rw
+1096 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hostname /etc/hostname rw,nosuid,nodev,relatime - tmpfs tmpfs rw
+1097 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/.containerenv /run/.containerenv rw,nosuid,nodev,relatime - tmpfs tmpfs rw
+1098 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/run/secrets /run/secrets rw,nosuid,nodev,relatime - tmpfs tmpfs rw
+1099 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/resolv.conf /etc/resolv.conf rw,nosuid,nodev,relatime - tmpfs tmpfs rw`,
+			expectedContainerID: "1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809",
+		},
+		{
 			name: "no container id",
 			content: `25 1 0:23 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
 26 1 0:24 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw`,
@@ -421,6 +458,14 @@ func TestGetContainerIDFromCGroup(t *testing.T) {
 			cgroupFileNotExist:   true,
 			mountInfoContent:     "983 961 0:56 /containers/overlay-containers/2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6/userdata/hostname /etc/hostname ro - tmpfs tmpfs rw",
 			expectedContainerID:  "2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6",
+		},
+		{
+			name:          "podman cgroupv2 falls back to mountinfo",
+			cgroupContent: "0::/",
+			mountInfoContent: `1088 875 0:118 / / rw,noatime - fuse.fuse-overlayfs fuse-overlayfs rw
+1094 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hosts /etc/hosts rw - tmpfs tmpfs rw
+1096 1088 0:104 /containers/overlay-containers/1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809/userdata/hostname /etc/hostname rw - tmpfs tmpfs rw`,
+			expectedContainerID: "1a2de27e7157106568f7e081e42a8c14858c02bd9df30d6e352b298178b46809",
 		},
 		{
 			name:                  "cgroup v1 empty and mountinfo does not exist",
