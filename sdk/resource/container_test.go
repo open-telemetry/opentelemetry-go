@@ -252,6 +252,60 @@ func TestGetContainerIDFromMountInfoReader(t *testing.T) {
 			expectedContainerID: "2a33efc76e519c137fe6093179653788bed6162d4a15e5131c8e835c968afbe6",
 		},
 		{
+			name: "gke containerd with hostname fallback only",
+			content: `7634 6917 0:1147 / / rw,relatime - overlay overlay rw,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.gcfs/snapshotter/snapshots/673/fs:/var/lib/containerd/io.containerd.snapshotter.v1.gcfs/snapshotter/snapshots/671/fs:/var/lib/containerd/io.containerd.snapshotter.v1.gcfs/snapshotter/snapshots/669/fs:/var/lib/containerd/io.containerd.snapshotter.v1.gcfs/snapshotter/snapshots/668/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.gcfs/snapshotter/snapshots/915/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.gcfs/snapshotter/snapshots/915/work,uuid=on
+7636 7634 0:1179 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+7637 7634 0:1180 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+7638 7637 0:1181 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666
+7639 7637 0:1149 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw
+7640 7634 0:1154 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro
+7641 7640 0:27 / /sys/fs/cgroup ro,nosuid,nodev,noexec,relatime - cgroup2 cgroup rw
+7642 7634 8:1 /var/lib/kubelet/pods/6bcf846c-5fe3-45cb-995f-5d34aa16e4c3/etc-hosts /etc/hosts rw,relatime - ext4 /dev/sda1 rw,commit=30
+7643 7637 8:1 /var/lib/kubelet/pods/6bcf846c-5fe3-45cb-995f-5d34aa16e4c3/containers/latency-router/fc653337 /dev/termination-log rw,relatime - ext4 /dev/sda1 rw,commit=30
+7644 7634 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/cbd4283245f21968f5a0f2960d4b689d063a0ccd27896b3665cfcbd140f3b5b5/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw,commit=30
+7645 7634 8:1 /var/lib/containerd/io.containerd.grpc.v1.cri/sandboxes/cbd4283245f21968f5a0f2960d4b689d063a0ccd27896b3665cfcbd140f3b5b5/resolv.conf /etc/resolv.conf rw,relatime - ext4 /dev/sda1 rw,commit=30
+7646 7637 0:947 / /dev/shm rw,relatime - tmpfs shm rw,size=65536k
+7647 7634 0:702 / /run/secrets/kubernetes.io/serviceaccount ro,relatime - tmpfs tmpfs rw,size=28928128k,noswap
+6918 7636 0:1179 /bus /proc/bus ro,nosuid,nodev,noexec,relatime - proc proc rw
+6919 7636 0:1179 /fs /proc/fs ro,nosuid,nodev,noexec,relatime - proc proc rw
+6920 7636 0:1179 /irq /proc/irq ro,nosuid,nodev,noexec,relatime - proc proc rw
+6921 7636 0:1179 /sys /proc/sys ro,nosuid,nodev,noexec,relatime - proc proc rw
+6922 7636 0:1179 /sysrq-trigger /proc/sysrq-trigger ro,nosuid,nodev,noexec,relatime - proc proc rw
+6923 7636 0:1182 / /proc/acpi ro,relatime - tmpfs tmpfs ro
+6924 7636 0:1180 /null /proc/interrupts rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+6925 7636 0:1180 /null /proc/kcore rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+6926 7636 0:1180 /null /proc/keys rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+6927 7636 0:1180 /null /proc/timer_list rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+6928 7636 0:1183 / /proc/scsi ro,relatime - tmpfs tmpfs ro
+6929 7640 0:1184 / /sys/firmware ro,relatime - tmpfs tmpfs ro`,
+			expectedContainerID: "cbd4283245f21968f5a0f2960d4b689d063a0ccd27896b3665cfcbd140f3b5b5",
+		},
+		{
+			name: "orbstack docker multi-line",
+			content: `291 219 0:76 / / rw,relatime - overlay overlay rw,lowerdir=/var/lib/docker/overlay2/l/EHOYRZ2XVF72EER2KUZMZRQ4AR:/var/lib/docker/overlay2/l/CPKJ4KNWRQ5UBZGO2NLTOWUR5H:/var/lib/docker/overlay2/l/LOSHS5MI4YOOHYHWFCMSYRMMOL:/var/lib/docker/overlay2/l/QGCTP7MCIDJDFW36CEJVHSCUBQ:/var/lib/docker/overlay2/l/NXOVYOW5ATJQZKPSKXAVF35YXR:/var/lib/docker/overlay2/l/7XE5L5WBX7ARM5KWBH7NBKOE5V:/var/lib/docker/overlay2/l/UVNTWA347GTLCKLFHLIF75TKX3:/var/lib/docker/overlay2/l/HCXXIKSKZIO7WAR4A3YZRMDERW,upperdir=/var/lib/docker/overlay2/e8ba3edcecf7d04bd9801d8085e49980f36a49a9b27b51b000ba4f423106543b/diff,workdir=/var/lib/docker/overlay2/e8ba3edcecf7d04bd9801d8085e49980f36a49a9b27b51b000ba4f423106543b/work
+293 291 0:81 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+294 291 0:82 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+295 294 0:83 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666
+296 291 0:84 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro
+297 296 0:31 / /sys/fs/cgroup ro,nosuid,nodev,noexec,relatime - cgroup2 cgroup rw,nsdelegate
+298 294 0:79 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw
+299 294 0:85 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=8207360k
+300 291 0:37 /docker/volumes/test-depends_redis-data/_data /data rw,noatime master:65 - btrfs /dev/vdb1 rw,nodatasum,nodatacow,ssd,discard,space_cache=v2,subvolid=256,subvol=/docker
+301 291 0:37 /docker/containers/6663b89b397dca3b1bc842cbeb31c5e3b1f27ec40ecb21ef15727300816e5158/resolv.conf /etc/resolv.conf rw,noatime - btrfs /dev/vdb1 rw,nodatasum,nodatacow,ssd,discard,space_cache=v2,subvolid=256,subvol=/docker
+302 291 0:37 /docker/containers/6663b89b397dca3b1bc842cbeb31c5e3b1f27ec40ecb21ef15727300816e5158/hostname /etc/hostname rw,noatime - btrfs /dev/vdb1 rw,nodatasum,nodatacow,ssd,discard,space_cache=v2,subvolid=256,subvol=/docker
+303 291 0:37 /docker/containers/6663b89b397dca3b1bc842cbeb31c5e3b1f27ec40ecb21ef15727300816e5158/hosts /etc/hosts rw,noatime - btrfs /dev/vdb1 rw,nodatasum,nodatacow,ssd,discard,space_cache=v2,subvolid=256,subvol=/docker
+222 293 0:81 /bus /proc/bus ro,nosuid,nodev,noexec,relatime - proc proc rw
+223 293 0:81 /fs /proc/fs ro,nosuid,nodev,noexec,relatime - proc proc rw
+224 293 0:81 /irq /proc/irq ro,nosuid,nodev,noexec,relatime - proc proc rw
+225 293 0:81 /sys /proc/sys ro,nosuid,nodev,noexec,relatime - proc proc rw
+226 293 0:81 /sysrq-trigger /proc/sysrq-trigger ro,nosuid,nodev,noexec,relatime - proc proc rw
+227 293 0:82 /null /proc/interrupts rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+228 293 0:82 /null /proc/keys rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+229 293 0:82 /null /proc/timer_list rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+230 296 0:86 / /sys/firmware ro,relatime - tmpfs tmpfs ro`,
+			expectedContainerID: "6663b89b397dca3b1bc842cbeb31c5e3b1f27ec40ecb21ef15727300816e5158",
+		},
+		{
 			name: "no container id",
 			content: `25 1 0:23 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
 26 1 0:24 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw`,
