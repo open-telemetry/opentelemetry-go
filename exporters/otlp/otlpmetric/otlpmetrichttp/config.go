@@ -121,7 +121,7 @@ func WithCompression(compression Compression) Option {
 
 // WithEncoding sets the encoding the Exporter will use to encode the payload.
 //
-// By default, if this option is not passed, protobuf encoding will be used.
+// By default, if this option is not used, or an invalid value is passed, the protobuf encoding will be used.
 func WithEncoding(encoding Encoding) Option {
 	return wrappedOption{oconf.WithEncoding(oconf.Encoding(encoding))}
 }
