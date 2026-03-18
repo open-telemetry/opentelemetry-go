@@ -490,9 +490,6 @@ func validateGauge[N int64 | float64](t *testing.T, aggs []metricdata.Aggregatio
 	for _, v := range getConcurrentVals[N]() {
 		valid[v] = true
 	}
-	// TODO(dashpole): Fix a concurrency bug where a gauge can be collected with
-	// the value zero even when no zero-value measurements have been recorded.
-	valid[0] = true
 
 	for _, agg := range aggs {
 		s, ok := agg.(metricdata.Gauge[N])

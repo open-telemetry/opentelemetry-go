@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `IsRandom` and `WithRandom` on `TraceFlags`, and `IsRandom` on `SpanContext` in `go.opentelemetry.io/otel/trace` for [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag) support. (#8012)
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
+- Add `DefaultWithContext` and `EnvironmentWithContext` in `go.opentelemetry.io/otel/sdk/resource` to support plumbing `context.Context` through default and environment detectors. (#8051)
 - Support attributes with empty value (`attribute.EMPTY`) in OTLP exporters (`go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`). (#8038)
 - Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8038)
 
@@ -28,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Return spec-compliant `TraceIdRatioBased` description. This is a breaking behavioral change, but it is necessary to
   make the implementation [spec-compliant](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8027)
+- Fix a race condition in `go.opentelemetry.io/otel/sdk/metric` where the lastvalue aggregation could collect the value 0 even when no zero-value measurements were recorded. (#8056)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
