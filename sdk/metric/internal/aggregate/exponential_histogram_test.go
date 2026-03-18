@@ -16,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -638,6 +639,8 @@ func TestSubNormal(t *testing.T) {
 	ehdp.record(math.SmallestNonzeroFloat64)
 	ehdp.record(math.SmallestNonzeroFloat64)
 
+	want.startTime = ehdp.startTime
+
 	assert.Equal(t, want, ehdp)
 }
 
@@ -651,10 +654,33 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 	t.Run("Float64/Delta", testDeltaExpoHist[float64]())
 	c.Reset()
 
-	t.Run("Int64/Cumulative", testCumulativeExpoHist[int64]())
+	t.Run("Int64/Cumulative", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[int64]()(t)
+	})
 	c.Reset()
 
-	t.Run("Float64/Cumulative", testCumulativeExpoHist[float64]())
+	t.Run("Int64/Cumulative/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[float64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[float64]()(t)
+	})
+	c.Reset()
 }
 
 func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
@@ -693,7 +719,7 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(1),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(3),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -747,8 +773,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(3),
-							Time:       y2kPlus(4),
+							StartTime:  y2kPlus(4),
+							Time:       y2kPlus(7),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -765,8 +791,8 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(3),
-							Time:       y2kPlus(4),
+							StartTime:  y2kPlus(4),
+							Time:       y2kPlus(7),
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -790,6 +816,15 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 2,
 	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	aliceStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	if x.PerSeriesStartTimestamps.Enabled() {
+		aliceStartTime = y2kPlus(2)
+		overflowStartTime = y2kPlus(6)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -819,8 +854,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(3),
 							Count:      7,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -852,8 +887,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(4),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -881,8 +916,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(5),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -918,8 +953,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(7),
 							Count:      10,
 							Min:        metricdata.NewExtrema[N](-1),
 							Max:        metricdata.NewExtrema[N](16),
@@ -936,8 +971,8 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  overflowStartTime,
+							Time:       y2kPlus(7),
 							Count:      6,
 							Min:        metricdata.NewExtrema[N](1),
 							Max:        metricdata.NewExtrema[N](16),

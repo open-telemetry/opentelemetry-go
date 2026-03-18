@@ -13,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -40,6 +41,7 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	posBuckets expoBuckets
 	negBuckets expoBuckets
 	zeroCount  atomic.Uint64
+	startTime  time.Time
 }
 
 func newExpoHistogramDataPoint[N int64 | float64](
@@ -49,10 +51,11 @@ func newExpoHistogramDataPoint[N int64 | float64](
 	noMinMax, noSum bool,
 ) *expoHistogramDataPoint[N] { // nolint:revive // we need this control flag
 	dp := &expoHistogramDataPoint[N]{
-		attrs:    attrs,
-		maxSize:  maxSize,
-		noMinMax: noMinMax,
-		noSum:    noSum,
+		attrs:     attrs,
+		maxSize:   maxSize,
+		noMinMax:  noMinMax,
+		noSum:     noSum,
+		startTime: now(),
 	}
 	dp.scale.Store(maxScale)
 	return dp
@@ -440,10 +443,17 @@ func (e *expoHistogram[N]) cumulative(
 	n := len(e.values)
 	hDPts := reset(h.DataPoints, n, n)
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	for _, val := range e.values {
 		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
+
+		startTime := e.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
+		hDPts[i].StartTime = startTime
 		hDPts[i].Time = t
 		hDPts[i].Count = val.count()
 		hDPts[i].Scale = val.scale.Load()
