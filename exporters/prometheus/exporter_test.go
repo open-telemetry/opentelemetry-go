@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1162,12 +1162,10 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	concurrencyLevel := 10
 	for range concurrencyLevel {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, err := registry.Gather() // this calls collector.Collect
 			assert.NoError(t, err)
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -2749,11 +2747,11 @@ func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 	const numOperations = 100
 	var wg sync.WaitGroup
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
+			for j := range numOperations {
 				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.Int("goroutine", id)))
 
 				// Occasionally trigger collection

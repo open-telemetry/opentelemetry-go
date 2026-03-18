@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
-	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -389,9 +388,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64Counter("sint")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -411,9 +408,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Int64UpDownCounter("sint")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -462,9 +457,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64Counter("sfloat")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 3)
 			},
 			want: metricdata.Metrics{
@@ -484,9 +477,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 				ctr, err := m.Float64UpDownCounter("sfloat")
 				assert.NoError(t, err)
 
-				c, ok := ctr.(x.EnabledInstrument)
-				require.True(t, ok)
-				assert.True(t, c.Enabled(t.Context()))
+				assert.True(t, ctr.Enabled(t.Context()))
 				ctr.Add(ctx, 11)
 			},
 			want: metricdata.Metrics{
@@ -616,7 +607,9 @@ func TestMeterWithDropView(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.fn(t)
 			require.NoError(t, err)
-			c, ok := got.(x.EnabledInstrument)
+			c, ok := got.(interface {
+				Enabled(context.Context) bool
+			})
 			require.True(t, ok)
 			assert.False(t, c.Enabled(t.Context()))
 		})

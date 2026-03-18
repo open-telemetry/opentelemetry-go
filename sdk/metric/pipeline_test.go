@@ -86,11 +86,9 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	const threads = 2
 	for i := range threads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = pipe.produce(ctx, &output)
-		}()
+		})
 
 		wg.Add(1)
 		go func(n int) {
@@ -100,15 +98,11 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			pipe.addMultiCallback(func(context.Context) error { return nil })
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			b := aggregate.Builder[int64]{
 				Temporality:      metricdata.CumulativeTemporality,
 				ReservoirFunc:    nil,
@@ -119,7 +113,7 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 			measures := []aggregate.Measure[int64]{}
 			measures = append(measures, m)
 			pipe.addInt64Measure(oID, measures)
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -549,35 +543,27 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, err := m.Int64ObservableCounter("int64-observable-counter-2")
 		require.NoError(t, err)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, err := m.RegisterCallback(
 			func(_ context.Context, o metric.Observer) error {
 				o.ObserveInt64(oc1, 2)
 				return nil
 			}, oc1)
 		require.NoError(t, err)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_ = mp.pipes[0].produce(t.Context(), &metricdata.ResourceMetrics{})
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_ = mp.pipes[1].produce(t.Context(), &metricdata.ResourceMetrics{})
-	}()
+	})
 
 	wg.Wait()
 }
