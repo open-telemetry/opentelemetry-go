@@ -26,6 +26,9 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics, cfg config) (reasons 
 	r := diffSlices(
 		a.ScopeMetrics,
 		b.ScopeMetrics,
+		func(sm metricdata.ScopeMetrics) string {
+			return fmt.Sprintf("Scope %q", sm.Scope.Name)
+		},
 		func(a, b metricdata.ScopeMetrics) []string {
 			return equalScopeMetrics(a, b, cfg)
 		},
@@ -49,6 +52,9 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics, cfg config) (reasons []stri
 	r := diffSlices(
 		a.Metrics,
 		b.Metrics,
+		func(m metricdata.Metrics) string {
+			return fmt.Sprintf("Metric %q", m.Name)
+		},
 		func(a, b metricdata.Metrics) []string {
 			return equalMetrics(a, b, cfg)
 		},
@@ -164,6 +170,9 @@ func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reaso
 	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
+		func(dp metricdata.DataPoint[N]) string {
+			return fmt.Sprintf("DataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+		},
 		func(a, b metricdata.DataPoint[N]) []string {
 			return equalDataPoints(a, b, cfg)
 		},
@@ -190,6 +199,9 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons [
 	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
+		func(dp metricdata.DataPoint[N]) string {
+			return fmt.Sprintf("DataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+		},
 		func(a, b metricdata.DataPoint[N]) []string {
 			return equalDataPoints(a, b, cfg)
 		},
@@ -213,6 +225,9 @@ func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config
 	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
+		func(dp metricdata.HistogramDataPoint[N]) string {
+			return fmt.Sprintf("HistogramDataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+		},
 		func(a, b metricdata.HistogramDataPoint[N]) []string {
 			return equalHistogramDataPoints(a, b, cfg)
 		},
@@ -256,6 +271,9 @@ func equalDataPoints[N int64 | float64](
 		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
+			func(e metricdata.Exemplar[N]) string {
+				return "Exemplar"
+			},
 			func(a, b metricdata.Exemplar[N]) []string {
 				return equalExemplars(a, b, cfg)
 			},
@@ -312,6 +330,9 @@ func equalHistogramDataPoints[N int64 | float64](
 		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
+			func(e metricdata.Exemplar[N]) string {
+				return "Exemplar"
+			},
 			func(a, b metricdata.Exemplar[N]) []string {
 				return equalExemplars(a, b, cfg)
 			},
@@ -339,6 +360,9 @@ func equalExponentialHistograms[N int64 | float64](
 	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
+		func(dp metricdata.ExponentialHistogramDataPoint[N]) string {
+			return fmt.Sprintf("ExponentialHistogramDataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+		},
 		func(a, b metricdata.ExponentialHistogramDataPoint[N]) []string {
 			return equalExponentialHistogramDataPoints(a, b, cfg)
 		},
@@ -404,6 +428,9 @@ func equalExponentialHistogramDataPoints[N int64 | float64](
 		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
+			func(e metricdata.Exemplar[N]) string {
+				return "Exemplar"
+			},
 			func(a, b metricdata.Exemplar[N]) []string {
 				return equalExemplars(a, b, cfg)
 			},
@@ -429,6 +456,9 @@ func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
 	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
+		func(dp metricdata.SummaryDataPoint) string {
+			return fmt.Sprintf("SummaryDataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+		},
 		func(a, b metricdata.SummaryDataPoint) []string {
 			return equalSummaryDataPoint(a, b, cfg)
 		},
@@ -465,6 +495,9 @@ func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reason
 		r := diffSlices(
 			a.QuantileValues,
 			b.QuantileValues,
+			func(qv metricdata.QuantileValue) string {
+				return fmt.Sprintf("QuantileValue %v", qv.Quantile)
+			},
 			func(a, b metricdata.QuantileValue) []string {
 				return equalQuantileValue(a, b, cfg)
 			},
@@ -579,7 +612,7 @@ func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) 
 	return reasons
 }
 
-func diffSlices[T any](a, b []T, compare func(T, T) []string) string {
+func diffSlices[T any](a, b []T, formatContext func(T) string, compare func(T, T) []string) string {
 	visited := make([]bool, len(b))
 	var extraA []T
 	var extraB []T
@@ -619,8 +652,17 @@ func diffSlices[T any](a, b []T, compare func(T, T) []string) string {
 
 	for i := 0; i < minLen; i++ {
 		reasons := compare(extraA[i], extraB[i])
+		if formatContext != nil {
+			msg.WriteString(formatContext(extraA[i]) + ":\n")
+		}
 		for _, reason := range reasons {
-			msg.WriteString(reason + "\n")
+			// Indent reasons
+			lines := bytes.Split([]byte(reason), []byte("\n"))
+			for _, line := range lines {
+				if len(line) > 0 {
+					msg.WriteString("\t" + string(line) + "\n")
+				}
+			}
 		}
 	}
 
