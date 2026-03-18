@@ -1,12 +1,13 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric
+package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+// batcher splits metrics into batches.
 type batcher struct {
 	size int
 }
@@ -104,6 +105,7 @@ func (b batcher) splitMetric(m metricdata.Metrics, firstSize int) []metricdata.M
 	return chunks
 }
 
+// copyMetricData creates a copy of the metricdata.Metrics with the specified offset and number of datapoints to take.
 func copyMetricData(m metricdata.Metrics, offset, take int) metricdata.Metrics {
 	dest := metricdata.Metrics{
 		Name:        m.Name,
@@ -154,9 +156,9 @@ func copyMetricData(m metricdata.Metrics, offset, take int) metricdata.Metrics {
 }
 
 // scopeMetricsDPC calculates the total number of data points in the metricdata.ScopeMetrics.
-func scopeMetricsDPC(ilm metricdata.ScopeMetrics) int {
+func scopeMetricsDPC(sm metricdata.ScopeMetrics) int {
 	dataPointCount := 0
-	ms := ilm.Metrics
+	ms := sm.Metrics
 	for k := range ms {
 		dataPointCount += metricDPC(ms[k])
 	}
@@ -164,8 +166,8 @@ func scopeMetricsDPC(ilm metricdata.ScopeMetrics) int {
 }
 
 // metricDPC calculates the total number of data points in the metricdata.Metrics.
-func metricDPC(ms metricdata.Metrics) int {
-	switch a := ms.Data.(type) {
+func metricDPC(m metricdata.Metrics) int {
+	switch a := m.Data.(type) {
 	case metricdata.Gauge[int64]:
 		return len(a.DataPoints)
 	case metricdata.Gauge[float64]:
