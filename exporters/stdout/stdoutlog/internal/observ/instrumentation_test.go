@@ -13,13 +13,13 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 const (
