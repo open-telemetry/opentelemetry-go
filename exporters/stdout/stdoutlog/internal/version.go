@@ -5,4 +5,4 @@ package internal // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/
 
 // Version is the current release version of the OpenTelemetry stdoutlog
 // exporter in use.
-const Version = "v1.42.0"
+const Version = "v0.18.0"
