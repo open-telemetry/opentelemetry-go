@@ -271,7 +271,7 @@ func equalDataPoints[N int64 | float64](
 		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
-			func(e metricdata.Exemplar[N]) string {
+			func(_ metricdata.Exemplar[N]) string {
 				return "Exemplar"
 			},
 			func(a, b metricdata.Exemplar[N]) []string {
@@ -330,7 +330,7 @@ func equalHistogramDataPoints[N int64 | float64](
 		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
-			func(e metricdata.Exemplar[N]) string {
+			func(_ metricdata.Exemplar[N]) string {
 				return "Exemplar"
 			},
 			func(a, b metricdata.Exemplar[N]) []string {
@@ -428,7 +428,7 @@ func equalExponentialHistogramDataPoints[N int64 | float64](
 		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
-			func(e metricdata.Exemplar[N]) string {
+			func(_ metricdata.Exemplar[N]) string {
 				return "Exemplar"
 			},
 			func(a, b metricdata.Exemplar[N]) []string {
@@ -635,9 +635,10 @@ func diffSlices[T any](a, b []T, formatContext func(T) string, compare func(T, T
 	}
 
 	for j := range b {
-		if !visited[j] {
-			extraB = append(extraB, b[j])
+		if visited[j] {
+			continue
 		}
+		extraB = append(extraB, b[j])
 	}
 
 	if len(extraA) == 0 && len(extraB) == 0 {
@@ -645,22 +646,19 @@ func diffSlices[T any](a, b []T, formatContext func(T) string, compare func(T, T
 	}
 
 	var msg bytes.Buffer
-	minLen := len(extraA)
-	if len(extraB) < minLen {
-		minLen = len(extraB)
-	}
+	minLen := min(len(extraB), len(extraA))
 
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		reasons := compare(extraA[i], extraB[i])
 		if formatContext != nil {
-			msg.WriteString(formatContext(extraA[i]) + ":\n")
+			_, _ = msg.WriteString(formatContext(extraA[i]) + ":\n")
 		}
 		for _, reason := range reasons {
 			// Indent reasons
-			lines := bytes.Split([]byte(reason), []byte("\n"))
-			for _, line := range lines {
+			lines := bytes.SplitSeq([]byte(reason), []byte("\n"))
+			for line := range lines {
 				if len(line) > 0 {
-					msg.WriteString("\t" + string(line) + "\n")
+					_, _ = msg.WriteString("\t" + string(line) + "\n")
 				}
 			}
 		}
@@ -670,15 +668,15 @@ func diffSlices[T any](a, b []T, formatContext func(T) string, compare func(T, T
 		return fmt.Sprintf("%#v", v)
 	}
 	if len(extraA) > minLen {
-		msg.WriteString("missing expected values:\n")
+		_, _ = msg.WriteString("missing expected values:\n")
 		for i := minLen; i < len(extraA); i++ {
-			msg.WriteString(formatter(extraA[i]) + "\n")
+			_, _ = msg.WriteString(formatter(extraA[i]) + "\n")
 		}
 	}
 	if len(extraB) > minLen {
-		msg.WriteString("unexpected additional values:\n")
+		_, _ = msg.WriteString("unexpected additional values:\n")
 		for i := minLen; i < len(extraB); i++ {
-			msg.WriteString(formatter(extraB[i]) + "\n")
+			_, _ = msg.WriteString(formatter(extraB[i]) + "\n")
 		}
 	}
 
