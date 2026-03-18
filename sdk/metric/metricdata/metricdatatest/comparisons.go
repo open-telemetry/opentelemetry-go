@@ -23,14 +23,13 @@ func equalResourceMetrics(a, b metricdata.ResourceMetrics, cfg config) (reasons 
 		reasons = append(reasons, notEqualStr("Resources", a.Resource, b.Resource))
 	}
 
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.ScopeMetrics,
 		b.ScopeMetrics,
-		func(a, b metricdata.ScopeMetrics) bool {
-			r := equalScopeMetrics(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.ScopeMetrics) []string {
+			return equalScopeMetrics(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "ResourceMetrics ScopeMetrics not equal:\n"+r)
 	}
@@ -47,14 +46,13 @@ func equalScopeMetrics(a, b metricdata.ScopeMetrics, cfg config) (reasons []stri
 		reasons = append(reasons, notEqualStr("Scope", a.Scope, b.Scope))
 	}
 
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.Metrics,
 		b.Metrics,
-		func(a, b metricdata.Metrics) bool {
-			r := equalMetrics(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.Metrics) []string {
+			return equalMetrics(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "ScopeMetrics Metrics not equal:\n"+r)
 	}
@@ -163,14 +161,13 @@ func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []strin
 // The DataPoints each Gauge contains are compared based on containing the
 // same DataPoints, not the order they are stored in.
 func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reasons []string) {
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.DataPoint[N]) bool {
-			r := equalDataPoints(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.DataPoint[N]) []string {
+			return equalDataPoints(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "Gauge DataPoints not equal:\n"+r)
 	}
@@ -190,14 +187,13 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons [
 		reasons = append(reasons, notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic))
 	}
 
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.DataPoint[N]) bool {
-			r := equalDataPoints(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.DataPoint[N]) []string {
+			return equalDataPoints(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "Sum DataPoints not equal:\n"+r)
 	}
@@ -214,14 +210,13 @@ func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
 
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.HistogramDataPoint[N]) bool {
-			r := equalHistogramDataPoints(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.HistogramDataPoint[N]) []string {
+			return equalHistogramDataPoints(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "Histogram DataPoints not equal:\n"+r)
 	}
@@ -258,14 +253,13 @@ func equalDataPoints[N int64 | float64](
 	}
 
 	if !cfg.ignoreExemplars {
-		r := compareDiff(diffSlices(
+		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
-			func(a, b metricdata.Exemplar[N]) bool {
-				r := equalExemplars(a, b, cfg)
-				return len(r) == 0
+			func(a, b metricdata.Exemplar[N]) []string {
+				return equalExemplars(a, b, cfg)
 			},
-		))
+		)
 		if r != "" {
 			reasons = append(reasons, "Exemplars not equal:\n"+r)
 		}
@@ -315,14 +309,13 @@ func equalHistogramDataPoints[N int64 | float64](
 		}
 	}
 	if !cfg.ignoreExemplars {
-		r := compareDiff(diffSlices(
+		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
-			func(a, b metricdata.Exemplar[N]) bool {
-				r := equalExemplars(a, b, cfg)
-				return len(r) == 0
+			func(a, b metricdata.Exemplar[N]) []string {
+				return equalExemplars(a, b, cfg)
 			},
-		))
+		)
 		if r != "" {
 			reasons = append(reasons, "Exemplars not equal:\n"+r)
 		}
@@ -343,14 +336,13 @@ func equalExponentialHistograms[N int64 | float64](
 		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
 	}
 
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.ExponentialHistogramDataPoint[N]) bool {
-			r := equalExponentialHistogramDataPoints(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.ExponentialHistogramDataPoint[N]) []string {
+			return equalExponentialHistogramDataPoints(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "Histogram DataPoints not equal:\n"+r)
 	}
@@ -409,14 +401,13 @@ func equalExponentialHistogramDataPoints[N int64 | float64](
 		}
 	}
 	if !cfg.ignoreExemplars {
-		r := compareDiff(diffSlices(
+		r := diffSlices(
 			a.Exemplars,
 			b.Exemplars,
-			func(a, b metricdata.Exemplar[N]) bool {
-				r := equalExemplars(a, b, cfg)
-				return len(r) == 0
+			func(a, b metricdata.Exemplar[N]) []string {
+				return equalExemplars(a, b, cfg)
 			},
-		))
+		)
 		if r != "" {
 			reasons = append(reasons, "Exemplars not equal:\n"+r)
 		}
@@ -435,14 +426,13 @@ func equalExponentialBuckets(a, b metricdata.ExponentialBucket, _ config) (reaso
 }
 
 func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
-	r := compareDiff(diffSlices(
+	r := diffSlices(
 		a.DataPoints,
 		b.DataPoints,
-		func(a, b metricdata.SummaryDataPoint) bool {
-			r := equalSummaryDataPoint(a, b, cfg)
-			return len(r) == 0
+		func(a, b metricdata.SummaryDataPoint) []string {
+			return equalSummaryDataPoint(a, b, cfg)
 		},
-	))
+	)
 	if r != "" {
 		reasons = append(reasons, "Summary DataPoints not equal:\n"+r)
 	}
@@ -472,14 +462,13 @@ func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reason
 		if a.Sum != b.Sum {
 			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
 		}
-		r := compareDiff(diffSlices(
+		r := diffSlices(
 			a.QuantileValues,
 			b.QuantileValues,
-			func(a, b metricdata.QuantileValue) bool {
-				r := equalQuantileValue(a, b, cfg)
-				return len(r) == 0
+			func(a, b metricdata.QuantileValue) []string {
+				return equalQuantileValue(a, b, cfg)
 			},
-		))
+		)
 		if r != "" {
 			reasons = append(reasons, r)
 		}
@@ -590,15 +579,18 @@ func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) 
 	return reasons
 }
 
-func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
+func diffSlices[T any](a, b []T, compare func(T, T) []string) string {
 	visited := make([]bool, len(b))
+	var extraA []T
+	var extraB []T
+
 	for i := range a {
 		found := false
 		for j := range b {
 			if visited[j] {
 				continue
 			}
-			if equal(a[i], b[j]) {
+			if len(compare(a[i], b[j])) == 0 {
 				visited[j] = true
 				found = true
 				break
@@ -610,36 +602,41 @@ func diffSlices[T any](a, b []T, equal func(T, T) bool) (extraA, extraB []T) {
 	}
 
 	for j := range b {
-		if visited[j] {
-			continue
+		if !visited[j] {
+			extraB = append(extraB, b[j])
 		}
-		extraB = append(extraB, b[j])
 	}
 
-	return extraA, extraB
-}
-
-func compareDiff[T any](extraExpected, extraActual []T) string {
-	if len(extraExpected) == 0 && len(extraActual) == 0 {
+	if len(extraA) == 0 && len(extraB) == 0 {
 		return ""
+	}
+
+	var msg bytes.Buffer
+	minLen := len(extraA)
+	if len(extraB) < minLen {
+		minLen = len(extraB)
+	}
+
+	for i := 0; i < minLen; i++ {
+		reasons := compare(extraA[i], extraB[i])
+		for _, reason := range reasons {
+			msg.WriteString(reason + "\n")
+		}
 	}
 
 	formatter := func(v T) string {
 		return fmt.Sprintf("%#v", v)
 	}
-
-	var msg bytes.Buffer
-	if len(extraExpected) > 0 {
-		_, _ = msg.WriteString("missing expected values:\n")
-		for _, v := range extraExpected {
-			_, _ = msg.WriteString(formatter(v) + "\n")
+	if len(extraA) > minLen {
+		msg.WriteString("missing expected values:\n")
+		for i := minLen; i < len(extraA); i++ {
+			msg.WriteString(formatter(extraA[i]) + "\n")
 		}
 	}
-
-	if len(extraActual) > 0 {
-		_, _ = msg.WriteString("unexpected additional values:\n")
-		for _, v := range extraActual {
-			_, _ = msg.WriteString(formatter(v) + "\n")
+	if len(extraB) > minLen {
+		msg.WriteString("unexpected additional values:\n")
+		for i := minLen; i < len(extraB); i++ {
+			msg.WriteString(formatter(extraB[i]) + "\n")
 		}
 	}
 
