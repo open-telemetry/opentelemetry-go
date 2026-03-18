@@ -47,10 +47,10 @@ func errorType(err error) string {
 		}
 	}
 	if s == "" {
-		// Fallback to reflection if the ErrorType method is not supported or
-		// returns an empty value.
+		// Fall back to reflection if the ErrorType method is either not supported or
+		// it returns an empty value.
 
-		t := reflect.TypeOf(err)
+		t := reflect.TypeOf(rootError(err))
 		pkg, name := t.PkgPath(), t.Name()
 		if pkg != "" && name != "" {
 			s = pkg + "." + name
@@ -63,4 +63,16 @@ func errorType(err error) string {
 		}
 	}
 	return s
+}
+
+// rootError walks the error chain using errors.Unwrap to avoid reporting
+// wrapper types (e.g., *fmt.wrapError).
+func rootError(err error) error {
+	for curr := err; ; {
+		if u := errors.Unwrap(curr); u != nil {
+			curr = u
+			continue
+		}
+		return curr
+	}
 }

@@ -17,7 +17,15 @@ func TestErrorType(t *testing.T) {
 	check(t, errors.Join(custom("left"), custom("right")), "left") // first errors.As match is used.
 	check(t, custom(""), pkg+".ErrCustomType")                     // empty ErrorType, use concrete type.
 	check(t, wrapped(custom("wrapped-aborted")), "wrapped-aborted")
-	check(t, wrapped(custom("")), pkg+".wrappedErr") // empty ErrorType in chain, use concrete top-level type.
+	check(t, wrapped(custom("")), pkg+".ErrCustomType")         // empty ErrorType in chain, unwraps to innermost type.
+	check(t, wrapped(errors.New("msg")), "*errors.errorString") // wrapper unwraps to inner type.
+	check(t, wrapped(wrapped(errors.New("msg"))), "*errors.errorString")
+	check(t, errors.Join(errors.New("left"), errors.New("right")), "*errors.joinError")
+	check(
+		t,
+		wrapped(errors.Join(errors.New("left"), errors.New("right"))),
+		"*errors.joinError",
+	) // wrapped join error, still matches *errors.joinError.
 }
 
 func check(t *testing.T, err error, want string) {

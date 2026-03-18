@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -158,28 +159,50 @@ flush:
 }
 
 func errorType(err error) string {
+	var s string
 	if et, ok := err.(interface{ ErrorType() string }); ok {
-		if s := et.ErrorType(); s != "" {
-			return s
+		// Fast path: check the top-level error first.
+		s = et.ErrorType()
+	} else {
+		// Fallback: search the error chain for an ErrorType method.
+		var et interface{ ErrorType() string }
+		if errors.As(err, &et) {
+			// Prioritize the ErrorType method if available.
+			s = et.ErrorType()
 		}
 	}
 
-	t := reflect.TypeOf(err)
-	if t == nil {
-		return ""
-	}
+	if s == "" {
+		// Fall back to reflection if the ErrorType method is either not supported or
+		// it returns an empty value.
 
-	pkg, name := t.PkgPath(), t.Name()
-	if pkg != "" && name != "" {
-		return pkg + "." + name
-	}
+		t := reflect.TypeOf(rootError(err))
+		if t == nil {
+			return ""
+		}
 
-	// The type has no package path or name (predeclared, not-defined,
-	// or alias for a not-defined type).
-	//
-	// The type has no package path or name (predeclared, not-defined,
-	// or alias for a not-defined type).
-	//
-	// This is not guaranteed to be unique, but is a best effort.
-	return t.String()
+		pkg, name := t.PkgPath(), t.Name()
+		if pkg != "" && name != "" {
+			s = pkg + "." + name
+		} else {
+			// The type has no package path or name (predeclared, not-defined,
+			// or alias for a not-defined type).
+			//
+			// This is not guaranteed to be unique, but is a best effort.
+			s = t.String()
+		}
+	}
+	return s
+}
+
+// rootError walks the error chain using errors.Unwrap to avoid reporting
+// wrapper types (e.g., *fmt.wrapError).
+func rootError(err error) error {
+	for curr := err; ; {
+		if u := errors.Unwrap(curr); u != nil {
+			curr = u
+			continue
+		}
+		return curr
+	}
 }
