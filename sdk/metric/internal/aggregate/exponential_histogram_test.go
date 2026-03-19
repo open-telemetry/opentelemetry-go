@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/x"
@@ -154,11 +155,12 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
+			h := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			v, _ := h.values.Load(alice.Equivalent())
+			dp := v.(*cumulativePoint[int64]).points[0]
 
 			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
 			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
@@ -196,11 +198,12 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+			h := newCumulativeExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			v, _ := h.values.Load(alice.Equivalent())
+			dp := v.(*cumulativePoint[float64]).points[0]
 
 			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
 			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
@@ -1255,4 +1258,37 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 			assert.Equal(t, refH, h)
 		})
 	}
+}
+
+func TestExpoHistogramRecordUnderflow(t *testing.T) {
+	var errs []error
+	original := global.GetErrorHandler()
+	global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+		errs = append(errs, e)
+	}))
+	t.Cleanup(func() {
+		global.SetErrorHandler(original)
+	})
+
+	dp := newExpoHistogramDataPoint[float64](attribute.NewSet(), 1, 20, false, false)
+	// Force scale to a low value
+	dp.scale.Store(-10)
+	dp.record(1)
+	dp.record(math.MaxFloat64)
+	require.Len(t, errs, 1)
+	assert.EqualError(t, errs[0], "exponential histogram scale underflow")
+}
+
+func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
+	h := newDeltaExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+	ctx := t.Context()
+
+	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
+	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil)
+	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
+
+	var dest metricdata.Aggregation
+	h.collect(&dest)
+	eh := dest.(metricdata.ExponentialHistogram[float64])
+	assert.Empty(t, eh.DataPoints)
 }
