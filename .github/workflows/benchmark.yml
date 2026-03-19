@@ -48,6 +48,9 @@ jobs:
         with:
           mode: walltime
           allow-empty: true
+          # CodSpeed runs extremely slow when there are 128 processes involved, which is the number
+          # of CPUs on the bare metal machine. Limiting the number of processes to 4 helps mitigate this. 4 also matches the number of CPUs on GitHub runners.
+          #
           # CodSpeed overrides the default benchtime if we don't explicitly specify it.
           # Having this would avoid running benchmark for more than 1 hour.
           #
