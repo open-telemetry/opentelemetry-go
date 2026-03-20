@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8038)
 - Add support for per-series start time tracking for cumulative metrics in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` to enable. (#8060)
+- Add `WithCardinalityLimitSelector` for metric reader for configuring cardinality limits specific to the instrument kind. (#7855)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers. (#8071)
 
