@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -650,15 +651,13 @@ func diffSlices[T any](a, b []T, formatContext func(T) string, compare func(T, T
 
 	for i := range minLen {
 		reasons := compare(extraA[i], extraB[i])
-		if formatContext != nil {
-			_, _ = msg.WriteString(formatContext(extraA[i]) + ":\n")
-		}
+		_, _ = msg.WriteString(formatContext(extraA[i]) + ":\n")
 		for _, reason := range reasons {
 			// Indent reasons
-			lines := bytes.SplitSeq([]byte(reason), []byte("\n"))
+			lines := strings.SplitSeq(reason, "\n")
 			for line := range lines {
-				if len(line) > 0 {
-					_, _ = msg.WriteString("\t" + string(line) + "\n")
+				if line != "" {
+					_, _ = msg.WriteString("\t" + line + "\n")
 				}
 			}
 		}
