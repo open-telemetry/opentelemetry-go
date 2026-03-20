@@ -715,6 +715,7 @@ type ClientRequestDuration struct {
 var newClientRequestDurationOpts = []metric.Float64HistogramOption{
 	metric.WithDescription("Duration of HTTP client requests."),
 	metric.WithUnit("s"),
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewClientRequestDuration returns a new ClientRequestDuration instrument.
@@ -1402,6 +1403,7 @@ type ServerRequestDuration struct {
 var newServerRequestDurationOpts = []metric.Float64HistogramOption{
 	metric.WithDescription("Duration of HTTP server requests."),
 	metric.WithUnit("s"),
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewServerRequestDuration returns a new ServerRequestDuration instrument.
