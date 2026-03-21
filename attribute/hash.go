@@ -84,7 +84,7 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		}
 	case BYTES:
 		h = h.Uint64(bytesID)
-		h = h.Bytes(kv.Value.asBytes())
+		h = h.String(kv.Value.stringly)
 	case EMPTY:
 		h = h.Uint64(emptyID)
 	default:
