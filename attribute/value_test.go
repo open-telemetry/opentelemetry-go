@@ -92,12 +92,12 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.BYTES,
 			wantValue: []byte("hello world"),
 		},
-    {
-      name:      "empty value",
+		{
+			name:      "empty value",
 			value:     attribute.Value{},
 			wantType:  attribute.EMPTY,
 			wantValue: nil,
-    },
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
@@ -156,10 +156,10 @@ func TestEquivalence(t *testing.T) {
 			attribute.Bytes("Bytes", []byte("one")),
 			attribute.Bytes("Bytes", []byte("one")),
 		},
-    {
-      attribute.KeyValue{Key: "Empty"},
+		{
 			attribute.KeyValue{Key: "Empty"},
-    },
+			attribute.KeyValue{Key: "Empty"},
+		},
 	}
 
 	t.Run("Distinct", func(t *testing.T) {
@@ -238,6 +238,10 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.Float64("Float64", 19.09),
 			attribute.Float64("Float64", 22.09),
+		},
+		{
+			attribute.Bytes("Bytes", []byte("bytes value")),
+			attribute.Bytes("Bytes", []byte("another value")),
 		},
 		{
 			attribute.Float64Slice("Float64Slice", []float64{12398.1, -37.1713873737, 3}),

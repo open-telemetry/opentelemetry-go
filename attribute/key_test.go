@@ -113,11 +113,11 @@ func TestEmit(t *testing.T) {
 			v:    attribute.BytesValue([]byte("foo")),
 			want: "Zm9v",
 		},
-    {
-      name: `test Key.Emit() can emit a string representing self.EMPTY`,
+		{
+			name: `test Key.Emit() can emit a string representing self.EMPTY`,
 			v:    attribute.Value{},
 			want: "",
-    },
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {
