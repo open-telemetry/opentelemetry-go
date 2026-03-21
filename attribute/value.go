@@ -140,8 +140,8 @@ func StringSliceValue(v []string) Value {
 // BytesValue creates a BYTES Value.
 func BytesValue(v []byte) Value {
 	return Value{
-		vtype: BYTES,
-		slice: attribute.BytesValue(v),
+		vtype:    BYTES,
+		stringly: string(v),
 	}
 }
 
@@ -236,7 +236,7 @@ func (v Value) AsBytes() []byte {
 }
 
 func (v Value) asBytes() []byte {
-	return attribute.AsBytes(v.slice)
+	return []byte(v.stringly)
 }
 
 type unknownValueType struct{}

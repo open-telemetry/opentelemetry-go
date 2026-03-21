@@ -22,7 +22,7 @@ func _() {
 
 const _Type_name = "EMPTYBOOLINT64FLOAT64STRINGBOOLSLICEINT64SLICEFLOAT64SLICESTRINGSLICEBYTES"
 
-var _Type_index = [...]uint8{0, 5, 9, 14, 21, 27, 36, 46, 58, 69}
+var _Type_index = [...]uint8{0, 5, 9, 14, 21, 27, 36, 46, 58, 69, 74}
 
 func (i Type) String() string {
 	idx := int(i) - 0

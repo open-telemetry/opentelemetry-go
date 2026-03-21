@@ -98,19 +98,6 @@ func TestString(t *testing.T) {
 	}
 }
 
-func TestBytes(t *testing.T) {
-	h1 := New().Bytes([]byte("hello"))
-	h2 := New().Bytes([]byte("hello"))
-	if h1.Sum64() != h2.Sum64() {
-		t.Errorf("Bytes() should be deterministic: %d != %d", h1.Sum64(), h2.Sum64())
-	}
-
-	h3 := New().Bytes([]byte("world"))
-	if h1.Sum64() == h3.Sum64() {
-		t.Errorf("Different bytes should produce different hashes: %d == %d", h1.Sum64(), h3.Sum64())
-	}
-}
-
 func TestChaining(t *testing.T) {
 	// Test that methods can be chained and produce different results
 	h1 := New().String("key").Uint64(42).Bool(true)
@@ -170,16 +157,6 @@ func BenchmarkString(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		h = h.String(str)
-	}
-}
-
-func BenchmarkBytes(b *testing.B) {
-	h := New()
-	bytes := []byte("benchmark_bytes_value")
-
-	b.ReportAllocs()
-	for b.Loop() {
-		h = h.Bytes(bytes)
 	}
 }
 

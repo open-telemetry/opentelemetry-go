@@ -169,10 +169,10 @@ func TestIncorrectCast(t *testing.T) {
 			name: "Bytes",
 			val:  attribute.BytesValue([]byte{123}),
 		},
-    {
-      name: "Empty",
+		{
+			name: "Empty",
 			val:  attribute.Value{},
-    },
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
