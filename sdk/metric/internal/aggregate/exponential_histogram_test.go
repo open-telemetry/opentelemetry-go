@@ -1067,11 +1067,11 @@ func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metric
 		if !isDelta {
 			if attr == overflowSet {
 				// The overflow set contains all the goroutines that didn't make the limit of 3
-				assert.Equal(t, uint64(0), count%expectedSingleCount)
-				assert.Equal(t, count/expectedSingleCount*uint64(expectedSingleSum), uint64(sum))
+				expectedOverflowSum := N(count/expectedSingleCount) * expectedSingleSum
+				assertSumEqual[N](t, expectedOverflowSum, sum)
 			} else {
 				// Individual attributes should have exactly one goroutine's worth of data
-				assert.Equal(t, expectedSingleSum, sum)
+				assertSumEqual[N](t, expectedSingleSum, sum)
 				assert.Equal(t, expectedSingleCount, count)
 			}
 		}
