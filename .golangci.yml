@@ -133,13 +133,16 @@ linters:
       strconcat: true
     revive:
       confidence: 0.01
+      enable-all-rules: false
+      enable-default-rules: true
+      max-open-files: 2048
       rules:
         - name: blank-imports
         - name: bool-literal-in-expr
         - name: constant-logical-expr
         - name: context-as-argument
           arguments:
-            - allowTypesBefore: '*testing.T'
+            - allow-types-before: '*testing.T'
           disabled: true
         - name: context-keys-type
         - name: deep-exit
@@ -151,7 +154,7 @@ linters:
         - name: duplicated-imports
         - name: early-return
           arguments:
-            - preserveScope
+            - preserve-scope
         - name: empty-block
         - name: empty-lines
         - name: error-naming
@@ -160,7 +163,7 @@ linters:
         - name: errorf
         - name: exported
           arguments:
-            - sayRepetitiveInsteadOfStutters
+            - say-repetitive-instead-of-stutters
         - name: flag-parameter
         - name: identical-branches
         - name: if-return
@@ -168,11 +171,12 @@ linters:
         - name: increment-decrement
         - name: indent-error-flow
           arguments:
-            - preserveScope
+            - preserve-scope
         - name: package-comments
         - name: range
         - name: range-val-in-closure
         - name: range-val-address
+        - name: receiver-naming
         - name: redefines-builtin-id
         - name: string-format
           arguments:
@@ -182,7 +186,7 @@ linters:
         - name: struct-tag
         - name: superfluous-else
           arguments:
-            - preserveScope
+            - preserve-scope
         - name: time-equal
         - name: unconditional-recursion
         - name: unexported-return
