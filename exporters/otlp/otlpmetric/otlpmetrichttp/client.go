@@ -89,7 +89,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 		u.Scheme = "http"
 	}
 	// Body is set when this is cloned during upload.
-	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
