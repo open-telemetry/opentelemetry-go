@@ -1372,7 +1372,10 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 				gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
 				assert.Truef(
 					t,
-					strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"),
+					strings.HasPrefix(
+						gotStackTraceFunctionName[1],
+						"go.opentelemetry.io/otel/sdk/trace.recordStackTrace",
+					),
 					"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace",
 					gotStackTraceFunctionName[1],
 				)
@@ -1676,13 +1679,19 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 				gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
 				assert.Truef(
 					t,
-					strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"),
+					strings.HasPrefix(
+						gotStackTraceFunctionName[1],
+						"go.opentelemetry.io/otel/sdk/trace.recordStackTrace",
+					),
 					"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace",
 					gotStackTraceFunctionName[1],
 				)
 				assert.Truef(
 					t,
-					strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End"),
+					strings.HasPrefix(
+						gotStackTraceFunctionName[3],
+						"go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End",
+					),
 					"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End",
 					gotStackTraceFunctionName[3],
 				)

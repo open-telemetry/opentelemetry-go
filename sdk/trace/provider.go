@@ -76,12 +76,12 @@ type tracerProviderConfig struct {
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
 func (cfg tracerProviderConfig) MarshalLog() any {
 	return struct {
-		SpanProcessors   []SpanProcessor
-		SamplerType      string
-		IDGeneratorType  string
-		SpanLimits       SpanLimits
-		Resource         *resource.Resource
-		StackTraceMode   string
+		SpanProcessors  []SpanProcessor
+		SamplerType     string
+		IDGeneratorType string
+		SpanLimits      SpanLimits
+		Resource        *resource.Resource
+		StackTraceMode  string
 	}{
 		SpanProcessors:  cfg.processors,
 		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
