@@ -86,13 +86,16 @@ func TestValue(t *testing.T) {
 			wantType:  attribute.STRINGSLICE,
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
+		{
+			name:      "empty value",
+			value:     attribute.Value{},
+			wantType:  attribute.EMPTY,
+			wantValue: nil,
+		},
 	} {
 		t.Logf("Running test case %s", testcase.name)
 		if testcase.value.Type() != testcase.wantType {
 			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		if testcase.wantType == attribute.INVALID {
-			continue
 		}
 		got := testcase.value.AsInterface()
 		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
@@ -142,6 +145,10 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.KeyValue{Key: "Empty"},
+			attribute.KeyValue{Key: "Empty"},
 		},
 	}
 
@@ -233,6 +240,10 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two"}),
+		},
+		{
+			attribute.KeyValue{Key: "Empty"},
+			attribute.String("Empty", ""),
 		},
 	}
 
