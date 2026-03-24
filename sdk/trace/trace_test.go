@@ -1346,6 +1346,71 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 	)
 }
 
+func TestProviderRecordErrorWithStackTrace(t *testing.T) {
+	err := newTestError("test error")
+	typ := "go.opentelemetry.io/otel/sdk/trace.testError"
+	msg := "test error"
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()), WithStackTrace(true))
+	span := startSpan(tp, "RecordError")
+
+	errTime := time.Now()
+	span.RecordError(err, trace.WithTimestamp(errTime))
+
+	got, err := endSpan(te, span)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &snapshot{
+		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    tid,
+			TraceFlags: 0x1,
+		}),
+		parent:   sc.WithRemote(true),
+		name:     "span0",
+		status:   Status{Code: codes.Unset},
+		spanKind: trace.SpanKindInternal,
+		events: []Event{
+			{
+				Name: semconv.ExceptionEventName,
+				Time: errTime,
+				Attributes: []attribute.KeyValue{
+					semconv.ExceptionType(typ),
+					semconv.ExceptionMessage(msg),
+				},
+			},
+		},
+		instrumentationScope: instrumentation.Scope{Name: "RecordError"},
+	}
+
+	assert.Equal(t, want.spanContext, got.spanContext)
+	assert.Equal(t, want.parent, got.parent)
+	assert.Equal(t, want.name, got.name)
+	assert.Equal(t, want.status, got.status)
+	assert.Equal(t, want.spanKind, got.spanKind)
+	assert.Equal(t, got.events[0].Attributes[0].Value.AsString(), want.events[0].Attributes[0].Value.AsString())
+	assert.Equal(t, got.events[0].Attributes[1].Value.AsString(), want.events[0].Attributes[1].Value.AsString())
+	gotStackTraceFunctionName := strings.Split(got.events[0].Attributes[2].Value.AsString(), "\n")
+
+	assert.Truef(
+		t,
+		strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"),
+		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace",
+		gotStackTraceFunctionName[1],
+	)
+	assert.Truef(
+		t,
+		strings.HasPrefix(
+			gotStackTraceFunctionName[3],
+			"go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError",
+		),
+		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError",
+		gotStackTraceFunctionName[3],
+	)
+}
+
 func TestRecordErrorNil(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1578,6 +1643,41 @@ func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 
 	f := func() {
 		defer span.End(trace.WithStackTrace(true))
+		panic(errors.New("error message"))
+	}
+	require.PanicsWithError(t, "error message", f)
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	require.Len(t, spans[0].Events(), 1)
+	assert.Equal(t, semconv.ExceptionEventName, spans[0].Events()[0].Name)
+	assert.Equal(t, "*errors.errorString", spans[0].Events()[0].Attributes[0].Value.AsString())
+	assert.Equal(t, "error message", spans[0].Events()[0].Attributes[1].Value.AsString())
+
+	gotStackTraceFunctionName := strings.Split(spans[0].Events()[0].Attributes[2].Value.AsString(), "\n")
+	assert.Truef(
+		t,
+		strings.HasPrefix(gotStackTraceFunctionName[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"),
+		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.recordStackTrace",
+		gotStackTraceFunctionName[1],
+	)
+	assert.Truef(
+		t,
+		strings.HasPrefix(gotStackTraceFunctionName[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End"),
+		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End",
+		gotStackTraceFunctionName[3],
+	)
+}
+
+func TestProviderSpanCapturesPanicWithStackTrace(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()), WithStackTrace(true))
+	_, span := tp.Tracer("CatchPanic").Start(
+		t.Context(),
+		"span",
+	)
+
+	f := func() {
+		defer span.End()
 		panic(errors.New("error message"))
 	}
 	require.PanicsWithError(t, "error message", f)

@@ -42,6 +42,9 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	// stackTrace configs whether to capture stack trace for all recorded errors and panics.
+	stackTrace bool
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
@@ -52,12 +55,14 @@ func (cfg tracerProviderConfig) MarshalLog() any {
 		IDGeneratorType string
 		SpanLimits      SpanLimits
 		Resource        *resource.Resource
+		StackTrace      bool
 	}{
 		SpanProcessors:  cfg.processors,
 		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
 		IDGeneratorType: fmt.Sprintf("%T", cfg.idGenerator),
 		SpanLimits:      cfg.spanLimits,
 		Resource:        cfg.resource,
+		StackTrace:      cfg.stackTrace,
 	}
 }
 
@@ -78,6 +83,7 @@ type TracerProvider struct {
 	idGenerator IDGenerator
 	spanLimits  SpanLimits
 	resource    *resource.Resource
+	stackTrace  bool
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -110,6 +116,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		idGenerator: o.idGenerator,
 		spanLimits:  o.spanLimits,
 		resource:    o.resource,
+		stackTrace:  o.stackTrace,
 	}
 	global.Info("TracerProvider created", "config", o)
 
@@ -380,6 +387,15 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 		if g != nil {
 			cfg.idGenerator = g
 		}
+		return cfg
+	})
+}
+
+// WithStackTrace configures the TracerProvider to capture a stack trace
+// for all recorded errors and panics.
+func WithStackTrace(b bool) TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.stackTrace = b
 		return cfg
 	})
 }
