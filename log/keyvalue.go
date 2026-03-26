@@ -32,7 +32,7 @@ const (
 	KindFloat64
 	KindInt64
 	KindString
-	KindBytes
+	KindByteSlice
 	KindSlice
 	KindMap
 )
@@ -44,7 +44,7 @@ type Value struct {
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
 	// num holds the value for Int64, Float64, and Bool. It holds the length
-	// for String, Bytes, Slice, Map.
+	// for String, ByteSlice, Slice, Map.
 	num uint64
 	// any holds either the KindBool, KindInt64, KindFloat64, stringptr,
 	// bytesptr, sliceptr, or mapptr. If KindBool, KindInt64, or KindFloat64
@@ -56,7 +56,7 @@ type Value struct {
 type (
 	// sliceptr represents a value in Value.any for KindString Values.
 	stringptr *byte
-	// bytesptr represents a value in Value.any for KindBytes Values.
+	// bytesptr represents a value in Value.any for KindByteSlice Values.
 	bytesptr *byte
 	// sliceptr represents a value in Value.any for KindSlice Values.
 	sliceptr *Value
@@ -95,9 +95,9 @@ func BoolValue(v bool) Value { //nolint:revive // Not a control flag.
 	return Value{num: n, any: KindBool}
 }
 
-// BytesValue returns a [Value] for a byte slice. The passed slice must not be
+// ByteSliceValue returns a [Value] for a byte slice. The passed slice must not be
 // changed after it is passed.
-func BytesValue(v []byte) Value {
+func ByteSliceValue(v []byte) Value {
 	return Value{
 		num: uint64(len(v)),
 		any: bytesptr(unsafe.SliceData(v)),
@@ -179,18 +179,18 @@ func (v Value) AsFloat64() float64 {
 // KindFloat64, this will return garbage.
 func (v Value) asFloat64() float64 { return math.Float64frombits(v.num) }
 
-// AsBytes returns the value held by v as a []byte.
-func (v Value) AsBytes() []byte {
+// AsByteSlice returns the value held by v as a []byte.
+func (v Value) AsByteSlice() []byte {
 	if sp, ok := v.any.(bytesptr); ok {
 		return unsafe.Slice((*byte)(sp), v.num)
 	}
-	global.Error(errKind, "AsBytes", "Kind", v.Kind())
+	global.Error(errKind, "AsByteSlice", "Kind", v.Kind())
 	return nil
 }
 
-// asBytes returns the value held by v as a []byte. It will panic if the Value
-// is not KindBytes.
-func (v Value) asBytes() []byte {
+// asByteSlice returns the value held by v as a []byte. It will panic if the Value
+// is not KindByteSlice.
+func (v Value) asByteSlice() []byte {
 	return unsafe.Slice((*byte)(v.any.(bytesptr)), v.num)
 }
 
@@ -232,7 +232,7 @@ func (v Value) Kind() Kind {
 	case stringptr:
 		return KindString
 	case bytesptr:
-		return KindBytes
+		return KindByteSlice
 	case sliceptr:
 		return KindSlice
 	case mapptr:
@@ -265,8 +265,8 @@ func (v Value) Equal(w Value) bool {
 		sv := sortMap(v.asMap())
 		sw := sortMap(w.asMap())
 		return slices.EqualFunc(sv, sw, KeyValue.Equal)
-	case KindBytes:
-		return bytes.Equal(v.asBytes(), w.asBytes())
+	case KindByteSlice:
+		return bytes.Equal(v.asByteSlice(), w.asByteSlice())
 	case KindEmpty:
 		return true
 	default:
@@ -300,8 +300,8 @@ func (v Value) String() string {
 		return strconv.FormatFloat(v.asFloat64(), 'g', -1, 64)
 	case KindBool:
 		return strconv.FormatBool(v.asBool())
-	case KindBytes:
-		return fmt.Sprint(v.asBytes()) // nolint:staticcheck  // Use fmt.Sprint to encode as slice.
+	case KindByteSlice:
+		return fmt.Sprint(v.asByteSlice()) // nolint:staticcheck  // Use fmt.Sprint to encode as slice.
 	case KindMap:
 		return fmt.Sprint(v.asMap())
 	case KindSlice:
@@ -356,10 +356,10 @@ func Bool(key string, value bool) KeyValue {
 	return KeyValue{key, BoolValue(value)}
 }
 
-// Bytes returns a KeyValue for a []byte value.
+// ByteSlice returns a KeyValue for a []byte value.
 // The passed slice must not be changed after it is passed.
-func Bytes(key string, value []byte) KeyValue {
-	return KeyValue{key, BytesValue(value)}
+func ByteSlice(key string, value []byte) KeyValue {
+	return KeyValue{key, ByteSliceValue(value)}
 }
 
 // Slice returns a KeyValue for a []Value value.
@@ -428,9 +428,9 @@ func ValueFromAttribute(value attribute.Value) Value {
 			res = append(res, StringValue(v))
 		}
 		return SliceValue(res...)
-	case attribute.BYTES:
-		val := value.AsBytes()
-		return BytesValue(val)
+	case attribute.BYTESLICE:
+		val := value.AsByteSlice()
+		return ByteSliceValue(val)
 	}
 	// This code should never be reached
 	// as log attributes are a superset of standard attributes.

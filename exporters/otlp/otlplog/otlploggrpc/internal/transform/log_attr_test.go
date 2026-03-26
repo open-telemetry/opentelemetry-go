@@ -21,7 +21,7 @@ var (
 	logAttrInt64   = log.Int64("int64", 1)
 	logAttrFloat64 = log.Float64("float64", 1)
 	logAttrString  = log.String("string", "o")
-	logAttrBytes   = log.Bytes("bytes", []byte("test"))
+	logAttrBytes   = log.ByteSlice("bytes", []byte("test"))
 	logAttrSlice   = log.Slice("slice", log.BoolValue(true))
 	logAttrMap     = log.Map("map", logAttrString)
 	logAttrEmpty   = log.Empty("empty")

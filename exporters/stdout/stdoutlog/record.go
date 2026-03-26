@@ -40,8 +40,8 @@ func (v value) MarshalJSON() ([]byte, error) {
 		jsonVal.Value = v.AsFloat64()
 	case log.KindBool:
 		jsonVal.Value = v.AsBool()
-	case log.KindBytes:
-		jsonVal.Value = v.AsBytes()
+	case log.KindByteSlice:
+		jsonVal.Value = v.AsByteSlice()
 	case log.KindMap:
 		m := v.AsMap()
 		values := make([]keyValue, 0, len(m))

@@ -68,9 +68,9 @@ func StringSlice(k string, v []string) KeyValue {
 	return Key(k).StringSlice(v)
 }
 
-// Bytes creates a KeyValue with a BYTES Value type.
-func Bytes(k string, v []byte) KeyValue {
-	return Key(k).Bytes(v)
+// ByteSlice creates a KeyValue with a BYTES Value type.
+func ByteSlice(k string, v []byte) KeyValue {
+	return Key(k).ByteSlice(v)
 }
 
 // Stringer creates a new key-value pair with a passed name and a string

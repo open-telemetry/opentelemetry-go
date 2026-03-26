@@ -33,7 +33,7 @@ func BenchmarkLoggerEmit(b *testing.B) {
 		log.Float64("k2", 1.0),
 		log.Int("k3", 2),
 		log.Bool("k4", true),
-		log.Bytes("k5", []byte{1}),
+		log.ByteSlice("k5", []byte{1}),
 	)
 
 	r10 := r
@@ -42,7 +42,7 @@ func BenchmarkLoggerEmit(b *testing.B) {
 		log.Float64("k7", 1.0),
 		log.Int("k8", 2),
 		log.Bool("k9", true),
-		log.Bytes("k10", []byte{1}),
+		log.ByteSlice("k10", []byte{1}),
 	)
 
 	require.Equal(b, 5, r.AttributesLen())

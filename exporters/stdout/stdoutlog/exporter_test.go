@@ -402,9 +402,9 @@ func TestValueMarshalJSON(t *testing.T) {
 			want:  `{"Type":"String","Value":"hello"}`,
 		},
 		{
-			value: log.BytesValue([]byte{1, 2, 3}),
+			value: log.ByteSliceValue([]byte{1, 2, 3}),
 			// The base64 encoding of []byte{1, 2, 3} is "AQID".
-			want: `{"Type":"Bytes","Value":"AQID"}`,
+			want: `{"Type":"ByteSlice","Value":"AQID"}`,
 		},
 		{
 			value: log.SliceValue(
@@ -413,7 +413,7 @@ func TestValueMarshalJSON(t *testing.T) {
 				log.Float64Value(2.2),
 				log.IntValue(3),
 				log.StringValue("4"),
-				log.BytesValue([]byte{5}),
+				log.ByteSliceValue([]byte{5}),
 				log.SliceValue(
 					log.IntValue(6),
 					log.MapValue(
@@ -424,7 +424,7 @@ func TestValueMarshalJSON(t *testing.T) {
 					log.Int("nine", 9),
 				),
 			),
-			want: `{"Type":"Slice","Value":[{"Type":"Empty","Value":null},{"Type":"Bool","Value":true},{"Type":"Float64","Value":2.2},{"Type":"Int64","Value":3},{"Type":"String","Value":"4"},{"Type":"Bytes","Value":"BQ=="},{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]},{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}]}`,
+			want: `{"Type":"Slice","Value":[{"Type":"Empty","Value":null},{"Type":"Bool","Value":true},{"Type":"Float64","Value":2.2},{"Type":"Int64","Value":3},{"Type":"String","Value":"4"},{"Type":"ByteSlice","Value":"BQ=="},{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]},{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}]}`,
 		},
 		{
 			value: log.MapValue(
@@ -433,7 +433,7 @@ func TestValueMarshalJSON(t *testing.T) {
 				log.Float64("two", 2.2),
 				log.Int("three", 3),
 				log.String("four", "4"),
-				log.Bytes("five", []byte{5}),
+				log.ByteSlice("five", []byte{5}),
 				log.Slice("six",
 					log.IntValue(6),
 					log.MapValue(
@@ -444,7 +444,7 @@ func TestValueMarshalJSON(t *testing.T) {
 					log.Int("nine", 9),
 				),
 			),
-			want: `{"Type":"Map","Value":[{"Key":"empty","Value":{"Type":"Empty","Value":null}},{"Key":"one","Value":{"Type":"Bool","Value":true}},{"Key":"two","Value":{"Type":"Float64","Value":2.2}},{"Key":"three","Value":{"Type":"Int64","Value":3}},{"Key":"four","Value":{"Type":"String","Value":"4"}},{"Key":"five","Value":{"Type":"Bytes","Value":"BQ=="}},{"Key":"six","Value":{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]}},{"Key":"eight","Value":{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}}]}`,
+			want: `{"Type":"Map","Value":[{"Key":"empty","Value":{"Type":"Empty","Value":null}},{"Key":"one","Value":{"Type":"Bool","Value":true}},{"Key":"two","Value":{"Type":"Float64","Value":2.2}},{"Key":"three","Value":{"Type":"Int64","Value":3}},{"Key":"four","Value":{"Type":"String","Value":"4"}},{"Key":"five","Value":{"Type":"ByteSlice","Value":"BQ=="}},{"Key":"six","Value":{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]}},{"Key":"eight","Value":{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}}]}`,
 		},
 	}
 
