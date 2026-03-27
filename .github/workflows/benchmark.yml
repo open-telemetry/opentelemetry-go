@@ -4,6 +4,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+  pull_request:
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -34,6 +35,9 @@ jobs:
         shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # Bare metal uses Ubuntu 24.04, which does not have `make` and `build-essential`
+      - name: Install make and build-essential
+        run: sudo apt-get update && sudo apt-get install -y make build-essential
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
@@ -44,9 +48,12 @@ jobs:
         with:
           mode: walltime
           allow-empty: true
+          # CodSpeed runs extremely slow when there are 128 processes involved, which is the number
+          # of CPUs on the bare metal machine. Limiting the number of processes to 4 helps mitigate this. 4 also matches the number of CPUs on GitHub runners.
+          #
           # CodSpeed overrides the default benchtime if we don't explicitly specify it.
           # Having this would avoid running benchmark for more than 1 hour.
           #
           # The benchtime is adjusted to 500 ms to speed up the benchmark time.
           # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
-          run: make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
+          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
