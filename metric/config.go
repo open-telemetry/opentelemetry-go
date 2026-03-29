@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/internal/x"
 )
 
 // MeterConfig contains options for Meters.
@@ -47,6 +48,9 @@ type MeterOption interface {
 func NewMeterConfig(opts ...MeterOption) MeterConfig {
 	var config MeterConfig
 	for _, o := range opts {
+		if _, ok := o.(x.ExperimentalOption); ok {
+			continue
+		}
 		config = o.applyMeter(config)
 	}
 	return config
