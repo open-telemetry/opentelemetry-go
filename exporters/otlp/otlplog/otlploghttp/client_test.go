@@ -988,7 +988,9 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	}
 
 	t.Run("success response body too large", func(t *testing.T) {
+		var calls int
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			calls++
 			w.Header().Set("Content-Type", "application/x-protobuf")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(largeBody)
@@ -998,6 +1000,7 @@ func TestResponseBodySizeLimit(t *testing.T) {
 		c := newTestClient(t, srv)
 		err := c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
 		assert.ErrorContains(t, err, "response body too large")
+		assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 	})
 
 	t.Run("error response body too large", func(t *testing.T) {
