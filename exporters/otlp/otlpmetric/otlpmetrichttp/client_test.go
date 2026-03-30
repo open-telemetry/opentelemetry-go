@@ -116,7 +116,7 @@ func TestClientJSONEncodingParsesJSONResponsePartialSuccess(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			resp := &colmetricpb.ExportMetricsServiceResponse{
 				PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
 					RejectedDataPoints: wantN,
