@@ -976,7 +976,11 @@ func TestResponseBodySizeLimit(t *testing.T) {
 
 	newTestClient := func(t *testing.T, srv *httptest.Server) *client {
 		t.Helper()
-		opts := []Option{WithEndpoint(srv.Listener.Addr().String()), WithInsecure(), WithRetry(RetryConfig{Enabled: false})}
+		opts := []Option{
+			WithEndpoint(srv.Listener.Addr().String()),
+			WithInsecure(),
+			WithRetry(RetryConfig{Enabled: false}),
+		}
 		cfg := newConfig(opts)
 		c, err := newHTTPClient(t.Context(), cfg)
 		require.NoError(t, err)
