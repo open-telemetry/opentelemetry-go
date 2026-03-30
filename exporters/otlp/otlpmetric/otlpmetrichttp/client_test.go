@@ -19,8 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -96,6 +99,49 @@ func TestClientWithJSONEncoding(t *testing.T) {
 	headers := coll.Headers()
 	require.Contains(t, headers, "Content-Type")
 	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+}
+
+func TestClientJSONEncodingParsesJSONResponsePartialSuccess(t *testing.T) {
+	ctx := t.Context()
+	const wantN int64 = 4
+	const wantMsg = "dropped"
+	tests := []struct {
+		contentType string
+	}{
+		{
+			contentType: "application/json",
+		},
+		{
+			contentType: "application/json; charset=utf-8",
+		},
+	}
+	for _, test := range tests {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			resp := &colmetricpb.ExportMetricsServiceResponse{
+				PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+					RejectedDataPoints: wantN,
+					ErrorMessage:       wantMsg,
+				},
+			}
+			body, err := protojson.Marshal(resp)
+			require.NoError(t, err)
+			w.Header().Set("Content-Type", test.contentType)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(body)
+		}))
+		t.Cleanup(srv.Close)
+
+		u, err := url.Parse(srv.URL)
+		require.NoError(t, err)
+		opts := []Option{WithEndpoint(u.Host), WithInsecure(), WithEncoding(JSONEncoding)}
+		cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+		cl, err := newClient(cfg)
+		require.NoError(t, err)
+
+		wantErr := internal.MetricPartialSuccessError(wantN, wantMsg)
+		assert.ErrorIs(t, cl.UploadMetrics(ctx, &mpb.ResourceMetrics{}), wantErr)
+		assert.NoError(t, cl.Shutdown(ctx))
+	}
 }
 
 func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {

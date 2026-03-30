@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -202,19 +203,30 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
-				var respProto colmetricpb.ExportMetricsServiceResponse
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
-					return err
-				}
+			// Read the media type from the Content-Type header, dropping
+			// parameters (e.g. charset), so we match application/json or
+			// application/x-protobuf
+			mediatype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+			if err != nil {
+				mediatype = ""
+			}
+			var respProto colmetricpb.ExportMetricsServiceResponse
+			switch mediatype {
+			case "application/x-protobuf":
+				err = proto.Unmarshal(respData.Bytes(), &respProto)
+			case "application/json":
+				err = protojson.Unmarshal(respData.Bytes(), &respProto)
+			}
+			if err != nil {
+				return err
+			}
 
-				if respProto.PartialSuccess != nil {
-					msg := respProto.PartialSuccess.GetErrorMessage()
-					n := respProto.PartialSuccess.GetRejectedDataPoints()
-					if n != 0 || msg != "" {
-						err := internal.MetricPartialSuccessError(n, msg)
-						uploadErr = errors.Join(uploadErr, err)
-					}
+			if respProto.PartialSuccess != nil {
+				msg := respProto.PartialSuccess.GetErrorMessage()
+				n := respProto.PartialSuccess.GetRejectedDataPoints()
+				if n != 0 || msg != "" {
+					err := internal.MetricPartialSuccessError(n, msg)
+					uploadErr = errors.Join(uploadErr, err)
 				}
 			}
 			return nil
