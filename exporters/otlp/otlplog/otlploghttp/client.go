@@ -54,7 +54,7 @@ func nextExporterID() int64 {
 }
 
 // newHTTPClient creates a new HTTP log client.
-func newHTTPClient(cfg config) (*client, error) {
+func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	if cfg.insecure.Value && cfg.tlsCfg.Value != nil {
 		return nil, errInsecureEndpointWithTLS
 	}
@@ -88,7 +88,7 @@ func newHTTPClient(cfg config) (*client, error) {
 		u.Scheme = "http"
 	}
 	// Body is set when this is cloned during upload.
-	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
