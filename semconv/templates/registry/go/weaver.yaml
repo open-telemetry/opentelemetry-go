@@ -83,6 +83,16 @@ text_maps:
     otel.sdk.processor.span.queue.capacity: Int64ObservableUpDownCounter
     otel.sdk.processor.span.queue.size: Int64ObservableUpDownCounter
     process.cpu.time: Float64ObservableCounter
+    process.context_switches: Int64ObservableCounter
+    process.cpu.utilization: Int64ObservableGauge
+    process.disk.io: Int64ObservableCounter
+    process.memory.usage: Int64ObservableUpDownCounter
+    process.memory.virtual: Int64ObservableUpDownCounter
+    process.network.io: Int64ObservableCounter
+    process.open_file_descriptor.count: Int64ObservableUpDownCounter
+    process.paging.faults: Int64ObservableCounter
+    process.thread.count: Int64ObservableUpDownCounter
+    process.uptime: Float64ObservableGauge
     system.memory.usage: Int64ObservableUpDownCounter
     system.memory.utilization: Float64ObservableGauge
     system.network.io: Int64ObservableCounter
