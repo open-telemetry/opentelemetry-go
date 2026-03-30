@@ -33,11 +33,11 @@ import (
 const contentTypeProto = "application/x-protobuf"
 
 // maxResponseBodySize is the maximum number of bytes to read from a response
-// body. It is set to 32 KiB per the OTLP specification recommendation to
+// body. It is set to 4 MiB per the OTLP specification recommendation to
 // mitigate excessive memory usage caused by a misconfigured or malicious
 // server. If exceeded, the response is treated as a not-retryable error.
 // This is a variable to allow tests to override it.
-var maxResponseBodySize int64 = 32 * 1024
+var maxResponseBodySize int64 = 4 * 1024 * 1024
 
 var gzPool = sync.Pool{
 	New: func() any {
