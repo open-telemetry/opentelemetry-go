@@ -606,55 +606,47 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	// largeBody is larger than the 1-byte limit.
 	largeBody := []byte("xx")
 
-	t.Run("success response body too large", func(t *testing.T) {
-		var calls int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			calls++
-			w.Header().Set("Content-Type", "application/x-protobuf")
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(largeBody)
-		}))
-		t.Cleanup(srv.Close)
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+	}{
+		{
+			name:        "success response body too large",
+			status:      http.StatusOK,
+			contentType: "application/x-protobuf",
+		},
+		{
+			name:        "error response body too large",
+			status:      http.StatusServiceUnavailable,
+			contentType: "text/plain",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write(largeBody)
+			}))
+			t.Cleanup(srv.Close)
 
-		client := otlptracehttp.NewClient(
-			otlptracehttp.WithEndpointURL(srv.URL),
-			otlptracehttp.WithInsecure(),
-			otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
-		)
-		ctx := t.Context()
-		exporter, err := otlptrace.New(ctx, client)
-		require.NoError(t, err)
-		t.Cleanup(func() { _ = exporter.Shutdown(ctx) })
+			client := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpointURL(srv.URL),
+				otlptracehttp.WithInsecure(),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+			)
+			exporter, err := otlptrace.New(t.Context(), client)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
 
-		err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-		assert.ErrorContains(t, err, "response body too large")
-		assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
-	})
-
-	t.Run("error response body too large", func(t *testing.T) {
-		var calls int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			calls++
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write(largeBody)
-		}))
-		t.Cleanup(srv.Close)
-
-		client := otlptracehttp.NewClient(
-			otlptracehttp.WithEndpointURL(srv.URL),
-			otlptracehttp.WithInsecure(),
-			otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
-		)
-		ctx := t.Context()
-		exporter, err := otlptrace.New(ctx, client)
-		require.NoError(t, err)
-		t.Cleanup(func() { _ = exporter.Shutdown(ctx) })
-
-		err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-		assert.ErrorContains(t, err, "response body too large")
-		assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
-	})
+			err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+			assert.ErrorContains(t, err, "response body too large")
+			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+		})
+	}
 }
 
 func TestGetBodyCalledOnRedirect(t *testing.T) {

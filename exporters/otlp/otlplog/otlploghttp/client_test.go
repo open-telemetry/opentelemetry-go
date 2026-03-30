@@ -974,50 +974,47 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	// largeBody is larger than the 1-byte limit.
 	largeBody := []byte("xx")
 
-	newTestClient := func(t *testing.T, srv *httptest.Server) *client {
-		t.Helper()
-		opts := []Option{
-			WithEndpoint(srv.Listener.Addr().String()),
-			WithInsecure(),
-			WithRetry(RetryConfig{Enabled: false}),
-		}
-		cfg := newConfig(opts)
-		c, err := newHTTPClient(t.Context(), cfg)
-		require.NoError(t, err)
-		return c
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+	}{
+		{
+			name:        "success response body too large",
+			status:      http.StatusOK,
+			contentType: "application/x-protobuf",
+		},
+		{
+			name:        "error response body too large",
+			status:      http.StatusServiceUnavailable,
+			contentType: "text/plain",
+		},
 	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write(largeBody)
+			}))
+			t.Cleanup(srv.Close)
 
-	t.Run("success response body too large", func(t *testing.T) {
-		var calls int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			calls++
-			w.Header().Set("Content-Type", "application/x-protobuf")
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(largeBody)
-		}))
-		t.Cleanup(srv.Close)
+			opts := []Option{
+				WithEndpoint(srv.Listener.Addr().String()),
+				WithInsecure(),
+				WithRetry(RetryConfig{Enabled: false}),
+			}
+			cfg := newConfig(opts)
+			c, err := newHTTPClient(t.Context(), cfg)
+			require.NoError(t, err)
 
-		c := newTestClient(t, srv)
-		err := c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
-		assert.ErrorContains(t, err, "response body too large")
-		assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
-	})
-
-	t.Run("error response body too large", func(t *testing.T) {
-		var calls int
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			calls++
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write(largeBody)
-		}))
-		t.Cleanup(srv.Close)
-
-		c := newTestClient(t, srv)
-		err := c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
-		assert.ErrorContains(t, err, "response body too large")
-		assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
-	})
+			err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+			assert.ErrorContains(t, err, "response body too large")
+			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+		})
+	}
 }
 
 func BenchmarkExporterExportLogs(b *testing.B) {
