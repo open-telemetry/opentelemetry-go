@@ -227,7 +227,7 @@ func (v Value) asStringSlice() []string {
 }
 
 // AsByteSlice returns the bytes value. Make sure that the Value's type
-// is BYTES.
+// is BYTESLICE.
 func (v Value) AsByteSlice() []byte {
 	if v.vtype != BYTESLICE {
 		return nil
