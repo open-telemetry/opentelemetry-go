@@ -68,7 +68,7 @@ func StringSlice(k string, v []string) KeyValue {
 	return Key(k).StringSlice(v)
 }
 
-// ByteSlice creates a KeyValue with a BYTES Value type.
+// ByteSlice creates a KeyValue with a BYTESLICE Value type.
 func ByteSlice(k string, v []byte) KeyValue {
 	return Key(k).ByteSlice(v)
 }

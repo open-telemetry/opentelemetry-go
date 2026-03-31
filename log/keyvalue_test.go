@@ -27,7 +27,7 @@ func TestKind(t *testing.T) {
 		value int
 	}{
 		{log.KindBool, "Bool", 1},
-		{log.KindByteSlice, "ByteSlice", 5},
+		{log.KindBytes, "Bytes", 5},
 		{log.KindEmpty, "Empty", 0},
 		{log.KindFloat64, "Float64", 2},
 		{log.KindInt64, "Int64", 3},
@@ -55,13 +55,13 @@ func TestValueEqual(t *testing.T) {
 		log.BoolValue(false),
 		log.StringValue("hi"),
 		log.StringValue("bye"),
-		log.ByteSliceValue([]byte{1, 3, 5}),
+		log.BytesValue([]byte{1, 3, 5}),
 		log.SliceValue(log.StringValue("foo")),
 		log.SliceValue(log.IntValue(3), log.StringValue("foo")),
 		log.MapValue(log.Bool("b", true), log.Int("i", 3)),
 		log.MapValue(
 			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-			log.ByteSlice("b", []byte{3, 5, 7}),
+			log.Bytes("b", []byte{3, 5, 7}),
 			log.Empty("e"),
 		),
 	}
@@ -80,11 +80,11 @@ func TestSortedValueEqual(t *testing.T) {
 		{
 			value: log.MapValue(
 				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-				log.ByteSlice("b", []byte{3, 5, 7}),
+				log.Bytes("b", []byte{3, 5, 7}),
 				log.Empty("e"),
 			),
 			value2: log.MapValue(
-				log.ByteSlice("b", []byte{3, 5, 7}),
+				log.Bytes("b", []byte{3, 5, 7}),
 				log.Slice("l", log.IntValue(3), log.StringValue("foo")),
 				log.Empty("e"),
 			),
@@ -103,8 +103,8 @@ func TestValueEmpty(t *testing.T) {
 		assert.True(t, v.Empty())
 	})
 
-	t.Run("ByteSlice", func(t *testing.T) {
-		assert.Nil(t, log.ByteSlice("b", nil).Value.AsByteSlice())
+	t.Run("Bytes", func(t *testing.T) {
+		assert.Nil(t, log.Bytes("b", nil).Value.AsBytes())
 	})
 	t.Run("Slice", func(t *testing.T) {
 		assert.Nil(t, log.Slice("s").Value.AsSlice())
@@ -144,7 +144,7 @@ func TestBool(t *testing.T) {
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
@@ -161,7 +161,7 @@ func TestFloat64(t *testing.T) {
 	})
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
@@ -178,7 +178,7 @@ func TestInt(t *testing.T) {
 		assert.Equal(t, int64(val), v.AsInt64(), "AsInt64")
 	})
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
@@ -195,7 +195,7 @@ func TestInt64(t *testing.T) {
 		assert.Equal(t, int64(val), v.AsInt64(), "AsInt64")
 	})
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
@@ -212,24 +212,24 @@ func TestString(t *testing.T) {
 	t.Run("AsString", func(t *testing.T) {
 		assert.Equal(t, val, v.AsString(), "AsString")
 	})
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
 
-func TestByteSlice(t *testing.T) {
+func TestBytes(t *testing.T) {
 	const key = "bytesKey"
 	val := []byte{3, 2, 1}
-	kv := log.ByteSlice(key, val)
+	kv := log.Bytes(key, val)
 	testKV(t, key, kv)
 
-	v, k := kv.Value, log.KindByteSlice
+	v, k := kv.Value, log.KindBytes
 	t.Run("AsBool", testErrKind(v.AsBool, "AsBool", k))
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", func(t *testing.T) {
-		assert.Equal(t, val, v.AsByteSlice(), "AsByteSlice")
+	t.Run("AsBytes", func(t *testing.T) {
+		assert.Equal(t, val, v.AsBytes(), "AsBytes")
 	})
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
@@ -246,7 +246,7 @@ func TestSlice(t *testing.T) {
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", func(t *testing.T) {
 		assert.Equal(t, val, v.AsSlice(), "AsSlice")
 	})
@@ -257,7 +257,7 @@ func TestMap(t *testing.T) {
 	const key = "mapKey"
 	val := []log.KeyValue{
 		log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-		log.ByteSlice("b", []byte{3, 5, 7}),
+		log.Bytes("b", []byte{3, 5, 7}),
 	}
 	kv := log.Map(key, val...)
 	testKV(t, key, kv)
@@ -267,7 +267,7 @@ func TestMap(t *testing.T) {
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", func(t *testing.T) {
 		assert.Equal(t, val, v.AsMap(), "AsMap")
@@ -286,7 +286,7 @@ func TestEmpty(t *testing.T) {
 	t.Run("AsFloat64", testErrKind(v.AsFloat64, "AsFloat64", k))
 	t.Run("AsInt64", testErrKind(v.AsInt64, "AsInt64", k))
 	t.Run("AsString", testErrKind(v.AsString, "AsString", k))
-	t.Run("AsByteSlice", testErrKind(v.AsByteSlice, "AsByteSlice", k))
+	t.Run("AsBytes", testErrKind(v.AsBytes, "AsBytes", k))
 	t.Run("AsSlice", testErrKind(v.AsSlice, "AsSlice", k))
 	t.Run("AsMap", testErrKind(v.AsMap, "AsMap", k))
 }
@@ -300,7 +300,7 @@ func TestValueString(t *testing.T) {
 		{log.Float64Value(.15), "0.15"},
 		{log.BoolValue(true), "true"},
 		{log.StringValue("foo"), "foo"},
-		{log.ByteSliceValue([]byte{2, 4, 6}), "[2 4 6]"},
+		{log.BytesValue([]byte{2, 4, 6}), "[2 4 6]"},
 		{log.SliceValue(log.IntValue(3), log.StringValue("foo")), "[3 foo]"},
 		{log.MapValue(log.Int("a", 1), log.Bool("b", true)), "[a:1 b:true]"},
 		{log.Value{}, "<nil>"},
@@ -512,8 +512,8 @@ func TestAllocationLimits(t *testing.T) {
 
 	byteVal := []byte{1, 3, 4}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
-		by = log.ByteSlice(key, byteVal).Value.AsByteSlice()
-	}), "Byte.AsByteSlice")
+		by = log.Bytes(key, byteVal).Value.AsBytes()
+	}), "Byte.AsBytes")
 
 	sliceVal := []log.Value{log.BoolValue(true), log.IntValue(32)}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {

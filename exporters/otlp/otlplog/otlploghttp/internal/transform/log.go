@@ -312,9 +312,9 @@ func LogAttrValue(v api.Value) *cpb.AnyValue {
 		av.Value = &cpb.AnyValue_StringValue{
 			StringValue: v.AsString(),
 		}
-	case api.KindByteSlice:
+	case api.KindBytes:
 		av.Value = &cpb.AnyValue_BytesValue{
-			BytesValue: v.AsByteSlice(),
+			BytesValue: v.AsBytes(),
 		}
 	case api.KindSlice:
 		av.Value = &cpb.AnyValue_ArrayValue{

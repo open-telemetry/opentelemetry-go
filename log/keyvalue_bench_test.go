@@ -212,13 +212,13 @@ func BenchmarkValueEqual(b *testing.B) {
 		log.BoolValue(false),
 		log.StringValue("hi"),
 		log.StringValue("bye"),
-		log.ByteSliceValue([]byte{1, 3, 5}),
+		log.BytesValue([]byte{1, 3, 5}),
 		log.SliceValue(log.StringValue("foo")),
 		log.SliceValue(log.IntValue(3), log.StringValue("foo")),
 		log.MapValue(log.Bool("b", true), log.Int("i", 3)),
 		log.MapValue(
 			log.Slice("l", log.IntValue(3), log.StringValue("foo")),
-			log.ByteSlice("b", []byte{3, 5, 7}),
+			log.Bytes("b", []byte{3, 5, 7}),
 			log.Empty("e"),
 		),
 	}

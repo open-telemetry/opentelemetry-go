@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE Type` in `go.opentelemetry.io/otel/attribute`. (#7948)
+- Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
 - Add `IsRandom` and `WithRandom` on `TraceFlags`, and `IsRandom` on `SpanContext` in `go.opentelemetry.io/otel/trace` for [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag) support. (#8012)
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 - Support attributes with empty value (`attribute.EMPTY`) in OTLP exporters (`go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`). (#8038)
