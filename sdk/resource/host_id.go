@@ -39,11 +39,11 @@ func (r *hostIDReaderBSD) read() (string, error) {
 		return strings.TrimSpace(result), nil
 	}
 
-	if result, err := r.execCommand("kenv", "-q", "smbios.system.uuid"); err == nil {
+	if result, err := r.execCommand("/bin/kenv", "-q", "smbios.system.uuid"); err == nil {
 		return strings.TrimSpace(result), nil
 	}
 
-	return "", errors.New("host id not found in: /etc/hostid or kenv")
+	return "", errors.New("host id not found in: /etc/hostid or /bin/kenv")
 }
 
 // hostIDReaderDarwin implements hostIDReader.
