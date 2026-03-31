@@ -1109,6 +1109,36 @@ func TestObservability(t *testing.T) {
 Test order should not affect results.
 Ensure that any global state (e.g. component ID counters) is reset between tests.
 
+### Experimental Features
+
+This repository provides strict stability guarantees for public APIs in stable modules. To support the development of new features in the specification, we provide the following mechanisms to implement in-development features without adding new public artifacts in stable modules.
+
+#### Experimental behavior with no API artifacts
+
+Features that change behavior without changing the API (e.g., exemplar collection, auto-generation of identifiers) are implemented behind a feature gate. The implementation resides in an `/internal/x` package and is activated through environment variables with the `OTEL_GO_X_` prefix (e.g., `OTEL_GO_X_OBSERVABILITY`).
+
+#### Experimental methods on SDK-only interfaces
+
+Features that require new methods on SDK interfaces are defined as a new interface in an exerimental module (e.g., `go.opentelemetry.io/otel/sdk/x`). The SDK uses type assertions to check if passing types implement these experimental interfaces.
+
+#### Experimental structs, functions, or interfaces
+
+Features that introduce net-new artifacts that don't need changes to the existing package, are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+
+#### Experimental signals
+
+New telemetry signals (e.g., Logs before stabilization) are hosted in new, unstable modules (e.g., `go.opentelemetry.io/otel/log` before 1.0.0).
+
+#### Not Supported
+
+The following kinds of experimental features are **not currently supported** on stable interfaces:
+
+- Experimental methods on API interfaces
+- Experimental fields for API or SDK structs
+- Experimental options for API or SDK functions
+
+In some cases forks or long-lived branches may be used for prototyping these features.
+
 ## Approvers and Maintainers
 
 ### Maintainers
