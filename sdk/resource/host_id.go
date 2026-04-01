@@ -31,9 +31,9 @@ type hostIDReaderBSD struct {
 	readFile    fileReader
 }
 
-// read attempts to read the machine-id from /etc/hostid. If not found it will
-// execute `kenv -q smbios.system.uuid`. If neither location yields an id an
-// error will be returned.
+// read attempts to read the machine-id from /etc/hostid.
+// If not found it will execute: /bin/kenv -q smbios.system.uuid.
+// If neither location yields an id an error will be returned.
 func (r *hostIDReaderBSD) read() (string, error) {
 	if result, err := r.readFile("/etc/hostid"); err == nil {
 		return strings.TrimSpace(result), nil
