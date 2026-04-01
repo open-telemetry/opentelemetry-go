@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Return spec-compliant `TraceIdRatioBased` description. This is a breaking behavioral change, but it is necessary to
   make the implementation [spec-compliant](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8027)
 - Fix a race condition in `go.opentelemetry.io/otel/sdk/metric` where the lastvalue aggregation could collect the value 0 even when no zero-value measurements were recorded. (#8056)
+- Limit HTTP response body to 4 MiB in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to mitigate excessive memory usage caused by a misconfigured or malicious server. Responses exceeding the limit are treated as non-retryable errors. (#8108)
 - `WithHostID` detector in `go.opentelemetry.io/otel/sdk/resource` to use full path for `kenv` command on BSD. (#8113)
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to correctly handle HTTP2 GOAWAY frame. (#8096)
 
