@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Introduce the `EMPTY` Type in `go.opentelemetry.io/otel/attribute` to reflect that an empty value is now a valid value, with `INVALID` remaining as a deprecated alias of `EMPTY`. (#8038)
 - Refactor slice handling in `go.opentelemetry.io/otel/attribute` to optimize short slice values with fixed-size fast paths. (#8039)
 - Improve performance of span metric recording in `go.opentelemetry.io/otel/sdk/trace` by returning early if self-observability is not enabled. (#8067)
+- Improve formatting of metric data diffs in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8073)
 
 ### Deprecated
 
@@ -34,6 +35,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Return spec-compliant `TraceIdRatioBased` description. This is a breaking behavioral change, but it is necessary to
   make the implementation [spec-compliant](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8027)
 - Fix a race condition in `go.opentelemetry.io/otel/sdk/metric` where the lastvalue aggregation could collect the value 0 even when no zero-value measurements were recorded. (#8056)
+- Limit HTTP response body to 4 MiB in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to mitigate excessive memory usage caused by a misconfigured or malicious server. Responses exceeding the limit are treated as non-retryable errors. (#8108)
+- `WithHostID` detector in `go.opentelemetry.io/otel/sdk/resource` to use full path for `kenv` command on BSD. (#8113)
+- Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to correctly handle HTTP2 GOAWAY frame. (#8096)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
