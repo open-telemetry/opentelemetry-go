@@ -1123,7 +1123,7 @@ Features that require new methods on SDK interfaces are defined as a new interfa
 
 #### Experimental structs, functions, or interfaces
 
-Features that introduce net-new artifacts that don't need changes to the existing package, are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+Features that introduce net-new artifacts that don't need changes to the existing package are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
 
 #### Experimental signals
 
