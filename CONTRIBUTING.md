@@ -1119,7 +1119,7 @@ Features that change behavior without changing the API (e.g., exemplar collectio
 
 #### Experimental methods on SDK-only interfaces
 
-Features that require new methods on SDK interfaces are defined as a new interface in an exerimental module (e.g., `go.opentelemetry.io/otel/sdk/x`). The SDK uses type assertions to check if passing types implement these experimental interfaces.
+Features that require new methods on SDK interfaces are defined as a new interface in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`). The SDK uses type assertions to check if passing types implement these experimental interfaces.
 
 #### Experimental structs, functions, or interfaces
 
