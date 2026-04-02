@@ -321,3 +321,71 @@ func FuzzHashKVs(f *testing.F) {
 		}
 	})
 }
+
+// TestHashKVsMAP verifies hashing behaviour specific to the MAP value type.
+func TestHashKVsMAP(t *testing.T) {
+	t.Run("Deterministic", func(t *testing.T) {
+		kv := KeyValue{
+			Key: "m",
+			Value: MapValue([]KeyValue{
+				String("a", "1"),
+				Int("b", 2),
+			}),
+		}
+		h1 := hashKVs([]KeyValue{kv})
+		h2 := hashKVs([]KeyValue{kv})
+		if h1 != h2 {
+			t.Errorf("MAP hash is not deterministic: %d != %d", h1, h2)
+		}
+	})
+
+	t.Run("OrderIndependent", func(t *testing.T) {
+		// Two MAP values with identical key-value pairs but different insertion
+		// order must hash to the same value.
+		m1 := MapValue([]KeyValue{
+			String("x", "hello"),
+			Int("y", 99),
+		})
+		m2 := MapValue([]KeyValue{
+			Int("y", 99),
+			String("x", "hello"),
+		})
+		kv1 := KeyValue{Key: "m", Value: m1}
+		kv2 := KeyValue{Key: "m", Value: m2}
+		h1 := hashKVs([]KeyValue{kv1})
+		h2 := hashKVs([]KeyValue{kv2})
+		if h1 != h2 {
+			t.Errorf("MAP hash differs for identical entries in different order: %d != %d", h1, h2)
+		}
+	})
+
+	t.Run("DistinctFromString", func(t *testing.T) {
+		// A MAP value must not hash the same as a STRING value even if they
+		// have the same string representation.
+		kvMap := KeyValue{Key: "k", Value: MapValue([]KeyValue{String("a", "b")})}
+		kvStr := KeyValue{Key: "k", Value: StringValue(`{"a":"b"}`)}
+		hMap := hashKVs([]KeyValue{kvMap})
+		hStr := hashKVs([]KeyValue{kvStr})
+		if hMap == hStr {
+			t.Errorf("MAP and STRING hash collision: both %d", hMap)
+		}
+	})
+
+	t.Run("EmptyMap", func(t *testing.T) {
+		kv := KeyValue{Key: "m", Value: MapValue(nil)}
+		h := hashKVs([]KeyValue{kv})
+		if h == 0 {
+			t.Error("hash of empty MAP should not be zero")
+		}
+	})
+
+	t.Run("DifferentValues", func(t *testing.T) {
+		kv1 := KeyValue{Key: "m", Value: MapValue([]KeyValue{String("a", "1")})}
+		kv2 := KeyValue{Key: "m", Value: MapValue([]KeyValue{String("a", "2")})}
+		h1 := hashKVs([]KeyValue{kv1})
+		h2 := hashKVs([]KeyValue{kv2})
+		if h1 == h2 {
+			t.Errorf("MAP hash collision for different values: both %d", h1)
+		}
+	})
+}

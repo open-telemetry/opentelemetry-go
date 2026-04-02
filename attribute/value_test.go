@@ -290,6 +290,127 @@ func TestNotEquivalence(t *testing.T) {
 	})
 }
 
+func TestMapValue(t *testing.T) {
+	t.Run("TypeIsMAP", func(t *testing.T) {
+		v := attribute.MapValue([]attribute.KeyValue{
+			attribute.String("k", "v"),
+		})
+		assert.Equal(t, attribute.MAP, v.Type())
+		assert.Equal(t, "MAP", v.Type().String())
+	})
+
+	t.Run("RoundTrip", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			attribute.String("host", "localhost"),
+			attribute.Int("port", 8080),
+			attribute.Bool("tls", true),
+		}
+		v := attribute.MapValue(kvs)
+		got := v.AsMap()
+		assert.Equal(t, kvs, got)
+	})
+
+	t.Run("EmptyMap", func(t *testing.T) {
+		v := attribute.MapValue(nil)
+		assert.Equal(t, attribute.MAP, v.Type())
+		assert.Empty(t, v.AsMap())
+	})
+
+	t.Run("AsMapWrongType", func(t *testing.T) {
+		v := attribute.StringValue("not a map")
+		assert.Nil(t, v.AsMap())
+	})
+
+	t.Run("AsInterfaceReturnsSlice", func(t *testing.T) {
+		kvs := []attribute.KeyValue{attribute.String("a", "b")}
+		v := attribute.MapValue(kvs)
+		got, ok := v.AsInterface().([]attribute.KeyValue)
+		assert.True(t, ok, "AsInterface() should return []KeyValue for MAP type")
+		assert.Equal(t, kvs, got)
+	})
+}
+
+func TestMapValueDeduplication(t *testing.T) {
+	t.Run("LastWriteWins", func(t *testing.T) {
+		// "a" appears twice: last value ("second") must win.
+		kvs := []attribute.KeyValue{
+			attribute.String("a", "first"),
+			attribute.String("b", "only"),
+			attribute.String("a", "second"),
+		}
+		got := attribute.MapValue(kvs).AsMap()
+		want := []attribute.KeyValue{
+			attribute.String("a", "second"), // position preserved; value updated
+			attribute.String("b", "only"),
+		}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("AllDuplicates", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			attribute.Int("x", 1),
+			attribute.Int("x", 2),
+			attribute.Int("x", 3),
+		}
+		got := attribute.MapValue(kvs).AsMap()
+		want := []attribute.KeyValue{attribute.Int("x", 3)}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("NoDuplicates", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			attribute.String("p", "1"),
+			attribute.String("q", "2"),
+		}
+		got := attribute.MapValue(kvs).AsMap()
+		assert.Equal(t, kvs, got)
+	})
+
+	t.Run("OrderOfFirstOccurrencePreserved", func(t *testing.T) {
+		// Keys: c, a, b — with "a" duplicated. Result should be [c, a, b].
+		kvs := []attribute.KeyValue{
+			attribute.String("c", "c-val"),
+			attribute.String("a", "a-first"),
+			attribute.String("b", "b-val"),
+			attribute.String("a", "a-second"),
+		}
+		got := attribute.MapValue(kvs).AsMap()
+		want := []attribute.KeyValue{
+			attribute.String("c", "c-val"),
+			attribute.String("a", "a-second"),
+			attribute.String("b", "b-val"),
+		}
+		assert.Equal(t, want, got)
+	})
+}
+
+func TestMapValueEmit(t *testing.T) {
+	t.Run("SingleEntry", func(t *testing.T) {
+		v := attribute.MapValue([]attribute.KeyValue{
+			attribute.String("key", "value"),
+		})
+		emit := v.Emit()
+		// JSON object — must contain the key and value.
+		assert.Contains(t, emit, `"key"`)
+		assert.Contains(t, emit, `"value"`)
+	})
+
+	t.Run("EmptyMap", func(t *testing.T) {
+		v := attribute.MapValue(nil)
+		assert.Equal(t, "{}", v.Emit())
+	})
+
+	t.Run("MultipleEntries", func(t *testing.T) {
+		v := attribute.MapValue([]attribute.KeyValue{
+			attribute.Int("count", 42),
+			attribute.Bool("ok", true),
+		})
+		emit := v.Emit()
+		assert.Contains(t, emit, `"count"`)
+		assert.Contains(t, emit, `"ok"`)
+	})
+}
+
 func TestAsSlice(t *testing.T) {
 	bs1 := []bool{true, false, true}
 	kv := attribute.BoolSlice("BoolSlice", bs1)

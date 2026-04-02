@@ -6,6 +6,7 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 import (
 	"fmt"
 	"reflect"
+	"sort"
 
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
@@ -28,6 +29,7 @@ const (
 	float64SliceID uint64 = 7308324551835016539 // "[]double" (little endian)
 	stringSliceID  uint64 = 7453010373645655387 // "[]string" (little endian)
 	emptyID        uint64 = 7305809155345288421 // "__empty_" (little endian)
+	mapID          uint64 = 7882987970709290093 // "___map__" (little endian)
 )
 
 // hashKVs returns a new xxHash64 hash of kvs.
@@ -80,6 +82,19 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		rv := reflect.ValueOf(kv.Value.slice)
 		for i := 0; i < rv.Len(); i++ {
 			h = h.String(rv.Index(i).String())
+		}
+	case MAP:
+		h = h.Uint64(mapID)
+		// Sort keys for order-independent hashing: two MAP values with the
+		// same key-value pairs but different insertion order must hash the same.
+		kvs := kv.Value.AsMap()
+		sorted := make([]KeyValue, len(kvs))
+		copy(sorted, kvs)
+		sort.Slice(sorted, func(i, j int) bool {
+			return sorted[i].Key < sorted[j].Key
+		})
+		for _, entry := range sorted {
+			h = hashKV(h, entry)
 		}
 	case EMPTY:
 		h = h.Uint64(emptyID)
