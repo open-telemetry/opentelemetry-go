@@ -3619,7 +3619,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.42.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.43.0...HEAD
+[1.43.0/0.65.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.43.0
 [1.42.0/0.64.0/0.18.0/0.0.16]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.42.0
 [1.41.0/0.63.0/0.17.0/0.0.15]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.41.0
 [1.40.0/0.62.0/0.16.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.40.0
