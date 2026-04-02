@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -124,23 +123,6 @@ type httpClient struct {
 	client      *http.Client
 
 	inst *observ.Instrumentation
-}
-
-// Keep it in sync with golang's DefaultTransport from net/http! We
-// have our own copy to avoid handling a situation where the
-// DefaultTransport is overwritten with some different implementation
-// of http.RoundTripper or it's modified by another package.
-var ourTransport = &http.Transport{
-	Proxy: http.ProxyFromEnvironment,
-	DialContext: (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}).DialContext,
-	ForceAttemptHTTP2:     true,
-	MaxIdleConns:          100,
-	IdleConnTimeout:       90 * time.Second,
-	TLSHandshakeTimeout:   10 * time.Second,
-	ExpectContinueTimeout: 1 * time.Second,
 }
 
 func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs) (uploadErr error) {
