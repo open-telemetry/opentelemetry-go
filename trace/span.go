@@ -44,10 +44,13 @@ type Span interface {
 	// true if the Span is active and events can be recorded.
 	IsRecording() bool
 
-	// RecordError will record err as an exception span event for this span. An
-	// additional call to SetStatus is required if the Status of the Span should
-	// be set to Error, as this method does not change the Span status. If this
-	// span is not being recorded or err is nil then this method does nothing.
+	// RecordError will record err as an exception span event for this span. If
+	// this span is not being recorded or err is nil then this method does
+	// nothing.
+	//
+	// By default this method does not change the Span status. Use
+	// [WithErrorStatus] to also set the span status to [codes.Error] in a
+	// single call.
 	RecordError(err error, options ...EventOption)
 
 	// SpanContext returns the SpanContext of the Span. The returned SpanContext

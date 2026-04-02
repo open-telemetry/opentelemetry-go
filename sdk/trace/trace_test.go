@@ -1377,6 +1377,62 @@ func TestRecordErrorNil(t *testing.T) {
 	}
 }
 
+func TestRecordErrorWithErrorStatus(t *testing.T) {
+	t.Run("sets span status to Error", func(t *testing.T) {
+		te := NewTestExporter()
+		tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+		span := startSpan(tp, "RecordErrorWithErrorStatus")
+
+		err := errors.New("boom")
+		errTime := time.Now()
+		span.RecordError(err, trace.WithTimestamp(errTime), trace.WithErrorStatus())
+
+		got, endErr := endSpan(te, span)
+		if endErr != nil {
+			t.Fatal(endErr)
+		}
+
+		assert.Equal(t, codes.Error, got.status.Code)
+		assert.Equal(t, "boom", got.status.Description)
+		if len(got.events) != 1 {
+			t.Fatalf("expected 1 event, got %d", len(got.events))
+		}
+		assert.Equal(t, semconv.ExceptionEventName, got.events[0].Name)
+	})
+
+	t.Run("does not overwrite Ok status", func(t *testing.T) {
+		te := NewTestExporter()
+		tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+		span := startSpan(tp, "RecordErrorWithErrorStatusOk")
+		span.SetStatus(codes.Ok, "all good")
+
+		span.RecordError(errors.New("ignored"), trace.WithErrorStatus())
+
+		got, endErr := endSpan(te, span)
+		if endErr != nil {
+			t.Fatal(endErr)
+		}
+
+		assert.Equal(t, codes.Ok, got.status.Code)
+	})
+
+	t.Run("nil error does nothing", func(t *testing.T) {
+		te := NewTestExporter()
+		tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+		span := startSpan(tp, "RecordErrorWithErrorStatusNil")
+
+		span.RecordError(nil, trace.WithErrorStatus())
+
+		got, endErr := endSpan(te, span)
+		if endErr != nil {
+			t.Fatal(endErr)
+		}
+
+		assert.Equal(t, codes.Unset, got.status.Code)
+		assert.Empty(t, got.events)
+	})
+}
+
 func TestWithSpanKind(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithSampler(AlwaysSample()), WithResource(resource.Empty()))

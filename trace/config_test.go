@@ -408,6 +408,18 @@ func BenchmarkNewSpanEndConfig(b *testing.B) {
 	}
 }
 
+func TestNewEventConfigWithErrorStatus(t *testing.T) {
+	t.Run("default is false", func(t *testing.T) {
+		c := NewEventConfig()
+		assert.False(t, c.ErrorStatus())
+	})
+
+	t.Run("WithErrorStatus sets true", func(t *testing.T) {
+		c := NewEventConfig(WithErrorStatus())
+		assert.True(t, c.ErrorStatus())
+	})
+}
+
 func BenchmarkNewEventConfig(b *testing.B) {
 	for _, bb := range []struct {
 		name    string

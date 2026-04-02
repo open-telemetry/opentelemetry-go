@@ -537,10 +537,9 @@ func monotonicEndTime(start time.Time) time.Time {
 	return start.Add(time.Since(start))
 }
 
-// RecordError will record err as a span event for this span. An additional call to
-// SetStatus is required if the Status of the Span should be set to Error, this method
-// does not change the Span status. If this span is not being recorded or err is nil
-// than this method does nothing.
+// RecordError will record err as a span event for this span. If this span is
+// not being recorded or err is nil then this method does nothing. Pass
+// [trace.WithErrorStatus] to also set the span status to [codes.Error].
 func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	if s == nil || err == nil {
 		return
@@ -562,6 +561,10 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 		opts = append(opts, trace.WithAttributes(
 			semconv.ExceptionStacktrace(recordStackTrace()),
 		))
+	}
+
+	if c.ErrorStatus() && s.status.Code < codes.Ok {
+		s.status = Status{Code: codes.Error, Description: err.Error()}
 	}
 
 	s.addEvent(semconv.ExceptionEventName, opts...)

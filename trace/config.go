@@ -140,9 +140,10 @@ type SpanEndOption interface {
 
 // EventConfig is a group of options for an Event.
 type EventConfig struct {
-	attributes []attribute.KeyValue
-	timestamp  time.Time
-	stackTrace bool
+	attributes  []attribute.KeyValue
+	timestamp   time.Time
+	stackTrace  bool
+	errorStatus bool
 }
 
 // Attributes describe the associated qualities of an Event.
@@ -158,6 +159,12 @@ func (cfg *EventConfig) Timestamp() time.Time {
 // StackTrace reports whether stack trace capturing is enabled.
 func (cfg *EventConfig) StackTrace() bool {
 	return cfg.stackTrace
+}
+
+// ErrorStatus reports whether the span status should be set to error when
+// this option is passed to [Span.RecordError].
+func (cfg *EventConfig) ErrorStatus() bool {
+	return cfg.errorStatus
 }
 
 // NewEventConfig applies all the EventOptions to a returned EventConfig. If no
@@ -268,6 +275,22 @@ func (o stackTraceOption) applySpanEnd(c SpanConfig) SpanConfig { return o.apply
 // WithStackTrace sets the flag to capture the error with stack trace (e.g. true, false).
 func WithStackTrace(b bool) SpanEndEventOption {
 	return stackTraceOption(b)
+}
+
+type errorStatusOption struct{}
+
+func (errorStatusOption) applyEvent(c EventConfig) EventConfig {
+	c.errorStatus = true
+	return c
+}
+
+var _ EventOption = errorStatusOption{}
+
+// WithErrorStatus sets the span status to [codes.Error] with the recorded
+// error message when passed to [Span.RecordError]. This option has no effect
+// when used with other event methods.
+func WithErrorStatus() EventOption {
+	return errorStatusOption{}
 }
 
 // WithLinks adds links to a Span. The links are added to the existing Span
