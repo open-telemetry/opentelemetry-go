@@ -8,12 +8,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.43.0/0.65.0/0.19.0] 2026-04-02
+
 ### Added
 
-- Add `IsRandom` and `WithRandom` on `TraceFlags`, and `IsRandom` on `SpanContext` in `go.opentelemetry.io/otel/trace` for [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag) support. (#8012)
+- Add `IsRandom` and `WithRandom` on `TraceFlags`, and `IsRandom` on `SpanContext` in `go.opentelemetry.io/otel/trace`
+  for [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag) support. (#8012)
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 - Add `DefaultWithContext` and `EnvironmentWithContext` in `go.opentelemetry.io/otel/sdk/resource` to support plumbing `context.Context` through default and environment detectors. (#8051)
-- Support attributes with empty value (`attribute.EMPTY`) in OTLP exporters (`go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`). (#8038)
+- Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8038)
+- Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#8038)
+- Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8038)
+- Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8038)
+- Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8038)
+- Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8038)
 - Support attributes with empty value (`attribute.EMPTY`) in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8038)
 - Add support for per-series start time tracking for cumulative metrics in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` to enable. (#8060)
@@ -35,12 +46,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Return spec-compliant `TraceIdRatioBased` description. This is a breaking behavioral change, but it is necessary to
   make the implementation [spec-compliant](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8027)
 - Fix a race condition in `go.opentelemetry.io/otel/sdk/metric` where the lastvalue aggregation could collect the value 0 even when no zero-value measurements were recorded. (#8056)
-- Limit HTTP response body to 4 MiB in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to mitigate excessive memory usage caused by a misconfigured or malicious server. Responses exceeding the limit are treated as non-retryable errors. (#8108)
+- Limit HTTP response body to 4 MiB in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` to mitigate excessive memory usage caused by a misconfigured or malicious server.
+  Responses exceeding the limit are treated as non-retryable errors. (#8108)
+- Limit HTTP response body to 4 MiB in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` to mitigate excessive memory usage caused by a misconfigured or malicious server.
+  Responses exceeding the limit are treated as non-retryable errors. (#8108)
+- Limit HTTP response body to 4 MiB in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to mitigate excessive memory usage caused by a misconfigured or malicious server.
+  Responses exceeding the limit are treated as non-retryable errors. (#8108)
 - `WithHostID` detector in `go.opentelemetry.io/otel/sdk/resource` to use full path for `kenv` command on BSD. (#8113)
 - Fix missing `request.GetBody` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` to correctly handle HTTP2 GOAWAY frame. (#8096)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.42.0/0.64.0/0.18.0/0.0.16] 2026-03-06
 
