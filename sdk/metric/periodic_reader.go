@@ -240,6 +240,11 @@ func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
+	if !x.MetricExportBatchSize.Enabled() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect and export timeout"))
+		defer cancel()
+	}
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	err := r.Collect(ctx, rm)
@@ -277,8 +282,11 @@ func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMet
 
 // collect unwraps p as a produceHolder and returns its produce results.
 func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) error {
-	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect timeout"))
-	defer cancel()
+	if x.MetricExportBatchSize.Enabled() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect timeout"))
+		defer cancel()
+	}
 
 	var err error
 	if r.inst != nil {
@@ -320,8 +328,11 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 // export exports metric data m using r's exporter.
 func (r *PeriodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
-	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader export timeout"))
-	defer cancel()
+	if x.MetricExportBatchSize.Enabled() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, r.timeout, errors.New("reader export timeout"))
+		defer cancel()
+	}
 	return r.exporter.Export(ctx, m)
 }
 
