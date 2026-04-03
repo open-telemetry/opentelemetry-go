@@ -1109,6 +1109,42 @@ func TestObservability(t *testing.T) {
 Test order should not affect results.
 Ensure that any global state (e.g. component ID counters) is reset between tests.
 
+### Experimental Features
+
+To support the development of new features in the specification, we use the following patterns to implement in-development features without adding new public artifacts in stable modules.
+
+#### Experimental behavior with no API artifacts
+
+Features that change behavior without changing the API (e.g., exemplar collection, auto-generation of identifiers) are implemented behind a feature gate.
+The implementation resides in an `/internal/x` package and is activated through environment variables with the `OTEL_GO_X_` prefix (e.g., `OTEL_GO_X_OBSERVABILITY`).
+The feature must be documented in a `README.md` file in the `/internal/x` package.
+
+#### Experimental methods on SDK-only interfaces
+
+Features that require new methods on SDK interfaces are defined as a new interface in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+The SDK uses type assertions (without importing the unstable package) to check if passing types implement these experimental interfaces.
+The SDK must not depend on the experimental module.
+
+#### Experimental structs, functions, or interfaces
+
+Features that don't need any changes to the existing stable package are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+
+#### Experimental signals and components
+
+New telemetry signals (e.g., Logs before stabilization) and components (e.g. bridges) are hosted in new, unstable modules (e.g., `go.opentelemetry.io/otel/log` before 1.0.0).
+The package should have the final name it will use once stabilized (i.e. not `/x`), and is released at a v0.x.y version to indicate it is not stable.
+Most new components are hosted in [opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib).
+
+#### Not Supported
+
+The following kinds of experimental features are **not currently supported** on stable interfaces:
+
+- Experimental methods on API interfaces
+- Experimental fields for API or SDK exported structs
+- Experimental options for API or SDK functions
+
+In some cases forks or long-lived branches may be used for prototyping these features.
+
 ## Approvers and Maintainers
 
 ### Maintainers
