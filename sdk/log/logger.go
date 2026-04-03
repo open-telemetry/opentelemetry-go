@@ -192,7 +192,7 @@ func unwrapFmtWrapped(err error) error {
 	for reflect.TypeOf(err) == fmtWrapErrorType {
 		u := errors.Unwrap(err)
 		if u == nil {
-			return err
+			return err // Should never happen, but avoid returning nil if unwrapping fails.
 		}
 		err = u
 	}
