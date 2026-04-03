@@ -1117,6 +1117,7 @@ To support the development of new features in the specification, we use the foll
 
 Features that change behavior without changing the API (e.g., exemplar collection, auto-generation of identifiers) are implemented behind a feature gate.
 The implementation resides in an `/internal/x` package and is activated through environment variables with the `OTEL_GO_X_` prefix (e.g., `OTEL_GO_X_OBSERVABILITY`).
+The feature must be documented in a `README.md` file in the `/internal/x` package.
 
 #### Experimental methods on SDK-only interfaces
 
@@ -1128,9 +1129,11 @@ The SDK must not depend on the experimental module.
 
 Features that don't need any changes to the existing stable package are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
 
-#### Experimental signals
+#### Experimental signals and components
 
-New telemetry signals (e.g., Logs before stabilization) are hosted in new, unstable modules (e.g., `go.opentelemetry.io/otel/log` before 1.0.0).
+New telemetry signals (e.g., Logs before stabilization) and components (e.g. bridges) are hosted in new, unstable modules (e.g., `go.opentelemetry.io/otel/log` before 1.0.0).
+The package should have the final name it will use once stabilized (i.e. not `/x`), and is released at a v0.x.y version to indicate it is not stable.
+Most new components are hosted in [opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib).
 
 #### Not Supported
 
