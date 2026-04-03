@@ -24,6 +24,8 @@ const (
 	smallestNonZeroNormalFloat64 = 0x1p-1022
 )
 
+var errUnderflow = errors.New("exponential histogram underflow (exceeds maxSize at scale -10)")
+
 // expoHistogramDataPoint is a single data point in an exponential histogram.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	attrs attribute.Set
@@ -94,9 +96,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
 		currentScale := p.scale.Load()
 		if currentScale-scaleDelta < expoMinScale {
-			// With a scale of -10 there is only two buckets for the whole range of float64 values.
-			// This can only happen if there is a max size of 1.
-			otel.Handle(errors.New("exponential histogram scale underflow"))
+			otel.Handle(errUnderflow)
 			return
 		}
 		// Downscale
@@ -315,17 +315,52 @@ func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	pScale := p.scale.Load()
-	oScale := other.scale.Load()
-	if pScale > oScale {
-		delta := pScale - oScale
-		p.scale.Add(-delta)
-		p.posBuckets.downscale(delta)
-		p.negBuckets.downscale(delta)
-	} else if oScale > pScale {
-		delta := oScale - pScale
-		other.posBuckets.downscale(delta)
-		other.negBuckets.downscale(delta)
+	pStartScale := p.scale.Load()
+	oStartScale := other.scale.Load()
+
+	targetScale := min(pStartScale, oStartScale)
+	pAlignShift := pStartScale - targetScale
+	oAlignShift := oStartScale - targetScale
+
+	var d int32
+	if len(p.posBuckets.counts) > 0 && len(other.posBuckets.counts) > 0 {
+		pMinBin := p.posBuckets.startBin >> pAlignShift
+		oMinBin := other.posBuckets.startBin >> oAlignShift
+		pMaxBin := (p.posBuckets.startBin + int32(len(p.posBuckets.counts)) - 1) >> pAlignShift
+		oMaxBin := (other.posBuckets.startBin + int32(len(other.posBuckets.counts)) - 1) >> oAlignShift
+
+		minBin := min(pMinBin, oMinBin)
+		maxBin := max(pMaxBin, oMaxBin)
+		delta := p.scaleChange(maxBin, minBin, 1)
+		if delta > d {
+			d = delta
+		}
+	}
+	if len(p.negBuckets.counts) > 0 && len(other.negBuckets.counts) > 0 {
+		pMinBin := p.negBuckets.startBin >> pAlignShift
+		oMinBin := other.negBuckets.startBin >> oAlignShift
+		pMaxBin := (p.negBuckets.startBin + int32(len(p.negBuckets.counts)) - 1) >> pAlignShift
+		oMaxBin := (other.negBuckets.startBin + int32(len(other.negBuckets.counts)) - 1) >> oAlignShift
+
+		minBin := min(pMinBin, oMinBin)
+		maxBin := max(pMaxBin, oMaxBin)
+		delta := p.scaleChange(maxBin, minBin, 1)
+		if delta > d {
+			d = delta
+		}
+	}
+
+	pDownscale := pAlignShift + d
+	if pDownscale > 0 {
+		p.scale.Add(-pDownscale)
+		p.posBuckets.downscale(pDownscale)
+		p.negBuckets.downscale(pDownscale)
+	}
+
+	oDownscale := oAlignShift + d
+	if oDownscale > 0 {
+		other.posBuckets.downscale(oDownscale)
+		other.negBuckets.downscale(oDownscale)
 	}
 
 	p.posBuckets.merge(&other.posBuckets)
@@ -493,6 +528,8 @@ type cumulativePoint[N int64 | float64] struct {
 	wg         hotColdWaitGroup
 	points     [2]*expoHistogramDataPoint[N]
 	cumulative *expoHistogramDataPoint[N]
+
+	tracker atomicUnderflowTracker
 }
 
 // newCumulativeExpoHistogram returns an Aggregator that summarizes a set of
@@ -544,6 +581,7 @@ func (e *cumulativeExpoHistogram[N]) measure(
 
 	vp := e.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		cp := &cumulativePoint[N]{}
+		cp.tracker.maxSize = e.maxSize
 		cp.cumulative = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 
 		cp.points[0] = &expoHistogramDataPoint[N]{
@@ -566,6 +604,11 @@ func (e *cumulativeExpoHistogram[N]) measure(
 
 		return cp
 	}).(*cumulativePoint[N])
+
+	if !vp.tracker.checkAndRecord(float64(value)) {
+		otel.Handle(errUnderflow)
+		return
+	}
 
 	hotIdx := vp.wg.start()
 	v := vp.points[hotIdx]
@@ -597,6 +640,7 @@ func (e *cumulativeExpoHistogram[N]) collect(
 		delta := cp.points[coldIdx]
 
 		cp.cumulative.merge(delta)
+
 
 		// Replace the cold delta point and its reservoir
 		cp.points[coldIdx] = &expoHistogramDataPoint[N]{

@@ -1260,23 +1260,49 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 	}
 }
 
-func TestExpoHistogramRecordUnderflow(t *testing.T) {
-	var errs []error
-	original := global.GetErrorHandler()
-	global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
-		errs = append(errs, e)
-	}))
-	t.Cleanup(func() {
-		global.SetErrorHandler(original)
-	})
+func TestExpoHistogramUnderflow(t *testing.T) {
+	tests := []struct {
+		name    string
+		run     func(ctx context.Context)
+		wantErr string
+	}{
+		{
+			name: "delta measure downscale underflow",
+			run: func(ctx context.Context) {
+				h := newDeltaExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				h.measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
+				h.measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
+			},
+			wantErr: "exponential histogram underflow (exceeds maxSize at scale -10)",
+		},
+		{
+			name: "cumulative tracker measure underflow",
+			run: func(ctx context.Context) {
+				h := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				h.measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
+				h.measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
+			},
+			wantErr: "exponential histogram underflow (exceeds maxSize at scale -10)",
+		},
+	}
 
-	dp := newExpoHistogramDataPoint[float64](attribute.NewSet(), 1, 20, false, false)
-	// Force scale to a low value
-	dp.scale.Store(-10)
-	dp.record(1)
-	dp.record(math.MaxFloat64)
-	require.Len(t, errs, 1)
-	assert.EqualError(t, errs[0], "exponential histogram scale underflow")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var errs []error
+			original := global.GetErrorHandler()
+			global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				errs = append(errs, e)
+			}))
+			t.Cleanup(func() {
+				global.SetErrorHandler(original)
+			})
+
+			tt.run(t.Context())
+
+			require.Len(t, errs, 1)
+			assert.EqualError(t, errs[0], tt.wantErr)
+		})
+	}
 }
 
 func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
