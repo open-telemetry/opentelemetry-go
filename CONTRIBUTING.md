@@ -1142,6 +1142,26 @@ The return type of the Option function must embed the option's type (e.g. `metri
 The SDK uses type assertions (without importing the unstable package) to check if passing types implement these experimental interfaces.
 The SDK must not depend on the experimental module.
 
+For example:
+
+```go
+type myOption struct {
+    // Embed the stable option type.
+    metric.InstrumentOption
+    value string
+}
+
+// Experimental prevents the API from panicing when the option is used.
+func (o myOption) Experimental() {}
+
+// The SDK can use type assertions to use this function.
+func (o myOption) Value() string { return o.value }
+
+func WithMyOption(value string) metric.InstrumentOption {
+    return myOption{value: value}
+}
+```
+
 #### Not Supported
 
 The following kinds of experimental features are **not currently supported** on stable interfaces:
