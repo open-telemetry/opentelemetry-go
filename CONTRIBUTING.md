@@ -1138,7 +1138,7 @@ Most new components are hosted in [opentelemetry-go-contrib](https://github.com/
 #### Experimental options for API or SDK functions
 
 Experimental Options functions are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
-The return type of the Option function must embed the option's type (e.g. `metric.InstrumentOption`), and have an `Experimental()` method to prevent the API from panicing when the option is used.
+The return type of the Option function must embed the option's type (e.g. `metric.InstrumentOption`), and have an `Experimental()` method to prevent the API from panicking when the option is used.
 The SDK uses type assertions (without importing the unstable package) to check if passing types implement these experimental interfaces.
 The SDK must not depend on the experimental module.
 
@@ -1151,7 +1151,7 @@ type myOption struct {
     value string
 }
 
-// Experimental prevents the API from panicing when the option is used.
+// Experimental prevents the API from panicking when the option is used.
 func (o myOption) Experimental() {}
 
 // The SDK can use type assertions to use this function.
