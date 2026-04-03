@@ -22,6 +22,7 @@ func TestErrorType(t *testing.T) {
 	check(t, fmtWrapped(custom("")), pkg+".ErrCustomType")
 	check(t, fmtWrapped(wrapped(custom(""))), pkg+".wrappedErr")
 	check(t, fmtWrapped(fmtWrapped(custom(""))), pkg+".ErrCustomType")
+	check(t, fmtWrapped(nil), fmtWrapErrorType.String()) // fmt.Errorf with nil error, use concrete type of the wrapper.
 }
 
 func check(t *testing.T, err error, want string) {

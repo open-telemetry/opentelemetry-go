@@ -415,6 +415,11 @@ func TestErrorType(t *testing.T) {
 		err := wrappedErr{err: errWithType{msg: "boom", typ: ""}}
 		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.wrappedErr", errorType(err))
 	})
+
+	t.Run("FmtWrappedNilError", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", nil)
+		assert.Equal(t, fmtWrapErrorType.String(), errorType(err))
+	})
 }
 
 type errWithType struct {
