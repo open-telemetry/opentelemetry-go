@@ -153,7 +153,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
 				readerAggregation := i.readerDefaultAggregation(inst.Kind)
-				got, err := i.Instrument(inst, readerAggregation)
+				got, err := i.Instrument(inst, nil, readerAggregation)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {

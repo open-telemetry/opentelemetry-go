@@ -36,3 +36,5 @@ replace go.opentelemetry.io/otel/log => ../../log
 replace go.opentelemetry.io/otel => ../..
 
 replace go.opentelemetry.io/otel/sdk/metric => ../metric
+
+replace go.opentelemetry.io/otel/metric/x => ../../metric/x
