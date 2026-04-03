@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/internal/x"
+
 )
 
 func TestConfig(t *testing.T) {
@@ -198,9 +198,7 @@ func BenchmarkNewMeterConfig(b *testing.B) {
 		})
 	}
 }
-
 type testExperimentalOption struct {
-	x.ExperimentalOption
 	metric.MeterOption
 	metric.Int64CounterOption
 	metric.Int64UpDownCounterOption
@@ -220,6 +218,8 @@ type testExperimentalOption struct {
 	metric.RecordOption
 	metric.ObserveOption
 }
+
+func (testExperimentalOption) Experimental() {}
 
 func TestExperimentalOptionSafe(t *testing.T) {
 	var opt testExperimentalOption

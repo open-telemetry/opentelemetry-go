@@ -196,3 +196,16 @@ func BenchmarkNewLoggerConfig(b *testing.B) {
 		})
 	}
 }
+
+type testExperimentalOption struct {
+	log.LoggerOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = log.NewLoggerConfig(opt) })
+}
+

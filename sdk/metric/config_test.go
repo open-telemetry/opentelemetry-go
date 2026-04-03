@@ -369,3 +369,16 @@ func sample(parent context.Context) context.Context {
 	})
 	return trace.ContextWithSpanContext(parent, sc)
 }
+
+type testExperimentalOption struct {
+	Option
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
+}
+

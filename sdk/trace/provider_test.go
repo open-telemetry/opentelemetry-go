@@ -518,3 +518,16 @@ func (m *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.In
 func (m *errMeter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	return nil, m.err
 }
+
+type testExperimentalOption struct {
+	TracerProviderOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = NewTracerProvider(opt) })
+}
+

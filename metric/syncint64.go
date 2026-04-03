@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/internal/x"
+
 )
 
 // Int64Counter is an instrument that records increasing int64 values.
@@ -52,7 +52,7 @@ type Int64CounterConfig struct {
 func NewInt64CounterConfig(opts ...Int64CounterOption) Int64CounterConfig {
 	var config Int64CounterConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyInt64Counter(config)
@@ -120,7 +120,7 @@ type Int64UpDownCounterConfig struct {
 func NewInt64UpDownCounterConfig(opts ...Int64UpDownCounterOption) Int64UpDownCounterConfig {
 	var config Int64UpDownCounterConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyInt64UpDownCounter(config)
@@ -189,7 +189,7 @@ type Int64HistogramConfig struct {
 func NewInt64HistogramConfig(opts ...Int64HistogramOption) Int64HistogramConfig {
 	var config Int64HistogramConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyInt64Histogram(config)
@@ -261,7 +261,7 @@ type Int64GaugeConfig struct {
 func NewInt64GaugeConfig(opts ...Int64GaugeOption) Int64GaugeConfig {
 	var config Int64GaugeConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyInt64Gauge(config)

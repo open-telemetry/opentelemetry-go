@@ -419,3 +419,16 @@ func BenchmarkLoggerProviderLogger(b *testing.B) {
 	b.StopTimer()
 	loggers[0].Enabled(b.Context(), log.EnabledParameters{})
 }
+
+type testExperimentalOption struct {
+	LoggerProviderOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = NewLoggerProvider(opt) })
+}
+

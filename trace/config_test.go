@@ -544,3 +544,22 @@ func TestWithInstrumentationAttributesMerge(t *testing.T) {
 			"Attributes and attribute sets should be merged together.")
 	})
 }
+
+type testExperimentalOption struct {
+	TracerOption
+	SpanStartOption
+	SpanEndOption
+	EventOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = NewTracerConfig(opt) })
+	assert.NotPanics(t, func() { _ = NewSpanStartConfig(opt) })
+	assert.NotPanics(t, func() { _ = NewSpanEndConfig(opt) })
+	assert.NotPanics(t, func() { _ = NewEventConfig(opt) })
+}
+

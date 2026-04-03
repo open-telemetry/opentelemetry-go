@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/embedded"
-	"go.opentelemetry.io/otel/metric/internal/x"
+
 )
 
 // Float64Observable describes a set of instruments used asynchronously to
@@ -52,7 +52,7 @@ type Float64ObservableCounterConfig struct {
 func NewFloat64ObservableCounterConfig(opts ...Float64ObservableCounterOption) Float64ObservableCounterConfig {
 	var config Float64ObservableCounterConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyFloat64ObservableCounter(config)
@@ -115,7 +115,7 @@ func NewFloat64ObservableUpDownCounterConfig(
 ) Float64ObservableUpDownCounterConfig {
 	var config Float64ObservableUpDownCounterConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyFloat64ObservableUpDownCounter(config)
@@ -175,7 +175,7 @@ type Float64ObservableGaugeConfig struct {
 func NewFloat64ObservableGaugeConfig(opts ...Float64ObservableGaugeOption) Float64ObservableGaugeConfig {
 	var config Float64ObservableGaugeConfig
 	for _, o := range opts {
-		if _, ok := o.(x.ExperimentalOption); ok {
+		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
 		config = o.applyFloat64ObservableGauge(config)
