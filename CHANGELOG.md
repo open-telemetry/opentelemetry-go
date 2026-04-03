@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
+- `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -33,8 +38,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Introduce the `EMPTY` Type in `go.opentelemetry.io/otel/attribute` to reflect that an empty value is now a valid value, with `INVALID` remaining as a deprecated alias of `EMPTY`. (#8038)
 - Improve slice handling in `go.opentelemetry.io/otel/attribute` to optimize short slice values with fixed-size fast paths. (#8039)
-- `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#7975)
-- `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#7975)
 - Improve performance of span metric recording in `go.opentelemetry.io/otel/sdk/trace` by returning early if self-observability is not enabled. (#8067)
 - Improve formatting of metric data diffs in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8073)
 
