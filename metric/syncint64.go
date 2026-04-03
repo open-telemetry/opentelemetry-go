@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/embedded"
-
 )
 
 // Int64Counter is an instrument that records increasing int64 values.

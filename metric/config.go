@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
-
 )
 
 // MeterConfig contains options for Meters.

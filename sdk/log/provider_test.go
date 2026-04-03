@@ -431,4 +431,3 @@ func TestExperimentalOptionSafe(t *testing.T) {
 
 	assert.NotPanics(t, func() { _ = NewLoggerProvider(opt) })
 }
-

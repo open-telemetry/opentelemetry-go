@@ -381,4 +381,3 @@ func TestExperimentalOptionSafe(t *testing.T) {
 
 	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
 }
-

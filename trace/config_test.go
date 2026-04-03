@@ -562,4 +562,3 @@ func TestExperimentalOptionSafe(t *testing.T) {
 	assert.NotPanics(t, func() { _ = NewSpanEndConfig(opt) })
 	assert.NotPanics(t, func() { _ = NewEventConfig(opt) })
 }
-

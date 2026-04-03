@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/embedded"
-
 )
 
 // Int64Observable describes a set of instruments used asynchronously to record

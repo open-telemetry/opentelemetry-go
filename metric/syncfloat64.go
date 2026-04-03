@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/metric/embedded"
-
 )
 
 // Float64Counter is an instrument that records increasing float64 values.

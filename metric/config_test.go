@@ -10,7 +10,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-
 )
 
 func TestConfig(t *testing.T) {
@@ -198,6 +197,7 @@ func BenchmarkNewMeterConfig(b *testing.B) {
 		})
 	}
 }
+
 type testExperimentalOption struct {
 	metric.MeterOption
 	metric.Int64CounterOption

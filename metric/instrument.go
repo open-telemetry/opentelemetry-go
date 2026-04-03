@@ -5,7 +5,6 @@ package metric // import "go.opentelemetry.io/otel/metric"
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-
 )
 
 // Observable is used as a grouping mechanism for all instruments that are
