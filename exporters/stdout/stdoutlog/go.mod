@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/exporters/stdout/stdoutlog
 
-go 1.25.0
+go 1.25.8
 
 // Contains broken dependency on go.opentelemetry.io/otel/sdk/log/logtest.
 retract v0.12.0
