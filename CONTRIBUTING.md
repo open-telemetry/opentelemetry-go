@@ -1135,13 +1135,19 @@ New telemetry signals (e.g., Logs before stabilization) and components (e.g. bri
 The package should have the final name it will use once stabilized (i.e. not `/x`), and is released at a v0.x.y version to indicate it is not stable.
 Most new components are hosted in [opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib).
 
+#### Experimental options for API or SDK functions
+
+Experimental Options functions are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+The return type of the Option function must embed the option's type (e.g. `metric.InstrumentOption`), and have an `Experimental()` method to prevent the API from panicing when the option is used.
+The SDK uses type assertions (without importing the unstable package) to check if passing types implement these experimental interfaces.
+The SDK must not depend on the experimental module.
+
 #### Not Supported
 
 The following kinds of experimental features are **not currently supported** on stable interfaces:
 
 - Experimental methods on API interfaces
 - Experimental fields for API or SDK exported structs
-- Experimental options for API or SDK functions
 
 In some cases forks or long-lived branches may be used for prototyping these features.
 
