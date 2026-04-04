@@ -19,8 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -74,6 +77,100 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	require.NoError(t, client.Shutdown(ctx))
 	got := coll.Collect().Dump()
 	require.Len(t, got, 1, "upload of one ResourceMetrics")
+}
+
+func TestClientWithJSONEncoding(t *testing.T) {
+	ctx := t.Context()
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(JSONEncoding)}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding")
+
+	// Verify the Content-Type header was set correctly for JSON
+	headers := coll.Headers()
+	require.Contains(t, headers, "Content-Type")
+	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+}
+
+func TestClientJSONEncodingParsesJSONResponsePartialSuccess(t *testing.T) {
+	ctx := t.Context()
+	const wantN int64 = 4
+	const wantMsg = "dropped"
+	tests := []struct {
+		contentType string
+	}{
+		{
+			contentType: "application/json",
+		},
+		{
+			contentType: "application/json; charset=utf-8",
+		},
+	}
+	for _, test := range tests {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			resp := &colmetricpb.ExportMetricsServiceResponse{
+				PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+					RejectedDataPoints: wantN,
+					ErrorMessage:       wantMsg,
+				},
+			}
+			body, err := protojson.Marshal(resp)
+			require.NoError(t, err)
+			w.Header().Set("Content-Type", test.contentType)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(body)
+		}))
+		t.Cleanup(srv.Close)
+
+		u, err := url.Parse(srv.URL)
+		require.NoError(t, err)
+		opts := []Option{WithEndpoint(u.Host), WithInsecure(), WithEncoding(JSONEncoding)}
+		cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+		cl, err := newClient(cfg)
+		require.NoError(t, err)
+
+		wantErr := internal.MetricPartialSuccessError(wantN, wantMsg)
+		assert.ErrorIs(t, cl.UploadMetrics(ctx, &mpb.ResourceMetrics{}), wantErr)
+		assert.NoError(t, cl.Shutdown(ctx))
+	}
+}
+
+func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
+	ctx := t.Context()
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{
+		WithEndpoint(addr),
+		WithInsecure(),
+		WithEncoding(JSONEncoding),
+		WithCompression(GzipCompression),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding and gzip compression")
+
+	// Verify headers
+	headers := coll.Headers()
+	require.Contains(t, headers, "Content-Type")
+	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+	require.Contains(t, headers, "Content-Encoding")
+	assert.Equal(t, []string{"gzip"}, headers["Content-Encoding"])
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
@@ -154,6 +251,37 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSON", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{"application/json"}, got["Content-Type"])
+		require.Regexp(t, "OTel Go OTLP over HTTP/JSON metrics exporter/[01]\\..*", got)
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSONAndCompressionGZip", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding), WithCompression(GzipCompression))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{"application/json"}, got["Content-Type"])
+		require.Contains(t, got, "Content-Encoding")
+		assert.Equal(t, []string{"gzip"}, got["Content-Encoding"])
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
