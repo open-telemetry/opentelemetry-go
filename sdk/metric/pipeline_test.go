@@ -602,6 +602,35 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 	}
 }
 
+func TestCallbackCanUnregisterDuringCollect(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	var called atomic.Int64
+	var reg metric.Registration
+	reg, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		called.Add(1)
+		o.ObserveInt64(counter, 1)
+		return reg.Unregister()
+	}, counter)
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), called.Load())
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+	rm = metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), called.Load())
+	assert.Empty(t, rm.ScopeMetrics)
+}
+
 // TestPipelineProduceErrors tests the issue described in https://github.com/open-telemetry/opentelemetry-go/issues/6344.
 // Earlier implementations of the pipeline produce method could corrupt metric data point state when the passed context
 // was canceled during execution of callbacks. In this case, corroption was the result of some or all callbacks being
