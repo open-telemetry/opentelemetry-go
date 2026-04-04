@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/internal/observ"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
@@ -126,6 +127,9 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 			},
 		},
 	}
+	if val, ok := x.MetricExportBatchSize.Lookup(); ok {
+		r.batcher = batcher{size: val}
+	}
 	r.externalProducers.Store(conf.producers)
 
 	go func() {
@@ -164,6 +168,7 @@ type PeriodicReader struct {
 
 	interval time.Duration
 	timeout  time.Duration
+	batcher  batcher
 	exporter Exporter
 	flushCh  chan chan error
 
@@ -235,14 +240,23 @@ func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
-	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect and export timeout"))
-	defer cancel()
-
+	if !x.MetricExportBatchSize.Enabled() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect and export timeout"))
+		defer cancel()
+	}
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	err := r.Collect(ctx, rm)
 	if err == nil {
-		err = r.export(ctx, rm)
+		if r.batcher.size > 0 {
+			batches := r.batcher.splitResourceMetrics(rm)
+			for _, batch := range batches {
+				err = errors.Join(err, r.export(ctx, batch))
+			}
+		} else {
+			err = r.export(ctx, rm)
+		}
 	}
 	r.rmPool.Put(rm)
 	return err
@@ -268,6 +282,12 @@ func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMet
 
 // collect unwraps p as a produceHolder and returns its produce results.
 func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) error {
+	if x.MetricExportBatchSize.Enabled() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect timeout"))
+		defer cancel()
+	}
+
 	var err error
 	if r.inst != nil {
 		cp := r.inst.CollectMetrics(ctx)
@@ -308,6 +328,11 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 // export exports metric data m using r's exporter.
 func (r *PeriodicReader) export(ctx context.Context, m *metricdata.ResourceMetrics) error {
+	if x.MetricExportBatchSize.Enabled() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, r.timeout, errors.New("reader export timeout"))
+		defer cancel()
+	}
 	return r.exporter.Export(ctx, m)
 }
 
@@ -369,7 +394,14 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			err = r.collect(ctx, ph, m)
 			if err == nil {
-				err = r.export(ctx, m)
+				if r.batcher.size > 0 {
+					batches := r.batcher.splitResourceMetrics(m)
+					for _, batch := range batches {
+						err = errors.Join(err, r.export(ctx, batch))
+					}
+				} else {
+					err = r.export(ctx, m)
+				}
 			}
 			r.rmPool.Put(m)
 		}
