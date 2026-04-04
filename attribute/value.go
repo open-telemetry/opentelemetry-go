@@ -45,6 +45,11 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
+	// MAP is a map of string keys to Value Type Value.
+	//
+	// The implementation enforces uniqueness of keys by default:
+	// when duplicate keys are provided, the last value for each key wins.
+	MAP
 	// INVALID is used for a Value with no value set.
 	//
 	// Deprecated: Use EMPTY instead as an empty value is a valid value.
@@ -134,6 +139,28 @@ func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.SliceValue(v)}
 }
 
+// MapValue creates a MAP Value from the provided key-value pairs.
+//
+// Duplicate keys are resolved using last-write-wins semantics: if the same
+// key appears more than once, the last value for that key is retained.
+// The relative order of first occurrences is preserved in the output.
+func MapValue(kvs []KeyValue) Value {
+	seen := make(map[Key]int, len(kvs))
+	deduped := make([]KeyValue, 0, len(kvs))
+	for _, kv := range kvs {
+		if idx, ok := seen[kv.Key]; ok {
+			// Key already seen: update the value at its original position.
+			deduped[idx] = kv
+		} else {
+			seen[kv.Key] = len(deduped)
+			deduped = append(deduped, kv)
+		}
+	}
+	// Store []KeyValue directly as any; it cannot use the generic SliceValue
+	// helper since KeyValue is not a primitive sliceElem type.
+	return Value{vtype: MAP, slice: deduped}
+}
+
 // Type returns a type of the Value.
 func (v Value) Type() Type {
 	return v.vtype
@@ -215,6 +242,23 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsSlice[string](v.slice)
 }
 
+// AsMap returns the []KeyValue value. Make sure that the Value's type is MAP.
+// The returned slice contains unique keys (deduplication is applied on
+// construction via [MapValue]).
+func (v Value) AsMap() []KeyValue {
+	if v.vtype != MAP {
+		return nil
+	}
+	return v.asMap()
+}
+
+func (v Value) asMap() []KeyValue {
+	if kvs, ok := v.slice.([]KeyValue); ok {
+		return kvs
+	}
+	return nil
+}
+
 type unknownValueType struct{}
 
 // AsInterface returns Value's data as any.
@@ -236,6 +280,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
+	case MAP:
+		return v.asMap()
 	case EMPTY:
 		return nil
 	}
@@ -273,6 +319,18 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
+	case MAP:
+		// Emit the MAP as a JSON object representation.
+		kvs := v.asMap()
+		m := make(map[string]any, len(kvs))
+		for _, kv := range kvs {
+			m[string(kv.Key)] = kv.Value.AsInterface()
+		}
+		j, err := json.Marshal(m)
+		if err != nil {
+			return fmt.Sprintf("invalid: %v", kvs)
+		}
+		return string(j)
 	case EMPTY:
 		return ""
 	default:
