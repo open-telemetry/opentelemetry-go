@@ -404,8 +404,21 @@ func newDeltaExpoHistogram[N int64 | float64](
 	noMinMax, noSum bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
-) *expoHistogram[N] {
-	return newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, limit, r)
+) *deltaExpoHistogram[N] {
+	return &deltaExpoHistogram[N]{
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		maxSize:  int(maxSize),
+		maxScale: maxScale,
+
+		newRes: r,
+		hotColdValMap: [2]limitedSyncMap{
+			{aggLimit: limit},
+			{aggLimit: limit},
+		},
+
+		start: now(),
+	}
 }
 
 func newCumulativeExpoHistogram[N int64 | float64](
@@ -415,6 +428,123 @@ func newCumulativeExpoHistogram[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *expoHistogram[N] {
 	return newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, limit, r)
+}
+
+type deltaExpoHistogram[N int64 | float64] struct {
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int32
+
+	newRes        func(attribute.Set) FilteredExemplarReservoir[N]
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap
+
+	start time.Time
+}
+
+func (e *deltaExpoHistogram[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
+	hotIdx := e.hcwg.start()
+	defer e.hcwg.done(hotIdx)
+
+	v := e.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		vp := newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		vp.res = e.newRes(attr)
+		return vp
+	}).(*expoHistogramDataPoint[N])
+
+	v.record(value)
+	v.res.Offer(ctx, value, droppedAttr)
+}
+
+func (e *deltaExpoHistogram[N]) collect(
+	dest *metricdata.Aggregation,
+) int {
+	t := now()
+
+	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
+	h.Temporality = metricdata.DeltaTemporality
+
+	coldIdx := e.hcwg.swapHotAndWait()
+
+	n := e.hotColdValMap[coldIdx].Len()
+	hDPts := reset(h.DataPoints, 0, n)
+
+	var i int
+	e.hotColdValMap[coldIdx].Range(func(_, value any) bool {
+		val := value.(*expoHistogramDataPoint[N])
+
+		dPt := metricdata.ExponentialHistogramDataPoint[N]{
+			Attributes:    val.attrs,
+			StartTime:     e.start,
+			Time:          t,
+			Count:         val.count(),
+			Scale:         val.scale.Load(),
+			ZeroCount:     val.zeroCount.Load(),
+			ZeroThreshold: 0.0,
+		}
+
+		dPt.PositiveBucket.Offset = val.posBuckets.startBin
+		if i < len(h.DataPoints) && len(h.DataPoints[i].PositiveBucket.Counts) >= len(val.posBuckets.counts) {
+			dPt.PositiveBucket.Counts = reset(
+				h.DataPoints[i].PositiveBucket.Counts,
+				len(val.posBuckets.counts),
+				len(val.posBuckets.counts),
+			)
+		} else {
+			dPt.PositiveBucket.Counts = make([]uint64, len(val.posBuckets.counts))
+		}
+		for j := range val.posBuckets.counts {
+			dPt.PositiveBucket.Counts[j] = val.posBuckets.counts[j].Load()
+		}
+
+		dPt.NegativeBucket.Offset = val.negBuckets.startBin
+		if i < len(h.DataPoints) && len(h.DataPoints[i].NegativeBucket.Counts) >= len(val.negBuckets.counts) {
+			dPt.NegativeBucket.Counts = reset(
+				h.DataPoints[i].NegativeBucket.Counts,
+				len(val.negBuckets.counts),
+				len(val.negBuckets.counts),
+			)
+		} else {
+			dPt.NegativeBucket.Counts = make([]uint64, len(val.negBuckets.counts))
+		}
+		for j := range val.negBuckets.counts {
+			dPt.NegativeBucket.Counts[j] = val.negBuckets.counts[j].Load()
+		}
+
+		if !e.noSum {
+			dPt.Sum = val.sum.load()
+		}
+		if !e.noMinMax {
+			if val.minMax.set.Load() {
+				dPt.Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+				dPt.Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+			}
+		}
+
+		collectExemplars(&dPt.Exemplars, val.res.Collect)
+
+		hDPts = append(hDPts, dPt)
+		i++
+		return true
+	})
+
+	e.start = t
+	e.hotColdValMap[coldIdx].Clear()
+
+	h.DataPoints = hDPts
+	*dest = h
+	return n
 }
 
 // expoHistogram summarizes a set of measurements as an histogram with exponentially

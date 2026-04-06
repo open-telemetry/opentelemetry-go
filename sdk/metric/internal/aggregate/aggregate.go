@@ -146,7 +146,7 @@ func (b Builder[N]) ExponentialBucketHistogram(
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		h := newDeltaExpoHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		return b.filter(h.measure), h.delta
+		return b.filter(h.measure), h.collect
 	default:
 		h := newCumulativeExpoHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
 		return b.filter(h.measure), h.cumulative
