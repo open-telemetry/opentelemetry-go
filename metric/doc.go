@@ -74,6 +74,45 @@ To ensure compatibility with observability platforms, all instruments created
 need to conform to this syntax. Not all implementations of the API will validate
 these names, it is the callers responsibility to ensure compliance.
 
+# Choosing an Instrument
+
+When instrumenting code, choosing the right instrument type is essential. Here
+is a quick guide to help decide:
+
+  - Counter: Use for values that only increase over time (monotonically
+    increasing). Examples: total requests served, bytes sent, errors count.
+    Counters are ideal for measuring rates (e.g., requests per second) when
+    aggregated over time.
+
+  - UpDownCounter: Use for values that can both increase and decrease.
+    Examples: queue length, active connections, memory in use. Use this when
+    you want to track the current state of something that changes in both
+    directions.
+
+  - Gauge: Use for non-additive measurements where only the current value
+    matters. Examples: current temperature, CPU utilization percentage, heap
+    size. Gauges measure the instantaneous value at a point in time. Unlike
+    Counters and UpDownCounters, Gauge values are not aggregated (adding two
+    temperature readings does not make sense).
+
+  - Histogram: Use when you care about the distribution of values, not just
+    the total or current value. Examples: request latency, response payload
+    size. Histograms automatically bucket values, allowing you to answer
+    questions like "what percentile of requests completed within 100ms?"
+
+A key distinction is whether the measurement is additive or non-additive:
+
+  - Additive: Counter and UpDownCounter values can be meaningfully summed
+    across processes or time intervals. The sum of "requests served" from
+    multiple instances equals total requests served.
+
+  - Non-additive: Gauge values typically cannot be summed meaningfully. The
+    average of "current CPU temperature" across servers does not represent a
+    real physical quantity.
+
+For a comprehensive guide on choosing instrument types, see the
+[Supplementary Guidelines].
+
 # Measurements
 
 Measurements are made by recording values and information about the values with
@@ -173,5 +212,6 @@ fully implement all the API interfaces when a user updates their API.
 [instrument name syntax]: https://opentelemetry.io/docs/specs/otel/metrics/api/#instrument-name-syntax
 [OpenTelemetry documentation]: https://opentelemetry.io/docs/concepts/signals/metrics/
 [GetMeterProvider]: https://pkg.go.dev/go.opentelemetry.io/otel#GetMeterProvider
+[Supplementary Guidelines]: https://opentelemetry.io/docs/specs/otel/metrics/supplementary-guidelines/
 */
 package metric // import "go.opentelemetry.io/otel/metric"
