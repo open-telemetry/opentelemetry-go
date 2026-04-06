@@ -155,11 +155,12 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
+			h := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			v, _ := h.values.Load(alice.Equivalent())
+			dp := v.(*cumulativePoint[int64]).points[0]
 
 			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
 			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
@@ -197,11 +198,12 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+			h := newCumulativeExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			v, _ := h.values.Load(alice.Equivalent())
+			dp := v.(*cumulativePoint[float64]).points[0]
 
 			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
 			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
