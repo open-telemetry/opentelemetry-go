@@ -399,6 +399,24 @@ func newExponentialHistogram[N int64 | float64](
 	}
 }
 
+func newDeltaExpoHistogram[N int64 | float64](
+	maxSize, maxScale int32,
+	noMinMax, noSum bool,
+	limit int,
+	r func(attribute.Set) FilteredExemplarReservoir[N],
+) *expoHistogram[N] {
+	return newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, limit, r)
+}
+
+func newCumulativeExpoHistogram[N int64 | float64](
+	maxSize, maxScale int32,
+	noMinMax, noSum bool,
+	limit int,
+	r func(attribute.Set) FilteredExemplarReservoir[N],
+) *expoHistogram[N] {
+	return newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, limit, r)
+}
+
 // expoHistogram summarizes a set of measurements as an histogram with exponentially
 // defined buckets.
 type expoHistogram[N int64 | float64] struct {
