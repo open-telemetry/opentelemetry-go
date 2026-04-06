@@ -36,6 +36,8 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	noMinMax bool
 	noSum    bool
 
+	mu sync.Mutex
+
 	scale atomic.Int32
 
 	posBuckets expoBuckets
@@ -76,6 +78,9 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 		p.zeroCount.Add(1)
 		return
 	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	bin := p.getBin(absV)
 
@@ -158,15 +163,15 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int)
 		return 0
 	}
 
-	low := int(startBin)
-	high := int(bin)
+	low := int64(startBin)
+	high := int64(bin)
 	if startBin >= bin {
-		low = int(bin)
-		high = int(startBin) + length - 1
+		low = int64(bin)
+		high = int64(startBin) + int64(length) - 1
 	}
 
 	var count int32
-	for high-low >= p.maxSize {
+	for high-low >= int64(p.maxSize) {
 		low >>= 1
 		high >>= 1
 		count++
@@ -190,9 +195,13 @@ type expoBuckets struct {
 // record increments the count for the given bin, and expands the buckets if needed.
 // Size changes must be done before calling this function.
 func (b *expoBuckets) record(bin int32) {
+	b.recordCount(bin, 1)
+}
+
+func (b *expoBuckets) recordCount(bin int32, count uint64) {
 	if len(b.counts) == 0 {
 		b.counts = make([]atomic.Uint64, 1)
-		b.counts[0].Store(1)
+		b.counts[0].Store(count)
 		b.startBin = bin
 		return
 	}
@@ -201,7 +210,7 @@ func (b *expoBuckets) record(bin int32) {
 
 	// if the new bin is inside the current range
 	if bin >= b.startBin && int(bin) <= endBin {
-		b.counts[bin-b.startBin].Add(1)
+		b.counts[bin-b.startBin].Add(count)
 		return
 	}
 	// if the new bin is before the current start add spaces to the counts
@@ -226,7 +235,7 @@ func (b *expoBuckets) record(bin int32) {
 			b.counts[i].Store(0)
 		}
 		b.startBin = bin
-		b.counts[0].Store(1)
+		b.counts[0].Store(count)
 		return
 	}
 	// if the new is after the end add spaces to the end
@@ -236,13 +245,13 @@ func (b *expoBuckets) record(bin int32) {
 			for i := endBin + 1 - int(b.startBin); i < len(b.counts); i++ {
 				b.counts[i].Store(0)
 			}
-			b.counts[bin-b.startBin].Store(1)
+			b.counts[bin-b.startBin].Store(count)
 			return
 		}
 
 		end := make([]atomic.Uint64, int(bin-b.startBin)-len(b.counts)+1)
 		b.counts = append(b.counts, end...)
-		b.counts[bin-b.startBin].Store(1)
+		b.counts[bin-b.startBin].Store(count)
 	}
 }
 
@@ -280,12 +289,91 @@ func (b *expoBuckets) downscale(delta int32) {
 	b.startBin >>= delta
 }
 
+func (b *expoBuckets) merge(other *expoBuckets) {
+	if len(other.counts) == 0 {
+		return
+	}
+	for i := range other.counts {
+		c := other.counts[i].Load()
+		if c > 0 {
+			b.recordCount(other.startBin+int32(i), c)
+		}
+	}
+}
+
 func (b *expoBuckets) count() uint64 {
 	var total uint64
 	for i := range b.counts {
 		total += b.counts[i].Load()
 	}
 	return total
+}
+
+func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pStartScale := p.scale.Load()
+	oStartScale := other.scale.Load()
+
+	targetScale := min(pStartScale, oStartScale)
+	pAlignShift := pStartScale - targetScale
+	oAlignShift := oStartScale - targetScale
+
+	var d int32
+	if len(p.posBuckets.counts) > 0 && len(other.posBuckets.counts) > 0 {
+		pMinBin := p.posBuckets.startBin >> pAlignShift
+		oMinBin := other.posBuckets.startBin >> oAlignShift
+		pMaxBin := (p.posBuckets.startBin + int32(len(p.posBuckets.counts)) - 1) >> pAlignShift         // nolint: gosec // length fits in int32
+		oMaxBin := (other.posBuckets.startBin + int32(len(other.posBuckets.counts)) - 1) >> oAlignShift // nolint: gosec // length fits in int32
+
+		minBin := min(pMinBin, oMinBin)
+		maxBin := max(pMaxBin, oMaxBin)
+		delta := p.scaleChange(maxBin, minBin, 1)
+		if delta > d {
+			d = delta
+		}
+	}
+	if len(p.negBuckets.counts) > 0 && len(other.negBuckets.counts) > 0 {
+		pMinBin := p.negBuckets.startBin >> pAlignShift
+		oMinBin := other.negBuckets.startBin >> oAlignShift
+		pMaxBin := (p.negBuckets.startBin + int32(len(p.negBuckets.counts)) - 1) >> pAlignShift         // nolint: gosec // length fits in int32
+		oMaxBin := (other.negBuckets.startBin + int32(len(other.negBuckets.counts)) - 1) >> oAlignShift // nolint: gosec // length fits in int32
+
+		minBin := min(pMinBin, oMinBin)
+		maxBin := max(pMaxBin, oMaxBin)
+		delta := p.scaleChange(maxBin, minBin, 1)
+		if delta > d {
+			d = delta
+		}
+	}
+
+	pDownscale := pAlignShift + d
+	if pDownscale > 0 {
+		p.scale.Add(-pDownscale)
+		p.posBuckets.downscale(pDownscale)
+		p.negBuckets.downscale(pDownscale)
+	}
+
+	oDownscale := oAlignShift + d
+	if oDownscale > 0 {
+		other.posBuckets.downscale(oDownscale)
+		other.negBuckets.downscale(oDownscale)
+	}
+
+	p.posBuckets.merge(&other.posBuckets)
+	p.negBuckets.merge(&other.negBuckets)
+
+	if !p.noSum {
+		p.sum.add(other.sum.load())
+	}
+	if !p.noMinMax {
+		if other.minMax.set.Load() {
+			p.minMax.Update(other.minMax.minimum.Load())
+			p.minMax.Update(other.minMax.maximum.Load())
+		}
+	}
+	p.zeroCount.Add(other.zeroCount.Load())
 }
 
 // newExponentialHistogram returns an Aggregator that summarizes a set of
