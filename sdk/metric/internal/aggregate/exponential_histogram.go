@@ -96,9 +96,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
 		currentScale := p.scale.Load()
 		if currentScale-scaleDelta < expoMinScale {
-			// With a scale of -10 there is only two buckets for the whole range of float64 values.
-			// This can only happen if there is a max size of 1.
-			otel.Handle(errors.New("exponential histogram scale underflow"))
+			otel.Handle(errUnderflow)
 			return
 		}
 		// Downscale
