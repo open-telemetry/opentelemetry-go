@@ -25,7 +25,7 @@ var (
 	attrFloat64      = attribute.Float64("float64", 1)
 	attrFloat64Slice = attribute.Float64Slice("float64 slice", []float64{-1, 1})
 	attrString       = attribute.String("string", "o")
-	attrAttrBytes    = attribute.ByteSlice("bytes", []byte("otlp"))
+	attrBytes        = attribute.ByteSlice("bytes", []byte("otlp"))
 	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
 	attrEmpty        = attribute.KeyValue{
 		Key:   attribute.Key("empty"),
@@ -53,10 +53,10 @@ var (
 			Values: []*cpb.AnyValue{valDblNOne, valDblOne},
 		},
 	}}
-	valStrO      = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
 	valAttrBytes = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
-	valStrN      = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "n"}}
-	valStrSlice  = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+	valStrN     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "n"}}
+	valStrSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
 			Values: []*cpb.AnyValue{valStrO, valStrN},
 		},
@@ -138,7 +138,7 @@ func TestAttrTransforms(t *testing.T) {
 		},
 		{
 			"bytes",
-			[]attribute.KeyValue{attrAttrBytes},
+			[]attribute.KeyValue{attrBytes},
 			[]*cpb.KeyValue{kvAttrBytes},
 		},
 		{
@@ -158,7 +158,7 @@ func TestAttrTransforms(t *testing.T) {
 				attrFloat64,
 				attrFloat64Slice,
 				attrString,
-				attrAttrBytes,
+				attrBytes,
 				attrStringSlice,
 				attrEmpty,
 			},
