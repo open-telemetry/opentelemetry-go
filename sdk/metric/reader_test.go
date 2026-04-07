@@ -232,6 +232,11 @@ var testResourceMetricsA = metricdata.ResourceMetrics{
 	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA},
 }
 
+var testResourceMetricsB = metricdata.ResourceMetrics{
+	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
+	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsB},
+}
+
 var testResourceMetricsAB = metricdata.ResourceMetrics{
 	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
 	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA, testScopeMetricsB},
