@@ -945,10 +945,13 @@ func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
 	for _, body := range requestBodies {
 		reader, err := gzip.NewReader(bytes.NewReader(body))
 		require.NoError(t, err)
-		decoded, err := io.ReadAll(reader)
-		require.NoError(t, err)
-		require.NoError(t, reader.Close())
-		assert.NotEmpty(t, decoded)
+		func() {
+			defer func() { assert.NoError(t, reader.Close()) }()
+
+			decoded, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			assert.NotEmpty(t, decoded)
+		}()
 	}
 }
 
