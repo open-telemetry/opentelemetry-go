@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
 
+### Fixed
+
+- Fix `PeriodicReader` to export successfully observed metrics even if one or more callbacks return an error (#8149)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
