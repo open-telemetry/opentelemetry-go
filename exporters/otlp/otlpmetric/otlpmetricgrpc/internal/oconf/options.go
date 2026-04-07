@@ -91,7 +91,7 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:    fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:     DefaultMetricsPath,
 			Compression: NoCompression,
-			Encoding:    ProtobufEncoding,
+			Encoding:    EncodingProtobuf,
 			Timeout:     DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,

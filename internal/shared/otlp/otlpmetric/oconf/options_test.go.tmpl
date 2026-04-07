@@ -606,13 +606,13 @@ func TestWithEncoding(t *testing.T) {
 	}{
 		{
 			name:     "default encoding is protobuf",
-			encoding: ProtobufEncoding,
-			want:     ProtobufEncoding,
+			encoding: EncodingProtobuf,
+			want:     EncodingProtobuf,
 		},
 		{
 			name:     "JSON encoding",
-			encoding: JSONEncoding,
-			want:     JSONEncoding,
+			encoding: EncodingJSON,
+			want:     EncodingJSON,
 		},
 	}
 
@@ -626,7 +626,7 @@ func TestWithEncoding(t *testing.T) {
 
 func TestDefaultEncodingIsProtobuf(t *testing.T) {
 	cfg := NewHTTPConfig()
-	assert.Equal(t, ProtobufEncoding, cfg.Metrics.Encoding)
+	assert.Equal(t, EncodingProtobuf, cfg.Metrics.Encoding)
 }
 
 func TestCleanPath(t *testing.T) {

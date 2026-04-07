@@ -35,10 +35,10 @@ const (
 type Encoding int
 
 const (
-	// ProtobufEncoding tells the driver to send payloads using protobuf encoding.
-	ProtobufEncoding Encoding = iota
-	// JSONEncoding tells the driver to send payloads using JSON encoding.
-	JSONEncoding
+	// EncodingProtobuf tells the driver to send payloads using protobuf encoding.
+	EncodingProtobuf Encoding = iota
+	// EncodingJSON tells the driver to send payloads using JSON encoding.
+	EncodingJSON
 )
 
 // RetrySettings defines configuration for retrying batches in case of export failure

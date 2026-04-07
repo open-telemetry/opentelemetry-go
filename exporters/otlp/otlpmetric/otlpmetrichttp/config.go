@@ -36,10 +36,10 @@ const (
 )
 
 const (
-	// ProtobufEncoding tells the driver to send payloads using protobuf encoding.
-	ProtobufEncoding = Encoding(oconf.ProtobufEncoding)
-	// JSONEncoding tells the driver to send payloads using JSON encoding.
-	JSONEncoding = Encoding(oconf.JSONEncoding)
+	// EncodingProtobuf tells the driver to send payloads using protobuf encoding.
+	EncodingProtobuf = Encoding(oconf.EncodingProtobuf)
+	// EncodingJSON tells the driver to send payloads using JSON encoding.
+	EncodingJSON = Encoding(oconf.EncodingJSON)
 )
 
 // Option applies an option to the Exporter.

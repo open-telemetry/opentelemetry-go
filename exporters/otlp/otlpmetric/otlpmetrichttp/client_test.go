@@ -85,7 +85,7 @@ func TestClientWithJSONEncoding(t *testing.T) {
 	require.NoError(t, err)
 
 	addr := coll.Addr().String()
-	opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(JSONEncoding)}
+	opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(EncodingJSON)}
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 	client, err := newClient(cfg)
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestClientJSONEncodingParsesJSONResponsePartialSuccess(t *testing.T) {
 
 		u, err := url.Parse(srv.URL)
 		require.NoError(t, err)
-		opts := []Option{WithEndpoint(u.Host), WithInsecure(), WithEncoding(JSONEncoding)}
+		opts := []Option{WithEndpoint(u.Host), WithInsecure(), WithEncoding(EncodingJSON)}
 		cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
 		cl, err := newClient(cfg)
 		require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
 	opts := []Option{
 		WithEndpoint(addr),
 		WithInsecure(),
-		WithEncoding(JSONEncoding),
+		WithEncoding(EncodingJSON),
 		WithCompression(GzipCompression),
 	}
 	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
@@ -255,7 +255,7 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithEncodingJSON", func(t *testing.T) {
-		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding))
+		exp, coll := factoryFunc("", nil, WithEncoding(EncodingJSON))
 		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
@@ -270,7 +270,7 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithEncodingJSONAndCompressionGZip", func(t *testing.T) {
-		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding), WithCompression(GzipCompression))
+		exp, coll := factoryFunc("", nil, WithEncoding(EncodingJSON), WithCompression(GzipCompression))
 		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))

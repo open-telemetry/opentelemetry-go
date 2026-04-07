@@ -108,7 +108,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 	var userAgent string
 	var contentType string
 	switch encoding {
-	case JSONEncoding:
+	case EncodingJSON:
 		userAgent = "OTel Go OTLP over HTTP/JSON metrics exporter/" + Version()
 		contentType = "application/json"
 	default:
@@ -160,7 +160,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	var body []byte
 	var err error
 	switch c.encoding {
-	case JSONEncoding:
+	case EncodingJSON:
 		body, err = protojson.Marshal(pbRequest)
 	default:
 		body, err = proto.Marshal(pbRequest)
