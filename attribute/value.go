@@ -353,10 +353,6 @@ func (v Value) Emit() string {
 }
 
 func formatBoolSlice(vals []bool) string {
-	if len(vals) == 0 {
-		return "[]"
-	}
-
 	var b strings.Builder
 	b.Grow(2 + len(vals)*5)
 	_ = b.WriteByte('[')
@@ -390,10 +386,6 @@ func formatBoolSliceValue(v any) string {
 }
 
 func formatInt64Slice(vals []int64) string {
-	if len(vals) == 0 {
-		return "[]"
-	}
-
 	var b strings.Builder
 	b.Grow(2 + len(vals)*20)
 	_ = b.WriteByte('[')
@@ -440,10 +432,6 @@ func formatFloat64(v float64) string {
 }
 
 func formatFloat64Slice(vals []float64) string {
-	if len(vals) == 0 {
-		return "[]"
-	}
-
 	var b strings.Builder
 	b.Grow(2 + len(vals)*24)
 	_ = b.WriteByte('[')
@@ -487,10 +475,6 @@ func formatFloat64SliceValue(v any) string {
 }
 
 func formatStringSlice(vals []string) string {
-	if len(vals) == 0 {
-		return "[]"
-	}
-
 	size := 2
 	for _, val := range vals {
 		size += len(val) + 2
@@ -609,12 +593,6 @@ func appendJSONString(dst *strings.Builder, s string) {
 
 func formatBoolSliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
-	if !rv.IsValid() || rv.Kind() != reflect.Array {
-		return "unknown"
-	}
-	if rv.Len() == 0 {
-		return "[]"
-	}
 
 	var b strings.Builder
 	b.Grow(2 + rv.Len()*5)
@@ -635,12 +613,6 @@ func formatBoolSliceReflect(v any) string {
 
 func formatInt64SliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
-	if !rv.IsValid() || rv.Kind() != reflect.Array {
-		return "unknown"
-	}
-	if rv.Len() == 0 {
-		return "[]"
-	}
 
 	var b strings.Builder
 	b.Grow(2 + rv.Len()*20)
@@ -661,12 +633,6 @@ func formatInt64SliceReflect(v any) string {
 
 func formatFloat64SliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
-	if !rv.IsValid() || rv.Kind() != reflect.Array {
-		return "unknown"
-	}
-	if rv.Len() == 0 {
-		return "[]"
-	}
 
 	var b strings.Builder
 	b.Grow(2 + rv.Len()*24)
@@ -697,12 +663,6 @@ func formatFloat64SliceReflect(v any) string {
 
 func formatStringSliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
-	if !rv.IsValid() || rv.Kind() != reflect.Array {
-		return "unknown"
-	}
-	if rv.Len() == 0 {
-		return "[]"
-	}
 
 	size := rv.Len() + 1
 	for i := 0; i < rv.Len(); i++ {
