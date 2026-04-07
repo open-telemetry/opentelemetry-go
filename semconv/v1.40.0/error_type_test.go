@@ -5,6 +5,7 @@ package semconv // import "go.opentelemetry.io/otel/semconv/v1.40.0"
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -18,6 +19,10 @@ func TestErrorType(t *testing.T) {
 	check(t, custom(""), pkg+".ErrCustomType")                     // empty ErrorType, use concrete type.
 	check(t, wrapped(custom("wrapped-aborted")), "wrapped-aborted")
 	check(t, wrapped(custom("")), pkg+".wrappedErr") // empty ErrorType in chain, use concrete top-level type.
+	check(t, fmtWrapped(custom("")), pkg+".ErrCustomType")
+	check(t, fmtWrapped(wrapped(custom(""))), pkg+".wrappedErr")
+	check(t, fmtWrapped(fmtWrapped(custom(""))), pkg+".ErrCustomType")
+	check(t, fmtWrapped(nil), fmtWrapErrorType.String()) // fmt.Errorf with nil error, use concrete type of the wrapper.
 }
 
 func check(t *testing.T, err error, want string) {
@@ -37,6 +42,10 @@ func custom(typ string) error {
 
 func wrapped(err error) error {
 	return wrappedErr{err: err}
+}
+
+func fmtWrapped(err error) error {
+	return fmt.Errorf("wrapped: %w", err)
 }
 
 type ErrCustomType struct {
