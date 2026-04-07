@@ -59,11 +59,11 @@ func TestKeyValueConstructors(t *testing.T) {
 			},
 		},
 		{
-			name:   "Bytes",
-			actual: attribute.Bytes("k1", []byte{123}),
+			name:   "ByteSlice",
+			actual: attribute.ByteSlice("k1", []byte{123}),
 			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: attribute.BytesValue([]byte{123}),
+				Value: attribute.ByteSliceValue([]byte{123}),
 			},
 		},
 	}
@@ -123,9 +123,9 @@ func TestKeyValueValid(t *testing.T) {
 			kv:    attribute.String("string", ""),
 		},
 		{
-			desc:  "non-empty key with BYTE type Value should be valid",
+			desc:  "non-empty key with BYTESLICE type Value should be valid",
 			valid: true,
-			kv:    attribute.Bytes("bytes", []byte{}),
+			kv:    attribute.ByteSlice("bytes", []byte{}),
 		},
 	}
 
@@ -166,8 +166,8 @@ func TestIncorrectCast(t *testing.T) {
 			val:  attribute.BoolSliceValue([]bool{true}),
 		},
 		{
-			name: "Bytes",
-			val:  attribute.BytesValue([]byte{123}),
+			name: "ByteSlice",
+			val:  attribute.ByteSliceValue([]byte{123}),
 		},
 		{
 			name: "Empty",
@@ -186,7 +186,7 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInterface()
 				tt.val.AsString()
 				tt.val.AsStringSlice()
-				tt.val.AsBytes()
+				tt.val.AsByteSlice()
 			})
 		})
 	}

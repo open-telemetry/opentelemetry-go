@@ -3,7 +3,9 @@
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // Observable is used as a grouping mechanism for all instruments that are
 // updated within a Callback.
@@ -228,6 +230,9 @@ type AddConfig struct {
 func NewAddConfig(opts []AddOption) AddConfig {
 	config := AddConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyAdd(config)
 	}
 	return config
@@ -253,6 +258,9 @@ type RecordConfig struct {
 func NewRecordConfig(opts []RecordOption) RecordConfig {
 	config := RecordConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyRecord(config)
 	}
 	return config
@@ -278,6 +286,9 @@ type ObserveConfig struct {
 func NewObserveConfig(opts []ObserveOption) ObserveConfig {
 	config := ObserveConfig{attrs: *attribute.EmptySet()}
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyObserve(config)
 	}
 	return config

@@ -428,8 +428,8 @@ func ValueFromAttribute(value attribute.Value) Value {
 			res = append(res, StringValue(v))
 		}
 		return SliceValue(res...)
-	case attribute.BYTES:
-		val := value.AsBytes()
+	case attribute.BYTESLICE:
+		val := value.AsByteSlice()
 		return BytesValue(val)
 	}
 	// This code should never be reached

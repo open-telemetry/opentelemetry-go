@@ -36,8 +36,8 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return String(k, "bar") },
 	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
-	func(k string) KeyValue { return Bytes(k, []byte("foo")) },
-	func(k string) KeyValue { return Bytes(k, []byte("[]i1")) },
+	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
+	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
 	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
 }
 
@@ -229,12 +229,12 @@ func FuzzHashKVs(f *testing.F) {
 				}
 				kvs = append(kvs, Float64Slice("float64slice", float64s))
 			case 4:
-				// Test Bytes with variable length.
+				// Test ByteSlice with variable length.
 				bytes := make([]byte, len(s)%5)
 				for i := range bytes {
 					bytes[i] = byte(i + len(k1))
 				}
-				kvs = append(kvs, Bytes("bytes", bytes))
+				kvs = append(kvs, ByteSlice("bytes", bytes))
 			}
 		}
 

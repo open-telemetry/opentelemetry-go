@@ -34,9 +34,16 @@ type providerConfig struct {
 	allowDupKeys  setting[bool]
 }
 
+type experimentalOption interface {
+	Experimental()
+}
+
 func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 	var c providerConfig
 	for _, opt := range opts {
+		if _, ok := opt.(experimentalOption); ok {
+			continue
+		}
 		c = opt.apply(c)
 	}
 

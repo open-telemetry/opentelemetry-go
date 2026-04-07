@@ -46,8 +46,8 @@ const (
 	FLOAT64SLICE
 	// STRINGSLICE is a slice of strings Type Value.
 	STRINGSLICE
-	// BYTES is a slice of bytes Type Value.
-	BYTES
+	// BYTESLICE is a slice of bytes Type Value.
+	BYTESLICE
 	// INVALID is used for a Value with no value set.
 	//
 	// Deprecated: Use EMPTY instead as an empty value is a valid value.
@@ -137,10 +137,10 @@ func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.SliceValue(v)}
 }
 
-// BytesValue creates a BYTES Value.
-func BytesValue(v []byte) Value {
+// ByteSliceValue creates a BYTESLICE Value.
+func ByteSliceValue(v []byte) Value {
 	return Value{
-		vtype:    BYTES,
+		vtype:    BYTESLICE,
 		stringly: string(v),
 	}
 }
@@ -226,16 +226,16 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsSlice[string](v.slice)
 }
 
-// AsBytes returns the bytes value. Make sure that the Value's type
-// is BYTES.
-func (v Value) AsBytes() []byte {
-	if v.vtype != BYTES {
+// AsByteSlice returns the bytes value. Make sure that the Value's type
+// is BYTESLICE.
+func (v Value) AsByteSlice() []byte {
+	if v.vtype != BYTESLICE {
 		return nil
 	}
-	return v.asBytes()
+	return v.asByteSlice()
 }
 
-func (v Value) asBytes() []byte {
+func (v Value) asByteSlice() []byte {
 	return []byte(v.stringly)
 }
 
@@ -260,8 +260,8 @@ func (v Value) AsInterface() any {
 		return v.stringly
 	case STRINGSLICE:
 		return v.asStringSlice()
-	case BYTES:
-		return v.asBytes()
+	case BYTESLICE:
+		return v.asByteSlice()
 	case EMPTY:
 		return nil
 	}
@@ -299,8 +299,8 @@ func (v Value) Emit() string {
 		return string(j)
 	case STRING:
 		return v.stringly
-	case BYTES:
-		return base64.StdEncoding.EncodeToString(v.asBytes())
+	case BYTESLICE:
+		return base64.StdEncoding.EncodeToString(v.asByteSlice())
 	case EMPTY:
 		return ""
 	default:

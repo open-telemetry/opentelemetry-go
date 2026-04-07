@@ -70,6 +70,10 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 	}
 }
 
+type experimentalOption interface {
+	Experimental()
+}
+
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
@@ -81,6 +85,9 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		conf = o.apply(conf)
 	}
 	return conf
