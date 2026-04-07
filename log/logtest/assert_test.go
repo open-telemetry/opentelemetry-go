@@ -15,8 +15,10 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
-var errBoom = errors.New("boom")
+var (
+	y2k     = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	errBoom = errors.New("boom")
+)
 
 // Compile-time check to ensure testing structs implement TestingT.
 var (
