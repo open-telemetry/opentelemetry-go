@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -15,7 +19,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
 - Add `IsRandom` and `WithRandom` on `TraceFlags`, and `IsRandom` on `SpanContext` in `go.opentelemetry.io/otel/trace` for [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag) support. (#8012)
 - Add service detection with `WithService` in `go.opentelemetry.io/otel/sdk/resource`. (#7642)
 - Add `DefaultWithContext` and `EnvironmentWithContext` in `go.opentelemetry.io/otel/sdk/resource` to support plumbing `context.Context` through default and environment detectors. (#8051)
