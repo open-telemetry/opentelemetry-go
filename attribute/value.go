@@ -279,7 +279,7 @@ func (v Value) AsInterface() any {
 //
 // Strings are returned as-is without JSON quoting, booleans and integers use
 // JSON literals, floating-point values use JSON numbers except that NaN and
-// +/-Infinity are rendered as NaN, Infinity, and -Infinity, byte slices are
+// ±Inf are rendered as NaN, Infinity, and -Infinity, byte slices are
 // base64-encoded, empty values are the empty string, and slices are encoded as
 // JSON arrays. Floating-point special values inside arrays are encoded as JSON
 // strings.
