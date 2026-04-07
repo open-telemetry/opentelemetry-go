@@ -17,6 +17,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 
+### Fixed
+
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/trace`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
