@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
+- Add `http/json` support, and the `WithEncoding` option to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7804)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -32,7 +33,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for per-series start time tracking for cumulative metrics in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` to enable. (#8060)
 - Add `WithCardinalityLimitSelector` for metric reader for configuring cardinality limits specific to the instrument kind. (#7855)
-- Add `http/json` support, and the `WithEncoding` option to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7804)
 
 ### Changed
 
