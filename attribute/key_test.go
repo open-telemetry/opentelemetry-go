@@ -109,6 +109,11 @@ func TestEmit(t *testing.T) {
 			want: `["foo","bar"]`,
 		},
 		{
+			name: `test Key.Emit() can emit a string representing self.BYTESLICE`,
+			v:    attribute.ByteSliceValue([]byte("foo")),
+			want: "Zm9v",
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.EMPTY`,
 			v:    attribute.Value{},
 			want: "",

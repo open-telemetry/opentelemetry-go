@@ -87,6 +87,12 @@ func TestValue(t *testing.T) {
 			wantValue: []string{"forty-two", "negative three", "twelve"},
 		},
 		{
+			name:      "Key.ByteSlice() correctly returns keys's internal []byte value",
+			value:     k.ByteSlice([]byte("hello world")).Value,
+			wantType:  attribute.BYTESLICE,
+			wantValue: []byte("hello world"),
+		},
+		{
 			name:      "empty value",
 			value:     attribute.Value{},
 			wantType:  attribute.EMPTY,
@@ -145,6 +151,10 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
 			attribute.StringSlice("StringSlice", []string{"one", "two", "three"}),
+		},
+		{
+			attribute.ByteSlice("ByteSlice", []byte("one")),
+			attribute.ByteSlice("ByteSlice", []byte("one")),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
@@ -228,6 +238,10 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.Float64("Float64", 19.09),
 			attribute.Float64("Float64", 22.09),
+		},
+		{
+			attribute.ByteSlice("ByteSlice", []byte("bytes value")),
+			attribute.ByteSlice("ByteSlice", []byte("another value")),
 		},
 		{
 			attribute.Float64Slice("Float64Slice", []float64{12398.1, -37.1713873737, 3}),
@@ -315,4 +329,9 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.StringSlice("StringSlice", ss1)
 	ss2 := kv.Value.AsStringSlice()
 	assert.Equal(t, ss1, ss2)
+
+	b1 := []byte("one")
+	kv = attribute.ByteSlice("ByteSlice", b1)
+	b2 := kv.Value.AsByteSlice()
+	assert.Equal(t, b1, b2)
 }
