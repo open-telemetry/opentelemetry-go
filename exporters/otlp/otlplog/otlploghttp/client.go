@@ -285,7 +285,10 @@ func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, erro
 		r.Header.Set("Content-Encoding", "gzip")
 
 		gz := gzPool.Get().(*gzip.Writer)
-		defer gzPool.Put(gz)
+		defer func() {
+			gz.Reset(io.Discard)
+			gzPool.Put(gz)
+		}()
 
 		var b bytes.Buffer
 		gz.Reset(&b)
