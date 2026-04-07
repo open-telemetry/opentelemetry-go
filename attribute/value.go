@@ -395,7 +395,7 @@ func formatBoolSliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
 
 	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + rv.Len()*boolArrayElemMaxLen)
+	b.Grow(jsonArrayBracketsLen + rv.Len()*(boolArrayElemMaxLen+commaLen))
 	_ = b.WriteByte('[')
 	for i := 0; i < rv.Len(); i++ {
 		if i > 0 {
