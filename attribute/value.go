@@ -525,6 +525,15 @@ func formatStringSliceValue(v any) string {
 	}
 }
 
+// appendJSONString appends s to dst as a JSON string literal.
+//
+// This is adapted from the Go standard library's encoding/json
+// [appendString implementation]. It keeps the same escaping behavior we need
+// here, but writes directly into a strings.Builder and intentionally does not
+// apply HTML escaping because the OpenTelemetry non-OTLP AnyValue representation
+// only requires JSON array string encoding.
+//
+// [appendString implementation]: https://github.com/golang/go/blob/3b5954c6349d31465dca409b45ab6597e0942d9f/src/encoding/json/encode.go#L998-L1064
 func appendJSONString(dst *strings.Builder, s string) {
 	_ = dst.WriteByte('"')
 	start := 0
@@ -570,6 +579,7 @@ func appendJSONString(dst *strings.Builder, s string) {
 			if start < i {
 				_, _ = dst.WriteString(s[start:i])
 			}
+			// Match encoding/json by replacing invalid UTF-8 with U+FFFD.
 			_, _ = dst.WriteString(`\ufffd`)
 			i++
 			start = i
@@ -580,6 +590,7 @@ func appendJSONString(dst *strings.Builder, s string) {
 			if start < i {
 				_, _ = dst.WriteString(s[start:i])
 			}
+			// Escape JSONP-sensitive separators unconditionally, like encoding/json.
 			_, _ = dst.WriteString(`\u202`)
 			_ = dst.WriteByte(lowerhex[r&0x0f])
 			i += size
