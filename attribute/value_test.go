@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -334,4 +335,159 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.ByteSlice("ByteSlice", b1)
 	b2 := kv.Value.AsByteSlice()
 	assert.Equal(t, b1, b2)
+}
+
+func TestValueString(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		v    attribute.Value
+		want string
+	}{
+		{
+			name: "bool",
+			v:    attribute.BoolValue(true),
+			want: "true",
+		},
+		{
+			name: "bool false",
+			v:    attribute.BoolValue(false),
+			want: "false",
+		},
+		{
+			name: "empty bool slice",
+			v:    attribute.BoolSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "bool slice",
+			v:    attribute.BoolSliceValue([]bool{true, false, true}),
+			want: `[true,false,true]`,
+		},
+		{
+			name: "bool slice reflect path",
+			v:    attribute.BoolSliceValue([]bool{false, true, false, true}),
+			want: `[false,true,false,true]`,
+		},
+		{
+			name: "int64",
+			v:    attribute.Int64Value(-42),
+			want: "-42",
+		},
+		{
+			name: "empty int slice",
+			v:    attribute.IntSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "int slice",
+			v:    attribute.IntSliceValue([]int{1, -2, 3}),
+			want: `[1,-2,3]`,
+		},
+		{
+			name: "int64 slice reflect path",
+			v:    attribute.Int64SliceValue([]int64{1, -2, 3, -4}),
+			want: `[1,-2,3,-4]`,
+		},
+		{
+			name: "float64",
+			v:    attribute.Float64Value(1.23e10),
+			want: "1.23e+10",
+		},
+		{
+			name: "float64 negative zero",
+			v:    attribute.Float64Value(math.Copysign(0, -1)),
+			want: "-0",
+		},
+		{
+			name: "float64 NaN",
+			v:    attribute.Float64Value(math.NaN()),
+			want: "NaN",
+		},
+		{
+			name: "float64 +Inf",
+			v:    attribute.Float64Value(math.Inf(1)),
+			want: "Infinity",
+		},
+		{
+			name: "float64 -Inf",
+			v:    attribute.Float64Value(math.Inf(-1)),
+			want: "-Infinity",
+		},
+		{
+			name: "empty float64 slice",
+			v:    attribute.Float64SliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "float64 slice",
+			v: attribute.Float64SliceValue([]float64{
+				1,
+				math.NaN(),
+				math.Inf(1),
+				math.Inf(-1),
+				math.Copysign(0, -1),
+			}),
+			want: `[1,"NaN","Infinity","-Infinity",-0]`,
+		},
+		{
+			name: "float64 slice fast path",
+			v: attribute.Float64SliceValue([]float64{
+				math.NaN(),
+				math.Inf(1),
+			}),
+			want: `["NaN","Infinity"]`,
+		},
+		{
+			name: "string",
+			v:    attribute.StringValue(`hello "world"`),
+			want: `hello "world"`,
+		},
+		{
+			name: "empty string",
+			v:    attribute.StringValue(""),
+			want: "",
+		},
+		{
+			name: "empty string slice",
+			v:    attribute.StringSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "string slice",
+			v: attribute.StringSliceValue([]string{
+				`hello "world"`,
+				"line\nbreak",
+				string([]byte{0xff, 'a'}),
+				"\u2028",
+			}),
+			want: `["hello \"world\"","line\nbreak","\ufffda","\u2028"]`,
+		},
+		{
+			name: "string slice fast path escapes",
+			v: attribute.StringSliceValue([]string{
+				"tab\treturn\rformfeed\fbackslash\\quote\"",
+				string([]byte{0x01}) + "\u2029",
+			}),
+			want: `["tab\treturn\rformfeed\fbackslash\\quote\"","\u0001\u2029"]`,
+		},
+		{
+			name: "byte slice",
+			v:    attribute.ByteSliceValue([]byte("hello world")),
+			want: "aGVsbG8gd29ybGQ=",
+		},
+		{
+			name: "empty byte slice",
+			v:    attribute.ByteSliceValue(nil),
+			want: "",
+		},
+		{
+			name: "empty",
+			v:    attribute.Value{},
+			want: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.v.String())
+		})
+	}
 }

@@ -7,7 +7,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math"
+	"reflect"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	attribute "go.opentelemetry.io/otel/attribute/internal"
 )
@@ -241,6 +245,8 @@ func (v Value) asByteSlice() []byte {
 
 type unknownValueType struct{}
 
+const lowerhex = "0123456789abcdef"
+
 // AsInterface returns Value's data as any.
 func (v Value) AsInterface() any {
 	switch v.Type() {
@@ -266,6 +272,44 @@ func (v Value) AsInterface() any {
 		return nil
 	}
 	return unknownValueType{}
+}
+
+// String returns a string representation of Value using the
+// [OpenTelemetry AnyValue representation for non-OTLP protocols] rules.
+//
+// Strings are returned as-is without JSON quoting, booleans and integers use
+// JSON literals, floating-point values use JSON numbers except that NaN and
+// +/-Infinity are rendered as NaN, Infinity, and -Infinity, byte slices are
+// base64-encoded, empty values are the empty string, and slices are encoded as
+// JSON arrays. Floating-point special values inside arrays are encoded as JSON
+// strings.
+//
+// [OpenTelemetry AnyValue representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols
+func (v Value) String() string {
+	switch v.Type() {
+	case BOOL:
+		return strconv.FormatBool(v.AsBool())
+	case BOOLSLICE:
+		return formatBoolSliceValue(v.slice)
+	case INT64:
+		return strconv.FormatInt(v.AsInt64(), 10)
+	case INT64SLICE:
+		return formatInt64SliceValue(v.slice)
+	case FLOAT64:
+		return formatFloat64(v.AsFloat64())
+	case FLOAT64SLICE:
+		return formatFloat64SliceValue(v.slice)
+	case STRING:
+		return v.stringly
+	case STRINGSLICE:
+		return formatStringSliceValue(v.slice)
+	case BYTESLICE:
+		return base64.StdEncoding.EncodeToString(v.asByteSlice())
+	case EMPTY:
+		return ""
+	default:
+		return "unknown"
+	}
 }
 
 // Emit returns a string representation of Value's data.
@@ -306,6 +350,365 @@ func (v Value) Emit() string {
 	default:
 		return "unknown"
 	}
+}
+
+func formatBoolSlice(vals []bool) string {
+	if len(vals) == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	b.Grow(2 + len(vals)*5)
+	_ = b.WriteByte('[')
+	for i, val := range vals {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		if val {
+			_, _ = b.WriteString("true")
+		} else {
+			_, _ = b.WriteString("false")
+		}
+	}
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatBoolSliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]bool:
+		return "[]"
+	case [1]bool:
+		return formatBoolSlice(vals[:])
+	case [2]bool:
+		return formatBoolSlice(vals[:])
+	case [3]bool:
+		return formatBoolSlice(vals[:])
+	default:
+		return formatBoolSliceReflect(v)
+	}
+}
+
+func formatInt64Slice(vals []int64) string {
+	if len(vals) == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	b.Grow(2 + len(vals)*20)
+	_ = b.WriteByte('[')
+
+	var scratch [20]byte
+	for i, val := range vals {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		out := strconv.AppendInt(scratch[:0], val, 10)
+		_, _ = b.Write(out)
+	}
+
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatInt64SliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]int64:
+		return "[]"
+	case [1]int64:
+		return formatInt64Slice(vals[:])
+	case [2]int64:
+		return formatInt64Slice(vals[:])
+	case [3]int64:
+		return formatInt64Slice(vals[:])
+	default:
+		return formatInt64SliceReflect(v)
+	}
+}
+
+func formatFloat64(v float64) string {
+	switch {
+	case math.IsNaN(v):
+		return "NaN"
+	case math.IsInf(v, 1):
+		return "Infinity"
+	case math.IsInf(v, -1):
+		return "-Infinity"
+	default:
+		return strconv.FormatFloat(v, 'g', -1, 64)
+	}
+}
+
+func formatFloat64Slice(vals []float64) string {
+	if len(vals) == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	b.Grow(2 + len(vals)*24)
+	_ = b.WriteByte('[')
+
+	var scratch [24]byte
+	for i, val := range vals {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+
+		switch {
+		case math.IsNaN(val):
+			_, _ = b.WriteString(`"NaN"`)
+		case math.IsInf(val, 1):
+			_, _ = b.WriteString(`"Infinity"`)
+		case math.IsInf(val, -1):
+			_, _ = b.WriteString(`"-Infinity"`)
+		default:
+			out := strconv.AppendFloat(scratch[:0], val, 'g', -1, 64)
+			_, _ = b.Write(out)
+		}
+	}
+
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatFloat64SliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]float64:
+		return "[]"
+	case [1]float64:
+		return formatFloat64Slice(vals[:])
+	case [2]float64:
+		return formatFloat64Slice(vals[:])
+	case [3]float64:
+		return formatFloat64Slice(vals[:])
+	default:
+		return formatFloat64SliceReflect(v)
+	}
+}
+
+func formatStringSlice(vals []string) string {
+	if len(vals) == 0 {
+		return "[]"
+	}
+
+	size := 2
+	for _, val := range vals {
+		size += len(val) + 2
+	}
+	size += len(vals) - 1
+
+	var b strings.Builder
+	b.Grow(size)
+	_ = b.WriteByte('[')
+	for i, val := range vals {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		appendJSONString(&b, val)
+	}
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatStringSliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]string:
+		return "[]"
+	case [1]string:
+		return formatStringSlice(vals[:])
+	case [2]string:
+		return formatStringSlice(vals[:])
+	case [3]string:
+		return formatStringSlice(vals[:])
+	default:
+		return formatStringSliceReflect(v)
+	}
+}
+
+func appendJSONString(dst *strings.Builder, s string) {
+	_ = dst.WriteByte('"')
+	start := 0
+
+	for i := 0; i < len(s); {
+		if c := s[i]; c < utf8.RuneSelf {
+			if c >= 0x20 && c != '\\' && c != '"' {
+				i++
+				continue
+			}
+
+			if start < i {
+				_, _ = dst.WriteString(s[start:i])
+			}
+
+			switch c {
+			case '\\', '"':
+				_ = dst.WriteByte('\\')
+				_ = dst.WriteByte(c)
+			case '\b':
+				_, _ = dst.WriteString(`\b`)
+			case '\f':
+				_, _ = dst.WriteString(`\f`)
+			case '\n':
+				_, _ = dst.WriteString(`\n`)
+			case '\r':
+				_, _ = dst.WriteString(`\r`)
+			case '\t':
+				_, _ = dst.WriteString(`\t`)
+			default:
+				_, _ = dst.WriteString(`\u00`)
+				_ = dst.WriteByte(lowerhex[c>>4])
+				_ = dst.WriteByte(lowerhex[c&0x0f])
+			}
+
+			i++
+			start = i
+			continue
+		}
+
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 {
+			if start < i {
+				_, _ = dst.WriteString(s[start:i])
+			}
+			_, _ = dst.WriteString(`\ufffd`)
+			i++
+			start = i
+			continue
+		}
+
+		if r == '\u2028' || r == '\u2029' {
+			if start < i {
+				_, _ = dst.WriteString(s[start:i])
+			}
+			_, _ = dst.WriteString(`\u202`)
+			_ = dst.WriteByte(lowerhex[r&0x0f])
+			i += size
+			start = i
+			continue
+		}
+
+		i += size
+	}
+
+	if start < len(s) {
+		_, _ = dst.WriteString(s[start:])
+	}
+	_ = dst.WriteByte('"')
+}
+
+func formatBoolSliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Array {
+		return "unknown"
+	}
+	if rv.Len() == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	b.Grow(2 + rv.Len()*5)
+	_ = b.WriteByte('[')
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		if rv.Index(i).Bool() {
+			_, _ = b.WriteString("true")
+		} else {
+			_, _ = b.WriteString("false")
+		}
+	}
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatInt64SliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Array {
+		return "unknown"
+	}
+	if rv.Len() == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	b.Grow(2 + rv.Len()*20)
+	_ = b.WriteByte('[')
+
+	var scratch [20]byte
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		out := strconv.AppendInt(scratch[:0], rv.Index(i).Int(), 10)
+		_, _ = b.Write(out)
+	}
+
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatFloat64SliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Array {
+		return "unknown"
+	}
+	if rv.Len() == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	b.Grow(2 + rv.Len()*24)
+	_ = b.WriteByte('[')
+
+	var scratch [24]byte
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		val := rv.Index(i).Float()
+		switch {
+		case math.IsNaN(val):
+			_, _ = b.WriteString(`"NaN"`)
+		case math.IsInf(val, 1):
+			_, _ = b.WriteString(`"Infinity"`)
+		case math.IsInf(val, -1):
+			_, _ = b.WriteString(`"-Infinity"`)
+		default:
+			out := strconv.AppendFloat(scratch[:0], val, 'g', -1, 64)
+			_, _ = b.Write(out)
+		}
+	}
+
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatStringSliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Array {
+		return "unknown"
+	}
+	if rv.Len() == 0 {
+		return "[]"
+	}
+
+	size := rv.Len() + 1
+	for i := 0; i < rv.Len(); i++ {
+		size += len(rv.Index(i).String()) + 2
+	}
+
+	var b strings.Builder
+	b.Grow(size)
+	_ = b.WriteByte('[')
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		appendJSONString(&b, rv.Index(i).String())
+	}
+	_ = b.WriteByte(']')
+	return b.String()
 }
 
 // MarshalJSON returns the JSON encoding of the Value.
