@@ -541,6 +541,16 @@ func TestValueString(t *testing.T) {
 			want: `["tab\treturn\rformfeed\fbackslash\\quote\"backspace\b","\u0001\u2029"]`,
 		},
 		{
+			name: "string slice leaves HTML characters unescaped",
+			v:    attribute.StringSliceValue([]string{"<tag>&"}),
+			want: `["<tag>&"]`,
+		},
+		{
+			name: "string slice replaces invalid utf8 after copied prefix",
+			v:    attribute.StringSliceValue([]string{string([]byte{'a', 0xff, 'b'})}),
+			want: `["a\ufffdb"]`,
+		},
+		{
 			name: "byte slice",
 			v:    attribute.ByteSliceValue([]byte("hello world")),
 			want: "aGVsbG8gd29ybGQ=",

@@ -245,8 +245,6 @@ func (v Value) asByteSlice() []byte {
 
 type unknownValueType struct{}
 
-const lowerhex = "0123456789abcdef"
-
 // AsInterface returns Value's data as any.
 func (v Value) AsInterface() any {
 	switch v.Type() {
@@ -352,9 +350,16 @@ func (v Value) Emit() string {
 	}
 }
 
+const (
+	jsonArrayBracketsLen   = len("[]")
+	boolArrayElemMaxLen    = len("false") + len(",")
+	int64ArrayElemMaxLen   = len("-9223372036854775808") + len(",")
+	float64ArrayElemMaxLen = len("-1.7976931348623157e+308") + len(",")
+)
+
 func formatBoolSlice(vals []bool) string {
 	var b strings.Builder
-	b.Grow(2 + len(vals)*5)
+	b.Grow(jsonArrayBracketsLen + len(vals)*boolArrayElemMaxLen)
 	_ = b.WriteByte('[')
 	for i, val := range vals {
 		if i > 0 {
@@ -387,7 +392,7 @@ func formatBoolSliceValue(v any) string {
 
 func formatInt64Slice(vals []int64) string {
 	var b strings.Builder
-	b.Grow(2 + len(vals)*20)
+	b.Grow(jsonArrayBracketsLen + len(vals)*int64ArrayElemMaxLen)
 	_ = b.WriteByte('[')
 
 	var scratch [20]byte
@@ -433,7 +438,7 @@ func formatFloat64(v float64) string {
 
 func formatFloat64Slice(vals []float64) string {
 	var b strings.Builder
-	b.Grow(2 + len(vals)*24)
+	b.Grow(jsonArrayBracketsLen + len(vals)*float64ArrayElemMaxLen)
 	_ = b.WriteByte('[')
 
 	var scratch [24]byte
@@ -515,10 +520,13 @@ func formatStringSliceValue(v any) string {
 // [appendString implementation]. It keeps the same escaping behavior we need
 // here, but writes directly into a strings.Builder and intentionally does not
 // apply HTML escaping because the OpenTelemetry non-OTLP AnyValue representation
-// only requires JSON array string encoding.
+// only requires JSON array string encoding. We inline this instead of using
+// encoding/json so slice formatting avoids allocations and reflection.
 //
 // [appendString implementation]: https://github.com/golang/go/blob/3b5954c6349d31465dca409b45ab6597e0942d9f/src/encoding/json/encode.go#L998-L1064
 func appendJSONString(dst *strings.Builder, s string) {
+	const hex = "0123456789abcdef" // For escaping bytes to hex.
+
 	_ = dst.WriteByte('"')
 	start := 0
 
@@ -549,8 +557,8 @@ func appendJSONString(dst *strings.Builder, s string) {
 				_, _ = dst.WriteString(`\t`)
 			default:
 				_, _ = dst.WriteString(`\u00`)
-				_ = dst.WriteByte(lowerhex[c>>4])
-				_ = dst.WriteByte(lowerhex[c&0x0f])
+				_ = dst.WriteByte(hex[c>>4])
+				_ = dst.WriteByte(hex[c&0x0f])
 			}
 
 			i++
@@ -576,7 +584,7 @@ func appendJSONString(dst *strings.Builder, s string) {
 			}
 			// Escape JSONP-sensitive separators unconditionally, like encoding/json.
 			_, _ = dst.WriteString(`\u202`)
-			_ = dst.WriteByte(lowerhex[r&0x0f])
+			_ = dst.WriteByte(hex[r&0x0f])
 			i += size
 			start = i
 			continue
@@ -595,7 +603,7 @@ func formatBoolSliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
 
 	var b strings.Builder
-	b.Grow(2 + rv.Len()*5)
+	b.Grow(jsonArrayBracketsLen + rv.Len()*boolArrayElemMaxLen)
 	_ = b.WriteByte('[')
 	for i := 0; i < rv.Len(); i++ {
 		if i > 0 {
@@ -615,7 +623,7 @@ func formatInt64SliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
 
 	var b strings.Builder
-	b.Grow(2 + rv.Len()*20)
+	b.Grow(jsonArrayBracketsLen + rv.Len()*int64ArrayElemMaxLen)
 	_ = b.WriteByte('[')
 
 	var scratch [20]byte
@@ -635,7 +643,7 @@ func formatFloat64SliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
 
 	var b strings.Builder
-	b.Grow(2 + rv.Len()*24)
+	b.Grow(jsonArrayBracketsLen + rv.Len()*float64ArrayElemMaxLen)
 	_ = b.WriteByte('[')
 
 	var scratch [24]byte
