@@ -4,6 +4,7 @@
 package logtest
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 )
 
 var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+var errBoom = errors.New("boom")
 
 // Compile-time check to ensure testing structs implement TestingT.
 var (
@@ -63,6 +65,7 @@ func TestAssertEqualRecording(t *testing.T) {
 					{
 						Timestamp:  y2k,
 						Context:    t.Context(),
+						Error:      errBoom,
 						Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
 					},
 				},
@@ -72,6 +75,7 @@ func TestAssertEqualRecording(t *testing.T) {
 					{
 						Timestamp:  y2k,
 						Context:    t.Context(),
+						Error:      errBoom,
 						Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
 					},
 				},
@@ -145,11 +149,13 @@ func TestAssertEqualRecord(t *testing.T) {
 			a: Record{
 				Timestamp:  y2k,
 				Context:    t.Context(),
+				Error:      errBoom,
 				Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
 			},
 			b: Record{
 				Timestamp:  y2k,
 				Context:    t.Context(),
+				Error:      errBoom,
 				Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
 			},
 			want: true,
