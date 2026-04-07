@@ -369,6 +369,11 @@ func TestValueString(t *testing.T) {
 			want: "[]",
 		},
 		{
+			name: "empty bool slice literal",
+			v:    attribute.BoolSliceValue([]bool{}),
+			want: "[]",
+		},
+		{
 			name: "bool slice",
 			v:    attribute.BoolSliceValue([]bool{true, false, true}),
 			want: `[true,false,true]`,
@@ -401,6 +406,16 @@ func TestValueString(t *testing.T) {
 		{
 			name: "empty int slice",
 			v:    attribute.IntSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty int slice literal",
+			v:    attribute.IntSliceValue([]int{}),
+			want: "[]",
+		},
+		{
+			name: "empty int64 slice literal",
+			v:    attribute.Int64SliceValue([]int64{}),
 			want: "[]",
 		},
 		{
@@ -441,6 +456,11 @@ func TestValueString(t *testing.T) {
 		{
 			name: "empty float64 slice",
 			v:    attribute.Float64SliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty float64 slice literal",
+			v:    attribute.Float64SliceValue([]float64{}),
 			want: "[]",
 		},
 		{
@@ -485,6 +505,11 @@ func TestValueString(t *testing.T) {
 		{
 			name: "empty string slice",
 			v:    attribute.StringSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty string slice literal",
+			v:    attribute.StringSliceValue([]string{}),
 			want: "[]",
 		},
 		{
