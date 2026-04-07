@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
+- Add `String` method to `attribute.Value` in `go.opentelemetry.io/otel/attribute` implementing `fmt.Stringer`; deprecate `Emit` in favor of `String`; update `go.opentelemetry.io/otel/exporters/prometheus` to use `Value.String`. (#8144)
 
 ### Changed
 

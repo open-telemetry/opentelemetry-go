@@ -52,79 +52,85 @@ func TestJSONValue(t *testing.T) {
 		string(data))
 }
 
-func TestEmit(t *testing.T) {
+func TestString(t *testing.T) {
 	for _, testcase := range []struct {
 		name string
 		v    attribute.Value
 		want string
 	}{
 		{
-			name: `test Key.Emit() can emit a string representing self.BOOL`,
+			name: `test Value.String() can emit a string representing self.BOOL`,
 			v:    attribute.BoolValue(true),
 			want: "true",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.BOOLSLICE`,
+			name: `test Value.String() can emit a string representing self.BOOLSLICE`,
 			v:    attribute.BoolSliceValue([]bool{true, false, true}),
 			want: `[true false true]`,
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.INT64SLICE`,
+			name: `test Value.String() can emit a string representing self.INT64SLICE`,
 			v:    attribute.Int64SliceValue([]int64{1, 42}),
 			want: `[1,42]`,
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.INT64`,
+			name: `test Value.String() can emit a string representing self.INT64`,
 			v:    attribute.Int64Value(42),
 			want: "42",
 		},
 		{
-			name: `test Key.Emit() can representing an int value`,
+			name: `test Value.String() can represent an int value`,
 			v:    attribute.IntValue(7),
 			want: "7",
 		},
 		{
-			name: `test Key.Emit() can represent an []int value`,
+			name: `test Value.String() can represent an []int value`,
 			v:    attribute.IntSliceValue([]int{1, 2, 3}),
 			want: `[1,2,3]`,
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.FLOAT64SLICE`,
+			name: `test Value.String() can emit a string representing self.FLOAT64SLICE`,
 			v:    attribute.Float64SliceValue([]float64{1.0, 42.5}),
 			want: `[1,42.5]`,
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
+			name: `test Value.String() can emit a string representing self.FLOAT64`,
 			v:    attribute.Float64Value(42.1),
 			want: "42.1",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.STRING`,
+			name: `test Value.String() can emit a string representing self.STRING`,
 			v:    attribute.StringValue("foo"),
 			want: "foo",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.STRINGSLICE`,
+			name: `test Value.String() can emit a string representing self.STRINGSLICE`,
 			v:    attribute.StringSliceValue([]string{"foo", "bar"}),
 			want: `["foo","bar"]`,
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.BYTESLICE`,
+			name: `test Value.String() can emit a string representing self.BYTESLICE`,
 			v:    attribute.ByteSliceValue([]byte("foo")),
 			want: "Zm9v",
 		},
 		{
-			name: `test Key.Emit() can emit a string representing self.EMPTY`,
+			name: `test Value.String() can emit a string representing self.EMPTY`,
 			v:    attribute.Value{},
 			want: "",
 		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
-			// proto: func (v attribute.Value) Emit() string {
-			have := testcase.v.Emit()
+			have := testcase.v.String()
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
 		})
+	}
+}
+
+func TestEmitDeprecated(t *testing.T) {
+	v := attribute.StringValue("foo")
+	if v.Emit() != v.String() {
+		t.Errorf("Emit() should delegate to String(), got %q and %q", v.Emit(), v.String())
 	}
 }

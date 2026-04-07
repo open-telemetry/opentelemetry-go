@@ -268,8 +268,9 @@ func (v Value) AsInterface() any {
 	return unknownValueType{}
 }
 
-// Emit returns a string representation of Value's data.
-func (v Value) Emit() string {
+// String returns a string representation of Value's data.
+// It implements the [fmt.Stringer] interface.
+func (v Value) String() string {
 	switch v.Type() {
 	case BOOLSLICE:
 		return fmt.Sprint(v.asBoolSlice())
@@ -306,6 +307,13 @@ func (v Value) Emit() string {
 	default:
 		return "unknown"
 	}
+}
+
+// Emit returns a string representation of Value's data.
+//
+// Deprecated: Use [Value.String] instead.
+func (v Value) Emit() string {
+	return v.String()
 }
 
 // MarshalJSON returns the JSON encoding of the Value.
