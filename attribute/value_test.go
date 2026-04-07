@@ -354,6 +354,16 @@ func TestValueString(t *testing.T) {
 			want: "false",
 		},
 		{
+			name: "bool slice len1 fast path",
+			v:    attribute.BoolSliceValue([]bool{false}),
+			want: `[false]`,
+		},
+		{
+			name: "bool slice len2 fast path",
+			v:    attribute.BoolSliceValue([]bool{true, false}),
+			want: `[true,false]`,
+		},
+		{
 			name: "empty bool slice",
 			v:    attribute.BoolSliceValue(nil),
 			want: "[]",
@@ -372,6 +382,21 @@ func TestValueString(t *testing.T) {
 			name: "int64",
 			v:    attribute.Int64Value(-42),
 			want: "-42",
+		},
+		{
+			name: "int",
+			v:    attribute.IntValue(7),
+			want: "7",
+		},
+		{
+			name: "int64 slice len1 fast path",
+			v:    attribute.Int64SliceValue([]int64{-1}),
+			want: `[-1]`,
+		},
+		{
+			name: "int64 slice len2 fast path",
+			v:    attribute.Int64SliceValue([]int64{1, -2}),
+			want: `[1,-2]`,
 		},
 		{
 			name: "empty int slice",
@@ -419,6 +444,16 @@ func TestValueString(t *testing.T) {
 			want: "[]",
 		},
 		{
+			name: "float64 slice len1 fast path",
+			v:    attribute.Float64SliceValue([]float64{math.Inf(-1)}),
+			want: `["-Infinity"]`,
+		},
+		{
+			name: "float64 slice len3 fast path",
+			v:    attribute.Float64SliceValue([]float64{1.25, math.Copysign(0, -1), 2.5}),
+			want: `[1.25,-0,2.5]`,
+		},
+		{
 			name: "float64 slice",
 			v: attribute.Float64SliceValue([]float64{
 				1,
@@ -453,6 +488,16 @@ func TestValueString(t *testing.T) {
 			want: "[]",
 		},
 		{
+			name: "string slice len1 fast path",
+			v:    attribute.StringSliceValue([]string{""}),
+			want: `[""]`,
+		},
+		{
+			name: "string slice len3 fast path",
+			v:    attribute.StringSliceValue([]string{"snowman ☃", "left\u2028right", "left\u2029right"}),
+			want: `["snowman ☃","left\u2028right","left\u2029right"]`,
+		},
+		{
 			name: "string slice",
 			v: attribute.StringSliceValue([]string{
 				`hello "world"`,
@@ -465,10 +510,10 @@ func TestValueString(t *testing.T) {
 		{
 			name: "string slice fast path escapes",
 			v: attribute.StringSliceValue([]string{
-				"tab\treturn\rformfeed\fbackslash\\quote\"",
+				"tab\treturn\rformfeed\fbackslash\\quote\"backspace\b",
 				string([]byte{0x01}) + "\u2029",
 			}),
-			want: `["tab\treturn\rformfeed\fbackslash\\quote\"","\u0001\u2029"]`,
+			want: `["tab\treturn\rformfeed\fbackslash\\quote\"backspace\b","\u0001\u2029"]`,
 		},
 		{
 			name: "byte slice",
