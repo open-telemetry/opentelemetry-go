@@ -238,14 +238,15 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect and export timeout"))
 	defer cancel()
 
+	var collectErr, exportErr error
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
-	err := r.Collect(ctx, rm)
-	if err == nil {
-		err = r.export(ctx, rm)
+	collectErr = r.Collect(ctx, rm)
+	if len(rm.ScopeMetrics) > 0 {
+		exportErr = r.export(ctx, rm)
 	}
 	r.rmPool.Put(rm)
-	return err
+	return errors.Join(collectErr, exportErr)
 }
 
 // Collect gathers all metric data related to the Reader from
