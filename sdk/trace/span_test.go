@@ -94,7 +94,7 @@ func TestTruncateAttr(t *testing.T) {
 	const key = "key"
 
 	strAttr := attribute.String(key, "value")
-	bytesAttr := attribute.Bytes(key, []byte("value"))
+	bytesAttr := attribute.ByteSlice(key, []byte("value"))
 	strSliceAttr := attribute.StringSlice(key, []string{"value-0", "value-1"})
 
 	tests := []struct {
@@ -174,7 +174,7 @@ func TestTruncateAttr(t *testing.T) {
 		{
 			limit: 0,
 			attr:  bytesAttr,
-			want:  attribute.Bytes(key, []byte{}),
+			want:  attribute.ByteSlice(key, []byte{}),
 		},
 		{
 			limit: 1,
@@ -189,7 +189,7 @@ func TestTruncateAttr(t *testing.T) {
 		{
 			limit: 1,
 			attr:  bytesAttr,
-			want:  attribute.Bytes(key, []byte("v")),
+			want:  attribute.ByteSlice(key, []byte("v")),
 		},
 		{
 			limit: 5,
@@ -362,7 +362,7 @@ func BenchmarkTruncateAttr(b *testing.B) {
 	const key = "key"
 
 	strAttr := attribute.String(key, "value")
-	bytesAttr := attribute.Bytes(key, []byte("value"))
+	bytesAttr := attribute.ByteSlice(key, []byte("value"))
 	strSliceAttr := attribute.StringSlice(key, []string{"value-0", "value-1"})
 
 	run := func(limit int, attr attribute.KeyValue) func(b *testing.B) {
@@ -380,13 +380,13 @@ func BenchmarkTruncateAttr(b *testing.B) {
 
 	b.Run("String", run(3, strAttr))
 	b.Run("StringSlice", run(3, strSliceAttr))
-	b.Run("Bytes", run(3, bytesAttr))
+	b.Run("ByteSlice", run(3, bytesAttr))
 	b.Run("String/Limit0", run(0, strAttr))
 	b.Run("StringSlice/Limit0", run(0, strSliceAttr))
-	b.Run("Bytes/Limit0", run(0, bytesAttr))
+	b.Run("ByteSlice/Limit0", run(0, bytesAttr))
 	b.Run("String/Unlimited", run(-1, strAttr))
 	b.Run("StringSlice/Unlimited", run(-1, strSliceAttr))
-	b.Run("Bytes/Unlimited", run(-1, bytesAttr))
+	b.Run("ByteSlice/Unlimited", run(-1, bytesAttr))
 }
 
 func BenchmarkTruncate(b *testing.B) {
