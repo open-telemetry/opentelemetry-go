@@ -352,14 +352,15 @@ func (v Value) Emit() string {
 
 const (
 	jsonArrayBracketsLen   = len("[]")
-	boolArrayElemMaxLen    = len("false") + len(",")
-	int64ArrayElemMaxLen   = len("-9223372036854775808") + len(",")
-	float64ArrayElemMaxLen = len("-1.7976931348623157e+308") + len(",")
+	boolArrayElemMaxLen    = len("false")
+	int64ArrayElemMaxLen   = len("-9223372036854775808")
+	float64ArrayElemMaxLen = len("-1.7976931348623157e+308")
+	commaLen               = len(",")
 )
 
 func formatBoolSlice(vals []bool) string {
 	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + len(vals)*boolArrayElemMaxLen)
+	b.Grow(jsonArrayBracketsLen + len(vals)*(boolArrayElemMaxLen+commaLen))
 	_ = b.WriteByte('[')
 	for i, val := range vals {
 		if i > 0 {
@@ -392,15 +393,15 @@ func formatBoolSliceValue(v any) string {
 
 func formatInt64Slice(vals []int64) string {
 	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + len(vals)*int64ArrayElemMaxLen)
+	b.Grow(jsonArrayBracketsLen + len(vals)*(int64ArrayElemMaxLen+commaLen))
 	_ = b.WriteByte('[')
 
-	var scratch [20]byte
+	var buf [int64ArrayElemMaxLen]byte
 	for i, val := range vals {
 		if i > 0 {
 			_ = b.WriteByte(',')
 		}
-		out := strconv.AppendInt(scratch[:0], val, 10)
+		out := strconv.AppendInt(buf[:0], val, 10)
 		_, _ = b.Write(out)
 	}
 
@@ -438,10 +439,10 @@ func formatFloat64(v float64) string {
 
 func formatFloat64Slice(vals []float64) string {
 	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + len(vals)*float64ArrayElemMaxLen)
+	b.Grow(jsonArrayBracketsLen + len(vals)*(float64ArrayElemMaxLen+commaLen))
 	_ = b.WriteByte('[')
 
-	var scratch [24]byte
+	var buf [float64ArrayElemMaxLen]byte
 	for i, val := range vals {
 		if i > 0 {
 			_ = b.WriteByte(',')
@@ -455,7 +456,7 @@ func formatFloat64Slice(vals []float64) string {
 		case math.IsInf(val, -1):
 			_, _ = b.WriteString(`"-Infinity"`)
 		default:
-			out := strconv.AppendFloat(scratch[:0], val, 'g', -1, 64)
+			out := strconv.AppendFloat(buf[:0], val, 'g', -1, 64)
 			_, _ = b.Write(out)
 		}
 	}
@@ -480,11 +481,10 @@ func formatFloat64SliceValue(v any) string {
 }
 
 func formatStringSlice(vals []string) string {
-	size := 2
+	size := jsonArrayBracketsLen
 	for _, val := range vals {
-		size += len(val) + 2
+		size += len(val) + commaLen + 2 // Account for JSON string quotes and comma.
 	}
-	size += len(vals) - 1
 
 	var b strings.Builder
 	b.Grow(size)
@@ -672,9 +672,9 @@ func formatFloat64SliceReflect(v any) string {
 func formatStringSliceReflect(v any) string {
 	rv := reflect.ValueOf(v)
 
-	size := rv.Len() + 1
+	size := jsonArrayBracketsLen
 	for i := 0; i < rv.Len(); i++ {
-		size += len(rv.Index(i).String()) + 2
+		size += len(rv.Index(i).String()) + commaLen + 2 // Account for JSON string quotes and comma.
 	}
 
 	var b strings.Builder
