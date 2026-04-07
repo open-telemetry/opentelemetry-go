@@ -358,6 +358,21 @@ const (
 	commaLen               = len(",")
 )
 
+func formatBoolSliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]bool:
+		return "[]"
+	case [1]bool:
+		return formatBoolSlice(vals[:])
+	case [2]bool:
+		return formatBoolSlice(vals[:])
+	case [3]bool:
+		return formatBoolSlice(vals[:])
+	default:
+		return formatBoolSliceReflect(v)
+	}
+}
+
 func formatBoolSlice(vals []bool) string {
 	var b strings.Builder
 	b.Grow(jsonArrayBracketsLen + len(vals)*(boolArrayElemMaxLen+commaLen))
@@ -376,18 +391,38 @@ func formatBoolSlice(vals []bool) string {
 	return b.String()
 }
 
-func formatBoolSliceValue(v any) string {
+func formatBoolSliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+
+	var b strings.Builder
+	b.Grow(jsonArrayBracketsLen + rv.Len()*boolArrayElemMaxLen)
+	_ = b.WriteByte('[')
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		if rv.Index(i).Bool() {
+			_, _ = b.WriteString("true")
+		} else {
+			_, _ = b.WriteString("false")
+		}
+	}
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatInt64SliceValue(v any) string {
 	switch vals := v.(type) {
-	case [0]bool:
+	case [0]int64:
 		return "[]"
-	case [1]bool:
-		return formatBoolSlice(vals[:])
-	case [2]bool:
-		return formatBoolSlice(vals[:])
-	case [3]bool:
-		return formatBoolSlice(vals[:])
+	case [1]int64:
+		return formatInt64Slice(vals[:])
+	case [2]int64:
+		return formatInt64Slice(vals[:])
+	case [3]int64:
+		return formatInt64Slice(vals[:])
 	default:
-		return formatBoolSliceReflect(v)
+		return formatInt64SliceReflect(v)
 	}
 }
 
@@ -409,19 +444,24 @@ func formatInt64Slice(vals []int64) string {
 	return b.String()
 }
 
-func formatInt64SliceValue(v any) string {
-	switch vals := v.(type) {
-	case [0]int64:
-		return "[]"
-	case [1]int64:
-		return formatInt64Slice(vals[:])
-	case [2]int64:
-		return formatInt64Slice(vals[:])
-	case [3]int64:
-		return formatInt64Slice(vals[:])
-	default:
-		return formatInt64SliceReflect(v)
+func formatInt64SliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+
+	var b strings.Builder
+	b.Grow(jsonArrayBracketsLen + rv.Len()*(int64ArrayElemMaxLen+commaLen))
+	_ = b.WriteByte('[')
+
+	var scratch [20]byte
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		out := strconv.AppendInt(scratch[:0], rv.Index(i).Int(), 10)
+		_, _ = b.Write(out)
 	}
+
+	_ = b.WriteByte(']')
+	return b.String()
 }
 
 func formatFloat64(v float64) string {
@@ -434,6 +474,21 @@ func formatFloat64(v float64) string {
 		return "-Infinity"
 	default:
 		return strconv.FormatFloat(v, 'g', -1, 64)
+	}
+}
+
+func formatFloat64SliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]float64:
+		return "[]"
+	case [1]float64:
+		return formatFloat64Slice(vals[:])
+	case [2]float64:
+		return formatFloat64Slice(vals[:])
+	case [3]float64:
+		return formatFloat64Slice(vals[:])
+	default:
+		return formatFloat64SliceReflect(v)
 	}
 }
 
@@ -465,18 +520,48 @@ func formatFloat64Slice(vals []float64) string {
 	return b.String()
 }
 
-func formatFloat64SliceValue(v any) string {
+func formatFloat64SliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+
+	var b strings.Builder
+	b.Grow(jsonArrayBracketsLen + rv.Len()*(float64ArrayElemMaxLen+commaLen))
+	_ = b.WriteByte('[')
+
+	var scratch [24]byte
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		val := rv.Index(i).Float()
+		switch {
+		case math.IsNaN(val):
+			_, _ = b.WriteString(`"NaN"`)
+		case math.IsInf(val, 1):
+			_, _ = b.WriteString(`"Infinity"`)
+		case math.IsInf(val, -1):
+			_, _ = b.WriteString(`"-Infinity"`)
+		default:
+			out := strconv.AppendFloat(scratch[:0], val, 'g', -1, 64)
+			_, _ = b.Write(out)
+		}
+	}
+
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatStringSliceValue(v any) string {
 	switch vals := v.(type) {
-	case [0]float64:
+	case [0]string:
 		return "[]"
-	case [1]float64:
-		return formatFloat64Slice(vals[:])
-	case [2]float64:
-		return formatFloat64Slice(vals[:])
-	case [3]float64:
-		return formatFloat64Slice(vals[:])
+	case [1]string:
+		return formatStringSlice(vals[:])
+	case [2]string:
+		return formatStringSlice(vals[:])
+	case [3]string:
+		return formatStringSlice(vals[:])
 	default:
-		return formatFloat64SliceReflect(v)
+		return formatStringSliceReflect(v)
 	}
 }
 
@@ -499,19 +584,25 @@ func formatStringSlice(vals []string) string {
 	return b.String()
 }
 
-func formatStringSliceValue(v any) string {
-	switch vals := v.(type) {
-	case [0]string:
-		return "[]"
-	case [1]string:
-		return formatStringSlice(vals[:])
-	case [2]string:
-		return formatStringSlice(vals[:])
-	case [3]string:
-		return formatStringSlice(vals[:])
-	default:
-		return formatStringSliceReflect(v)
+func formatStringSliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+
+	size := jsonArrayBracketsLen
+	for i := 0; i < rv.Len(); i++ {
+		size += len(rv.Index(i).String()) + commaLen + 2 // Account for JSON string quotes and comma.
 	}
+
+	var b strings.Builder
+	b.Grow(size)
+	_ = b.WriteByte('[')
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		appendJSONString(&b, rv.Index(i).String())
+	}
+	_ = b.WriteByte(']')
+	return b.String()
 }
 
 // appendJSONString appends s to dst as a JSON string literal.
@@ -597,97 +688,6 @@ func appendJSONString(dst *strings.Builder, s string) {
 		_, _ = dst.WriteString(s[start:])
 	}
 	_ = dst.WriteByte('"')
-}
-
-func formatBoolSliceReflect(v any) string {
-	rv := reflect.ValueOf(v)
-
-	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + rv.Len()*boolArrayElemMaxLen)
-	_ = b.WriteByte('[')
-	for i := 0; i < rv.Len(); i++ {
-		if i > 0 {
-			_ = b.WriteByte(',')
-		}
-		if rv.Index(i).Bool() {
-			_, _ = b.WriteString("true")
-		} else {
-			_, _ = b.WriteString("false")
-		}
-	}
-	_ = b.WriteByte(']')
-	return b.String()
-}
-
-func formatInt64SliceReflect(v any) string {
-	rv := reflect.ValueOf(v)
-
-	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + rv.Len()*int64ArrayElemMaxLen)
-	_ = b.WriteByte('[')
-
-	var scratch [20]byte
-	for i := 0; i < rv.Len(); i++ {
-		if i > 0 {
-			_ = b.WriteByte(',')
-		}
-		out := strconv.AppendInt(scratch[:0], rv.Index(i).Int(), 10)
-		_, _ = b.Write(out)
-	}
-
-	_ = b.WriteByte(']')
-	return b.String()
-}
-
-func formatFloat64SliceReflect(v any) string {
-	rv := reflect.ValueOf(v)
-
-	var b strings.Builder
-	b.Grow(jsonArrayBracketsLen + rv.Len()*float64ArrayElemMaxLen)
-	_ = b.WriteByte('[')
-
-	var scratch [24]byte
-	for i := 0; i < rv.Len(); i++ {
-		if i > 0 {
-			_ = b.WriteByte(',')
-		}
-		val := rv.Index(i).Float()
-		switch {
-		case math.IsNaN(val):
-			_, _ = b.WriteString(`"NaN"`)
-		case math.IsInf(val, 1):
-			_, _ = b.WriteString(`"Infinity"`)
-		case math.IsInf(val, -1):
-			_, _ = b.WriteString(`"-Infinity"`)
-		default:
-			out := strconv.AppendFloat(scratch[:0], val, 'g', -1, 64)
-			_, _ = b.Write(out)
-		}
-	}
-
-	_ = b.WriteByte(']')
-	return b.String()
-}
-
-func formatStringSliceReflect(v any) string {
-	rv := reflect.ValueOf(v)
-
-	size := jsonArrayBracketsLen
-	for i := 0; i < rv.Len(); i++ {
-		size += len(rv.Index(i).String()) + commaLen + 2 // Account for JSON string quotes and comma.
-	}
-
-	var b strings.Builder
-	b.Grow(size)
-	_ = b.WriteByte('[')
-	for i := 0; i < rv.Len(); i++ {
-		if i > 0 {
-			_ = b.WriteByte(',')
-		}
-		appendJSONString(&b, rv.Index(i).String())
-	}
-	_ = b.WriteByte(']')
-	return b.String()
 }
 
 // MarshalJSON returns the JSON encoding of the Value.
