@@ -297,6 +297,41 @@ func TestPeriodicReaderRun(t *testing.T) {
 	_ = r.Shutdown(t.Context())
 }
 
+func TestPeriodicReaderExportsPartialMetrics(t *testing.T) {
+	trigger := triggerTicker(t)
+
+	// Register an error handler to verify errors from producer are passed to otel error handler.
+	defer func(orig otel.ErrorHandler) {
+		otel.SetErrorHandler(orig)
+	}(otel.GetErrorHandler())
+	eh := newChErrorHandler()
+	otel.SetErrorHandler(eh)
+
+	exportCalled := false
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+			assert.Equal(t, testResourceMetricsA, *m)
+			exportCalled = true
+			return nil
+		},
+	}
+
+	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
+	r.register(testSDKProducer{
+		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+			// Simulate a producer that produces metrics but also returns an error.
+			*rm = testResourceMetricsA
+			return assert.AnError
+		},
+	})
+	trigger <- time.Now()
+	assert.ErrorIs(t, <-eh.Err, assert.AnError)
+	assert.True(t, exportCalled)
+
+	// Ensure Reader is allowed clean up attempt.
+	_ = r.Shutdown(t.Context())
+}
+
 func TestPeriodicReaderFlushesPending(t *testing.T) {
 	// Override the ticker so tests are not flaky and rely on timing.
 	trigger := triggerTicker(t)
