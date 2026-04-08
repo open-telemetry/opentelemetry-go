@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	// DefaultSamplingPrecision is the default precision for threshold encoding.
-	DefaultSamplingPrecision = 4
+	// defaultSamplingPrecision is the default precision for threshold encoding.
+	defaultSamplingPrecision = 4
 	maxAdjustedCount         = 1 << 56
 	// randomnessMask masks the least significant 56 bits of the trace ID per
 	// W3C Trace Context Level 2 Random Trace ID Flag.
@@ -29,14 +29,16 @@ const (
 	probabilityOneThreshold  = 1 - 0x1p-52
 )
 
-type xTraceIDRatioSampler struct {
+// traceIDRatioSampler is the sdktrace.Sampler implementation used by
+// TraceIDRatioBased.
+type traceIDRatioSampler struct {
 	threshold   uint64
 	thkv        string
 	description string
 }
 
 // ShouldSample implements sdktrace.Sampler.
-func (ts *xTraceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+func (ts *traceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	state := psc.TraceState()
 
@@ -84,20 +86,20 @@ func (ts *xTraceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdkt
 }
 
 // Description implements sdktrace.Sampler.
-func (ts *xTraceIDRatioSampler) Description() string {
+func (ts *traceIDRatioSampler) Description() string {
 	return ts.description
 }
 
-// XTraceIDRatioBased samples a given fraction of traces. Fractions >= 1 will
+// TraceIDRatioBased samples a given fraction of traces. Fractions >= 1 will
 // always sample. Fractions < 0 are treated as zero. To respect the parent
-// trace's SampledFlag, the XTraceIDRatioBased sampler should be used as a
+// trace's SampledFlag, the TraceIDRatioBased sampler should be used as a
 // delegate of a ParentBased sampler.
 //
-//nolint:revive // XTraceIDRatioBased matches the OpenTelemetry sampler naming convention.
-func XTraceIDRatioBased(fraction float64) sdktrace.Sampler {
+//nolint:revive // revive complains about stutter of `x.TraceIDRatioBased`
+func TraceIDRatioBased(fraction float64) sdktrace.Sampler {
 	const (
 		maxp  = 14
-		defp  = DefaultSamplingPrecision
+		defp  = defaultSamplingPrecision
 		hbits = 4
 	)
 	if fraction > probabilityOneThreshold {
@@ -122,9 +124,9 @@ func XTraceIDRatioBased(fraction float64) sdktrace.Sampler {
 	}
 
 	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
-	return &xTraceIDRatioSampler{
+	return &traceIDRatioSampler{
 		threshold:   threshold,
 		thkv:        "th:" + tvalue,
-		description: fmt.Sprintf("XTraceIDRatioBased{%g}", fraction),
+		description: fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }
