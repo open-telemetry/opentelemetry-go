@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/x"
@@ -1065,7 +1066,7 @@ func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metric
 			if attr == overflowSet {
 				// The overflow set contains all the goroutines that didn't make the limit of 3
 				assert.Equal(t, uint64(0), count%expectedSingleCount)
-				assert.Equal(t, count/expectedSingleCount*uint64(expectedSingleSum), uint64(sum))
+				assertSumEqual[N](t, N(count/expectedSingleCount)*expectedSingleSum, sum)
 			} else {
 				// Individual attributes should have exactly one goroutine's worth of data
 				assert.Equal(t, expectedSingleSum, sum)
@@ -1255,4 +1256,37 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 			assert.Equal(t, refH, h)
 		})
 	}
+}
+
+func TestExpoHistogramRecordUnderflow(t *testing.T) {
+	var errs []error
+	original := global.GetErrorHandler()
+	global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+		errs = append(errs, e)
+	}))
+	t.Cleanup(func() {
+		global.SetErrorHandler(original)
+	})
+
+	dp := newExpoHistogramDataPoint[float64](attribute.NewSet(), 1, 20, false, false)
+	// Force scale to a low value
+	dp.scale.Store(-10)
+	dp.record(1)
+	dp.record(math.MaxFloat64)
+	require.Len(t, errs, 1)
+	assert.EqualError(t, errs[0], "exponential histogram scale underflow")
+}
+
+func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
+	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+	ctx := t.Context()
+
+	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
+	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil)
+	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
+
+	var dest metricdata.Aggregation
+	h.delta(&dest)
+	eh := dest.(metricdata.ExponentialHistogram[float64])
+	assert.Empty(t, eh.DataPoints)
 }
