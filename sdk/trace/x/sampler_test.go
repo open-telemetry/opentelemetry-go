@@ -16,21 +16,21 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestXTraceIDRatioBased(t *testing.T) {
+func TestTraceIDRatioBased(t *testing.T) {
 	t.Run("description", func(t *testing.T) {
 		for _, tc := range []struct {
 			prob float64
 			desc string
 		}{
-			{0.5, "XTraceIDRatioBased{0.5}"},
-			{1. / 3, "XTraceIDRatioBased{0.3333333333333333}"},
-			{1. / 10000, "XTraceIDRatioBased{0.0001}"},
+			{0.5, "TraceIDRatioBased{0.5}"},
+			{1. / 3, "TraceIDRatioBased{0.3333333333333333}"},
+			{1. / 10000, "TraceIDRatioBased{0.0001}"},
 			{1, "AlwaysOnSampler"},
 			{1.5, "AlwaysOnSampler"},
 			{0, "AlwaysOffSampler"},
 			{-0.5, "AlwaysOffSampler"},
 		} {
-			require.Equal(t, tc.desc, XTraceIDRatioBased(tc.prob).Description())
+			require.Equal(t, tc.desc, TraceIDRatioBased(tc.prob).Description())
 		}
 	})
 
@@ -47,7 +47,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 			{1 / 65536.0, 0xffff0000000000},
 			{1 / 1048576.0, 0xfffff000000000},
 		} {
-			sampler := XTraceIDRatioBased(tc.prob).(*xTraceIDRatioSampler)
+			sampler := TraceIDRatioBased(tc.prob).(*traceIDRatioSampler)
 			require.Equal(t, tc.threshold, sampler.threshold)
 		}
 	})
@@ -60,8 +60,8 @@ func TestXTraceIDRatioBased(t *testing.T) {
 			if ratioHi < ratioLo {
 				ratioLo, ratioHi = ratioHi, ratioLo
 			}
-			samplerHi := XTraceIDRatioBased(ratioHi)
-			samplerLo := XTraceIDRatioBased(ratioLo)
+			samplerHi := TraceIDRatioBased(ratioHi)
+			samplerLo := TraceIDRatioBased(ratioLo)
 			for range numTraces {
 				traceID := trace.TraceID{}
 				_, _ = rand.Read(traceID[:])
@@ -85,7 +85,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 
 	t.Run("RecordAndSample adds ot.th to tracestate", func(t *testing.T) {
 		const traceIDWillSample = "00000000000000000080000000000000"
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex(traceIDWillSample)
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("vendor=value")
@@ -115,7 +115,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("RecordAndSample with explicit rv and no randomness flag inserts th in tracestate", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000000000000000001")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("ot=rv:80000000000000,vendor=value")
@@ -145,7 +145,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("RecordAndSample without randomness flag erases ot.th from tracestate", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("ot=th:0ad;other:value,vendor=v")
@@ -180,7 +180,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("RecordAndSample when ot becomes empty deletes ot from tracestate", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("ot=th:0ad,vendor=value")
@@ -209,7 +209,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 
 	t.Run("Drop when randomness < threshold", func(t *testing.T) {
 		const traceIDWillDrop = "0000000000000000007fffffffffffff"
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex(traceIDWillDrop)
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("ot=th:0;rv:0123456789abcd,vendor=value")
@@ -236,7 +236,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("root span RecordAndSample", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
 		params := sdktrace.SamplingParameters{
 			ParentContext: t.Context(),
@@ -250,7 +250,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("root span Drop", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000000000000000000")
 		params := sdktrace.SamplingParameters{
 			ParentContext: t.Context(),
@@ -264,7 +264,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("RecordAndSample updates existing th in tracestate", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("ot=th:0ad;other:value,vendor=v")
@@ -294,7 +294,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("trace ID all zeros Drop", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000000000000000000")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("vendor=value")
@@ -320,7 +320,7 @@ func TestXTraceIDRatioBased(t *testing.T) {
 	})
 
 	t.Run("trace ID max randomness RecordAndSample", func(t *testing.T) {
-		sampler := XTraceIDRatioBased(0.5)
+		sampler := TraceIDRatioBased(0.5)
 		traceID, _ := trace.TraceIDFromHex("000000000000000000ffffffffffffff")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 		initialState, err := trace.ParseTraceState("vendor=value")
