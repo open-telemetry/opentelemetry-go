@@ -242,7 +242,10 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	collectErr = r.Collect(ctx, rm)
-	if len(rm.ScopeMetrics) > 0 {
+	// Export partial metrics only when the context is still valid.
+	// If the context is cancelled or timed out, the exporter will not
+	// be able to perform meaningful work (e.g. network requests).
+	if len(rm.ScopeMetrics) > 0 && ctx.Err() == nil {
 		exportErr = r.export(ctx, rm)
 	}
 	r.rmPool.Put(rm)
