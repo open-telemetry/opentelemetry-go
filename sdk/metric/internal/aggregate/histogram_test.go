@@ -564,6 +564,14 @@ func TestCumulativeHistogramFinishResetsStartTime(t *testing.T) {
 	}, got)
 
 	h.measure(ctx, 0, alice, nil, true)
+	assert.Equal(t, 1, h.collect(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.HistogramDataPoint[int64]{
+			hPointSummed[int64](alice, 5, 1, y2kPlus(1), y2kPlus(3)),
+		},
+	}, got)
+
 	assert.Equal(t, 0, h.collect(&got))
 	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
 		Temporality: metricdata.CumulativeTemporality,
@@ -575,7 +583,33 @@ func TestCumulativeHistogramFinishResetsStartTime(t *testing.T) {
 	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		DataPoints: []metricdata.HistogramDataPoint[int64]{
-			hPointSummed[int64](alice, 5, 1, y2kPlus(4), y2kPlus(5)),
+			hPointSummed[int64](alice, 5, 1, y2kPlus(5), y2kPlus(6)),
 		},
+	}, got)
+}
+
+func TestDeltaHistogramFinishExportsFinalPoint(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	h := newDeltaHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
+	ctx := t.Context()
+
+	h.measure(ctx, 5, alice, nil, false)
+	h.measure(ctx, 0, alice, nil, true)
+
+	var got metricdata.Aggregation = metricdata.Histogram[int64]{}
+	assert.Equal(t, 1, h.collect(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints: []metricdata.HistogramDataPoint[int64]{
+			hPointSummed[int64](alice, 5, 1, y2k, y2kPlus(1)),
+		},
+	}, got)
+
+	assert.Equal(t, 0, h.collect(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.HistogramDataPoint[int64]{},
 	}, got)
 }

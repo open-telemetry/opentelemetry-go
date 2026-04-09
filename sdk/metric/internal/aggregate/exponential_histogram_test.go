@@ -1329,6 +1329,27 @@ func TestCumulativeExponentialHistogramFinishResetsStartTime(t *testing.T) {
 	}, got)
 
 	in(ctx, 0, alice, true)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(1),
+				Time:       y2kPlus(3),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+
 	assert.Equal(t, 0, out(&got))
 	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
 		Temporality: metricdata.CumulativeTemporality,
@@ -1342,8 +1363,8 @@ func TestCumulativeExponentialHistogramFinishResetsStartTime(t *testing.T) {
 		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
 			{
 				Attributes: fltrAlice,
-				StartTime:  y2kPlus(4),
-				Time:       y2kPlus(5),
+				StartTime:  y2kPlus(5),
+				Time:       y2kPlus(6),
 				Count:      1,
 				Min:        metricdata.NewExtrema[int64](4),
 				Max:        metricdata.NewExtrema[int64](4),
@@ -1355,5 +1376,47 @@ func TestCumulativeExponentialHistogramFinishResetsStartTime(t *testing.T) {
 				},
 			},
 		},
+	}, got)
+}
+
+func TestDeltaExponentialHistogramFinishExportsFinalPoint(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, out := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		Filter:      attrFltr,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in(ctx, 4, alice, false)
+	in(ctx, 0, alice, true)
+
+	var got metricdata.Aggregation = metricdata.ExponentialHistogram[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2k,
+				Time:       y2kPlus(2),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{},
 	}, got)
 }

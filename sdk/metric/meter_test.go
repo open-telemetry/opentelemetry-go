@@ -585,6 +585,7 @@ func TestFinishInstruments(t *testing.T) {
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{Value: 3, Attributes: alice},
+						{Value: 5, Attributes: bob},
 					},
 				},
 			},
@@ -609,6 +610,7 @@ func TestFinishInstruments(t *testing.T) {
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{Value: 3, Attributes: alice},
+						{Value: 5, Attributes: bob},
 					},
 				},
 			},
@@ -640,6 +642,18 @@ func TestFinishInstruments(t *testing.T) {
 							Max:          metricdata.NewExtrema[int64](7),
 							Sum:          7,
 						},
+						{
+							Attributes: bob,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[int64](5),
+							Max:          metricdata.NewExtrema[int64](5),
+							Sum:          5,
+						},
 					},
 				},
 			},
@@ -664,6 +678,7 @@ func TestFinishInstruments(t *testing.T) {
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Value: 3, Attributes: alice},
+						{Value: 5, Attributes: bob},
 					},
 				},
 			},
@@ -688,6 +703,7 @@ func TestFinishInstruments(t *testing.T) {
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Value: 11, Attributes: alice},
+						{Value: 12, Attributes: bob},
 					},
 				},
 			},
@@ -718,6 +734,18 @@ func TestFinishInstruments(t *testing.T) {
 							Min:          metricdata.NewExtrema[float64](7.),
 							Max:          metricdata.NewExtrema[float64](7.),
 							Sum:          7.0,
+						},
+						{
+							Attributes: bob,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[float64](5.),
+							Max:          metricdata.NewExtrema[float64](5.),
+							Sum:          5.0,
 						},
 					},
 				},
@@ -2867,6 +2895,12 @@ func TestFinishResetsCumulativeStartTime(t *testing.T) {
 
 	ctr.Finish(ctx, opt)
 	require.NoError(t, rdr.Collect(ctx, &rm))
+	pointsAfterFinish := points(rm)
+	require.Len(t, pointsAfterFinish, 1)
+	assert.Equal(t, firstStart, pointsAfterFinish[0].StartTime)
+	assert.Equal(t, int64(1), pointsAfterFinish[0].Value)
+
+	require.NoError(t, rdr.Collect(ctx, &rm))
 	require.Empty(t, points(rm))
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -2880,4 +2914,43 @@ func TestFinishResetsCumulativeStartTime(t *testing.T) {
 	dp = points(rm)[0]
 	assert.True(t, dp.StartTime.After(firstStart))
 	assert.Equal(t, int64(2), dp.Value)
+}
+
+func TestFinishRevivePreservesCumulativeData(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+	ctr, err := mp.Meter("test").Int64Counter("count")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	attrs := attribute.NewSet(attribute.String("name", "Alice"))
+	opt := metric.WithAttributeSet(attrs)
+
+	ctr.Add(ctx, 1, opt)
+	ctr.Finish(ctx, opt)
+	ctr.Add(ctx, 2, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+
+	points := func(rm metricdata.ResourceMetrics) []metricdata.DataPoint[int64] {
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != "count" {
+					continue
+				}
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				if ok {
+					return sum.DataPoints
+				}
+			}
+		}
+		return nil
+	}
+
+	got := points(rm)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(3), got[0].Value)
 }

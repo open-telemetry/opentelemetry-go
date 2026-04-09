@@ -61,6 +61,9 @@ func newDeltaSum[N int64 | float64](
 	return &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
+		tombstones: limitedSyncMap{
+			aggLimit: limit,
+		},
 		hotColdValMap: [2]sumValueMap[N]{
 			{
 				values: limitedSyncMap{aggLimit: limit},
@@ -81,8 +84,10 @@ type deltaSum[N int64 | float64] struct {
 
 	hcwg          hotColdWaitGroup
 	hotColdValMap [2]sumValueMap[N]
+	tombstones    limitedSyncMap
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *deltaSum[N]) measure(
 	ctx context.Context,
 	value N,
@@ -92,6 +97,24 @@ func (s *deltaSum[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
+	key := fltrAttr.Equivalent()
+	if remove {
+		if value, ok := s.hotColdValMap[hotIdx].values.Take(key); ok {
+			val := value.(*sumValue[N])
+			s.tombstones.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val })
+		}
+		return
+	}
+	if value, ok := s.tombstones.Take(key); ok {
+		val := value.(*sumValue[N])
+		actual := s.hotColdValMap[hotIdx].values.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*sumValue[N])
+		if actual != val {
+			actual.n.add(val.n.load())
+			if val.startTime.Before(actual.startTime) {
+				actual.startTime = val.startTime
+			}
+		}
+	}
 	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr, remove)
 }
 
@@ -111,6 +134,7 @@ func (s *deltaSum[N]) collect(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
+	n += s.tombstones.Len()
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
@@ -124,6 +148,17 @@ func (s *deltaSum[N]) collect(
 		i++
 		return true
 	})
+	s.tombstones.Range(func(_, value any) bool {
+		val := value.(*sumValue[N])
+		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		dPts[i].Attributes = val.attrs
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = val.n.load()
+		i++
+		return true
+	})
+	s.tombstones.Clear()
 	s.hotColdValMap[readIdx].values.Clear()
 	// The delta collection cycle resets.
 	s.start = t
@@ -145,6 +180,9 @@ func newCumulativeSum[N int64 | float64](
 	return &cumulativeSum[N]{
 		monotonic: monotonic,
 		start:     now(),
+		tombstones: limitedSyncMap{
+			aggLimit: limit,
+		},
 		sumValueMap: sumValueMap[N]{
 			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
@@ -158,6 +196,7 @@ type cumulativeSum[N int64 | float64] struct {
 	start     time.Time
 
 	sumValueMap[N]
+	tombstones limitedSyncMap
 }
 
 func (s *cumulativeSum[N]) collect(
@@ -173,7 +212,9 @@ func (s *cumulativeSum[N]) collect(
 
 	// Values are being concurrently written while we iterate, so only use the
 	// current length for capacity.
-	dPts := reset(sData.DataPoints, 0, s.values.Len())
+	capacity := s.values.Len()
+	capacity += s.tombstones.Len()
+	dPts := reset(sData.DataPoints, 0, capacity)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
@@ -200,6 +241,25 @@ func (s *cumulativeSum[N]) collect(
 		i++
 		return true
 	})
+	s.tombstones.Range(func(_, value any) bool {
+		val := value.(*sumValue[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
+		newPt := metricdata.DataPoint[N]{
+			Attributes: val.attrs,
+			StartTime:  startTime,
+			Time:       t,
+			Value:      val.n.load(),
+		}
+		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		dPts = append(dPts, newPt)
+		i++
+		return true
+	})
+	s.tombstones.Clear()
 
 	sData.DataPoints = dPts
 	*dest = sData
@@ -215,9 +275,23 @@ func (s *cumulativeSum[N]) measure(
 	droppedAttr []attribute.KeyValue,
 	remove bool,
 ) {
+	key := fltrAttr.Equivalent()
 	if remove {
-		s.values.Delete(fltrAttr.Equivalent())
+		if value, ok := s.values.Take(key); ok {
+			val := value.(*sumValue[N])
+			s.tombstones.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val })
+		}
 		return
+	}
+	if value, ok := s.tombstones.Take(key); ok {
+		val := value.(*sumValue[N])
+		actual := s.values.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*sumValue[N])
+		if actual != val {
+			actual.n.add(val.n.load())
+			if val.startTime.Before(actual.startTime) {
+				actual.startTime = val.startTime
+			}
+		}
 	}
 	s.sumValueMap.measure(ctx, value, fltrAttr, droppedAttr, false)
 }

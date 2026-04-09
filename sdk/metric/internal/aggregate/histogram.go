@@ -95,6 +95,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
 	hotColdValMap [2]limitedSyncMap
+	tombstones    limitedSyncMap
 
 	start    time.Time
 	noMinMax bool
@@ -113,10 +114,20 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-
+	key := fltrAttr.Equivalent()
 	if remove {
-		s.hotColdValMap[hotIdx].Delete(fltrAttr.Equivalent())
+		if value, ok := s.hotColdValMap[hotIdx].Take(key); ok {
+			val := value.(*histogramPoint[N])
+			s.tombstones.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val })
+		}
 		return
+	}
+	if value, ok := s.tombstones.Take(key); ok {
+		val := value.(*histogramPoint[N])
+		actual := s.hotColdValMap[hotIdx].LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*histogramPoint[N])
+		if actual != val {
+			val.histogramPointCounters.mergeIntoAndReset(&actual.histogramPointCounters, s.noMinMax, s.noSum)
+		}
 	}
 
 	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
@@ -171,6 +182,9 @@ func newDeltaHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
+		tombstones: limitedSyncMap{
+			aggLimit: limit,
+		},
 		hotColdValMap: [2]limitedSyncMap{
 			{aggLimit: limit},
 			{aggLimit: limit},
@@ -197,6 +211,7 @@ func (s *deltaHistogram[N]) collect(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].Len()
+	n += s.tombstones.Len()
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
@@ -226,6 +241,29 @@ func (s *deltaHistogram[N]) collect(
 		i++
 		return true
 	})
+	s.tombstones.Range(func(_, value any) bool {
+		val := value.(*histogramPoint[N])
+
+		count := val.loadCountsInto(&hDPts[i].BucketCounts)
+		hDPts[i].Attributes = val.attrs
+		hDPts[i].StartTime = s.start
+		hDPts[i].Time = t
+		hDPts[i].Count = count
+		hDPts[i].Bounds = bounds
+
+		if !s.noSum {
+			hDPts[i].Sum = val.total.load()
+		}
+		if !s.noMinMax && val.minMax.set.Load() {
+			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+		}
+
+		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+		i++
+		return true
+	})
+	s.tombstones.Clear()
 	// Unused attribute sets do not report.
 	s.hotColdValMap[readIdx].Clear()
 	// The delta collection cycle resets.
@@ -249,7 +287,8 @@ func (s *deltaHistogram[N]) collect(
 // to reading. Unlike deltaHistogram, this maintains a single map so that the
 // preserved attribute sets do not change when collect() is called.
 type cumulativeHistogram[N int64 | float64] struct {
-	values limitedSyncMap
+	values     limitedSyncMap
+	tombstones limitedSyncMap
 
 	start    time.Time
 	noMinMax bool
@@ -279,6 +318,9 @@ func newCumulativeHistogram[N int64 | float64](
 		bounds:   b,
 		newRes:   r,
 		values:   limitedSyncMap{aggLimit: limit},
+		tombstones: limitedSyncMap{
+			aggLimit: limit,
+		},
 	}
 }
 
@@ -290,9 +332,30 @@ func (s *cumulativeHistogram[N]) measure(
 	droppedAttr []attribute.KeyValue,
 	remove bool,
 ) {
+	key := fltrAttr.Equivalent()
 	if remove {
-		s.values.Delete(fltrAttr.Equivalent())
+		if value, ok := s.values.Take(key); ok {
+			val := value.(*hotColdHistogramPoint[N])
+			s.tombstones.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val })
+		}
 		return
+	}
+	if value, ok := s.tombstones.Take(key); ok {
+		val := value.(*hotColdHistogramPoint[N])
+		actual := s.values.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*hotColdHistogramPoint[N])
+		if actual != val {
+			tombReadIdx := val.hcwg.swapHotAndWait()
+			tombHotIdx := (tombReadIdx + 1) % 2
+			val.hotColdPoint[tombReadIdx].mergeIntoAndReset(&val.hotColdPoint[tombHotIdx], s.noMinMax, s.noSum)
+
+			dstHotIdx := actual.hcwg.start()
+			val.hotColdPoint[tombHotIdx].mergeIntoAndReset(&actual.hotColdPoint[dstHotIdx], s.noMinMax, s.noSum)
+			actual.hcwg.done(dstHotIdx)
+
+			if val.startTime.Before(actual.startTime) {
+				actual.startTime = val.startTime
+			}
+		}
 	}
 
 	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
@@ -354,7 +417,9 @@ func (s *cumulativeHistogram[N]) collect(
 
 	// Values are being concurrently written while we iterate, so only use the
 	// current length for capacity.
-	hDPts := reset(h.DataPoints, 0, s.values.Len())
+	capacity := s.values.Len()
+	capacity += s.tombstones.Len()
+	hDPts := reset(h.DataPoints, 0, capacity)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
@@ -405,6 +470,39 @@ func (s *cumulativeHistogram[N]) collect(
 		// overload the system.
 		return true
 	})
+	s.tombstones.Range(func(_, value any) bool {
+		val := value.(*hotColdHistogramPoint[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
+		readIdx := val.hcwg.swapHotAndWait()
+		var bucketCounts []uint64
+		count := val.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
+		newPt := metricdata.HistogramDataPoint[N]{
+			Attributes:   val.attrs,
+			StartTime:    startTime,
+			Time:         t,
+			Count:        count,
+			Bounds:       bounds,
+			BucketCounts: bucketCounts,
+		}
+
+		if !s.noSum {
+			newPt.Sum = val.hotColdPoint[readIdx].total.load()
+		}
+		if !s.noMinMax && val.hotColdPoint[readIdx].minMax.set.Load() {
+			newPt.Min = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.minimum.Load())
+			newPt.Max = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.maximum.Load())
+		}
+
+		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		hDPts = append(hDPts, newPt)
+		i++
+		return true
+	})
+	s.tombstones.Clear()
 
 	h.DataPoints = hDPts
 	*dest = h

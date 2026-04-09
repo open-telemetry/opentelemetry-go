@@ -59,6 +59,9 @@ func newDeltaLastValue[N int64 | float64](
 	return &deltaLastValue[N]{
 		newRes: r,
 		start:  now(),
+		tombstones: limitedSyncMap{
+			aggLimit: limit,
+		},
 		hotColdValMap: [2]lastValueMap[N]{
 			{
 				values: limitedSyncMap{aggLimit: limit},
@@ -79,8 +82,10 @@ type deltaLastValue[N int64 | float64] struct {
 
 	hcwg          hotColdWaitGroup
 	hotColdValMap [2]lastValueMap[N]
+	tombstones    limitedSyncMap
 }
 
+// nolint:revive // internal control flag intentionally affects behavior.
 func (s *deltaLastValue[N]) measure(
 	ctx context.Context,
 	value N,
@@ -90,6 +95,21 @@ func (s *deltaLastValue[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
+	key := fltrAttr.Equivalent()
+	if remove {
+		if value, ok := s.hotColdValMap[hotIdx].values.Take(key); ok {
+			val := value.(*lastValuePoint[N])
+			s.tombstones.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val })
+		}
+		return
+	}
+	if value, ok := s.tombstones.Take(key); ok {
+		val := value.(*lastValuePoint[N])
+		actual := s.hotColdValMap[hotIdx].values.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*lastValuePoint[N])
+		if actual != val && val.startTime.Before(actual.startTime) {
+			actual.startTime = val.startTime
+		}
+	}
 	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr, remove)
 }
 
@@ -117,6 +137,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
+	n += s.tombstones.Len()
 	dPts := reset(gData.DataPoints, n, n)
 
 	var i int
@@ -130,6 +151,17 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 		i++
 		return true
 	})
+	s.tombstones.Range(func(_, value any) bool {
+		v := value.(*lastValuePoint[N])
+		dPts[i].Attributes = v.attrs
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = v.value.Load()
+		collectExemplars[N](&dPts[i].Exemplars, v.res.Collect)
+		i++
+		return true
+	})
+	s.tombstones.Clear()
 	gData.DataPoints = dPts
 	// Do not report stale values.
 	s.hotColdValMap[readIdx].values.Clear()
@@ -140,7 +172,8 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 // cumulativeLastValue summarizes a set of measurements as the last one made.
 type cumulativeLastValue[N int64 | float64] struct {
 	lastValueMap[N]
-	start time.Time
+	start      time.Time
+	tombstones limitedSyncMap
 }
 
 func newCumulativeLastValue[N int64 | float64](
@@ -153,6 +186,9 @@ func newCumulativeLastValue[N int64 | float64](
 			newRes: r,
 		},
 		start: now(),
+		tombstones: limitedSyncMap{
+			aggLimit: limit,
+		},
 	}
 }
 
@@ -164,9 +200,20 @@ func (s *cumulativeLastValue[N]) measure(
 	droppedAttr []attribute.KeyValue,
 	remove bool,
 ) {
+	key := fltrAttr.Equivalent()
 	if remove {
-		s.values.Delete(fltrAttr.Equivalent())
+		if value, ok := s.values.Take(key); ok {
+			val := value.(*lastValuePoint[N])
+			s.tombstones.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val })
+		}
 		return
+	}
+	if value, ok := s.tombstones.Take(key); ok {
+		val := value.(*lastValuePoint[N])
+		actual := s.values.LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*lastValuePoint[N])
+		if actual != val && val.startTime.Before(actual.startTime) {
+			actual.startTime = val.startTime
+		}
 	}
 	s.lastValueMap.measure(ctx, value, fltrAttr, droppedAttr, false)
 }
@@ -181,7 +228,9 @@ func (s *cumulativeLastValue[N]) collect(
 
 	// Values are being concurrently written while we iterate, so only use the
 	// current length for capacity.
-	dPts := reset(gData.DataPoints, 0, s.values.Len())
+	capacity := s.values.Len()
+	capacity += s.tombstones.Len()
+	dPts := reset(gData.DataPoints, 0, capacity)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
@@ -204,6 +253,25 @@ func (s *cumulativeLastValue[N]) collect(
 		i++
 		return true
 	})
+	s.tombstones.Range(func(_, value any) bool {
+		v := value.(*lastValuePoint[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = v.startTime
+		}
+		newPt := metricdata.DataPoint[N]{
+			Attributes: v.attrs,
+			StartTime:  startTime,
+			Time:       t,
+			Value:      v.value.Load(),
+		}
+		collectExemplars[N](&newPt.Exemplars, v.res.Collect)
+		dPts = append(dPts, newPt)
+		i++
+		return true
+	})
+	s.tombstones.Clear()
 	gData.DataPoints = dPts
 	// TODO (#3006): This will use an unbounded amount of memory if there
 	// are unbounded number of attribute sets being aggregated. Attribute

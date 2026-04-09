@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -220,23 +219,6 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 	return hotIdx
 }
 
-type restartTimes struct {
-	values sync.Map
-}
-
-func (r *restartTimes) Store(key attribute.Distinct, t time.Time) {
-	r.values.Store(key, t)
-}
-
-func (r *restartTimes) LoadAndDelete(key attribute.Distinct) (time.Time, bool) {
-	val, ok := r.values.LoadAndDelete(key)
-	if !ok {
-		return time.Time{}, false
-	}
-	t, ok := val.(time.Time)
-	return t, ok
-}
-
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
 // attribute sets and provides a Len() function.
 type limitedSyncMap struct {
@@ -294,6 +276,16 @@ func (m *limitedSyncMap) Delete(key any) bool {
 		return true
 	}
 	return false
+}
+
+func (m *limitedSyncMap) Take(key any) (any, bool) {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	value, loaded := m.LoadAndDelete(key)
+	if loaded {
+		m.len--
+	}
+	return value, loaded
 }
 
 func (m *limitedSyncMap) Len() int {

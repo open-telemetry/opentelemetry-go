@@ -303,9 +303,10 @@ func newExponentialHistogram[N int64 | float64](
 		maxSize:  int(maxSize),
 		maxScale: maxScale,
 
-		newRes: r,
-		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
-		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		newRes:     r,
+		limit:      newLimiter[expoHistogramDataPoint[N]](limit),
+		values:     make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		tombstones: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
 
 		start: now(),
 	}
@@ -319,10 +320,11 @@ type expoHistogram[N int64 | float64] struct {
 	maxSize  int
 	maxScale int32
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[expoHistogramDataPoint[N]]
-	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
+	newRes     func(attribute.Set) FilteredExemplarReservoir[N]
+	limit      limiter[expoHistogramDataPoint[N]]
+	values     map[attribute.Distinct]*expoHistogramDataPoint[N]
+	tombstones map[attribute.Distinct]*expoHistogramDataPoint[N]
+	valuesMu   sync.Mutex
 
 	start time.Time
 }
@@ -343,22 +345,31 @@ func (e *expoHistogram[N]) measure(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
+	key := fltrAttr.Equivalent()
 	if remove {
-		delete(e.values, fltrAttr.Equivalent())
+		if v, ok := e.values[key]; ok {
+			delete(e.values, key)
+			e.tombstones[key] = v
+		}
 		return
 	}
+	if v, ok := e.tombstones[key]; ok {
+		delete(e.tombstones, key)
+		e.values[key] = v
+	}
 
-	v, ok := e.values[fltrAttr.Equivalent()]
+	v, ok := e.values[key]
 	if !ok {
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
 		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
+		key = fltrAttr.Equivalent()
+		v, ok = e.values[key]
 		if !ok {
 			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 			v.res = e.newRes(fltrAttr)
 
-			e.values[fltrAttr.Equivalent()] = v
+			e.values[key] = v
 		}
 	}
 	v.record(value)
@@ -378,7 +389,7 @@ func (e *expoHistogram[N]) delta(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	n := len(e.values)
+	n := len(e.values) + len(e.tombstones)
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
@@ -425,6 +436,48 @@ func (e *expoHistogram[N]) delta(
 
 		i++
 	}
+	for _, val := range e.tombstones {
+		hDPts[i].Attributes = val.attrs
+		hDPts[i].StartTime = e.start
+		hDPts[i].Time = t
+		hDPts[i].Count = val.count()
+		hDPts[i].Scale = val.scale.Load()
+		hDPts[i].ZeroCount = val.zeroCount.Load()
+		hDPts[i].ZeroThreshold = 0.0
+
+		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
+		hDPts[i].PositiveBucket.Counts = reset(
+			hDPts[i].PositiveBucket.Counts,
+			len(val.posBuckets.counts),
+			len(val.posBuckets.counts),
+		)
+		for j := range val.posBuckets.counts {
+			hDPts[i].PositiveBucket.Counts[j] = val.posBuckets.counts[j].Load()
+		}
+
+		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
+		hDPts[i].NegativeBucket.Counts = reset(
+			hDPts[i].NegativeBucket.Counts,
+			len(val.negBuckets.counts),
+			len(val.negBuckets.counts),
+		)
+		for j := range val.negBuckets.counts {
+			hDPts[i].NegativeBucket.Counts[j] = val.negBuckets.counts[j].Load()
+		}
+
+		if !e.noSum {
+			hDPts[i].Sum = val.sum.load()
+		}
+		if !e.noMinMax && val.minMax.set.Load() {
+			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+		}
+
+		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+
+		i++
+	}
+	clear(e.tombstones)
 	// Unused attribute sets do not report.
 	clear(e.values)
 
@@ -447,7 +500,7 @@ func (e *expoHistogram[N]) cumulative(
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	n := len(e.values)
+	n := len(e.values) + len(e.tombstones)
 	hDPts := reset(h.DataPoints, n, n)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
@@ -505,6 +558,52 @@ func (e *expoHistogram[N]) cumulative(
 		// sets that become "stale" need to be forgotten so this will not
 		// overload the system.
 	}
+	for _, val := range e.tombstones {
+		hDPts[i].Attributes = val.attrs
+
+		startTime := e.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
+		hDPts[i].StartTime = startTime
+		hDPts[i].Time = t
+		hDPts[i].Count = val.count()
+		hDPts[i].Scale = val.scale.Load()
+		hDPts[i].ZeroCount = val.zeroCount.Load()
+		hDPts[i].ZeroThreshold = 0.0
+
+		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
+		hDPts[i].PositiveBucket.Counts = reset(
+			hDPts[i].PositiveBucket.Counts,
+			len(val.posBuckets.counts),
+			len(val.posBuckets.counts),
+		)
+		for j := range val.posBuckets.counts {
+			hDPts[i].PositiveBucket.Counts[j] = val.posBuckets.counts[j].Load()
+		}
+
+		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
+		hDPts[i].NegativeBucket.Counts = reset(
+			hDPts[i].NegativeBucket.Counts,
+			len(val.negBuckets.counts),
+			len(val.negBuckets.counts),
+		)
+		for j := range val.negBuckets.counts {
+			hDPts[i].NegativeBucket.Counts[j] = val.negBuckets.counts[j].Load()
+		}
+
+		if !e.noSum {
+			hDPts[i].Sum = val.sum.load()
+		}
+		if !e.noMinMax && val.minMax.set.Load() {
+			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+		}
+
+		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+		i++
+	}
+	clear(e.tombstones)
 
 	h.DataPoints = hDPts
 	*dest = h

@@ -606,6 +606,18 @@ func TestCumulativeLastValueFinishResetsStartTime(t *testing.T) {
 	}, got)
 
 	in(ctx, 0, alice, true)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(1),
+				Time:       y2kPlus(3),
+				Value:      1,
+			},
+		},
+	}, got)
+
 	assert.Equal(t, 0, out(&got))
 	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{}, got)
 
@@ -615,10 +627,40 @@ func TestCumulativeLastValueFinishResetsStartTime(t *testing.T) {
 		DataPoints: []metricdata.DataPoint[int64]{
 			{
 				Attributes: fltrAlice,
-				StartTime:  y2kPlus(4),
-				Time:       y2kPlus(5),
+				StartTime:  y2kPlus(5),
+				Time:       y2kPlus(6),
 				Value:      3,
 			},
 		},
 	}, got)
+}
+
+func TestDeltaLastValueFinishExportsFinalPoint(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, out := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		Filter:      attrFltr,
+	}.LastValue()
+
+	ctx := t.Context()
+	in(ctx, 1, alice, false)
+	in(ctx, 0, alice, true)
+
+	var got metricdata.Aggregation = metricdata.Gauge[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2k,
+				Time:       y2kPlus(2),
+				Value:      1,
+			},
+		},
+	}, got)
+
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[int64]{}, got)
 }
