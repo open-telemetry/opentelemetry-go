@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
-- `Set.MarshalLog` in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
+- `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
 
 ### Fixed
 
@@ -119,7 +119,7 @@ The next release will require at least [Go 1.25].
 ### Added
 
 - Add `AlwaysRecord` sampler in `go.opentelemetry.io/otel/sdk/trace`. (#7724)
-- Add `Enabled` method to all synchronous instrument interfaces (`Float64Counter`, `Float64UpDownCounter`, `Float64Histogram`, `Float64Gauge`, `Int64Counter`, `Int64UpDownCounter`, `Int64Histogram`, `Int64Gauge`,) in `go.opentelemetry.io/otel/metric`.
+- Add `Enabled`  to all synchronous instrument interfaces (`Float64Counter`, `Float64UpDownCounter`, `Float64Histogram`, `Float64Gauge`, `Int64Counter`, `Int64UpDownCounter`, `Int64Histogram`, `Int64Gauge`,) in `go.opentelemetry.io/otel/metric`.
   This stabilizes the synchronous instrument enabled feature, allowing users to check if an instrument will process measurements before performing computationally expensive operations. (#7763)
 - Add `go.opentelemetry.io/otel/semconv/v1.39.0` package.
   The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
