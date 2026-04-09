@@ -22,6 +22,8 @@ func (o defaultAttributesOption) AllowedKeys() []attribute.Key {
 }
 
 // WithDefaultAttributes returns a metric.InstrumentOption that specifies default attribute keys.
+// Keys that are not included in the passed keys are treated as opt-in, and are filtered out by default.
+// Users can enable these attributes by using the AttributeFilter of a View to include them.
 func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
