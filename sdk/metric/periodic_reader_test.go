@@ -298,38 +298,68 @@ func TestPeriodicReaderRun(t *testing.T) {
 }
 
 func TestPeriodicReaderExportsPartialMetrics(t *testing.T) {
-	trigger := triggerTicker(t)
+	t.Run("SDK producer error", func(t *testing.T) {
+		trigger := triggerTicker(t)
 
-	// Register an error handler to verify errors from producer are passed to otel error handler.
-	defer func(orig otel.ErrorHandler) {
-		otel.SetErrorHandler(orig)
-	}(otel.GetErrorHandler())
-	eh := newChErrorHandler()
-	otel.SetErrorHandler(eh)
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
+		eh := newChErrorHandler()
+		otel.SetErrorHandler(eh)
 
-	exportCalled := false
-	exp := &fnExporter{
-		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
-			assert.Equal(t, testResourceMetricsA, *m)
-			exportCalled = true
-			return nil
-		},
-	}
+		exportCalled := false
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+				assert.Equal(t, testResourceMetricsA, *m)
+				exportCalled = true
+				return nil
+			},
+		}
 
-	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
-	r.register(testSDKProducer{
-		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
-			// Simulate a producer that produces metrics but also returns an error.
-			*rm = testResourceMetricsA
-			return assert.AnError
-		},
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				*rm = testResourceMetricsA
+				return assert.AnError
+			},
+		})
+		trigger <- time.Now()
+		assert.ErrorIs(t, <-eh.Err, assert.AnError)
+		assert.True(t, exportCalled)
+
+		_ = r.Shutdown(t.Context())
 	})
-	trigger <- time.Now()
-	assert.ErrorIs(t, <-eh.Err, assert.AnError)
-	assert.True(t, exportCalled)
 
-	// Ensure Reader is allowed clean up attempt.
-	_ = r.Shutdown(t.Context())
+	t.Run("external producer error", func(t *testing.T) {
+		trigger := triggerTicker(t)
+
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
+		eh := newChErrorHandler()
+		otel.SetErrorHandler(eh)
+
+		exportCalled := false
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+				assert.Equal(t, testResourceMetricsA, *m)
+				exportCalled = true
+				return nil
+			},
+		}
+
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{
+			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+				return nil, assert.AnError
+			},
+		}))
+		r.register(testSDKProducer{})
+		trigger <- time.Now()
+		assert.ErrorIs(t, <-eh.Err, assert.AnError)
+		assert.True(t, exportCalled)
+
+		_ = r.Shutdown(t.Context())
+	})
 }
 
 func TestPeriodicReaderFlushesPending(t *testing.T) {
@@ -399,7 +429,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		}))
 		r.register(testSDKProducer{})
 		assert.ErrorIs(t, r.ForceFlush(t.Context()), context.DeadlineExceeded)
-		assert.True(t, *called, "exporter Export method not called, pending telemetry from SDK producer should have been flushed")
+		assert.False(t, *called, "exporter Export method should not be called when context is expired")
 
 		// Ensure Reader is allowed clean up attempt.
 		_ = r.Shutdown(t.Context())
