@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add SDK attribute value limit to the BYTES attribute type in sdk/trace and sdk/log. (#7990)
+- Apply attribute value limit to the `BYTESLICE` attribute type in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#7990)
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
 
 <!-- Released section -->
