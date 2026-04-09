@@ -56,7 +56,7 @@ func scrapeWithContinueOnError(ctx context.Context, reg *prometheus.Registry) (i
 	return rr.Code, rr.Body.String()
 }
 
-func TestGetAttrsStringifiesValues(t *testing.T) {
+func TestGetAttrs(t *testing.T) {
 	attrs := attribute.NewSet(
 		attribute.BoolSlice("bools", []bool{true, false}),
 		attribute.Float64("float", math.Inf(1)),
@@ -69,7 +69,7 @@ func TestGetAttrsStringifiesValues(t *testing.T) {
 	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
 }
 
-func TestAttributesToLabelsStringifiesValues(t *testing.T) {
+func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
 	}, otlptranslator.LabelNamer{})
