@@ -982,6 +982,15 @@ func TestModelConversion(t *testing.T) {
 	require.Equal(t, expectedOutputBatch, gottenOutputBatch)
 }
 
+func TestAttributeToStringPairByteSlice(t *testing.T) {
+	t.Parallel()
+
+	k, v := attributeToStringPair(attribute.ByteSlice("bytes", []byte{1, 2, 3}))
+
+	assert.Equal(t, "bytes", k)
+	assert.Equal(t, "[1,2,3]", v)
+}
+
 func zkmodelIDPtr(n uint64) *zkmodel.ID {
 	id := zkmodel.ID(n)
 	return &id
