@@ -318,7 +318,7 @@ func TestPeriodicReaderExportsPartialMetrics(t *testing.T) {
 
 		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{
-			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+			produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
 				*rm = testResourceMetricsA
 				return assert.AnError
 			},
@@ -349,7 +349,7 @@ func TestPeriodicReaderExportsPartialMetrics(t *testing.T) {
 		}
 
 		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{
-			produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
 				return nil, assert.AnError
 			},
 		}))

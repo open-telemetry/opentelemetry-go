@@ -25,9 +25,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8152)
-
-### Fixed
-
 - Fix `PeriodicReader` to export successfully observed metrics even if one or more callbacks return an error (#8149)
 
 <!-- Released section -->
