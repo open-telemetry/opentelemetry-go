@@ -24,7 +24,7 @@ var (
 	logAttrBytes   = log.Bytes("bytes", []byte("test"))
 	logAttrSlice   = log.Slice("slice", log.BoolValue(true))
 	logAttrMap     = log.Map("map", logAttrString)
-	logAttrEmpty   = log.Empty("")
+	logAttrEmpty   = log.Empty("empty")
 
 	kvBytes = &cpb.KeyValue{
 		Key: "bytes",
@@ -52,11 +52,6 @@ var (
 					Values: []*cpb.KeyValue{kvString},
 				},
 			},
-		},
-	}
-	kvEmpty = &cpb.KeyValue{
-		Value: &cpb.AnyValue{
-			Value: &cpb.AnyValue_StringValue{StringValue: "INVALID"},
 		},
 	}
 )

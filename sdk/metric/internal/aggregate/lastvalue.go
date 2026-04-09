@@ -8,22 +8,22 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // lastValuePoint is timestamped measurement data.
 type lastValuePoint[N int64 | float64] struct {
-	attrs attribute.Set
-	value atomicN[N]
-	res   FilteredExemplarReservoir[N]
-	start time.Time
+	attrs     attribute.Set
+	value     atomicN[N]
+	res       FilteredExemplarReservoir[N]
+	startTime time.Time
 }
 
 // lastValueMap summarizes a set of measurements as the last one made.
 type lastValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	values limitedSyncMap
-	start  func(attribute.Distinct) time.Time
 }
 
 // nolint:revive // internal control flag intentionally affects behavior.
@@ -39,11 +39,13 @@ func (s *lastValueMap[N]) measure(
 		return
 	}
 	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		return &lastValuePoint[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
-			start: s.start(attr.Equivalent()),
+		p := &lastValuePoint[N]{
+			res:       s.newRes(attr),
+			attrs:     attr,
+			startTime: now(),
 		}
+		p.value.Store(value)
+		return p
 	}).(*lastValuePoint[N])
 
 	lv.value.Store(value)
@@ -61,12 +63,10 @@ func newDeltaLastValue[N int64 | float64](
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 		},
 	}
@@ -139,34 +139,21 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 
 // cumulativeLastValue summarizes a set of measurements as the last one made.
 type cumulativeLastValue[N int64 | float64] struct {
-	start time.Time
-	done  restartTimes
 	lastValueMap[N]
+	start time.Time
 }
 
 func newCumulativeLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *cumulativeLastValue[N] {
-	s := &cumulativeLastValue[N]{
-		start: now(),
+	return &cumulativeLastValue[N]{
 		lastValueMap: lastValueMap[N]{
 			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
 		},
+		start: now(),
 	}
-	s.lastValueMap.start = s.startFor
-	return s
-}
-
-func (s *cumulativeLastValue[N]) startFor(key attribute.Distinct) time.Time {
-	if start, ok := s.done.LoadAndDelete(key); ok {
-		if start.IsZero() {
-			return now()
-		}
-		return start
-	}
-	return s.start
 }
 
 // nolint:revive // internal control flag intentionally affects behavior.
@@ -178,9 +165,7 @@ func (s *cumulativeLastValue[N]) measure(
 	remove bool,
 ) {
 	if remove {
-		if s.values.Delete(fltrAttr.Equivalent()) {
-			s.done.Store(fltrAttr.Equivalent(), time.Time{})
-		}
+		s.values.Delete(fltrAttr.Equivalent())
 		return
 	}
 	s.lastValueMap.measure(ctx, value, fltrAttr, droppedAttr, false)
@@ -198,12 +183,19 @@ func (s *cumulativeLastValue[N]) collect(
 	// current length for capacity.
 	dPts := reset(gData.DataPoints, 0, s.values.Len())
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	s.values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = v.startTime
+		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: v.attrs,
-			StartTime:  v.start,
+			StartTime:  startTime,
 			Time:       t,
 			Value:      v.value.Load(),
 		}

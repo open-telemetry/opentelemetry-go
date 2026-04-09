@@ -60,6 +60,9 @@ type Float64CounterConfig struct {
 func NewFloat64CounterConfig(opts ...Float64CounterOption) Float64CounterConfig {
 	var config Float64CounterConfig
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyFloat64Counter(config)
 	}
 	return config
@@ -134,6 +137,9 @@ type Float64UpDownCounterConfig struct {
 func NewFloat64UpDownCounterConfig(opts ...Float64UpDownCounterOption) Float64UpDownCounterConfig {
 	var config Float64UpDownCounterConfig
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyFloat64UpDownCounter(config)
 	}
 	return config
@@ -209,6 +215,9 @@ type Float64HistogramConfig struct {
 func NewFloat64HistogramConfig(opts ...Float64HistogramOption) Float64HistogramConfig {
 	var config Float64HistogramConfig
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyFloat64Histogram(config)
 	}
 	return config
@@ -287,6 +296,9 @@ type Float64GaugeConfig struct {
 func NewFloat64GaugeConfig(opts ...Float64GaugeOption) Float64GaugeConfig {
 	var config Float64GaugeConfig
 	for _, o := range opts {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		config = o.applyFloat64Gauge(config)
 	}
 	return config

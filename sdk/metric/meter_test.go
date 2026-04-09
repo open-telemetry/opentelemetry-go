@@ -2832,6 +2832,8 @@ func TestExemplarFilter(t *testing.T) {
 }
 
 func TestFinishResetsCumulativeStartTime(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr))
 	ctr, err := mp.Meter("test").Int64Counter("count")

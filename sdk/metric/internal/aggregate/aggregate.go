@@ -146,11 +146,9 @@ func (b Builder[N]) ExponentialBucketHistogram(
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		h.pointStart = func(attribute.Distinct) time.Time { return time.Time{} }
 		return b.filter(h.measure), h.delta
 	default:
 		h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		h.pointStart = h.startFor
 		return b.filter(h.measure), h.cumulative
 	}
 }

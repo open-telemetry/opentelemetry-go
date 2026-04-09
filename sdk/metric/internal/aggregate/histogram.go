@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -27,9 +28,9 @@ type hotColdHistogramPoint[N int64 | float64] struct {
 	hcwg         hotColdWaitGroup
 	hotColdPoint [2]histogramPointCounters[N]
 
-	attrs attribute.Set
-	res   FilteredExemplarReservoir[N]
-	start time.Time
+	attrs     attribute.Set
+	res       FilteredExemplarReservoir[N]
+	startTime time.Time
 }
 
 // histogramPointCounters contains only the atomic counter data, and is used by
@@ -250,12 +251,11 @@ func (s *deltaHistogram[N]) collect(
 type cumulativeHistogram[N int64 | float64] struct {
 	values limitedSyncMap
 
+	start    time.Time
 	noMinMax bool
 	noSum    bool
 	bounds   []float64
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	start    time.Time
-	finished restartTimes
 }
 
 // newCumulativeHistogram returns a histogram that accumulates measurements
@@ -273,23 +273,13 @@ func newCumulativeHistogram[N int64 | float64](
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
 	return &cumulativeHistogram[N]{
+		start:    now(),
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
 		values:   limitedSyncMap{aggLimit: limit},
-		start:    now(),
 	}
-}
-
-func (s *cumulativeHistogram[N]) startFor(key attribute.Distinct) time.Time {
-	if start, ok := s.finished.LoadAndDelete(key); ok {
-		if start.IsZero() {
-			return now()
-		}
-		return start
-	}
-	return s.start
 }
 
 // nolint:revive // internal control flag intentionally affects behavior.
@@ -301,18 +291,15 @@ func (s *cumulativeHistogram[N]) measure(
 	remove bool,
 ) {
 	if remove {
-		if s.values.Delete(fltrAttr.Equivalent()) {
-			s.finished.Store(fltrAttr.Equivalent(), time.Time{})
-		}
+		s.values.Delete(fltrAttr.Equivalent())
 		return
 	}
 
 	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		start := s.startFor(attr.Equivalent())
 		hPt := &hotColdHistogramPoint[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
-			start: start,
+			res:       s.newRes(attr),
+			attrs:     attr,
+			startTime: now(),
 			// N+1 buckets. For example:
 			//
 			//   bounds = [0, 5, 10]
@@ -369,16 +356,23 @@ func (s *cumulativeHistogram[N]) collect(
 	// current length for capacity.
 	hDPts := reset(h.DataPoints, 0, s.values.Len())
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*hotColdHistogramPoint[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
 		// swap, observe, and clear the point
 		readIdx := val.hcwg.swapHotAndWait()
 		var bucketCounts []uint64
 		count := val.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
 		newPt := metricdata.HistogramDataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  val.start,
+			StartTime:  startTime,
 			Time:       t,
 			Count:      count,
 			Bounds:     bounds,

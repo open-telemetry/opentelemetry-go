@@ -140,42 +140,92 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 	}
 }
 
-func testAggergationConcurrentSafe[N int64 | float64](
+func getConcurrentVals[N int64 | float64]() []N {
+	// Keep length of v in sync with concurrentNumRecords
+	// and expectedConcurrentSum.
+	switch any(*new(N)).(type) {
+	case float64:
+		v := []float64{2.5, 6.1, 4.4, 10.0, 22.0, -3.5, -6.5, 3.0, -6.0}
+		return any(v).([]N)
+	default:
+		v := []int64{2, 6, 4, 10, 22, -3, -6, 3, -6}
+		return any(v).([]N)
+	}
+}
+
+const (
+	concurrentValsSum       = 32
+	concurrentNumGoroutines = 10
+	concurrentNumRecords    = 90 // Multiple of 9 (length of values sequences)
+	expectedConcurrentCount = uint64(concurrentNumGoroutines * concurrentNumRecords)
+)
+
+func expectedConcurrentSum[N int64 | float64]() N {
+	return N(int64(concurrentNumGoroutines) * int64(concurrentNumRecords/9) * concurrentValsSum)
+}
+
+// testAggregationConcurrentSafe provides a unified stress test for all generic aggregators
+// by generating high contention, cardinality limit overflow, and validating exact results.
+func testAggregationConcurrentSafe[N int64 | float64](
 	meas Measure[N],
 	comp ComputeAggregation,
-	validate func(t *testing.T, agg metricdata.Aggregation),
+	validate func(t *testing.T, aggs []metricdata.Aggregation),
 ) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
-		got := new(metricdata.Aggregation)
 		ctx := t.Context()
 		var wg sync.WaitGroup
-		for _, args := range []arg[N]{
-			{ctx, 2, alice, false},
-			{ctx, 6, alice, false},
-			{ctx, 4, alice, false},
-			{ctx, 10, alice, false},
-			{ctx, 22, alice, false},
-			{ctx, -3, bob, false},
-			{ctx, -6, bob, false},
-			{ctx, 3, bob, false},
-			{ctx, 6, bob, false},
-		} {
-			wg.Go(func() {
-				meas(args.ctx, args.value, args.attr, args.remove)
-			})
+
+		// Use 10 different attribute sets to force overflow on the AggregationLimit
+		// which is typically set to 3.
+		attrs := make([]attribute.Set, concurrentNumGoroutines)
+		for i := range attrs {
+			attrs[i] = attribute.NewSet(attribute.String(keyUser, strconv.Itoa(i)))
 		}
+
+		vals := getConcurrentVals[N]()
+
+		wg.Add(concurrentNumGoroutines)
+		for i := range concurrentNumGoroutines {
+			go func(id int) {
+				defer wg.Done()
+				// Each goroutine records to a distinct attribute set
+				attr := attrs[id]
+
+				for j := range concurrentNumRecords {
+					meas(ctx, vals[j%len(vals)], attr, false)
+				}
+			}(i)
+		}
+
+		var results []metricdata.Aggregation
+
+		// Run computation concurrently with measurements to stress hot/cold swaps
 		wg.Go(func() {
-			for range 2 {
+			for range concurrentNumRecords {
+				got := new(metricdata.Aggregation)
 				comp(got)
-				// We do not check expected output for each step because
-				// computeAggregation is run concurrently with steps. Instead,
-				// we validate that the output is a valid possible output.
-				validate(t, *got)
+				results = append(results, *got)
 			}
 		})
+
 		wg.Wait()
+
+		// Final flush to get final values
+		got := new(metricdata.Aggregation)
+		comp(got)
+		results = append(results, *got)
+
+		validate(t, results)
+	}
+}
+
+func assertSumEqual[N int64 | float64](t *testing.T, expected, actual N) {
+	if _, ok := any(*new(N)).(float64); ok {
+		assert.InDelta(t, float64(expected), float64(actual), 0.0001)
+	} else {
+		assert.Equal(t, expected, actual)
 	}
 }
 

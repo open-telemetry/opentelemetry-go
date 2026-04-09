@@ -8,20 +8,20 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type sumValue[N int64 | float64] struct {
-	n     atomicCounter[N]
-	res   FilteredExemplarReservoir[N]
-	attrs attribute.Set
-	start time.Time
+	n         atomicCounter[N]
+	res       FilteredExemplarReservoir[N]
+	attrs     attribute.Set
+	startTime time.Time
 }
 
 type sumValueMap[N int64 | float64] struct {
 	values limitedSyncMap
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
-	start  func(attribute.Distinct) time.Time
 }
 
 // nolint:revive // internal control flag intentionally affects behavior.
@@ -38,9 +38,9 @@ func (s *sumValueMap[N]) measure(
 	}
 	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &sumValue[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
-			start: s.start(attr.Equivalent()),
+			res:       s.newRes(attr),
+			attrs:     attr,
+			startTime: now(),
 		}
 	}).(*sumValue[N])
 	sv.n.add(value)
@@ -65,12 +65,10 @@ func newDeltaSum[N int64 | float64](
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 			{
 				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				start:  func(attribute.Distinct) time.Time { return time.Time{} },
 			},
 		},
 	}
@@ -144,7 +142,7 @@ func newCumulativeSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *cumulativeSum[N] {
-	s := &cumulativeSum[N]{
+	return &cumulativeSum[N]{
 		monotonic: monotonic,
 		start:     now(),
 		sumValueMap: sumValueMap[N]{
@@ -152,27 +150,14 @@ func newCumulativeSum[N int64 | float64](
 			newRes: r,
 		},
 	}
-	s.sumValueMap.start = s.startFor
-	return s
 }
 
 // deltaSum is the storage for sums which never reset.
 type cumulativeSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
-	finished  restartTimes
 
 	sumValueMap[N]
-}
-
-func (s *cumulativeSum[N]) startFor(key attribute.Distinct) time.Time {
-	if start, ok := s.finished.LoadAndDelete(key); ok {
-		if start.IsZero() {
-			return now()
-		}
-		return start
-	}
-	return s.start
 }
 
 func (s *cumulativeSum[N]) collect(
@@ -190,12 +175,19 @@ func (s *cumulativeSum[N]) collect(
 	// current length for capacity.
 	dPts := reset(sData.DataPoints, 0, s.values.Len())
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  val.start,
+			StartTime:  startTime,
 			Time:       t,
 			Value:      val.n.load(),
 		}
@@ -224,9 +216,7 @@ func (s *cumulativeSum[N]) measure(
 	remove bool,
 ) {
 	if remove {
-		if s.values.Delete(fltrAttr.Equivalent()) {
-			s.finished.Store(fltrAttr.Equivalent(), time.Time{})
-		}
+		s.values.Delete(fltrAttr.Equivalent())
 		return
 	}
 	s.sumValueMap.measure(ctx, value, fltrAttr, droppedAttr, false)

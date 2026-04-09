@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -404,6 +405,21 @@ func TestErrorType(t *testing.T) {
 		var err error = struct{ baseErr }{}
 		assert.Contains(t, errorType(err), "struct")
 	})
+
+	t.Run("FmtWrappedFallsBackToWrappedType", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", errWithType{msg: "boom", typ: ""})
+		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+	})
+
+	t.Run("CustomWrapperStaysTopLevel", func(t *testing.T) {
+		err := wrappedErr{err: errWithType{msg: "boom", typ: ""}}
+		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.wrappedErr", errorType(err))
+	})
+
+	t.Run("FmtWrappedNilError", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", nil)
+		assert.Equal(t, fmtWrapErrorType.String(), errorType(err))
+	})
 }
 
 type errWithType struct {
@@ -418,6 +434,14 @@ func (e errWithType) ErrorType() string { return e.typ }
 type baseErr struct{}
 
 func (baseErr) Error() string { return "boom" }
+
+type wrappedErr struct {
+	err error
+}
+
+func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
+
+func (e wrappedErr) Unwrap() error { return e.err }
 
 func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})

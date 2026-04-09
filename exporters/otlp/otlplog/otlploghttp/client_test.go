@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
@@ -263,7 +264,7 @@ func newHTTPCollector(
 		opt(c)
 	}
 
-	c.listener, err = net.Listen("tcp", u.Host)
+	c.listener, err = (&net.ListenConfig{}).Listen(context.Background(), "tcp", u.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +493,7 @@ func TestClient(t *testing.T) {
 		addr := coll.Addr().String()
 		opts := []Option{WithEndpoint(addr), WithInsecure()}
 		cfg := newConfig(opts)
-		client, err := newHTTPClient(cfg)
+		client, err := newHTTPClient(t.Context(), cfg)
 		require.NoError(t, err)
 		return client, coll
 	}
@@ -573,7 +574,7 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	addr := coll.Addr().String()
 	opts := []Option{WithEndpoint(addr), WithInsecure()}
 	cfg := newConfig(opts)
-	client, err := newHTTPClient(cfg)
+	client, err := newHTTPClient(t.Context(), cfg)
 	require.NoError(t, err)
 
 	require.NoError(t, client.uploadLogs(ctx, make([]*lpb.ResourceLogs, 1)))
@@ -833,6 +834,127 @@ func TestConfig(t *testing.T) {
 	})
 }
 
+func TestGetBodyCalledOnRedirect(t *testing.T) {
+	// Test that req.GetBody is set correctly, allowing the HTTP transport
+	// to re-send the body on 307 redirects.
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/logs/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	opts := []Option{WithEndpoint(server.Listener.Addr().String()), WithInsecure()}
+	cfg := newConfig(opts)
+	client, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	exporter, err := newExporter(client, cfg)
+	require.NoError(t, err)
+	ctx := t.Context()
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.Export(ctx, make([]log.Record, 1))
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+}
+
+func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
+	// Test that req.GetBody replays the gzipped request body on redirects.
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/logs/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	opts := []Option{
+		WithEndpoint(server.Listener.Addr().String()),
+		WithInsecure(),
+		WithCompression(GzipCompression),
+	}
+	cfg := newConfig(opts)
+	client, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	exporter, err := newExporter(client, cfg)
+	require.NoError(t, err)
+	ctx := t.Context()
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.Export(ctx, make([]log.Record, 1))
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+
+	for _, body := range requestBodies {
+		reader, err := gzip.NewReader(bytes.NewReader(body))
+		require.NoError(t, err)
+		func() {
+			defer func() { assert.NoError(t, reader.Close()) }()
+
+			decoded, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			assert.NotEmpty(t, decoded)
+		}()
+	}
+}
+
 // SetExporterID sets the exporter ID counter to v and returns the previous
 // value.
 //
@@ -850,7 +972,7 @@ func newFactory(t testing.TB) func(rCh <-chan exportResult) (*client, *httpColle
 		addr := coll.Addr().String()
 		opts := []Option{WithEndpoint(addr), WithInsecure()}
 		cfg := newConfig(opts)
-		client, err := newHTTPClient(cfg)
+		client, err := newHTTPClient(t.Context(), cfg)
 		require.NoError(t, err)
 		return client, coll, addr
 	}
@@ -962,6 +1084,58 @@ func TestClientInstrumentation(t *testing.T) {
 		metricdatatest.IgnoreValue(),
 	}
 	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func TestResponseBodySizeLimit(t *testing.T) {
+	// Override the limit to 1 byte so any non-empty response body exceeds it.
+	orig := maxResponseBodySize
+	maxResponseBodySize = 1
+	t.Cleanup(func() { maxResponseBodySize = orig })
+
+	// largeBody is larger than the 1-byte limit.
+	largeBody := []byte("xx")
+
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+	}{
+		{
+			name:        "success response body too large",
+			status:      http.StatusOK,
+			contentType: "application/x-protobuf",
+		},
+		{
+			name:        "error response body too large",
+			status:      http.StatusServiceUnavailable,
+			contentType: "text/plain",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write(largeBody)
+			}))
+			t.Cleanup(srv.Close)
+
+			opts := []Option{
+				WithEndpoint(srv.Listener.Addr().String()),
+				WithInsecure(),
+				WithRetry(RetryConfig{Enabled: false}),
+			}
+			cfg := newConfig(opts)
+			c, err := newHTTPClient(t.Context(), cfg)
+			require.NoError(t, err)
+
+			err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+			assert.ErrorContains(t, err, "response body too large")
+			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+		})
+	}
 }
 
 func BenchmarkExporterExportLogs(b *testing.B) {
