@@ -14,6 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `http/json` support, and the `WithEncoding` option to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7804)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
+- Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
+  Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
+  See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
 
 ### Changed
 
