@@ -376,8 +376,6 @@ func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
 	p.zeroCount.Add(other.zeroCount.Load())
 }
 
-
-
 func newDeltaExpoHistogram[N int64 | float64](
 	maxSize, maxScale int32,
 	noMinMax, noSum bool,
@@ -457,7 +455,7 @@ func (e *deltaExpoHistogram[N]) measure(
 }
 
 func (e *deltaExpoHistogram[N]) collect(
-	dest *metricdata.Aggregation,
+	dest *metricdata.Aggregation, // nolint:gocritic // dest is an interface pointer used to avoid allocations
 ) int {
 	t := now()
 
@@ -608,7 +606,7 @@ func (e *cumulativeExpoHistogram[N]) measure(
 }
 
 func (e *cumulativeExpoHistogram[N]) collect(
-	dest *metricdata.Aggregation,
+	dest *metricdata.Aggregation, // nolint:gocritic // dest is an interface pointer used to avoid allocations
 ) int {
 	t := now()
 

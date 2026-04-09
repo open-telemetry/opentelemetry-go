@@ -324,8 +324,8 @@ func (t *atomicUnderflowTracker) checkAndRecord(value float64) bool {
 				}
 			}
 			maxBit := -1
-			for i := int(7); i >= 0; i-- {
-				if newMask&(1<<uint32(i)) != 0 {
+			for i := 7; i >= 0; i-- {
+				if newMask&(1<<i) != 0 {
 					maxBit = i
 					break
 				}
