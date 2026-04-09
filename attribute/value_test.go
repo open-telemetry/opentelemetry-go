@@ -94,20 +94,27 @@ func TestValue(t *testing.T) {
 			wantValue: []byte("hello world"),
 		},
 		{
+			name:      "Key.Slice() correctly returns keys's internal []Value value",
+			value:     k.Slice([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")}).Value,
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
+		},
+		{
 			name:      "empty value",
 			value:     attribute.Value{},
 			wantType:  attribute.EMPTY,
 			wantValue: nil,
 		},
 	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.value.Type() != testcase.wantType {
+				t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+			}
+			got := testcase.value.AsInterface()
+			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
+		})
 	}
 }
 
@@ -156,6 +163,18 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.ByteSlice("ByteSlice", []byte("one")),
 			attribute.ByteSlice("ByteSlice", []byte("one")),
+		},
+		{
+			attribute.Slice("Slice", []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.SliceValue([]attribute.Value{attribute.StringValue("nested")}),
+			}),
+			attribute.Slice("Slice", []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.SliceValue([]attribute.Value{attribute.StringValue("nested")}),
+			}),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
@@ -257,6 +276,10 @@ func TestNotEquivalence(t *testing.T) {
 			attribute.StringSlice("StringSlice", []string{"one", "two"}),
 		},
 		{
+			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(43)}),
+		},
+		{
 			attribute.KeyValue{Key: "Empty"},
 			attribute.String("Empty", ""),
 		},
@@ -335,6 +358,11 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.ByteSlice("ByteSlice", b1)
 	b2 := kv.Value.AsByteSlice()
 	assert.Equal(t, b1, b2)
+
+	vs1 := []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("test")}
+	kv = attribute.Slice("Slice", vs1)
+	vs2 := kv.Value.AsSlice()
+	assert.Equal(t, vs1, vs2)
 }
 
 func TestValueString(t *testing.T) {
@@ -554,6 +582,16 @@ func TestValueString(t *testing.T) {
 			name: "byte slice",
 			v:    attribute.ByteSliceValue([]byte("hello world")),
 			want: "aGVsbG8gd29ybGQ=",
+		},
+		{
+			name: "slice",
+			v: attribute.SliceValue([]attribute.Value{
+				attribute.StringValue("hello \"world\""),
+				attribute.Float64Value(math.NaN()),
+				attribute.ByteSliceValue([]byte("bin")),
+				attribute.SliceValue([]attribute.Value{attribute.BoolValue(true), {}}),
+			}),
+			want: `["hello \"world\"","NaN","Ymlu",[true,null]]`,
 		},
 		{
 			name: "empty byte slice",

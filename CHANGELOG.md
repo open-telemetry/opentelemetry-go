@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
+- Add `Slice` and `SliceValue` functions for new `SLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#TODO)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
 
 ### Changed

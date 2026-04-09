@@ -38,6 +38,13 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
+	func(k string) KeyValue { return Slice(k, []Value{BoolValue(true), IntValue(42)}) },
+	func(k string) KeyValue {
+		return Slice(k, []Value{
+			StringValue("nested"),
+			SliceValue([]Value{Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))}),
+		})
+	},
 	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
 }
 
@@ -188,9 +195,9 @@ func FuzzHashKVs(f *testing.F) {
 			kvs = append(kvs, Bool(k5, b))
 		}
 
-		// Add slice types based on sliceType parameter
+		// Add slice types based on sliceType parameter.
 		if numAttrs > 5 {
-			switch sliceType % 5 {
+			switch sliceType % 6 {
 			case 0:
 				// Test BoolSlice with variable length.
 				bools := make([]bool, len(s)%5) // 0-4 elements
@@ -235,6 +242,21 @@ func FuzzHashKVs(f *testing.F) {
 					bytes[i] = byte(i + len(k1))
 				}
 				kvs = append(kvs, ByteSlice("bytes", bytes))
+			case 5:
+				values := make([]Value, len(s)%4) // 0-3 elements
+				for i := range values {
+					switch i % 4 {
+					case 0:
+						values[i] = BoolValue((i+len(k1))%2 == 0)
+					case 1:
+						values[i] = IntValue(i + len(k2))
+					case 2:
+						values[i] = StringValue(fmt.Sprintf("item_%d", i))
+					case 3:
+						values[i] = SliceValue([]Value{Float64Value(fVal), ByteSliceValue([]byte("bin"))})
+					}
+				}
+				kvs = append(kvs, Slice("slice", values))
 			}
 		}
 
@@ -315,6 +337,22 @@ func FuzzHashKVs(f *testing.F) {
 					val := modifiedKvs[0].Value.AsFloat64()
 					if !math.IsNaN(val) && !math.IsInf(val, 0) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
+					}
+				case SLICE:
+					origSlice := modifiedKvs[0].Value.AsSlice()
+					if len(origSlice) > 0 {
+						newSlice := slices.Clone(origSlice)
+						switch newSlice[0].Type() {
+						case INT64:
+							newSlice[0] = Int64Value(newSlice[0].AsInt64() + 1)
+						case BOOL:
+							newSlice[0] = BoolValue(!newSlice[0].AsBool())
+						case STRING:
+							newSlice[0] = StringValue(newSlice[0].AsString() + "_mod")
+						default:
+							newSlice[0] = StringValue("modified")
+						}
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice)
 					}
 				case EMPTY:
 					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")

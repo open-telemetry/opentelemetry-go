@@ -52,6 +52,8 @@ const (
 	STRINGSLICE
 	// BYTESLICE is a slice of bytes Type Value.
 	BYTESLICE
+	// SLICE is a slice of Value Type values.
+	SLICE
 	// INVALID is used for a Value with no value set.
 	//
 	// Deprecated: Use EMPTY instead as an empty value is a valid value.
@@ -149,6 +151,11 @@ func ByteSliceValue(v []byte) Value {
 	}
 }
 
+// SliceValue creates a SLICE Value.
+func SliceValue(v []Value) Value {
+	return Value{vtype: SLICE, slice: sliceValue(v)}
+}
+
 // Type returns a type of the Value.
 func (v Value) Type() Type {
 	return v.vtype
@@ -230,6 +237,30 @@ func (v Value) asStringSlice() []string {
 	return attribute.AsSlice[string](v.slice)
 }
 
+// AsSlice returns the []Value value. Make sure that the Value's type is
+// SLICE.
+func (v Value) AsSlice() []Value {
+	if v.vtype != SLICE {
+		return nil
+	}
+	return v.asSlice()
+}
+
+func (v Value) asSlice() []Value {
+	switch vals := v.slice.(type) {
+	case [0]Value:
+		return []Value{}
+	case [1]Value:
+		return []Value{vals[0]}
+	case [2]Value:
+		return []Value{vals[0], vals[1]}
+	case [3]Value:
+		return []Value{vals[0], vals[1], vals[2]}
+	default:
+		return asValueSliceReflect(v.slice)
+	}
+}
+
 // AsByteSlice returns the bytes value. Make sure that the Value's type
 // is BYTESLICE.
 func (v Value) AsByteSlice() []byte {
@@ -266,6 +297,8 @@ func (v Value) AsInterface() any {
 		return v.asStringSlice()
 	case BYTESLICE:
 		return v.asByteSlice()
+	case SLICE:
+		return v.asSlice()
 	case EMPTY:
 		return nil
 	}
@@ -279,8 +312,9 @@ func (v Value) AsInterface() any {
 // JSON literals, floating-point values use JSON numbers except that NaN and
 // ±Inf are rendered as NaN, Infinity, and -Infinity, byte slices are
 // base64-encoded, empty values are the empty string, and slices are encoded as
-// JSON arrays. Floating-point special values inside arrays are encoded as JSON
-// strings.
+// JSON arrays. String, byte, and special floating-point values inside arrays
+// are encoded as JSON strings, and empty values inside arrays are encoded as
+// null.
 //
 // [OpenTelemetry AnyValue representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols
 func (v Value) String() string {
@@ -303,6 +337,8 @@ func (v Value) String() string {
 		return formatStringSliceValue(v.slice)
 	case BYTESLICE:
 		return base64.StdEncoding.EncodeToString(v.asByteSlice())
+	case SLICE:
+		return formatValueSliceValue(v.slice)
 	case EMPTY:
 		return ""
 	default:
@@ -343,6 +379,8 @@ func (v Value) Emit() string {
 		return v.stringly
 	case BYTESLICE:
 		return base64.StdEncoding.EncodeToString(v.asByteSlice())
+	case SLICE:
+		return v.String()
 	case EMPTY:
 		return ""
 	default:
@@ -357,6 +395,39 @@ const (
 	float64ArrayElemMaxLen = len("-1.7976931348623157e+308")
 	commaLen               = len(",")
 )
+
+func sliceValue(v []Value) any {
+	switch len(v) {
+	case 0:
+		return [0]Value{}
+	case 1:
+		return [1]Value{v[0]}
+	case 2:
+		return [2]Value{v[0], v[1]}
+	case 3:
+		return [3]Value{v[0], v[1], v[2]}
+	default:
+		return sliceValueReflect(v)
+	}
+}
+
+func sliceValueReflect(v []Value) any {
+	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeFor[Value]())).Elem()
+	reflect.Copy(cp, reflect.ValueOf(v))
+	return cp.Interface()
+}
+
+func asValueSliceReflect(v any) []Value {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Array || rv.Type().Elem() != reflect.TypeFor[Value]() {
+		return nil
+	}
+	cpy := make([]Value, rv.Len())
+	if len(cpy) > 0 {
+		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
+	}
+	return cpy
+}
 
 func formatBoolSliceValue(v any) string {
 	switch vals := v.(type) {
@@ -603,6 +674,107 @@ func formatStringSliceReflect(v any) string {
 	}
 	_ = b.WriteByte(']')
 	return b.String()
+}
+
+func formatValueSliceValue(v any) string {
+	switch vals := v.(type) {
+	case [0]Value:
+		return "[]"
+	case [1]Value:
+		return formatValueSlice(vals[:])
+	case [2]Value:
+		return formatValueSlice(vals[:])
+	case [3]Value:
+		return formatValueSlice(vals[:])
+	default:
+		return formatValueSliceReflect(v)
+	}
+}
+
+func formatValueSlice(vals []Value) string {
+	var b strings.Builder
+	// Estimate 10 bytes per value for small values and commas.
+	b.Grow(jsonArrayBracketsLen + len(vals)*commaLen + len(vals)*10)
+	_ = b.WriteByte('[')
+	for i, val := range vals {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		appendJSONValue(&b, val)
+	}
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func formatValueSliceReflect(v any) string {
+	rv := reflect.ValueOf(v)
+
+	var b strings.Builder
+	// Estimate 10 bytes per value for small values and commas.
+	b.Grow(jsonArrayBracketsLen + rv.Len()*commaLen + rv.Len()*10)
+	_ = b.WriteByte('[')
+	for i := 0; i < rv.Len(); i++ {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		appendJSONValue(&b, rv.Index(i).Interface().(Value))
+	}
+	_ = b.WriteByte(']')
+	return b.String()
+}
+
+func appendJSONValue(dst *strings.Builder, v Value) {
+	switch v.Type() {
+	case BOOL:
+		if v.AsBool() {
+			_, _ = dst.WriteString("true")
+		} else {
+			_, _ = dst.WriteString("false")
+		}
+	case BOOLSLICE:
+		_, _ = dst.WriteString(formatBoolSliceValue(v.slice))
+	case INT64:
+		var buf [int64ArrayElemMaxLen]byte
+		out := strconv.AppendInt(buf[:0], v.AsInt64(), 10)
+		_, _ = dst.Write(out)
+	case INT64SLICE:
+		_, _ = dst.WriteString(formatInt64SliceValue(v.slice))
+	case FLOAT64:
+		if s, ok := formatArrayFloat64(v.AsFloat64()); ok {
+			appendJSONString(dst, s)
+			return
+		}
+		var buf [float64ArrayElemMaxLen]byte
+		out := strconv.AppendFloat(buf[:0], v.AsFloat64(), 'g', -1, 64)
+		_, _ = dst.Write(out)
+	case FLOAT64SLICE:
+		_, _ = dst.WriteString(formatFloat64SliceValue(v.slice))
+	case STRING:
+		appendJSONString(dst, v.stringly)
+	case STRINGSLICE:
+		_, _ = dst.WriteString(formatStringSliceValue(v.slice))
+	case BYTESLICE:
+		appendJSONString(dst, base64.StdEncoding.EncodeToString(v.asByteSlice()))
+	case SLICE:
+		_, _ = dst.WriteString(formatValueSliceValue(v.slice))
+	case EMPTY:
+		_, _ = dst.WriteString("null")
+	default:
+		appendJSONString(dst, "unknown")
+	}
+}
+
+func formatArrayFloat64(v float64) (string, bool) {
+	switch {
+	case math.IsNaN(v):
+		return "NaN", true
+	case math.IsInf(v, 1):
+		return "Infinity", true
+	case math.IsInf(v, -1):
+		return "-Infinity", true
+	default:
+		return "", false
+	}
 }
 
 // appendJSONString appends s to dst as a JSON string literal.
