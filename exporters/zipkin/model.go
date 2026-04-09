@@ -175,7 +175,7 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 		data, _ := json.Marshal(kv.Value.AsStringSlice())
 		return string(kv.Key), string(data)
 	default:
-		return string(kv.Key), kv.Value.Emit()
+		return string(kv.Key), kv.Value.String()
 	}
 }
 

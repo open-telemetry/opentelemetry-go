@@ -105,7 +105,7 @@ func (d *defaultAttrEncoder) Encode(iter Iterator) string {
 		if keyValue.Value.Type() == STRING {
 			copyAndEscape(buf, keyValue.Value.AsString())
 		} else {
-			_, _ = buf.WriteString(keyValue.Value.Emit())
+			_, _ = buf.WriteString(keyValue.Value.String())
 		}
 	}
 	return buf.String()
