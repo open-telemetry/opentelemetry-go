@@ -177,7 +177,8 @@ func (i instID) normalize() instID {
 }
 
 type int64Inst struct {
-	measures []aggregate.Measure[int64]
+	measures      []aggregate.Measure[int64]
+	removeMatches []aggregate.RemoveMatch
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -198,7 +199,12 @@ func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption
 }
 
 func (i *int64Inst) Finish(ctx context.Context, opts ...metric.FinishOption) {
-	i.remove(ctx, metric.NewFinishConfig(opts).Attributes())
+	c := metric.NewFinishConfig(opts)
+	if c.MatchAttributes() == nil {
+		i.remove(ctx, c.Attributes())
+		return
+	}
+	i.removeMatch(func(attrs attribute.Set) bool { return c.Matcher()(attrs) })
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
@@ -229,8 +235,15 @@ func (i *int64Inst) remove(
 	}
 }
 
+func (i *int64Inst) removeMatch(match aggregate.MatchAttributes) {
+	for _, rm := range i.removeMatches {
+		rm(match)
+	}
+}
+
 type float64Inst struct {
-	measures []aggregate.Measure[float64]
+	measures      []aggregate.Measure[float64]
+	removeMatches []aggregate.RemoveMatch
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -251,7 +264,12 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 }
 
 func (i *float64Inst) Finish(ctx context.Context, opts ...metric.FinishOption) {
-	i.remove(ctx, metric.NewFinishConfig(opts).Attributes())
+	c := metric.NewFinishConfig(opts)
+	if c.MatchAttributes() == nil {
+		i.remove(ctx, c.Attributes())
+		return
+	}
+	i.removeMatch(func(attrs attribute.Set) bool { return c.Matcher()(attrs) })
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
@@ -272,6 +290,12 @@ func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Se
 func (i *float64Inst) remove(ctx context.Context, s attribute.Set) {
 	for _, in := range i.measures {
 		in(ctx, 0, s, true)
+	}
+}
+
+func (i *float64Inst) removeMatch(match aggregate.MatchAttributes) {
+	for _, rm := range i.removeMatches {
+		rm(match)
 	}
 }
 

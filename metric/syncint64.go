@@ -41,7 +41,10 @@ type Int64Counter interface {
 	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to identify the attribute set.
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
@@ -118,7 +121,10 @@ type Int64UpDownCounter interface {
 	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to identify the attribute set.
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
@@ -195,7 +201,10 @@ type Int64Histogram interface {
 	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to identify the attribute set.
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
@@ -277,7 +286,10 @@ type Int64Gauge interface {
 	// Finish unregisters an attribute set.
 	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
-	// the WithAttributes) option to identify the attribute set.
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.

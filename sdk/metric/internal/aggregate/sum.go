@@ -24,6 +24,28 @@ type sumValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
+func moveSumToTombstones[N int64 | float64](src, dest *limitedSyncMap, match MatchAttributes) {
+	src.Range(func(key, value any) bool {
+		val := value.(*sumValue[N])
+		if !match(val.attrs) {
+			return true
+		}
+		taken, ok := src.Take(key)
+		if !ok {
+			return true
+		}
+		tomb := taken.(*sumValue[N])
+		actual := dest.LoadOrStoreAttr(tomb.attrs, func(attribute.Set) any { return tomb }).(*sumValue[N])
+		if actual != tomb {
+			actual.n.add(tomb.n.load())
+			if tomb.startTime.Before(actual.startTime) {
+				actual.startTime = tomb.startTime
+			}
+		}
+		return true
+	})
+}
+
 // nolint:revive // internal control flag intentionally affects behavior.
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
@@ -85,6 +107,14 @@ type deltaSum[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
 	hotColdValMap [2]sumValueMap[N]
 	tombstones    limitedSyncMap
+}
+
+func (s *deltaSum[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	moveSumToTombstones[N](&s.hotColdValMap[0].values, &s.tombstones, match)
+	moveSumToTombstones[N](&s.hotColdValMap[1].values, &s.tombstones, match)
 }
 
 // nolint:revive // internal control flag intentionally affects behavior.
@@ -197,6 +227,13 @@ type cumulativeSum[N int64 | float64] struct {
 
 	sumValueMap[N]
 	tombstones limitedSyncMap
+}
+
+func (s *cumulativeSum[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	moveSumToTombstones[N](&s.values, &s.tombstones, match)
 }
 
 func (s *cumulativeSum[N]) collect(

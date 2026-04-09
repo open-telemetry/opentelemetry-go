@@ -773,6 +773,131 @@ func TestFinishInstruments(t *testing.T) {
 	}
 }
 
+func TestFinishWithMatchAttributes(t *testing.T) {
+	rdr := NewManualReader()
+	m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+
+	ctr, err := m.Int64Counter("jobs")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	containerA1 := metric.WithAttributes(
+		attribute.String("container.id", "a"),
+		attribute.String("pod", "api-0"),
+	)
+	containerA2 := metric.WithAttributes(
+		attribute.String("container.id", "a"),
+		attribute.String("pod", "api-1"),
+	)
+	containerB := metric.WithAttributes(
+		attribute.String("container.id", "b"),
+		attribute.String("pod", "api-2"),
+	)
+
+	ctr.Add(ctx, 1, containerA1)
+	ctr.Add(ctx, 2, containerA2)
+	ctr.Add(ctx, 3, containerB)
+
+	ctr.Finish(ctx, metric.WithMatchAttributes(func(attrs attribute.Set) bool {
+		v, ok := (&attrs).Value("container.id")
+		return ok && v.AsString() == "a"
+	}))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+
+	points := func(rm metricdata.ResourceMetrics) []metricdata.DataPoint[int64] {
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != "jobs" {
+					continue
+				}
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				if ok {
+					return sum.DataPoints
+				}
+			}
+		}
+		return nil
+	}
+
+	got := points(rm)
+	require.Len(t, got, 3)
+
+	values := map[attribute.Distinct]int64{}
+	for _, pt := range got {
+		values[pt.Attributes.Equivalent()] = pt.Value
+	}
+	a0 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-0"))
+	a1 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-1"))
+	b0 := attribute.NewSet(attribute.String("container.id", "b"), attribute.String("pod", "api-2"))
+	assert.Equal(t, int64(1), values[(&a0).Equivalent()])
+	assert.Equal(t, int64(2), values[(&a1).Equivalent()])
+	assert.Equal(t, int64(3), values[(&b0).Equivalent()])
+
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	got = points(rm)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(3), got[0].Value)
+}
+
+func TestFinishWithAttributesAndMatchAttributes(t *testing.T) {
+	rdr := NewManualReader()
+	m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+
+	ctr, err := m.Int64Counter("jobs")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	a0 := metric.WithAttributes(attribute.String("container.id", "a"), attribute.String("pod", "api-0"))
+	a1 := metric.WithAttributes(attribute.String("container.id", "a"), attribute.String("pod", "api-1"))
+
+	ctr.Add(ctx, 1, a0)
+	ctr.Add(ctx, 2, a1)
+
+	ctr.Finish(
+		ctx,
+		metric.WithAttributes(attribute.String("container.id", "a"), attribute.String("pod", "api-0")),
+		metric.WithMatchAttributes(func(attrs attribute.Set) bool {
+			v, ok := (&attrs).Value("pod")
+			return ok && v.AsString() == "api-0"
+		}),
+	)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+
+	var points []metricdata.DataPoint[int64]
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "jobs" {
+				points = m.Data.(metricdata.Sum[int64]).DataPoints
+			}
+		}
+	}
+	require.Len(t, points, 2)
+
+	values := map[attribute.Distinct]int64{}
+	for _, pt := range points {
+		values[pt.Attributes.Equivalent()] = pt.Value
+	}
+	api0 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-0"))
+	api1 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-1"))
+	assert.Equal(t, int64(1), values[(&api0).Equivalent()])
+	assert.Equal(t, int64(2), values[(&api1).Equivalent()])
+
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "jobs" {
+				points = m.Data.(metricdata.Sum[int64]).DataPoints
+			}
+		}
+	}
+	require.Len(t, points, 1)
+	assert.Equal(t, int64(2), points[0].Value)
+}
+
 func TestMeterWithDropView(t *testing.T) {
 	dropView := NewView(
 		Instrument{Name: "*"},

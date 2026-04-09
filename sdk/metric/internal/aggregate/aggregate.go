@@ -18,6 +18,12 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set, bool)
 
+// MatchAttributes returns whether attrs should be finished.
+type MatchAttributes func(attribute.Set) bool
+
+// RemoveMatch finishes all active series whose attributes match match.
+type RemoveMatch func(match MatchAttributes)
+
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
 type ComputeAggregation func(dest *metricdata.Aggregation) int
@@ -73,51 +79,51 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 }
 
 // LastValue returns a last-value aggregate function input and output.
-func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
+func (b Builder[N]) LastValue() (Measure[N], RemoveMatch, ComputeAggregation) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		lv := newDeltaLastValue[N](b.AggregationLimit, b.resFunc())
-		return b.filter(lv.measure), lv.collect
+		return b.filter(lv.measure), lv.removeMatch, lv.collect
 	default:
 		lv := newCumulativeLastValue[N](b.AggregationLimit, b.resFunc())
-		return b.filter(lv.measure), lv.collect
+		return b.filter(lv.measure), lv.removeMatch, lv.collect
 	}
 }
 
 // PrecomputedLastValue returns a last-value aggregate function input and
 // output. The aggregation returned from the returned ComputeAggregation
 // function will always only return values from the previous collection cycle.
-func (b Builder[N]) PrecomputedLastValue() (Measure[N], ComputeAggregation) {
+func (b Builder[N]) PrecomputedLastValue() (Measure[N], RemoveMatch, ComputeAggregation) {
 	lv := newPrecomputedLastValue[N](b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(lv.measure), lv.delta
+		return b.filter(lv.measure), lv.removeMatch, lv.delta
 	default:
-		return b.filter(lv.measure), lv.cumulative
+		return b.filter(lv.measure), lv.removeMatch, lv.cumulative
 	}
 }
 
 // PrecomputedSum returns a sum aggregate function input and output. The
 // arguments passed to the input are expected to be the precomputed sum values.
-func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregation) {
+func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], RemoveMatch, ComputeAggregation) {
 	s := newPrecomputedSum[N](monotonic, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(s.measure), s.delta
+		return b.filter(s.measure), s.removeMatch, s.delta
 	default:
-		return b.filter(s.measure), s.cumulative
+		return b.filter(s.measure), s.removeMatch, s.cumulative
 	}
 }
 
 // Sum returns a sum aggregate function input and output.
-func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
+func (b Builder[N]) Sum(monotonic bool) (Measure[N], RemoveMatch, ComputeAggregation) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		s := newDeltaSum[N](monotonic, b.AggregationLimit, b.resFunc())
-		return b.filter(s.measure), s.collect
+		return b.filter(s.measure), s.removeMatch, s.collect
 	default:
 		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc())
-		return b.filter(s.measure), s.collect
+		return b.filter(s.measure), s.removeMatch, s.collect
 	}
 }
 
@@ -126,14 +132,14 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 func (b Builder[N]) ExplicitBucketHistogram(
 	boundaries []float64,
 	noMinMax, noSum bool,
-) (Measure[N], ComputeAggregation) {
+) (Measure[N], RemoveMatch, ComputeAggregation) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		h := newDeltaHistogram[N](boundaries, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		return b.filter(h.measure), h.collect
+		return b.filter(h.measure), h.removeMatch, h.collect
 	default:
 		h := newCumulativeHistogram[N](boundaries, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		return b.filter(h.measure), h.collect
+		return b.filter(h.measure), h.removeMatch, h.collect
 	}
 }
 
@@ -142,14 +148,14 @@ func (b Builder[N]) ExplicitBucketHistogram(
 func (b Builder[N]) ExponentialBucketHistogram(
 	maxSize, maxScale int32,
 	noMinMax, noSum bool,
-) (Measure[N], ComputeAggregation) {
+) (Measure[N], RemoveMatch, ComputeAggregation) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		return b.filter(h.measure), h.delta
+		return b.filter(h.measure), h.removeMatch, h.delta
 	default:
 		h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		return b.filter(h.measure), h.cumulative
+		return b.filter(h.measure), h.removeMatch, h.cumulative
 	}
 }
 

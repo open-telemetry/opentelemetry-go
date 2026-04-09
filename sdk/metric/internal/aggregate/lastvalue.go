@@ -26,6 +26,25 @@ type lastValueMap[N int64 | float64] struct {
 	values limitedSyncMap
 }
 
+func moveLastValueToTombstones[N int64 | float64](src, dest *limitedSyncMap, match MatchAttributes) {
+	src.Range(func(key, value any) bool {
+		val := value.(*lastValuePoint[N])
+		if !match(val.attrs) {
+			return true
+		}
+		taken, ok := src.Take(key)
+		if !ok {
+			return true
+		}
+		tomb := taken.(*lastValuePoint[N])
+		actual := dest.LoadOrStoreAttr(tomb.attrs, func(attribute.Set) any { return tomb }).(*lastValuePoint[N])
+		if actual != tomb && tomb.startTime.Before(actual.startTime) {
+			actual.startTime = tomb.startTime
+		}
+		return true
+	})
+}
+
 // nolint:revive // internal control flag intentionally affects behavior.
 func (s *lastValueMap[N]) measure(
 	ctx context.Context,
@@ -83,6 +102,14 @@ type deltaLastValue[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
 	hotColdValMap [2]lastValueMap[N]
 	tombstones    limitedSyncMap
+}
+
+func (s *deltaLastValue[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	moveLastValueToTombstones[N](&s.hotColdValMap[0].values, &s.tombstones, match)
+	moveLastValueToTombstones[N](&s.hotColdValMap[1].values, &s.tombstones, match)
 }
 
 // nolint:revive // internal control flag intentionally affects behavior.
@@ -174,6 +201,13 @@ type cumulativeLastValue[N int64 | float64] struct {
 	lastValueMap[N]
 	start      time.Time
 	tombstones limitedSyncMap
+}
+
+func (s *cumulativeLastValue[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	moveLastValueToTombstones[N](&s.values, &s.tombstones, match)
 }
 
 func newCumulativeLastValue[N int64 | float64](

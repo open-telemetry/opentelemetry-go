@@ -25,19 +25,19 @@ func BenchmarkInstrument(b *testing.B) {
 		var meas []aggregate.Measure[int64]
 
 		build.Temporality = metricdata.CumulativeTemporality
-		in, _ := build.LastValue()
+		in, _, _ := build.LastValue()
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
-		in, _ = build.LastValue()
+		in, _, _ = build.LastValue()
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		inst := int64Inst{measures: meas}
@@ -54,15 +54,15 @@ func BenchmarkInstrument(b *testing.B) {
 		build := aggregate.Builder[int64]{}
 		var meas []aggregate.Measure[int64]
 
-		in, _ := build.PrecomputedLastValue()
+		in, _, _ := build.PrecomputedLastValue()
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		o := observable[int64]{measures: meas}

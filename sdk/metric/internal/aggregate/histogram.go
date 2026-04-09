@@ -41,6 +41,62 @@ type histogramPointCounters[N int64 | float64] struct {
 	minMax atomicMinMax[N]
 }
 
+func moveHistogramToTombstones[N int64 | float64](
+	src, dest *limitedSyncMap,
+	noMinMax, noSum bool,
+	match MatchAttributes,
+) {
+	src.Range(func(key, value any) bool {
+		val := value.(*histogramPoint[N])
+		if !match(val.attrs) {
+			return true
+		}
+		taken, ok := src.Take(key)
+		if !ok {
+			return true
+		}
+		tomb := taken.(*histogramPoint[N])
+		actual := dest.LoadOrStoreAttr(tomb.attrs, func(attribute.Set) any { return tomb }).(*histogramPoint[N])
+		if actual != tomb {
+			tomb.mergeIntoAndReset(&actual.histogramPointCounters, noMinMax, noSum)
+		}
+		return true
+	})
+}
+
+func moveCumulativeHistogramToTombstones[N int64 | float64](
+	src, dest *limitedSyncMap,
+	noMinMax, noSum bool,
+	match MatchAttributes,
+) {
+	src.Range(func(key, value any) bool {
+		val := value.(*hotColdHistogramPoint[N])
+		if !match(val.attrs) {
+			return true
+		}
+		taken, ok := src.Take(key)
+		if !ok {
+			return true
+		}
+		tomb := taken.(*hotColdHistogramPoint[N])
+		actual := dest.LoadOrStoreAttr(tomb.attrs, func(attribute.Set) any { return tomb }).(*hotColdHistogramPoint[N])
+		if actual != tomb {
+			tombReadIdx := tomb.hcwg.swapHotAndWait()
+			tombHotIdx := (tombReadIdx + 1) % 2
+			tomb.hotColdPoint[tombReadIdx].mergeIntoAndReset(&tomb.hotColdPoint[tombHotIdx], noMinMax, noSum)
+
+			dstHotIdx := actual.hcwg.start()
+			tomb.hotColdPoint[tombHotIdx].mergeIntoAndReset(&actual.hotColdPoint[dstHotIdx], noMinMax, noSum)
+			actual.hcwg.done(dstHotIdx)
+
+			if tomb.startTime.Before(actual.startTime) {
+				actual.startTime = tomb.startTime
+			}
+		}
+		return true
+	})
+}
+
 func (b *histogramPointCounters[N]) loadCountsInto(into *[]uint64) uint64 {
 	// TODO (#3047): Making copies for counts incurs a large
 	// memory allocation footprint. Alternatives should be explored.
@@ -104,6 +160,14 @@ type deltaHistogram[N int64 | float64] struct {
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
+func (s *deltaHistogram[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	moveHistogramToTombstones[N](&s.hotColdValMap[0], &s.tombstones, s.noMinMax, s.noSum, match)
+	moveHistogramToTombstones[N](&s.hotColdValMap[1], &s.tombstones, s.noMinMax, s.noSum, match)
+}
+
 // nolint:revive // internal control flag intentionally affects behavior.
 func (s *deltaHistogram[N]) measure(
 	ctx context.Context,
@@ -126,7 +190,7 @@ func (s *deltaHistogram[N]) measure(
 		val := value.(*histogramPoint[N])
 		actual := s.hotColdValMap[hotIdx].LoadOrStoreAttr(val.attrs, func(attribute.Set) any { return val }).(*histogramPoint[N])
 		if actual != val {
-			val.histogramPointCounters.mergeIntoAndReset(&actual.histogramPointCounters, s.noMinMax, s.noSum)
+			val.mergeIntoAndReset(&actual.histogramPointCounters, s.noMinMax, s.noSum)
 		}
 	}
 
@@ -295,6 +359,13 @@ type cumulativeHistogram[N int64 | float64] struct {
 	noSum    bool
 	bounds   []float64
 	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
+}
+
+func (s *cumulativeHistogram[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	moveCumulativeHistogramToTombstones[N](&s.values, &s.tombstones, s.noMinMax, s.noSum, match)
 }
 
 // newCumulativeHistogram returns a histogram that accumulates measurements

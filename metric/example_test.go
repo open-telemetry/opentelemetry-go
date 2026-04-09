@@ -147,6 +147,36 @@ func ExampleMeter_upDownCounter() {
 	itemsCounter.Finish(context.Background(), metric.WithAttributes(attribute.String("location", "kitchen")))
 }
 
+func ExampleWithMatchAttributes_finishAllSeriesForContainer() {
+	itemsCounter, err := meter.Int64Counter("items")
+	if err != nil {
+		panic(err)
+	}
+
+	// Finish all series for a container regardless of pod or status values.
+	itemsCounter.Finish(context.Background(), metric.WithMatchAttributes(func(attrs attribute.Set) bool {
+		v, ok := (&attrs).Value("container.id")
+		return ok && v.AsString() == "container-42"
+	}))
+}
+
+func ExampleWithMatchAttributes_finishSubsetWithinExactAttributes() {
+	itemsCounter, err := meter.Int64Counter("items")
+	if err != nil {
+		panic(err)
+	}
+
+	// Finish only the error series for a specific container.
+	itemsCounter.Finish(
+		context.Background(),
+		metric.WithAttributes(attribute.String("container.id", "container-42")),
+		metric.WithMatchAttributes(func(attrs attribute.Set) bool {
+			v, ok := (&attrs).Value("status")
+			return ok && v.AsString() == "error"
+		}),
+	)
+}
+
 // Gauges can be used to record non-additive values when changes occur.
 //
 // Here's how you might report the current speed of a cpu fan.

@@ -329,6 +329,46 @@ type expoHistogram[N int64 | float64] struct {
 	start time.Time
 }
 
+func (e *expoHistogram[N]) removeMatch(match MatchAttributes) {
+	if match == nil {
+		return
+	}
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+
+	for key, val := range e.values {
+		if !match(val.attrs) {
+			continue
+		}
+		delete(e.values, key)
+		if actual, ok := e.tombstones[key]; ok {
+			if val.startTime.Before(actual.startTime) {
+				actual.startTime = val.startTime
+			}
+			actual.sum.add(val.sum.load())
+			actual.zeroCount.Add(val.zeroCount.Load())
+			if !e.noMinMax && val.minMax.set.Load() {
+				actual.minMax.Update(val.minMax.minimum.Load())
+				actual.minMax.Update(val.minMax.maximum.Load())
+			}
+			for i := range val.posBuckets.counts {
+				bin := val.posBuckets.startBin + int32(i)
+				for range val.posBuckets.counts[i].Load() {
+					actual.posBuckets.record(bin)
+				}
+			}
+			for i := range val.negBuckets.counts {
+				bin := val.negBuckets.startBin + int32(i)
+				for range val.negBuckets.counts[i].Load() {
+					actual.negBuckets.record(bin)
+				}
+			}
+			continue
+		}
+		e.tombstones[key] = val
+	}
+}
+
 // revive:disable-next-line:flag-parameter
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,

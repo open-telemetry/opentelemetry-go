@@ -68,7 +68,7 @@ func TestSum(t *testing.T) {
 
 func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -196,7 +196,7 @@ func testDeltaSum[N int64 | float64]() func(t *testing.T) {
 
 func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -321,7 +321,7 @@ func testCumulativeSum[N int64 | float64]() func(t *testing.T) {
 
 func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -450,7 +450,7 @@ func testDeltaPrecomputedSum[N int64 | float64]() func(t *testing.T) {
 
 func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	mono := false
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -623,7 +623,7 @@ func validateSum[N int64 | float64](isPrecomputed bool) func(t *testing.T, aggs 
 }
 
 func testDeltaSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -632,7 +632,7 @@ func testDeltaSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 }
 
 func testCumulativeSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -641,7 +641,7 @@ func testCumulativeSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 }
 
 func testDeltaPrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -650,7 +650,7 @@ func testDeltaPrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.
 }
 
 func testCumulativePrecomputedSumConcurrentSafe[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -663,45 +663,53 @@ func BenchmarkSum(b *testing.B) {
 	// the Aggregation method. It should not have an effect on operational
 	// performance, therefore, only monotonic=false is benchmarked here.
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.Sum(false)
+		return in, out
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.Sum(false)
+		return in, out
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.Sum(false)
+		return in, out
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.Sum(false)
+		return in, out
 	}))
 
 	b.Run("Precomputed/Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.PrecomputedSum(false)
+		return in, out
 	}))
 	b.Run("Precomputed/Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.PrecomputedSum(false)
+		return in, out
 	}))
 	b.Run("Precomputed/Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.PrecomputedSum(false)
+		return in, out
 	}))
 	b.Run("Precomputed/Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.PrecomputedSum(false)
+		return in, out
 	}))
 }
 
@@ -711,7 +719,7 @@ func TestCumulativeSumFinishResetsStartTime(t *testing.T) {
 	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
 	assert.True(t, x.PerSeriesStartTimestamps.Enabled())
 
-	in, out := Builder[int64]{
+	in, _, out := Builder[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		Filter:      attrFltr,
 	}.Sum(false)
@@ -772,7 +780,7 @@ func TestDeltaSumFinishExportsFinalPoint(t *testing.T) {
 	c := new(clock)
 	t.Cleanup(c.Register())
 
-	in, out := Builder[int64]{
+	in, _, out := Builder[int64]{
 		Temporality: metricdata.DeltaTemporality,
 		Filter:      attrFltr,
 	}.Sum(false)
@@ -806,7 +814,7 @@ func TestDeltaSumFinishRevivePreservesData(t *testing.T) {
 	c := new(clock)
 	t.Cleanup(c.Register())
 
-	in, out := Builder[int64]{
+	in, _, out := Builder[int64]{
 		Temporality: metricdata.DeltaTemporality,
 		Filter:      attrFltr,
 	}.Sum(false)
@@ -837,7 +845,7 @@ func TestCumulativeSumFinishRevivePreservesData(t *testing.T) {
 	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
 	assert.True(t, x.PerSeriesStartTimestamps.Enabled())
 
-	in, out := Builder[int64]{
+	in, _, out := Builder[int64]{
 		Temporality: metricdata.CumulativeTemporality,
 		Filter:      attrFltr,
 	}.Sum(false)

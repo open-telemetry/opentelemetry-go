@@ -107,7 +107,7 @@ type conf[N int64 | float64] struct {
 }
 
 func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -194,7 +194,7 @@ func testDeltaHist[N int64 | float64](c conf[N]) func(t *testing.T) {
 }
 
 func testCumulativeHist[N int64 | float64](c conf[N]) func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -372,7 +372,7 @@ func validateHistogram[N int64 | float64](t *testing.T, aggs []metricdata.Aggreg
 }
 
 func testCumulativeHistConcurrentSafe[N int64 | float64]() func(*testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -381,7 +381,7 @@ func testCumulativeHistConcurrentSafe[N int64 | float64]() func(*testing.T) {
 }
 
 func testDeltaHistConcurrentSafe[N int64 | float64]() func(*testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -522,24 +522,28 @@ func TestDeltaHistogramReset(t *testing.T) {
 
 func BenchmarkHistogram(b *testing.B) {
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
+		return in, out
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
+		return in, out
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
+		return in, out
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
+		return in, out
 	}))
 }
 
