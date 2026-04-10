@@ -991,6 +991,12 @@ func appendJSONString(dst *strings.Builder, s string) {
 	_ = dst.WriteByte('"')
 }
 
+// This is adapted from the Go standard library's encoding/base64
+// [Encoding.Encode implementation]. It keeps the same encoding behavior we need
+// here, but writes directly into a strings.Builder. We inline this instead of using
+// encoding/base64 to avoid allocations.
+//
+// [Encoding.Encode implementation]: https://github.com/golang/go/blob/3b5954c6349d31465dca409b45ab6597e0942d9f/src/encoding/base64/base64.go#L139-L189
 func appendBase64(dst *strings.Builder, s string) {
 	const encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
