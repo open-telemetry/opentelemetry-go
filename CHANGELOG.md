@@ -25,6 +25,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8152)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/trace`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
