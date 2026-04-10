@@ -343,8 +343,6 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 			out = append(out, telemetry.StringValue(v))
 		}
 		return telemetry.SliceValue(out...)
-	case attribute.BYTESLICE:
-		return telemetry.BytesValue(value.AsByteSlice())
 	case attribute.SLICE:
 		slice := value.AsSlice()
 		out := make([]telemetry.Value, 0, len(slice))
