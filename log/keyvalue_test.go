@@ -362,6 +362,11 @@ func TestValueFromAttribute(t *testing.T) {
 			want: log.SliceValue(log.StringValue("foo"), log.StringValue("bar")),
 		},
 		{
+			desc: "ByteSlice",
+			v:    attribute.ByteSliceValue([]byte("foo")),
+			want: log.BytesValue([]byte("foo")),
+		},
+    {
 			desc: "Slice",
 			v: attribute.SliceValue([]attribute.Value{
 				attribute.BoolValue(true),
@@ -373,7 +378,7 @@ func TestValueFromAttribute(t *testing.T) {
 				log.StringValue("foo"),
 				log.SliceValue(log.Int64Value(7)),
 			),
-		},
+    },
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {

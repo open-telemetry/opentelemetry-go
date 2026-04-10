@@ -581,7 +581,11 @@ func equalKeyValue(a, b attribute.KeyValue) bool {
 		if ok := slices.Equal(a.Value.AsStringSlice(), b.Value.AsStringSlice()); !ok {
 			return false
 		}
-	case attribute.SLICE:
+	case attribute.BYTESLICE:
+		if ok := slices.Equal(a.Value.AsByteSlice(), b.Value.AsByteSlice()); !ok {
+			return false
+		}
+  case attribute.SLICE:
 		if ok := slices.EqualFunc(a.Value.AsSlice(), b.Value.AsSlice(), equalValue); !ok {
 			return false
 		}
@@ -735,7 +739,7 @@ func hasAttributesExemplars[T int64 | float64](
 			continue
 		}
 		if val != attr.Value {
-			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
 		}
 	}
 	return reasons
@@ -752,7 +756,7 @@ func hasAttributesDataPoints[T int64 | float64](
 			continue
 		}
 		if val != attr.Value {
-			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
 		}
 	}
 	return reasons
@@ -791,7 +795,7 @@ func hasAttributesHistogramDataPoints[T int64 | float64](
 			continue
 		}
 		if val != attr.Value {
-			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
 		}
 	}
 	return reasons
@@ -822,7 +826,7 @@ func hasAttributesExponentialHistogramDataPoints[T int64 | float64](
 			continue
 		}
 		if val != attr.Value {
-			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
 		}
 	}
 	return reasons
@@ -918,7 +922,7 @@ func hasAttributesSummaryDataPoint(dp metricdata.SummaryDataPoint, attrs ...attr
 			continue
 		}
 		if val != attr.Value {
-			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.Emit(), val.Emit()))
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
 		}
 	}
 	return reasons
