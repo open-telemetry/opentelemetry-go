@@ -586,7 +586,7 @@ func equalKeyValue(a, b attribute.KeyValue) bool {
 			return false
 		}
 	case attribute.SLICE:
-		if ok := slices.EqualFunc(a.Value.AsSlice(), b.Value.AsSlice(), equalValue); !ok {
+		if ok := slices.Equal(a.Value.AsSlice(), b.Value.AsSlice()); !ok {
 			return false
 		}
 	case attribute.EMPTY:
@@ -596,39 +596,6 @@ func equalKeyValue(a, b attribute.KeyValue) bool {
 		panic(fmt.Sprintf("unknown attribute value type: %s", a.Value.Type()))
 	}
 	return true
-}
-
-func equalValue(a, b attribute.Value) bool {
-	if a.Type() != b.Type() {
-		return false
-	}
-
-	switch a.Type() {
-	case attribute.EMPTY:
-		return true
-	case attribute.BOOL:
-		return a.AsBool() == b.AsBool()
-	case attribute.INT64:
-		return a.AsInt64() == b.AsInt64()
-	case attribute.FLOAT64:
-		return a.AsFloat64() == b.AsFloat64()
-	case attribute.STRING:
-		return a.AsString() == b.AsString()
-	case attribute.BOOLSLICE:
-		return slices.Equal(a.AsBoolSlice(), b.AsBoolSlice())
-	case attribute.INT64SLICE:
-		return slices.Equal(a.AsInt64Slice(), b.AsInt64Slice())
-	case attribute.FLOAT64SLICE:
-		return slices.Equal(a.AsFloat64Slice(), b.AsFloat64Slice())
-	case attribute.STRINGSLICE:
-		return slices.Equal(a.AsStringSlice(), b.AsStringSlice())
-	case attribute.BYTESLICE:
-		return slices.Equal(a.AsByteSlice(), b.AsByteSlice())
-	case attribute.SLICE:
-		return slices.EqualFunc(a.AsSlice(), b.AsSlice(), equalValue)
-	default:
-		panic(fmt.Sprintf("unknown attribute value type: %s", a.Type()))
-	}
 }
 
 func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) (reasons []string) {
