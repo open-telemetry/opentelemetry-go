@@ -22,8 +22,8 @@ func (o defaultAttributesOption) AllowedKeys() []attribute.Key {
 }
 
 // WithDefaultAttributes returns a metric.InstrumentOption that specifies default attribute keys.
-// Keys that are not included in the passed keys are treated as opt-in, and are filtered out by default.
-// Users can enable these attributes by using the AttributeFilter of a View to include them.
+// The implementation should treat keys that are not included in the passed keys as opt-in, and they should be filtered out by default.
+// Users of [go.opentelemetry.io/otel/sdk/metric] can enable these attributes by using the AttributeFilter of a View to include them.
 func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
