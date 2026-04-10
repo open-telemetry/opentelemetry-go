@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/trace`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8153)
+- Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
@@ -21,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
+- `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
 
 ### Fixed
 
