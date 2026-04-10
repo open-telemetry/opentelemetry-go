@@ -585,7 +585,7 @@ func equalKeyValue(a, b attribute.KeyValue) bool {
 		if ok := slices.Equal(a.Value.AsByteSlice(), b.Value.AsByteSlice()); !ok {
 			return false
 		}
-  case attribute.SLICE:
+	case attribute.SLICE:
 		if ok := slices.EqualFunc(a.Value.AsSlice(), b.Value.AsSlice(), equalValue); !ok {
 			return false
 		}
