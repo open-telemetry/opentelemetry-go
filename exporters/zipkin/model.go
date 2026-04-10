@@ -174,6 +174,14 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	case attribute.STRINGSLICE:
 		data, _ := json.Marshal(kv.Value.AsStringSlice())
 		return string(kv.Key), string(data)
+	case attribute.BYTESLICE:
+		raw := kv.Value.AsByteSlice()
+		data := make([]int, len(raw))
+		for i, b := range raw {
+			data[i] = int(b)
+		}
+		encoded, _ := json.Marshal(data)
+		return string(kv.Key), string(encoded)
 	default:
 		return string(kv.Key), kv.Value.Emit()
 	}
