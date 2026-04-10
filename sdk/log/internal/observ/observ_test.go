@@ -32,10 +32,12 @@ func setup(t *testing.T) func() metricdata.ScopeMetrics {
 	return func() metricdata.ScopeMetrics {
 		var got metricdata.ResourceMetrics
 		require.NoError(t, reader.Collect(t.Context(), &got))
-		if len(got.ScopeMetrics) != 1 {
-			return metricdata.ScopeMetrics{}
+		for _, sm := range got.ScopeMetrics {
+			if sm.Scope.Name == observ.ScopeName {
+				return sm
+			}
 		}
-		return got.ScopeMetrics[0]
+		return metricdata.ScopeMetrics{}
 	}
 }
 
@@ -90,6 +92,10 @@ func (m *errMeter) Int64ObservableUpDownCounter(
 	string,
 	...mapi.Int64ObservableUpDownCounterOption,
 ) (mapi.Int64ObservableUpDownCounter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
 	return nil, m.err
 }
 
