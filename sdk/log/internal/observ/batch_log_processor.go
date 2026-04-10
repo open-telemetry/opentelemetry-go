@@ -113,9 +113,13 @@ func (b *BLP) Shutdown() error {
 }
 
 func (b *BLP) Processed(ctx context.Context, n int64) {
-	b.processed.Add(ctx, n, b.processedOpts...)
+	if b.processed.Enabled(ctx) {
+		b.processed.Add(ctx, n, b.processedOpts...)
+	}
 }
 
 func (b *BLP) ProcessedQueueFull(ctx context.Context, n int64) {
-	b.processed.Add(ctx, n, b.processedQueueFullOpts...)
+	if b.processed.Enabled(ctx) {
+		b.processed.Add(ctx, n, b.processedQueueFullOpts...)
+	}
 }
