@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
+- Add experimental observability metrics in `go.opentelemetry.io/otel/sdk/log`. (#7124)
 
 ### Changed
 
@@ -128,7 +129,6 @@ The next release will require at least [Go 1.25].
 - Add `go.opentelemetry.io/otel/semconv/v1.39.0` package.
   The package contains semantic conventions from the `v1.39.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.39.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.38.0.` (#7783, #7789)
-- Add experimental observability metrics in `go.opentelemetry.io/otel/sdk/log`. (#7124)
 
 ### Changed
 
