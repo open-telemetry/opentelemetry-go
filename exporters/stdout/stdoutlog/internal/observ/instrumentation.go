@@ -178,12 +178,11 @@ type ExportOp struct {
 
 // End completes the observation of the operation being observed by a call to
 // [Instrumentation.ExportLogs].
-// Any error that is encountered is provided as err.
+// The success parameter is the number of logs exported successfully.
+// Any error encountered during export is provided as err.
 //
-// If err is not nil, all logs will be recorded as failures unless error is of
-// type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
-// of successfully exported logs will be determined by inspecting the
-// RejectedItems field of the PartialSuccess.
+// If err is not nil, End records failed log exports as count-success with the
+// error.type attribute set from err.
 func (e ExportOp) End(success int64, err error) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
