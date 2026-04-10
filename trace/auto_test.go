@@ -164,6 +164,15 @@ func TestSpanKindTransform(t *testing.T) {
 	}
 }
 
+func TestConvAttrValueBytes(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.ByteSliceValue([]byte("bytes")))
+
+	assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+	assert.Equal(t, []byte("bytes"), val.AsBytes())
+}
+
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {
 	t.Parallel()
 
