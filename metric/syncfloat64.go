@@ -37,6 +37,18 @@ type Float64Counter interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64CounterConfig contains options for synchronous counter instruments that
@@ -105,6 +117,18 @@ type Float64UpDownCounter interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64UpDownCounterConfig contains options for synchronous counter
@@ -173,6 +197,18 @@ type Float64Histogram interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64HistogramConfig contains options for synchronous histogram
@@ -246,6 +282,18 @@ type Float64Gauge interface {
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
 	Enabled(context.Context) bool
+
+	// Finish unregisters an attribute set.
+	//
+	// Use the WithAttributeSet (or, if performance is not a concern,
+	// the WithAttributes) option to identify an exact attribute set.
+	//
+	// Use WithMatchAttributes to finish broader groups of series, for example
+	// all series for a container regardless of the rest of their attributes.
+	//
+	// Implementations of this method need to be safe for a user to call
+	// concurrently.
+	Finish(ctx context.Context, options ...FinishOption)
 }
 
 // Float64GaugeConfig contains options for synchronous gauge instruments that

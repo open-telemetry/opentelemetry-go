@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -540,6 +541,361 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
 		})
 	}
+}
+
+func TestFinishInstruments(t *testing.T) {
+	// The synchronous measurement methods must ignore the context cancellation.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	alice := attribute.NewSet(
+		attribute.String("name", "Alice"),
+		attribute.Bool("admin", true),
+	)
+	optAlice := metric.WithAttributeSet(alice)
+
+	bob := attribute.NewSet(
+		attribute.String("name", "Bob"),
+		attribute.Bool("admin", false),
+	)
+	optBob := metric.WithAttributeSet(bob)
+
+	testCases := []struct {
+		name string
+		fn   func(*testing.T, metric.Meter)
+		want metricdata.Metrics
+	}{
+		{
+			name: "SyncInt64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 3, optAlice)
+				ctr.Add(ctx, 5, optBob)
+				ctr.Finish(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sint",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 3, Attributes: alice},
+						{Value: 5, Attributes: bob},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64UpDownCounter("sint")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 3, optAlice)
+				ctr.Add(ctx, 5, optBob)
+				ctr.Finish(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sint",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 3, Attributes: alice},
+						{Value: 5, Attributes: bob},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				histo, err := m.Int64Histogram("histogram")
+				assert.NoError(t, err)
+
+				histo.Record(ctx, 7, optAlice)
+				histo.Record(ctx, 5, optBob)
+				histo.Finish(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: alice,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[int64](7),
+							Max:          metricdata.NewExtrema[int64](7),
+							Sum:          7,
+						},
+						{
+							Attributes: bob,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[int64](5),
+							Max:          metricdata.NewExtrema[int64](5),
+							Sum:          5,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Count",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Float64Counter("sfloat")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 3, optAlice)
+				ctr.Add(ctx, 5, optBob)
+				ctr.Finish(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sfloat",
+				Data: metricdata.Sum[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[float64]{
+						{Value: 3, Attributes: alice},
+						{Value: 5, Attributes: bob},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64UpDownCount",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Float64UpDownCounter("sfloat")
+				assert.NoError(t, err)
+
+				c, ok := ctr.(interface{ Enabled(context.Context) bool })
+				require.True(t, ok)
+				assert.True(t, c.Enabled(t.Context()))
+				ctr.Add(ctx, 11, optAlice)
+				ctr.Add(ctx, 12, optBob)
+				ctr.Finish(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "sfloat",
+				Data: metricdata.Sum[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[float64]{
+						{Value: 11, Attributes: alice},
+						{Value: 12, Attributes: bob},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncFloat64Histogram",
+			fn: func(t *testing.T, m metric.Meter) {
+				histo, err := m.Float64Histogram("histogram")
+				assert.NoError(t, err)
+
+				histo.Record(ctx, 7, optAlice)
+				histo.Record(ctx, 5, optBob)
+				histo.Finish(ctx, optBob)
+			},
+			want: metricdata.Metrics{
+				Name: "histogram",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: alice,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[float64](7.),
+							Max:          metricdata.NewExtrema[float64](7.),
+							Sum:          7.0,
+						},
+						{
+							Attributes: bob,
+							Count:      1,
+							Bounds: []float64{
+								0, 5, 10, 25, 50, 75, 100, 250, 500,
+								750, 1000, 2500, 5000, 7500, 10000,
+							},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Min:          metricdata.NewExtrema[float64](5.),
+							Max:          metricdata.NewExtrema[float64](5.),
+							Sum:          5.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := NewManualReader()
+			m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+
+			tt.fn(t, m)
+
+			rm := metricdata.ResourceMetrics{}
+			err := rdr.Collect(t.Context(), &rm)
+			assert.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+			require.Len(t, sm.Metrics, 1)
+			got := sm.Metrics[0]
+			metricdatatest.AssertEqual(t, tt.want, got, metricdatatest.IgnoreTimestamp())
+		})
+	}
+}
+
+func TestFinishWithMatchAttributes(t *testing.T) {
+	rdr := NewManualReader()
+	m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+
+	ctr, err := m.Int64Counter("jobs")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	containerA1 := metric.WithAttributes(
+		attribute.String("container.id", "a"),
+		attribute.String("pod", "api-0"),
+	)
+	containerA2 := metric.WithAttributes(
+		attribute.String("container.id", "a"),
+		attribute.String("pod", "api-1"),
+	)
+	containerB := metric.WithAttributes(
+		attribute.String("container.id", "b"),
+		attribute.String("pod", "api-2"),
+	)
+
+	ctr.Add(ctx, 1, containerA1)
+	ctr.Add(ctx, 2, containerA2)
+	ctr.Add(ctx, 3, containerB)
+
+	ctr.Finish(ctx, metric.WithMatchAttributes(func(attrs attribute.Set) bool {
+		v, ok := (&attrs).Value("container.id")
+		return ok && v.AsString() == "a"
+	}))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+
+	points := func(rm metricdata.ResourceMetrics) []metricdata.DataPoint[int64] {
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != "jobs" {
+					continue
+				}
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				if ok {
+					return sum.DataPoints
+				}
+			}
+		}
+		return nil
+	}
+
+	got := points(rm)
+	require.Len(t, got, 3)
+
+	values := map[attribute.Distinct]int64{}
+	for _, pt := range got {
+		values[pt.Attributes.Equivalent()] = pt.Value
+	}
+	a0 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-0"))
+	a1 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-1"))
+	b0 := attribute.NewSet(attribute.String("container.id", "b"), attribute.String("pod", "api-2"))
+	assert.Equal(t, int64(1), values[(&a0).Equivalent()])
+	assert.Equal(t, int64(2), values[(&a1).Equivalent()])
+	assert.Equal(t, int64(3), values[(&b0).Equivalent()])
+
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	got = points(rm)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(3), got[0].Value)
+}
+
+func TestFinishWithAttributesAndMatchAttributes(t *testing.T) {
+	rdr := NewManualReader()
+	m := NewMeterProvider(WithReader(rdr)).Meter("testInstruments")
+
+	ctr, err := m.Int64Counter("jobs")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	a0 := metric.WithAttributes(attribute.String("container.id", "a"), attribute.String("pod", "api-0"))
+	a1 := metric.WithAttributes(attribute.String("container.id", "a"), attribute.String("pod", "api-1"))
+
+	ctr.Add(ctx, 1, a0)
+	ctr.Add(ctx, 2, a1)
+
+	ctr.Finish(
+		ctx,
+		metric.WithAttributes(attribute.String("container.id", "a"), attribute.String("pod", "api-0")),
+		metric.WithMatchAttributes(func(attrs attribute.Set) bool {
+			v, ok := (&attrs).Value("pod")
+			return ok && v.AsString() == "api-0"
+		}),
+	)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+
+	var points []metricdata.DataPoint[int64]
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "jobs" {
+				points = m.Data.(metricdata.Sum[int64]).DataPoints
+			}
+		}
+	}
+	require.Len(t, points, 2)
+
+	values := map[attribute.Distinct]int64{}
+	for _, pt := range points {
+		values[pt.Attributes.Equivalent()] = pt.Value
+	}
+	api0 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-0"))
+	api1 := attribute.NewSet(attribute.String("container.id", "a"), attribute.String("pod", "api-1"))
+	assert.Equal(t, int64(1), values[(&api0).Equivalent()])
+	assert.Equal(t, int64(2), values[(&api1).Equivalent()])
+
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name == "jobs" {
+				points = m.Data.(metricdata.Sum[int64]).DataPoints
+			}
+		}
+	}
+	require.Len(t, points, 1)
+	assert.Equal(t, int64(2), points[0].Value)
 }
 
 func TestMeterWithDropView(t *testing.T) {
@@ -2626,4 +2982,100 @@ func TestExemplarFilter(t *testing.T) {
 	err = rdr.Collect(t.Context(), &got)
 	assert.NoError(t, err)
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp())
+}
+
+func TestFinishResetsCumulativeStartTime(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+	ctr, err := mp.Meter("test").Int64Counter("count")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	attrs := attribute.NewSet(attribute.String("name", "Alice"))
+	opt := metric.WithAttributeSet(attrs)
+
+	ctr.Add(ctx, 1, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	points := func(rm metricdata.ResourceMetrics) []metricdata.DataPoint[int64] {
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != "count" {
+					continue
+				}
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				if ok {
+					return sum.DataPoints
+				}
+			}
+		}
+		return nil
+	}
+
+	dp := points(rm)[0]
+	firstStart := dp.StartTime
+
+	ctr.Finish(ctx, opt)
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	pointsAfterFinish := points(rm)
+	require.Len(t, pointsAfterFinish, 1)
+	assert.Equal(t, firstStart, pointsAfterFinish[0].StartTime)
+	assert.Equal(t, int64(1), pointsAfterFinish[0].Value)
+
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	require.Empty(t, points(rm))
+
+	deadline := time.Now().Add(2 * time.Second)
+	for !time.Now().After(firstStart) {
+		require.True(t, time.Now().Before(deadline), "wall clock did not advance past first start time")
+		time.Sleep(time.Millisecond)
+	}
+
+	ctr.Add(ctx, 2, opt)
+	require.NoError(t, rdr.Collect(ctx, &rm))
+	dp = points(rm)[0]
+	assert.True(t, dp.StartTime.After(firstStart))
+	assert.Equal(t, int64(2), dp.Value)
+}
+
+func TestFinishRevivePreservesCumulativeData(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr))
+	ctr, err := mp.Meter("test").Int64Counter("count")
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	attrs := attribute.NewSet(attribute.String("name", "Alice"))
+	opt := metric.WithAttributeSet(attrs)
+
+	ctr.Add(ctx, 1, opt)
+	ctr.Finish(ctx, opt)
+	ctr.Add(ctx, 2, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(ctx, &rm))
+
+	points := func(rm metricdata.ResourceMetrics) []metricdata.DataPoint[int64] {
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != "count" {
+					continue
+				}
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				if ok {
+					return sum.DataPoints
+				}
+			}
+		}
+		return nil
+	}
+
+	got := points(rm)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(3), got[0].Value)
 }

@@ -236,6 +236,12 @@ func (i *sfCounter) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *sfCounter) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Counter).Finish(ctx, opts...)
+	}
+}
+
 type sfUpDownCounter struct {
 	embedded.Float64UpDownCounter
 
@@ -267,6 +273,12 @@ func (i *sfUpDownCounter) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Float64UpDownCounter).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *sfUpDownCounter) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64UpDownCounter).Finish(ctx, opts...)
+	}
 }
 
 type sfHistogram struct {
@@ -302,6 +314,12 @@ func (i *sfHistogram) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *sfHistogram) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Histogram).Finish(ctx, opts...)
+	}
+}
+
 type sfGauge struct {
 	embedded.Float64Gauge
 
@@ -333,6 +351,12 @@ func (i *sfGauge) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Float64Gauge).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *sfGauge) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Float64Gauge).Finish(ctx, opts...)
+	}
 }
 
 type siCounter struct {
@@ -368,6 +392,12 @@ func (i *siCounter) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *siCounter) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64Counter).Finish(ctx, opts...)
+	}
+}
+
 type siUpDownCounter struct {
 	embedded.Int64UpDownCounter
 
@@ -399,6 +429,12 @@ func (i *siUpDownCounter) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Int64UpDownCounter).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *siUpDownCounter) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64UpDownCounter).Finish(ctx, opts...)
+	}
 }
 
 type siHistogram struct {
@@ -434,6 +470,12 @@ func (i *siHistogram) Enabled(ctx context.Context) bool {
 	return false
 }
 
+func (i *siHistogram) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64Histogram).Finish(ctx, opts...)
+	}
+}
+
 type siGauge struct {
 	embedded.Int64Gauge
 
@@ -465,4 +507,10 @@ func (i *siGauge) Enabled(ctx context.Context) bool {
 		return ctr.(metric.Int64Gauge).Enabled(ctx)
 	}
 	return false
+}
+
+func (i *siGauge) Finish(ctx context.Context, opts ...metric.FinishOption) {
+	if ctr := i.delegate.Load(); ctr != nil {
+		ctr.(metric.Int64Gauge).Finish(ctx, opts...)
+	}
 }

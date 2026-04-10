@@ -142,7 +142,7 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 		for _, insert := range m.int64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, insert.readerDefaultAggregation(id.Kind))
+			in, err := insert.instrumentMethods(id, insert.readerDefaultAggregation(id.Kind))
 			if err != nil {
 				return inst, err
 			}
@@ -151,14 +151,18 @@ func (m *meter) int64ObservableInstrument(id Instrument, callbacks []metric.Int6
 				inst.dropAggregation = true
 				continue
 			}
-			inst.appendMeasures(in)
+			measures := make([]aggregate.Measure[int64], 0, len(in))
+			for _, agg := range in {
+				measures = append(measures, agg.measure)
+			}
+			inst.appendMeasures(measures)
 
 			// Add the measures to the pipeline. It is required to maintain
 			// measures per pipeline to avoid calling the measure that
 			// is not part of the pipeline.
-			insert.pipeline.addInt64Measure(inst.observableID, in)
+			insert.pipeline.addInt64Measure(inst.observableID, measures)
 			for _, cback := range callbacks {
-				inst := int64Observer{measures: in}
+				inst := int64Observer{measures: measures}
 				fn := cback
 				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
@@ -324,7 +328,7 @@ func (m *meter) float64ObservableInstrument(
 		for _, insert := range m.float64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, insert.readerDefaultAggregation(id.Kind))
+			in, err := insert.instrumentMethods(id, insert.readerDefaultAggregation(id.Kind))
 			if err != nil {
 				return inst, err
 			}
@@ -333,14 +337,18 @@ func (m *meter) float64ObservableInstrument(
 				inst.dropAggregation = true
 				continue
 			}
-			inst.appendMeasures(in)
+			measures := make([]aggregate.Measure[float64], 0, len(in))
+			for _, agg := range in {
+				measures = append(measures, agg.measure)
+			}
+			inst.appendMeasures(measures)
 
 			// Add the measures to the pipeline. It is required to maintain
 			// measures per pipeline to avoid calling the measure that
 			// is not part of the pipeline.
-			insert.pipeline.addFloat64Measure(inst.observableID, in)
+			insert.pipeline.addFloat64Measure(inst.observableID, measures)
 			for _, cback := range callbacks {
-				inst := float64Observer{measures: in}
+				inst := float64Observer{measures: measures}
 				fn := cback
 				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
@@ -590,7 +598,7 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.float64Measures[oImpl.observableID]
 	for _, m := range measures {
-		m(context.Background(), v, c.Attributes())
+		m(context.Background(), v, c.Attributes(), false)
 	}
 }
 
@@ -620,7 +628,7 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.int64Measures[oImpl.observableID]
 	for _, m := range measures {
-		m(context.Background(), v, c.Attributes())
+		m(context.Background(), v, c.Attributes(), false)
 	}
 }
 
@@ -633,7 +641,7 @@ func (noopRegister) Unregister() error {
 // int64InstProvider provides int64 OpenTelemetry instruments.
 type int64InstProvider struct{ *meter }
 
-func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[int64], error) {
+func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregatorMethods[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -641,13 +649,13 @@ func (p int64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]ag
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.int64Resolver.Aggregators(inst)
+	return p.int64Resolver.aggregatorMethods(inst)
 }
 
 func (p int64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Int64HistogramConfig,
-) ([]aggregate.Measure[int64], error) {
+) ([]aggregatorMethods[int64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
@@ -661,7 +669,7 @@ func (p int64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.int64Resolver.HistogramAggregators(inst, boundaries)
+	measures, err := p.int64Resolver.histogramAggregatorMethods(inst, boundaries)
 	return measures, errors.Join(aggError, err)
 }
 
@@ -674,7 +682,13 @@ func (p int64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (*i
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u)
-		return &int64Inst{measures: aggs}, err
+		measures := make([]aggregate.Measure[int64], 0, len(aggs))
+		removeMatches := make([]aggregate.RemoveMatch, 0, len(aggs))
+		for _, agg := range aggs {
+			measures = append(measures, agg.measure)
+			removeMatches = append(removeMatches, agg.removeMatch)
+		}
+		return &int64Inst{measures: measures, removeMatches: removeMatches}, err
 	})
 }
 
@@ -687,14 +701,20 @@ func (p int64InstProvider) lookupHistogram(name string, cfg metric.Int64Histogra
 		Kind:        InstrumentKindHistogram,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg)
-		return &int64Inst{measures: aggs}, err
+		measures := make([]aggregate.Measure[int64], 0, len(aggs))
+		removeMatches := make([]aggregate.RemoveMatch, 0, len(aggs))
+		for _, agg := range aggs {
+			measures = append(measures, agg.measure)
+			removeMatches = append(removeMatches, agg.removeMatch)
+		}
+		return &int64Inst{measures: measures, removeMatches: removeMatches}, err
 	})
 }
 
 // float64InstProvider provides float64 OpenTelemetry instruments.
 type float64InstProvider struct{ *meter }
 
-func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregate.Measure[float64], error) {
+func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]aggregatorMethods[float64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -702,13 +722,13 @@ func (p float64InstProvider) aggs(kind InstrumentKind, name, desc, u string) ([]
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.float64Resolver.Aggregators(inst)
+	return p.float64Resolver.aggregatorMethods(inst)
 }
 
 func (p float64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Float64HistogramConfig,
-) ([]aggregate.Measure[float64], error) {
+) ([]aggregatorMethods[float64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
@@ -722,7 +742,7 @@ func (p float64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.float64Resolver.HistogramAggregators(inst, boundaries)
+	measures, err := p.float64Resolver.histogramAggregatorMethods(inst, boundaries)
 	return measures, errors.Join(aggError, err)
 }
 
@@ -735,7 +755,13 @@ func (p float64InstProvider) lookup(kind InstrumentKind, name, desc, u string) (
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u)
-		return &float64Inst{measures: aggs}, err
+		measures := make([]aggregate.Measure[float64], 0, len(aggs))
+		removeMatches := make([]aggregate.RemoveMatch, 0, len(aggs))
+		for _, agg := range aggs {
+			measures = append(measures, agg.measure)
+			removeMatches = append(removeMatches, agg.removeMatch)
+		}
+		return &float64Inst{measures: measures, removeMatches: removeMatches}, err
 	})
 }
 
@@ -748,7 +774,13 @@ func (p float64InstProvider) lookupHistogram(name string, cfg metric.Float64Hist
 		Kind:        InstrumentKindHistogram,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg)
-		return &float64Inst{measures: aggs}, err
+		measures := make([]aggregate.Measure[float64], 0, len(aggs))
+		removeMatches := make([]aggregate.RemoveMatch, 0, len(aggs))
+		for _, agg := range aggs {
+			measures = append(measures, agg.measure)
+			removeMatches = append(removeMatches, agg.removeMatch)
+		}
+		return &float64Inst{measures: measures, removeMatches: removeMatches}, err
 	})
 }
 

@@ -109,7 +109,7 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 				AggregationLimit: 0,
 			}
 			var oID observableID[int64]
-			m, _ := b.PrecomputedSum(false)
+			m, _, _ := b.PrecomputedSum(false)
 			measures := []aggregate.Measure[int64]{}
 			measures = append(measures, m)
 			pipe.addInt64Measure(oID, measures)
@@ -157,7 +157,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
-					in(t.Context(), 1, *attribute.EmptySet())
+					in(t.Context(), 1, *attribute.EmptySet(), false)
 				}
 
 				out := metricdata.ResourceMetrics{}
@@ -380,7 +380,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
-	_, origID, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
+	_, _, origID, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
 	require.NoError(t, err)
 
 	require.Len(t, pipe.aggregations, 1)
@@ -390,7 +390,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	require.Equal(t, name, iSync[0].name)
 
 	stream.Name = "RequestCount"
-	_, id, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
+	_, _, id, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
 	require.NoError(t, err)
 	assert.Equal(t, origID, id, "multiple aggregators for equivalent name")
 
@@ -614,7 +614,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 	// Set up an observable with callbacks
 	var testObsID observableID[int64]
 	aggBuilder := aggregate.Builder[int64]{Temporality: metricdata.CumulativeTemporality}
-	measure, _ := aggBuilder.Sum(true)
+	measure, _, _ := aggBuilder.Sum(true)
 	pipe.addInt64Measure(testObsID, []aggregate.Measure[int64]{measure})
 
 	// Add an aggregation that just sets the data point value to the number of times the aggregation is invoked
@@ -646,7 +646,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 		func(ctx context.Context) error {
 			callbackCounts[0]++
 			for _, m := range pipe.int64Measures[testObsID] {
-				m(ctx, 123, *attribute.EmptySet())
+				m(ctx, 123, *attribute.EmptySet(), false)
 			}
 			return nil
 		},

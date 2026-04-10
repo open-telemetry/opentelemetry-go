@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 type noErrorHandler struct{ t *testing.T }
@@ -157,7 +158,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice, nil, false)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -199,7 +200,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice, nil, false)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -604,24 +605,28 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 	)
 
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
+		return in, out
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
-		return Builder[int64]{
+		in, _, out := Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
+		return in, out
 	}))
 	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
+		return in, out
 	}))
 	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
+		in, _, out := Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
+		return in, out
 	}))
 }
 
@@ -685,7 +690,7 @@ func TestExponentialHistogramAggregation(t *testing.T) {
 }
 
 func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 2,
@@ -704,13 +709,13 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 2, alice},
-				{ctx, 16, alice},
-				{ctx, 1, alice},
-				{ctx, -1, alice},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 16, alice, false},
+				{ctx, 1, alice, false},
+				{ctx, -1, alice, false},
 			},
 			expect: output{
 				n: 1,
@@ -752,20 +757,20 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 2, alice},
-				{ctx, 16, alice},
-				{ctx, 1, alice},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 16, alice, false},
+				{ctx, 1, alice, false},
 				// These will exceed the cardinality limit.
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 2, carol},
-				{ctx, 16, carol},
-				{ctx, 1, dave},
-				{ctx, -1, alice},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 2, carol, false},
+				{ctx, 16, carol, false},
+				{ctx, 1, dave, false},
+				{ctx, -1, alice, false},
 			},
 			expect: output{
 				n: 2,
@@ -812,7 +817,7 @@ func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
 }
 
 func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 2,
@@ -840,13 +845,13 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 4, alice},
-				{ctx, 2, alice},
-				{ctx, 16, alice},
-				{ctx, 1, alice},
-				{ctx, -1, alice},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 4, alice, false},
+				{ctx, 2, alice, false},
+				{ctx, 16, alice, false},
+				{ctx, 1, alice, false},
+				{ctx, -1, alice, false},
 			},
 			expect: output{
 				n: 1,
@@ -877,9 +882,9 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		},
 		{
 			input: []arg[N]{
-				{ctx, 2, alice},
-				{ctx, 3, alice},
-				{ctx, 8, alice},
+				{ctx, 2, alice, false},
+				{ctx, 3, alice, false},
+				{ctx, 8, alice, false},
 			},
 			expect: output{
 				n: 1,
@@ -940,12 +945,12 @@ func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
 		{
 			input: []arg[N]{
 				// These will exceed the cardinality limit.
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 4, bob},
-				{ctx, 2, carol},
-				{ctx, 16, carol},
-				{ctx, 1, dave},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 4, bob, false},
+				{ctx, 2, carol, false},
+				{ctx, 16, carol, false},
+				{ctx, 1, dave, false},
 			},
 			expect: output{
 				n: 2,
@@ -999,7 +1004,7 @@ func TestExponentialHistogramAggregationConcurrentSafe(t *testing.T) {
 }
 
 func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.DeltaTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -1008,7 +1013,7 @@ func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
 }
 
 func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
-	in, out := Builder[N]{
+	in, _, out := Builder[N]{
 		Temporality:      metricdata.CumulativeTemporality,
 		Filter:           attrFltr,
 		AggregationLimit: 3,
@@ -1150,7 +1155,7 @@ func TestExponentialHistogramConcurrentSafeEdgeCases(t *testing.T) {
 func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricdata.Temporality) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Run("ZeroValues", func(t *testing.T) {
-			meas, comp := Builder[N]{
+			meas, _, comp := Builder[N]{
 				Temporality:      temporality,
 				Filter:           attrFltr,
 				AggregationLimit: 3,
@@ -1165,7 +1170,7 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 				go func() {
 					defer wg.Done()
 					for range numRecords {
-						meas(ctx, 0, alice)
+						meas(ctx, 0, alice, false)
 					}
 				}()
 			}
@@ -1180,7 +1185,7 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 		})
 
 		t.Run("RescalingStress", func(t *testing.T) {
-			meas, comp := Builder[N]{
+			meas, _, comp := Builder[N]{
 				Temporality:      temporality,
 				Filter:           attrFltr,
 				AggregationLimit: 3,
@@ -1192,7 +1197,7 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 			const numRecords = 100
 
 			// To verify exact outcome, we sequentially record the same to a reference.
-			refMeas, refComp := Builder[N]{
+			refMeas, _, refComp := Builder[N]{
 				Temporality:      temporality,
 				Filter:           attrFltr,
 				AggregationLimit: 3,
@@ -1215,10 +1220,10 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 							val = N(float64(id+1) * 100.0)
 						}
 
-						meas(ctx, val, alice)
+						meas(ctx, val, alice, false)
 
 						m.Lock()
-						refMeas(ctx, val, alice)
+						refMeas(ctx, val, alice, false)
 						m.Unlock()
 					}
 				}(i)
@@ -1281,12 +1286,141 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 	ctx := t.Context()
 
-	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
+	h.measure(ctx, math.NaN(), attribute.NewSet(), nil, false)
+	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil, false)
+	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil, false)
 
 	var dest metricdata.Aggregation
 	h.delta(&dest)
 	eh := dest.(metricdata.ExponentialHistogram[float64])
 	assert.Empty(t, eh.DataPoints)
+}
+
+func TestCumulativeExponentialHistogramFinishResetsStartTime(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+	assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+
+	in, _, out := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		Filter:      attrFltr,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in(ctx, 4, alice, false)
+
+	var got metricdata.Aggregation = metricdata.ExponentialHistogram[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(1),
+				Time:       y2kPlus(2),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+
+	in(ctx, 0, alice, true)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(1),
+				Time:       y2kPlus(3),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{},
+	}, got)
+
+	in(ctx, 4, alice, false)
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2kPlus(5),
+				Time:       y2kPlus(6),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+}
+
+func TestDeltaExponentialHistogramFinishExportsFinalPoint(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	in, _, out := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		Filter:      attrFltr,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in(ctx, 4, alice, false)
+	in(ctx, 0, alice, true)
+
+	var got metricdata.Aggregation = metricdata.ExponentialHistogram[int64]{}
+	assert.Equal(t, 1, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+			{
+				Attributes: fltrAlice,
+				StartTime:  y2k,
+				Time:       y2kPlus(2),
+				Count:      1,
+				Min:        metricdata.NewExtrema[int64](4),
+				Max:        metricdata.NewExtrema[int64](4),
+				Sum:        4,
+				Scale:      20,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Offset: 2097151,
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}, got)
+
+	assert.Equal(t, 0, out(&got))
+	metricdatatest.AssertAggregationsEqual(t, metricdata.ExponentialHistogram[int64]{
+		Temporality: metricdata.DeltaTemporality,
+		DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{},
+	}, got)
 }

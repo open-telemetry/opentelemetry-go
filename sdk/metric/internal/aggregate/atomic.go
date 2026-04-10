@@ -268,6 +268,26 @@ func (m *limitedSyncMap) Clear() {
 	m.Map.Clear()
 }
 
+func (m *limitedSyncMap) Delete(key any) bool {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	if _, loaded := m.LoadAndDelete(key); loaded {
+		m.len--
+		return true
+	}
+	return false
+}
+
+func (m *limitedSyncMap) Take(key any) (any, bool) {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	value, loaded := m.LoadAndDelete(key)
+	if loaded {
+		m.len--
+	}
+	return value, loaded
+}
+
 func (m *limitedSyncMap) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()

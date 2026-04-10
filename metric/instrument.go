@@ -306,6 +306,72 @@ type MeasurementOption interface {
 	ObserveOption
 }
 
+// FinishOption applies options to a synchronous instrument finish operation.
+type FinishOption interface {
+	applyFinish(FinishConfig) FinishConfig
+}
+
+// MatchAttributesFunc returns whether attrs matches a finish selector.
+type MatchAttributesFunc func(attribute.Set) bool
+
+// AttributeSetOption applies attribute options to measurement and finish calls.
+type AttributeSetOption interface {
+	MeasurementOption
+	FinishOption
+}
+
+// FinishConfig contains options for a finish operation.
+type FinishConfig struct {
+	attrs      attribute.Set
+	hasAttrs   bool
+	matchAttrs MatchAttributesFunc
+}
+
+// NewFinishConfig returns a new [FinishConfig] with all opts applied.
+func NewFinishConfig(opts []FinishOption) FinishConfig {
+	config := FinishConfig{attrs: *attribute.EmptySet()}
+	for _, o := range opts {
+		config = o.applyFinish(config)
+	}
+	return config
+}
+
+// Attributes returns the configured attribute set.
+func (c FinishConfig) Attributes() attribute.Set {
+	return c.attrs
+}
+
+// HasAttributes reports whether an exact attribute set selector was configured.
+func (c FinishConfig) HasAttributes() bool {
+	return c.hasAttrs
+}
+
+// MatchAttributes returns the configured finish matcher, if any.
+func (c FinishConfig) MatchAttributes() MatchAttributesFunc {
+	return c.matchAttrs
+}
+
+// Matcher returns the configured finish selector as a predicate.
+func (c FinishConfig) Matcher() MatchAttributesFunc {
+	switch {
+	case c.hasAttrs && c.matchAttrs != nil:
+		return func(attrs attribute.Set) bool {
+			return attrs.Equals(&c.attrs) && c.matchAttrs(attrs)
+		}
+	case c.hasAttrs:
+		return func(attrs attribute.Set) bool {
+			return attrs.Equals(&c.attrs)
+		}
+	case c.matchAttrs != nil:
+		return c.matchAttrs
+	default:
+		empty := *attribute.EmptySet()
+		return func(attrs attribute.Set) bool {
+			return attrs.Equals(&empty)
+		}
+	}
+}
+
 type attrOpt struct {
 	set attribute.Set
 }
@@ -355,13 +421,45 @@ func (o attrOpt) applyObserve(c ObserveConfig) ObserveConfig {
 	return c
 }
 
+func (o attrOpt) applyFinish(c FinishConfig) FinishConfig {
+	switch {
+	case o.set.Len() == 0:
+	case c.attrs.Len() == 0:
+		c.attrs = o.set
+		c.hasAttrs = true
+	default:
+		c.attrs = mergeSets(c.attrs, o.set)
+		c.hasAttrs = true
+	}
+	return c
+}
+
+type matchAttrOpt struct {
+	match MatchAttributesFunc
+}
+
+func (o matchAttrOpt) applyFinish(c FinishConfig) FinishConfig {
+	if o.match == nil {
+		return c
+	}
+	if c.matchAttrs == nil {
+		c.matchAttrs = o.match
+		return c
+	}
+	prev := c.matchAttrs
+	c.matchAttrs = func(attrs attribute.Set) bool {
+		return prev(attrs) && o.match(attrs)
+	}
+	return c
+}
+
 // WithAttributeSet sets the attribute Set associated with a measurement is
 // made with.
 //
 // If multiple WithAttributeSet or WithAttributes options are passed the
 // attributes will be merged together in the order they are passed. Attributes
 // with duplicate keys will use the last value passed.
-func WithAttributeSet(attributes attribute.Set) MeasurementOption {
+func WithAttributeSet(attributes attribute.Set) AttributeSetOption {
 	return attrOpt{set: attributes}
 }
 
@@ -380,8 +478,20 @@ func WithAttributeSet(attributes attribute.Set) MeasurementOption {
 //
 // See [WithAttributeSet] for information about how multiple WithAttributes are
 // merged.
-func WithAttributes(attributes ...attribute.KeyValue) MeasurementOption {
+func WithAttributes(attributes ...attribute.KeyValue) AttributeSetOption {
 	cp := make([]attribute.KeyValue, len(attributes))
 	copy(cp, attributes)
 	return attrOpt{set: attribute.NewSet(cp...)}
+}
+
+// WithMatchAttributes sets a finish matcher that decides whether a series
+// should be finished based on its attributes.
+//
+// This option is only used by Finish calls. If multiple matchers are passed,
+// all of them need to match for a series to be finished.
+//
+// If combined with WithAttributeSet or WithAttributes, both the exact
+// attribute selector and the matcher need to match.
+func WithMatchAttributes(match MatchAttributesFunc) FinishOption {
+	return matchAttrOpt{match: match}
 }
