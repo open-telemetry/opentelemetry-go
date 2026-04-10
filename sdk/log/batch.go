@@ -182,7 +182,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			if d := b.q.Dropped(); d > 0 {
 				global.Warn("dropped log records", "dropped", d)
 				if b.inst != nil {
-					b.inst.ProcessedQueueFull(ctx, int64(d))
+					b.inst.ProcessedQueueFull(ctx, int64(d)) //nolint: gosec
 				}
 			}
 
