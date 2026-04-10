@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 
 	"go.opentelemetry.io/otel"
