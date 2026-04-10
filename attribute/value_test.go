@@ -584,6 +584,43 @@ func TestValueString(t *testing.T) {
 			want: "aGVsbG8gd29ybGQ=",
 		},
 		{
+			name: "empty byte slice",
+			v:    attribute.ByteSliceValue(nil),
+			want: "",
+		},
+		{
+			name: "empty slice",
+			v:    attribute.SliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty slice literal",
+			v:    attribute.SliceValue([]attribute.Value{}),
+			want: "[]",
+		},
+		{
+			name: "slice len1 fast path",
+			v:    attribute.SliceValue([]attribute.Value{attribute.BoolValue(false)}),
+			want: `[false]`,
+		},
+		{
+			name: "slice len2 fast path",
+			v: attribute.SliceValue([]attribute.Value{
+				attribute.IntValue(7),
+				attribute.StringValue(`hello "world"`),
+			}),
+			want: `[7,"hello \"world\""]`,
+		},
+		{
+			name: "slice len3 fast path",
+			v: attribute.SliceValue([]attribute.Value{
+				attribute.Float64Value(1.25),
+				attribute.Float64Value(math.Inf(1)),
+				attribute.Float64Value(math.Inf(-1)),
+			}),
+			want: `[1.25,"Infinity","-Infinity"]`,
+		},
+		{
 			name: "slice",
 			v: attribute.SliceValue([]attribute.Value{
 				attribute.StringValue("hello \"world\""),
@@ -594,9 +631,18 @@ func TestValueString(t *testing.T) {
 			want: `["hello \"world\"","NaN","Ymlu",[true,null]]`,
 		},
 		{
-			name: "empty byte slice",
-			v:    attribute.ByteSliceValue(nil),
-			want: "",
+			name: "slice reflect path nested types",
+			v: attribute.SliceValue([]attribute.Value{
+				attribute.BoolSliceValue([]bool{true, false}),
+				attribute.Int64SliceValue([]int64{1, -2}),
+				attribute.Float64SliceValue([]float64{1, math.NaN(), math.Inf(1), math.Inf(-1)}),
+				attribute.StringSliceValue([]string{`hello "world"`}),
+				attribute.ByteSliceValue([]byte("bin")),
+				attribute.SliceValue([]attribute.Value{attribute.IntValue(7)}),
+				{},
+				attribute.Float64Value(math.NaN()),
+			}),
+			want: `[[true,false],[1,-2],[1,"NaN","Infinity","-Infinity"],["hello \"world\""],"Ymlu",[7],null,"NaN"]`,
 		},
 		{
 			name: "empty",
