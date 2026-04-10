@@ -563,6 +563,11 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 		if slices.ContainsFunc(val.AsSlice(), r.needsValueLimitsOrDedup) {
 			return true
 		}
+	case log.KindBytes:
+		bs := val.AsBytes()
+		if r.attributeValueLengthLimit >= 0 && len(bs) > r.attributeValueLengthLimit {
+			return true
+		}
 	case log.KindMap:
 		kvs := val.AsMap()
 		if !r.allowDupKeys && len(kvs) > 1 {
