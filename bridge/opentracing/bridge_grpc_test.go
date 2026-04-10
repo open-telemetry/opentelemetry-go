@@ -39,7 +39,7 @@ func (*testGRPCServer) StreamingBidirectionalCall(testpb.TestService_StreamingBi
 }
 
 func startTestGRPCServer(t *testing.T, tracer ot.Tracer) (*grpc.Server, net.Addr) {
-	lis, _ := net.Listen("tcp", ":0")
+	lis, _ := (&net.ListenConfig{}).Listen(t.Context(), "tcp", ":0")
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(tracer)),
 	)

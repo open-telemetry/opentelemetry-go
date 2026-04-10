@@ -18,7 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
@@ -162,6 +162,15 @@ func TestSpanKindTransform(t *testing.T) {
 	for in, want := range tests {
 		assert.Equal(t, want, spanKind(in), in.String())
 	}
+}
+
+func TestConvAttrValueBytes(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.ByteSliceValue([]byte("bytes")))
+
+	assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+	assert.Equal(t, []byte("bytes"), val.AsBytes())
 }
 
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {

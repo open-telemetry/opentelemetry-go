@@ -39,7 +39,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -205,7 +205,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 		t.Skipf("Skipping this long running test")
 	}
 
-	ln, err := net.Listen("tcp", "localhost:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Failed to grab an available port: %v", err)
 	}
@@ -519,8 +519,8 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
-							otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
-								otelconv.RPCGRPCStatusCodeOk,
+							otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+								codes.OK.String(),
 							),
 						)...)},
 					},

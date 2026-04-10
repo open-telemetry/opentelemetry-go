@@ -195,12 +195,17 @@ func AttrValue(v attribute.Value) *cpb.AnyValue {
 		av.Value = &cpb.AnyValue_StringValue{
 			StringValue: v.AsString(),
 		}
+	case attribute.BYTESLICE:
+		av.Value = &cpb.AnyValue_BytesValue{
+			BytesValue: v.AsByteSlice(),
+		}
 	case attribute.STRINGSLICE:
 		av.Value = &cpb.AnyValue_ArrayValue{
 			ArrayValue: &cpb.ArrayValue{
 				Values: stringSliceValues(v.AsStringSlice()),
 			},
 		}
+	case attribute.EMPTY:
 	default:
 		av.Value = &cpb.AnyValue_StringValue{
 			StringValue: "INVALID",
@@ -327,6 +332,7 @@ func LogAttrValue(v api.Value) *cpb.AnyValue {
 				Values: LogAttrs(v.AsMap()),
 			},
 		}
+	case api.KindEmpty:
 	default:
 		av.Value = &cpb.AnyValue_StringValue{
 			StringValue: "INVALID",

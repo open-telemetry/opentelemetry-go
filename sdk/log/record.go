@@ -495,15 +495,7 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 		sl := val.AsSlice()
 
 		// First check if any limits need to be applied.
-		needsChange := false
-		for _, v := range sl {
-			if r.needsValueLimitsOrDedup(v) {
-				needsChange = true
-				break
-			}
-		}
-
-		if needsChange {
+		if slices.ContainsFunc(sl, r.needsValueLimitsOrDedup) {
 			// Create a new slice to avoid modifying the original.
 			newSl := make([]log.Value, len(sl))
 			for i, item := range sl {
@@ -564,10 +556,8 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 	case log.KindString:
 		return r.attributeValueLengthLimit >= 0 && len(val.AsString()) > r.attributeValueLengthLimit
 	case log.KindSlice:
-		for _, v := range val.AsSlice() {
-			if r.needsValueLimitsOrDedup(v) {
-				return true
-			}
+		if slices.ContainsFunc(val.AsSlice(), r.needsValueLimitsOrDedup) {
+			return true
 		}
 	case log.KindMap:
 		kvs := val.AsMap()
@@ -603,15 +593,7 @@ func (r *Record) dedupeBodyCollections(val log.Value) log.Value {
 		sl := val.AsSlice()
 
 		// Check if any nested values need deduplication.
-		needsChange := false
-		for _, item := range sl {
-			if r.needsBodyDedup(item) {
-				needsChange = true
-				break
-			}
-		}
-
-		if needsChange {
+		if slices.ContainsFunc(sl, r.needsBodyDedup) {
 			// Create a new slice to avoid modifying the original.
 			newSl := make([]log.Value, len(sl))
 			for i, item := range sl {
@@ -654,10 +636,8 @@ func (r *Record) dedupeBodyCollections(val log.Value) log.Value {
 func (r *Record) needsBodyDedup(val log.Value) bool {
 	switch val.Kind() {
 	case log.KindSlice:
-		for _, item := range val.AsSlice() {
-			if r.needsBodyDedup(item) {
-				return true
-			}
+		if slices.ContainsFunc(val.AsSlice(), r.needsBodyDedup) {
+			return true
 		}
 	case log.KindMap:
 		kvs := val.AsMap()

@@ -20,13 +20,14 @@ import (
 )
 
 type reader struct {
-	producer          sdkProducer
-	externalProducers []Producer
-	temporalityFunc   TemporalitySelector
-	aggregationFunc   AggregationSelector
-	collectFunc       func(context.Context, *metricdata.ResourceMetrics) error
-	forceFlushFunc    func(context.Context) error
-	shutdownFunc      func(context.Context) error
+	producer                 sdkProducer
+	externalProducers        []Producer
+	temporalityFunc          TemporalitySelector
+	aggregationFunc          AggregationSelector
+	cardinalityLimitSelector CardinalityLimitSelector
+	collectFunc              func(context.Context, *metricdata.ResourceMetrics) error
+	forceFlushFunc           func(context.Context) error
+	shutdownFunc             func(context.Context) error
 }
 
 const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
@@ -43,6 +44,13 @@ func (r *reader) register(p sdkProducer)      { r.producer = p }
 func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
+}
+
+func (r *reader) cardinalityLimit(kind InstrumentKind) (int, bool) {
+	if r.cardinalityLimitSelector != nil {
+		return r.cardinalityLimitSelector(kind)
+	}
+	return 0, true
 }
 
 func (r *reader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
@@ -360,4 +368,16 @@ func sample(parent context.Context) context.Context {
 		TraceFlags: trace.FlagsSampled,
 	})
 	return trace.ContextWithSpanContext(parent, sc)
+}
+
+type testExperimentalOption struct {
+	Option
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
 }

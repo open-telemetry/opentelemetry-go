@@ -21,7 +21,7 @@ jobs:
 
 
     - name: Restore lychee cache
-      uses: actions/cache/restore@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
+      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       id: cache-restore
       with:
         path: .lycheecache
@@ -30,7 +30,7 @@ jobs:
 
     - name: Link Checker
       id: lychee
-      uses: lycheeverse/lychee-action@a8c4c7cb88f0c7386610c35eb25108e448569cb0 # v2.7.0
+      uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -38,7 +38,7 @@ jobs:
 
     - name: Save lychee cache
       if: always()
-      uses: actions/cache/save@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
+      uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
         path: .lycheecache
         key: ${{ steps.cache-restore.outputs.cache-primary-key }}

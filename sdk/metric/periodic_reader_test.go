@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 const testDur = time.Second * 2
@@ -297,6 +297,139 @@ func TestPeriodicReaderRun(t *testing.T) {
 	_ = r.Shutdown(t.Context())
 }
 
+func TestPeriodicReaderBatching(t *testing.T) {
+	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "2")
+
+	var exported []metricdata.ResourceMetrics
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+			exported = append(exported, *m)
+			return nil
+		},
+	}
+
+	ts1, ts2, ts3 := time.Now(), time.Now(), time.Now()
+	testMetrics := []metricdata.ScopeMetrics{{
+		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+		Metrics: []metricdata.Metrics{{
+			Name: "metric1",
+			Data: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{{
+					Attributes: attribute.NewSet(attribute.String("user", "david")),
+					StartTime:  ts1, Time: ts1.Add(time.Second), Value: 1,
+				}},
+			},
+		}, {
+			Name: "metric2",
+			Data: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{
+					{
+						Attributes: attribute.NewSet(attribute.String("user", "tyler")),
+						StartTime:  ts2,
+						Time:       ts2.Add(time.Second),
+						Value:      10,
+					},
+					{
+						Attributes: attribute.NewSet(attribute.String("user", "robert")),
+						StartTime:  ts3,
+						Time:       ts3.Add(time.Second),
+						Value:      100,
+					},
+				},
+			},
+		}},
+	}}
+
+	r := NewPeriodicReader(
+		exp,
+		WithProducer(testExternalProducer{
+			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+				return testMetrics, nil
+			},
+		}),
+	)
+	// testSDKProducer generates 2 Data Points (testResourceMetricsAB)
+	r.register(testSDKProducer{})
+
+	// Trigger export via ForceFlush
+	assert.NoError(t, r.ForceFlush(t.Context()))
+
+	// We should have a total of 4 data points
+	// testSDKProducer: 1
+	// testExternalProducer: 3
+	// Max batch size is 2, so it should split into 2 batches (2 + 2)
+	assert.Len(t, exported, 2)
+
+	dpCount := 0
+	for _, batch := range exported {
+		batchPoints := 0
+		for _, sm := range batch.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				batchPoints += metricDPC(m)
+			}
+		}
+		assert.LessOrEqual(t, batchPoints, 2)
+		dpCount += batchPoints
+	}
+	assert.Equal(t, 4, dpCount)
+
+	_ = r.Shutdown(t.Context())
+}
+
+func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
+	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
+
+	trigger := triggerTicker(t)
+
+	timeout := 200 * time.Millisecond
+
+	var exportCount int
+	done := make(chan struct{})
+	exp := &fnExporter{
+		exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
+			exportCount++
+			// Simulate export taking some time
+			select {
+			case <-time.After(100 * time.Millisecond):
+				if exportCount == 2 {
+					close(done)
+				}
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		},
+	}
+
+	r := NewPeriodicReader(exp, WithTimeout(timeout))
+
+	r.register(testSDKProducer{
+		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+			// Simulate Collect taking time (150ms)
+			// So when we enter the loop, only 50ms are left of the top-level 200ms timeout!
+			select {
+			case <-time.After(150 * time.Millisecond):
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+			*rm = testResourceMetricsAB // Has 2 data points
+			return nil
+		},
+	})
+
+	trigger <- time.Now()
+
+	select {
+	case <-done:
+		// Success
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for exports")
+	}
+
+	assert.Equal(t, 2, exportCount)
+}
+
 func TestPeriodicReaderFlushesPending(t *testing.T) {
 	// Override the ticker so tests are not flaky and rely on timing.
 	trigger := triggerTicker(t)
@@ -370,6 +503,56 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		_ = r.Shutdown(t.Context())
 	})
 
+	t.Run("ForceFlush timeout on export with batching", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
+
+		timeout := 200 * time.Millisecond
+
+		var exportCount int
+		exp := &fnExporter{
+			exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
+				exportCount++
+				select {
+				case <-time.After(100 * time.Millisecond):
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		}
+
+		ts1 := time.Now()
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+				return []metricdata.ScopeMetrics{{
+					Scope: instrumentation.Scope{Name: "test"},
+					Metrics: []metricdata.Metrics{{
+						Name: "metric1",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{Value: 1, Time: ts1},
+								{Value: 2, Time: ts1},
+							},
+						},
+					}},
+				}}, nil
+			},
+		}))
+		r.register(testSDKProducer{
+			produceFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error {
+				return nil
+			},
+		})
+
+		ctx, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
+		defer cancel()
+		err := r.ForceFlush(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 2, exportCount)
+
+		_ = r.Shutdown(t.Context())
+	})
+
 	t.Run("Shutdown", func(t *testing.T) {
 		exp, called := expFunc(t)
 		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
@@ -415,6 +598,52 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		r.register(testSDKProducer{})
 		assert.ErrorIs(t, r.Shutdown(t.Context()), context.DeadlineExceeded)
 		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+	})
+
+	t.Run("Shutdown timeout on export with batching", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
+
+		timeout := 200 * time.Millisecond
+
+		var exportCount int
+		exp := &fnExporter{
+			exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
+				exportCount++
+				select {
+				case <-time.After(50 * time.Millisecond):
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		}
+
+		ts1 := time.Now()
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+				return []metricdata.ScopeMetrics{{
+					Scope: instrumentation.Scope{Name: "test"},
+					Metrics: []metricdata.Metrics{{
+						Name: "metric1",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{Value: 1, Time: ts1},
+								{Value: 2, Time: ts1},
+							},
+						},
+					}},
+				}}, nil
+			},
+		}))
+		r.register(testSDKProducer{
+			produceFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error {
+				return nil
+			},
+		})
+
+		err := r.Shutdown(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, 2, exportCount)
 	})
 }
 
@@ -773,7 +1002,7 @@ func createMetricDataTestProducer() testSDKProducer {
 
 			// Create multiple scopes for comprehensive test data
 			var scopeMetrics []metricdata.ScopeMetrics
-			for i := 0; i < 20; i++ { // 20 scopes with 4 metrics each = 80 total metrics
+			for i := range 20 { // 20 scopes with 4 metrics each = 80 total metrics
 				scopeMetrics = append(scopeMetrics, createScopeMetrics(i))
 			}
 

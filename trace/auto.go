@@ -20,7 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace/embedded"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
@@ -314,6 +314,8 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 	case attribute.STRING:
 		v := truncate(maxSpan.AttrValueLen, value.AsString())
 		return telemetry.StringValue(v)
+	case attribute.BYTESLICE:
+		return telemetry.BytesValue(value.AsByteSlice())
 	case attribute.BOOLSLICE:
 		slice := value.AsBoolSlice()
 		out := make([]telemetry.Value, 0, len(slice))

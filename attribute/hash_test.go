@@ -36,6 +36,9 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return String(k, "bar") },
 	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
+	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
+	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
+	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
 }
 
 func TestHashKVsEquality(t *testing.T) {
@@ -53,12 +56,12 @@ func TestHashKVsEquality(t *testing.T) {
 	result = append(result, testcase{hashKVs(nil), nil})
 
 	for _, key := range keys {
-		for i := 0; i < len(keyVals); i++ {
+		for i := range keyVals {
 			kvs := []KeyValue{keyVals[i](key)}
 			hash := hashKVs(kvs)
 			result = append(result, testcase{hash, kvs})
 
-			for j := 0; j < len(keyVals); j++ {
+			for j := range keyVals {
 				kvs := []KeyValue{
 					keyVals[i](key),
 					keyVals[j](key),
@@ -66,7 +69,7 @@ func TestHashKVsEquality(t *testing.T) {
 				hash := hashKVs(kvs)
 				result = append(result, testcase{hash, kvs})
 
-				for k := 0; k < len(keyVals); k++ {
+				for k := range keyVals {
 					kvs := []KeyValue{
 						keyVals[i](key),
 						keyVals[j](key),
@@ -155,8 +158,8 @@ func FuzzHashKVs(f *testing.F) {
 		0, int64(0), math.Inf(1), false, uint8(2))
 
 	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, fVal float64, b bool, sliceType uint8) {
-		// Test variable number of attributes (0-10).
-		numAttrs := len(k1) % 11 // Use key length to determine number of attributes.
+		// Test variable number of attributes (0-11).
+		numAttrs := len(k1) % 12 // Use key length to determine number of attributes.
 		if numAttrs == 0 && k1 == "" {
 			// Test empty set.
 			h := hashKVs(nil)
@@ -187,7 +190,7 @@ func FuzzHashKVs(f *testing.F) {
 
 		// Add slice types based on sliceType parameter
 		if numAttrs > 5 {
-			switch sliceType % 4 {
+			switch sliceType % 5 {
 			case 0:
 				// Test BoolSlice with variable length.
 				bools := make([]bool, len(s)%5) // 0-4 elements
@@ -225,6 +228,13 @@ func FuzzHashKVs(f *testing.F) {
 					}
 				}
 				kvs = append(kvs, Float64Slice("float64slice", float64s))
+			case 4:
+				// Test ByteSlice with variable length.
+				bytes := make([]byte, len(s)%5)
+				for i := range bytes {
+					bytes[i] = byte(i + len(k1))
+				}
+				kvs = append(kvs, ByteSlice("bytes", bytes))
 			}
 		}
 
@@ -248,6 +258,11 @@ func FuzzHashKVs(f *testing.F) {
 		}
 		if numAttrs > 9 {
 			kvs = append(kvs, String("empty", ""))
+		}
+
+		// Add empty value.
+		if numAttrs > 10 {
+			kvs = append(kvs, KeyValue{Key: Key("empty_value")})
 		}
 
 		// Sort to ensure consistent ordering (as Set would do).
@@ -301,6 +316,8 @@ func FuzzHashKVs(f *testing.F) {
 					if !math.IsNaN(val) && !math.IsInf(val, 0) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
 					}
+				case EMPTY:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
 				}
 
 				h3 := hashKVs(modifiedKvs)

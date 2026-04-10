@@ -87,12 +87,17 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 		av.Value = &commonpb.AnyValue_StringValue{
 			StringValue: v.AsString(),
 		}
+	case attribute.BYTESLICE:
+		av.Value = &commonpb.AnyValue_BytesValue{
+			BytesValue: v.AsByteSlice(),
+		}
 	case attribute.STRINGSLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
 				Values: stringSliceValues(v.AsStringSlice()),
 			},
 		}
+	case attribute.EMPTY:
 	default:
 		av.Value = &commonpb.AnyValue_StringValue{
 			StringValue: "INVALID",

@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -41,7 +41,7 @@ type producerFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
 func (f producerFunc) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) { return f(ctx) }
 
 // Helper: scrape with ContinueOnError and return body + status.
-func scrapeWithContinueOnError(reg *prometheus.Registry) (int, string) {
+func scrapeWithContinueOnError(ctx context.Context, reg *prometheus.Registry) (int, string) {
 	h := promhttp.HandlerFor(
 		reg,
 		promhttp.HandlerOpts{
@@ -50,7 +50,7 @@ func scrapeWithContinueOnError(reg *prometheus.Registry) (int, string) {
 	)
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/metrics", http.NoBody)
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/metrics", http.NoBody)
 	h.ServeHTTP(rr, req)
 
 	return rr.Code, rr.Body.String()
@@ -1113,7 +1113,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				// 2) Also assert what users will see if they opt into ContinueOnError.
 				// Compare the HTTP body to an expected file that contains only the valid series
 				// (e.g., "target_info" and any non-conflicting families).
-				status, body := scrapeWithContinueOnError(registry)
+				status, body := scrapeWithContinueOnError(t.Context(), registry)
 				require.Equal(t, http.StatusOK, status)
 
 				matched := false
@@ -1162,12 +1162,10 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	concurrencyLevel := 10
 	for range concurrencyLevel {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, err := registry.Gather() // this calls collector.Collect
 			assert.NoError(t, err)
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -2749,11 +2747,11 @@ func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
 	const numOperations = 100
 	var wg sync.WaitGroup
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
+			for j := range numOperations {
 				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.Int("goroutine", id)))
 
 				// Occasionally trigger collection

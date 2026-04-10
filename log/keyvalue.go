@@ -390,7 +390,7 @@ func (a KeyValue) String() string {
 // ValueFromAttribute converts [attribute.Value] to [Value].
 func ValueFromAttribute(value attribute.Value) Value {
 	switch value.Type() {
-	case attribute.INVALID:
+	case attribute.EMPTY:
 		return Value{}
 	case attribute.BOOL:
 		return BoolValue(value.AsBool())
@@ -428,6 +428,9 @@ func ValueFromAttribute(value attribute.Value) Value {
 			res = append(res, StringValue(v))
 		}
 		return SliceValue(res...)
+	case attribute.BYTESLICE:
+		val := value.AsByteSlice()
+		return BytesValue(val)
 	}
 	// This code should never be reached
 	// as log attributes are a superset of standard attributes.

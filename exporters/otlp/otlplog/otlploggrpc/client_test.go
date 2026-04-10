@@ -37,8 +37,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 var (
@@ -411,7 +411,7 @@ var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 // If errCh is not nil, the collector will respond to Export calls with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
+func newGRPCCollector(ctx context.Context, endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
 	if endpoint == "" {
 		endpoint = "localhost:0"
 	}
@@ -422,7 +422,7 @@ func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcColle
 	}
 
 	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
+	c.listener, err = (&net.ListenConfig{}).Listen(ctx, "tcp", endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func (c *grpcCollector) Collect() *storage {
 
 func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
 	t.Helper()
-	coll, err := newGRPCCollector("", rCh)
+	coll, err := newGRPCCollector(t.Context(), "", rCh)
 	require.NoError(t, err)
 
 	addr := coll.listener.Addr().String()
@@ -564,7 +564,7 @@ func TestClient(t *testing.T) {
 
 func TestConfig(t *testing.T) {
 	factoryFunc := func(rCh <-chan exportResult, o ...Option) (log.Exporter, *grpcCollector) {
-		coll, err := newGRPCCollector("", rCh)
+		coll, err := newGRPCCollector(t.Context(), "", rCh)
 		require.NoError(t, err)
 
 		ctx := t.Context()
@@ -693,10 +693,8 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
-												otelconv.RPCGRPCStatusCodeAttr(
-													codes.OK,
-												),
+											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+												codes.OK.String(),
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
@@ -833,10 +831,8 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
-												otelconv.RPCGRPCStatusCodeAttr(
-													status.Code(wantErr),
-												),
+											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+												status.Code(wantErr).String(),
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
@@ -880,7 +876,7 @@ func TestClientObservability(t *testing.T) {
 				wantErr = errors.Join(wantErr, err)
 
 				wantErrTypeAttr := semconv.ErrorType(wantErr)
-				wantGRPCStatusCodeAttr := otelconv.RPCGRPCStatusCodeAttr(codes.InvalidArgument)
+				wantGRPCStatus := codes.InvalidArgument
 				rCh := make(chan exportResult, 1)
 				rCh <- exportResult{
 					Err: err,
@@ -968,8 +964,8 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
-												wantGRPCStatusCodeAttr,
+											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+												wantGRPCStatus.String(),
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
@@ -1148,10 +1144,8 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 									otelconv.ComponentTypeOtlpGRPCLogExporter,
 								),
-								otelconv.SDKExporterOperationDuration{}.AttrRPCGRPCStatusCode(
-									otelconv.RPCGRPCStatusCodeAttr(
-										status.Code(wantErr),
-									),
+								otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+									status.Code(wantErr).String(),
 								),
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
@@ -1190,7 +1184,7 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 	const logRecordsCount = 100
 
 	run := func(b *testing.B) {
-		coll, err := newGRPCCollector("", nil)
+		coll, err := newGRPCCollector(b.Context(), "", nil)
 		require.NoError(b, err)
 		b.Cleanup(func() {
 			coll.srv.Stop()

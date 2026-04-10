@@ -70,6 +70,10 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 	}
 }
 
+type experimentalOption interface {
+	Experimental()
+}
+
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
@@ -81,6 +85,9 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
+		if _, ok := o.(experimentalOption); ok {
+			continue
+		}
 		conf = o.apply(conf)
 	}
 	return conf
@@ -160,12 +167,14 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 	})
 }
 
-// WithCardinalityLimit sets the cardinality limit for the MeterProvider.
+// WithCardinalityLimit sets the global cardinality limit for the MeterProvider.
 //
 // The cardinality limit is the hard limit on the number of metric datapoints
 // that can be collected for a single instrument in a single collect cycle.
 //
 // Setting this to a zero or negative value means no limit is applied.
+// This value applies to all instrument kinds, but can be overridden per kind by
+// the reader's cardinality limit selector (see [WithCardinalityLimitSelector]).
 func WithCardinalityLimit(limit int) Option {
 	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
 	// can also be used to set this value.

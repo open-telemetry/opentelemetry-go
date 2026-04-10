@@ -25,9 +25,10 @@ var (
 	attrFloat64      = attribute.Float64("float64", 1)
 	attrFloat64Slice = attribute.Float64Slice("float64 slice", []float64{-1, 1})
 	attrString       = attribute.String("string", "o")
+	attrBytes        = attribute.ByteSlice("bytes", []byte("otlp"))
 	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
-	attrInvalid      = attribute.KeyValue{
-		Key:   attribute.Key("invalid"),
+	attrEmpty        = attribute.KeyValue{
+		Key:   attribute.Key("empty"),
 		Value: attribute.Value{},
 	}
 
@@ -53,6 +54,7 @@ var (
 		},
 	}}
 	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valAttrBytes = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
 	valStrN     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "n"}}
 	valStrSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
@@ -69,13 +71,9 @@ var (
 	kvFloat64      = &cpb.KeyValue{Key: "float64", Value: valDblOne}
 	kvFloat64Slice = &cpb.KeyValue{Key: "float64 slice", Value: valDblSlice}
 	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
+	kvAttrBytes    = &cpb.KeyValue{Key: "bytes", Value: valAttrBytes}
 	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
-	kvInvalid      = &cpb.KeyValue{
-		Key: "invalid",
-		Value: &cpb.AnyValue{
-			Value: &cpb.AnyValue_StringValue{StringValue: "INVALID"},
-		},
-	}
+	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
 
 func TestAttrTransforms(t *testing.T) {
@@ -89,9 +87,9 @@ func TestAttrTransforms(t *testing.T) {
 		{"nil", nil, nil},
 		{"empty", []attribute.KeyValue{}, nil},
 		{
-			"invalid",
-			[]attribute.KeyValue{attrInvalid},
-			[]*cpb.KeyValue{kvInvalid},
+			"empty value",
+			[]attribute.KeyValue{attrEmpty},
+			[]*cpb.KeyValue{kvEmpty},
 		},
 		{
 			"bool",
@@ -139,6 +137,11 @@ func TestAttrTransforms(t *testing.T) {
 			[]*cpb.KeyValue{kvString},
 		},
 		{
+			"bytes",
+			[]attribute.KeyValue{attrBytes},
+			[]*cpb.KeyValue{kvAttrBytes},
+		},
+		{
 			"string slice",
 			[]attribute.KeyValue{attrStringSlice},
 			[]*cpb.KeyValue{kvStringSlice},
@@ -155,8 +158,9 @@ func TestAttrTransforms(t *testing.T) {
 				attrFloat64,
 				attrFloat64Slice,
 				attrString,
+				attrBytes,
 				attrStringSlice,
-				attrInvalid,
+				attrEmpty,
 			},
 			[]*cpb.KeyValue{
 				kvBool,
@@ -168,8 +172,9 @@ func TestAttrTransforms(t *testing.T) {
 				kvFloat64,
 				kvFloat64Slice,
 				kvString,
+				kvAttrBytes,
 				kvStringSlice,
-				kvInvalid,
+				kvEmpty,
 			},
 		},
 	} {
