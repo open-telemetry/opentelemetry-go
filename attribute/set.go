@@ -211,6 +211,51 @@ func NewSet(kvs ...KeyValue) Set {
 	return s
 }
 
+// SortAndDedup sorts and de-duplicates the passed attributes in-place.
+// Duplicate keys are eliminated by taking the last value.
+// It returns the slice containing the unique attributes.
+func SortAndDedup(kvs []KeyValue) []KeyValue {
+	if len(kvs) == 0 {
+		return kvs
+	}
+
+	// Stable sort so the following de-duplication can implement
+	// last-value-wins semantics.
+	slices.SortStableFunc(kvs, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	position := len(kvs) - 1
+	offset := position - 1
+
+	// De-duplicate with last-value-wins semantics.
+	for ; offset >= 0; offset-- {
+		if kvs[offset].Key == kvs[position].Key {
+			continue
+		}
+		position--
+		kvs[offset], kvs[position] = kvs[position], kvs[offset]
+	}
+	return kvs[position:]
+}
+
+// NewDistinctFromSorted returns a Distinct identifier for the passed attributes.
+// The passed attributes must already be sorted and de-duplicated.
+func NewDistinctFromSorted(kvs []KeyValue) Distinct {
+	if len(kvs) == 0 {
+		return Distinct{hash: emptySet.hash}
+	}
+	return Distinct{hash: hashKVs(kvs)}
+}
+
+// NewDistinct returns a Distinct identifier for the passed attributes.
+// It may modify the passed slice to sort and de-duplicate the attributes.
+// Duplicate keys are eliminated by taking the last value.
+func NewDistinct(kvs []KeyValue) Distinct {
+	kvs = SortAndDedup(kvs)
+	return NewDistinctFromSorted(kvs)
+}
+
 // NewSetWithSortable returns a new Set. See the documentation for
 // NewSetWithSortableFiltered for more details.
 //

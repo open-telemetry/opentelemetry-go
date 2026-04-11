@@ -599,3 +599,46 @@ func BenchmarkNewSetStringAttrs(b *testing.B) {
 		})
 	}
 }
+
+func TestNewDistinct(t *testing.T) {
+	cases := []struct {
+		name string
+		kvs  []attribute.KeyValue
+	}{
+		{
+			name: "empty",
+			kvs:  nil,
+		},
+		{
+			name: "unique",
+			kvs:  []attribute.KeyValue{attribute.String("A", "B"), attribute.String("C", "D")},
+		},
+		{
+			name: "duplicate",
+			kvs:  []attribute.KeyValue{attribute.String("A", "B"), attribute.String("A", "C")},
+		},
+		{
+			name: "mixed",
+			kvs: []attribute.KeyValue{
+				attribute.String("C", "D"),
+				attribute.String("A", "B"),
+				attribute.String("A", "C"),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			kvsCopy1 := make([]attribute.KeyValue, len(tc.kvs))
+			copy(kvsCopy1, tc.kvs)
+
+			kvsCopy2 := make([]attribute.KeyValue, len(tc.kvs))
+			copy(kvsCopy2, tc.kvs)
+
+			distinct := attribute.NewDistinct(kvsCopy1)
+			set := attribute.NewSet(kvsCopy2...)
+
+			assert.Equal(t, set.Equivalent(), distinct, "Distinct should match Set.Equivalent()")
+		})
+	}
+}
