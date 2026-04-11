@@ -45,6 +45,8 @@ func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 //
 //		if r, ok := opt.(x.Resettable[attribute.Set]); ok {
 //			r.Reset(set)
+//		} else {
+//			opt = metric.WithAttributeSet(set)
 //		}
 //		counter.Add(ctx, 1, opt)
 //	}
