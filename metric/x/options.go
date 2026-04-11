@@ -27,3 +27,24 @@ func (o defaultAttributesOption) AllowedKeys() []attribute.Key {
 func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
+
+type unsafeAttributesOption struct {
+	metric.MeasurementOption
+	kvs []attribute.KeyValue
+}
+
+// Experimental prevents the API from panicking when the option is used.
+func (unsafeAttributesOption) Experimental() {}
+
+// RawAttributes returns the raw key-values associated with the option.
+func (o unsafeAttributesOption) RawAttributes() []attribute.KeyValue {
+	return o.kvs
+}
+
+// WithUnsafeAttributes returns a metric.MeasurementOption that stores the raw attributes
+// and associates them with a measurement without making a copy.
+// The caller must not modify the attributes slice after passing it to this function.
+func WithUnsafeAttributes(kvs ...attribute.KeyValue) metric.MeasurementOption {
+	kvs = attribute.SortAndDedup(kvs)
+	return unsafeAttributesOption{kvs: kvs}
+}
