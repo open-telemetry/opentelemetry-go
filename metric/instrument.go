@@ -310,6 +310,10 @@ type attrOpt struct {
 	set attribute.Set
 }
 
+func (o *attrOpt) Reset(set attribute.Set) {
+	o.set = set
+}
+
 // mergeSets returns the union of keys between a and b. Any duplicate keys will
 // use the value associated with b.
 func mergeSets(a, b attribute.Set) attribute.Set {
@@ -322,7 +326,7 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 	return attribute.NewSet(merged...)
 }
 
-func (o attrOpt) applyAdd(c AddConfig) AddConfig {
+func (o *attrOpt) applyAdd(c AddConfig) AddConfig {
 	switch {
 	case o.set.Len() == 0:
 	case c.attrs.Len() == 0:
@@ -333,7 +337,7 @@ func (o attrOpt) applyAdd(c AddConfig) AddConfig {
 	return c
 }
 
-func (o attrOpt) applyRecord(c RecordConfig) RecordConfig {
+func (o *attrOpt) applyRecord(c RecordConfig) RecordConfig {
 	switch {
 	case o.set.Len() == 0:
 	case c.attrs.Len() == 0:
@@ -344,7 +348,7 @@ func (o attrOpt) applyRecord(c RecordConfig) RecordConfig {
 	return c
 }
 
-func (o attrOpt) applyObserve(c ObserveConfig) ObserveConfig {
+func (o *attrOpt) applyObserve(c ObserveConfig) ObserveConfig {
 	switch {
 	case o.set.Len() == 0:
 	case c.attrs.Len() == 0:
@@ -362,7 +366,7 @@ func (o attrOpt) applyObserve(c ObserveConfig) ObserveConfig {
 // attributes will be merged together in the order they are passed. Attributes
 // with duplicate keys will use the last value passed.
 func WithAttributeSet(attributes attribute.Set) MeasurementOption {
-	return attrOpt{set: attributes}
+	return &attrOpt{set: attributes}
 }
 
 // WithAttributes converts attributes into an attribute Set and sets the Set to
@@ -383,5 +387,5 @@ func WithAttributeSet(attributes attribute.Set) MeasurementOption {
 func WithAttributes(attributes ...attribute.KeyValue) MeasurementOption {
 	cp := make([]attribute.KeyValue, len(attributes))
 	copy(cp, attributes)
-	return attrOpt{set: attribute.NewSet(cp...)}
+	return &attrOpt{set: attribute.NewSet(cp...)}
 }

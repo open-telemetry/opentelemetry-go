@@ -48,3 +48,30 @@ func WithUnsafeAttributes(kvs ...attribute.KeyValue) metric.MeasurementOption {
 	kvs = attribute.SortAndDedup(kvs)
 	return unsafeAttributesOption{kvs: kvs}
 }
+
+// Resettable is an optional interface that Options can implement
+// to allow reuse without additional allocations.
+//
+// Example usage with sync.Pool:
+//
+//	var optionPool = sync.Pool{
+//		New: func() any {
+//			return metric.WithAttributeSet(*attribute.EmptySet())
+//		},
+//	}
+//
+//	func record(ctx context.Context, counter metric.Int64Counter, set attribute.Set) {
+//		opt := optionPool.Get().(metric.MeasurementOption)
+//		defer optionPool.Put(opt)
+//
+//		if r, ok := opt.(x.Resettable[attribute.Set]); ok {
+//			r.Reset(set)
+//		}
+//		counter.Add(ctx, 1, opt)
+//	}
+//
+// WARNING: It is the user's responsibility to ensure that the option is not
+// concurrently reset while being passed to the API or used by another goroutine.
+type Resettable[T any] interface {
+	Reset(T)
+}
