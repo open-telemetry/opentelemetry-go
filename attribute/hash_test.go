@@ -126,12 +126,12 @@ func slice(kvs []KeyValue) string {
 	_, _ = b.WriteRune('[')
 	_, _ = b.WriteString(string(kvs[0].Key))
 	_, _ = b.WriteRune(':')
-	_, _ = b.WriteString(kvs[0].Value.Emit())
+	_, _ = b.WriteString(kvs[0].Value.String())
 	for _, kv := range kvs[1:] {
 		_, _ = b.WriteRune(',')
 		_, _ = b.WriteString(string(kv.Key))
 		_, _ = b.WriteRune(':')
-		_, _ = b.WriteString(kv.Value.Emit())
+		_, _ = b.WriteString(kv.Value.String())
 	}
 	_, _ = b.WriteRune(']')
 	return b.String()
