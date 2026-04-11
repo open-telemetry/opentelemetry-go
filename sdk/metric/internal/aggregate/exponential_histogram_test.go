@@ -157,7 +157,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice.Equivalent(), alice, nil, nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -199,7 +199,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, alice.Equivalent(), alice, nil, nil)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -1165,7 +1165,7 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 				go func() {
 					defer wg.Done()
 					for range numRecords {
-						meas(ctx, 0, alice)
+						meas(ctx, 0, alice.Equivalent(), alice, nil)
 					}
 				}()
 			}
@@ -1215,10 +1215,10 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 							val = N(float64(id+1) * 100.0)
 						}
 
-						meas(ctx, val, alice)
+						meas(ctx, val, alice.Equivalent(), alice, nil)
 
 						m.Lock()
-						refMeas(ctx, val, alice)
+						refMeas(ctx, val, alice.Equivalent(), alice, nil)
 						m.Unlock()
 					}
 				}(i)
@@ -1281,9 +1281,9 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 	ctx := t.Context()
 
-	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
+	h.measure(ctx, math.NaN(), attribute.EmptySet().Equivalent(), *attribute.EmptySet(), nil, nil)
+	h.measure(ctx, math.Inf(1), attribute.EmptySet().Equivalent(), *attribute.EmptySet(), nil, nil)
+	h.measure(ctx, math.Inf(-1), attribute.EmptySet().Equivalent(), *attribute.EmptySet(), nil, nil)
 
 	var dest metricdata.Aggregation
 	h.delta(&dest)

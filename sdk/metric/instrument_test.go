@@ -46,7 +46,8 @@ func BenchmarkInstrument(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			inst.aggregate(ctx, int64(i), attr(i))
+			a := attr(i)
+			inst.aggregate(ctx, int64(i), a.Equivalent(), a, nil)
 		}
 	})
 

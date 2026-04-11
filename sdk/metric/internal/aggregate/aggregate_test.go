@@ -91,12 +91,14 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, f attribute.Set, d []attribute.KeyValue) {
-					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
-					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
-				})
-				meas(t.Context(), value, attr)
+				meas := b.filter(
+					func(_ context.Context, v N, _ attribute.Distinct, f attribute.Set, _, d []attribute.KeyValue) {
+						assert.Equal(t, value, v, "measured incorrect value")
+						assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
+						assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
+					},
+				)
+				meas(t.Context(), value, attr.Equivalent(), attr, nil)
 			}
 		}
 
@@ -129,7 +131,7 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 		got := new(metricdata.Aggregation)
 		for i, step := range steps {
 			for _, args := range step.input {
-				meas(args.ctx, args.value, args.attr)
+				meas(args.ctx, args.value, args.attr.Equivalent(), args.attr, nil)
 			}
 
 			t.Logf("step: %d", i)
@@ -193,7 +195,7 @@ func testAggregationConcurrentSafe[N int64 | float64](
 				attr := attrs[id]
 
 				for j := range concurrentNumRecords {
-					meas(ctx, vals[j%len(vals)], attr)
+					meas(ctx, vals[j%len(vals)], attr.Equivalent(), attr, nil)
 				}
 			}(i)
 		}
@@ -256,7 +258,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 
 		for n := 0; n < b.N; n++ {
 			for _, attr := range attrs {
-				meas(ctx, 1, attr)
+				meas(ctx, 1, attr.Equivalent(), attr, nil)
 			}
 		}
 
@@ -268,7 +270,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 		for n := range comps {
 			meas, comp := factory()
 			for _, attr := range attrs {
-				meas(ctx, 1, attr)
+				meas(ctx, 1, attr.Equivalent(), attr, nil)
 			}
 			comps[n] = comp
 		}

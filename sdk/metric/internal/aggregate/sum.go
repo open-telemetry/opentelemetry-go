@@ -27,10 +27,12 @@ type sumValueMap[N int64 | float64] struct {
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	distinct attribute.Distinct,
+	set attribute.Set,
+	kvs []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	sv := s.values.LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
 		return &sumValue[N]{
 			res:       s.newRes(attr),
 			attrs:     attr,
@@ -77,10 +79,17 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]sumValueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+func (s *deltaSum[N]) measure(
+	ctx context.Context,
+	value N,
+	distinct attribute.Distinct,
+	set attribute.Set,
+	kvs []attribute.KeyValue,
+	droppedAttr []attribute.KeyValue,
+) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, kvs, droppedAttr)
 }
 
 func (s *deltaSum[N]) collect(

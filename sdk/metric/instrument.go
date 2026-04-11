@@ -176,6 +176,59 @@ func (i instID) normalize() instID {
 	return i
 }
 
+type rawAttributesOption interface {
+	RawAttributes() []attribute.KeyValue
+}
+
+func extractRawKVs[T any](opts []T) []attribute.KeyValue {
+	var rawKVs []attribute.KeyValue
+	var count int
+	for _, opt := range opts {
+		if r, ok := any(opt).(rawAttributesOption); ok {
+			count++
+			switch count {
+			case 1:
+				rawKVs = r.RawAttributes()
+			case 2:
+				merged := make([]attribute.KeyValue, 0, len(rawKVs)+len(r.RawAttributes()))
+				merged = append(merged, rawKVs...)
+				merged = append(merged, r.RawAttributes()...)
+				rawKVs = merged
+			default:
+				rawKVs = append(rawKVs, r.RawAttributes()...)
+			}
+		}
+	}
+	if count > 1 {
+		rawKVs = attribute.SortAndDedup(rawKVs)
+	}
+	return rawKVs
+}
+
+func resolveAttributes(
+	attrs attribute.Set,
+	rawKVs []attribute.KeyValue,
+) (attribute.Distinct, attribute.Set, []attribute.KeyValue) {
+	if len(rawKVs) == 0 {
+		equiv := attrs.Equivalent()
+		return equiv, attrs, nil
+	}
+
+	if attrs.Len() > 0 {
+		// Both are present, merge them.
+		merged := make([]attribute.KeyValue, 0, attrs.Len()+len(rawKVs))
+		merged = append(merged, attrs.ToSlice()...)
+		merged = append(merged, rawKVs...)
+		merged = attribute.SortAndDedup(merged)
+		distinct := attribute.NewDistinctFromSorted(merged)
+		return distinct, *attribute.EmptySet(), merged
+	}
+
+	// Only rawKVs are present.
+	distinct := attribute.NewDistinctFromSorted(rawKVs)
+	return distinct, *attribute.EmptySet(), rawKVs
+}
+
 type int64Inst struct {
 	measures []aggregate.Measure[int64]
 
@@ -194,12 +247,18 @@ var (
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+
+	rawKVs := extractRawKVs(opts)
+	distinct, set, kvs := resolveAttributes(c.Attributes(), rawKVs)
+	i.aggregate(ctx, val, distinct, set, kvs)
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+
+	rawKVs := extractRawKVs(opts)
+	distinct, set, kvs := resolveAttributes(c.Attributes(), rawKVs)
+	i.aggregate(ctx, val, distinct, set, kvs)
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
@@ -209,10 +268,12 @@ func (i *int64Inst) Enabled(context.Context) bool {
 func (i *int64Inst) aggregate(
 	ctx context.Context,
 	val int64,
-	s attribute.Set,
+	distinct attribute.Distinct,
+	set attribute.Set,
+	kvs []attribute.KeyValue,
 ) { // nolint:revive  // okay to shadow pkg with method.
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, distinct, set, kvs)
 	}
 }
 
@@ -234,21 +295,33 @@ var (
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+
+	rawKVs := extractRawKVs(opts)
+	distinct, set, kvs := resolveAttributes(c.Attributes(), rawKVs)
+	i.aggregate(ctx, val, distinct, set, kvs)
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+
+	rawKVs := extractRawKVs(opts)
+	distinct, set, kvs := resolveAttributes(c.Attributes(), rawKVs)
+	i.aggregate(ctx, val, distinct, set, kvs)
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
 	return len(i.measures) != 0
 }
 
-func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
+func (i *float64Inst) aggregate(
+	ctx context.Context,
+	val float64,
+	distinct attribute.Distinct,
+	set attribute.Set,
+	kvs []attribute.KeyValue,
+) {
 	for _, in := range i.measures {
-		in(ctx, val, s)
+		in(ctx, val, distinct, set, kvs)
 	}
 }
 
@@ -339,7 +412,7 @@ type measures[N int64 | float64] []aggregate.Measure[N]
 // observe records the val for the set of attrs.
 func (m measures[N]) observe(val N, s attribute.Set) {
 	for _, in := range m {
-		in(context.Background(), val, s)
+		in(context.Background(), val, s.Equivalent(), s, nil)
 	}
 }
 

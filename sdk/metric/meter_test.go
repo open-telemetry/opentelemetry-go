@@ -159,6 +159,15 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 	wg.Wait()
 }
 
+type testRawAttributesOption struct {
+	metric.AddOption
+	kvs []attribute.KeyValue
+}
+
+func (o testRawAttributesOption) RawAttributes() []attribute.KeyValue {
+	return o.kvs
+}
+
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
 	// The synchronous measurement methods must ignore the context cancellation.
@@ -399,6 +408,92 @@ func TestMeterCreatesInstruments(t *testing.T) {
 					IsMonotonic: true,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{Value: 3},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64CountWithUnsafeAttributes",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint_unsafe")
+				assert.NoError(t, err)
+
+				assert.True(t, ctr.Enabled(t.Context()))
+				ctr.Add(
+					ctx,
+					3,
+					testRawAttributesOption{
+						AddOption: metric.WithAttributes(),
+						kvs:       []attribute.KeyValue{attribute.String("key", "value")},
+					},
+				)
+			},
+			want: metricdata.Metrics{
+				Name: "sint_unsafe",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attribute.String("key", "value")), Value: 3},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64CountWithMergedAttributes",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint_merged")
+				assert.NoError(t, err)
+
+				assert.True(t, ctr.Enabled(t.Context()))
+				ctr.Add(
+					ctx,
+					3,
+					metric.WithAttributes(attribute.String("a", "b")),
+					testRawAttributesOption{
+						AddOption: metric.WithAttributes(),
+						kvs:       []attribute.KeyValue{attribute.String("a", "c")},
+					},
+				)
+			},
+			want: metricdata.Metrics{
+				Name: "sint_merged",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attribute.String("a", "c")), Value: 3},
+					},
+				},
+			},
+		},
+		{
+			name: "SyncInt64CountWithMultipleUnsafeAttributes",
+			fn: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint_multiple_unsafe")
+				assert.NoError(t, err)
+
+				assert.True(t, ctr.Enabled(t.Context()))
+				ctr.Add(
+					ctx,
+					3,
+					testRawAttributesOption{
+						AddOption: metric.WithAttributes(),
+						kvs:       []attribute.KeyValue{attribute.String("a", "b")},
+					},
+					testRawAttributesOption{
+						AddOption: metric.WithAttributes(),
+						kvs:       []attribute.KeyValue{attribute.String("a", "c")},
+					},
+				)
+			},
+			want: metricdata.Metrics{
+				Name: "sint_multiple_unsafe",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attribute.String("a", "c")), Value: 3},
 					},
 				},
 			},

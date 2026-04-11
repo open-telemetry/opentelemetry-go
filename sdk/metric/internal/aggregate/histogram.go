@@ -107,12 +107,14 @@ type deltaHistogram[N int64 | float64] struct {
 func (s *deltaHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	distinct attribute.Distinct,
+	set attribute.Set,
+	kvs []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
 		hPt := &histogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -278,10 +280,12 @@ func newCumulativeHistogram[N int64 | float64](
 func (s *cumulativeHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
+	distinct attribute.Distinct,
+	set attribute.Set,
+	kvs []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
-	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.values.LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
