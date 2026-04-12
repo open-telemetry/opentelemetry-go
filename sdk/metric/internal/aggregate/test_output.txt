@@ -1,0 +1,618 @@
+=== RUN   TestBuilderFilter
+=== RUN   TestBuilderFilter/Int64
+=== RUN   TestBuilderFilter/Int64/NoFilter
+=== RUN   TestBuilderFilter/Int64/NoFilter/Set
+=== RUN   TestBuilderFilter/Int64/NoFilter/KVs
+=== RUN   TestBuilderFilter/Int64/Filter
+=== RUN   TestBuilderFilter/Int64/Filter/Set
+=== RUN   TestBuilderFilter/Int64/Filter/KVs
+=== RUN   TestBuilderFilter/Float64
+=== RUN   TestBuilderFilter/Float64/NoFilter
+=== RUN   TestBuilderFilter/Float64/NoFilter/Set
+=== RUN   TestBuilderFilter/Float64/NoFilter/KVs
+=== RUN   TestBuilderFilter/Float64/Filter
+=== RUN   TestBuilderFilter/Float64/Filter/Set
+=== RUN   TestBuilderFilter/Float64/Filter/KVs
+--- PASS: TestBuilderFilter (0.00s)
+    --- PASS: TestBuilderFilter/Int64 (0.00s)
+        --- PASS: TestBuilderFilter/Int64/NoFilter (0.00s)
+            --- PASS: TestBuilderFilter/Int64/NoFilter/Set (0.00s)
+            --- PASS: TestBuilderFilter/Int64/NoFilter/KVs (0.00s)
+        --- PASS: TestBuilderFilter/Int64/Filter (0.00s)
+            --- PASS: TestBuilderFilter/Int64/Filter/Set (0.00s)
+            --- PASS: TestBuilderFilter/Int64/Filter/KVs (0.00s)
+    --- PASS: TestBuilderFilter/Float64 (0.00s)
+        --- PASS: TestBuilderFilter/Float64/NoFilter (0.00s)
+            --- PASS: TestBuilderFilter/Float64/NoFilter/Set (0.00s)
+            --- PASS: TestBuilderFilter/Float64/NoFilter/KVs (0.00s)
+        --- PASS: TestBuilderFilter/Float64/Filter (0.00s)
+            --- PASS: TestBuilderFilter/Float64/Filter/Set (0.00s)
+            --- PASS: TestBuilderFilter/Float64/Filter/KVs (0.00s)
+=== RUN   TestAtomicSumAddFloatConcurrentSafe
+--- PASS: TestAtomicSumAddFloatConcurrentSafe (0.00s)
+=== RUN   TestAtomicSumAddIntConcurrentSafe
+--- PASS: TestAtomicSumAddIntConcurrentSafe (0.00s)
+=== RUN   TestHotColdWaitGroupConcurrentSafe
+    atomic_test.go:95: read value 0
+    atomic_test.go:95: read value 4
+--- PASS: TestHotColdWaitGroupConcurrentSafe (0.00s)
+=== RUN   TestAtomicN
+=== RUN   TestAtomicN/Int64
+=== RUN   TestAtomicN/Float64
+--- PASS: TestAtomicN (0.00s)
+    --- PASS: TestAtomicN/Int64 (0.00s)
+    --- PASS: TestAtomicN/Float64 (0.00s)
+=== RUN   TestAtomicNConcurrentSafe
+=== RUN   TestAtomicNConcurrentSafe/Int64
+=== RUN   TestAtomicNConcurrentSafe/Float64
+--- PASS: TestAtomicNConcurrentSafe (0.00s)
+    --- PASS: TestAtomicNConcurrentSafe/Int64 (0.00s)
+    --- PASS: TestAtomicNConcurrentSafe/Float64 (0.00s)
+=== RUN   TestAtomicMinMaxConcurrentSafe
+=== RUN   TestAtomicMinMaxConcurrentSafe/Int64
+=== RUN   TestAtomicMinMaxConcurrentSafe/Float64
+--- PASS: TestAtomicMinMaxConcurrentSafe (0.00s)
+    --- PASS: TestAtomicMinMaxConcurrentSafe/Int64 (0.00s)
+    --- PASS: TestAtomicMinMaxConcurrentSafe/Float64 (0.00s)
+=== RUN   TestDrop
+=== RUN   TestDrop/Int64
+=== RUN   TestDrop/Float64
+--- PASS: TestDrop (0.00s)
+    --- PASS: TestDrop/Int64 (0.00s)
+    --- PASS: TestDrop/Float64 (0.00s)
+=== RUN   TestCollectExemplars
+=== RUN   TestCollectExemplars/Int64
+=== RUN   TestCollectExemplars/Float64
+--- PASS: TestCollectExemplars (0.00s)
+    --- PASS: TestCollectExemplars/Int64 (0.00s)
+    --- PASS: TestCollectExemplars/Float64 (0.00s)
+=== RUN   TestExpoHistogramDataPointRecord
+=== RUN   TestExpoHistogramDataPointRecord/float64
+=== RUN   TestExpoHistogramDataPointRecord/float64/[2_4_1]
+=== RUN   TestExpoHistogramDataPointRecord/float64/[4_4_4_2_16_1]
+=== RUN   TestExpoHistogramDataPointRecord/float64/[1_2_4]
+=== RUN   TestExpoHistogramDataPointRecord/float64/[1_4_2]
+=== RUN   TestExpoHistogramDataPointRecord/float64/[2_4_1]#01
+=== RUN   TestExpoHistogramDataPointRecord/float64/[2_1_4]
+=== RUN   TestExpoHistogramDataPointRecord/float64/[4_1_2]
+=== RUN   TestExpoHistogramDataPointRecord/float64/[4_2_1]
+=== RUN   TestExpoHistogramDataPointRecord/float64_MinMaxSum
+=== RUN   TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1]
+=== RUN   TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1_+Inf]
+=== RUN   TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1_-Inf]
+=== RUN   TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1_NaN]
+=== RUN   TestExpoHistogramDataPointRecord/float64_MinMaxSum/[4_4_4_2_16_1]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[2_2_2_1_8_0.5]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[1_0.5_2]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[1_2_0.5]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[2_0.5_1]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[2_1_0.5]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[0.5_1_2]
+=== RUN   TestExpoHistogramDataPointRecord/float64-2/[0.5_2_1]
+=== RUN   TestExpoHistogramDataPointRecord/int64
+=== RUN   TestExpoHistogramDataPointRecord/int64/[2_4_1]
+=== RUN   TestExpoHistogramDataPointRecord/int64/[4_4_4_2_16_1]
+=== RUN   TestExpoHistogramDataPointRecord/int64/[1_2_4]
+=== RUN   TestExpoHistogramDataPointRecord/int64/[1_4_2]
+=== RUN   TestExpoHistogramDataPointRecord/int64/[2_4_1]#01
+=== RUN   TestExpoHistogramDataPointRecord/int64/[2_1_4]
+=== RUN   TestExpoHistogramDataPointRecord/int64/[4_1_2]
+=== RUN   TestExpoHistogramDataPointRecord/int64/[4_2_1]
+=== RUN   TestExpoHistogramDataPointRecord/int64_MinMaxSum
+=== RUN   TestExpoHistogramDataPointRecord/int64_MinMaxSum/[2_4_1]
+=== RUN   TestExpoHistogramDataPointRecord/int64_MinMaxSum/[4_4_4_2_16_1]
+--- PASS: TestExpoHistogramDataPointRecord (0.00s)
+    --- PASS: TestExpoHistogramDataPointRecord/float64 (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[2_4_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[4_4_4_2_16_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[1_2_4] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[1_4_2] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[2_4_1]#01 (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[2_1_4] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[4_1_2] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64/[4_2_1] (0.00s)
+    --- PASS: TestExpoHistogramDataPointRecord/float64_MinMaxSum (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1_+Inf] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1_-Inf] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64_MinMaxSum/[2_4_1_NaN] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64_MinMaxSum/[4_4_4_2_16_1] (0.00s)
+    --- PASS: TestExpoHistogramDataPointRecord/float64-2 (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[2_2_2_1_8_0.5] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[1_0.5_2] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[1_2_0.5] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[2_0.5_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[2_1_0.5] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[0.5_1_2] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/float64-2/[0.5_2_1] (0.00s)
+    --- PASS: TestExpoHistogramDataPointRecord/int64 (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[2_4_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[4_4_4_2_16_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[1_2_4] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[1_4_2] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[2_4_1]#01 (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[2_1_4] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[4_1_2] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64/[4_2_1] (0.00s)
+    --- PASS: TestExpoHistogramDataPointRecord/int64_MinMaxSum (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64_MinMaxSum/[2_4_1] (0.00s)
+        --- PASS: TestExpoHistogramDataPointRecord/int64_MinMaxSum/[4_4_4_2_16_1] (0.00s)
+=== RUN   TestExponentialHistogramDataPointRecordLimits
+--- PASS: TestExponentialHistogramDataPointRecordLimits (0.00s)
+=== RUN   TestExpoBucketDownscale
+=== RUN   TestExpoBucketDownscale/Empty_bucket
+=== RUN   TestExpoBucketDownscale/1_size_bucket
+=== RUN   TestExpoBucketDownscale/zero_scale
+=== RUN   TestExpoBucketDownscale/aligned_bucket_scale_1
+=== RUN   TestExpoBucketDownscale/aligned_bucket_scale_2
+=== RUN   TestExpoBucketDownscale/aligned_bucket_scale_3
+=== RUN   TestExpoBucketDownscale/unaligned_bucket_scale_1
+=== RUN   TestExpoBucketDownscale/unaligned_bucket_scale_2
+=== RUN   TestExpoBucketDownscale/unaligned_bucket_scale_3
+=== RUN   TestExpoBucketDownscale/unaligned_bucket_scale_1#01
+=== RUN   TestExpoBucketDownscale/negative_startBin
+=== RUN   TestExpoBucketDownscale/negative_startBin_2
+--- PASS: TestExpoBucketDownscale (0.00s)
+    --- PASS: TestExpoBucketDownscale/Empty_bucket (0.00s)
+    --- PASS: TestExpoBucketDownscale/1_size_bucket (0.00s)
+    --- PASS: TestExpoBucketDownscale/zero_scale (0.00s)
+    --- PASS: TestExpoBucketDownscale/aligned_bucket_scale_1 (0.00s)
+    --- PASS: TestExpoBucketDownscale/aligned_bucket_scale_2 (0.00s)
+    --- PASS: TestExpoBucketDownscale/aligned_bucket_scale_3 (0.00s)
+    --- PASS: TestExpoBucketDownscale/unaligned_bucket_scale_1 (0.00s)
+    --- PASS: TestExpoBucketDownscale/unaligned_bucket_scale_2 (0.00s)
+    --- PASS: TestExpoBucketDownscale/unaligned_bucket_scale_3 (0.00s)
+    --- PASS: TestExpoBucketDownscale/unaligned_bucket_scale_1#01 (0.00s)
+    --- PASS: TestExpoBucketDownscale/negative_startBin (0.00s)
+    --- PASS: TestExpoBucketDownscale/negative_startBin_2 (0.00s)
+=== RUN   TestExpoBucketRecord
+=== RUN   TestExpoBucketRecord/Empty_Bucket_creates_first_count
+=== RUN   TestExpoBucketRecord/Bin_is_in_the_bucket
+=== RUN   TestExpoBucketRecord/Bin_is_before_the_start_of_the_bucket
+=== RUN   TestExpoBucketRecord/Bin_is_after_the_end_of_the_bucket
+--- PASS: TestExpoBucketRecord (0.00s)
+    --- PASS: TestExpoBucketRecord/Empty_Bucket_creates_first_count (0.00s)
+    --- PASS: TestExpoBucketRecord/Bin_is_in_the_bucket (0.00s)
+    --- PASS: TestExpoBucketRecord/Bin_is_before_the_start_of_the_bucket (0.00s)
+    --- PASS: TestExpoBucketRecord/Bin_is_after_the_end_of_the_bucket (0.00s)
+=== RUN   TestScaleChange
+=== RUN   TestScaleChange/if_length_is_0,_no_rescale_is_needed
+=== RUN   TestScaleChange/if_bin_is_between_start,_and_the_end,_no_rescale_needed
+=== RUN   TestScaleChange/if_len([bin,..._end])_>_maxSize,_rescale_needed
+=== RUN   TestScaleChange/if_len([start,_...,_bin])_>_maxSize,_rescale_needed
+=== RUN   TestScaleChange/if_len([start,_...,_bin])_>_maxSize,_rescale_needed#01
+=== RUN   TestScaleChange/It_should_not_hang_if_it_will_never_be_able_to_rescale
+--- PASS: TestScaleChange (0.00s)
+    --- PASS: TestScaleChange/if_length_is_0,_no_rescale_is_needed (0.00s)
+    --- PASS: TestScaleChange/if_bin_is_between_start,_and_the_end,_no_rescale_needed (0.00s)
+    --- PASS: TestScaleChange/if_len([bin,..._end])_>_maxSize,_rescale_needed (0.00s)
+    --- PASS: TestScaleChange/if_len([start,_...,_bin])_>_maxSize,_rescale_needed (0.00s)
+    --- PASS: TestScaleChange/if_len([start,_...,_bin])_>_maxSize,_rescale_needed#01 (0.00s)
+    --- PASS: TestScaleChange/It_should_not_hang_if_it_will_never_be_able_to_rescale (0.00s)
+=== RUN   TestSubNormal
+--- PASS: TestSubNormal (0.00s)
+=== RUN   TestExponentialHistogramAggregation
+=== RUN   TestExponentialHistogramAggregation/Int64/Delta
+    exponential_histogram_test.go:652: step: 0
+    exponential_histogram_test.go:652: step: 1
+    exponential_histogram_test.go:652: step: 2
+    exponential_histogram_test.go:652: step: 3
+=== RUN   TestExponentialHistogramAggregation/Float64/Delta
+    exponential_histogram_test.go:655: step: 0
+    exponential_histogram_test.go:655: step: 1
+    exponential_histogram_test.go:655: step: 2
+    exponential_histogram_test.go:655: step: 3
+=== RUN   TestExponentialHistogramAggregation/Int64/Cumulative
+    exponential_histogram_test.go:661: step: 0
+    exponential_histogram_test.go:661: step: 1
+    exponential_histogram_test.go:661: step: 2
+    exponential_histogram_test.go:661: step: 3
+    exponential_histogram_test.go:661: step: 4
+=== RUN   TestExponentialHistogramAggregation/Int64/Cumulative/PerSeriesStartTimeEnabled
+    exponential_histogram_test.go:668: step: 0
+    exponential_histogram_test.go:668: step: 1
+    exponential_histogram_test.go:668: step: 2
+    exponential_histogram_test.go:668: step: 3
+    exponential_histogram_test.go:668: step: 4
+=== RUN   TestExponentialHistogramAggregation/Float64/Cumulative
+    exponential_histogram_test.go:675: step: 0
+    exponential_histogram_test.go:675: step: 1
+    exponential_histogram_test.go:675: step: 2
+    exponential_histogram_test.go:675: step: 3
+    exponential_histogram_test.go:675: step: 4
+=== RUN   TestExponentialHistogramAggregation/Float64/Cumulative/PerSeriesStartTimeEnabled
+    exponential_histogram_test.go:682: step: 0
+    exponential_histogram_test.go:682: step: 1
+    exponential_histogram_test.go:682: step: 2
+    exponential_histogram_test.go:682: step: 3
+    exponential_histogram_test.go:682: step: 4
+--- PASS: TestExponentialHistogramAggregation (0.00s)
+    --- PASS: TestExponentialHistogramAggregation/Int64/Delta (0.00s)
+    --- PASS: TestExponentialHistogramAggregation/Float64/Delta (0.00s)
+    --- PASS: TestExponentialHistogramAggregation/Int64/Cumulative (0.00s)
+    --- PASS: TestExponentialHistogramAggregation/Int64/Cumulative/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestExponentialHistogramAggregation/Float64/Cumulative (0.00s)
+    --- PASS: TestExponentialHistogramAggregation/Float64/Cumulative/PerSeriesStartTimeEnabled (0.00s)
+=== RUN   TestExponentialHistogramAggregationConcurrentSafe
+=== RUN   TestExponentialHistogramAggregationConcurrentSafe/Int64/Delta
+=== RUN   TestExponentialHistogramAggregationConcurrentSafe/Float64/Delta
+=== RUN   TestExponentialHistogramAggregationConcurrentSafe/Int64/Cumulative
+=== RUN   TestExponentialHistogramAggregationConcurrentSafe/Float64/Cumulative
+--- PASS: TestExponentialHistogramAggregationConcurrentSafe (0.00s)
+    --- PASS: TestExponentialHistogramAggregationConcurrentSafe/Int64/Delta (0.00s)
+    --- PASS: TestExponentialHistogramAggregationConcurrentSafe/Float64/Delta (0.00s)
+    --- PASS: TestExponentialHistogramAggregationConcurrentSafe/Int64/Cumulative (0.00s)
+    --- PASS: TestExponentialHistogramAggregationConcurrentSafe/Float64/Cumulative (0.00s)
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Delta
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Delta/ZeroValues
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Delta/RescalingStress
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Delta
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Delta/ZeroValues
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Delta/RescalingStress
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Cumulative
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Cumulative/ZeroValues
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Cumulative/RescalingStress
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Cumulative
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Cumulative/ZeroValues
+=== RUN   TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Cumulative/RescalingStress
+--- PASS: TestExponentialHistogramConcurrentSafeEdgeCases (0.01s)
+    --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Delta (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Delta/ZeroValues (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Delta/RescalingStress (0.00s)
+    --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Delta (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Delta/ZeroValues (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Delta/RescalingStress (0.00s)
+    --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Cumulative (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Cumulative/ZeroValues (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Int64/Cumulative/RescalingStress (0.00s)
+    --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Cumulative (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Cumulative/ZeroValues (0.00s)
+        --- PASS: TestExponentialHistogramConcurrentSafeEdgeCases/Float64/Cumulative/RescalingStress (0.00s)
+=== RUN   TestExpoHistogramRecordUnderflow
+--- PASS: TestExpoHistogramRecordUnderflow (0.00s)
+=== RUN   TestDeltaExpoHistogramMeasureNaNAndInf
+--- PASS: TestDeltaExpoHistogramMeasureNaNAndInf (0.00s)
+=== RUN   TestConcurrentSafeFilteredReservoir
+=== RUN   TestConcurrentSafeFilteredReservoir/concurrent_safe
+=== RUN   TestConcurrentSafeFilteredReservoir/not_concurrent_safe
+--- PASS: TestConcurrentSafeFilteredReservoir (0.00s)
+    --- PASS: TestConcurrentSafeFilteredReservoir/concurrent_safe (0.00s)
+    --- PASS: TestConcurrentSafeFilteredReservoir/not_concurrent_safe (0.00s)
+=== RUN   TestHistogram
+=== RUN   TestHistogram/Int64/Delta/Sum
+    histogram_test.go:30: step: 0
+    histogram_test.go:30: step: 1
+    histogram_test.go:30: step: 2
+    histogram_test.go:30: step: 3
+    histogram_test.go:30: step: 4
+=== RUN   TestHistogram/Int64/Delta/NoSum
+    histogram_test.go:32: step: 0
+    histogram_test.go:32: step: 1
+    histogram_test.go:32: step: 2
+    histogram_test.go:32: step: 3
+    histogram_test.go:32: step: 4
+=== RUN   TestHistogram/Float64/Delta/Sum
+    histogram_test.go:34: step: 0
+    histogram_test.go:34: step: 1
+    histogram_test.go:34: step: 2
+    histogram_test.go:34: step: 3
+    histogram_test.go:34: step: 4
+=== RUN   TestHistogram/Float64/Delta/NoSum
+    histogram_test.go:36: step: 0
+    histogram_test.go:36: step: 1
+    histogram_test.go:36: step: 2
+    histogram_test.go:36: step: 3
+    histogram_test.go:36: step: 4
+=== RUN   TestHistogram/Int64/Cumulative/Sum
+    histogram_test.go:42: step: 0
+    histogram_test.go:42: step: 1
+    histogram_test.go:42: step: 2
+    histogram_test.go:42: step: 3
+    histogram_test.go:42: step: 4
+=== RUN   TestHistogram/Int64/Cumulative/Sum/PerSeriesStartTimeEnabled
+    histogram_test.go:49: step: 0
+    histogram_test.go:49: step: 1
+    histogram_test.go:49: step: 2
+    histogram_test.go:49: step: 3
+    histogram_test.go:49: step: 4
+=== RUN   TestHistogram/Int64/Cumulative/NoSum
+    histogram_test.go:56: step: 0
+    histogram_test.go:56: step: 1
+    histogram_test.go:56: step: 2
+    histogram_test.go:56: step: 3
+    histogram_test.go:56: step: 4
+=== RUN   TestHistogram/Int64/Cumulative/NoSum/PerSeriesStartTimeEnabled
+    histogram_test.go:63: step: 0
+    histogram_test.go:63: step: 1
+    histogram_test.go:63: step: 2
+    histogram_test.go:63: step: 3
+    histogram_test.go:63: step: 4
+=== RUN   TestHistogram/Float64/Cumulative/Sum
+    histogram_test.go:70: step: 0
+    histogram_test.go:70: step: 1
+    histogram_test.go:70: step: 2
+    histogram_test.go:70: step: 3
+    histogram_test.go:70: step: 4
+=== RUN   TestHistogram/Float64/Cumulative/Sum/PerSeriesStartTimeEnabled
+    histogram_test.go:77: step: 0
+    histogram_test.go:77: step: 1
+    histogram_test.go:77: step: 2
+    histogram_test.go:77: step: 3
+    histogram_test.go:77: step: 4
+=== RUN   TestHistogram/Float64/Cumulative/NoSum
+    histogram_test.go:86: step: 0
+    histogram_test.go:86: step: 1
+    histogram_test.go:86: step: 2
+    histogram_test.go:86: step: 3
+    histogram_test.go:86: step: 4
+=== RUN   TestHistogram/Float64/Cumulative/NoSum/PerSeriesStartTimeEnabled
+    histogram_test.go:97: step: 0
+    histogram_test.go:97: step: 1
+    histogram_test.go:97: step: 2
+    histogram_test.go:97: step: 3
+    histogram_test.go:97: step: 4
+--- PASS: TestHistogram (0.00s)
+    --- PASS: TestHistogram/Int64/Delta/Sum (0.00s)
+    --- PASS: TestHistogram/Int64/Delta/NoSum (0.00s)
+    --- PASS: TestHistogram/Float64/Delta/Sum (0.00s)
+    --- PASS: TestHistogram/Float64/Delta/NoSum (0.00s)
+    --- PASS: TestHistogram/Int64/Cumulative/Sum (0.00s)
+    --- PASS: TestHistogram/Int64/Cumulative/Sum/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestHistogram/Int64/Cumulative/NoSum (0.00s)
+    --- PASS: TestHistogram/Int64/Cumulative/NoSum/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestHistogram/Float64/Cumulative/Sum (0.00s)
+    --- PASS: TestHistogram/Float64/Cumulative/Sum/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestHistogram/Float64/Cumulative/NoSum (0.00s)
+    --- PASS: TestHistogram/Float64/Cumulative/NoSum/PerSeriesStartTimeEnabled (0.00s)
+=== RUN   TestHistogramConcurrentSafe
+=== RUN   TestHistogramConcurrentSafe/Int64/Delta
+=== RUN   TestHistogramConcurrentSafe/Float64/Delta
+=== RUN   TestHistogramConcurrentSafe/Int64/Cumulative
+=== RUN   TestHistogramConcurrentSafe/Float64/Cumulative
+--- PASS: TestHistogramConcurrentSafe (0.00s)
+    --- PASS: TestHistogramConcurrentSafe/Int64/Delta (0.00s)
+    --- PASS: TestHistogramConcurrentSafe/Float64/Delta (0.00s)
+    --- PASS: TestHistogramConcurrentSafe/Int64/Cumulative (0.00s)
+    --- PASS: TestHistogramConcurrentSafe/Float64/Cumulative (0.00s)
+=== RUN   TestHistogramImmutableBounds
+--- PASS: TestHistogramImmutableBounds (0.00s)
+=== RUN   TestCumulativeHistogramImmutableCounts
+--- PASS: TestCumulativeHistogramImmutableCounts (0.00s)
+=== RUN   TestDeltaHistogramReset
+--- PASS: TestDeltaHistogramReset (0.00s)
+=== RUN   TestLastValue
+=== RUN   TestLastValue/Int64/DeltaLastValue
+    lastvalue_test.go:21: step: 0
+    lastvalue_test.go:21: step: 1
+    lastvalue_test.go:21: step: 2
+    lastvalue_test.go:21: step: 3
+    lastvalue_test.go:21: step: 4
+=== RUN   TestLastValue/Float64/DeltaLastValue
+    lastvalue_test.go:23: step: 0
+    lastvalue_test.go:23: step: 1
+    lastvalue_test.go:23: step: 2
+    lastvalue_test.go:23: step: 3
+    lastvalue_test.go:23: step: 4
+=== RUN   TestLastValue/Int64/CumulativeLastValue
+    lastvalue_test.go:29: step: 0
+    lastvalue_test.go:29: step: 1
+    lastvalue_test.go:29: step: 2
+    lastvalue_test.go:29: step: 3
+    lastvalue_test.go:29: step: 4
+=== RUN   TestLastValue/Int64/CumulativeLastValue/PerSeriesStartTimeEnabled
+    lastvalue_test.go:36: step: 0
+    lastvalue_test.go:36: step: 1
+    lastvalue_test.go:36: step: 2
+    lastvalue_test.go:36: step: 3
+    lastvalue_test.go:36: step: 4
+=== RUN   TestLastValue/Float64/CumulativeLastValue
+    lastvalue_test.go:43: step: 0
+    lastvalue_test.go:43: step: 1
+    lastvalue_test.go:43: step: 2
+    lastvalue_test.go:43: step: 3
+    lastvalue_test.go:43: step: 4
+=== RUN   TestLastValue/Float64/CumulativeLastValue/PerSeriesStartTimeEnabled
+    lastvalue_test.go:50: step: 0
+    lastvalue_test.go:50: step: 1
+    lastvalue_test.go:50: step: 2
+    lastvalue_test.go:50: step: 3
+    lastvalue_test.go:50: step: 4
+=== RUN   TestLastValue/Int64/DeltaPrecomputedLastValue
+    lastvalue_test.go:54: step: 0
+    lastvalue_test.go:54: step: 1
+    lastvalue_test.go:54: step: 2
+    lastvalue_test.go:54: step: 3
+    lastvalue_test.go:54: step: 4
+=== RUN   TestLastValue/Float64/DeltaPrecomputedLastValue
+    lastvalue_test.go:56: step: 0
+    lastvalue_test.go:56: step: 1
+    lastvalue_test.go:56: step: 2
+    lastvalue_test.go:56: step: 3
+    lastvalue_test.go:56: step: 4
+=== RUN   TestLastValue/Int64/CumulativePrecomputedLastValue
+    lastvalue_test.go:59: step: 0
+    lastvalue_test.go:59: step: 1
+    lastvalue_test.go:59: step: 2
+    lastvalue_test.go:59: step: 3
+    lastvalue_test.go:59: step: 4
+=== RUN   TestLastValue/Float64/CumulativePrecomputedLastValue
+    lastvalue_test.go:61: step: 0
+    lastvalue_test.go:61: step: 1
+    lastvalue_test.go:61: step: 2
+    lastvalue_test.go:61: step: 3
+    lastvalue_test.go:61: step: 4
+--- PASS: TestLastValue (0.00s)
+    --- PASS: TestLastValue/Int64/DeltaLastValue (0.00s)
+    --- PASS: TestLastValue/Float64/DeltaLastValue (0.00s)
+    --- PASS: TestLastValue/Int64/CumulativeLastValue (0.00s)
+    --- PASS: TestLastValue/Int64/CumulativeLastValue/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestLastValue/Float64/CumulativeLastValue (0.00s)
+    --- PASS: TestLastValue/Float64/CumulativeLastValue/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestLastValue/Int64/DeltaPrecomputedLastValue (0.00s)
+    --- PASS: TestLastValue/Float64/DeltaPrecomputedLastValue (0.00s)
+    --- PASS: TestLastValue/Int64/CumulativePrecomputedLastValue (0.00s)
+    --- PASS: TestLastValue/Float64/CumulativePrecomputedLastValue (0.00s)
+=== RUN   TestLastValueConcurrentSafe
+=== RUN   TestLastValueConcurrentSafe/Int64/DeltaLastValue
+=== RUN   TestLastValueConcurrentSafe/Float64/DeltaLastValue
+=== RUN   TestLastValueConcurrentSafe/Int64/CumulativeLastValue
+=== RUN   TestLastValueConcurrentSafe/Float64/CumulativeLastValue
+=== RUN   TestLastValueConcurrentSafe/Int64/DeltaPrecomputedLastValue
+=== RUN   TestLastValueConcurrentSafe/Float64/DeltaPrecomputedLastValue
+=== RUN   TestLastValueConcurrentSafe/Int64/CumulativePrecomputedLastValue
+=== RUN   TestLastValueConcurrentSafe/Float64/CumulativePrecomputedLastValue
+--- PASS: TestLastValueConcurrentSafe (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Int64/DeltaLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Float64/DeltaLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Int64/CumulativeLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Float64/CumulativeLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Int64/DeltaPrecomputedLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Float64/DeltaPrecomputedLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Int64/CumulativePrecomputedLastValue (0.00s)
+    --- PASS: TestLastValueConcurrentSafe/Float64/CumulativePrecomputedLastValue (0.00s)
+=== RUN   TestLimiterAttributes
+=== RUN   TestLimiterAttributes/NoLimit
+=== RUN   TestLimiterAttributes/NotAtLimit/Exists
+=== RUN   TestLimiterAttributes/NotAtLimit/DoesNotExist
+=== RUN   TestLimiterAttributes/AtLimit/Exists
+=== RUN   TestLimiterAttributes/AtLimit/DoesNotExist
+--- PASS: TestLimiterAttributes (0.00s)
+    --- PASS: TestLimiterAttributes/NoLimit (0.00s)
+    --- PASS: TestLimiterAttributes/NotAtLimit/Exists (0.00s)
+    --- PASS: TestLimiterAttributes/NotAtLimit/DoesNotExist (0.00s)
+    --- PASS: TestLimiterAttributes/AtLimit/Exists (0.00s)
+    --- PASS: TestLimiterAttributes/AtLimit/DoesNotExist (0.00s)
+=== RUN   TestSum
+=== RUN   TestSum/Int64/DeltaSum
+    sum_test.go:22: step: 0
+    sum_test.go:22: step: 1
+    sum_test.go:22: step: 2
+    sum_test.go:22: step: 3
+    sum_test.go:22: step: 4
+=== RUN   TestSum/Float64/DeltaSum
+    sum_test.go:25: step: 0
+    sum_test.go:25: step: 1
+    sum_test.go:25: step: 2
+    sum_test.go:25: step: 3
+    sum_test.go:25: step: 4
+=== RUN   TestSum/Int64/CumulativeSum
+    sum_test.go:31: step: 0
+    sum_test.go:31: step: 1
+    sum_test.go:31: step: 2
+    sum_test.go:31: step: 3
+=== RUN   TestSum/Int64/CumulativeSum/PerSeriesStartTimeEnabled
+    sum_test.go:38: step: 0
+    sum_test.go:38: step: 1
+    sum_test.go:38: step: 2
+    sum_test.go:38: step: 3
+=== RUN   TestSum/Float64/CumulativeSum
+    sum_test.go:45: step: 0
+    sum_test.go:45: step: 1
+    sum_test.go:45: step: 2
+    sum_test.go:45: step: 3
+=== RUN   TestSum/Float64/CumulativeSum/PerSeriesStartTimeEnabled
+    sum_test.go:52: step: 0
+    sum_test.go:52: step: 1
+    sum_test.go:52: step: 2
+    sum_test.go:52: step: 3
+=== RUN   TestSum/Int64/DeltaPrecomputedSum
+    sum_test.go:56: step: 0
+    sum_test.go:56: step: 1
+    sum_test.go:56: step: 2
+    sum_test.go:56: step: 3
+    sum_test.go:56: step: 4
+=== RUN   TestSum/Float64/DeltaPrecomputedSum
+    sum_test.go:59: step: 0
+    sum_test.go:59: step: 1
+    sum_test.go:59: step: 2
+    sum_test.go:59: step: 3
+    sum_test.go:59: step: 4
+=== RUN   TestSum/Int64/CumulativePrecomputedSum
+    sum_test.go:62: step: 0
+    sum_test.go:62: step: 1
+    sum_test.go:62: step: 2
+    sum_test.go:62: step: 3
+    sum_test.go:62: step: 4
+=== RUN   TestSum/Float64/CumulativePrecomputedSum
+    sum_test.go:65: step: 0
+    sum_test.go:65: step: 1
+    sum_test.go:65: step: 2
+    sum_test.go:65: step: 3
+    sum_test.go:65: step: 4
+--- PASS: TestSum (0.00s)
+    --- PASS: TestSum/Int64/DeltaSum (0.00s)
+    --- PASS: TestSum/Float64/DeltaSum (0.00s)
+    --- PASS: TestSum/Int64/CumulativeSum (0.00s)
+    --- PASS: TestSum/Int64/CumulativeSum/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestSum/Float64/CumulativeSum (0.00s)
+    --- PASS: TestSum/Float64/CumulativeSum/PerSeriesStartTimeEnabled (0.00s)
+    --- PASS: TestSum/Int64/DeltaPrecomputedSum (0.00s)
+    --- PASS: TestSum/Float64/DeltaPrecomputedSum (0.00s)
+    --- PASS: TestSum/Int64/CumulativePrecomputedSum (0.00s)
+    --- PASS: TestSum/Float64/CumulativePrecomputedSum (0.00s)
+=== RUN   TestSumConcurrentSafe
+=== RUN   TestSumConcurrentSafe/Int64/DeltaSum
+=== RUN   TestSumConcurrentSafe/Float64/DeltaSum
+=== RUN   TestSumConcurrentSafe/Int64/CumulativeSum
+=== RUN   TestSumConcurrentSafe/Float64/CumulativeSum
+=== RUN   TestSumConcurrentSafe/Int64/DeltaPrecomputedSum
+=== RUN   TestSumConcurrentSafe/Float64/DeltaPrecomputedSum
+=== RUN   TestSumConcurrentSafe/Int64/CumulativePrecomputedSum
+=== RUN   TestSumConcurrentSafe/Float64/CumulativePrecomputedSum
+--- PASS: TestSumConcurrentSafe (0.00s)
+    --- PASS: TestSumConcurrentSafe/Int64/DeltaSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Float64/DeltaSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Int64/CumulativeSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Float64/CumulativeSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Int64/DeltaPrecomputedSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Float64/DeltaPrecomputedSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Int64/CumulativePrecomputedSum (0.00s)
+    --- PASS: TestSumConcurrentSafe/Float64/CumulativePrecomputedSum (0.00s)
+=== RUN   FuzzGetBin
+=== RUN   FuzzGetBin/seed#0
+=== RUN   FuzzGetBin/seed#1
+=== RUN   FuzzGetBin/seed#2
+=== RUN   FuzzGetBin/seed#3
+=== RUN   FuzzGetBin/seed#4
+=== RUN   FuzzGetBin/seed#5
+=== RUN   FuzzGetBin/seed#6
+=== RUN   FuzzGetBin/seed#7
+=== RUN   FuzzGetBin/seed#8
+=== RUN   FuzzGetBin/seed#9
+=== RUN   FuzzGetBin/seed#10
+=== RUN   FuzzGetBin/seed#11
+=== RUN   FuzzGetBin/seed#12
+=== RUN   FuzzGetBin/seed#13
+=== RUN   FuzzGetBin/seed#14
+=== RUN   FuzzGetBin/seed#15
+=== RUN   FuzzGetBin/seed#16
+=== RUN   FuzzGetBin/seed#17
+=== RUN   FuzzGetBin/seed#18
+=== RUN   FuzzGetBin/seed#19
+=== RUN   FuzzGetBin/seed#20
+--- PASS: FuzzGetBin (0.00s)
+    --- PASS: FuzzGetBin/seed#0 (0.00s)
+    --- PASS: FuzzGetBin/seed#1 (0.00s)
+    --- PASS: FuzzGetBin/seed#2 (0.00s)
+    --- PASS: FuzzGetBin/seed#3 (0.00s)
+    --- PASS: FuzzGetBin/seed#4 (0.00s)
+    --- PASS: FuzzGetBin/seed#5 (0.00s)
+    --- PASS: FuzzGetBin/seed#6 (0.00s)
+    --- PASS: FuzzGetBin/seed#7 (0.00s)
+    --- PASS: FuzzGetBin/seed#8 (0.00s)
+    --- PASS: FuzzGetBin/seed#9 (0.00s)
+    --- PASS: FuzzGetBin/seed#10 (0.00s)
+    --- PASS: FuzzGetBin/seed#11 (0.00s)
+    --- PASS: FuzzGetBin/seed#12 (0.00s)
+    --- PASS: FuzzGetBin/seed#13 (0.00s)
+    --- PASS: FuzzGetBin/seed#14 (0.00s)
+    --- PASS: FuzzGetBin/seed#15 (0.00s)
+    --- PASS: FuzzGetBin/seed#16 (0.00s)
+    --- PASS: FuzzGetBin/seed#17 (0.00s)
+    --- PASS: FuzzGetBin/seed#18 (0.00s)
+    --- PASS: FuzzGetBin/seed#19 (0.00s)
+    --- PASS: FuzzGetBin/seed#20 (0.00s)
+PASS
+ok  	go.opentelemetry.io/otel/sdk/metric/internal/aggregate	0.084s

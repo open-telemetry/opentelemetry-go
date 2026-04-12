@@ -40,6 +40,17 @@ func hashKVs(kvs []KeyValue) uint64 {
 	return h.Sum64()
 }
 
+// hashKVsWithFilter returns a new xxHash64 hash of kvs, applying the filter.
+func hashKVsWithFilter(kvs []KeyValue, filter Filter) uint64 {
+	h := xxhash.New()
+	for _, kv := range kvs {
+		if filter(kv) {
+			h = hashKV(h, kv)
+		}
+	}
+	return h.Sum64()
+}
+
 // hashKV returns the xxHash64 hash of kv with h as the base.
 func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 	h = h.String(string(kv.Key))

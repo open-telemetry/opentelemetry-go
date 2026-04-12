@@ -109,12 +109,12 @@ func (s *deltaHistogram[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
 		hPt := &histogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -282,10 +282,10 @@ func (s *cumulativeHistogram[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
-	h := s.values.LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
+	h := s.values.LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,

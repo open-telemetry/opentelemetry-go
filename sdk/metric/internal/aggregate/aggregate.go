@@ -57,24 +57,72 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	return dropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, d attribute.Distinct, set attribute.Set, kvs, droppedAttr []attribute.KeyValue)
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, d attribute.Distinct, set attribute.Set, getKVs func() []attribute.KeyValue, droppedAttr []attribute.KeyValue)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
 		fltr := b.Filter // Copy to make it immutable after assignment.
-		return func(ctx context.Context, n N, _ attribute.Distinct, set attribute.Set, kvs []attribute.KeyValue) {
-			var a attribute.Set
+		return func(ctx context.Context, n N, d attribute.Distinct, set attribute.Set, kvs []attribute.KeyValue) {
 			if set.Len() > 0 {
-				a = set
-			} else {
-				a = attribute.NewSet(kvs...)
+				fAttr, dropped := set.Filter(fltr)
+				f(ctx, n, fAttr.Equivalent(), fAttr, func() []attribute.KeyValue { return nil }, dropped)
+				return
 			}
-			fAttr, dropped := a.Filter(fltr)
-			f(ctx, n, fAttr.Equivalent(), fAttr, nil, dropped)
+
+			if len(kvs) == 0 {
+				f(ctx, n, d, set, func() []attribute.KeyValue { return nil }, nil)
+				return
+			}
+
+			// kvs case (WithUnsafeAttributes)
+			distinct := attribute.NewDistinctFromSortedWithFilter(kvs, fltr)
+
+			// Compute dropped!
+			var dropped []attribute.KeyValue
+			for _, kv := range kvs {
+				if !fltr(kv) {
+					if dropped == nil {
+						dropped = make([]attribute.KeyValue, 0, len(kvs))
+					}
+					dropped = append(dropped, kv)
+				}
+			}
+
+			if dropped == nil {
+				// Nothing filtered!
+				f(ctx, n, d, set, func() []attribute.KeyValue { return kvs }, nil)
+				return
+			}
+
+			if len(dropped) == len(kvs) {
+				// Everything filtered!
+				f(
+					ctx,
+					n,
+					attribute.EmptySet().Equivalent(),
+					*attribute.EmptySet(),
+					func() []attribute.KeyValue { return nil },
+					dropped,
+				)
+				return
+			}
+
+			// Some items were filtered out.
+			getKVs := func() []attribute.KeyValue {
+				var filtered []attribute.KeyValue
+				for _, kv := range kvs {
+					if fltr(kv) {
+						filtered = append(filtered, kv)
+					}
+				}
+				return filtered
+			}
+
+			f(ctx, n, distinct, *attribute.EmptySet(), getKVs, dropped)
 		}
 	}
 	return func(ctx context.Context, n N, d attribute.Distinct, set attribute.Set, kvs []attribute.KeyValue) {
-		f(ctx, n, d, set, kvs, nil)
+		f(ctx, n, d, set, func() []attribute.KeyValue { return kvs }, nil)
 	}
 }
 

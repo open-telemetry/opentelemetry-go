@@ -31,10 +31,10 @@ func (s *lastValueMap[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
+	lv := s.values.LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
 		p := &lastValuePoint[N]{
 			res:       s.newRes(attr),
 			attrs:     attr,
@@ -82,12 +82,12 @@ func (s *deltaLastValue[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, kvs, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, getKVs, droppedAttr)
 }
 
 func (s *deltaLastValue[N]) collect(

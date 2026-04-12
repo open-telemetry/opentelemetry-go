@@ -248,6 +248,16 @@ func NewDistinctFromSorted(kvs []KeyValue) Distinct {
 	return Distinct{hash: hashKVs(kvs)}
 }
 
+// NewDistinctFromSortedWithFilter returns a Distinct identifier for the passed attributes,
+// applying the filter to ignore attributes that don't pass.
+// The passed attributes must already be sorted and de-duplicated.
+func NewDistinctFromSortedWithFilter(kvs []KeyValue, filter Filter) Distinct {
+	if len(kvs) == 0 || filter == nil {
+		return NewDistinctFromSorted(kvs)
+	}
+	return Distinct{hash: hashKVsWithFilter(kvs, filter)}
+}
+
 // NewDistinct returns a Distinct identifier for the passed attributes.
 // It may modify the passed slice to sort and de-duplicate the attributes.
 // Duplicate keys are eliminated by taking the last value.

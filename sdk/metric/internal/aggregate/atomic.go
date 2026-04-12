@@ -231,7 +231,7 @@ type limitedSyncMap struct {
 func (m *limitedSyncMap) LoadOrStoreAttr(
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	newValue func(attribute.Set) any,
 ) any {
 	actual, loaded := m.Load(distinct)
@@ -263,7 +263,7 @@ func (m *limitedSyncMap) LoadOrStoreAttr(
 		if set.Len() > 0 {
 			fltrAttr = set
 		} else {
-			fltrAttr = attribute.NewSet(kvs...)
+			fltrAttr = attribute.NewSet(getKVs()...)
 		}
 	}
 

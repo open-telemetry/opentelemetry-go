@@ -29,10 +29,10 @@ func (s *sumValueMap[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrStoreAttr(distinct, set, kvs, func(attr attribute.Set) any {
+	sv := s.values.LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
 		return &sumValue[N]{
 			res:       s.newRes(attr),
 			attrs:     attr,
@@ -84,12 +84,12 @@ func (s *deltaSum[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, kvs, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, getKVs, droppedAttr)
 }
 
 func (s *deltaSum[N]) collect(

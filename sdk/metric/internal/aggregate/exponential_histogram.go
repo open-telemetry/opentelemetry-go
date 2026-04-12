@@ -332,7 +332,7 @@ func (e *expoHistogram[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	kvs []attribute.KeyValue,
+	getKVs func() []attribute.KeyValue,
 	droppedAttr []attribute.KeyValue,
 ) {
 	// Ignore NaN and infinity.
@@ -349,7 +349,7 @@ func (e *expoHistogram[N]) measure(
 		if set.Len() > 0 {
 			fltrAttr = set
 		} else {
-			fltrAttr = attribute.NewSet(kvs...)
+			fltrAttr = attribute.NewSet(getKVs()...)
 		}
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
 		// If we overflowed, make sure we add to the existing overflow series
