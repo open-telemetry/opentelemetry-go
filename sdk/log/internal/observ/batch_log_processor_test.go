@@ -4,6 +4,7 @@
 package observ_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -150,6 +151,9 @@ func TestBLPProcessed(t *testing.T) {
 func BenchmarkBLP(b *testing.B) {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
+	orig := otel.GetMeterProvider()
+	b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
 	newBLP := func(b *testing.B) *observ.BLP {
 		b.Helper()
 		blp, err := observ.NewBLP(id, func() int64 { return 3 }, 5)
@@ -164,44 +168,27 @@ func BenchmarkBLP(b *testing.B) {
 	}
 	ctx := b.Context()
 
-	b.Run("Processed", func(b *testing.B) {
-		orig := otel.GetMeterProvider()
-		b.Cleanup(func() { otel.SetMeterProvider(orig) })
-
-		// Ensure deterministic benchmark by using noop meter.
-		otel.SetMeterProvider(noop.NewMeterProvider())
-
-		blp := newBLP(b)
-
-		b.ResetTimer()
-		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				blp.Processed(ctx, 10)
-			}
+	for _, tt := range []struct {
+		name string
+		fn   func(*observ.BLP, context.Context)
+	}{
+		{"Processed", func(blp *observ.BLP, ctx context.Context) { blp.Processed(ctx, 10) }},
+		{"ProcessedQueueFull", func(blp *observ.BLP, ctx context.Context) { blp.ProcessedQueueFull(ctx, 1) }},
+	} {
+		b.Run(tt.name, func(b *testing.B) {
+			otel.SetMeterProvider(noop.NewMeterProvider())
+			blp := newBLP(b)
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					tt.fn(blp, ctx)
+				}
+			})
 		})
-	})
-	b.Run("ProcessedQueueFull", func(b *testing.B) {
-		orig := otel.GetMeterProvider()
-		b.Cleanup(func() { otel.SetMeterProvider(orig) })
+	}
 
-		// Ensure deterministic benchmark by using noop meter.
-		otel.SetMeterProvider(noop.NewMeterProvider())
-
-		blp := newBLP(b)
-
-		b.ResetTimer()
-		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				blp.ProcessedQueueFull(ctx, 1)
-			}
-		})
-	})
 	b.Run("Callback", func(b *testing.B) {
-		orig := otel.GetMeterProvider()
-		b.Cleanup(func() { otel.SetMeterProvider(orig) })
-
 		reader := metric.NewManualReader()
 		mp := metric.NewMeterProvider(metric.WithReader(reader))
 		otel.SetMeterProvider(mp)
@@ -214,8 +201,6 @@ func BenchmarkBLP(b *testing.B) {
 		for b.Loop() {
 			_ = reader.Collect(ctx, &got)
 		}
-
-		_ = got
 		_ = blp
 	})
 }
