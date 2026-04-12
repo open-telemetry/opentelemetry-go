@@ -684,41 +684,6 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 	})
 }
 
-func BenchmarkBatchProcessorObservability(b *testing.B) {
-	run := func(b *testing.B) {
-		b.Helper()
-		e := newTestExporter(nil)
-		bp := NewBatchProcessor(
-			e,
-			WithMaxQueueSize(b.N+1),
-			WithExportMaxBatchSize(b.N+1),
-			WithExportInterval(time.Hour),
-			WithExportTimeout(time.Hour),
-		)
-		ctx := b.Context()
-		b.Cleanup(func() {
-			e.Stop()
-			_ = bp.Shutdown(ctx)
-		})
-		r := new(Record)
-		r.SetBody(log.BoolValue(true))
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		var err error
-		for b.Loop() {
-			err = bp.OnEmit(ctx, r)
-		}
-		_ = err
-	}
-
-	b.Run("Observability", func(b *testing.B) {
-		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-		run(b)
-	})
-	b.Run("NoObservability", run)
-}
-
 const blpComponentID int64 = 0
 
 func TestBatchProcessorMetricsDisabled(t *testing.T) {
