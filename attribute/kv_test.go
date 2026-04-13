@@ -68,10 +68,10 @@ func TestKeyValueConstructors(t *testing.T) {
 		},
 		{
 			name:   "Slice",
-			actual: attribute.Slice("k1", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+			actual: attribute.Slice("k1", attribute.BoolValue(true), attribute.IntValue(42)),
 			expected: attribute.KeyValue{
 				Key:   "k1",
-				Value: attribute.SliceValue([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
+				Value: attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(42)),
 			},
 		},
 	}
@@ -138,7 +138,7 @@ func TestKeyValueValid(t *testing.T) {
 		{
 			desc:  "non-empty key with SLICE type Value should be valid",
 			valid: true,
-			kv:    attribute.Slice("slice", []attribute.Value{attribute.StringValue("value")}),
+			kv:    attribute.Slice("slice", attribute.StringValue("value")),
 		},
 	}
 
@@ -188,7 +188,7 @@ func TestIncorrectCast(t *testing.T) {
 		},
 		{
 			name: "Slice",
-			val:  attribute.SliceValue([]attribute.Value{attribute.StringValue("value")}),
+			val:  attribute.SliceValue(attribute.StringValue("value")),
 		},
 	}
 	for _, tt := range testCases {

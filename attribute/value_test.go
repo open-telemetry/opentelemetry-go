@@ -95,7 +95,7 @@ func TestValue(t *testing.T) {
 		},
 		{
 			name:      "Key.Slice() correctly returns keys's internal []Value value",
-			value:     k.Slice([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")}).Value,
+			value:     k.Slice(attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")).Value,
 			wantType:  attribute.SLICE,
 			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
 		},
@@ -165,16 +165,16 @@ func TestEquivalence(t *testing.T) {
 			attribute.ByteSlice("ByteSlice", []byte("one")),
 		},
 		{
-			attribute.Slice("Slice", []attribute.Value{
+			attribute.Slice("Slice",
 				attribute.BoolValue(true),
 				attribute.IntValue(42),
-				attribute.SliceValue([]attribute.Value{attribute.StringValue("nested")}),
-			}),
-			attribute.Slice("Slice", []attribute.Value{
+				attribute.SliceValue(attribute.StringValue("nested")),
+			),
+			attribute.Slice("Slice",
 				attribute.BoolValue(true),
 				attribute.IntValue(42),
-				attribute.SliceValue([]attribute.Value{attribute.StringValue("nested")}),
-			}),
+				attribute.SliceValue(attribute.StringValue("nested")),
+			),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
@@ -276,8 +276,8 @@ func TestNotEquivalence(t *testing.T) {
 			attribute.StringSlice("StringSlice", []string{"one", "two"}),
 		},
 		{
-			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)}),
-			attribute.Slice("Slice", []attribute.Value{attribute.BoolValue(true), attribute.IntValue(43)}),
+			attribute.Slice("Slice", attribute.BoolValue(true), attribute.IntValue(42)),
+			attribute.Slice("Slice", attribute.BoolValue(true), attribute.IntValue(43)),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
@@ -406,12 +406,12 @@ func TestAsSlice(t *testing.T) {
 				attribute.StringValue("test"),
 				attribute.Float64Value(1.25),
 				attribute.ByteSliceValue([]byte("bin")),
-				attribute.SliceValue([]attribute.Value{attribute.BoolValue(false)}),
+				attribute.SliceValue(attribute.BoolValue(false)),
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			kv = attribute.Slice("Slice", tc.in)
+			kv = attribute.Slice("Slice", tc.in...)
 			assert.Equal(t, tc.in, kv.Value.AsSlice())
 		})
 	}
@@ -642,55 +642,55 @@ func TestValueString(t *testing.T) {
 		},
 		{
 			name: "empty slice",
-			v:    attribute.SliceValue(nil),
+			v:    attribute.SliceValue(),
 			want: "[]",
 		},
 		{
 			name: "slice len5 fast path",
-			v: attribute.SliceValue([]attribute.Value{
+			v: attribute.SliceValue(
 				attribute.BoolValue(true),
 				attribute.IntValue(7),
 				attribute.Float64Value(math.Copysign(0, -1)),
 				attribute.StringValue(`hello "world"`),
 				attribute.ByteSliceValue([]byte("bin")),
-			}),
+			),
 			want: `[true,7,-0,"hello \"world\"","Ymlu"]`,
 		},
 		{
 			name: "slice len1 fast path",
-			v:    attribute.SliceValue([]attribute.Value{attribute.BoolValue(false)}),
+			v:    attribute.SliceValue(attribute.BoolValue(false)),
 			want: `[false]`,
 		},
 		{
 			name: "slice len2 fast path",
-			v: attribute.SliceValue([]attribute.Value{
+			v: attribute.SliceValue(
 				attribute.IntValue(7),
 				attribute.StringValue(`hello "world"`),
-			}),
+			),
 			want: `[7,"hello \"world\""]`,
 		},
 		{
 			name: "slice len3 fast path",
-			v: attribute.SliceValue([]attribute.Value{
+			v: attribute.SliceValue(
 				attribute.Float64Value(1.25),
 				attribute.Float64Value(math.Inf(1)),
 				attribute.Float64Value(math.Inf(-1)),
-			}),
+			),
 			want: `[1.25,"Infinity","-Infinity"]`,
 		},
 		{
 			name: "slice",
-			v: attribute.SliceValue([]attribute.Value{
+			v: attribute.SliceValue(
 				attribute.StringValue("hello \"world\""),
 				attribute.Float64Value(math.NaN()),
 				attribute.ByteSliceValue([]byte("bin")),
-				attribute.SliceValue([]attribute.Value{attribute.BoolValue(true), {}}),
-			}),
+				attribute.SliceValue(attribute.BoolValue(true), attribute.Value{}),
+			),
 			want: `["hello \"world\"","NaN","Ymlu",[true,null]]`,
 		},
 		{
 			name: "slice reflect path nested slice values",
-			v: attribute.SliceValue([]attribute.Value{
+			v: attribute.SliceValue(
 				attribute.BoolSliceValue([]bool{}),
 				attribute.BoolSliceValue([]bool{true}),
 				attribute.BoolSliceValue([]bool{true, false}),
@@ -716,32 +716,32 @@ func TestValueString(t *testing.T) {
 					"<tag>&",
 					string([]byte{'a', 0xff, 'b'}),
 				}),
-				attribute.SliceValue([]attribute.Value{}),
-				attribute.SliceValue([]attribute.Value{attribute.BoolValue(true)}),
-				attribute.SliceValue([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(2)}),
-				attribute.SliceValue([]attribute.Value{attribute.BoolValue(true), attribute.IntValue(2), attribute.StringValue("x")}),
-				attribute.SliceValue([]attribute.Value{
+				attribute.SliceValue(),
+				attribute.SliceValue(attribute.BoolValue(true)),
+				attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(2)),
+				attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(2), attribute.StringValue("x")),
+				attribute.SliceValue(
 					attribute.BoolValue(true),
 					attribute.IntValue(2),
 					attribute.StringValue("x"),
 					attribute.Float64Value(math.Inf(1)),
-				}),
-				attribute.SliceValue([]attribute.Value{
-					attribute.BoolValue(true),
-					attribute.IntValue(2),
-					attribute.StringValue("x"),
-					attribute.Float64Value(math.Inf(1)),
-					attribute.ByteSliceValue([]byte("bin")),
-				}),
-				attribute.SliceValue([]attribute.Value{
+				),
+				attribute.SliceValue(
 					attribute.BoolValue(true),
 					attribute.IntValue(2),
 					attribute.StringValue("x"),
 					attribute.Float64Value(math.Inf(1)),
 					attribute.ByteSliceValue([]byte("bin")),
-					{},
-				}),
-			}),
+				),
+				attribute.SliceValue(
+					attribute.BoolValue(true),
+					attribute.IntValue(2),
+					attribute.StringValue("x"),
+					attribute.Float64Value(math.Inf(1)),
+					attribute.ByteSliceValue([]byte("bin")),
+					attribute.Value{},
+				),
+			),
 			want: `[[],[true],[true,false],[true,false,true],[false,true,false,true],[]` +
 				`,[-1],[1,-2],[1,-2,3],[1,-2,3,-4],[]` +
 				`,["-Infinity"],["NaN","Infinity"],[1.25,-0,2.5],[1,"NaN","Infinity","-Infinity"],[]` +

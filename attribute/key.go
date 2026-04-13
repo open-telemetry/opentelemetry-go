@@ -131,11 +131,11 @@ func (k Key) ByteSlice(v []byte) KeyValue {
 // Slice creates a KeyValue instance with a SLICE Value.
 //
 // If creating both a key and value at the same time, use the provided
-// convenience function instead -- Slice(name, value).
-func (k Key) Slice(v []Value) KeyValue {
+// convenience function instead -- Slice(name, values...).
+func (k Key) Slice(v ...Value) KeyValue {
 	return KeyValue{
 		Key:   k,
-		Value: SliceValue(v),
+		Value: SliceValue(v...),
 	}
 }
 

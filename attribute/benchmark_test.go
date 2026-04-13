@@ -362,25 +362,25 @@ func BenchmarkSlice(b *testing.B) {
 				attribute.StringValue("quote\""),
 				attribute.Float64Value(math.Inf(1)),
 				attribute.ByteSliceValue([]byte("bin")),
-				attribute.SliceValue([]attribute.Value{attribute.StringValue("nested"), {}}),
+				attribute.SliceValue(attribute.StringValue("nested"), attribute.Value{}),
 				attribute.BoolValue(false),
 			},
 		},
 	} {
 		b.Run(bench.name, func(b *testing.B) {
 			k, v := "slice", bench.v
-			kv := attribute.Slice(k, v)
+			kv := attribute.Slice(k, v...)
 
 			b.Run("Value", func(b *testing.B) {
 				b.ReportAllocs()
 				for i := 0; i < b.N; i++ {
-					outV = attribute.SliceValue(v)
+					outV = attribute.SliceValue(v...)
 				}
 			})
 			b.Run("KeyValue", func(b *testing.B) {
 				b.ReportAllocs()
 				for i := 0; i < b.N; i++ {
-					outKV = attribute.Slice(k, v)
+					outKV = attribute.Slice(k, v...)
 				}
 			})
 			b.Run("AsSlice", func(b *testing.B) {

@@ -368,11 +368,11 @@ func TestValueFromAttribute(t *testing.T) {
 		},
 		{
 			desc: "Slice",
-			v: attribute.SliceValue([]attribute.Value{
+			v: attribute.SliceValue(
 				attribute.BoolValue(true),
 				attribute.StringValue("foo"),
-				attribute.SliceValue([]attribute.Value{attribute.IntValue(7)}),
-			}),
+				attribute.SliceValue(attribute.IntValue(7)),
+			),
 			want: log.SliceValue(
 				log.BoolValue(true),
 				log.StringValue("foo"),
@@ -443,11 +443,11 @@ func TestKeyValueFromAttribute(t *testing.T) {
 		},
 		{
 			desc: "Slice",
-			kv: attribute.Slice("k", []attribute.Value{
+			kv: attribute.Slice("k",
 				attribute.BoolValue(true),
 				attribute.StringValue("foo"),
-				attribute.SliceValue([]attribute.Value{attribute.IntValue(7)}),
-			}),
+				attribute.SliceValue(attribute.IntValue(7)),
+			),
 			want: log.Slice(
 				"k",
 				log.BoolValue(true),

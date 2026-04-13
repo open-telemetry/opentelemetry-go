@@ -277,11 +277,11 @@ func BenchmarkKeyValueFromAttribute(b *testing.B) {
 		},
 		{
 			desc: "Slice",
-			kv: attribute.Slice("k", []attribute.Value{
+			kv: attribute.Slice("k",
 				attribute.BoolValue(true),
 				attribute.StringValue("foo"),
-				attribute.SliceValue([]attribute.Value{attribute.IntValue(7)}),
-			}),
+				attribute.SliceValue(attribute.IntValue(7)),
+			),
 		},
 	}
 	for _, tc := range testCases {

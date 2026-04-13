@@ -152,7 +152,7 @@ func ByteSliceValue(v []byte) Value {
 }
 
 // SliceValue creates a SLICE Value.
-func SliceValue(v []Value) Value {
+func SliceValue(v ...Value) Value {
 	return Value{vtype: SLICE, slice: sliceValue(v)}
 }
 

@@ -38,12 +38,12 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
-	func(k string) KeyValue { return Slice(k, []Value{BoolValue(true), IntValue(42)}) },
+	func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) },
 	func(k string) KeyValue {
-		return Slice(k, []Value{
+		return Slice(k,
 			StringValue("nested"),
-			SliceValue([]Value{Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))}),
-		})
+			SliceValue(Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))),
+		)
 	},
 	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
 }
@@ -253,10 +253,10 @@ func FuzzHashKVs(f *testing.F) {
 					case 2:
 						values[i] = StringValue(fmt.Sprintf("item_%d", i))
 					case 3:
-						values[i] = SliceValue([]Value{Float64Value(fVal), ByteSliceValue([]byte("bin"))})
+						values[i] = SliceValue(Float64Value(fVal), ByteSliceValue([]byte("bin")))
 					}
 				}
-				kvs = append(kvs, Slice("slice", values))
+				kvs = append(kvs, Slice("slice", values...))
 			}
 		}
 
@@ -352,7 +352,7 @@ func FuzzHashKVs(f *testing.F) {
 						default:
 							newSlice[0] = StringValue("modified")
 						}
-						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice)
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice...)
 					}
 				case EMPTY:
 					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
