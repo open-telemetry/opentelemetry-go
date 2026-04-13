@@ -19,8 +19,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
@@ -161,7 +161,7 @@ func ParseEndpoint(endpoint string) (address string, port int) {
 	port = 4317
 
 	if endpoint == "" {
-		return
+		return address, port
 	}
 
 	// Handle endpoint without scheme
@@ -171,7 +171,7 @@ func ParseEndpoint(endpoint string) (address string, port int) {
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return
+		return address, port
 	}
 
 	if u.Hostname() != "" {
@@ -184,5 +184,5 @@ func ParseEndpoint(endpoint string) (address string, port int) {
 		}
 	}
 
-	return
+	return address, port
 }
