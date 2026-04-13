@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,6 +24,24 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
+)
+
+var (
+	attrPool = sync.Pool{
+		New: func() any {
+			// Pre-allocate for common attributes + dynamic error attribute
+			const n = 1 /* otel.component.type */ + 1 /* otel.component.name */ + 1 /* server.address */ + 1 /* server.port */ + 1 /* error.type */
+			s := make([]attribute.KeyValue, 0, n)
+			return &s
+		},
+	}
+
+	recOptPool = sync.Pool{
+		New: func() any {
+			o := make([]metric.RecordOption, 0, 1)
+			return &o
+		},
+	}
 )
 
 // exporterIDCounter is used to generate unique component names for exporters.
@@ -39,6 +58,8 @@ type ExporterMetrics struct {
 	inflight otelconv.SDKExporterMetricDataPointInflight
 	duration otelconv.SDKExporterOperationDuration
 	attrs    []attribute.KeyValue
+	addOpt   metric.AddOption
+	recOpt   metric.RecordOption
 	enabled  bool
 }
 
@@ -87,6 +108,10 @@ func NewExporterMetrics(componentType, serverAddress string, serverPort int) *Ex
 		semconv.ServerPort(serverPort),
 	}
 
+	attrSet := attribute.NewSet(em.attrs...)
+	em.addOpt = metric.WithAttributeSet(attrSet)
+	em.recOpt = metric.WithAttributeSet(attrSet)
+
 	return em
 }
 
@@ -108,27 +133,44 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 	startTime := time.Now()
 
 	if inflightEnabled {
-		em.inflight.Add(ctx, dataPointCount, em.attrs...)
+		em.inflight.Inst().Add(ctx, dataPointCount, em.addOpt)
 	}
 
 	return func(err error) {
 		if inflightEnabled {
-			em.inflight.Add(ctx, -dataPointCount, em.attrs...)
+			em.inflight.Inst().Add(ctx, -dataPointCount, em.addOpt)
 		}
 
 		duration := time.Since(startTime).Seconds()
 
 		if durationEnabled {
-			attrs := make([]attribute.KeyValue, len(em.attrs), len(em.attrs)+1)
-			copy(attrs, em.attrs)
 			if err != nil {
-				attrs = append(attrs, semconv.ErrorTypeOther)
+				attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
+				defer func() {
+					*attrsPtr = (*attrsPtr)[:0]
+					attrPool.Put(attrsPtr)
+				}()
+
+				*attrsPtr = append(*attrsPtr, em.attrs...)
+				*attrsPtr = append(*attrsPtr, semconv.ErrorTypeOther)
+
+				recOptPtr := recOptPool.Get().(*[]metric.RecordOption)
+				defer func() {
+					*recOptPtr = (*recOptPtr)[:0]
+					recOptPool.Put(recOptPtr)
+				}()
+
+				set := attribute.NewSet(*attrsPtr...)
+				*recOptPtr = append(*recOptPtr, metric.WithAttributeSet(set))
+
+				em.duration.Inst().Record(ctx, duration, *recOptPtr...)
+			} else {
+				em.duration.Inst().Record(ctx, duration, em.recOpt)
 			}
-			em.duration.Record(ctx, duration, attrs...)
 		}
 
 		if err == nil && exportedEnabled {
-			em.exported.Add(ctx, dataPointCount, em.attrs...)
+			em.exported.Inst().Add(ctx, dataPointCount, em.addOpt)
 		}
 	}
 }
