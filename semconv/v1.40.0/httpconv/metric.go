@@ -159,6 +159,9 @@ func (m ClientActiveRequests) Add(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("server.address", serverAddress),
@@ -189,6 +192,9 @@ func (m ClientActiveRequests) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientActiveRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -302,6 +308,9 @@ func (m ClientConnectionDuration) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("server.address", serverAddress),
@@ -332,6 +341,9 @@ func (m ClientConnectionDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientConnectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -448,6 +460,9 @@ func (m ClientOpenConnections) Add(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("http.connection.state", string(connectionState)),
@@ -480,6 +495,9 @@ func (m ClientOpenConnections) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientOpenConnections) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -601,6 +619,9 @@ func (m ClientRequestBodySize) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -640,6 +661,9 @@ func (m ClientRequestBodySize) Record(
 //
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ClientRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -781,6 +805,9 @@ func (m ClientRequestDuration) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -813,6 +840,9 @@ func (m ClientRequestDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -961,6 +991,9 @@ func (m ClientResponseBodySize) Record(
 	serverPort int,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -1000,6 +1033,9 @@ func (m ClientResponseBodySize) Record(
 //
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ClientResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -1139,6 +1175,9 @@ func (m ServerActiveRequests) Add(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -1169,6 +1208,9 @@ func (m ServerActiveRequests) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ServerActiveRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1279,6 +1321,9 @@ func (m ServerRequestBodySize) Record(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -1316,6 +1361,9 @@ func (m ServerRequestBodySize) Record(
 //
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -1466,6 +1514,9 @@ func (m ServerRequestDuration) Record(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -1496,6 +1547,9 @@ func (m ServerRequestDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -1653,6 +1707,9 @@ func (m ServerResponseBodySize) Record(
 	urlScheme string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("http.request.method", string(requestMethod)),
@@ -1690,6 +1747,9 @@ func (m ServerResponseBodySize) Record(
 //
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return

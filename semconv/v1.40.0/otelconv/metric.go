@@ -197,6 +197,9 @@ func (m SDKExporterLogExported) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -228,6 +231,9 @@ func (m SDKExporterLogExported) Add(
 // If no rejection reason is available, `rejected` SHOULD be used as value for
 // `error.type`.
 func (m SDKExporterLogExported) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -347,6 +353,9 @@ func (m SDKExporterLogInflight) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -373,6 +382,9 @@ func (m SDKExporterLogInflight) Add(
 // For successful exports, `error.type` MUST NOT be set. For failed exports,
 // `error.type` MUST contain the failure cause.
 func (m SDKExporterLogInflight) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -491,6 +503,9 @@ func (m SDKExporterMetricDataPointExported) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -522,6 +537,9 @@ func (m SDKExporterMetricDataPointExported) Add(
 // If no rejection reason is available, `rejected` SHOULD be used as value for
 // `error.type`.
 func (m SDKExporterMetricDataPointExported) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -643,6 +661,9 @@ func (m SDKExporterMetricDataPointInflight) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -669,6 +690,9 @@ func (m SDKExporterMetricDataPointInflight) Add(
 // For successful exports, `error.type` MUST NOT be set. For failed exports,
 // `error.type` MUST contain the failure cause.
 func (m SDKExporterMetricDataPointInflight) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -788,6 +812,9 @@ func (m SDKExporterOperationDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -821,6 +848,9 @@ func (m SDKExporterOperationDuration) Record(
 // [http]: https://github.com/open-telemetry/opentelemetry-proto/blob/v1.5.0/docs/specification.md#full-success-1
 // [grpc]: https://github.com/open-telemetry/opentelemetry-proto/blob/v1.5.0/docs/specification.md#full-success
 func (m SDKExporterOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -959,6 +989,9 @@ func (m SDKExporterSpanExported) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -990,6 +1023,9 @@ func (m SDKExporterSpanExported) Add(
 // If no rejection reason is available, `rejected` SHOULD be used as value for
 // `error.type`.
 func (m SDKExporterSpanExported) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1109,6 +1145,9 @@ func (m SDKExporterSpanInflight) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1135,6 +1174,9 @@ func (m SDKExporterSpanInflight) Add(
 // For successful exports, `error.type` MUST NOT be set. For failed exports,
 // `error.type` MUST contain the failure cause.
 func (m SDKExporterSpanInflight) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1237,6 +1279,9 @@ func (SDKLogCreated) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m SDKLogCreated) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1254,6 +1299,9 @@ func (m SDKLogCreated) Add(ctx context.Context, incr int64, attrs ...attribute.K
 
 // AddSet adds incr to the existing count for set.
 func (m SDKLogCreated) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1343,6 +1391,9 @@ func (m SDKMetricReaderCollectionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -1372,6 +1423,9 @@ func (m SDKMetricReaderCollectionDuration) Record(
 // while others fail. In that case `error.type` SHOULD be set to any of the
 // failure causes.
 func (m SDKMetricReaderCollectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -1481,6 +1535,9 @@ func (m SDKProcessorLogProcessed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1510,6 +1567,9 @@ func (m SDKProcessorLogProcessed) Add(
 // considered to be processed already when it has been submitted to the exporter,
 // not when the corresponding export call has finished.
 func (m SDKProcessorLogProcessed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1768,6 +1828,9 @@ func (m SDKProcessorSpanProcessed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1797,6 +1860,9 @@ func (m SDKProcessorSpanProcessed) Add(
 // processed already when it has been submitted to the exporter, not when the
 // corresponding export call has finished.
 func (m SDKProcessorSpanProcessed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2049,6 +2115,9 @@ func (m SDKSpanLive) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2072,6 +2141,9 @@ func (m SDKSpanLive) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m SDKSpanLive) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2163,6 +2235,9 @@ func (m SDKSpanStarted) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2189,6 +2264,9 @@ func (m SDKSpanStarted) Add(
 // Implementations MUST record this metric for all spans, even for non-recording
 // ones.
 func (m SDKSpanStarted) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
