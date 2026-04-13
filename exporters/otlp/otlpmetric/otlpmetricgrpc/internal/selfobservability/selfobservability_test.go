@@ -69,14 +69,15 @@ func TestNewExporterMetrics_Enabled(t *testing.T) {
 
 	// Verify attributes are set correctly
 	expectedAttrs := []attribute.KeyValue{
-		semconv.OTelComponentTypeKey.String("test_component"),
 		semconv.OTelComponentName("test_component/0"),
+		semconv.OTelComponentTypeKey.String("test_component"),
 		semconv.ServerAddress("example.com"),
 		semconv.ServerPort(4317),
 	}
 
-	assert.Len(t, em.attrs, len(expectedAttrs), "attributes length mismatch")
-	assert.Equal(t, expectedAttrs, em.attrs, "attributes should match expected values")
+	actualAttrs := em.attrs
+	assert.Len(t, actualAttrs, len(expectedAttrs), "attributes length mismatch")
+	assert.Equal(t, expectedAttrs, actualAttrs, "attributes should match expected values")
 }
 
 func TestNewExporterMetrics_MeterFailure(t *testing.T) {
