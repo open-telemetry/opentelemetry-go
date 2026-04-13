@@ -27,7 +27,7 @@ import (
 
 func TestSelfObservability_Disabled(t *testing.T) {
 	// Ensure self-observability is disabled
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "false")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
@@ -63,7 +63,7 @@ func TestSelfObservability_Disabled(t *testing.T) {
 
 func TestSelfObservability_Enabled(t *testing.T) {
 	// Enable self-observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
@@ -165,7 +165,7 @@ func TestSelfObservability_Enabled(t *testing.T) {
 
 func TestSelfObservability_ExportError(t *testing.T) {
 	// Enable self-observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
@@ -244,7 +244,7 @@ func TestSelfObservability_ExportError(t *testing.T) {
 
 func TestSelfObservability_EndpointParsing(t *testing.T) {
 	// Enable self-observability
-	t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", "true")
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))

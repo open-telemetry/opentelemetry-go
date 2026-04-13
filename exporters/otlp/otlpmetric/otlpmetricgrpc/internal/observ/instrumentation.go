@@ -1,9 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package selfobservability provides self-observability metrics for OTLP metric exporters.
-// This is an experimental feature controlled by the x.SelfObservability feature flag.
-package selfobservability // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability"
+// Package observ provides self-observability metrics for OTLP metric exporters.
+// This is an experimental feature controlled by the x.Observability feature flag.
+package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 
 import (
 	"context"
@@ -52,8 +52,8 @@ func nextExporterID() uint64 {
 	return exporterIDCounter.Add(1) - 1
 }
 
-// ExporterMetrics holds the self-observability metric instruments for an OTLP metric exporter.
-type ExporterMetrics struct {
+// Instrumentation holds the self-observability metric instruments for an OTLP metric exporter.
+type Instrumentation struct {
 	exported otelconv.SDKExporterMetricDataPointExported
 	inflight otelconv.SDKExporterMetricDataPointInflight
 	duration otelconv.SDKExporterOperationDuration
@@ -63,11 +63,11 @@ type ExporterMetrics struct {
 	enabled  bool
 }
 
-// NewExporterMetrics creates a new ExporterMetrics instance.
+// NewInstrumentation creates a new Instrumentation instance.
 // If self-observability is disabled, returns a no-op instance.
-func NewExporterMetrics(componentType, serverAddress string, serverPort int) *ExporterMetrics {
-	em := &ExporterMetrics{
-		enabled: x.SelfObservability.Enabled(),
+func NewInstrumentation(componentType, serverAddress string, serverPort int) *Instrumentation {
+	em := &Instrumentation{
+		enabled: x.Observability.Enabled(),
 	}
 
 	if !em.enabled {
@@ -117,7 +117,7 @@ func NewExporterMetrics(componentType, serverAddress string, serverPort int) *Ex
 
 // TrackExport tracks an export operation and returns a function to complete the tracking.
 // The returned function should be called when the export operation completes.
-func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.ResourceMetrics) func(error) {
+func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.ResourceMetrics) func(error) {
 	if !em.enabled {
 		return func(error) {}
 	}
