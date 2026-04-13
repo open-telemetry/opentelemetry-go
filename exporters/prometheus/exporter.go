@@ -617,7 +617,7 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 		for itr.Next() {
 			kv := itr.Attribute()
 			keys = append(keys, string(kv.Key))
-			values = append(values, kv.Value.Emit())
+			values = append(values, kv.Value.String())
 		}
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
@@ -631,10 +631,10 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 				return nil, nil, err
 			}
 			if _, ok := keysMap[key]; !ok {
-				keysMap[key] = []string{kv.Value.Emit()}
+				keysMap[key] = []string{kv.Value.String()}
 			} else {
 				// if the sanitized key is a duplicate, append to the list of keys
-				keysMap[key] = append(keysMap[key], kv.Value.Emit())
+				keysMap[key] = append(keysMap[key], kv.Value.String())
 			}
 		}
 		for key, vals := range keysMap {
@@ -812,7 +812,7 @@ func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.La
 		if err != nil {
 			return nil, err
 		}
-		labels[name] = attr.Value.Emit()
+		labels[name] = attr.Value.String()
 	}
 	return labels, nil
 }
