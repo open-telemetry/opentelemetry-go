@@ -14,7 +14,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 The OTLP gRPC metric exporter can emit self-observability metrics to track its own operation.
 
-This experimental feature can be enabled by setting the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable.
+This experimental feature can be enabled by setting the `OTEL_GO_X_OBSERVABILITY` environment variable.
 The value must be the case-insensitive string of `"true"` to enable the feature.
 All other values are ignored.
 
@@ -36,13 +36,13 @@ All metrics include attributes identifying the exporter component and destinatio
 Enable self-observability metrics.
 
 ```console
-export OTEL_GO_X_SELF_OBSERVABILITY=true
+export OTEL_GO_X_OBSERVABILITY=true
 ```
 
 Disable self-observability metrics.
 
 ```console
-unset OTEL_GO_X_SELF_OBSERVABILITY
+unset OTEL_GO_X_OBSERVABILITY
 ```
 
 ## Compatibility and Stability
