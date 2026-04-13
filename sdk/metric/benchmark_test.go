@@ -639,6 +639,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
 					b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
+						optionPool := sync.Pool{
+							New: func() any {
+								return metric.WithAttributeSet(*attribute.EmptySet())
+							},
+						}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
@@ -650,13 +655,22 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
+									set := attribute.NewSet(*attrsSlice...)
+
+									opt := optionPool.Get().(metric.MeasurementOption)
+									defer optionPool.Put(opt)
+
+									if r, ok := opt.(x.Resettable[attribute.Set]); ok {
+										r.Reset(set)
+									} else {
+										opt = metric.WithAttributeSet(set)
+									}
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
-									set := attribute.NewSet(*attrsSlice...)
-									*addOpt = append(*addOpt, metric.WithAttributeSet(set))
+									*addOpt = append(*addOpt, opt)
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}
