@@ -97,24 +97,37 @@ func (em *ExporterMetrics) TrackExport(ctx context.Context, rm *metricdata.Resou
 		return func(error) {}
 	}
 
-	dataPointCount := countDataPoints(rm)
+	var dataPointCount int64
+	inflightEnabled := em.inflight.Enabled(ctx)
+	exportedEnabled := em.exported.Enabled(ctx)
+	durationEnabled := em.duration.Enabled(ctx)
+
+	if inflightEnabled || exportedEnabled {
+		dataPointCount = countDataPoints(rm)
+	}
 	startTime := time.Now()
 
-	em.inflight.Add(ctx, dataPointCount, em.attrs...)
+	if inflightEnabled {
+		em.inflight.Add(ctx, dataPointCount, em.attrs...)
+	}
 
 	return func(err error) {
-		em.inflight.Add(ctx, -dataPointCount, em.attrs...)
+		if inflightEnabled {
+			em.inflight.Add(ctx, -dataPointCount, em.attrs...)
+		}
 
 		duration := time.Since(startTime).Seconds()
 
-		attrs := make([]attribute.KeyValue, len(em.attrs), len(em.attrs)+1)
-		copy(attrs, em.attrs)
-		if err != nil {
-			attrs = append(attrs, semconv.ErrorTypeOther)
+		if durationEnabled {
+			attrs := make([]attribute.KeyValue, len(em.attrs), len(em.attrs)+1)
+			copy(attrs, em.attrs)
+			if err != nil {
+				attrs = append(attrs, semconv.ErrorTypeOther)
+			}
+			em.duration.Record(ctx, duration, attrs...)
 		}
-		em.duration.Inst().Record(ctx, duration, metric.WithAttributes(attrs...))
 
-		if err == nil {
+		if err == nil && exportedEnabled {
 			em.exported.Add(ctx, dataPointCount, em.attrs...)
 		}
 	}
