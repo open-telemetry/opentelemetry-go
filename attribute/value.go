@@ -351,6 +351,8 @@ func (v Value) String() string {
 }
 
 // Emit returns a string representation of Value's data.
+//
+// Deprecated: Use [Value.String] instead.
 func (v Value) Emit() string {
 	switch v.Type() {
 	case BOOLSLICE:

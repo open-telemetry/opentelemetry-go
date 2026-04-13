@@ -31,7 +31,7 @@ func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
 	return func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outStr = kv.Value.Emit()
+			outStr = kv.Value.Emit() //nolint:staticcheck // Benchmark the deprecated formatter for comparison.
 		}
 	}
 }
