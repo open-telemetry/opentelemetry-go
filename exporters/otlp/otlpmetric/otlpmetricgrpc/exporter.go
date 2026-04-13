@@ -12,7 +12,7 @@ import (
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/selfobservability"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -35,7 +35,7 @@ type Exporter struct {
 	shutdownOnce sync.Once
 
 	// Self-observability metrics
-	metrics *selfobservability.ExporterMetrics
+	metrics *observ.Instrumentation
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
@@ -52,7 +52,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 	}
 
 	// Extract server address and port from endpoint for self-observability
-	serverAddress, serverPort := selfobservability.ParseEndpoint(cfg.Metrics.Endpoint)
+	serverAddress, serverPort := observ.ParseEndpoint(cfg.Metrics.Endpoint)
 
 	return &Exporter{
 		client: c,
@@ -60,7 +60,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		temporalitySelector: ts,
 		aggregationSelector: as,
 
-		metrics: selfobservability.NewExporterMetrics(
+		metrics: observ.NewInstrumentation(
 			string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
 			serverAddress,
 			serverPort,
