@@ -402,7 +402,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 }
 
 func TestExemplars(t *testing.T) {
-	nCPU := runtime.GOMAXPROCS(0)
+	nCPU := max(runtime.GOMAXPROCS(0), 1) 
 	setup := func(name string) (metric.Meter, Reader) {
 		r := NewManualReader()
 		v := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
