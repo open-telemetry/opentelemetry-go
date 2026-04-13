@@ -4,7 +4,6 @@
 package selfobservability
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -20,8 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
@@ -39,13 +38,13 @@ func TestNewExporterMetrics_Disabled(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	finish := em.TrackExport(context.Background(), createTestResourceMetrics())
+	finish := em.TrackExport(t.Context(), createTestResourceMetrics())
 	finish(nil)
 	finish(errors.New("test error"))
 
 	// Verify no metrics were recorded when disabled
 	rm := &metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), rm)
+	err := reader.Collect(t.Context(), rm)
 	require.NoError(t, err, "failed to collect metrics")
 
 	totalMetrics := 0
@@ -98,12 +97,12 @@ func TestNewExporterMetrics_MeterFailure(t *testing.T) {
 	assert.True(t, em.enabled, "metrics should be enabled when meter provider is valid")
 
 	// Test that tracking works properly
-	finish := em.TrackExport(context.Background(), createTestResourceMetrics())
+	finish := em.TrackExport(t.Context(), createTestResourceMetrics())
 	finish(nil)
 	finish(errors.New("test error"))
 
 	rm := &metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), rm)
+	err := reader.Collect(t.Context(), rm)
 	require.NoError(t, err, "failed to collect metrics")
 
 	// Verify metrics were recorded
@@ -127,12 +126,12 @@ func TestTrackExport_Success(t *testing.T) {
 	rm := createTestResourceMetrics()
 
 	// Track export operation
-	finish := em.TrackExport(context.Background(), rm)
+	finish := em.TrackExport(t.Context(), rm)
 	time.Sleep(10 * time.Millisecond) // Small delay to measure duration
 	finish(nil)                       // Success
 
 	var got metricdata.ResourceMetrics
-	err := reader.Collect(context.Background(), &got)
+	err := reader.Collect(t.Context(), &got)
 	require.NoError(t, err)
 	require.Len(t, got.ScopeMetrics, 1)
 
@@ -223,11 +222,11 @@ func TestTrackExport_Error(t *testing.T) {
 	rm := createTestResourceMetrics()
 
 	// Track export operation that fails
-	finish := em.TrackExport(context.Background(), rm)
+	finish := em.TrackExport(t.Context(), rm)
 	finish(errors.New("export failed"))
 
 	var got metricdata.ResourceMetrics
-	err := reader.Collect(context.Background(), &got)
+	err := reader.Collect(t.Context(), &got)
 	require.NoError(t, err)
 	require.Len(t, got.ScopeMetrics, 1)
 

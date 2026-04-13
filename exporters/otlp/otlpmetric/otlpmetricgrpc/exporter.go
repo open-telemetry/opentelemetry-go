@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 // Exporter is a OpenTelemetry metric Exporter using gRPC.
