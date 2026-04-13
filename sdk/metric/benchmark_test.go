@@ -706,6 +706,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					})
 					b.Run("Dynamic/WithUnsafeAttributes", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
+						optionPool := sync.Pool{
+							New: func() any {
+								return x.WithUnsafeAttributes()
+							},
+						}
 						b.ReportAllocs()
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
@@ -717,12 +722,22 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
+
+									opt := optionPool.Get().(metric.MeasurementOption)
+									defer optionPool.Put(opt)
+
+									if r, ok := opt.(x.Resettable[[]attribute.KeyValue]); ok {
+										r.Reset(*attrsSlice)
+									} else {
+										opt = x.WithUnsafeAttributes(*attrsSlice...)
+									}
+
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
-									*addOpt = append(*addOpt, x.WithUnsafeAttributes(*attrsSlice...))
+									*addOpt = append(*addOpt, opt)
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}

@@ -34,11 +34,16 @@ type unsafeAttributesOption struct {
 }
 
 // Experimental prevents the API from panicking when the option is used.
-func (unsafeAttributesOption) Experimental() {}
+func (*unsafeAttributesOption) Experimental() {}
 
 // RawAttributes returns the raw key-values associated with the option.
-func (o unsafeAttributesOption) RawAttributes() []attribute.KeyValue {
+func (o *unsafeAttributesOption) RawAttributes() []attribute.KeyValue {
 	return o.kvs
+}
+
+// Reset resets the attributes.
+func (o *unsafeAttributesOption) Reset(kvs []attribute.KeyValue) {
+	o.kvs = kvs
 }
 
 // WithUnsafeAttributes returns a metric.MeasurementOption that stores the raw attributes
@@ -46,7 +51,7 @@ func (o unsafeAttributesOption) RawAttributes() []attribute.KeyValue {
 // The caller must not modify the attributes slice after passing it to this function.
 func WithUnsafeAttributes(kvs ...attribute.KeyValue) metric.MeasurementOption {
 	kvs = attribute.SortAndDedup(kvs)
-	return unsafeAttributesOption{kvs: kvs}
+	return &unsafeAttributesOption{kvs: kvs}
 }
 
 // Resettable is an optional interface that Options can implement
