@@ -121,7 +121,7 @@ func TestEmit(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {
-			have := testcase.v.Emit()
+			have := testcase.v.Emit() //nolint:staticcheck // Verify the deprecated formatter's legacy output.
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}

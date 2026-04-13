@@ -183,7 +183,7 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 		encoded, _ := json.Marshal(data)
 		return string(kv.Key), string(encoded)
 	default:
-		return string(kv.Key), kv.Value.Emit()
+		return string(kv.Key), kv.Value.Emit() //nolint:staticcheck // Preserve existing Zipkin tag encoding.
 	}
 }
 
@@ -307,7 +307,8 @@ func remoteEndpointPeerIPWithPort(peerIP string, portKey attribute.Key, attrs []
 
 	for _, kv := range attrs {
 		if kv.Key == portKey {
-			port, _ := strconv.ParseUint(kv.Value.Emit(), 10, 16)
+			v := kv.Value.String()
+			port, _ := strconv.ParseUint(v, 10, 16)
 			endpoint.Port = uint16(port) // nolint: gosec  // Bit size of 16 checked above.
 			return endpoint
 		}
