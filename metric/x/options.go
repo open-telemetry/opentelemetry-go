@@ -28,7 +28,7 @@ func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
 
-// Resettable is an optional interface that Options can implement
+// Settable is an optional interface that Options can implement
 // to allow reuse without additional allocations.
 //
 // Example usage with sync.Pool:
@@ -43,8 +43,8 @@ func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 //		opt := optionPool.Get().(metric.MeasurementOption)
 //		defer optionPool.Put(opt)
 //
-//		if r, ok := opt.(x.Resettable[attribute.Set]); ok {
-//			r.Reset(set)
+//		if r, ok := opt.(x.Settable[attribute.Set]); ok {
+//			r.Set(set)
 //		} else {
 //			opt = metric.WithAttributeSet(set)
 //		}
@@ -52,7 +52,7 @@ func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 //	}
 //
 // WARNING: It is the user's responsibility to ensure that the option is not
-// concurrently reset while being passed to the API or used by another goroutine.
-type Resettable[T any] interface {
-	Reset(T)
+// concurrently set while being passed to the API or used by another goroutine.
+type Settable[T any] interface {
+	Set(T)
 }
