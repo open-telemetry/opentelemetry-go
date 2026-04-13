@@ -29,10 +29,18 @@ func (s *sumValueMap[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
-	sv := s.values.LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
+	if val, ok := s.values.Load(distinct); ok {
+		sv := val.(*sumValue[N])
+		sv.n.add(value)
+		sv.res.Offer(ctx, value, lazyDropped)
+		return
+	}
+
+	sv := s.values.LoadOrStoreAttr(distinct, set, kvs, lazyKVs, func(attr attribute.Set) any {
 		return &sumValue[N]{
 			res:       s.newRes(attr),
 			attrs:     attr,
@@ -40,10 +48,7 @@ func (s *sumValueMap[N]) measure(
 		}
 	}).(*sumValue[N])
 	sv.n.add(value)
-	// It is possible for collection to race with measurement and observe the
-	// exemplar in the batch of metrics after the add() for cumulative sums.
-	// This is an accepted tradeoff to avoid locking during measurement.
-	sv.res.Offer(ctx, value, droppedAttr)
+	sv.res.Offer(ctx, value, lazyDropped)
 }
 
 // newDeltaSum returns an aggregator that summarizes a set of measurements as
@@ -84,12 +89,13 @@ func (s *deltaSum[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, getKVs, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, kvs, lazyKVs, lazyDropped)
 }
 
 func (s *deltaSum[N]) collect(

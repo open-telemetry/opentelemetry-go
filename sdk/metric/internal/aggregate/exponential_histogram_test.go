@@ -157,7 +157,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice.Equivalent(), alice, nil, nil)
+				h.measure(t.Context(), v, alice.Equivalent(), alice, nil, LazyAttributes{}, LazyAttributes{})
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -199,7 +199,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice.Equivalent(), alice, nil, nil)
+				h.measure(t.Context(), v, alice.Equivalent(), alice, nil, LazyAttributes{}, LazyAttributes{})
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -1281,9 +1281,33 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 	ctx := t.Context()
 
-	h.measure(ctx, math.NaN(), attribute.EmptySet().Equivalent(), *attribute.EmptySet(), nil, nil)
-	h.measure(ctx, math.Inf(1), attribute.EmptySet().Equivalent(), *attribute.EmptySet(), nil, nil)
-	h.measure(ctx, math.Inf(-1), attribute.EmptySet().Equivalent(), *attribute.EmptySet(), nil, nil)
+	h.measure(
+		ctx,
+		math.NaN(),
+		attribute.EmptySet().Equivalent(),
+		*attribute.EmptySet(),
+		nil,
+		LazyAttributes{},
+		LazyAttributes{},
+	)
+	h.measure(
+		ctx,
+		math.Inf(1),
+		attribute.EmptySet().Equivalent(),
+		*attribute.EmptySet(),
+		nil,
+		LazyAttributes{},
+		LazyAttributes{},
+	)
+	h.measure(
+		ctx,
+		math.Inf(-1),
+		attribute.EmptySet().Equivalent(),
+		*attribute.EmptySet(),
+		nil,
+		LazyAttributes{},
+		LazyAttributes{},
+	)
 
 	var dest metricdata.Aggregation
 	h.delta(&dest)

@@ -92,15 +92,18 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 				t.Helper()
 
 				meas := b.filter(
-					func(_ context.Context, v N, _ attribute.Distinct, f attribute.Set, getKVs func() []attribute.KeyValue, d []attribute.KeyValue) {
+					func(_ context.Context, v N, _ attribute.Distinct, f attribute.Set, kvs []attribute.KeyValue, lazyKVs, lazyDropped LazyAttributes) {
 						assert.Equal(t, value, v, "measured incorrect value")
-						if f.Len() == 0 && getKVs != nil {
-							kvs := getKVs()
+						if f.Len() == 0 {
+							if lazyKVs.Result != nil || lazyKVs.KVs != nil || lazyKVs.Filter != nil {
+								kvs = lazyKVs.Get()
+							}
 							if len(kvs) > 0 {
 								f = attribute.NewSet(kvs...)
 							}
 						}
 						assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
+						d := lazyDropped.Get()
 						assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
 					},
 				)

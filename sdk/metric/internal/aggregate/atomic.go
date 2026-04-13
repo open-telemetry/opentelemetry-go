@@ -231,7 +231,8 @@ type limitedSyncMap struct {
 func (m *limitedSyncMap) LoadOrStoreAttr(
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
 	newValue func(attribute.Set) any,
 ) any {
 	actual, loaded := m.Load(distinct)
@@ -260,10 +261,13 @@ func (m *limitedSyncMap) LoadOrStoreAttr(
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
 	} else {
-		if set.Len() > 0 {
+		switch {
+		case set.Len() > 0:
 			fltrAttr = set
-		} else {
-			fltrAttr = attribute.NewSet(getKVs()...)
+		case lazyKVs.Result != nil || lazyKVs.KVs != nil || lazyKVs.Filter != nil:
+			fltrAttr = attribute.NewSet(lazyKVs.Get()...)
+		default:
+			fltrAttr = attribute.NewSet(kvs...)
 		}
 	}
 

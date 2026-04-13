@@ -447,7 +447,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	b[0] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the bounds argument should not change the bounds")
 
-	h.measure(t.Context(), 5, alice.Equivalent(), alice, nil, nil)
+	h.measure(t.Context(), 5, alice.Equivalent(), alice, nil, LazyAttributes{}, LazyAttributes{})
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -458,7 +458,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 
 func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h := newCumulativeHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
-	h.measure(t.Context(), 5, alice.Equivalent(), alice, nil, nil)
+	h.measure(t.Context(), 5, alice.Equivalent(), alice, nil, LazyAttributes{}, LazyAttributes{})
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -501,7 +501,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	require.Equal(t, 0, h.collect(&data))
 	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
-	h.measure(t.Context(), 1, alice.Equivalent(), alice, nil, nil)
+	h.measure(t.Context(), 1, alice.Equivalent(), alice, nil, LazyAttributes{}, LazyAttributes{})
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1, now(), now())}
@@ -514,7 +514,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
-	h.measure(t.Context(), 1, bob.Equivalent(), bob, nil, nil)
+	h.measure(t.Context(), 1, bob.Equivalent(), bob, nil, LazyAttributes{}, LazyAttributes{})
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1, now(), now())}
 	h.collect(&data)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)

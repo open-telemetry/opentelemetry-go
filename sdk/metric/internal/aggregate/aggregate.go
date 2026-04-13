@@ -57,7 +57,30 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	return dropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, d attribute.Distinct, set attribute.Set, getKVs func() []attribute.KeyValue, droppedAttr []attribute.KeyValue)
+type LazyAttributes struct {
+	Result       []attribute.KeyValue
+	KVs          []attribute.KeyValue
+	Filter       func(attribute.KeyValue) bool
+	KeepMatching bool
+}
+
+func (l LazyAttributes) Get() []attribute.KeyValue {
+	if l.Result != nil {
+		return l.Result
+	}
+	if l.Filter == nil {
+		return l.KVs
+	}
+	var res []attribute.KeyValue
+	for _, kv := range l.KVs {
+		if l.Filter(kv) == l.KeepMatching {
+			res = append(res, kv)
+		}
+	}
+	return res
+}
+
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, d attribute.Distinct, set attribute.Set, kvs []attribute.KeyValue, lazyKVs, lazyDropped LazyAttributes)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
@@ -65,64 +88,63 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 		return func(ctx context.Context, n N, d attribute.Distinct, set attribute.Set, kvs []attribute.KeyValue) {
 			if set.Len() > 0 {
 				fAttr, dropped := set.Filter(fltr)
-				f(ctx, n, fAttr.Equivalent(), fAttr, func() []attribute.KeyValue { return nil }, dropped)
+				f(ctx, n, fAttr.Equivalent(), fAttr, nil, LazyAttributes{}, LazyAttributes{Result: dropped})
 				return
 			}
 
 			if len(kvs) == 0 {
-				f(ctx, n, d, set, func() []attribute.KeyValue { return nil }, nil)
+				f(ctx, n, d, set, kvs, LazyAttributes{}, LazyAttributes{})
 				return
 			}
 
 			// kvs case (WithUnsafeAttributes)
 			distinct := attribute.NewDistinctFromSortedWithFilter(kvs, fltr)
 
-			// Compute dropped!
-			var dropped []attribute.KeyValue
+			count := 0
 			for _, kv := range kvs {
-				if !fltr(kv) {
-					if dropped == nil {
-						dropped = make([]attribute.KeyValue, 0, len(kvs))
-					}
-					dropped = append(dropped, kv)
+				if fltr(kv) {
+					count++
 				}
 			}
 
-			if dropped == nil {
+			if count == len(kvs) {
 				// Nothing filtered!
-				f(ctx, n, d, set, func() []attribute.KeyValue { return kvs }, nil)
+				f(ctx, n, d, set, kvs, LazyAttributes{}, LazyAttributes{})
 				return
 			}
 
-			if len(dropped) == len(kvs) {
+			if count == 0 {
 				// Everything filtered!
 				f(
 					ctx,
 					n,
 					attribute.EmptySet().Equivalent(),
 					*attribute.EmptySet(),
-					func() []attribute.KeyValue { return nil },
-					dropped,
+					nil,
+					LazyAttributes{},
+					LazyAttributes{Result: kvs},
 				)
 				return
 			}
 
 			// Some items were filtered out.
-			getKVs := func() []attribute.KeyValue {
-				var filtered []attribute.KeyValue
-				for _, kv := range kvs {
-					if fltr(kv) {
-						filtered = append(filtered, kv)
-					}
-				}
-				return filtered
+			lazyKVs := LazyAttributes{
+				KVs:          kvs,
+				Filter:       fltr,
+				KeepMatching: true,
 			}
 
-			f(ctx, n, distinct, *attribute.EmptySet(), getKVs, dropped)
+			lazyDropped := LazyAttributes{
+				KVs:          kvs,
+				Filter:       fltr,
+				KeepMatching: false,
+			}
+
+			f(ctx, n, distinct, *attribute.EmptySet(), nil, lazyKVs, lazyDropped)
 		}
 	}
 	return func(ctx context.Context, n N, d attribute.Distinct, set attribute.Set, kvs []attribute.KeyValue) {
-		f(ctx, n, d, set, func() []attribute.KeyValue { return kvs }, nil)
+		f(ctx, n, d, set, kvs, LazyAttributes{}, LazyAttributes{})
 	}
 }
 

@@ -38,7 +38,7 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			var wg sync.WaitGroup
 			for range 5 {
 				wg.Go(func() {
-					reservoir.Offer(t.Context(), 25, []attribute.KeyValue{})
+					reservoir.Offer(t.Context(), 25, LazyAttributes{})
 				})
 			}
 			into := []exemplar.Exemplar{}

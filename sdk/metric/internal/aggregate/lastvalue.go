@@ -31,10 +31,18 @@ func (s *lastValueMap[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
-	lv := s.values.LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
+	if val, ok := s.values.Load(distinct); ok {
+		lv := val.(*lastValuePoint[N])
+		lv.value.Store(value)
+		lv.res.Offer(ctx, value, lazyDropped)
+		return
+	}
+
+	lv := s.values.LoadOrStoreAttr(distinct, set, kvs, lazyKVs, func(attr attribute.Set) any {
 		p := &lastValuePoint[N]{
 			res:       s.newRes(attr),
 			attrs:     attr,
@@ -45,7 +53,7 @@ func (s *lastValueMap[N]) measure(
 	}).(*lastValuePoint[N])
 
 	lv.value.Store(value)
-	lv.res.Offer(ctx, value, droppedAttr)
+	lv.res.Offer(ctx, value, lazyDropped)
 }
 
 func newDeltaLastValue[N int64 | float64](
@@ -82,12 +90,13 @@ func (s *deltaLastValue[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, getKVs, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, distinct, set, kvs, lazyKVs, lazyDropped)
 }
 
 func (s *deltaLastValue[N]) collect(

@@ -109,12 +109,27 @@ func (s *deltaHistogram[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
+	if val, ok := s.hotColdValMap[hotIdx].Load(distinct); ok {
+		h := val.(*histogramPoint[N])
+		idx := sort.SearchFloat64s(s.bounds, float64(value))
+		h.counts[idx].Add(1)
+		if !s.noMinMax {
+			h.minMax.Update(value)
+		}
+		if !s.noSum {
+			h.total.add(value)
+		}
+		h.res.Offer(ctx, value, lazyDropped)
+		return
+	}
+
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(distinct, set, kvs, lazyKVs, func(attr attribute.Set) any {
 		hPt := &histogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -143,7 +158,7 @@ func (s *deltaHistogram[N]) measure(
 	if !s.noSum {
 		h.total.add(value)
 	}
-	h.res.Offer(ctx, value, droppedAttr)
+	h.res.Offer(ctx, value, lazyDropped)
 }
 
 // newDeltaHistogram returns a histogram that is reset each time it is
@@ -282,10 +297,11 @@ func (s *cumulativeHistogram[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
-	h := s.values.LoadOrStoreAttr(distinct, set, getKVs, func(attr attribute.Set) any {
+	h := s.values.LoadOrStoreAttr(distinct, set, kvs, lazyKVs, func(attr attribute.Set) any {
 		hPt := &hotColdHistogramPoint[N]{
 			res:   s.newRes(attr),
 			attrs: attr,
@@ -326,7 +342,7 @@ func (s *cumulativeHistogram[N]) measure(
 	if !s.noSum {
 		h.hotColdPoint[hotIdx].total.add(value)
 	}
-	h.res.Offer(ctx, value, droppedAttr)
+	h.res.Offer(ctx, value, lazyDropped)
 }
 
 func (s *cumulativeHistogram[N]) collect(

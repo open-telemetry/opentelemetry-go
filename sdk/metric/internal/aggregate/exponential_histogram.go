@@ -332,8 +332,9 @@ func (e *expoHistogram[N]) measure(
 	value N,
 	distinct attribute.Distinct,
 	set attribute.Set,
-	getKVs func() []attribute.KeyValue,
-	droppedAttr []attribute.KeyValue,
+	kvs []attribute.KeyValue,
+	lazyKVs LazyAttributes,
+	lazyDropped LazyAttributes,
 ) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
@@ -346,10 +347,13 @@ func (e *expoHistogram[N]) measure(
 	v, ok := e.values[distinct]
 	if !ok {
 		var fltrAttr attribute.Set
-		if set.Len() > 0 {
+		switch {
+		case set.Len() > 0:
 			fltrAttr = set
-		} else {
-			fltrAttr = attribute.NewSet(getKVs()...)
+		case lazyKVs.Result != nil || lazyKVs.KVs != nil || lazyKVs.Filter != nil:
+			fltrAttr = attribute.NewSet(lazyKVs.Get()...)
+		default:
+			fltrAttr = attribute.NewSet(kvs...)
 		}
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
 		// If we overflowed, make sure we add to the existing overflow series
@@ -363,7 +367,7 @@ func (e *expoHistogram[N]) measure(
 		}
 	}
 	v.record(value)
-	v.res.Offer(ctx, value, droppedAttr)
+	v.res.Offer(ctx, value, lazyDropped)
 }
 
 func (e *expoHistogram[N]) delta(
