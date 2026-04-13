@@ -55,7 +55,6 @@ func TestProbabilitySampler(t *testing.T) {
 
 	t.Run("probability one uses probabilitySampler with th:0", func(t *testing.T) {
 		for _, prob := range []float64{1, 1.5} {
-			prob := prob
 			t.Run(fmt.Sprintf("%g", prob), func(t *testing.T) {
 				t.Helper()
 				sampler := ProbabilitySampler(prob).(*probabilitySampler)
