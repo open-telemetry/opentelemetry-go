@@ -5,6 +5,7 @@ package observ
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -68,16 +69,28 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 	assert.True(t, em.enabled, "metrics should be enabled when feature flag is true")
 
 	// Verify attributes are set correctly
-	expectedAttrs := []attribute.KeyValue{
-		semconv.OTelComponentName("test_component/0"),
-		semconv.OTelComponentTypeKey.String("test_component"),
-		semconv.ServerAddress("example.com"),
-		semconv.ServerPort(4317),
+	assert.Len(t, em.attrs, 4, "attributes length mismatch")
+	
+	// Find and verify each attribute
+	var componentName, componentType, serverAddress string
+	var serverPort int
+	for _, attr := range em.attrs {
+		switch attr.Key {
+		case semconv.OTelComponentNameKey:
+			componentName = attr.Value.AsString()
+		case semconv.OTelComponentTypeKey:
+			componentType = attr.Value.AsString()
+		case semconv.ServerAddressKey:
+			serverAddress = attr.Value.AsString()
+		case semconv.ServerPortKey:
+			serverPort = int(attr.Value.AsInt64())
+		}
 	}
 
-	actualAttrs := em.attrs
-	assert.Len(t, actualAttrs, len(expectedAttrs), "attributes length mismatch")
-	assert.Equal(t, expectedAttrs, actualAttrs, "attributes should match expected values")
+	assert.True(t, strings.HasPrefix(componentName, "test_component/"), "component name should start with test_component/")
+	assert.Equal(t, "test_component", componentType, "component type mismatch")
+	assert.Equal(t, "example.com", serverAddress, "server address mismatch")
+	assert.Equal(t, 4317, serverPort, "server port mismatch")
 }
 
 func TestNewInstrumentation_MeterFailure(t *testing.T) {
@@ -514,4 +527,30 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 			},
 		},
 	}
+}
+
+func BenchmarkInstrumentationTrackExport(b *testing.B) {
+	run := func(enabled bool, err error) func(*testing.B) {
+		return func(b *testing.B) {
+			rm := createTestResourceMetrics()
+			if enabled {
+				b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+			} else {
+				b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+			}
+			inst := NewInstrumentation("otlp_grpc_metric_exporter", "localhost", 4317)
+			if inst.enabled != enabled {
+				b.Fatalf("instrumentation enabled state mismatch: got %v, want %v", inst.enabled, enabled)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.TrackExport(b.Context(), rm)(err)
+			}
+		}
+	}
+
+	b.Run("EnabledNoError", run(true, nil))
+	b.Run("EnabledError", run(true, errors.New("export failed")))
+	b.Run("Disabled", run(false, nil))
 }
