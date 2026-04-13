@@ -561,8 +561,18 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			},
 		}))
 		r.register(testSDKProducer{})
-		assert.ErrorIs(t, r.ForceFlush(t.Context()), context.DeadlineExceeded)
-		assert.False(t, *called, "exporter Export method should not be called when context is expired")
+		// Use a long outer deadline so ForceFlush waits for the internal
+		// collectAndExport to finish. The DeadlineExceeded comes from the
+		// external producer hitting r.timeout (1ms) inside collectAndExport,
+		// not from ForceFlush's own context being cancelled.
+		ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+		defer cancel()
+		assert.ErrorIs(t, r.ForceFlush(ctx), context.DeadlineExceeded)
+		assert.True(
+			t,
+			*called,
+			"exporter Export method not called, pending telemetry from SDK producer should have been flushed",
+		)
 
 		// Ensure Reader is allowed clean up attempt.
 		_ = r.Shutdown(t.Context())
