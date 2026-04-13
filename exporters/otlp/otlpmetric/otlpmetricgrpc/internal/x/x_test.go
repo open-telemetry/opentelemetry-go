@@ -10,16 +10,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSelfObservability(t *testing.T) {
-	const key = "OTEL_GO_X_SELF_OBSERVABILITY"
-	require.Equal(t, key, SelfObservability.Key())
+func TestObservability(t *testing.T) {
+	const key = "OTEL_GO_X_OBSERVABILITY"
+	require.Equal(t, key, Observability.Key())
 
-	t.Run("true", run(setenv("true"), assertEnabled(SelfObservability, "true")))
-	t.Run("True", run(setenv("True"), assertEnabled(SelfObservability, "True")))
-	t.Run("TRUE", run(setenv("TRUE"), assertEnabled(SelfObservability, "TRUE")))
-	t.Run("false", run(setenv("false"), assertDisabled(SelfObservability)))
-	t.Run("1", run(setenv("1"), assertDisabled(SelfObservability)))
-	t.Run("empty", run(assertDisabled(SelfObservability)))
+	t.Run("true", run(setenv("true"), assertEnabled(Observability, "true")))
+	t.Run("True", run(setenv("True"), assertEnabled(Observability, "True")))
+	t.Run("TRUE", run(setenv("TRUE"), assertEnabled(Observability, "TRUE")))
+	t.Run("false", run(setenv("false"), assertDisabled(Observability)))
+	t.Run("1", run(setenv("1"), assertDisabled(Observability)))
+	t.Run("empty", run(assertDisabled(Observability)))
 }
 
 func run(steps ...func(*testing.T)) func(*testing.T) {
@@ -32,7 +32,7 @@ func run(steps ...func(*testing.T)) func(*testing.T) {
 }
 
 func setenv(v string) func(t *testing.T) {
-	return func(t *testing.T) { t.Setenv("OTEL_GO_X_SELF_OBSERVABILITY", v) }
+	return func(t *testing.T) { t.Setenv("OTEL_GO_X_OBSERVABILITY", v) }
 }
 
 func assertEnabled[T any](f Feature[T], want T) func(*testing.T) {

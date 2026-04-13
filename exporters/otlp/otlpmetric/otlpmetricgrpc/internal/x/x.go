@@ -12,13 +12,13 @@ import (
 	"strings"
 )
 
-// SelfObservability is an experimental feature flag that defines if OTLP
+// Observability is an experimental feature flag that defines if OTLP
 // gRPC metric exporter should include self-observability metrics.
 //
-// To enable this feature set the OTEL_GO_X_SELF_OBSERVABILITY environment variable
+// To enable this feature set the OTEL_GO_X_OBSERVABILITY environment variable
 // to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
 // will also enable this).
-var SelfObservability = newFeature("SELF_OBSERVABILITY", func(v string) (string, bool) {
+var Observability = newFeature("OBSERVABILITY", func(v string) (string, bool) {
 	if strings.EqualFold(v, "true") {
 		return v, true
 	}
