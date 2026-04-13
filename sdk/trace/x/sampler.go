@@ -29,16 +29,16 @@ const (
 	probabilityOneThreshold  = 1 - 0x1p-52
 )
 
-// traceIDRatioSampler is the sdktrace.Sampler implementation used by
-// TraceIDRatioBased.
-type traceIDRatioSampler struct {
+// probabilitySampler is the sdktrace.Sampler implementation used by
+// ProbabilitySampler.
+type probabilitySampler struct {
 	threshold   uint64
 	thkv        string
 	description string
 }
 
 // ShouldSample implements sdktrace.Sampler.
-func (ts *traceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	state := psc.TraceState()
 
@@ -54,7 +54,7 @@ func (ts *traceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktr
 		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
 	}
 
-	if ts.threshold > randomness {
+	if ps.threshold > randomness {
 		return sdktrace.SamplingResult{
 			Decision:   sdktrace.Drop,
 			Tracestate: state,
@@ -68,7 +68,7 @@ func (ts *traceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktr
 	// statistically representative.
 	// See https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/#general-requirements
 	if hasRandomness || psc.TraceFlags().IsRandom() {
-		newOtts = InsertOrUpdateTraceStateThKeyValue(existingOtts, ts.thkv)
+		newOtts = InsertOrUpdateTraceStateThKeyValue(existingOtts, ps.thkv)
 	} else {
 		newOtts = eraseTraceStateThKeyValue(existingOtts)
 	}
@@ -86,34 +86,38 @@ func (ts *traceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktr
 }
 
 // Description implements sdktrace.Sampler.
-func (ts *traceIDRatioSampler) Description() string {
-	return ts.description
+func (ps *probabilitySampler) Description() string {
+	return ps.description
 }
 
-// TraceIDRatioBased samples a given fraction of traces. Fractions >= 1 will
-// always sample. Fractions < 0 are treated as zero. To respect the parent
-// trace's SampledFlag, the TraceIDRatioBased sampler should be used as a
+// ProbabilitySampler samples a trace with a given probability. Probabilities >= 1 will
+// always sample. Probabilities < 0 are treated as zero. To respect the parent
+// trace's SampledFlag, ProbabilitySampler should be used as a
 // delegate of a ParentBased sampler.
 //
-//nolint:revive // revive complains about stutter of `x.TraceIDRatioBased`
-func TraceIDRatioBased(fraction float64) sdktrace.Sampler {
+//nolint:revive // revive complains about stutter of `x.ProbabilitySampler`
+func ProbabilitySampler(probability float64) sdktrace.Sampler {
 	const (
 		maxp  = 14
 		defp  = defaultSamplingPrecision
 		hbits = 4
 	)
-	if fraction > probabilityOneThreshold {
-		return sdktrace.AlwaysSample()
+	if probability > probabilityOneThreshold {
+		return &probabilitySampler{
+			threshold:   0,
+			thkv:        "th:0",
+			description: "ProbabilitySampler{1}",
+		}
 	}
-	if fraction < probabilityZeroThreshold {
+	if probability < probabilityZeroThreshold {
 		return sdktrace.NeverSample()
 	}
 
-	_, expF := math.Frexp(fraction)
-	_, expR := math.Frexp(1 - fraction)
+	_, expF := math.Frexp(probability)
+	_, expR := math.Frexp(1 - probability)
 	precision := min(maxp, max(defp+expF/-hbits, defp+expR/-hbits))
 
-	scaled := uint64(math.Round(fraction * float64(maxAdjustedCount)))
+	scaled := uint64(math.Round(probability * float64(maxAdjustedCount)))
 	threshold := maxAdjustedCount - scaled
 
 	if shift := hbits * (maxp - precision); shift != 0 {
@@ -124,9 +128,9 @@ func TraceIDRatioBased(fraction float64) sdktrace.Sampler {
 	}
 
 	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
-	return &traceIDRatioSampler{
+	return &probabilitySampler{
 		threshold:   threshold,
 		thkv:        "th:" + tvalue,
-		description: fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
+		description: fmt.Sprintf("ProbabilitySampler{%g}", probability),
 	}
 }
