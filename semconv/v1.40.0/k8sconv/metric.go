@@ -334,6 +334,9 @@ func (ContainerCPULimit) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerCPULimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -355,6 +358,9 @@ func (m ContainerCPULimit) Add(ctx context.Context, incr int64, attrs ...attribu
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerCPULimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -435,6 +441,9 @@ func (ContainerCPULimitUtilization) Description() string {
 // of its CPU limit. If the CPU limit is not set, this metric SHOULD NOT be
 // emitted for that container.
 func (m ContainerCPULimitUtilization) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -456,6 +465,9 @@ func (m ContainerCPULimitUtilization) Record(ctx context.Context, val int64, att
 // of its CPU limit. If the CPU limit is not set, this metric SHOULD NOT be
 // emitted for that container.
 func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -535,6 +547,9 @@ func (ContainerCPURequest) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerCPURequest) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -556,6 +571,9 @@ func (m ContainerCPURequest) Add(ctx context.Context, incr int64, attrs ...attri
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerCPURequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -633,6 +651,9 @@ func (ContainerCPURequestUtilization) Description() string {
 
 // Record records val to the current distribution for attrs.
 func (m ContainerCPURequestUtilization) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -650,6 +671,9 @@ func (m ContainerCPURequestUtilization) Record(ctx context.Context, val int64, a
 
 // RecordSet records val to the current distribution for set.
 func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -731,6 +755,9 @@ func (ContainerEphemeralStorageLimit) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerEphemeralStorageLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -752,6 +779,9 @@ func (m ContainerEphemeralStorageLimit) Add(ctx context.Context, incr int64, att
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerEphemeralStorageLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -833,6 +863,9 @@ func (ContainerEphemeralStorageRequest) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerEphemeralStorageRequest) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -854,6 +887,9 @@ func (m ContainerEphemeralStorageRequest) Add(ctx context.Context, incr int64, a
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerEphemeralStorageRequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -933,6 +969,9 @@ func (ContainerMemoryLimit) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerMemoryLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -954,6 +993,9 @@ func (m ContainerMemoryLimit) Add(ctx context.Context, incr int64, attrs ...attr
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerMemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1033,6 +1075,9 @@ func (ContainerMemoryRequest) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerMemoryRequest) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1054,6 +1099,9 @@ func (m ContainerMemoryRequest) Add(ctx context.Context, incr int64, attrs ...at
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerMemoryRequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1135,6 +1183,9 @@ func (ContainerReady) Description() string {
 //
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatus-v1-core
 func (m ContainerReady) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1157,6 +1208,9 @@ func (m ContainerReady) Add(ctx context.Context, incr int64, attrs ...attribute.
 //
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatus-v1-core
 func (m ContainerReady) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1243,6 +1297,9 @@ func (ContainerRestartCount) Description() string {
 // you can conclude there were restarts in the recent past, and not try and
 // analyze the value beyond that.
 func (m ContainerRestartCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1270,6 +1327,9 @@ func (m ContainerRestartCount) Add(ctx context.Context, incr int64, attrs ...att
 // you can conclude there were restarts in the recent past, and not try and
 // analyze the value beyond that.
 func (m ContainerRestartCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1362,6 +1422,9 @@ func (m ContainerStatusReason) Add(
 	containerStatusReason ContainerStatusReasonAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.container.status.reason", string(containerStatusReason)),
@@ -1394,6 +1457,9 @@ func (m ContainerStatusReason) Add(
 // avoid missing metrics.
 // Only the value corresponding to the current state reason will be non-zero.
 func (m ContainerStatusReason) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1483,6 +1549,9 @@ func (m ContainerStatusState) Add(
 	containerStatusState ContainerStatusStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.container.status.state", string(containerStatusState)),
@@ -1515,6 +1584,9 @@ func (m ContainerStatusState) Add(
 // missing metrics.
 // Only the value corresponding to the current state will be non-zero.
 func (m ContainerStatusState) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1594,6 +1666,9 @@ func (ContainerStorageLimit) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerStorageLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1615,6 +1690,9 @@ func (m ContainerStorageLimit) Add(ctx context.Context, incr int64, attrs ...att
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerStorageLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1694,6 +1772,9 @@ func (ContainerStorageRequest) Description() string {
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerStorageRequest) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1715,6 +1796,9 @@ func (m ContainerStorageRequest) Add(ctx context.Context, incr int64, attrs ...a
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#resourcerequirements-v1-core
 // for details.
 func (m ContainerStorageRequest) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1795,6 +1879,9 @@ func (CronJobJobActive) Description() string {
 //
 // [K8s CronJobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#cronjobstatus-v1-batch
 func (m CronJobJobActive) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1817,6 +1904,9 @@ func (m CronJobJobActive) Add(ctx context.Context, incr int64, attrs ...attribut
 //
 // [K8s CronJobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#cronjobstatus-v1-batch
 func (m CronJobJobActive) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1899,6 +1989,9 @@ func (DaemonSetNodeCurrentScheduled) Description() string {
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeCurrentScheduled) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1921,6 +2014,9 @@ func (m DaemonSetNodeCurrentScheduled) Add(ctx context.Context, incr int64, attr
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeCurrentScheduled) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2003,6 +2099,9 @@ func (DaemonSetNodeDesiredScheduled) Description() string {
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeDesiredScheduled) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2025,6 +2124,9 @@ func (m DaemonSetNodeDesiredScheduled) Add(ctx context.Context, incr int64, attr
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeDesiredScheduled) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2107,6 +2209,9 @@ func (DaemonSetNodeMisscheduled) Description() string {
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeMisscheduled) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2129,6 +2234,9 @@ func (m DaemonSetNodeMisscheduled) Add(ctx context.Context, incr int64, attrs ..
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeMisscheduled) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2210,6 +2318,9 @@ func (DaemonSetNodeReady) Description() string {
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeReady) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2232,6 +2343,9 @@ func (m DaemonSetNodeReady) Add(ctx context.Context, incr int64, attrs ...attrib
 //
 // [K8s DaemonSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#daemonsetstatus-v1-apps
 func (m DaemonSetNodeReady) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2313,6 +2427,9 @@ func (DeploymentPodAvailable) Description() string {
 //
 // [K8s DeploymentStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#deploymentstatus-v1-apps
 func (m DeploymentPodAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2335,6 +2452,9 @@ func (m DeploymentPodAvailable) Add(ctx context.Context, incr int64, attrs ...at
 //
 // [K8s DeploymentStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#deploymentstatus-v1-apps
 func (m DeploymentPodAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2415,6 +2535,9 @@ func (DeploymentPodDesired) Description() string {
 //
 // [K8s DeploymentSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#deploymentspec-v1-apps
 func (m DeploymentPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2437,6 +2560,9 @@ func (m DeploymentPodDesired) Add(ctx context.Context, incr int64, attrs ...attr
 //
 // [K8s DeploymentSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#deploymentspec-v1-apps
 func (m DeploymentPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2529,6 +2655,9 @@ func (m HPAMetricTargetCPUAverageUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2561,6 +2690,9 @@ func (m HPAMetricTargetCPUAverageUtilization) Record(
 // [K8s HPA MetricTarget]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#metrictarget-v2-autoscaling
 // [`ContainerResource`]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis
 func (m HPAMetricTargetCPUAverageUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2668,6 +2800,9 @@ func (m HPAMetricTargetCPUAverageValue) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2700,6 +2835,9 @@ func (m HPAMetricTargetCPUAverageValue) Record(
 // [K8s HPA MetricTarget]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#metrictarget-v2-autoscaling
 // [`ContainerResource`]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis
 func (m HPAMetricTargetCPUAverageValue) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2805,6 +2943,9 @@ func (m HPAMetricTargetCPUValue) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2837,6 +2978,9 @@ func (m HPAMetricTargetCPUValue) Record(
 // [K8s HPA MetricTarget]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#metrictarget-v2-autoscaling
 // [`ContainerResource`]: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-metrics-apis
 func (m HPAMetricTargetCPUValue) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2933,6 +3077,9 @@ func (HPAPodCurrent) Description() string {
 //
 // [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
 func (m HPAPodCurrent) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2955,6 +3102,9 @@ func (m HPAPodCurrent) Add(ctx context.Context, incr int64, attrs ...attribute.K
 //
 // [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
 func (m HPAPodCurrent) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3036,6 +3186,9 @@ func (HPAPodDesired) Description() string {
 //
 // [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
 func (m HPAPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3058,6 +3211,9 @@ func (m HPAPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.K
 //
 // [K8s HorizontalPodAutoscalerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerstatus-v2-autoscaling
 func (m HPAPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3138,6 +3294,9 @@ func (HPAPodMax) Description() string {
 //
 // [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
 func (m HPAPodMax) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3160,6 +3319,9 @@ func (m HPAPodMax) Add(ctx context.Context, incr int64, attrs ...attribute.KeyVa
 //
 // [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
 func (m HPAPodMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3240,6 +3402,9 @@ func (HPAPodMin) Description() string {
 //
 // [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
 func (m HPAPodMin) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3262,6 +3427,9 @@ func (m HPAPodMin) Add(ctx context.Context, incr int64, attrs ...attribute.KeyVa
 //
 // [K8s HorizontalPodAutoscalerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#horizontalpodautoscalerspec-v2-autoscaling
 func (m HPAPodMin) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3342,6 +3510,9 @@ func (JobPodActive) Description() string {
 //
 // [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
 func (m JobPodActive) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3364,6 +3535,9 @@ func (m JobPodActive) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 //
 // [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
 func (m JobPodActive) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3445,6 +3619,9 @@ func (JobPodDesiredSuccessful) Description() string {
 //
 // [K8s JobSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobspec-v1-batch
 func (m JobPodDesiredSuccessful) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3467,6 +3644,9 @@ func (m JobPodDesiredSuccessful) Add(ctx context.Context, incr int64, attrs ...a
 //
 // [K8s JobSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobspec-v1-batch
 func (m JobPodDesiredSuccessful) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3547,6 +3727,9 @@ func (JobPodFailed) Description() string {
 //
 // [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
 func (m JobPodFailed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3569,6 +3752,9 @@ func (m JobPodFailed) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 //
 // [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
 func (m JobPodFailed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3649,6 +3835,9 @@ func (JobPodMaxParallel) Description() string {
 //
 // [K8s JobSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobspec-v1-batch
 func (m JobPodMaxParallel) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3671,6 +3860,9 @@ func (m JobPodMaxParallel) Add(ctx context.Context, incr int64, attrs ...attribu
 //
 // [K8s JobSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobspec-v1-batch
 func (m JobPodMaxParallel) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3751,6 +3943,9 @@ func (JobPodSuccessful) Description() string {
 //
 // [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
 func (m JobPodSuccessful) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3773,6 +3968,9 @@ func (m JobPodSuccessful) Add(ctx context.Context, incr int64, attrs ...attribut
 //
 // [K8s JobStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#jobstatus-v1-batch
 func (m JobPodSuccessful) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3855,6 +4053,9 @@ func (m NamespacePhase) Add(
 	namespacePhase NamespacePhaseAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.namespace.phase", string(namespacePhase)),
@@ -3883,6 +4084,9 @@ func (m NamespacePhase) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NamespacePhase) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3973,6 +4177,9 @@ func (m NodeConditionStatus) Add(
 	nodeConditionType NodeConditionTypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.node.condition.status", string(nodeConditionStatus)),
@@ -4007,6 +4214,9 @@ func (m NodeConditionStatus) Add(
 // time interval to avoid missing metrics. Condition pairs corresponding to the
 // current conditions' statuses will be non-zero.
 func (m NodeConditionStatus) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4082,6 +4292,9 @@ func (NodeCPUAllocatable) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m NodeCPUAllocatable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4099,6 +4312,9 @@ func (m NodeCPUAllocatable) Add(ctx context.Context, incr int64, attrs ...attrib
 
 // AddSet adds incr to the existing count for set.
 func (m NodeCPUAllocatable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4176,6 +4392,9 @@ func (NodeCPUTime) Description() string {
 //
 // Total CPU time consumed by the specific Node on all available CPU cores
 func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -4195,6 +4414,9 @@ func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.K
 //
 // Total CPU time consumed by the specific Node on all available CPU cores
 func (m NodeCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -4273,6 +4495,9 @@ func (NodeCPUUsage) Description() string {
 // CPU usage of the specific Node on all available CPU cores, averaged over the
 // sample window
 func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -4293,6 +4518,9 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 // CPU usage of the specific Node on all available CPU cores, averaged over the
 // sample window
 func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -4370,6 +4598,9 @@ func (NodeEphemeralStorageAllocatable) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m NodeEphemeralStorageAllocatable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4387,6 +4618,9 @@ func (m NodeEphemeralStorageAllocatable) Add(ctx context.Context, incr int64, at
 
 // AddSet adds incr to the existing count for set.
 func (m NodeEphemeralStorageAllocatable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4470,6 +4704,9 @@ func (NodeFilesystemAvailable) Description() string {
 // [FsStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [NodeStats.Fs]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeFilesystemAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4495,6 +4732,9 @@ func (m NodeFilesystemAvailable) Add(ctx context.Context, incr int64, attrs ...a
 // [FsStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [NodeStats.Fs]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeFilesystemAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4578,6 +4818,9 @@ func (NodeFilesystemCapacity) Description() string {
 // [FsStats.CapacityBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [NodeStats.Fs]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeFilesystemCapacity) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4603,6 +4846,9 @@ func (m NodeFilesystemCapacity) Add(ctx context.Context, incr int64, attrs ...at
 // [FsStats.CapacityBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [NodeStats.Fs]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeFilesystemCapacity) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4688,6 +4934,9 @@ func (NodeFilesystemUsage) Description() string {
 // [FsStats.UsedBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [NodeStats.Fs]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeFilesystemUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4715,6 +4964,9 @@ func (m NodeFilesystemUsage) Add(ctx context.Context, incr int64, attrs ...attri
 // [FsStats.UsedBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [NodeStats.Fs]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeFilesystemUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4790,6 +5042,9 @@ func (NodeMemoryAllocatable) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m NodeMemoryAllocatable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4807,6 +5062,9 @@ func (m NodeMemoryAllocatable) Add(ctx context.Context, incr int64, attrs ...att
 
 // AddSet adds incr to the existing count for set.
 func (m NodeMemoryAllocatable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4890,6 +5148,9 @@ func (NodeMemoryAvailable) Description() string {
 // [MemoryStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4915,6 +5176,9 @@ func (m NodeMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attri
 // [MemoryStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5005,6 +5269,9 @@ func (m NodeMemoryPagingFaults) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5037,6 +5304,9 @@ func (m NodeMemoryPagingFaults) Add(
 // [MemoryStats.MajorPageFaults]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryPagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5126,6 +5396,9 @@ func (NodeMemoryRss) Description() string {
 // [MemoryStats.RSSBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryRss) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5151,6 +5424,9 @@ func (m NodeMemoryRss) Add(ctx context.Context, incr int64, attrs ...attribute.K
 // [MemoryStats.RSSBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryRss) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5228,6 +5504,9 @@ func (NodeMemoryUsage) Description() string {
 //
 // Total memory usage of the Node
 func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -5247,6 +5526,9 @@ func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribu
 //
 // Total memory usage of the Node
 func (m NodeMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -5330,6 +5612,9 @@ func (NodeMemoryWorkingSet) Description() string {
 // [MemoryStats.WorkingSetBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryWorkingSet) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5355,6 +5640,9 @@ func (m NodeMemoryWorkingSet) Add(ctx context.Context, incr int64, attrs ...attr
 // [MemoryStats.WorkingSetBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [NodeStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#NodeStats
 func (m NodeMemoryWorkingSet) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5436,6 +5724,9 @@ func (m NodeNetworkErrors) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5459,6 +5750,9 @@ func (m NodeNetworkErrors) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NodeNetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5554,6 +5848,9 @@ func (m NodeNetworkIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5577,6 +5874,9 @@ func (m NodeNetworkIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NodeNetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5666,6 +5966,9 @@ func (NodePodAllocatable) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m NodePodAllocatable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5683,6 +5986,9 @@ func (m NodePodAllocatable) Add(ctx context.Context, incr int64, attrs ...attrib
 
 // AddSet adds incr to the existing count for set.
 func (m NodePodAllocatable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5762,6 +6068,9 @@ func (NodeUptime) Description() string {
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -5783,6 +6092,9 @@ func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m NodeUptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -5860,6 +6172,9 @@ func (PodCPUTime) Description() string {
 //
 // Total CPU time consumed by the specific Pod on all available CPU cores
 func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -5879,6 +6194,9 @@ func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.Ke
 //
 // Total CPU time consumed by the specific Pod on all available CPU cores
 func (m PodCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -5957,6 +6275,9 @@ func (PodCPUUsage) Description() string {
 // CPU usage of the specific Pod on all available CPU cores, averaged over the
 // sample window
 func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -5977,6 +6298,9 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 // CPU usage of the specific Pod on all available CPU cores, averaged over the
 // sample window
 func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -6060,6 +6384,9 @@ func (PodFilesystemAvailable) Description() string {
 // [FsStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [PodStats.EphemeralStorage]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodFilesystemAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6085,6 +6412,9 @@ func (m PodFilesystemAvailable) Add(ctx context.Context, incr int64, attrs ...at
 // [FsStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [PodStats.EphemeralStorage]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodFilesystemAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6168,6 +6498,9 @@ func (PodFilesystemCapacity) Description() string {
 // [FsStats.CapacityBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [PodStats.EphemeralStorage]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodFilesystemCapacity) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6193,6 +6526,9 @@ func (m PodFilesystemCapacity) Add(ctx context.Context, incr int64, attrs ...att
 // [FsStats.CapacityBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [PodStats.EphemeralStorage]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodFilesystemCapacity) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6278,6 +6614,9 @@ func (PodFilesystemUsage) Description() string {
 // [FsStats.UsedBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [PodStats.EphemeralStorage]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodFilesystemUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6305,6 +6644,9 @@ func (m PodFilesystemUsage) Add(ctx context.Context, incr int64, attrs ...attrib
 // [FsStats.UsedBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#FsStats
 // [PodStats.EphemeralStorage]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodFilesystemUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6388,6 +6730,9 @@ func (PodMemoryAvailable) Description() string {
 // [MemoryStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6413,6 +6758,9 @@ func (m PodMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attrib
 // [MemoryStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6503,6 +6851,9 @@ func (m PodMemoryPagingFaults) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -6535,6 +6886,9 @@ func (m PodMemoryPagingFaults) Add(
 // [MemoryStats.MajorPageFaults]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryPagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -6624,6 +6978,9 @@ func (PodMemoryRss) Description() string {
 // [MemoryStats.RSSBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryRss) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6649,6 +7006,9 @@ func (m PodMemoryRss) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 // [MemoryStats.RSSBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryRss) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6726,6 +7086,9 @@ func (PodMemoryUsage) Description() string {
 //
 // Total memory usage of the Pod
 func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -6745,6 +7108,9 @@ func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribut
 //
 // Total memory usage of the Pod
 func (m PodMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -6828,6 +7194,9 @@ func (PodMemoryWorkingSet) Description() string {
 // [MemoryStats.WorkingSetBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryWorkingSet) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6853,6 +7222,9 @@ func (m PodMemoryWorkingSet) Add(ctx context.Context, incr int64, attrs ...attri
 // [MemoryStats.WorkingSetBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#MemoryStats
 // [PodStats.Memory]: https://pkg.go.dev/k8s.io/kubelet@v0.34.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodMemoryWorkingSet) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -6934,6 +7306,9 @@ func (m PodNetworkErrors) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -6957,6 +7332,9 @@ func (m PodNetworkErrors) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PodNetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -7052,6 +7430,9 @@ func (m PodNetworkIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -7075,6 +7456,9 @@ func (m PodNetworkIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PodNetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -7178,6 +7562,9 @@ func (m PodStatusPhase) Add(
 	podStatusPhase PodStatusPhaseAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.pod.status.phase", string(podStatusPhase)),
@@ -7210,6 +7597,9 @@ func (m PodStatusPhase) Add(
 // missing metrics.
 // Only the value corresponding to the current phase will be non-zero.
 func (m PodStatusPhase) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -7299,6 +7689,9 @@ func (m PodStatusReason) Add(
 	podStatusReason PodStatusReasonAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.pod.status.reason", string(podStatusReason)),
@@ -7331,6 +7724,9 @@ func (m PodStatusReason) Add(
 // avoid missing metrics.
 // Only the value corresponding to the current reason will be non-zero.
 func (m PodStatusReason) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -7410,6 +7806,9 @@ func (PodUptime) Description() string {
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -7431,6 +7830,9 @@ func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.K
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m PodUptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -7523,6 +7925,9 @@ func (m PodVolumeAvailable) Add(
 	volumeName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.volume.name", volumeName),
@@ -7559,6 +7964,9 @@ func (m PodVolumeAvailable) Add(
 // [VolumeStats.AvailableBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#VolumeStats
 // [PodStats]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodVolumeAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -7657,6 +8065,9 @@ func (m PodVolumeCapacity) Add(
 	volumeName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.volume.name", volumeName),
@@ -7693,6 +8104,9 @@ func (m PodVolumeCapacity) Add(
 // [VolumeStats.CapacityBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#VolumeStats
 // [PodStats]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodVolumeCapacity) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -7791,6 +8205,9 @@ func (m PodVolumeInodeCount) Add(
 	volumeName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.volume.name", volumeName),
@@ -7827,6 +8244,9 @@ func (m PodVolumeInodeCount) Add(
 // [VolumeStats.Inodes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#VolumeStats
 // [PodStats]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodVolumeInodeCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -7925,6 +8345,9 @@ func (m PodVolumeInodeFree) Add(
 	volumeName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.volume.name", volumeName),
@@ -7961,6 +8384,9 @@ func (m PodVolumeInodeFree) Add(
 // [VolumeStats.InodesFree]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#VolumeStats
 // [PodStats]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodVolumeInodeFree) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8062,6 +8488,9 @@ func (m PodVolumeInodeUsed) Add(
 	volumeName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.volume.name", volumeName),
@@ -8101,6 +8530,9 @@ func (m PodVolumeInodeUsed) Add(
 // [VolumeStats.InodesUsed]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#VolumeStats
 // [PodStats]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodVolumeInodeUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8201,6 +8633,9 @@ func (m PodVolumeUsage) Add(
 	volumeName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.volume.name", volumeName),
@@ -8239,6 +8674,9 @@ func (m PodVolumeUsage) Add(
 // [VolumeStats.UsedBytes]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#VolumeStats
 // [PodStats]: https://pkg.go.dev/k8s.io/kubelet@v0.33.0/pkg/apis/stats/v1alpha1#PodStats
 func (m PodVolumeUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8326,6 +8764,9 @@ func (ReplicaSetPodAvailable) Description() string {
 //
 // [K8s ReplicaSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicasetstatus-v1-apps
 func (m ReplicaSetPodAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8348,6 +8789,9 @@ func (m ReplicaSetPodAvailable) Add(ctx context.Context, incr int64, attrs ...at
 //
 // [K8s ReplicaSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicasetstatus-v1-apps
 func (m ReplicaSetPodAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8428,6 +8872,9 @@ func (ReplicaSetPodDesired) Description() string {
 //
 // [K8s ReplicaSetSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicasetspec-v1-apps
 func (m ReplicaSetPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8450,6 +8897,9 @@ func (m ReplicaSetPodDesired) Add(ctx context.Context, incr int64, attrs ...attr
 //
 // [K8s ReplicaSetSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicasetspec-v1-apps
 func (m ReplicaSetPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8532,6 +8982,9 @@ func (ReplicationControllerPodAvailable) Description() string {
 //
 // [K8s ReplicationControllerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicationcontrollerstatus-v1-core
 func (m ReplicationControllerPodAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8554,6 +9007,9 @@ func (m ReplicationControllerPodAvailable) Add(ctx context.Context, incr int64, 
 //
 // [K8s ReplicationControllerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicationcontrollerstatus-v1-core
 func (m ReplicationControllerPodAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8636,6 +9092,9 @@ func (ReplicationControllerPodDesired) Description() string {
 //
 // [K8s ReplicationControllerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicationcontrollerspec-v1-core
 func (m ReplicationControllerPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8658,6 +9117,9 @@ func (m ReplicationControllerPodDesired) Add(ctx context.Context, incr int64, at
 //
 // [K8s ReplicationControllerSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#replicationcontrollerspec-v1-core
 func (m ReplicationControllerPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8741,6 +9203,9 @@ func (ResourceQuotaCPULimitHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8763,6 +9228,9 @@ func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ..
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8846,6 +9314,9 @@ func (ResourceQuotaCPULimitUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8868,6 +9339,9 @@ func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ..
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8951,6 +9425,9 @@ func (ResourceQuotaCPURequestHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -8973,6 +9450,9 @@ func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs 
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9056,6 +9536,9 @@ func (ResourceQuotaCPURequestUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9078,6 +9561,9 @@ func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs 
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9162,6 +9648,9 @@ func (ResourceQuotaEphemeralStorageLimitHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageLimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9184,6 +9673,9 @@ func (m ResourceQuotaEphemeralStorageLimitHard) Add(ctx context.Context, incr in
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageLimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9268,6 +9760,9 @@ func (ResourceQuotaEphemeralStorageLimitUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9290,6 +9785,9 @@ func (m ResourceQuotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr in
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageLimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9374,6 +9872,9 @@ func (ResourceQuotaEphemeralStorageRequestHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageRequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9396,6 +9897,9 @@ func (m ResourceQuotaEphemeralStorageRequestHard) Add(ctx context.Context, incr 
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9480,6 +9984,9 @@ func (ResourceQuotaEphemeralStorageRequestUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9502,6 +10009,9 @@ func (m ResourceQuotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr 
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaEphemeralStorageRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9593,6 +10103,9 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 	hugepageSize string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.hugepage.size", hugepageSize),
@@ -9626,6 +10139,9 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaHugepageCountRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9717,6 +10233,9 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 	hugepageSize string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.hugepage.size", hugepageSize),
@@ -9750,6 +10269,9 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaHugepageCountRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9833,6 +10355,9 @@ func (ResourceQuotaMemoryLimitHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9855,6 +10380,9 @@ func (m ResourceQuotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryLimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9938,6 +10466,9 @@ func (ResourceQuotaMemoryLimitUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -9960,6 +10491,9 @@ func (m ResourceQuotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryLimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10043,6 +10577,9 @@ func (ResourceQuotaMemoryRequestHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryRequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10065,6 +10602,9 @@ func (m ResourceQuotaMemoryRequestHard) Add(ctx context.Context, incr int64, att
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10148,6 +10688,9 @@ func (ResourceQuotaMemoryRequestUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryRequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10170,6 +10713,9 @@ func (m ResourceQuotaMemoryRequestUsed) Add(ctx context.Context, incr int64, att
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaMemoryRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10261,6 +10807,9 @@ func (m ResourceQuotaObjectCountHard) Add(
 	resourcequotaResourceName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
@@ -10294,6 +10843,9 @@ func (m ResourceQuotaObjectCountHard) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaObjectCountHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10385,6 +10937,9 @@ func (m ResourceQuotaObjectCountUsed) Add(
 	resourcequotaResourceName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
@@ -10418,6 +10973,9 @@ func (m ResourceQuotaObjectCountUsed) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaObjectCountUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10513,6 +11071,9 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10545,6 +11106,9 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10649,6 +11213,9 @@ func (m ResourceQuotaPersistentvolumeclaimCountUsed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10681,6 +11248,9 @@ func (m ResourceQuotaPersistentvolumeclaimCountUsed) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaPersistentvolumeclaimCountUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10783,6 +11353,9 @@ func (m ResourceQuotaStorageRequestHard) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10815,6 +11388,9 @@ func (m ResourceQuotaStorageRequestHard) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaStorageRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10917,6 +11493,9 @@ func (m ResourceQuotaStorageRequestUsed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -10949,6 +11528,9 @@ func (m ResourceQuotaStorageRequestUsed) Add(
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 func (m ResourceQuotaStorageRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11076,6 +11658,9 @@ func (m ServiceEndpointCount) Record(
 	serviceEndpointCondition ServiceEndpointConditionAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("k8s.service.endpoint.address_type", string(serviceEndpointAddressType)),
@@ -11136,6 +11721,9 @@ func (m ServiceEndpointCount) Record(
 // [EndpointSlice API]: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/endpoint-slice-v1/
 // [K8s EndpointConditions]: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/endpoint-slice-v1/
 func (m ServiceEndpointCount) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -11240,6 +11828,9 @@ func (ServiceLoadBalancerIngressCount) Description() string {
 //
 // [.status.loadBalancer.ingress]: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/#ServiceStatus
 func (m ServiceLoadBalancerIngressCount) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -11277,6 +11868,9 @@ func (m ServiceLoadBalancerIngressCount) Record(ctx context.Context, val int64, 
 //
 // [.status.loadBalancer.ingress]: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/#ServiceStatus
 func (m ServiceLoadBalancerIngressCount) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -11358,6 +11952,9 @@ func (StatefulSetPodCurrent) Description() string {
 //
 // [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
 func (m StatefulSetPodCurrent) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11380,6 +11977,9 @@ func (m StatefulSetPodCurrent) Add(ctx context.Context, incr int64, attrs ...att
 //
 // [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
 func (m StatefulSetPodCurrent) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11460,6 +12060,9 @@ func (StatefulSetPodDesired) Description() string {
 //
 // [K8s StatefulSetSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetspec-v1-apps
 func (m StatefulSetPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11482,6 +12085,9 @@ func (m StatefulSetPodDesired) Add(ctx context.Context, incr int64, attrs ...att
 //
 // [K8s StatefulSetSpec]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetspec-v1-apps
 func (m StatefulSetPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11562,6 +12168,9 @@ func (StatefulSetPodReady) Description() string {
 //
 // [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
 func (m StatefulSetPodReady) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11584,6 +12193,9 @@ func (m StatefulSetPodReady) Add(ctx context.Context, incr int64, attrs ...attri
 //
 // [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
 func (m StatefulSetPodReady) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11665,6 +12277,9 @@ func (StatefulSetPodUpdated) Description() string {
 //
 // [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
 func (m StatefulSetPodUpdated) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -11687,6 +12302,9 @@ func (m StatefulSetPodUpdated) Add(ctx context.Context, incr int64, attrs ...att
 //
 // [K8s StatefulSetStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#statefulsetstatus-v1-apps
 func (m StatefulSetPodUpdated) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return

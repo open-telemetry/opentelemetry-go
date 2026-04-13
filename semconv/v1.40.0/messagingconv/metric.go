@@ -168,6 +168,9 @@ func (m ClientConsumedMessages) Add(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("messaging.operation.name", operationName),
@@ -205,6 +208,9 @@ func (m ClientConsumedMessages) Add(
 // delivery, this counter is incremented when the message is received and not
 // reported when it is processed.
 func (m ClientConsumedMessages) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -353,6 +359,9 @@ func (m ClientOperationDuration) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("messaging.operation.name", operationName),
@@ -386,6 +395,9 @@ func (m ClientOperationDuration) Record(
 // This metric SHOULD NOT be used to report processing duration - processing
 // duration is reported in `messaging.process.duration` metric.
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -540,6 +552,9 @@ func (m ClientSentMessages) Add(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("messaging.operation.name", operationName),
@@ -573,6 +588,9 @@ func (m ClientSentMessages) Add(
 // This metric MUST NOT count messages that were created but haven't yet been
 // sent.
 func (m ClientSentMessages) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -706,6 +724,9 @@ func (m ProcessDuration) Record(
 	system SystemAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("messaging.operation.name", operationName),
@@ -739,6 +760,9 @@ func (m ProcessDuration) Record(
 // This metric MUST be reported for operations with `messaging.operation.type`
 // that matches `process`.
 func (m ProcessDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

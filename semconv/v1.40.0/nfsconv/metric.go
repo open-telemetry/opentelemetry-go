@@ -135,6 +135,9 @@ func (m ClientNetCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -161,6 +164,9 @@ func (m ClientNetCount) Add(
 // Linux: this metric is taken from the Linux kernel's svc_stat.netudpcnt and
 // svc_stat.nettcpcnt
 func (m ClientNetCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -250,6 +256,9 @@ func (ClientNetTCPConnectionAccepted) Description() string {
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.nettcpconn
 func (m ClientNetTCPConnectionAccepted) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -269,6 +278,9 @@ func (m ClientNetTCPConnectionAccepted) Add(ctx context.Context, incr int64, att
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.nettcpconn
 func (m ClientNetTCPConnectionAccepted) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -350,6 +362,9 @@ func (m ClientOperationCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -373,6 +388,9 @@ func (m ClientOperationCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientOperationCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -466,6 +484,9 @@ func (m ClientProcedureCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -489,6 +510,9 @@ func (m ClientProcedureCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientProcedureCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -581,6 +605,9 @@ func (ClientRPCAuthrefreshCount) Description() string {
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.rpcauthrefresh
 func (m ClientRPCAuthrefreshCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -600,6 +627,9 @@ func (m ClientRPCAuthrefreshCount) Add(ctx context.Context, incr int64, attrs ..
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.rpcauthrefresh
 func (m ClientRPCAuthrefreshCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -678,6 +708,9 @@ func (ClientRPCCount) Description() string {
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.rpccnt
 func (m ClientRPCCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -697,6 +730,9 @@ func (m ClientRPCCount) Add(ctx context.Context, incr int64, attrs ...attribute.
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.rpccnt
 func (m ClientRPCCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -774,6 +810,9 @@ func (ClientRPCRetransmitCount) Description() string {
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.rpcretrans
 func (m ClientRPCRetransmitCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -793,6 +832,9 @@ func (m ClientRPCRetransmitCount) Add(ctx context.Context, incr int64, attrs ...
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.rpcretrans
 func (m ClientRPCRetransmitCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -871,6 +913,9 @@ func (ServerFhStaleCount) Description() string {
 // Linux: this metric is taken from the Linux kernel NFSD_STATS_FH_STALE counter
 // in the nfsd_net struct
 func (m ServerFhStaleCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -891,6 +936,9 @@ func (m ServerFhStaleCount) Add(ctx context.Context, incr int64, attrs ...attrib
 // Linux: this metric is taken from the Linux kernel NFSD_STATS_FH_STALE counter
 // in the nfsd_net struct
 func (m ServerFhStaleCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -976,6 +1024,9 @@ func (m ServerIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1002,6 +1053,9 @@ func (m ServerIO) Add(
 // Linux: this metric is taken from the Linux kernel NFSD_STATS_IO_READ and
 // NFSD_STATS_IO_WRITE counters in the nfsd_net struct
 func (m ServerIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1093,6 +1147,9 @@ func (m ServerNetCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1119,6 +1176,9 @@ func (m ServerNetCount) Add(
 // Linux: this metric is taken from the Linux kernel's svc_stat.nettcpcnt and
 // svc_stat.netudpcnt
 func (m ServerNetCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1208,6 +1268,9 @@ func (ServerNetTCPConnectionAccepted) Description() string {
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.nettcpconn
 func (m ServerNetTCPConnectionAccepted) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1227,6 +1290,9 @@ func (m ServerNetTCPConnectionAccepted) Add(ctx context.Context, incr int64, att
 //
 // Linux: this metric is taken from the Linux kernel's svc_stat.nettcpconn
 func (m ServerNetTCPConnectionAccepted) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1308,6 +1374,9 @@ func (m ServerOperationCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1331,6 +1400,9 @@ func (m ServerOperationCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ServerOperationCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1424,6 +1496,9 @@ func (m ServerProcedureCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1447,6 +1522,9 @@ func (m ServerProcedureCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ServerProcedureCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1542,6 +1620,9 @@ func (m ServerRepcacheRequests) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1565,6 +1646,9 @@ func (m ServerRepcacheRequests) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ServerRepcacheRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1659,6 +1743,9 @@ func (m ServerRPCCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1687,6 +1774,9 @@ func (m ServerRPCCount) Add(
 // an error.type of "format", "auth", or "client" for svc_stat.badfmt,
 // svc_stat.badauth, and svc_stat.badclnt.
 func (m ServerRPCCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1771,6 +1861,9 @@ func (ServerThreadCount) Description() string {
 //
 // Linux: this metric is taken from the Linux kernel nfsd_th_cnt variable
 func (m ServerThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1790,6 +1883,9 @@ func (m ServerThreadCount) Add(ctx context.Context, incr int64, attrs ...attribu
 //
 // Linux: this metric is taken from the Linux kernel nfsd_th_cnt variable
 func (m ServerThreadCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
