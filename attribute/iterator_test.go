@@ -128,7 +128,7 @@ func TestMergedIterator(t *testing.T) {
 
 			for merge.Next() {
 				attr := merge.Attribute()
-				result = append(result, fmt.Sprint(attr.Key, "/", attr.Value.Emit()))
+				result = append(result, fmt.Sprint(attr.Key, "/", attr.Value.String()))
 			}
 
 			require.Equal(t, input.expect, result)
