@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -62,6 +63,8 @@ func TestSelfObservability_Disabled(t *testing.T) {
 }
 
 func TestSelfObservability_Enabled(t *testing.T) {
+	// Reset counter for predictable ID in test
+	counter.SetExporterID(0)
 	// Enable self-observability
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 

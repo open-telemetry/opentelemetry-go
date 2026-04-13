@@ -11,8 +11,9 @@ import (
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -61,6 +62,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		aggregationSelector: as,
 
 		metrics: observ.NewInstrumentation(
+			counter.NextExporterID(),
 			string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
 			serverAddress,
 			serverPort,
