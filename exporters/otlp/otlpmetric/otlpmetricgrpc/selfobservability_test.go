@@ -4,7 +4,6 @@
 package otlpmetricgrpc
 
 import (
-	"context"
 	"net"
 	"strconv"
 	"testing"
@@ -22,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
-	"go.opentelemetry.io/otel/semconv/v1.36.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 func TestSelfObservability_Disabled(t *testing.T) {
@@ -38,18 +37,18 @@ func TestSelfObservability_Disabled(t *testing.T) {
 	require.NoError(t, err)
 	defer coll.Shutdown()
 
-	exp, err := New(context.Background(),
+	exp, err := New(t.Context(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
 	require.NoError(t, err)
 
 	rm := createTestResourceMetrics()
-	err = exp.Export(context.Background(), rm)
+	err = exp.Export(t.Context(), rm)
 	require.NoError(t, err)
 
 	// Verify that no self-observability metrics are reported
 	selfObsMetrics := &metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), selfObsMetrics)
+	err = reader.Collect(t.Context(), selfObsMetrics)
 	require.NoError(t, err)
 
 	// Check that no self-observability metrics exist
@@ -74,17 +73,17 @@ func TestSelfObservability_Enabled(t *testing.T) {
 	require.NoError(t, err)
 	defer coll.Shutdown()
 
-	exp, err := New(context.Background(),
+	exp, err := New(t.Context(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
 	require.NoError(t, err)
 
 	rm := createTestResourceMetrics()
-	err = exp.Export(context.Background(), rm)
+	err = exp.Export(t.Context(), rm)
 	require.NoError(t, err)
 
 	var got metricdata.ResourceMetrics
-	err = reader.Collect(context.Background(), &got)
+	err = reader.Collect(t.Context(), &got)
 	require.NoError(t, err)
 	require.Len(t, got.ScopeMetrics, 1)
 
@@ -173,18 +172,18 @@ func TestSelfObservability_ExportError(t *testing.T) {
 	otel.SetMeterProvider(provider)
 
 	// Create exporter with invalid endpoint to force error
-	exp, err := New(context.Background(),
+	exp, err := New(t.Context(),
 		WithEndpoint("invalid:999999"),
 		WithInsecure())
 	require.NoError(t, err)
 
 	// Export data (should fail)
 	rm := createTestResourceMetrics()
-	err = exp.Export(context.Background(), rm)
+	err = exp.Export(t.Context(), rm)
 	assert.Error(t, err, "expected error but got none")
 
 	var got metricdata.ResourceMetrics
-	err = reader.Collect(context.Background(), &got)
+	err = reader.Collect(t.Context(), &got)
 	require.NoError(t, err)
 	require.Len(t, got.ScopeMetrics, 1)
 
@@ -255,17 +254,17 @@ func TestSelfObservability_EndpointParsing(t *testing.T) {
 	require.NoError(t, err)
 	defer coll.Shutdown()
 
-	exp, err := New(context.Background(),
+	exp, err := New(t.Context(),
 		WithEndpoint(coll.Addr().String()),
 		WithInsecure())
 	require.NoError(t, err)
 
 	rm := createTestResourceMetrics()
-	err = exp.Export(context.Background(), rm)
+	err = exp.Export(t.Context(), rm)
 	require.NoError(t, err)
 
 	var got metricdata.ResourceMetrics
-	err = reader.Collect(context.Background(), &got)
+	err = reader.Collect(t.Context(), &got)
 	require.NoError(t, err)
 	require.Len(t, got.ScopeMetrics, 1)
 
