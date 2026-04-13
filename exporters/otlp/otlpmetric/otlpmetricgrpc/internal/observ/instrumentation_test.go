@@ -30,7 +30,7 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 	// Ensure feature is disabled
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 
-	em := NewInstrumentation("test_component", "localhost", 4317)
+	em := NewInstrumentation(0, "test_component", "localhost", 4317)
 
 	assert.False(t, em.enabled, "metrics should be disabled when feature flag is false")
 
@@ -64,13 +64,13 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	em := NewInstrumentation("test_component", "example.com", 4317)
+	em := NewInstrumentation(0, "test_component", "example.com", 4317)
 
 	assert.True(t, em.enabled, "metrics should be enabled when feature flag is true")
 
 	// Verify attributes are set correctly
 	assert.Len(t, em.attrs, 4, "attributes length mismatch")
-	
+
 	// Find and verify each attribute
 	var componentName, componentType, serverAddress string
 	var serverPort int
@@ -87,7 +87,11 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 		}
 	}
 
-	assert.True(t, strings.HasPrefix(componentName, "test_component/"), "component name should start with test_component/")
+	assert.True(
+		t,
+		strings.HasPrefix(componentName, "test_component/"),
+		"component name should start with test_component/",
+	)
 	assert.Equal(t, "test_component", componentType, "component type mismatch")
 	assert.Equal(t, "example.com", serverAddress, "server address mismatch")
 	assert.Equal(t, 4317, serverPort, "server port mismatch")
@@ -105,7 +109,7 @@ func TestNewInstrumentation_MeterFailure(t *testing.T) {
 
 	// This test primarily covers the enabled path, but the error handling
 	// is covered by the semantic convention's internal nil checks
-	em := NewInstrumentation("test_component", "example.com", 4317)
+	em := NewInstrumentation(0, "test_component", "example.com", 4317)
 
 	// Should be enabled with valid meter provider
 	assert.True(t, em.enabled, "metrics should be enabled when meter provider is valid")
@@ -136,7 +140,7 @@ func TestTrackExport_Success(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	em := NewInstrumentation("test_component", "localhost", 4317)
+	em := NewInstrumentation(0, "test_component", "localhost", 4317)
 	rm := createTestResourceMetrics()
 
 	// Track export operation
@@ -232,7 +236,7 @@ func TestTrackExport_Error(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	em := NewInstrumentation("test_component", "localhost", 4317)
+	em := NewInstrumentation(0, "test_component", "localhost", 4317)
 	rm := createTestResourceMetrics()
 
 	// Track export operation that fails
@@ -538,7 +542,7 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			} else {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 			}
-			inst := NewInstrumentation("otlp_grpc_metric_exporter", "localhost", 4317)
+			inst := NewInstrumentation(0, "otlp_grpc_metric_exporter", "localhost", 4317)
 			if inst.enabled != enabled {
 				b.Fatalf("instrumentation enabled state mismatch: got %v, want %v", inst.enabled, enabled)
 			}

@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -44,14 +43,6 @@ var (
 	}
 )
 
-// exporterIDCounter is used to generate unique component names for exporters.
-var exporterIDCounter atomic.Uint64
-
-// nextExporterID returns the next unique exporter ID.
-func nextExporterID() uint64 {
-	return exporterIDCounter.Add(1) - 1
-}
-
 // Instrumentation holds the self-observability metric instruments for an OTLP metric exporter.
 type Instrumentation struct {
 	exported otelconv.SDKExporterMetricDataPointExported
@@ -65,7 +56,7 @@ type Instrumentation struct {
 
 // NewInstrumentation creates a new Instrumentation instance.
 // If self-observability is disabled, returns a no-op instance.
-func NewInstrumentation(componentType, serverAddress string, serverPort int) *Instrumentation {
+func NewInstrumentation(id int64, componentType, serverAddress string, serverPort int) *Instrumentation {
 	em := &Instrumentation{
 		enabled: x.Observability.Enabled(),
 	}
@@ -100,7 +91,7 @@ func NewInstrumentation(componentType, serverAddress string, serverPort int) *In
 	}
 
 	// Set up common attributes
-	componentName := fmt.Sprintf("%s/%d", componentType, nextExporterID())
+	componentName := fmt.Sprintf("%s/%d", componentType, id)
 	em.attrs = []attribute.KeyValue{
 		semconv.OTelComponentTypeKey.String(componentType),
 		semconv.OTelComponentName(componentName),
