@@ -8,11 +8,11 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ## Features
 
-- [TraceIDRatioBased Sampler](#traceidratiobased-sampler)
+- [ProbabilitySampler](#probabilitysampler)
 
-### TraceIDRatioBased Sampler
+### ProbabilitySampler
 
-`TraceIDRatioBased` is a threshold-based sampler that conforms to the [OpenTelemetry specification's TraceIdRatioBased sampler](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased).
+`ProbabilitySampler` is a threshold-based sampler that conforms to the [OpenTelemetry specification's TraceIdRatioBased sampler](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased).
 
 It uses the least significant 56 bits of the trace ID (per [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag)) for deterministic sampling decisions and propagates the sampling threshold via the `th` sub-key in the W3C `ot` tracestate vendor key.
 
@@ -26,7 +26,7 @@ import (
 
 tp := sdktrace.NewTracerProvider(
 	sdktrace.WithSampler(
-		sdktrace.ParentBased(x.TraceIDRatioBased(0.5)),
+		sdktrace.ParentBased(x.ProbabilitySampler(0.5)),
 	),
 )
 ```
