@@ -26,223 +26,203 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
-func TestSelfObservability_Disabled(t *testing.T) {
-	// Ensure self-observability is disabled
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
-
-	reader := metric.NewManualReader()
-	provider := metric.NewMeterProvider(metric.WithReader(reader))
-	otel.SetMeterProvider(provider)
-
+func TestSelfObservability(t *testing.T) {
 	coll, err := otest.NewGRPCCollector("", nil)
 	require.NoError(t, err)
 	defer coll.Shutdown()
 
-	exp, err := New(t.Context(),
-		WithEndpoint(coll.Addr().String()),
-		WithInsecure())
-	require.NoError(t, err)
-
-	rm := createTestResourceMetrics()
-	err = exp.Export(t.Context(), rm)
-	require.NoError(t, err)
-
-	// Verify that no self-observability metrics are reported
-	selfObsMetrics := &metricdata.ResourceMetrics{}
-	err = reader.Collect(t.Context(), selfObsMetrics)
-	require.NoError(t, err)
-
-	// Check that no self-observability metrics exist
-	selfObsMetricCount := 0
-	for _, sm := range selfObsMetrics.ScopeMetrics {
-		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
-			selfObsMetricCount += len(sm.Metrics)
-		}
-	}
-	assert.Equal(t, 0, selfObsMetricCount, "expected no self-observability metrics when disabled")
-}
-
-func TestSelfObservability_Enabled(t *testing.T) {
-	// Reset counter for predictable ID in test
-	counter.SetExporterID(0)
-	// Enable self-observability
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-
-	reader := metric.NewManualReader()
-	provider := metric.NewMeterProvider(metric.WithReader(reader))
-	otel.SetMeterProvider(provider)
-
-	coll, err := otest.NewGRPCCollector("", nil)
-	require.NoError(t, err)
-	defer coll.Shutdown()
-
-	exp, err := New(t.Context(),
-		WithEndpoint(coll.Addr().String()),
-		WithInsecure())
-	require.NoError(t, err)
-
-	rm := createTestResourceMetrics()
-	err = exp.Export(t.Context(), rm)
-	require.NoError(t, err)
-
-	var got metricdata.ResourceMetrics
-	err = reader.Collect(t.Context(), &got)
-	require.NoError(t, err)
-	require.Len(t, got.ScopeMetrics, 1)
-
-	serverAddr, serverPort := parseEndpoint(coll.Addr().String())
-
-	want := metricdata.ScopeMetrics{
-		Scope: instrumentation.Scope{
-			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
-			Version:   sdk.Version(),
-			SchemaURL: semconv.SchemaURL,
-		},
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
-				Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
-				Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.OTelComponentName("otlp_grpc_metric_exporter/0"),
-								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-								semconv.ServerAddressKey.String(serverAddr),
-								semconv.ServerPortKey.Int(serverPort),
-							),
-							Value: 4,
+	tests := []struct {
+		name        string
+		envValue    string
+		endpoint    string
+		expectError bool
+		wantMetrics func(actualComponentName, addr string, port int) []metricdata.Metrics
+	}{
+		{
+			name:        "success",
+			envValue:    "true",
+			endpoint:    coll.Addr().String(),
+			expectError: false,
+			wantMetrics: func(actualComponentName, addr string, port int) []metricdata.Metrics {
+				return []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Value: 4,
+								},
+							},
 						},
 					},
-				},
-			},
-			{
-				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
-				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
-				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: false,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.OTelComponentName("otlp_grpc_metric_exporter/0"),
-								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-								semconv.ServerAddressKey.String(serverAddr),
-								semconv.ServerPortKey.Int(serverPort),
-							),
-							Value: 0,
+					{
+						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: false,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Value: 0,
+								},
+							},
 						},
 					},
-				},
-			},
-			{
-				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
-				Description: otelconv.SDKExporterOperationDuration{}.Description(),
-				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
-				Data: metricdata.Histogram[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.OTelComponentName("otlp_grpc_metric_exporter/0"),
-								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-								semconv.ServerAddressKey.String(serverAddr),
-								semconv.ServerPortKey.Int(serverPort),
-							),
-							Count: 1,
+					{
+						Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+						Description: otelconv.SDKExporterOperationDuration{}.Description(),
+						Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Count: 1,
+								},
+							},
 						},
 					},
-				},
+				}
 			},
 		},
-	}
-
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
-		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreValue())
-}
-
-func TestSelfObservability_ExportError(t *testing.T) {
-	// Enable self-observability
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-
-	reader := metric.NewManualReader()
-	provider := metric.NewMeterProvider(metric.WithReader(reader))
-	otel.SetMeterProvider(provider)
-
-	// Create exporter with invalid endpoint to force error
-	exp, err := New(t.Context(),
-		WithEndpoint("invalid:999999"),
-		WithInsecure())
-	require.NoError(t, err)
-
-	// Export data (should fail)
-	rm := createTestResourceMetrics()
-	err = exp.Export(t.Context(), rm)
-	assert.Error(t, err, "expected error but got none")
-
-	var got metricdata.ResourceMetrics
-	err = reader.Collect(t.Context(), &got)
-	require.NoError(t, err)
-	require.Len(t, got.ScopeMetrics, 1)
-
-	actualComponentName := extractComponentName(got.ScopeMetrics[0])
-
-	want := metricdata.ScopeMetrics{
-		Scope: instrumentation.Scope{
-			Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
-			Version:   sdk.Version(),
-			SchemaURL: semconv.SchemaURL,
-		},
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
-				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
-				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: false,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.OTelComponentName(actualComponentName),
-								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-								semconv.ServerAddress("invalid"),
-								semconv.ServerPort(999999),
-							),
+		{
+			name:        "error",
+			envValue:    "true",
+			endpoint:    "invalid:999999",
+			expectError: true,
+			wantMetrics: func(actualComponentName, addr string, port int) []metricdata.Metrics {
+				return []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: false,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+								},
+							},
 						},
 					},
-				},
+					{
+						Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+						Description: otelconv.SDKExporterOperationDuration{}.Description(),
+						Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.ErrorTypeOther,
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Count: 1,
+								},
+							},
+						},
+					},
+				}
 			},
-			{
-				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
-				Description: otelconv.SDKExporterOperationDuration{}.Description(),
-				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
-				Data: metricdata.Histogram[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.ErrorTypeOther,
-								semconv.OTelComponentName(actualComponentName),
-								semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-								semconv.ServerAddress("invalid"),
-								semconv.ServerPort(999999),
-							),
-						},
-					},
-				},
+		},
+		{
+			name:        "disabled",
+			envValue:    "false",
+			endpoint:    coll.Addr().String(),
+			expectError: false,
+			wantMetrics: func(_, _ string, _ int) []metricdata.Metrics {
+				return nil
 			},
 		},
 	}
 
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
-		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreValue())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset counter for predictable ID in test
+			counter.SetExporterID(0)
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", tt.envValue)
+
+			reader := metric.NewManualReader()
+			provider := metric.NewMeterProvider(metric.WithReader(reader))
+			otel.SetMeterProvider(provider)
+
+			exp, err := New(t.Context(),
+				WithEndpoint(tt.endpoint),
+				WithInsecure())
+			require.NoError(t, err)
+
+			rm := createTestResourceMetrics()
+			err = exp.Export(t.Context(), rm)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			var got metricdata.ResourceMetrics
+			err = reader.Collect(t.Context(), &got)
+			require.NoError(t, err)
+
+			if len(tt.wantMetrics("", "", 0)) == 0 {
+				// Verify no metrics for our scope
+				selfObsMetricCount := 0
+				for _, sm := range got.ScopeMetrics {
+					if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
+						selfObsMetricCount += len(sm.Metrics)
+					}
+				}
+				assert.Equal(t, 0, selfObsMetricCount, "expected no self-observability metrics when disabled")
+			} else {
+				require.Len(t, got.ScopeMetrics, 1)
+				actualComponentName := extractComponentName(got.ScopeMetrics[0])
+				addr, port := parseEndpoint(tt.endpoint)
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: tt.wantMetrics(actualComponentName, addr, port),
+				}
+
+				metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreValue())
+			}
+		})
+	}
 }
 
 func TestSelfObservability_EndpointParsing(t *testing.T) {
