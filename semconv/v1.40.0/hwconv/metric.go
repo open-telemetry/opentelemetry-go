@@ -255,6 +255,9 @@ func (m BatteryCharge) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -283,6 +286,9 @@ func (m BatteryCharge) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m BatteryCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -410,6 +416,9 @@ func (m BatteryChargeLimit) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -438,6 +447,9 @@ func (m BatteryChargeLimit) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m BatteryChargeLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -578,6 +590,9 @@ func (m BatteryTimeLeft) Record(
 	state StateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -608,6 +623,9 @@ func (m BatteryTimeLeft) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m BatteryTimeLeft) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -740,6 +758,9 @@ func (m CPUSpeed) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -768,6 +789,9 @@ func (m CPUSpeed) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CPUSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -879,6 +903,9 @@ func (m CPUSpeedLimit) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -907,6 +934,9 @@ func (m CPUSpeedLimit) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CPUSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1027,6 +1057,9 @@ func (m Energy) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1057,6 +1090,9 @@ func (m Energy) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m Energy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1158,6 +1194,9 @@ func (m Errors) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1188,6 +1227,9 @@ func (m Errors) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1299,6 +1341,9 @@ func (m FanSpeed) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1327,6 +1372,9 @@ func (m FanSpeed) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m FanSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1431,6 +1479,9 @@ func (m FanSpeedLimit) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1459,6 +1510,9 @@ func (m FanSpeedLimit) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m FanSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1569,6 +1623,9 @@ func (m FanSpeedRatio) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1597,6 +1654,9 @@ func (m FanSpeedRatio) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m FanSpeedRatio) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1704,6 +1764,9 @@ func (m GpuIO) Add(
 	networkIoDirection NetworkIODirectionAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1734,6 +1797,9 @@ func (m GpuIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m GpuIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1866,6 +1932,9 @@ func (m GpuMemoryLimit) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -1894,6 +1963,9 @@ func (m GpuMemoryLimit) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m GpuMemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2025,6 +2097,9 @@ func (m GpuMemoryUsage) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2053,6 +2128,9 @@ func (m GpuMemoryUsage) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m GpuMemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2185,6 +2263,9 @@ func (m GpuMemoryUtilization) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2213,6 +2294,9 @@ func (m GpuMemoryUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2345,6 +2429,9 @@ func (m GpuUtilization) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2373,6 +2460,9 @@ func (m GpuUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m GpuUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2511,6 +2601,9 @@ func (m HostAmbientTemperature) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2539,6 +2632,9 @@ func (m HostAmbientTemperature) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2642,6 +2738,9 @@ func (m HostEnergy) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2675,6 +2774,9 @@ func (m HostEnergy) Add(
 // `hw.energy` and `hw.power` described in the previous section, to prevent
 // summing up overlapping values.
 func (m HostEnergy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2774,6 +2876,9 @@ func (m HostHeatingMargin) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2802,6 +2907,9 @@ func (m HostHeatingMargin) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -2905,6 +3013,9 @@ func (m HostPower) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -2938,6 +3049,9 @@ func (m HostPower) Record(
 // `hw.energy` and `hw.power` described in the previous section, to prevent
 // summing up overlapping values.
 func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -3036,6 +3150,9 @@ func (m LogicalDiskLimit) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3064,6 +3181,9 @@ func (m LogicalDiskLimit) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m LogicalDiskLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3172,6 +3292,9 @@ func (m LogicalDiskUsage) Add(
 	logicalDiskState LogicalDiskStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3202,6 +3325,9 @@ func (m LogicalDiskUsage) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m LogicalDiskUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3310,6 +3436,9 @@ func (m LogicalDiskUtilization) Record(
 	logicalDiskState LogicalDiskStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3340,6 +3469,9 @@ func (m LogicalDiskUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -3445,6 +3577,9 @@ func (m MemorySize) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3473,6 +3608,9 @@ func (m MemorySize) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m MemorySize) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3597,6 +3735,9 @@ func (m NetworkBandwidthLimit) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3625,6 +3766,9 @@ func (m NetworkBandwidthLimit) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkBandwidthLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3758,6 +3902,9 @@ func (m NetworkBandwidthUtilization) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3786,6 +3933,9 @@ func (m NetworkBandwidthUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -3921,6 +4071,9 @@ func (m NetworkIO) Add(
 	networkIoDirection NetworkIODirectionAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -3951,6 +4104,9 @@ func (m NetworkIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -4086,6 +4242,9 @@ func (m NetworkPackets) Add(
 	networkIoDirection NetworkIODirectionAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -4116,6 +4275,9 @@ func (m NetworkPackets) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkPackets) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -4248,6 +4410,9 @@ func (m NetworkUp) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -4276,6 +4441,9 @@ func (m NetworkUp) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkUp) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4412,6 +4580,9 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 	physicalDiskState PhysicalDiskStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -4442,6 +4613,9 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -4574,6 +4748,9 @@ func (m PhysicalDiskSize) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -4602,6 +4779,9 @@ func (m PhysicalDiskSize) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PhysicalDiskSize) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -4737,6 +4917,9 @@ func (m PhysicalDiskSmart) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -4765,6 +4948,9 @@ func (m PhysicalDiskSmart) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m PhysicalDiskSmart) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -4912,6 +5098,9 @@ func (m Power) Record(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -4944,6 +5133,9 @@ func (m Power) Record(
 //
 // It is recommended to report `hw.energy` instead of `hw.power` when possible.
 func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -5042,6 +5234,9 @@ func (m PowerSupplyLimit) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5070,6 +5265,9 @@ func (m PowerSupplyLimit) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PowerSupplyLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5194,6 +5392,9 @@ func (m PowerSupplyUsage) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5222,6 +5423,9 @@ func (m PowerSupplyUsage) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PowerSupplyUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5341,6 +5545,9 @@ func (m PowerSupplyUtilization) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5369,6 +5576,9 @@ func (m PowerSupplyUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -5501,6 +5711,9 @@ func (m Status) Add(
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5541,6 +5754,9 @@ func (m Status) Add(
 //
 // [ [*StateSet* as defined in OpenMetrics]: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#stateset
 func (m Status) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -5639,6 +5855,9 @@ func (m TapeDriveOperations) Add(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5667,6 +5886,9 @@ func (m TapeDriveOperations) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m TapeDriveOperations) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -5792,6 +6014,9 @@ func (m Temperature) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5820,6 +6045,9 @@ func (m Temperature) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m Temperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -5924,6 +6152,9 @@ func (m TemperatureLimit) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -5952,6 +6183,9 @@ func (m TemperatureLimit) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m TemperatureLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -6062,6 +6296,9 @@ func (m Voltage) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -6090,6 +6327,9 @@ func (m Voltage) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m Voltage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -6194,6 +6434,9 @@ func (m VoltageLimit) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -6222,6 +6465,9 @@ func (m VoltageLimit) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m VoltageLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -6332,6 +6578,9 @@ func (m VoltageNominal) Record(
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
@@ -6360,6 +6609,9 @@ func (m VoltageNominal) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m VoltageNominal) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
