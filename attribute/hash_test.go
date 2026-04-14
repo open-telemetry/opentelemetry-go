@@ -330,3 +330,21 @@ func FuzzHashKVs(f *testing.F) {
 		}
 	})
 }
+
+// BenchmarkHashKVsSlices benchmarks hashing of slice-type attributes only,
+// targeting the fixed-array fast path added for BOOLSLICE, INT64SLICE,
+// FLOAT64SLICE, and STRINGSLICE.
+func BenchmarkHashKVsSlices(b *testing.B) {
+	attrs := []KeyValue{
+		BoolSlice("b2", []bool{false, true}),
+		BoolSlice("b3", []bool{true, true, false}),
+		Int64Slice("i3", []int64{3826, -38, -29}),
+		Float64Slice("f2", []float64{0.1, -3.8}),
+		StringSlice("s3", []string{"foo", "bar", "baz"}),
+	}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for b.Loop() {
+		hashKVs(attrs)
+	}
+}
