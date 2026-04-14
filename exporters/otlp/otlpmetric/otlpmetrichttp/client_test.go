@@ -341,7 +341,6 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-<<<<<<< HEAD
 func TestGetBodyCalledOnRedirect(t *testing.T) {
 	// Test that req.GetBody is set correctly, allowing the HTTP transport
 	// to re-send the body on 307 redirects.
