@@ -27,3 +27,32 @@ func (o defaultAttributesOption) AllowedKeys() []attribute.Key {
 func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
+
+// Settable is an optional interface that Options can implement
+// to allow reuse without additional allocations.
+//
+// Example usage with sync.Pool:
+//
+//	var optionPool = sync.Pool{
+//		New: func() any {
+//			return metric.WithAttributeSet(*attribute.EmptySet())
+//		},
+//	}
+//
+//	func record(ctx context.Context, counter metric.Int64Counter, set attribute.Set) {
+//		opt := optionPool.Get().(metric.MeasurementOption)
+//		defer optionPool.Put(opt)
+//
+//		if r, ok := opt.(x.Settable[attribute.Set]); ok {
+//			r.Set(set)
+//		} else {
+//			opt = metric.WithAttributeSet(set)
+//		}
+//		counter.Add(ctx, 1, opt)
+//	}
+//
+// WARNING: It is the user's responsibility to ensure that the option is not
+// concurrently set while being passed to the API or used by another goroutine.
+type Settable[T any] interface {
+	Set(T)
+}
