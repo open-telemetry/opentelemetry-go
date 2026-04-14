@@ -565,7 +565,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		// collectAndExport to finish. The DeadlineExceeded comes from the
 		// external producer hitting r.timeout (1ms) inside collectAndExport,
 		// not from ForceFlush's own context being cancelled.
-		ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 		defer cancel()
 		assert.ErrorIs(t, r.ForceFlush(ctx), context.DeadlineExceeded)
 		assert.True(
