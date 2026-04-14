@@ -12,7 +12,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ### ProbabilitySampler
 
-`ProbabilitySampler` is a threshold-based sampler that conforms to the [OpenTelemetry specification's TraceIdRatioBased sampler](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased).
+`ProbabilitySampler` is a threshold-based sampler that conforms to the [OpenTelemetry specification's ProbabilitySampler](https://opentelemetry.io/docs/specs/otel/trace/sdk/#probabilitysampler).
 
 It uses the least significant 56 bits of the trace ID (per [W3C Trace Context Level 2 Random Trace ID Flag](https://www.w3.org/TR/trace-context-2/#random-trace-id-flag)) for deterministic sampling decisions and propagates the sampling threshold via the `th` sub-key in the W3C `ot` tracestate vendor key.
 
