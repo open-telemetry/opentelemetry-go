@@ -265,6 +265,18 @@ func (v Value) asSlice() []Value {
 	}
 }
 
+func asValueSliceReflect(v any) []Value {
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() || rv.Kind() != reflect.Array || rv.Type().Elem() != reflect.TypeFor[Value]() {
+		return nil
+	}
+	cpy := make([]Value, rv.Len())
+	if len(cpy) > 0 {
+		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
+	}
+	return cpy
+}
+
 // AsByteSlice returns the bytes value. Make sure that the Value's type
 // is BYTESLICE.
 func (v Value) AsByteSlice() []byte {
@@ -425,18 +437,6 @@ func sliceValueReflect(v []Value) any {
 	cp := reflect.New(reflect.ArrayOf(len(v), reflect.TypeFor[Value]())).Elem()
 	reflect.Copy(cp, reflect.ValueOf(v))
 	return cp.Interface()
-}
-
-func asValueSliceReflect(v any) []Value {
-	rv := reflect.ValueOf(v)
-	if !rv.IsValid() || rv.Kind() != reflect.Array || rv.Type().Elem() != reflect.TypeFor[Value]() {
-		return nil
-	}
-	cpy := make([]Value, rv.Len())
-	if len(cpy) > 0 {
-		_ = reflect.Copy(reflect.ValueOf(cpy), rv)
-	}
-	return cpy
 }
 
 func formatBoolSliceValue(v any) string {
