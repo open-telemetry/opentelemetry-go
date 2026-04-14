@@ -190,8 +190,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			}()
 		}
 
-		statusCode = resp.StatusCode
-		if statusCode >= 200 && statusCode <= 299 {
+		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			// Success, do not retry.
 
 			// Read the partial success message, if any.
@@ -244,7 +243,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		}
 		bodyErr := fmt.Errorf("body: %s", respStr)
 
-		switch statusCode {
+		switch resp.StatusCode {
 		case http.StatusTooManyRequests,
 			http.StatusBadGateway,
 			http.StatusServiceUnavailable,
