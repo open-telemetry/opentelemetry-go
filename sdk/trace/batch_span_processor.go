@@ -177,7 +177,7 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 			}
 			close(wait)
 		}()
-		// Wait until the wait group is done or the context is cancelled
+		// Wait until the channel is ready or the context is canceled.
 		select {
 		case <-wait:
 			err = exportErr
