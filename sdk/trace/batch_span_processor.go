@@ -163,16 +163,12 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 	bsp.stopOnce.Do(func() {
 		bsp.stopped.Store(true)
 		wait := make(chan struct{})
-		// exportErr is written by the goroutine before closing wait.
-		// It is only read in the <-wait case, so there is no race.
-		var exportErr error
 		go func() {
 			close(bsp.stopCh)
 			bsp.stopWait.Wait()
 			if bsp.e != nil {
-				exportErr = bsp.e.Shutdown(ctx)
-				if exportErr != nil {
-					otel.Handle(exportErr)
+				if err := bsp.e.Shutdown(ctx); err != nil {
+					otel.Handle(err)
 				}
 			}
 			close(wait)
@@ -180,7 +176,6 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 		// Wait until the wait group is done or the context is cancelled
 		select {
 		case <-wait:
-			err = exportErr
 		case <-ctx.Done():
 			err = ctx.Err()
 		}
