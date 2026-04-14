@@ -413,8 +413,8 @@ type errorShutdownExporter struct {
 	err error
 }
 
-func (e *errorShutdownExporter) ExportSpans(context.Context, []ReadOnlySpan) error { return nil }
-func (e *errorShutdownExporter) Shutdown(context.Context) error                    { return e.err }
+func (*errorShutdownExporter) ExportSpans(context.Context, []ReadOnlySpan) error { return nil }
+func (e *errorShutdownExporter) Shutdown(context.Context) error                  { return e.err }
 
 func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 	tp := basicTracerProvider(t)
