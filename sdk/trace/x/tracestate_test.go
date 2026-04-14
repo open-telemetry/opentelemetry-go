@@ -54,6 +54,16 @@ func TestEraseTraceStateThKeyValue(t *testing.T) {
 		{"th at front", "th:0ad;rv:0123456789abcd", "rv:0123456789abcd"},
 		{"th in middle", "rv:0123456789abcd;th:0ad;other:value", "rv:0123456789abcd;other:value"},
 		{"th at end", "rv:0123456789abcd;th:0ad", "rv:0123456789abcd"},
+		{
+			"th substring in another key (path:0) is not erased",
+			"path:0",
+			"path:0",
+		},
+		{
+			"erase real th only when another key ends with th before colon",
+			"path:0;th:0ad",
+			"path:0",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -86,6 +96,12 @@ func TestInsertOrUpdateTraceStateThKeyValue(t *testing.T) {
 		},
 		{"th at front is replaced", "th:0ad;rv:0123456789abcd", "th:0e1", "th:0e1;rv:0123456789abcd"},
 		{"only th in existing is replaced", "th:0ad", "th:0e1", "th:0e1"},
+		{
+			"th substring in another key (path:0) is left intact; th prepended",
+			"path:0;rv:0123456789abcd",
+			"th:fedcba987654321",
+			"th:fedcba987654321;path:0;rv:0123456789abcd",
+		},
 	}
 
 	for _, tc := range testCases {

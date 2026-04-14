@@ -72,8 +72,12 @@ func tracestateRandomness(otts string) (randomness uint64, hasRandomness bool) {
 }
 
 func eraseTraceStateThKeyValue(otts string) string {
-	start := strings.Index(otts, "th:")
-	if start == -1 {
+	var start int
+	if strings.HasPrefix(otts, "th:") {
+		start = 0
+	} else if idx := strings.Index(otts, ";th:"); idx != -1 {
+		start = idx + 1
+	} else {
 		return otts
 	}
 	if start > 0 && otts[start-1] == ';' {
