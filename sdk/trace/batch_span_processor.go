@@ -171,9 +171,6 @@ func (bsp *batchSpanProcessor) Shutdown(ctx context.Context) error {
 			bsp.stopWait.Wait()
 			if bsp.e != nil {
 				exportErr = bsp.e.Shutdown(ctx)
-				if exportErr != nil {
-					otel.Handle(exportErr)
-				}
 			}
 			close(wait)
 		}()
