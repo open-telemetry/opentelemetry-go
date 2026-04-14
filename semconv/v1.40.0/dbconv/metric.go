@@ -293,6 +293,9 @@ func (m ClientConnectionCount) Add(
 	clientConnectionState ClientConnectionStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -323,6 +326,9 @@ func (m ClientConnectionCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientConnectionCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -412,6 +418,9 @@ func (m ClientConnectionCreateTime) Record(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -440,6 +449,9 @@ func (m ClientConnectionCreateTime) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientConnectionCreateTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -528,6 +540,9 @@ func (m ClientConnectionIdleMax) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -556,6 +571,9 @@ func (m ClientConnectionIdleMax) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientConnectionIdleMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -644,6 +662,9 @@ func (m ClientConnectionIdleMin) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -672,6 +693,9 @@ func (m ClientConnectionIdleMin) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientConnectionIdleMin) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -760,6 +784,9 @@ func (m ClientConnectionMax) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -788,6 +815,9 @@ func (m ClientConnectionMax) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientConnectionMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -878,6 +908,9 @@ func (m ClientConnectionPendingRequests) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -906,6 +939,9 @@ func (m ClientConnectionPendingRequests) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientConnectionPendingRequests) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -995,6 +1031,9 @@ func (m ClientConnectionTimeouts) Add(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -1023,6 +1062,9 @@ func (m ClientConnectionTimeouts) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ClientConnectionTimeouts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1112,6 +1154,9 @@ func (m ClientConnectionUseTime) Record(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -1140,6 +1185,9 @@ func (m ClientConnectionUseTime) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientConnectionUseTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -1228,6 +1276,9 @@ func (m ClientConnectionWaitTime) Record(
 	clientConnectionPoolName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
@@ -1256,6 +1307,9 @@ func (m ClientConnectionWaitTime) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientConnectionWaitTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -1343,6 +1397,9 @@ func (m ClientOperationDuration) Record(
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.system.name", string(systemName)),
@@ -1373,6 +1430,9 @@ func (m ClientOperationDuration) Record(
 //
 // Batch operations SHOULD be recorded as a single operation.
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -1540,6 +1600,9 @@ func (m ClientResponseReturnedRows) Record(
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.system.name", string(systemName)),
@@ -1568,6 +1631,9 @@ func (m ClientResponseReturnedRows) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientResponseReturnedRows) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return

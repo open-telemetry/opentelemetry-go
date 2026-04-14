@@ -752,7 +752,7 @@ func TestWithProcess(t *testing.T) {
 func toMap(res *resource.Resource) map[string]string {
 	m := map[string]string{}
 	for _, attr := range res.Attributes() {
-		m[string(attr.Key)] = attr.Value.Emit()
+		m[string(attr.Key)] = attr.Value.String()
 	}
 	return m
 }

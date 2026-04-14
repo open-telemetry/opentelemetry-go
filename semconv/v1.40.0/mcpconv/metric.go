@@ -228,6 +228,9 @@ func (m ClientOperationDuration) Record(
 	methodName MethodNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("mcp.method.name", string(methodName)),
@@ -256,6 +259,9 @@ func (m ClientOperationDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -430,6 +436,9 @@ func (m ClientSessionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -453,6 +462,9 @@ func (m ClientSessionDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientSessionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -598,6 +610,9 @@ func (m ServerOperationDuration) Record(
 	methodName MethodNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("mcp.method.name", string(methodName)),
@@ -626,6 +641,9 @@ func (m ServerOperationDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -787,6 +805,9 @@ func (m ServerSessionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -810,6 +831,9 @@ func (m ServerSessionDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerSessionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

@@ -1009,7 +1009,7 @@ func kvStr(kvs []attribute.KeyValue) string {
 		}
 		_, _ = sb.WriteString(string(attr.Key))
 		_, _ = sb.WriteString(": ")
-		_, _ = sb.WriteString(attr.Value.Emit())
+		_, _ = sb.WriteString(attr.Value.String())
 	}
 	_, _ = sb.WriteRune(']')
 	return sb.String()

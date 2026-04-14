@@ -57,7 +57,7 @@ func TestStringDetectorErrors(t *testing.T) {
 
 		m := map[string]string{}
 		for _, kv := range res.Attributes() {
-			m[string(kv.Key)] = kv.Value.Emit()
+			m[string(kv.Key)] = kv.Value.String()
 		}
 		require.Equal(t, map[string]string{"A": "B"}, m)
 	}
