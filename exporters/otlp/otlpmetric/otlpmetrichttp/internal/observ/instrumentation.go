@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
@@ -25,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 const (
@@ -406,4 +407,3 @@ func rejected(n int64, err error) int64 {
 	}
 	return n // All metrics rejected.
 }
-

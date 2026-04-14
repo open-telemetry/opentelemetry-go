@@ -14,13 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/observ"
 	"go.opentelemetry.io/otel/internal/global"
 	mapi "go.opentelemetry.io/otel/metric"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -212,7 +213,7 @@ func assertMetrics(t *testing.T, got metricdata.ScopeMetrics, metrics, success i
 
 func makeResourceMetrics(n int) *metricpb.ResourceMetrics {
 	dpts := make([]*metricpb.NumberDataPoint, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		dpts[i] = &metricpb.NumberDataPoint{
 			Value: &metricpb.NumberDataPoint_AsInt{AsInt: 1},
 		}
@@ -427,4 +428,3 @@ func BenchmarkInstrumentationExportMetrics(b *testing.B) {
 	b.Run("PartialError", run(err, http.StatusOK))
 	b.Run("FullError", run(assert.AnError, http.StatusInternalServerError))
 }
-

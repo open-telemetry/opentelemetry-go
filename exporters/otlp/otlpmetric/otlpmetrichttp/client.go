@@ -182,15 +182,18 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		if err != nil {
 			return err
 		}
-		if resp != nil && resp.Body != nil {
-			defer func() {
-				if err := resp.Body.Close(); err != nil {
-					uploadErr = errors.Join(uploadErr, err)
-				}
-			}()
+		if resp != nil {
+			statusCode = resp.StatusCode
+			if resp.Body != nil {
+				defer func() {
+					if err := resp.Body.Close(); err != nil {
+						uploadErr = errors.Join(uploadErr, err)
+					}
+				}()
+			}
 		}
 
-		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
+		if statusCode >= 200 && statusCode <= 299 {
 			// Success, do not retry.
 
 			// Read the partial success message, if any.
