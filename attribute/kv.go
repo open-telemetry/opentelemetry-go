@@ -13,6 +13,15 @@ type KeyValue struct {
 	Value Value
 }
 
+// String returns key-value pair as a string, formatted like "key:value".
+//
+// Value is formatted using the [OpenTelemetry AnyValue representation for non-OTLP protocols] rules.
+//
+// [OpenTelemetry AnyValue representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols
+func (kv KeyValue) String() string {
+	return fmt.Sprintf("%s:%s", kv.Key, kv.Value)
+}
+
 // Valid reports whether kv is a valid OpenTelemetry attribute.
 func (kv KeyValue) Valid() bool {
 	return kv.Key.Defined()

@@ -136,6 +136,39 @@ func TestKeyValueValid(t *testing.T) {
 	}
 }
 
+func TestKeyValueString(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		kv   attribute.KeyValue
+		want string
+	}{
+		{
+			name: "bool",
+			kv:   attribute.Bool("bool", true),
+			want: "bool:true",
+		},
+		{
+			name: "string slice",
+			kv:   attribute.StringSlice("strings", []string{"one", "two"}),
+			want: `strings:["one","two"]`,
+		},
+		{
+			name: "byte slice",
+			kv:   attribute.ByteSlice("bytes", []byte("one")),
+			want: "bytes:b25l",
+		},
+		{
+			name: "empty value",
+			kv:   attribute.KeyValue{Key: "empty"},
+			want: "empty:",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.kv.String())
+		})
+	}
+}
+
 func TestIncorrectCast(t *testing.T) {
 	testCases := []struct {
 		name string
