@@ -50,11 +50,9 @@ func TestHashKVs(t *testing.T) {
 
 	keys := []string{"k0", "k1"}
 
-	// Test all combinations up to length 3.
 	// Track hashes as we generate them so collision detection stays linear.
-	seen := make(map[uint64]testcase)
 	i := 0
-
+	seen := make(map[uint64]testcase)
 	assertUniqueHash := func(kvs []KeyValue) {
 		hash := hashKVs(kvs)
 		tc := testcase{num: i, hash: hash, kvs: kvs}
