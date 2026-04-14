@@ -61,8 +61,8 @@ func TestExporterClientConcurrentSafe(t *testing.T) {
 	}
 
 	someWork.Wait()
-	require.NoError(t, exp.Shutdown(ctx))
-	require.ErrorIs(t, exp.Shutdown(ctx), errShutdown)
+	assert.NoError(t, exp.Shutdown(ctx))
+	assert.ErrorIs(t, exp.Shutdown(ctx), errShutdown)
 
 	close(done)
 	wg.Wait()

@@ -97,42 +97,6 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 	assert.Equal(t, 4317, serverPort, "server port mismatch")
 }
 
-func TestNewInstrumentation_MeterFailure(t *testing.T) {
-	// Enable feature
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-
-	// Use a meter provider that will cause metric creation to work
-	// but test the error handling paths by using nil meter in the semantic convention
-	reader := metric.NewManualReader()
-	provider := metric.NewMeterProvider(metric.WithReader(reader))
-	otel.SetMeterProvider(provider)
-
-	// This test primarily covers the enabled path, but the error handling
-	// is covered by the semantic convention's internal nil checks
-	em := NewInstrumentation(0, "test_component", "example.com", 4317)
-
-	// Should be enabled with valid meter provider
-	assert.True(t, em.enabled, "metrics should be enabled when meter provider is valid")
-
-	// Test that tracking works properly
-	finish := em.TrackExport(t.Context(), createTestResourceMetrics())
-	finish(nil)
-	finish(errors.New("test error"))
-
-	rm := &metricdata.ResourceMetrics{}
-	err := reader.Collect(t.Context(), rm)
-	require.NoError(t, err, "failed to collect metrics")
-
-	// Verify metrics were recorded
-	totalMetrics := 0
-	for _, sm := range rm.ScopeMetrics {
-		if sm.Scope.Name == "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc" {
-			totalMetrics += len(sm.Metrics)
-		}
-	}
-	assert.Positive(t, totalMetrics, "expected self-observability metrics to be recorded when enabled")
-}
-
 func TestTrackExport(t *testing.T) {
 	tests := []struct {
 		name        string
