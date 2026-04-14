@@ -261,10 +261,12 @@ func parseIP(ip string) string {
 func (i *Instrumentation) ExportMetrics(ctx context.Context, nMetrics int) ExportOp {
 	start := time.Now()
 
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
-	i.inflightMetric.Add(ctx, int64(nMetrics), *addOpt...)
+	if i.inflightMetric.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
+		i.inflightMetric.Add(ctx, int64(nMetrics), *addOpt...)
+	}
 
 	return ExportOp{
 		ctx:      ctx,
@@ -299,14 +301,18 @@ func (e ExportOp) End(err error, status int) {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.inflightMetric.Add(e.ctx, -e.nMetrics, *addOpt...)
+	if e.inst.inflightMetric.Enabled(e.ctx) {
+		e.inst.inflightMetric.Add(e.ctx, -e.nMetrics, *addOpt...)
+	}
 
 	success := successful(e.nMetrics, err)
 	// Record successfully exported metrics, even if the value is 0 which are
 	// meaningful to distribution aggregations.
-	e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
+	if e.inst.exportedMetric.Enabled(e.ctx) {
+		e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
+	}
 
-	if err != nil {
+	if err != nil && e.inst.exportedMetric.Enabled(e.ctx) {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
@@ -321,12 +327,14 @@ func (e ExportOp) End(err error, status int) {
 		e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
 	}
 
-	recOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recOpt)
-	*recOpt = append(*recOpt, e.inst.recordOption(err, status))
+	if e.inst.opDuration.Enabled(e.ctx) {
+		recOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recOpt)
+		*recOpt = append(*recOpt, e.inst.recordOption(err, status))
 
-	d := time.Since(e.start).Seconds()
-	e.inst.opDuration.Record(e.ctx, d, *recOpt...)
+		d := time.Since(e.start).Seconds()
+		e.inst.opDuration.Record(e.ctx, d, *recOpt...)
+	}
 }
 
 // recordOption returns a RecordOption with attributes representing the
