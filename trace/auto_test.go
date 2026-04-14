@@ -165,12 +165,40 @@ func TestSpanKindTransform(t *testing.T) {
 }
 
 func TestConvAttrValueBytes(t *testing.T) {
-	t.Parallel()
+	input := []byte("bytes")
+	testcases := []struct {
+		name  string
+		want  []byte
+		limit int
+	}{
+		{
+			name:  "Unlimited",
+			want:  []byte("bytes"),
+			limit: -1,
+		},
+		{
+			name:  "Truncate",
+			want:  []byte("by"),
+			limit: 2,
+		},
+		{
+			name:  "NoTruncation",
+			want:  []byte("bytes"),
+			limit: 10,
+		},
+	}
+	orig := maxSpan.AttrValueLen
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+			maxSpan.AttrValueLen = tc.limit
 
-	val := convAttrValue(attribute.ByteSliceValue([]byte("bytes")))
+			val := convAttrValue(attribute.ByteSliceValue(input))
 
-	assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
-	assert.Equal(t, []byte("bytes"), val.AsBytes())
+			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+			assert.Equal(t, tc.want, val.AsBytes())
+		})
+	}
 }
 
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {
