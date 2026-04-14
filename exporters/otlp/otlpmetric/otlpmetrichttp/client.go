@@ -161,7 +161,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 	var statusCode int
 	if c.inst != nil {
-		op := c.inst.ExportMetrics(ctx, len(pbRequest.ResourceMetrics))
+		op := c.inst.ExportMetrics(ctx, protoMetrics)
 		defer func() { op.End(uploadErr, statusCode) }()
 	}
 

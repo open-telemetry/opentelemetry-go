@@ -20,12 +20,13 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/observ"
 	"go.opentelemetry.io/otel/internal/global"
 	mapi "go.opentelemetry.io/otel/metric"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 const (
@@ -209,11 +210,35 @@ func assertMetrics(t *testing.T, got metricdata.ScopeMetrics, metrics, success i
 	metricdatatest.AssertEqual(t, want, m[2], o, metricdatatest.IgnoreValue())
 }
 
+func makeResourceMetrics(n int) *metricpb.ResourceMetrics {
+	dpts := make([]*metricpb.NumberDataPoint, n)
+	for i := 0; i < n; i++ {
+		dpts[i] = &metricpb.NumberDataPoint{
+			Value: &metricpb.NumberDataPoint_AsInt{AsInt: 1},
+		}
+	}
+	return &metricpb.ResourceMetrics{
+		ScopeMetrics: []*metricpb.ScopeMetrics{
+			{
+				Metrics: []*metricpb.Metric{
+					{
+						Data: &metricpb.Metric_Gauge{
+							Gauge: &metricpb.Gauge{
+								DataPoints: dpts,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestInstrumentationExportMetrics(t *testing.T) {
 	inst, collect := setup(t)
 
 	const n = 10
-	inst.ExportMetrics(t.Context(), n).End(nil, http.StatusOK)
+	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(nil, http.StatusOK)
 
 	assertMetrics(t, collect(), n, n, nil, http.StatusOK)
 }
@@ -223,7 +248,7 @@ func TestInstrumentationExportMetricsAllErrored(t *testing.T) {
 
 	const n = 10
 	err := errors.New("http error")
-	inst.ExportMetrics(t.Context(), n).End(err, http.StatusInternalServerError)
+	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(err, http.StatusInternalServerError)
 
 	const success = 0
 	assertMetrics(t, collect(), n, success, err, http.StatusInternalServerError)
@@ -237,7 +262,7 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 
 	err := errors.New("partial failure")
 	err = errors.Join(err, &internal.PartialSuccess{RejectedItems: 5})
-	inst.ExportMetrics(t.Context(), n).End(err, http.StatusOK)
+	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(err, http.StatusOK)
 
 	assertMetrics(t, collect(), n, success, err, http.StatusOK)
 }
@@ -248,7 +273,7 @@ func TestInstrumentationExportMetricsInvalidPartialErrored(t *testing.T) {
 	const n = 10
 	pErr := &internal.PartialSuccess{RejectedItems: -5}
 	err := errors.Join(errors.New("temporary"), pErr)
-	inst.ExportMetrics(t.Context(), n).End(err, http.StatusServiceUnavailable)
+	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(err, http.StatusServiceUnavailable)
 
 	// Round -5 to 0.
 	success := int64(n) // (n - 0)
@@ -257,7 +282,7 @@ func TestInstrumentationExportMetricsInvalidPartialErrored(t *testing.T) {
 	// Note: the metrics are cumulative, so account for the previous
 	// ExportMetrics call.
 	pErr.RejectedItems = n + 5
-	inst.ExportMetrics(t.Context(), n).End(err, http.StatusServiceUnavailable)
+	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(err, http.StatusServiceUnavailable)
 
 	// Round n+5 to n.
 	success += 0 // success + (n - n)
@@ -379,10 +404,11 @@ func BenchmarkInstrumentationExportMetrics(b *testing.B) {
 	run := func(err error, statusCode int) func(*testing.B) {
 		return func(b *testing.B) {
 			inst := setup(b)
+			rm := makeResourceMetrics(10)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.ExportMetrics(b.Context(), 10).End(err, statusCode)
+				inst.ExportMetrics(b.Context(), rm).End(err, statusCode)
 			}
 		}
 	}
@@ -392,3 +418,4 @@ func BenchmarkInstrumentationExportMetrics(b *testing.B) {
 	b.Run("PartialError", run(err, http.StatusOK))
 	b.Run("FullError", run(assert.AnError, http.StatusInternalServerError))
 }
+

@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 const (
@@ -258,20 +259,22 @@ func parseIP(ip string) string {
 // ExportMetrics instruments the UploadMetrics method of the client. It returns an
 // [ExportOp] that must have its [ExportOp.End] method called when the
 // operation end.
-func (i *Instrumentation) ExportMetrics(ctx context.Context, nMetrics int) ExportOp {
+func (i *Instrumentation) ExportMetrics(ctx context.Context, rm *metricpb.ResourceMetrics) ExportOp {
 	start := time.Now()
+
+	nMetrics := countDataPoints(rm)
 
 	if i.inflightMetric.Enabled(ctx) {
 		addOpt := get[metric.AddOption](addOptPool)
 		defer put(addOptPool, addOpt)
 		*addOpt = append(*addOpt, i.addOpt)
-		i.inflightMetric.Add(ctx, int64(nMetrics), *addOpt...)
+		i.inflightMetric.Add(ctx, nMetrics, *addOpt...)
 	}
 
 	return ExportOp{
 		ctx:      ctx,
 		start:    start,
-		nMetrics: int64(nMetrics),
+		nMetrics: nMetrics,
 		inst:     i,
 	}
 }
@@ -403,3 +406,4 @@ func rejected(n int64, err error) int64 {
 	}
 	return n // All metrics rejected.
 }
+
