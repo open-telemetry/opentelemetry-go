@@ -235,36 +235,45 @@ func makeResourceMetrics(n int) *metricpb.ResourceMetrics {
 }
 
 func TestInstrumentationExportMetrics(t *testing.T) {
-	inst, collect := setup(t)
+	tests := []struct {
+		name        string
+		err         error
+		statusCode  int
+		numMetrics  int
+		wantSuccess int64
+	}{
+		{
+			name:        "Success",
+			err:         nil,
+			statusCode:  http.StatusOK,
+			numMetrics:  10,
+			wantSuccess: 10,
+		},
+		{
+			name:        "AllErrored",
+			err:         errors.New("http error"),
+			statusCode:  http.StatusInternalServerError,
+			numMetrics:  10,
+			wantSuccess: 0,
+		},
+		{
+			name:        "PartialErrored",
+			err:         errors.Join(errors.New("partial failure"), &internal.PartialSuccess{RejectedItems: 5}),
+			statusCode:  http.StatusOK,
+			numMetrics:  10,
+			wantSuccess: 5,
+		},
+	}
 
-	const n = 10
-	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(nil, http.StatusOK)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inst, collect := setup(t)
 
-	assertMetrics(t, collect(), n, n, nil, http.StatusOK)
-}
+			inst.ExportMetrics(t.Context(), makeResourceMetrics(tt.numMetrics)).End(tt.err, tt.statusCode)
 
-func TestInstrumentationExportMetricsAllErrored(t *testing.T) {
-	inst, collect := setup(t)
-
-	const n = 10
-	err := errors.New("http error")
-	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(err, http.StatusInternalServerError)
-
-	const success = 0
-	assertMetrics(t, collect(), n, success, err, http.StatusInternalServerError)
-}
-
-func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
-	inst, collect := setup(t)
-
-	const n = 10
-	const success = n - 5
-
-	err := errors.New("partial failure")
-	err = errors.Join(err, &internal.PartialSuccess{RejectedItems: 5})
-	inst.ExportMetrics(t.Context(), makeResourceMetrics(n)).End(err, http.StatusOK)
-
-	assertMetrics(t, collect(), n, success, err, http.StatusOK)
+			assertMetrics(t, collect(), int64(tt.numMetrics), tt.wantSuccess, tt.err, tt.statusCode)
+		})
+	}
 }
 
 func TestInstrumentationExportMetricsInvalidPartialErrored(t *testing.T) {
