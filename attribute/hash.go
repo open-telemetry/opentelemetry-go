@@ -5,7 +5,6 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"fmt"
-	"reflect"
 
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
@@ -60,27 +59,23 @@ func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
 		h = h.String(kv.Value.stringly)
 	case BOOLSLICE:
 		h = h.Uint64(boolSliceID)
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Bool(rv.Index(i).Bool())
+		for _, v := range kv.Value.asBoolSlice() {
+			h = h.Bool(v)
 		}
 	case INT64SLICE:
 		h = h.Uint64(int64SliceID)
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Int64(rv.Index(i).Int())
+		for _, v := range kv.Value.asInt64Slice() {
+			h = h.Int64(v)
 		}
 	case FLOAT64SLICE:
 		h = h.Uint64(float64SliceID)
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Float64(rv.Index(i).Float())
+		for _, v := range kv.Value.asFloat64Slice() {
+			h = h.Float64(v)
 		}
 	case STRINGSLICE:
 		h = h.Uint64(stringSliceID)
-		rv := reflect.ValueOf(kv.Value.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.String(rv.Index(i).String())
+		for _, v := range kv.Value.asStringSlice() {
+			h = h.String(v)
 		}
 	case BYTESLICE:
 		h = h.Uint64(byteSliceID)
