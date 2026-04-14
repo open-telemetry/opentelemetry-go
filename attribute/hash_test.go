@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
 
 // keyVals is all the KeyValue generators that are used for testing. This is
@@ -154,6 +156,53 @@ func BenchmarkHashKVs(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		hashKVs(attrs)
+	}
+}
+
+func BenchmarkHashValueSlice(b *testing.B) {
+	benches := []struct {
+		name string
+		v    Value
+	}{
+		{
+			name: "Len2",
+			v: SliceValue(
+				BoolValue(true),
+				StringValue("two"),
+			),
+		},
+		{
+			name: "Len5",
+			v: SliceValue(
+				BoolValue(true),
+				IntValue(2),
+				StringValue("three"),
+				Float64Value(4.5),
+				ByteSliceValue([]byte("five")),
+			),
+		},
+		{
+			name: "Len8Nested",
+			v: SliceValue(
+				BoolValue(true),
+				IntValue(2),
+				StringValue("three"),
+				Float64Value(4.5),
+				ByteSliceValue([]byte("five")),
+				SliceValue(StringValue("nested"), Int64Value(6)),
+				BoolSliceValue([]bool{true, false, true}),
+				StringSliceValue([]string{"seven", "eight"}),
+			),
+		},
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				hashValue(xxhash.New(), bench.v).Sum64()
+			}
+		})
 	}
 }
 

@@ -91,9 +91,24 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.String(v.stringly)
 	case SLICE:
 		h = h.Uint64(sliceID)
-		rv := reflect.ValueOf(v.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = hashValue(h, rv.Index(i).Interface().(Value))
+		switch vals := v.slice.(type) {
+		case [0]Value:
+			// No values to hash, but the type identifier is still hashed above.
+		case [1]Value:
+			h = hashValueSlice(h, vals[:])
+		case [2]Value:
+			h = hashValueSlice(h, vals[:])
+		case [3]Value:
+			h = hashValueSlice(h, vals[:])
+		case [4]Value:
+			h = hashValueSlice(h, vals[:])
+		case [5]Value:
+			h = hashValueSlice(h, vals[:])
+		default:
+			rv := reflect.ValueOf(v.slice)
+			for i := 0; i < rv.Len(); i++ {
+				h = hashValue(h, rv.Index(i).Interface().(Value))
+			}
 		}
 	case EMPTY:
 		h = h.Uint64(emptyID)
@@ -103,6 +118,13 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		val := v.AsInterface()
 		msg := fmt.Sprintf("unknown value type: %[1]v (%[1]T)", val)
 		panic(msg)
+	}
+	return h
+}
+
+func hashValueSlice(h xxhash.Hash, vals []Value) xxhash.Hash {
+	for _, v := range vals {
+		h = hashValue(h, v)
 	}
 	return h
 }
