@@ -40,11 +40,41 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
+	func(k string) KeyValue { return Slice(k) },
+	func(k string) KeyValue { return Slice(k, BoolValue(true)) },
 	func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) },
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("triad"),
+			IntValue(3),
+			BoolValue(false),
+		)
+	},
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("quad"),
+			IntValue(4),
+			BoolValue(false),
+			Float64Value(4.25),
+		)
+	},
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("penta"),
+			IntValue(5),
+			BoolValue(true),
+			Float64Value(5.5),
+			ByteSliceValue([]byte("five")),
+		)
+	},
 	func(k string) KeyValue {
 		return Slice(k,
 			StringValue("nested"),
 			SliceValue(Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))),
+			BoolValue(true),
+			IntValue(6),
+			StringValue("tail"),
+			StringSliceValue([]string{"fallback"}),
 		)
 	},
 	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
