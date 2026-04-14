@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8153)
 - Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
-- Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8146)
+- Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
