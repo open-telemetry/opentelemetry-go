@@ -54,7 +54,7 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 		return b.ReservoirFunc
 	}
 
-	return dropReservoir
+	return DropReservoir
 }
 
 type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)

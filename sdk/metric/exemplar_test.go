@@ -5,12 +5,15 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"reflect"
 	"runtime"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -58,4 +61,19 @@ func TestFixedSizeExemplarConcurrentSafe(t *testing.T) {
 
 	cancel()
 	wg.Wait()
+}
+
+func TestReservoirFuncAlwaysOff(t *testing.T) {
+	f := reservoirFunc[int64](
+		exemplar.FixedSizeReservoirProvider(1),
+		exemplar.AlwaysOffFilter,
+	)
+
+	res := f(*attribute.EmptySet())
+	require.Contains(
+		t,
+		reflect.TypeOf(res).String(),
+		"dropRes",
+		"reservoirFunc should return DropReservoir when AlwaysOffFilter is used",
+	)
 }
