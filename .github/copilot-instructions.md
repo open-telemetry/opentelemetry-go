@@ -20,4 +20,3 @@ This repository is the Go implementation of OpenTelemetry. Prefer changes that p
 - Non-internal, non-test packages should have Go doc comments, usually in `doc.go`.
 - Non-internal, non-test, non-documentation packages should also have a `README.md` with at least a title and `pkg.go.dev` badge.
 - If a change is user-visible, consider whether `CHANGELOG.md`, examples, package docs, or migration notes also need updates.
-- Keep license headers intact in Go and shell files.
