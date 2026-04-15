@@ -581,6 +581,24 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 				)
 			},
 		},
+		{
+			name: "FilteredWithExemplars",
+			provider: func() metric.MeterProvider {
+				view := NewView(
+					Instrument{
+						Name: "test.counter",
+					},
+					// Filter out one attribute from each call.
+					Stream{AttributeFilter: attribute.NewDenyKeysFilter("a")},
+				)
+				return NewMeterProvider(
+					WithView(view),
+					WithReader(NewManualReader()),
+					// Offer an Exemplar on each call.
+					WithExemplarFilter(exemplar.AlwaysOnFilter),
+				)
+			},
+		},
 	} {
 		b.Run(mp.name, func(b *testing.B) {
 			for _, attrsLen := range []int{1, 5, 10} {

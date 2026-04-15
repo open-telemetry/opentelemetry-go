@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
@@ -235,4 +237,26 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 			}
 		})
 	})
+}
+
+func TestLimitedSyncMapOverflow(t *testing.T) {
+	m := limitedSyncMap{aggLimit: 2}
+
+	a := attribute.NewSet(attribute.String("key", "val1"))
+	b := attribute.NewSet(attribute.String("key", "val2"))
+
+	// Store a
+	val := m.LoadOrStoreAttr(a, nil, func(_ attribute.Set) any {
+		return "a"
+	})
+	assert.Equal(t, "a", val)
+
+	// Try to store b (should fail because limit is 2, so 1 user set + 1 overflow)
+	val = m.LoadOrStoreAttr(b, nil, func(attr attribute.Set) any {
+		if attr == overflowSet {
+			return "overflow"
+		}
+		return "c"
+	})
+	assert.Equal(t, "overflow", val)
 }

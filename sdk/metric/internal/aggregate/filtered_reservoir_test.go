@@ -21,6 +21,7 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 		desc                 string
 		reservoir            exemplar.Reservoir
 		expectConcurrentSafe bool
+		expectOfferLazy      bool
 	}{
 		{
 			desc:                 "concurrent safe",
@@ -32,13 +33,19 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			reservoir:            &notConcurrentSafeReservoir{},
 			expectConcurrentSafe: false,
 		},
+		{
+			desc:                 "offer lazy",
+			reservoir:            &offerLazyReservoir{},
+			expectConcurrentSafe: true,
+			expectOfferLazy:      true,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			reservoir := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, tc.reservoir)
 			var wg sync.WaitGroup
 			for range 5 {
 				wg.Go(func() {
-					reservoir.Offer(t.Context(), 25, []attribute.KeyValue{})
+					reservoir.Offer(t.Context(), 25, *attribute.EmptySet(), nil)
 				})
 			}
 			into := []exemplar.Exemplar{}
@@ -48,6 +55,10 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			wg.Wait()
 			assert.Len(t, into, 1)
 			assert.Equal(t, reservoir.(*filteredExemplarReservoir[int64]).concurrentSafe, tc.expectConcurrentSafe)
+
+			if tc.expectOfferLazy {
+				assert.True(t, tc.reservoir.(*offerLazyReservoir).offerLazyCalled)
+			}
 		})
 	}
 }
@@ -98,4 +109,22 @@ func (r *concurrentSafeReservoir) Collect(dest *[]exemplar.Exemplar) {
 	r.Lock()
 	defer r.Unlock()
 	r.base.Collect(dest)
+}
+
+type offerLazyReservoir struct {
+	concurrentSafeReservoir
+	offerLazyCalled bool
+}
+
+func (r *offerLazyReservoir) OfferLazy(
+	ctx context.Context,
+	t time.Time,
+	val exemplar.Value,
+	attr attribute.Set,
+	fltr attribute.Filter,
+) {
+	r.Lock()
+	defer r.Unlock()
+	r.offerLazyCalled = true
+	r.base.Offer(ctx, t, val, getDroppedAttributes(attr, fltr))
 }
