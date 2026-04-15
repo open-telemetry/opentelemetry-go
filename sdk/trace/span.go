@@ -368,10 +368,10 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		return attr.Key.StringSlice(v)
 	case attribute.BYTESLICE:
 		v := attr.Value.AsByteSlice()
-		if len(v) <= limit {
-			return attr.Key.ByteSlice(v)
+		if len(v) > limit {
+			return attr.Key.ByteSlice(v[:limit])
 		}
-		return attr.Key.ByteSlice(v[:limit])
+		return attr.Key.ByteSlice(v)
 	}
 	return attr
 }
