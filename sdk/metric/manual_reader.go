@@ -152,9 +152,6 @@ func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 	}
 
 	err = ph.produce(ctx, rm)
-	if err != nil {
-		return err
-	}
 	for _, producer := range mr.externalProducers.Load().([]Producer) {
 		externalMetrics, e := producer.Produce(ctx)
 		if e != nil {

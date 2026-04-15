@@ -310,7 +310,9 @@ func TestPeriodicReaderExportsPartialMetrics(t *testing.T) {
 		exportCalled := false
 		exp := &fnExporter{
 			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
-				assert.Equal(t, testResourceMetricsA, *m)
+				// SDK producer returns testResourceMetricsA with an error.
+				// External producer still runs and appends testScopeMetricsB.
+				assert.Equal(t, testResourceMetricsAB, *m)
 				exportCalled = true
 				return nil
 			},
@@ -524,7 +526,11 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	})
 
 	t.Run("ForceFlush timeout on producer", func(t *testing.T) {
-		exp, called := expFunc(t, metricdata.ResourceMetrics{})
+		// Even when the SDK producer times out, external producers should
+		// still be collected and the partial data exported.
+		exp, called := expFunc(t, metricdata.ResourceMetrics{
+			ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsB},
+		})
 		timeout := time.Millisecond
 		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{
@@ -539,8 +545,14 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 				return nil
 			},
 		})
-		assert.ErrorIs(t, r.ForceFlush(t.Context()), context.DeadlineExceeded)
-		assert.False(t, *called, "exporter Export method called when it should have failed before export")
+		// Use a long outer deadline so ForceFlush waits for the internal
+		// collectAndExport to finish. The DeadlineExceeded comes from the
+		// SDK producer hitting r.timeout inside collectAndExport, not from
+		// ForceFlush's own context being cancelled.
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+		assert.ErrorIs(t, r.ForceFlush(ctx), context.DeadlineExceeded)
+		assert.True(t, *called, "exporter Export method not called, external producer data should still be exported")
 
 		// Ensure Reader is allowed clean up attempt.
 		_ = r.Shutdown(t.Context())

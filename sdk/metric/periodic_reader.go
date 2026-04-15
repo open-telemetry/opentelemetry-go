@@ -306,9 +306,6 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 	}
 
 	err = ph.produce(ctx, rm)
-	if err != nil {
-		return err
-	}
 	for _, producer := range r.externalProducers.Load().([]Producer) {
 		externalMetrics, e := producer.Produce(ctx)
 		if e != nil {

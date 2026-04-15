@@ -121,11 +121,11 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 	ts.Equal(testResourceMetricsAB, m)
 }
 
-func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
+func (ts *readerTestSuite) TestSDKFailureStillCollectsExternalProducer() {
 	ts.Reader = ts.Factory(WithProducer(testExternalProducer{}))
 	ts.Reader.register(testSDKProducer{
 		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
-			*rm = metricdata.ResourceMetrics{}
+			*rm = testResourceMetricsA
 			return assert.AnError
 		},
 	})
@@ -133,7 +133,7 @@ func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
 	ts.Equal(assert.AnError, err)
-	ts.Equal(metricdata.ResourceMetrics{}, m)
+	ts.Equal(testResourceMetricsAB, m)
 }
 
 func (ts *readerTestSuite) TestMethodConcurrentSafe() {
