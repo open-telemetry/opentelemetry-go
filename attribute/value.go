@@ -869,13 +869,19 @@ func appendJSONValue(dst *strings.Builder, v Value) {
 	case INT64SLICE:
 		appendInt64SliceValue(dst, v.slice)
 	case FLOAT64:
-		if s, ok := formatArrayFloat64(v.AsFloat64()); ok {
-			appendJSONString(dst, s)
-			return
+		val := v.AsFloat64()
+		switch {
+		case math.IsNaN(val):
+			appendJSONString(dst, "NaN")
+		case math.IsInf(val, 1):
+			appendJSONString(dst, "Infinity")
+		case math.IsInf(val, -1):
+			appendJSONString(dst, "-Infinity")
+		default:
+			var buf [float64ArrayElemMaxLen]byte
+			out := strconv.AppendFloat(buf[:0], val, 'g', -1, 64)
+			_, _ = dst.Write(out)
 		}
-		var buf [float64ArrayElemMaxLen]byte
-		out := strconv.AppendFloat(buf[:0], v.AsFloat64(), 'g', -1, 64)
-		_, _ = dst.Write(out)
 	case FLOAT64SLICE:
 		appendFloat64SliceValue(dst, v.slice)
 	case STRING:
@@ -892,19 +898,6 @@ func appendJSONValue(dst *strings.Builder, v Value) {
 		_, _ = dst.WriteString("null")
 	default:
 		appendJSONString(dst, "unknown")
-	}
-}
-
-func formatArrayFloat64(v float64) (string, bool) {
-	switch {
-	case math.IsNaN(v):
-		return "NaN", true
-	case math.IsInf(v, 1):
-		return "Infinity", true
-	case math.IsInf(v, -1):
-		return "-Infinity", true
-	default:
-		return "", false
 	}
 }
 
