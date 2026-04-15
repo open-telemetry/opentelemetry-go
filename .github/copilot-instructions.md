@@ -14,6 +14,7 @@ This repository is the Go implementation of OpenTelemetry. Prefer changes that p
 - Preserve resilience and concurrency safety. Telemetry must not unexpectedly interfere with the host application; make lifecycle, synchronization, and failure-mode invariants explicit in code and tests.
 - Write comments only for intent, invariants, and non-obvious constraints. Do not add comments that restate the code.
 - Add or update tests for every behavior change. Add or update benchmarks for performance-sensitive changes.
+- Follow [CONTRIBUTING.md Design Choices](../CONTRIBUTING.md#design-choices).
 
 ## Documentation and repository conventions
 
