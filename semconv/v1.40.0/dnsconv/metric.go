@@ -100,6 +100,9 @@ func (m LookupDuration) Record(
 	questionName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("dns.question.name", questionName),
@@ -128,6 +131,9 @@ func (m LookupDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m LookupDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

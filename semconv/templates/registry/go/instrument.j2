@@ -115,6 +115,9 @@ func (m {{ name }}) Add(
 	incr {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 {%- if req_attr | length > 0 %}
 		m.{{ inst }}.Add(ctx, incr, metric.WithAttributes(
@@ -159,6 +162,9 @@ func (m {{ name }}) Add(
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ h.to_go_name(metric.metric_name, pkg) }}) Add(ctx context.Context, incr {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.{{ inst }}.Add(ctx, incr)
 		return
@@ -184,6 +190,9 @@ func (m {{ h.to_go_name(metric.metric_name, pkg) }}) Add(ctx context.Context, in
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ h.to_go_name(metric.metric_name, pkg) }}) AddSet(ctx context.Context, incr {{ value_type(metric) | lower }}, set attribute.Set) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.{{ inst }}.Add(ctx, incr)
 		return
@@ -208,6 +217,9 @@ func (m {{ name }}) Record(
 	val {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 {%- if req_attr | length > 0 %}
 		m.{{ inst }}.Record(ctx, val, metric.WithAttributes(
@@ -253,6 +265,9 @@ func (m {{ name }}) Record(
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.{{ inst }}.Record(ctx, val)
 		return
@@ -279,6 +294,9 @@ func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lowe
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ name }}) RecordSet(ctx context.Context, val {{ value_type(metric) | lower }}, set attribute.Set) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.{{ inst }}.Record(ctx, val)
 		return

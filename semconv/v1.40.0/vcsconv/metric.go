@@ -223,6 +223,9 @@ func (m ChangeCount) Add(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("vcs.change.state", string(changeState)),
@@ -253,6 +256,9 @@ func (m ChangeCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ChangeCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -371,6 +377,9 @@ func (m ChangeDuration) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.change.state", string(changeState)),
@@ -403,6 +412,9 @@ func (m ChangeDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ChangeDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -518,6 +530,9 @@ func (m ChangeTimeToApproval) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.ref.head.name", refHeadName),
@@ -548,6 +563,9 @@ func (m ChangeTimeToApproval) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ChangeTimeToApproval) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -692,6 +710,9 @@ func (m ChangeTimeToMerge) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.ref.head.name", refHeadName),
@@ -722,6 +743,9 @@ func (m ChangeTimeToMerge) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ChangeTimeToMerge) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -860,6 +884,9 @@ func (m ContributorCount) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.repository.url.full", repositoryUrlFull),
@@ -888,6 +915,9 @@ func (m ContributorCount) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ContributorCount) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1001,6 +1031,9 @@ func (m RefCount) Add(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("vcs.ref.type", string(refType)),
@@ -1031,6 +1064,9 @@ func (m RefCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m RefCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1170,6 +1206,9 @@ func (m RefLinesDelta) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.line_change.type", string(lineChangeType)),
@@ -1215,6 +1254,9 @@ func (m RefLinesDelta) Record(
 // If number of lines added/removed should be calculated from the start of time,
 // then `vcs.ref.base.name` SHOULD be set to an empty string.
 func (m RefLinesDelta) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1359,6 +1401,9 @@ func (m RefRevisionsDelta) Record(
 	revisionDeltaDirection RevisionDeltaDirectionAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.ref.base.name", refBaseName),
@@ -1402,6 +1447,9 @@ func (m RefRevisionsDelta) Record(
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers) and `vcs.ref.base.name` is set to `trunk`.
 func (m RefRevisionsDelta) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1529,6 +1577,9 @@ func (m RefTime) Record(
 	repositoryUrlFull string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("vcs.ref.head.name", refHeadName),
@@ -1561,6 +1612,9 @@ func (m RefTime) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m RefTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -1663,6 +1717,9 @@ func (m RepositoryCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1686,6 +1743,9 @@ func (m RepositoryCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m RepositoryCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
