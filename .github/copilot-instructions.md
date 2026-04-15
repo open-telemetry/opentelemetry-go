@@ -8,9 +8,10 @@ This repository is the Go implementation of OpenTelemetry. Prefer changes that p
 - Keep public APIs backward compatible unless the task explicitly requires a breaking change.
 - Follow the OpenTelemetry specification and semantic conventions. Match span, metric, log, attribute, event, resource, and instrumentation scope behavior to the spec and existing package behavior.
 - Prefer idiomatic Go and the repository's established patterns over inventing new abstractions.
+- Prefer designs that keep telemetry easy to use and loosely coupled. Choose sensible defaults, avoid vendor-specific APIs or behavior, and do not force unrelated components to depend on each other.
 - For configurable constructors, reuse the project's usual option pattern: unexported `config` types, sealed `Option` interfaces with `apply`, and exported `With...` or `Without...` helpers.
-- Be conservative on hot paths. Avoid unnecessary allocations, reflection, interface churn, global state, and high-cardinality telemetry.
-- Preserve concurrency safety. If code touches shared state, synchronization, or lifecycle ordering, make the invariants explicit in code and tests.
+- Be conservative on hot paths. Avoid unnecessary allocations, reflection, interface churn, blocking, global state, and high-cardinality telemetry.
+- Preserve resilience and concurrency safety. Telemetry must not unexpectedly interfere with the host application; make lifecycle, synchronization, and failure-mode invariants explicit in code and tests.
 - Write comments only for intent, invariants, and non-obvious constraints. Do not add comments that restate the code.
 - Add or update tests for every behavior change. Add or update benchmarks for performance-sensitive changes.
 
