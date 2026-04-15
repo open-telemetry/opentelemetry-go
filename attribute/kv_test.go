@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -145,22 +146,37 @@ func TestKeyValueString(t *testing.T) {
 		{
 			name: "bool",
 			kv:   attribute.Bool("bool", true),
-			want: "bool:true",
+			want: `{"bool":true}`,
+		},
+		{
+			name: "string",
+			kv:   attribute.String("greeting", `hello "world"`),
+			want: `{"greeting":"hello \"world\""}`,
 		},
 		{
 			name: "string slice",
 			kv:   attribute.StringSlice("strings", []string{"one", "two"}),
-			want: `strings:["one","two"]`,
+			want: `{"strings":["one","two"]}`,
 		},
 		{
 			name: "byte slice",
 			kv:   attribute.ByteSlice("bytes", []byte("one")),
-			want: "bytes:b25l",
+			want: `{"bytes":"b25l"}`,
+		},
+		{
+			name: "float64 NaN",
+			kv:   attribute.Float64("float", math.NaN()),
+			want: `{"float":"NaN"}`,
+		},
+		{
+			name: "quoted key",
+			kv:   attribute.String(`http.request.method:raw`, "GET"),
+			want: `{"http.request.method:raw":"GET"}`,
 		},
 		{
 			name: "empty value",
 			kv:   attribute.KeyValue{Key: "empty"},
-			want: "empty:",
+			want: `{"empty":null}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

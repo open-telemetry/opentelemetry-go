@@ -5,6 +5,7 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
 	"fmt"
+	"strings"
 )
 
 // KeyValue holds a key and value pair.
@@ -13,16 +14,23 @@ type KeyValue struct {
 	Value Value
 }
 
-// String returns key-value pair as a string, formatted like "key:value".
+// String returns a string representation of kv using the
+// [OpenTelemetry Attribute representation for non-OTLP] rules.
 //
-// Value is formatted using the [OpenTelemetry AnyValue representation for non-OTLP protocols] rules.
+// The returned string is a JSON object containing a single key-value pair.
 //
 // The returned string is meant for debugging;
 // the string representation is not stable.
 //
-// [OpenTelemetry AnyValue representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols
+// [OpenTelemetry Attribute representation for non-OTLP]: https://opentelemetry.io/docs/specs/otel/common/#attribute-representation-for-non-otlp
 func (kv KeyValue) String() string {
-	return fmt.Sprintf("%s:%s", kv.Key, kv.Value)
+	var b strings.Builder
+	_ = b.WriteByte('{')
+	appendJSONString(&b, string(kv.Key))
+	_ = b.WriteByte(':')
+	appendJSONValue(&b, kv.Value)
+	_ = b.WriteByte('}')
+	return b.String()
 }
 
 // Valid reports whether kv is a valid OpenTelemetry attribute.
