@@ -128,3 +128,25 @@ func hashValueSlice(h xxhash.Hash, vals []Value) xxhash.Hash {
 	}
 	return h
 }
+
+// NewDistinctWithFilter returns a Distinct identifier for the
+// attributes in the Set that match the filter.
+func (s Set) NewDistinctWithFilter(filter Filter) Distinct {
+	if s.Len() == 0 {
+		return Distinct{hash: emptySet.hash}
+	}
+	h := xxhash.New()
+	hasAttributes := false
+	iter := s.Iter()
+	for iter.Next() {
+		kv := iter.Attribute()
+		if filter == nil || filter(kv) {
+			h = hashKV(h, kv)
+			hasAttributes = true
+		}
+	}
+	if !hasAttributes {
+		return Distinct{hash: emptySet.hash}
+	}
+	return Distinct{hash: h.Sum64()}
+}

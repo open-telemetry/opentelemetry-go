@@ -42,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 - `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
 - Optimize `go.opentelemetry.io/otel/sdk/metric` to return a drop reservoir when `exemplar.AlwaysOffFilter` is configured. (#8211)
+- Improve the performance of `go.opentelemetry.io/otel/sdk/metric` when an attribute.Filter is applied to measurements by a `View` or by `x.WithDefaultAttributes`. (#8230)
 
 ### Deprecated
 
