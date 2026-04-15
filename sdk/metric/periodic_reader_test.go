@@ -644,7 +644,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		exp, called := expFunc(t, testResourceMetricsAB)
 		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
 		r.register(testSDKProducer{})
-		assert.Equal(t, assert.AnError, r.Shutdown(t.Context()), "export error not returned")
+		assert.ErrorIs(t, r.Shutdown(t.Context()), assert.AnError, "export error not returned")
 		assert.True(t, *called, "exporter Export method not called, pending telemetry not flushed")
 	})
 
