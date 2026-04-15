@@ -41,33 +41,47 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
 }
 
-func TestHashKVsEquality(t *testing.T) {
+func TestHashKVs(t *testing.T) {
 	type testcase struct {
+		num  int
 		hash uint64
 		kvs  []KeyValue
 	}
 
 	keys := []string{"k0", "k1"}
 
-	// Test all combinations up to length 3.
-	n := len(keyVals)
-	result := make([]testcase, 0, 1+len(keys)*(n+(n*n)+(n*n*n)))
+	// Track hashes as we generate them so collision detection stays linear.
+	i := 0
+	seen := make(map[uint64]testcase)
+	assertUniqueHash := func(kvs []KeyValue) {
+		hash := hashKVs(kvs)
+		tc := testcase{num: i, hash: hash, kvs: kvs}
+		i++
 
-	result = append(result, testcase{hashKVs(nil), nil})
+		if prev, ok := seen[hash]; ok {
+			t.Errorf("hashes equal: (%d: %d)%s == (%d: %d)%s",
+				prev.num, prev.hash, slice(prev.kvs), tc.num, tc.hash, slice(tc.kvs))
+			return
+		}
 
+		seen[hash] = tc
+	}
+
+	// Test empty slice.
+	assertUniqueHash(nil)
+
+	// Test all combinations of 1, 2, and 3 attributes with different keys and values.
 	for _, key := range keys {
 		for i := range keyVals {
 			kvs := []KeyValue{keyVals[i](key)}
-			hash := hashKVs(kvs)
-			result = append(result, testcase{hash, kvs})
+			assertUniqueHash(kvs)
 
 			for j := range keyVals {
 				kvs := []KeyValue{
 					keyVals[i](key),
 					keyVals[j](key),
 				}
-				hash := hashKVs(kvs)
-				result = append(result, testcase{hash, kvs})
+				assertUniqueHash(kvs)
 
 				for k := range keyVals {
 					kvs := []KeyValue{
@@ -75,46 +89,11 @@ func TestHashKVsEquality(t *testing.T) {
 						keyVals[j](key),
 						keyVals[k](key),
 					}
-					hash := hashKVs(kvs)
-					result = append(result, testcase{hash, kvs})
+					assertUniqueHash(kvs)
 				}
 			}
 		}
 	}
-
-	for i := 0; i < len(result); i++ {
-		hI, kvI := result[i].hash, result[i].kvs
-		for j := 0; j < len(result); j++ {
-			hJ, kvJ := result[j].hash, result[j].kvs
-			m := msg{i: i, j: j, hI: hI, hJ: hJ, kvI: kvI, kvJ: kvJ}
-			if i == j {
-				m.cmp = "=="
-				if hI != hJ {
-					t.Errorf("hashes not equal: %s", m)
-				}
-			} else {
-				m.cmp = "!="
-				if hI == hJ {
-					// Do not use testify/assert here. It is slow.
-					t.Errorf("hashes equal: %s", m)
-				}
-			}
-		}
-	}
-}
-
-type msg struct {
-	cmp      string
-	i, j     int
-	hI, hJ   uint64
-	kvI, kvJ []KeyValue
-}
-
-func (m msg) String() string {
-	return fmt.Sprintf(
-		"(%d: %d)%s %s (%d: %d)%s",
-		m.i, m.hI, slice(m.kvI), m.cmp, m.j, m.hJ, slice(m.kvJ),
-	)
 }
 
 func slice(kvs []KeyValue) string {
