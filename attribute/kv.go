@@ -17,6 +17,9 @@ type KeyValue struct {
 //
 // Value is formatted using the [OpenTelemetry AnyValue representation for non-OTLP protocols] rules.
 //
+// The returned string is meant for debugging;
+// the string representation is not stable.
+//
 // [OpenTelemetry AnyValue representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols
 func (kv KeyValue) String() string {
 	return fmt.Sprintf("%s:%s", kv.Key, kv.Value)
