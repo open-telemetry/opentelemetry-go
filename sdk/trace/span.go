@@ -384,7 +384,7 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 // truncateValue returns a truncated version of v. Only string, string slice,
 // and (recursively) slice values are modified.
 //
-// limit must be non-negative; callers are responsible for enforcing this.
+// No truncation is performed for a negative limit.
 func truncateValue(limit int, v attribute.Value) attribute.Value {
 	switch v.Type() {
 	case attribute.STRING:
