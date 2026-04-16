@@ -5,7 +5,6 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
-	"reflect"
 	"runtime"
 	"sync"
 	"testing"
@@ -64,16 +63,21 @@ func TestFixedSizeExemplarConcurrentSafe(t *testing.T) {
 }
 
 func TestReservoirFuncAlwaysOff(t *testing.T) {
-	f := reservoirFunc[int64](
-		exemplar.FixedSizeReservoirProvider(1),
-		exemplar.AlwaysOffFilter,
-	)
+	var invoked bool
+	provider := func(attribute.Set) exemplar.Reservoir {
+		invoked = true
+		return nil
+	}
 
-	res := f(*attribute.EmptySet())
-	require.Contains(
-		t,
-		reflect.TypeOf(res).String(),
-		"dropRes",
-		"reservoirFunc should return DropReservoir when AlwaysOffFilter is used",
-	)
+	f := reservoirFunc[int64](provider, exemplar.AlwaysOffFilter)
+	_ = f(*attribute.EmptySet())
+
+	require.False(t, invoked, "ReservoirProvider should not be invoked when AlwaysOffFilter is used")
+
+	// Test non-off filter
+	invoked = false
+	f = reservoirFunc[int64](provider, exemplar.AlwaysOnFilter)
+	_ = f(*attribute.EmptySet())
+
+	require.True(t, invoked, "ReservoirProvider should be invoked when AlwaysOnFilter is used")
 }
