@@ -53,17 +53,21 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		as = metric.DefaultAggregationSelector
 	}
 
-	// Extract server address and port from endpoint for self-observability
-	serverAddress, serverPort := observ.ParseEndpoint(cfg.Metrics.Endpoint)
+	var metrics *observ.Instrumentation
+	if observ.Enabled() {
+		// Extract server address and port from endpoint for self-observability.
+		serverAddress, serverPort := observ.ParseEndpoint(cfg.Metrics.Endpoint)
 
-	metrics, err := observ.NewInstrumentation(
-		counter.NextExporterID(),
-		string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
-		serverAddress,
-		serverPort,
-	)
-	if err != nil {
-		otel.Handle(err)
+		var err error
+		metrics, err = observ.NewInstrumentation(
+			counter.NextExporterID(),
+			string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
+			serverAddress,
+			serverPort,
+		)
+		if err != nil {
+			otel.Handle(err)
+		}
 	}
 
 	return &Exporter{
