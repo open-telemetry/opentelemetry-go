@@ -200,6 +200,45 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  strSliceAttr,
 			want:  strSliceAttr,
 		},
+		// SLICE cases
+		{
+			limit: -1,
+			attr:  attribute.Slice(key, attribute.StringValue("value")),
+			want:  attribute.Slice(key, attribute.StringValue("value")),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Slice(key, attribute.BoolValue(true), attribute.StringValue("value")),
+			want:  attribute.Slice(key, attribute.BoolValue(true), attribute.StringValue("")),
+		},
+		{
+			limit: 1,
+			attr:  attribute.Slice(key, attribute.StringValue("value")),
+			want:  attribute.Slice(key, attribute.StringValue("v")),
+		},
+		{
+			limit: 5,
+			attr:  attribute.Slice(key, attribute.StringValue("value"), attribute.StringValue("toolong")),
+			want:  attribute.Slice(key, attribute.StringValue("value"), attribute.StringValue("toolo")),
+		},
+		{
+			// Nested SLICE: recursive truncation.
+			limit: 1,
+			attr:  attribute.Slice(key, attribute.SliceValue(attribute.StringValue("value"))),
+			want:  attribute.Slice(key, attribute.SliceValue(attribute.StringValue("v"))),
+		},
+		{
+			// STRINGSLICE within SLICE: each string element is truncated.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.StringSliceValue([]string{"abc", "de"})),
+			want:  attribute.Slice(key, attribute.StringSliceValue([]string{"ab", "de"})),
+		},
+		{
+			// SLICE with no strings: returned unchanged (no allocation).
+			limit: 1,
+			attr:  attribute.Slice(key, attribute.BoolValue(true), attribute.Int64Value(42)),
+			want:  attribute.Slice(key, attribute.BoolValue(true), attribute.Int64Value(42)),
+		},
 	}
 
 	for _, test := range tests {

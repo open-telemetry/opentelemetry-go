@@ -35,8 +35,10 @@ const (
 type SpanLimits struct {
 	// AttributeValueLengthLimit is the maximum allowed attribute value length.
 	//
-	// This limit only applies to string and string slice attribute values.
-	// Any string longer than this value will be truncated to this length.
+	// This limit only applies to string, string slice, and slice attribute
+	// values. Any string longer than this value will be truncated to this
+	// length. For slice attribute values, the limit is applied to each string
+	// element recursively.
 	//
 	// Setting this to a negative value means no limit is applied.
 	AttributeValueLengthLimit int
