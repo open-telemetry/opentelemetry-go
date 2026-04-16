@@ -409,16 +409,24 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 	return v
 }
 
+// stringNeedsTruncation reports whether s would be modified by truncate for the
+// given limit.
+func stringNeedsTruncation(limit int, s string) bool {
+	if limit < 0 || len(s) <= limit {
+		return false
+	}
+	return utf8.RuneCountInString(s) > limit
+}
+
 // needsTruncation reports whether v would be modified by truncateValue for the
 // given limit.
 func needsTruncation(limit int, v attribute.Value) bool {
 	switch v.Type() {
 	case attribute.STRING:
-		s := v.AsString()
-		return utf8.RuneCountInString(s) > limit
+		return stringNeedsTruncation(limit, v.AsString())
 	case attribute.STRINGSLICE:
 		for _, s := range v.AsStringSlice() {
-			if utf8.RuneCountInString(s) > limit {
+			if stringNeedsTruncation(limit, s) {
 				return true
 			}
 		}
