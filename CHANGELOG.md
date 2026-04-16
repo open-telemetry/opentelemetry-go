@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
+- Support `http/json` encoding in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8151)
 
 ### Changed
 
@@ -37,10 +38,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8135)
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8152)
 - `go.opentelemetry.io/otel/exporters/prometheus` now uses `Value.String` formatting for label values following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8170)
-- Propagate errors from the exporter when calling `Shutdown` on `BatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#8197)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

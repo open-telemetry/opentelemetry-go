@@ -95,6 +95,7 @@ type config struct {
 	tlsCfg      setting[*tls.Config]
 	headers     setting[map[string]string]
 	compression setting[Compression]
+	encoding    setting[Encoding]
 	timeout     setting[time.Duration]
 	proxy       setting[HTTPTransportProxyFunc]
 	retryCfg    setting[retry.Config]
@@ -128,6 +129,9 @@ func newConfig(options []Option) config {
 	)
 	c.compression = c.compression.Resolve(
 		getenv[Compression](envCompression, convCompression),
+	)
+	c.encoding = c.encoding.Resolve(
+		fallback[Encoding](ProtoEncoding),
 	)
 	c.timeout = c.timeout.Resolve(
 		getenv[time.Duration](envTimeout, convDuration),
@@ -218,6 +222,29 @@ const (
 func WithCompression(compression Compression) Option {
 	return fnOpt(func(c config) config {
 		c.compression = newSetting(compression)
+		return c
+	})
+}
+
+// Encoding describes the encoding of exported payloads.
+type Encoding int
+
+const (
+	// ProtoEncoding uses protobuf binary serialization with the
+	// "application/x-protobuf" Content-Type.
+	ProtoEncoding Encoding = iota
+	// JSONEncoding uses protobuf JSON serialization with the
+	// "application/json" Content-Type.
+	JSONEncoding
+)
+
+// WithEncoding sets the encoding the Exporter will use to serialize the
+// OTLP payload.
+//
+// By default, ProtoEncoding is used.
+func WithEncoding(encoding Encoding) Option {
+	return fnOpt(func(c config) config {
+		c.encoding = newSetting(encoding)
 		return c
 	})
 }
