@@ -390,14 +390,15 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		return attribute.StringValue(truncate(limit, v.AsString()))
 	case attribute.STRINGSLICE:
 		ss := v.AsStringSlice()
-		needsWork := false
+		// Check if any attribute limits need to be applied.
+		needsChange := false
 		for _, s := range ss {
 			if len(s) > limit {
-				needsWork = true
+				needsChange = true
 				break
 			}
 		}
-		if !needsWork {
+		if !needsChange {
 			return v
 		}
 		for i := range ss {
