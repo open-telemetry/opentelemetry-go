@@ -78,6 +78,11 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 }
 
 func BenchmarkSpanLimits(b *testing.B) {
+	b.Run("None", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		benchmarkSpanLimits(b, limits)
+	})
+
 	b.Run("AttributeValueLengthLimit", func(b *testing.B) {
 		limits := sdktrace.NewSpanLimits()
 		limits.AttributeValueLengthLimit = 2
