@@ -16,7 +16,7 @@ The `otlpmetrichttp` exporter can be configured to provide observability about i
 
 To opt-in, set the environment variable `OTEL_GO_X_OBSERVABILITY` to `true`.
 
-When enabled, the SDK will create the following metrics using the global `MeterProvider`:
+When enabled, the exporter will create the following metrics using the global `MeterProvider`:
 
 - `otel.sdk.exporter.metric_data_point.inflight`
 - `otel.sdk.exporter.metric_data_point.exported`
