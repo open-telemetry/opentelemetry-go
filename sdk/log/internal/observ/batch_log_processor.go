@@ -109,6 +109,9 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 }
 
 func (b *BLP) Shutdown() error {
+	if b.reg == nil {
+		return nil
+	}
 	return b.reg.Unregister()
 }
 
