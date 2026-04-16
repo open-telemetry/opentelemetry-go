@@ -238,9 +238,9 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			// Mixed SLICE: STRINGSLICE (all strings fit) + STRING (too long).
-			// Exercises the truncateValue STRINGSLICE branch needsChange=false path:
-			// truncateValue is called on the STRINGSLICE element but returns it
-			// unchanged because no string exceeds the limit.
+			// Exercises recursive truncation over mixed slice elements: the
+			// STRINGSLICE element remains unchanged because each string fits
+			// within the limit, while the sibling STRING element is truncated.
 			limit: 3,
 			attr: attribute.Slice(key,
 				attribute.StringSliceValue([]string{"ab", "cd"}),
