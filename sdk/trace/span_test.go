@@ -200,6 +200,27 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  strSliceAttr,
 			want:  strSliceAttr,
 		},
+		{
+			// Multi-byte string: byte length (9) exceeds limit (5) but rune count (3) does not.
+			// Must not be truncated.
+			limit: 5,
+			attr:  attribute.String(key, "日本語"),
+			want:  attribute.String(key, "日本語"),
+		},
+		{
+			// Multi-byte string: both byte length and rune count exceed limit.
+			// Must be truncated to limit runes.
+			limit: 2,
+			attr:  attribute.String(key, "日本語"),
+			want:  attribute.String(key, "日本"),
+		},
+		{
+			// STRINGSLICE with multi-byte elements: byte lengths exceed limit but rune counts do not.
+			// Must not be truncated.
+			limit: 1,
+			attr:  attribute.StringSlice(key, []string{"日", "本"}),
+			want:  attribute.StringSlice(key, []string{"日", "本"}),
+		},
 	}
 
 	for _, test := range tests {

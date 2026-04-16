@@ -359,6 +359,9 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.STRING:
 		v := attr.Value.AsString()
+		if len(v) <= limit || utf8.RuneCountInString(v) <= limit {
+			return attr
+		}
 		return attr.Key.String(truncate(limit, v))
 	case attribute.STRINGSLICE:
 		v := attr.Value.AsStringSlice()
