@@ -30,9 +30,9 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 	// Ensure feature is disabled
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 
-	em := NewInstrumentation(0, "test_component", "localhost", 4317)
-
-	assert.False(t, em.enabled, "metrics should be disabled when feature flag is false")
+	em, err := NewInstrumentation(0, "test_component", "localhost", 4317)
+	require.NoError(t, err)
+	assert.Nil(t, em, "metrics should be nil when feature flag is false")
 
 	// Tracking should be no-op when disabled
 	orig := otel.GetMeterProvider()
@@ -48,7 +48,7 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 
 	// Verify no metrics were recorded when disabled
 	rm := &metricdata.ResourceMetrics{}
-	err := reader.Collect(t.Context(), rm)
+	err = reader.Collect(t.Context(), rm)
 	require.NoError(t, err, "failed to collect metrics")
 
 	totalMetrics := 0
@@ -70,8 +70,9 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	em := NewInstrumentation(0, "test_component", "example.com", 4317)
-
+	em, err := NewInstrumentation(0, "test_component", "example.com", 4317)
+	require.NoError(t, err)
+	require.NotNil(t, em, "metrics should not be nil when feature flag is true")
 	assert.True(t, em.enabled, "metrics should be enabled when feature flag is true")
 
 	// Verify attributes are set correctly
@@ -237,14 +238,16 @@ func TestTrackExport(t *testing.T) {
 			provider := metric.NewMeterProvider(metric.WithReader(reader))
 			otel.SetMeterProvider(provider)
 
-			em := NewInstrumentation(0, "test_component", "localhost", 4317)
+			em, err := NewInstrumentation(0, "test_component", "localhost", 4317)
+			require.NoError(t, err)
+			require.NotNil(t, em)
 			rm := createTestResourceMetrics()
 
 			finish := em.TrackExport(t.Context(), rm)
 			finish(tt.err)
 
 			var got metricdata.ResourceMetrics
-			err := reader.Collect(t.Context(), &got)
+			err = reader.Collect(t.Context(), &got)
 			require.NoError(t, err)
 			require.Len(t, got.ScopeMetrics, 1)
 
@@ -503,9 +506,21 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			} else {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 			}
-			inst := NewInstrumentation(0, "otlp_grpc_metric_exporter", "localhost", 4317)
-			if inst.enabled != enabled {
-				b.Fatalf("instrumentation enabled state mismatch: got %v, want %v", inst.enabled, enabled)
+			inst, err := NewInstrumentation(0, "otlp_grpc_metric_exporter", "localhost", 4317)
+			if err != nil {
+				b.Fatal(err)
+			}
+			if enabled {
+				if inst == nil {
+					b.Fatal("instrumentation should not be nil when enabled")
+				}
+				if !inst.enabled {
+					b.Fatalf("instrumentation enabled state mismatch: got %v, want %v", inst.enabled, enabled)
+				}
+			} else {
+				if inst != nil {
+					b.Fatal("instrumentation should be nil when disabled")
+				}
 			}
 			b.ReportAllocs()
 			b.ResetTimer()
