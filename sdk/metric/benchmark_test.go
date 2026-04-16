@@ -833,18 +833,23 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 		b.Run(filterName, func(b *testing.B) {
 			for _, inst := range instruments {
 				b.Run(inst.name, func(b *testing.B) {
-					rdr := NewManualReader()
-					provider := NewMeterProvider(
-						WithReader(rdr),
-						WithExemplarFilter(filter),
-					)
-					meter := provider.Meter("BenchmarkMeasureNewAttributeSet")
-					record := inst.make(b, meter)
+					var record func(int)
 
 					b.ReportAllocs()
 					b.ResetTimer()
 
 					for n := 0; n < b.N; n++ {
+						if n%10000 == 0 {
+							b.StopTimer()
+							rdr := NewManualReader()
+							provider := NewMeterProvider(
+								WithReader(rdr),
+								WithExemplarFilter(filter),
+							)
+							meter := provider.Meter("BenchmarkMeasureNewAttributeSet")
+							record = inst.make(b, meter)
+							b.StartTimer()
+						}
 						record(n)
 					}
 				})
