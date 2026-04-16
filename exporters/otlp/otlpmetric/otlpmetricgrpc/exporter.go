@@ -11,11 +11,11 @@ import (
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -54,7 +54,8 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 	}
 
 	var metrics *observ.Instrumentation
-	if observ.Enabled() {
+	var initErr error
+	if x.Observability.Enabled() {
 		// Extract server address and port from endpoint for self-observability.
 		serverAddress, serverPort := observ.ParseEndpoint(cfg.Metrics.Endpoint)
 
@@ -66,7 +67,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 			serverPort,
 		)
 		if err != nil {
-			otel.Handle(err)
+			initErr = err
 		}
 	}
 
@@ -77,7 +78,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		aggregationSelector: as,
 
 		metrics: metrics,
-	}, nil
+	}, initErr
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
