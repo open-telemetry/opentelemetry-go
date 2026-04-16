@@ -172,6 +172,9 @@ func TestSelfObservability(t *testing.T) {
 			counter.SetExporterID(0)
 			t.Setenv("OTEL_GO_X_OBSERVABILITY", tt.envValue)
 
+			orig := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
 			reader := metric.NewManualReader()
 			provider := metric.NewMeterProvider(metric.WithReader(reader))
 			otel.SetMeterProvider(provider)
