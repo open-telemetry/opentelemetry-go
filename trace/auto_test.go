@@ -177,6 +177,11 @@ func TestConvAttrValueBytes(t *testing.T) {
 			limit: -1,
 		},
 		{
+			name:  "Zero",
+			want:  []byte(""),
+			limit: 0,
+		},
+		{
 			name:  "Truncate",
 			want:  []byte("by"),
 			limit: 2,
