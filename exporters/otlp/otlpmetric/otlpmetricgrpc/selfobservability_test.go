@@ -4,6 +4,7 @@
 package otlpmetricgrpc
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -194,6 +195,10 @@ func TestSelfObservability(t *testing.T) {
 				WithEndpoint(tt.endpoint),
 				WithInsecure())
 			require.NoError(t, err)
+			ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			t.Cleanup(func() {
+				require.NoError(t, exp.Shutdown(ctx))
+			})
 
 			rm := createTestResourceMetrics()
 			exportErr := exp.Export(t.Context(), rm)
@@ -257,7 +262,7 @@ func assertScopeMetricsEqual(t *testing.T, want, got metricdata.ScopeMetrics) {
 	}
 }
 
-func isHistogramMetric(m metricdata.Metric) bool {
+func isHistogramMetric(m metricdata.Metrics) bool {
 	switch m.Data.(type) {
 	case metricdata.Histogram[float64]:
 		return true
@@ -265,6 +270,7 @@ func isHistogramMetric(m metricdata.Metric) bool {
 		return false
 	}
 }
+
 // extractComponentName extracts the component name from metrics data to handle dynamic counter.
 func extractComponentName(scopeMetrics metricdata.ScopeMetrics) string {
 	for _, m := range scopeMetrics.Metrics {
