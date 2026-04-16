@@ -415,7 +415,7 @@ func stringNeedsTruncation(limit int, s string) bool {
 	if limit < 0 || len(s) <= limit {
 		return false
 	}
-	return utf8.RuneCountInString(s) > limit
+	return utf8.RuneCountInString(s) > limit || !utf8.ValidString(s)
 }
 
 // needsTruncation reports whether v would be modified by truncateValue for the

@@ -273,6 +273,13 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  attribute.Slice(key, attribute.StringValue("日本語")), // 3 runes, 9 bytes
 			want:  attribute.Slice(key, attribute.StringValue("日本語")),
 		},
+		{
+			// SLICE with invalid UTF-8 where rune count equals the limit:
+			// invalid byte is dropped.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.StringValue("日\x80")), // 2 runes (日 + invalid byte), 4 bytes
+			want:  attribute.Slice(key, attribute.StringValue("日")),
+		},
 	}
 
 	for _, test := range tests {
