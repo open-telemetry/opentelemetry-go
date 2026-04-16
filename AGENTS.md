@@ -28,9 +28,8 @@ For new features and behavior changes, use this order unless the task explicitly
 3. Implement the smallest change that makes the test pass.
 4. Refactor only after the behavior is locked in, and only if the refactor keeps the diff focused.
 5. If the changed code is on a hot path or performance-sensitive, inspect existing benchmarks and run them. Add a benchmark if coverage is missing.
-6. Update GoDoc, doc comments, examples, or `README.md` as needed while the context is fresh.
-7. Add or update a `CHANGELOG.md` entry under `## [Unreleased]` for user-visible changes.
-8. Run `make precommit` each time before considering the work complete.
+6. Update documentation artifacts as needed while the context is fresh. Follow the documentation and changelog conventions below for the specific updates required.
+7. Run `make precommit` each time before considering the work complete.
 
 For docs-only, test-only, or review-only tasks, still start with the required repository guidance above, then skip the workflow steps that do not apply while keeping the same discipline around scope, verification, and repository conventions.
 
