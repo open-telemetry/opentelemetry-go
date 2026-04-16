@@ -167,7 +167,7 @@ func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
 // to set the "component.name" attribute.
 //
 // The endpoint is the HTTP endpoint the exporter is exporting to. It should be
-// in the format "host:port" or a full URL.
+// in the format "host[:port]".
 func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
 	host, port, err := parseEndpoint(endpoint)
 	if err != nil || (host == "" && port < 0) {
