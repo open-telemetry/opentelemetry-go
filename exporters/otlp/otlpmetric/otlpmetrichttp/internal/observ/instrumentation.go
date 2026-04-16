@@ -259,7 +259,7 @@ func parseIP(ip string) string {
 
 // ExportMetrics instruments the UploadMetrics method of the client. It returns an
 // [ExportOp] that must have its [ExportOp.End] method called when the
-// operation end.
+// operation ends.
 func (i *Instrumentation) ExportMetrics(ctx context.Context, rm *metricpb.ResourceMetrics) ExportOp {
 	start := time.Now()
 
@@ -394,8 +394,8 @@ var errPartialPool = &sync.Pool{
 	New: func() any { return new(internal.PartialSuccess) },
 }
 
-// rejected returns how many out of the n metrics exporter were rejected based on
-// the provided non-nil err.
+// rejected returns how many out of the n metrics were rejected based on the
+// provided non-nil err.
 func rejected(n int64, err error) int64 {
 	ps := errPartialPool.Get().(*internal.PartialSuccess)
 	defer errPartialPool.Put(ps)
