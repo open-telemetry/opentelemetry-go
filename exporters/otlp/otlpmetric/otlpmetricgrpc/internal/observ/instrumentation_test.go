@@ -183,6 +183,27 @@ func TestTrackExport(t *testing.T) {
 			wantMetrics: func(actualComponentName string) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.ErrorType(errors.New("export failed")),
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.ServerAddress("localhost"),
+										semconv.ServerPort(4317),
+									),
+									Value: 10,
+								},
+							},
+						},
+					},
+					{
 						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
 						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
 						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
@@ -211,7 +232,7 @@ func TestTrackExport(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										attribute.String("error.type", "*errors.errorString"),
+										semconv.ErrorType(errors.New("export failed")),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("test_component"),
 										semconv.ServerAddress("localhost"),

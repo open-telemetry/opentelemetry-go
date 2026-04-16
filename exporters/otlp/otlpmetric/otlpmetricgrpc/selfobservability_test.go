@@ -115,6 +115,27 @@ func TestSelfObservability(t *testing.T) {
 			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.ErrorType(err),
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Value: 4,
+								},
+							},
+						},
+					},
+					{
 						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
 						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
 						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
