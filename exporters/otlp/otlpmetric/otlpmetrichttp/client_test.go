@@ -521,7 +521,8 @@ func TestClientInstrumentation(t *testing.T) {
 
 	// Reset client ID to be deterministic.
 	const id = 0
-	counter.SetExporterID(id)
+	origID := counter.SetExporterID(id)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
 
 	// Save original meter provider and restore at end of test.
 	orig := otel.GetMeterProvider()
