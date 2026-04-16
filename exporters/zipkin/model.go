@@ -185,7 +185,7 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	case attribute.SLICE:
 		// Note that this is a best effort support as this exporter is already deprecated.
 		// Yet, we want to preserve other existing behavior as much as possible.
-		// Emit the slice as using the non-OTLP AnyValue string representation.
+		// Emit the slice using the non-OTLP AnyValue string representation.
 		// Some values will be emitted differently than the specific types above.
 		return string(kv.Key), kv.Value.String()
 	default:

@@ -46,6 +46,7 @@ var (
 		},
 	}}
 	valIntOne   = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: 1}}
+	valIntTwo   = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: 2}}
 	valIntNOne  = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: -1}}
 	valIntSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
@@ -68,7 +69,7 @@ var (
 				valAttrBytes,
 				{Value: &cpb.AnyValue_ArrayValue{
 					ArrayValue: &cpb.ArrayValue{
-						Values: []*cpb.AnyValue{valIntOne, {}},
+						Values: []*cpb.AnyValue{valIntTwo, {}},
 					},
 				}},
 			},
