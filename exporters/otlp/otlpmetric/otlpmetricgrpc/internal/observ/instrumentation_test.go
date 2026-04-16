@@ -272,9 +272,15 @@ func TestTrackExport(t *testing.T) {
 				Metrics: tt.wantMetrics(actualComponentName),
 			}
 
-			metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
-				metricdatatest.IgnoreTimestamp(),
-				metricdatatest.IgnoreValue())
+			assert.Equal(t, want.Scope, got.ScopeMetrics[0].Scope)
+			require.Len(t, got.ScopeMetrics[0].Metrics, len(want.Metrics))
+			for i := range want.Metrics {
+				opts := []metricdatatest.Option{metricdatatest.IgnoreTimestamp()}
+				if strings.Contains(want.Metrics[i].Name, "duration") {
+					opts = append(opts, metricdatatest.IgnoreValue())
+				}
+				metricdatatest.AssertEqual(t, want.Metrics[i], got.ScopeMetrics[0].Metrics[i], opts...)
+			}
 		})
 	}
 }
