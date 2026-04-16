@@ -230,14 +230,41 @@ func TestSelfObservability(t *testing.T) {
 					Metrics: tt.wantMetrics(actualComponentName, addr, port, exportErr),
 				}
 
-				metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
-					metricdatatest.IgnoreTimestamp(),
-					metricdatatest.IgnoreValue())
+				assertScopeMetricsEqual(t, want, got.ScopeMetrics[0])
 			}
 		})
 	}
 }
 
+func assertScopeMetricsEqual(t *testing.T, want, got metricdata.ScopeMetrics) {
+	t.Helper()
+
+	assert.Equal(t, want.Scope, got.Scope)
+	require.Len(t, got.Metrics, len(want.Metrics))
+
+	for i := range want.Metrics {
+		if isHistogramMetric(want.Metrics[i]) {
+			metricdatatest.AssertEqual(t, want.Metrics[i], got.Metrics[i],
+				metricdatatest.IgnoreTimestamp(),
+				metricdatatest.IgnoreValue(),
+			)
+			continue
+		}
+
+		metricdatatest.AssertEqual(t, want.Metrics[i], got.Metrics[i],
+			metricdatatest.IgnoreTimestamp(),
+		)
+	}
+}
+
+func isHistogramMetric(m metricdata.Metric) bool {
+	switch m.Data.(type) {
+	case metricdata.Histogram[float64]:
+		return true
+	default:
+		return false
+	}
+}
 // extractComponentName extracts the component name from metrics data to handle dynamic counter.
 func extractComponentName(scopeMetrics metricdata.ScopeMetrics) string {
 	for _, m := range scopeMetrics.Metrics {
