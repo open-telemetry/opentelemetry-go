@@ -239,6 +239,44 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  attribute.Slice(key, attribute.BoolValue(true), attribute.Int64Value(42)),
 			want:  attribute.Slice(key, attribute.BoolValue(true), attribute.Int64Value(42)),
 		},
+		{
+			// STRINGSLICE within SLICE where all strings fit: no change.
+			// Exercises needsTruncation(STRINGSLICE) exhausting the loop without
+			// finding an over-limit string, returning false.
+			limit: 7,
+			attr:  attribute.Slice(key, attribute.StringSliceValue([]string{"value-0", "value-1"})),
+			want:  attribute.Slice(key, attribute.StringSliceValue([]string{"value-0", "value-1"})),
+		},
+		{
+			// Mixed SLICE: STRINGSLICE (all strings fit) + STRING (too long).
+			// Exercises the truncateValue STRINGSLICE branch needsChange=false path:
+			// truncateValue is called on the STRINGSLICE element but returns it
+			// unchanged because no string exceeds the limit.
+			limit: 3,
+			attr: attribute.Slice(key,
+				attribute.StringSliceValue([]string{"ab", "cd"}),
+				attribute.StringValue("toolong"),
+			),
+			want: attribute.Slice(key,
+				attribute.StringSliceValue([]string{"ab", "cd"}),
+				attribute.StringValue("too"),
+			),
+		},
+		{
+			// Nested SLICE (no truncation needed) alongside STRING (needs truncation).
+			// Exercises the truncateValue SLICE branch early-return path: truncateValue
+			// is called recursively on the nested SLICE but returns it unchanged because
+			// none of its elements require truncation.
+			limit: 3,
+			attr: attribute.Slice(key,
+				attribute.SliceValue(attribute.BoolValue(true)),
+				attribute.StringValue("toolong"),
+			),
+			want: attribute.Slice(key,
+				attribute.SliceValue(attribute.BoolValue(true)),
+				attribute.StringValue("too"),
+			),
+		},
 	}
 
 	for _, test := range tests {
