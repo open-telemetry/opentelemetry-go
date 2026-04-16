@@ -145,7 +145,7 @@ func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.Resou
 				}()
 
 				*attrsPtr = append(*attrsPtr, em.attrs...)
-				*attrsPtr = append(*attrsPtr, semconv.ErrorTypeOther)
+				*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
 
 				recOptPtr := recOptPool.Get().(*[]metric.RecordOption)
 				defer func() {
