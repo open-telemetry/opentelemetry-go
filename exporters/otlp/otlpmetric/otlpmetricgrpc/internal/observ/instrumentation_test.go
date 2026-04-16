@@ -211,7 +211,7 @@ func TestTrackExport(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorTypeOther,
+										attribute.String("error.type", "*errors.errorString"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("test_component"),
 										semconv.ServerAddress("localhost"),
@@ -234,8 +234,18 @@ func TestTrackExport(t *testing.T) {
 			orig := otel.GetMeterProvider()
 			t.Cleanup(func() { otel.SetMeterProvider(orig) })
 
+			dropReaderMetrics := metric.NewView(
+				metric.Instrument{
+					Scope: instrumentation.Scope{Name: "go.opentelemetry.io/otel/sdk/metric/internal/observ"},
+				},
+				metric.Stream{Aggregation: metric.AggregationDrop{}},
+			)
+
 			reader := metric.NewManualReader()
-			provider := metric.NewMeterProvider(metric.WithReader(reader))
+			provider := metric.NewMeterProvider(
+				metric.WithReader(reader),
+				metric.WithView(dropReaderMetrics),
+			)
 			otel.SetMeterProvider(provider)
 
 			em, err := NewInstrumentation(0, "test_component", "localhost", 4317)
