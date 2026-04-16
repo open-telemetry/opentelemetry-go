@@ -34,6 +34,7 @@ import (
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
@@ -192,15 +193,6 @@ func (s *storage) Dump() []*lpb.ResourceLogs {
 	return data
 }
 
-var emptyExportLogsServiceResponse = func() []byte {
-	body := collogpb.ExportLogsServiceResponse{}
-	r, err := proto.Marshal(&body)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}()
-
 type httpResponseError struct {
 	Err    error
 	Status int
@@ -324,13 +316,13 @@ func (c *httpCollector) Headers() map[string][]string {
 }
 
 func (c *httpCollector) handler(w http.ResponseWriter, r *http.Request) {
-	c.respond(w, c.record(r))
+	ct := r.Header.Get("Content-Type")
+	c.respond(w, c.record(r, ct), ct)
 }
 
-func (c *httpCollector) record(r *http.Request) exportResult {
-	// Currently only supports protobuf.
-	if v := r.Header.Get("Content-Type"); v != "application/x-protobuf" {
-		err := fmt.Errorf("content-type not supported: %s", v)
+func (c *httpCollector) record(r *http.Request, ct string) exportResult {
+	if ct != contentTypeProto && ct != contentTypeJSON {
+		err := fmt.Errorf("content-type not supported: %s", ct)
 		return exportResult{Err: err}
 	}
 
@@ -339,7 +331,12 @@ func (c *httpCollector) record(r *http.Request) exportResult {
 		return exportResult{Err: err}
 	}
 	pbRequest := &collogpb.ExportLogsServiceRequest{}
-	err = proto.Unmarshal(body, pbRequest)
+	switch ct {
+	case contentTypeJSON:
+		err = protojson.Unmarshal(body, pbRequest)
+	default:
+		err = proto.Unmarshal(body, pbRequest)
+	}
 	if err != nil {
 		return exportResult{
 			Err: &httpResponseError{
@@ -399,7 +396,7 @@ func (*httpCollector) readBody(r *http.Request) (body []byte, err error) {
 	return body, err
 }
 
-func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
+func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult, ct string) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -426,17 +423,29 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/x-protobuf")
-	w.WriteHeader(http.StatusOK)
-	if resp.Response == nil {
-		_, _ = w.Write(emptyExportLogsServiceResponse)
-	} else {
-		r, err := proto.Marshal(resp.Response)
+	respMsg := resp.Response
+	if respMsg == nil {
+		respMsg = &collogpb.ExportLogsServiceResponse{}
+	}
+
+	if ct == contentTypeJSON {
+		w.Header().Set("Content-Type", contentTypeJSON)
+		w.WriteHeader(http.StatusOK)
+		r, err := protojson.Marshal(respMsg)
 		if err != nil {
 			panic(err)
 		}
 		_, _ = w.Write(r)
+		return
 	}
+
+	w.Header().Set("Content-Type", contentTypeProto)
+	w.WriteHeader(http.StatusOK)
+	r, err := proto.Marshal(respMsg)
+	if err != nil {
+		panic(err)
+	}
+	_, _ = w.Write(r)
 }
 
 // Based on https://golang.org/src/crypto/tls/generate_cert.go,
@@ -548,6 +557,64 @@ func TestClient(t *testing.T) {
 			Response: &collogpb.ExportLogsServiceResponse{
 				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
 					// Should not be logged.
+					RejectedLogRecords: 0,
+					ErrorMessage:       "",
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{},
+		}
+
+		ctx := t.Context()
+		client, _ := factory(rCh)
+
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+	})
+}
+
+func TestClientJSON(t *testing.T) {
+	factory := func(rCh <-chan exportResult) (*client, *httpCollector) {
+		coll, err := newHTTPCollector("", rCh)
+		require.NoError(t, err)
+
+		addr := coll.Addr().String()
+		opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(JSONEncoding)}
+		cfg := newConfig(opts)
+		client, err := newHTTPClient(t.Context(), cfg)
+		require.NoError(t, err)
+		return client, coll
+	}
+
+	t.Run("uploadLogs", func(t *testing.T) {
+		ctx := t.Context()
+		client, coll := factory(nil)
+
+		require.NoError(t, client.uploadLogs(ctx, resourceLogs))
+		got := coll.Collect().Dump()
+		require.Len(t, got, 1, "upload of one ResourceLogs")
+		diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
+		if diff != "" {
+			t.Fatalf("unexpected ResourceLogs:\n%s", diff)
+		}
+	})
+
+	t.Run("PartialSuccess", func(t *testing.T) {
+		const n, msg = 2, "bad data"
+		rCh := make(chan exportResult, 3)
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					RejectedLogRecords: n,
+					ErrorMessage:       msg,
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
 					RejectedLogRecords: 0,
 					ErrorMessage:       "",
 				},
@@ -724,6 +791,28 @@ func TestConfig(t *testing.T) {
 		var retryErr *retryableError
 		assert.ErrorAs(t, err, &retryErr)
 		assert.ErrorIs(t, err, *retryErr)
+	})
+
+	t.Run("WithEncodingJSON", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSONHeaders", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(JSONEncoding))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Regexp(t, "OTel Go OTLP over HTTP/JSON logs exporter/[01]\\..*", got)
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{contentTypeJSON}, got["Content-Type"])
 	})
 
 	t.Run("WithURLPath", func(t *testing.T) {
