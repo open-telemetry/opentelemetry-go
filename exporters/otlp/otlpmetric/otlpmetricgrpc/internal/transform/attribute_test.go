@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -227,22 +228,16 @@ func TestSliceAttributeTransforms(t *testing.T) {
 }
 
 func assertSliceAttributeValue(t *testing.T, got *cpb.KeyValue) {
-	if !assert.Equal(t, "slice", got.Key) {
-		return
-	}
+	require.Equal(t, "slice", got.Key)
 
 	values := got.Value.GetArrayValue().GetValues()
-	if !assert.Len(t, values, 3) {
-		return
-	}
+	require.Len(t, values, 3)
 
 	assert.True(t, values[0].GetBoolValue())
 	assert.Equal(t, []byte("otlp"), values[1].GetBytesValue())
 
 	nested := values[2].GetArrayValue().GetValues()
-	if !assert.Len(t, nested, 2) {
-		return
-	}
+	require.Len(t, nested, 2)
 	assert.EqualValues(t, 2, nested[0].GetIntValue())
 	assert.Nil(t, nested[1].Value)
 }
