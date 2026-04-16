@@ -35,14 +35,14 @@ func TestSelfObservability(t *testing.T) {
 		envValue    string
 		endpoint    string
 		expectError bool
-		wantMetrics func(actualComponentName, addr string, port int) []metricdata.Metrics
+		wantMetrics func(actualComponentName, addr string, port int, err error) []metricdata.Metrics
 	}{
 		{
 			name:        "success",
 			envValue:    "true",
 			endpoint:    coll.Addr().String(),
 			expectError: false,
-			wantMetrics: func(actualComponentName, addr string, port int) []metricdata.Metrics {
+			wantMetrics: func(actualComponentName, addr string, port int, _ error) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
 						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
@@ -111,7 +111,7 @@ func TestSelfObservability(t *testing.T) {
 			envValue:    "true",
 			endpoint:    "invalid:999999",
 			expectError: true,
-			wantMetrics: func(actualComponentName, addr string, port int) []metricdata.Metrics {
+			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
 						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
@@ -141,7 +141,7 @@ func TestSelfObservability(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorTypeOther,
+										semconv.ErrorType(err),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddressKey.String(addr),
@@ -160,7 +160,7 @@ func TestSelfObservability(t *testing.T) {
 			envValue:    "false",
 			endpoint:    coll.Addr().String(),
 			expectError: false,
-			wantMetrics: func(_, _ string, _ int) []metricdata.Metrics {
+			wantMetrics: func(_, _ string, _ int, _ error) []metricdata.Metrics {
 				return nil
 			},
 		},
@@ -185,18 +185,18 @@ func TestSelfObservability(t *testing.T) {
 			require.NoError(t, err)
 
 			rm := createTestResourceMetrics()
-			err = exp.Export(t.Context(), rm)
+			exportErr := exp.Export(t.Context(), rm)
 			if tt.expectError {
-				assert.Error(t, err)
+				assert.Error(t, exportErr)
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, exportErr)
 			}
 
 			var got metricdata.ResourceMetrics
 			err = reader.Collect(t.Context(), &got)
 			require.NoError(t, err)
 
-			if len(tt.wantMetrics("", "", 0)) == 0 {
+			if len(tt.wantMetrics("", "", 0, nil)) == 0 {
 				// Verify no metrics for our scope
 				selfObsMetricCount := 0
 				for _, sm := range got.ScopeMetrics {
@@ -216,7 +216,7 @@ func TestSelfObservability(t *testing.T) {
 						Version:   sdk.Version(),
 						SchemaURL: semconv.SchemaURL,
 					},
-					Metrics: tt.wantMetrics(actualComponentName, addr, port),
+					Metrics: tt.wantMetrics(actualComponentName, addr, port, exportErr),
 				}
 
 				metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0],
