@@ -121,7 +121,10 @@ func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.Resou
 	if inflightEnabled || exportedEnabled {
 		dataPointCount = countDataPoints(rm)
 	}
-	startTime := time.Now()
+	var startTime time.Time
+	if durationEnabled {
+		startTime = time.Now()
+	}
 
 	if inflightEnabled {
 		em.inflight.Inst().Add(ctx, dataPointCount, em.addOpt)
@@ -132,9 +135,8 @@ func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.Resou
 			em.inflight.Inst().Add(ctx, -dataPointCount, em.addOpt)
 		}
 
-		duration := time.Since(startTime).Seconds()
-
 		if durationEnabled {
+			duration := time.Since(startTime).Seconds()
 			if err != nil {
 				attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
 				defer func() {
