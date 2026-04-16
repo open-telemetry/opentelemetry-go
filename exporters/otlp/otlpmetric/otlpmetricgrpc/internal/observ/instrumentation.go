@@ -7,6 +7,7 @@ package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -54,15 +55,15 @@ type Instrumentation struct {
 	enabled  bool
 }
 
-// NewInstrumentation creates a new Instrumentation instance.
-// If self-observability is disabled, returns a no-op instance.
-func NewInstrumentation(id int64, componentType, serverAddress string, serverPort int) *Instrumentation {
-	em := &Instrumentation{
-		enabled: x.Observability.Enabled(),
+// NewInstrumentation returns instrumentation for otlpmetric grpc exporter.
+// If self-observability is disabled, returns nil, nil.
+func NewInstrumentation(id int64, componentType, serverAddress string, serverPort int) (*Instrumentation, error) {
+	if !x.Observability.Enabled() {
+		return nil, nil
 	}
 
-	if !em.enabled {
-		return em
+	em := &Instrumentation{
+		enabled: true,
 	}
 
 	meter := otel.GetMeterProvider().Meter(
@@ -72,22 +73,21 @@ func NewInstrumentation(id int64, componentType, serverAddress string, serverPor
 	)
 
 	var err error
-	em.exported, err = otelconv.NewSDKExporterMetricDataPointExported(meter)
-	if err != nil {
-		em.enabled = false
-		return em
+	var instrumentErr error
+
+	em.exported, instrumentErr = otelconv.NewSDKExporterMetricDataPointExported(meter)
+	if instrumentErr != nil {
+		err = errors.Join(err, fmt.Errorf("failed to create exported metric: %w", instrumentErr))
 	}
 
-	em.inflight, err = otelconv.NewSDKExporterMetricDataPointInflight(meter)
-	if err != nil {
-		em.enabled = false
-		return em
+	em.inflight, instrumentErr = otelconv.NewSDKExporterMetricDataPointInflight(meter)
+	if instrumentErr != nil {
+		err = errors.Join(err, fmt.Errorf("failed to create inflight metric: %w", instrumentErr))
 	}
 
-	em.duration, err = otelconv.NewSDKExporterOperationDuration(meter)
-	if err != nil {
-		em.enabled = false
-		return em
+	em.duration, instrumentErr = otelconv.NewSDKExporterOperationDuration(meter)
+	if instrumentErr != nil {
+		err = errors.Join(err, fmt.Errorf("failed to create duration metric: %w", instrumentErr))
 	}
 
 	// Set up common attributes
@@ -103,13 +103,13 @@ func NewInstrumentation(id int64, componentType, serverAddress string, serverPor
 	em.addOpt = metric.WithAttributeSet(attrSet)
 	em.recOpt = metric.WithAttributeSet(attrSet)
 
-	return em
+	return em, err
 }
 
 // TrackExport tracks an export operation and returns a function to complete the tracking.
 // The returned function should be called when the export operation completes.
 func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.ResourceMetrics) func(error) {
-	if !em.enabled {
+	if em == nil || !em.enabled {
 		return func(error) {}
 	}
 
