@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -126,4 +127,35 @@ func TestWithAttributesConcurrentSafe(*testing.T) {
 	})
 
 	wg.Wait()
+}
+
+func TestSettableOptions(t *testing.T) {
+	type settable interface {
+		Set(attribute.Set)
+	}
+
+	aliceAttr := attribute.String("user", "Alice")
+	alice := attribute.NewSet(aliceAttr)
+	bobAttr := attribute.String("user", "Bob")
+	bob := attribute.NewSet(bobAttr)
+
+	t.Run("WithAttributeSet", func(t *testing.T) {
+		opt := WithAttributeSet(alice)
+		r, ok := opt.(settable)
+		require.True(t, ok, "WithAttributeSet option does not implement settable")
+
+		r.Set(bob)
+		c := NewAddConfig([]AddOption{opt.(AddOption)})
+		assert.Equal(t, bob, c.Attributes())
+	})
+
+	t.Run("WithAttributes", func(t *testing.T) {
+		opt := WithAttributes(aliceAttr)
+		r, ok := opt.(settable)
+		require.True(t, ok, "WithAttributes option does not implement settable")
+
+		r.Set(bob)
+		c := NewAddConfig([]AddOption{opt.(AddOption)})
+		assert.Equal(t, bob, c.Attributes())
+	})
 }

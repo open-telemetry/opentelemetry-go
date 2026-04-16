@@ -162,6 +162,9 @@ func (m PipelineRunActive) Add(
 	pipelineRunState PipelineRunStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("cicd.pipeline.name", pipelineName),
@@ -192,6 +195,9 @@ func (m PipelineRunActive) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PipelineRunActive) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -281,6 +287,9 @@ func (m PipelineRunDuration) Record(
 	pipelineRunState PipelineRunStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("cicd.pipeline.name", pipelineName),
@@ -311,6 +320,9 @@ func (m PipelineRunDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m PipelineRunDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -416,6 +428,9 @@ func (m PipelineRunErrors) Add(
 	errorType ErrorTypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("cicd.pipeline.name", pipelineName),
@@ -451,6 +466,9 @@ func (m PipelineRunErrors) Add(
 // This means that this error count might not be the same as the count of metric
 // `cicd.pipeline.run.duration` with run result `failure`.
 func (m PipelineRunErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -539,6 +557,9 @@ func (m SystemErrors) Add(
 	errorType ErrorTypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("cicd.system.component", systemComponent),
@@ -572,6 +593,9 @@ func (m SystemErrors) Add(
 // Errors in pipeline run execution are explicitly excluded. Ie a test failure is
 // not counted in this metric.
 func (m SystemErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -654,6 +678,9 @@ func (m WorkerCount) Add(
 	workerState WorkerStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("cicd.worker.state", string(workerState)),
@@ -682,6 +709,9 @@ func (m WorkerCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m WorkerCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return

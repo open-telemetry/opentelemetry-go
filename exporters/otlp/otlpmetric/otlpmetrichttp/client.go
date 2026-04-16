@@ -265,7 +265,10 @@ func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
 		r.Header.Set("Content-Encoding", "gzip")
 
 		gz := gzPool.Get().(*gzip.Writer)
-		defer gzPool.Put(gz)
+		defer func() {
+			gz.Reset(io.Discard)
+			gzPool.Put(gz)
+		}()
 
 		var b bytes.Buffer
 		gz.Reset(&b)
@@ -279,7 +282,7 @@ func (c *client) newRequest(ctx context.Context, body []byte) (request, error) {
 		}
 
 		req.bodyReader = bodyReader(b.Bytes())
-		req.GetBody = bodyReaderErr(body)
+		req.GetBody = bodyReaderErr(b.Bytes())
 	}
 
 	return req, nil
