@@ -35,6 +35,9 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 	assert.False(t, em.enabled, "metrics should be disabled when feature flag is false")
 
 	// Tracking should be no-op when disabled
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
@@ -60,6 +63,9 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	// Set up a test meter provider
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
@@ -223,6 +229,9 @@ func TestTrackExport(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+			orig := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(orig) })
 
 			reader := metric.NewManualReader()
 			provider := metric.NewMeterProvider(metric.WithReader(reader))
