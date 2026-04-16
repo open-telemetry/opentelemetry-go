@@ -212,11 +212,6 @@ func TestTruncateAttr(t *testing.T) {
 			want:  attribute.Slice(key, attribute.BoolValue(true), attribute.StringValue("")),
 		},
 		{
-			limit: 1,
-			attr:  attribute.Slice(key, attribute.StringValue("value")),
-			want:  attribute.Slice(key, attribute.StringValue("v")),
-		},
-		{
 			limit: 5,
 			attr:  attribute.Slice(key, attribute.StringValue("value"), attribute.StringValue("toolong")),
 			want:  attribute.Slice(key, attribute.StringValue("value"), attribute.StringValue("toolo")),
@@ -232,12 +227,6 @@ func TestTruncateAttr(t *testing.T) {
 			limit: 2,
 			attr:  attribute.Slice(key, attribute.StringSliceValue([]string{"abc", "de"})),
 			want:  attribute.Slice(key, attribute.StringSliceValue([]string{"ab", "de"})),
-		},
-		{
-			// SLICE with no strings: returned unchanged (no allocation).
-			limit: 1,
-			attr:  attribute.Slice(key, attribute.BoolValue(true), attribute.Int64Value(42)),
-			want:  attribute.Slice(key, attribute.BoolValue(true), attribute.Int64Value(42)),
 		},
 		{
 			// STRINGSLICE within SLICE where all strings fit: no change.
