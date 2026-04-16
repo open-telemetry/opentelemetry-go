@@ -36,8 +36,8 @@ type Builder[N int64 | float64] struct {
 	// ReservoirFunc is the factory function used by aggregate functions to
 	// create new exemplar reservoirs for a new seen attribute set.
 	//
-	// If this is not provided a default factory function that returns an
-	// dropReservoir reservoir will be used.
+	// If this is not provided a default factory function that returns a
+	// DropReservoir reservoir will be used.
 	ReservoirFunc func(attribute.Set) FilteredExemplarReservoir[N]
 	// AggregationLimit is the cardinality limit of measurement attributes. Any
 	// measurement for new attributes once the limit has been reached will be
