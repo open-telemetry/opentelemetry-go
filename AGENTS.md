@@ -2,7 +2,8 @@
 
 This file contains active, task-oriented instructions for autonomous and semi-autonomous coding agents working in this repository.
 
-Before starting any task, read `.github/copilot-instructions.md`, `CONTRIBUTING.md`, and this file. Treat `.github/copilot-instructions.md` as global passive guidance for every task, including docs-only and review-only work.
+Before starting any task, read `.github/copilot-instructions.md`, `CONTRIBUTING.md`, and this file.
+Treat `.github/copilot-instructions.md` as global passive guidance for every task, including docs-only and review-only work.
 
 ## Core expectations
 
@@ -11,6 +12,10 @@ Before starting any task, read `.github/copilot-instructions.md`, `CONTRIBUTING.
 - Read the package you are editing and match its existing naming, option types, error handling, comments, tests, and concurrency patterns.
 - Keep public APIs backward compatible unless the task explicitly requires a breaking change.
 - Keep telemetry resilient and loosely coupled. Do not introduce behavior that can unexpectedly interfere with host applications.
+- Inspect boundaries carefully: input validation, resource limits, cancellation, shutdown, error propagation, concurrency, and memory growth.
+- Prefer fail-safe behavior and explicit invariants over implicit assumptions.
+- Keep dependencies minimal and justified.
+- Preserve host-application safety: telemetry should not panic, block indefinitely, or amplify attacker-controlled input.
 - Be conservative on hot paths. Avoid unnecessary allocations, reflection, interface churn, blocking, global state, and high-cardinality telemetry.
 - Write comments only for intent, invariants, and non-obvious constraints. Do not add comments that restate the code.
 
@@ -25,16 +30,16 @@ For new features and behavior changes, use this order unless the task explicitly
 5. If the changed code is on a hot path or performance-sensitive, inspect existing benchmarks and run them. Add a benchmark if coverage is missing.
 6. Update GoDoc, doc comments, examples, or `README.md` as needed while the context is fresh.
 7. Add or update a `CHANGELOG.md` entry under `## [Unreleased]` for user-visible changes.
-8. Run `make` before considering the work complete.
+8. Run `make precommit` each time before considering the work complete.
 
 For docs-only, test-only, or review-only tasks, still start with the required repository guidance above, then skip the workflow steps that do not apply while keeping the same discipline around scope, verification, and repository conventions.
 
 ## Verification
 
 - Use `make` as the canonical repository verification command. The default target is `precommit`.
-- `make` is the expected final verification step for linting, generation, README checks, module checks, and tests.
+- `make precommit` is the expected final verification step for linting, generation, README checks, module checks, and tests.
 - During iteration, targeted commands are fine for fast feedback, but do not stop there if the task changes code.
-- If you touch performance-sensitive code, run focused benchmarks in addition to `make`.
+- If you touch performance-sensitive code, run focused benchmarks and compare the results using `benchstat` in addition to `make`.
 
 ## Documentation and changelog
 
@@ -93,16 +98,6 @@ Use this persona for hot-path work, allocation reduction, or throughput and late
 - Do not trade away correctness, spec compliance, or API stability for micro-optimizations.
 - Add or update benchmarks when performance-sensitive coverage is missing.
 - If you materially change a hot path, capture before-and-after results, preferably with `benchstat`.
-
-### Security Agent
-
-Use this persona for dependency changes, input handling, lifecycle management, or hardening exposed surfaces.
-
-- Inspect boundaries carefully: input validation, resource limits, cancellation, shutdown, error propagation, concurrency, and memory growth.
-- Prefer fail-safe behavior and explicit invariants over implicit assumptions.
-- Keep dependencies minimal and justified.
-- Preserve host-application safety: telemetry should not panic, block indefinitely, or amplify attacker-controlled input.
-- Run the normal verification flow and add extra security checks when the change warrants them.
 
 ### Review Agent
 
