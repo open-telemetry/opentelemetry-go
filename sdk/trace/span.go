@@ -389,7 +389,7 @@ func truncate(limit int, s string) string {
 	//  - Strings with valid encodings that exceed the limit.
 	//  - No limit.
 	//  - Strings with invalid encodings that exceed the limit.
-	if limit < 0 || len(s) <= limit || utf8.RuneCountInString(s) <= limit {
+	if limit < 0 || len(s) <= limit {
 		return s
 	}
 
