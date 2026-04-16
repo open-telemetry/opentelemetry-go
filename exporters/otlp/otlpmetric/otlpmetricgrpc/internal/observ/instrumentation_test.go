@@ -519,6 +519,13 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			rm := createTestResourceMetrics()
 			if enabled {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+				orig := otel.GetMeterProvider()
+				b.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+				reader := metric.NewManualReader()
+				provider := metric.NewMeterProvider(metric.WithReader(reader))
+				otel.SetMeterProvider(provider)
 			} else {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 			}
