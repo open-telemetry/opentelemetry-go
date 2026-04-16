@@ -391,17 +391,6 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		return attribute.StringValue(truncate(limit, v.AsString()))
 	case attribute.STRINGSLICE:
 		ss := v.AsStringSlice()
-		// Check if any attribute limits need to be applied.
-		needsChange := false
-		for _, s := range ss {
-			if utf8.RuneCountInString(s) > limit {
-				needsChange = true
-				break
-			}
-		}
-		if !needsChange {
-			return v
-		}
 		for i := range ss {
 			ss[i] = truncate(limit, ss[i])
 		}
