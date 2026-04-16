@@ -162,8 +162,22 @@ func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.Resou
 			}
 		}
 
-		if err == nil && exportedEnabled {
-			em.exported.Inst().Add(ctx, dataPointCount, em.addOpt)
+		if exportedEnabled {
+			if err != nil {
+				attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
+				defer func() {
+					*attrsPtr = (*attrsPtr)[:0]
+					attrPool.Put(attrsPtr)
+				}()
+
+				*attrsPtr = append(*attrsPtr, em.attrs...)
+				*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
+
+				set := attribute.NewSet(*attrsPtr...)
+				em.exported.Inst().Add(ctx, dataPointCount, metric.WithAttributeSet(set))
+			} else {
+				em.exported.Inst().Add(ctx, dataPointCount, em.addOpt)
+			}
 		}
 	}
 }
