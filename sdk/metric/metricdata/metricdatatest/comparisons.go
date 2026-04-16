@@ -585,6 +585,10 @@ func equalKeyValue(a, b attribute.KeyValue) bool {
 		if ok := slices.Equal(a.Value.AsByteSlice(), b.Value.AsByteSlice()); !ok {
 			return false
 		}
+	case attribute.SLICE:
+		if ok := slices.Equal(a.Value.AsSlice(), b.Value.AsSlice()); !ok {
+			return false
+		}
 	case attribute.EMPTY:
 	default:
 		// We control all types passed to this, panic to signal developers
