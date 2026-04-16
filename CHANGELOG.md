@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
 - Add `Slice` and `SliceValue` functions for new `SLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#8166)
-- Apply `AttributeValueLengthLimit` to `attribute.SLICE` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained string values. (#7955)
+- Apply `AttributeValueLengthLimit` to `attribute.SLICE` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained string values. (#8217)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
