@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/attribute"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -163,6 +164,11 @@ func TestAttrTransforms(t *testing.T) {
 			[]*cpb.KeyValue{kvAttrBytes},
 		},
 		{
+			"slice",
+			[]attribute.KeyValue{attrSlice},
+			[]*cpb.KeyValue{kvAttrSlice},
+		},
+		{
 			"string slice",
 			[]attribute.KeyValue{attrStringSlice},
 			[]*cpb.KeyValue{kvStringSlice},
@@ -180,6 +186,7 @@ func TestAttrTransforms(t *testing.T) {
 				attrFloat64Slice,
 				attrString,
 				attrBytes,
+				attrSlice,
 				attrStringSlice,
 				attrEmpty,
 			},
@@ -194,6 +201,7 @@ func TestAttrTransforms(t *testing.T) {
 				kvFloat64Slice,
 				kvString,
 				kvAttrBytes,
+				kvAttrSlice,
 				kvStringSlice,
 				kvEmpty,
 			},
@@ -201,44 +209,33 @@ func TestAttrTransforms(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Run("Attrs", func(t *testing.T) {
-				assert.ElementsMatch(t, test.want, Attrs(test.in))
+				assertKeyValueSlicesEqual(t, test.want, Attrs(test.in))
 			})
 			t.Run("AttrIter", func(t *testing.T) {
 				s := attribute.NewSet(test.in...)
-				assert.ElementsMatch(t, test.want, AttrIter(s.Iter()))
+				assertKeyValueSlicesEqual(t, test.want, AttrIter(s.Iter()))
 			})
 		})
 	}
 }
 
-func TestAttrTransformsSlice(t *testing.T) {
-	t.Run("Attrs", func(t *testing.T) {
-		got := Attrs([]attribute.KeyValue{attrSlice})
-		if assert.Len(t, got, 1) {
-			assertSliceValue(t, got[0])
-		}
-	})
+func assertKeyValueSlicesEqual(t *testing.T, want, got []*cpb.KeyValue) {
+	require.Len(t, got, len(want))
 
-	t.Run("AttrIter", func(t *testing.T) {
-		s := attribute.NewSet(attrSlice)
-		got := AttrIter(s.Iter())
-		if assert.Len(t, got, 1) {
-			assertSliceValue(t, got[0])
-		}
-	})
-}
+	wantByKey := make(map[string]*cpb.KeyValue, len(want))
+	for _, kv := range want {
+		wantByKey[kv.Key] = kv
+	}
 
-func assertSliceValue(t *testing.T, got *cpb.KeyValue) {
-	require.Equal(t, "slice", got.Key)
+	gotByKey := make(map[string]*cpb.KeyValue, len(got))
+	for _, kv := range got {
+		gotByKey[kv.Key] = kv
+	}
 
-	values := got.Value.GetArrayValue().GetValues()
-	require.Len(t, values, 3)
-
-	assert.True(t, values[0].GetBoolValue())
-	assert.Equal(t, []byte("otlp"), values[1].GetBytesValue())
-
-	nested := values[2].GetArrayValue().GetValues()
-	require.Len(t, nested, 2)
-	assert.EqualValues(t, 2, nested[0].GetIntValue())
-	assert.Nil(t, nested[1].Value)
+	require.Len(t, gotByKey, len(wantByKey))
+	for key, wantKV := range wantByKey {
+		gotKV, ok := gotByKey[key]
+		require.Truef(t, ok, "missing key %q in got", key)
+		assert.Truef(t, proto.Equal(wantKV, gotKV), "got %#v, want %#v", gotKV, wantKV)
+	}
 }

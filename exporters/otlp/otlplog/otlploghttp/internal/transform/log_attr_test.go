@@ -9,8 +9,6 @@ package transform
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/log"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
@@ -138,7 +136,7 @@ func TestLogAttrs(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			assert.ElementsMatch(t, test.want, LogAttrs(test.in))
+			assertKeyValueSlicesEqual(t, test.want, LogAttrs(test.in))
 		})
 	}
 }
