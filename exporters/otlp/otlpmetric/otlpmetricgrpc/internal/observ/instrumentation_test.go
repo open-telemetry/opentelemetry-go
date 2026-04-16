@@ -401,9 +401,7 @@ func TestIsObservabilityEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.envValue != "" {
-				t.Setenv("OTEL_GO_X_OBSERVABILITY", tt.envValue)
-			}
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", tt.envValue)
 
 			got := x.Observability.Enabled()
 			assert.Equal(t, tt.want, got, "observability enabled state mismatch")
