@@ -26,6 +26,11 @@ var (
 	attrFloat64Slice = attribute.Float64Slice("float64 slice", []float64{-1, 1})
 	attrString       = attribute.String("string", "o")
 	attrBytes        = attribute.ByteSlice("bytes", []byte("otlp"))
+	attrSlice        = attribute.Slice("slice",
+		attribute.BoolValue(true),
+		attribute.ByteSliceValue([]byte("otlp")),
+		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+	)
 	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
 	attrEmpty        = attribute.KeyValue{
 		Key:   attribute.Key("empty"),
@@ -55,6 +60,19 @@ var (
 	}}
 	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
 	valBytes    = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
+	valSlice    = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+		ArrayValue: &cpb.ArrayValue{
+			Values: []*cpb.AnyValue{
+				valBoolTrue,
+				valBytes,
+				{Value: &cpb.AnyValue_ArrayValue{
+					ArrayValue: &cpb.ArrayValue{
+						Values: []*cpb.AnyValue{valIntOne, {}},
+					},
+				}},
+			},
+		},
+	}}
 	valStrN     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "n"}}
 	valStrSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
@@ -72,6 +90,7 @@ var (
 	kvFloat64Slice = &cpb.KeyValue{Key: "float64 slice", Value: valDblSlice}
 	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
 	kvBytes        = &cpb.KeyValue{Key: "bytes", Value: valBytes}
+	kvSlice        = &cpb.KeyValue{Key: "slice", Value: valSlice}
 	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
 	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
@@ -188,4 +207,42 @@ func TestAttributeTransforms(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestSliceAttributeTransforms(t *testing.T) {
+	t.Run("KeyValues", func(t *testing.T) {
+		got := KeyValues([]attribute.KeyValue{attrSlice})
+		if assert.Len(t, got, 1) {
+			assertSliceAttributeValue(t, got[0])
+		}
+	})
+
+	t.Run("AttrIter", func(t *testing.T) {
+		s := attribute.NewSet(attrSlice)
+		got := AttrIter(s.Iter())
+		if assert.Len(t, got, 1) {
+			assertSliceAttributeValue(t, got[0])
+		}
+	})
+}
+
+func assertSliceAttributeValue(t *testing.T, got *cpb.KeyValue) {
+	if !assert.Equal(t, "slice", got.Key) {
+		return
+	}
+
+	values := got.Value.GetArrayValue().GetValues()
+	if !assert.Len(t, values, 3) {
+		return
+	}
+
+	assert.True(t, values[0].GetBoolValue())
+	assert.Equal(t, []byte("otlp"), values[1].GetBytesValue())
+
+	nested := values[2].GetArrayValue().GetValues()
+	if !assert.Len(t, nested, 2) {
+		return
+	}
+	assert.EqualValues(t, 2, nested[0].GetIntValue())
+	assert.Nil(t, nested[1].Value)
 }

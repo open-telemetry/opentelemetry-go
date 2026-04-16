@@ -182,6 +182,12 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 		}
 		encoded, _ := json.Marshal(data)
 		return string(kv.Key), string(encoded)
+	case attribute.SLICE:
+		// Note that this is a fallback as this exporter is already deprecated.
+		// Yet, we want to preserve existing behavior as much as possible.
+		// Emit the slice as a string, which will be a JSON array of the underlying values.
+		// Some values will be emitted differently than the specific types above.
+		return string(kv.Key), kv.Value.String()
 	default:
 		return string(kv.Key), kv.Value.Emit() //nolint:staticcheck // Preserve existing Zipkin tag encoding.
 	}
