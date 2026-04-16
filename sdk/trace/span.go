@@ -382,8 +382,9 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 }
 
 // truncateValue returns a truncated version of v. Only string, string slice,
-// and (recursively) slice values are modified. No truncation is performed for
-// a negative limit.
+// and (recursively) slice values are modified.
+//
+// limit must be non-negative; callers are responsible for enforcing this.
 func truncateValue(limit int, v attribute.Value) attribute.Value {
 	switch v.Type() {
 	case attribute.STRING:
@@ -393,7 +394,7 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		// Check if any attribute limits need to be applied.
 		needsChange := false
 		for _, s := range ss {
-			if len(s) > limit {
+			if utf8.RuneCountInString(s) > limit {
 				needsChange = true
 				break
 			}
@@ -424,10 +425,11 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 func needsTruncation(limit int, v attribute.Value) bool {
 	switch v.Type() {
 	case attribute.STRING:
-		return len(v.AsString()) > limit
+		s := v.AsString()
+		return utf8.RuneCountInString(s) > limit
 	case attribute.STRINGSLICE:
 		for _, s := range v.AsStringSlice() {
-			if len(s) > limit {
+			if utf8.RuneCountInString(s) > limit {
 				return true
 			}
 		}

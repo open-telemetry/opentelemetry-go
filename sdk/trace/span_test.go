@@ -266,6 +266,13 @@ func TestTruncateAttr(t *testing.T) {
 				attribute.StringValue("too"),
 			),
 		},
+		{
+			// Multi-byte string whose byte length exceeds the limit but rune count
+			// does not: must not be truncated (guards use rune count, not byte length).
+			limit: 3,
+			attr:  attribute.Slice(key, attribute.StringValue("日本語")), // 3 runes, 9 bytes
+			want:  attribute.Slice(key, attribute.StringValue("日本語")),
+		},
 	}
 
 	for _, test := range tests {
