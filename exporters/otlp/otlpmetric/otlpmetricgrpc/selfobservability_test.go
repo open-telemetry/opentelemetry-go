@@ -176,8 +176,18 @@ func TestSelfObservability(t *testing.T) {
 			orig := otel.GetMeterProvider()
 			t.Cleanup(func() { otel.SetMeterProvider(orig) })
 
+			dropReaderMetrics := metric.NewView(
+				metric.Instrument{
+					Scope: instrumentation.Scope{Name: "go.opentelemetry.io/otel/sdk/metric/internal/observ"},
+				},
+				metric.Stream{Aggregation: metric.AggregationDrop{}},
+			)
+
 			reader := metric.NewManualReader()
-			provider := metric.NewMeterProvider(metric.WithReader(reader))
+			provider := metric.NewMeterProvider(
+				metric.WithReader(reader),
+				metric.WithView(dropReaderMetrics),
+			)
 			otel.SetMeterProvider(provider)
 
 			exp, err := New(t.Context(),
