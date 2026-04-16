@@ -516,9 +516,9 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			} else {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 			}
-			inst, err := NewInstrumentation(0, "otlp_grpc_metric_exporter", "localhost", 4317)
-			if err != nil {
-				b.Fatal(err)
+			inst, instErr := NewInstrumentation(0, "otlp_grpc_metric_exporter", "localhost", 4317)
+			if instErr != nil {
+				b.Fatal(instErr)
 			}
 			if enabled {
 				if inst == nil {
@@ -527,10 +527,8 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 				if !inst.enabled {
 					b.Fatalf("instrumentation enabled state mismatch: got %v, want %v", inst.enabled, enabled)
 				}
-			} else {
-				if inst != nil {
-					b.Fatal("instrumentation should be nil when disabled")
-				}
+			} else if inst != nil {
+				b.Fatal("instrumentation should be nil when disabled")
 			}
 			b.ReportAllocs()
 			b.ResetTimer()
