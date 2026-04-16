@@ -140,3 +140,15 @@ func TestLogAttrs(t *testing.T) {
 		})
 	}
 }
+
+func TestLogAttrsPreserveDuplicateKeys(t *testing.T) {
+	want := []*cpb.KeyValue{
+		{Key: "dup", Value: valBoolTrue},
+		{Key: "dup", Value: valStrO},
+	}
+
+	assertKeyValueSlicesEqual(t, want, LogAttrs([]log.KeyValue{
+		log.Bool("dup", true),
+		log.String("dup", "o"),
+	}))
+}

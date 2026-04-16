@@ -33,8 +33,8 @@ var (
 		attribute.ByteSliceValue([]byte("otlp")),
 		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
 	)
-	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
-	attrEmpty        = attribute.KeyValue{
+	attrStringSlice = attribute.StringSlice("string slice", []string{"o", "n"})
+	attrEmpty       = attribute.KeyValue{
 		Key:   attribute.Key("empty"),
 		Value: attribute.Value{},
 	}
@@ -61,9 +61,9 @@ var (
 			Values: []*cpb.AnyValue{valDblNOne, valDblOne},
 		},
 	}}
-	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
-	valBytes    = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
-	valSlice    = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+	valStrO  = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valBytes = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
+	valSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
 			Values: []*cpb.AnyValue{
 				valBoolTrue,
@@ -219,23 +219,35 @@ func TestAttributeTransforms(t *testing.T) {
 	}
 }
 
+func TestKeyValuesPreserveDuplicateKeys(t *testing.T) {
+	want := []*cpb.KeyValue{
+		{Key: "dup", Value: valBoolTrue},
+		{Key: "dup", Value: valStrO},
+	}
+
+	assertKeyValueSlicesEqual(t, want, KeyValues([]attribute.KeyValue{
+		attribute.Bool("dup", true),
+		attribute.String("dup", "o"),
+	}))
+}
+
 func assertKeyValueSlicesEqual(t *testing.T, want, got []*cpb.KeyValue) {
+	t.Helper()
 	require.Len(t, got, len(want))
 
-	wantByKey := make(map[string]*cpb.KeyValue, len(want))
-	for _, kv := range want {
-		wantByKey[kv.Key] = kv
-	}
-
-	gotByKey := make(map[string]*cpb.KeyValue, len(got))
-	for _, kv := range got {
-		gotByKey[kv.Key] = kv
-	}
-
-	require.Len(t, gotByKey, len(wantByKey))
-	for key, wantKV := range wantByKey {
-		gotKV, ok := gotByKey[key]
-		require.Truef(t, ok, "missing key %q in got", key)
-		assert.Truef(t, proto.Equal(wantKV, gotKV), "got %#v, want %#v", gotKV, wantKV)
+	used := make([]bool, len(got))
+	for i, wantKV := range want {
+		matched := false
+		for j, gotKV := range got {
+			if used[j] {
+				continue
+			}
+			if proto.Equal(wantKV, gotKV) {
+				used[j] = true
+				matched = true
+				break
+			}
+		}
+		assert.Truef(t, matched, "missing match for want[%d] = %#v in got = %#v", i, wantKV, got)
 	}
 }
