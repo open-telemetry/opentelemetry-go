@@ -613,7 +613,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(attrs...)},
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterMetricDataPointExported{}.AttrErrorType("*errors.joinError"),
+							semconv.ErrorType(err),
 						)...)},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -628,7 +628,7 @@ func TestClientInstrumentation(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							semconv.ErrorType(err),
 							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
 						)...)},
 					},
