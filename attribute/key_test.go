@@ -5,6 +5,7 @@ package attribute_test
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -114,6 +115,16 @@ func TestEmit(t *testing.T) {
 			want: "Zm9v",
 		},
 		{
+			name: `test Key.Emit() can emit a string representing self.SLICE`,
+			v: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.StringValue("foo\"bar"),
+				attribute.Float64Value(math.Inf(1)),
+				attribute.ByteSliceValue([]byte("bin")),
+			),
+			want: `[true,"foo\"bar","Infinity","Ymlu"]`,
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.EMPTY`,
 			v:    attribute.Value{},
 			want: "",
@@ -127,4 +138,17 @@ func TestEmit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestString(t *testing.T) {
+	v := attribute.SliceValue(
+		attribute.StringValue("foo\nbar"),
+		attribute.Float64Value(math.NaN()),
+		attribute.SliceValue(
+			attribute.ByteSliceValue([]byte("bin")),
+			attribute.Value{},
+		),
+	)
+
+	require.Equal(t, `["foo\nbar","NaN",["Ymlu",null]]`, v.String())
 }
