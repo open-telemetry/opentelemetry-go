@@ -19,7 +19,7 @@ func TestObservability(t *testing.T) {
 	t.Run("TRUE", run(setenv("TRUE"), assertEnabled(Observability, "TRUE")))
 	t.Run("false", run(setenv("false"), assertDisabled(Observability)))
 	t.Run("1", run(setenv("1"), assertDisabled(Observability)))
-	t.Run("empty", run(assertDisabled(Observability)))
+	t.Run("empty", run(setenv(""), assertDisabled(Observability)))
 }
 
 func run(steps ...func(*testing.T)) func(*testing.T) {
