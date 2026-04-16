@@ -169,7 +169,8 @@ func TestSelfObservability(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset counter for predictable ID in test
-			counter.SetExporterID(0)
+			origID := counter.SetExporterID(0)
+			t.Cleanup(func() { counter.SetExporterID(origID) })
 			t.Setenv("OTEL_GO_X_OBSERVABILITY", tt.envValue)
 
 			orig := otel.GetMeterProvider()
