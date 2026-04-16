@@ -157,7 +157,7 @@ func WithView(views ...View) Option {
 // exemplar reservoir, but the exemplar reservoir makes the final decision of
 // whether to store an exemplar.
 //
-// By default, the [exemplar.SampledFilter]
+// By default, the [exemplar.TraceBasedFilter]
 // is used. Exemplars can be entirely disabled by providing the
 // [exemplar.AlwaysOffFilter].
 func WithExemplarFilter(filter exemplar.Filter) Option {
