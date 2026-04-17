@@ -50,9 +50,11 @@ incrementally increase in value. UpDownCounters ([Int64UpDownCounter],
 values that can increase and decrease. When more information needs to be
 conveyed about all the synchronous measurements made during a collection cycle,
 a Histogram ([Int64Histogram] and [Float64Histogram]) should be used. Finally,
-when just the most recent measurement needs to be conveyed about an
-asynchronous measurement, a Gauge ([Int64ObservableGauge] and
-[Float64ObservableGauge]) should be used.
+when just the most recent measurement needs to be conveyed, a Gauge
+([Int64Gauge], [Float64Gauge], [Int64ObservableGauge], and
+[Float64ObservableGauge]) should be used: the synchronous variants record an
+instantaneous value at a specific point in code, while the observable variants
+sample the value via a callback once per collection cycle.
 
 See the [OpenTelemetry documentation] for more information about instruments
 and their intended use.
