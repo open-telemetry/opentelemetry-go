@@ -316,7 +316,7 @@ func rejected(n int64, err error) int64 {
 	return n
 }
 
-// parseEndpoint parses the host and port from target that has the form
+// parseTarget parses the host and port from target that has the form
 // "host[:port]", or it returns an error if the target is not parsable.
 //
 // If no port is specified, -1 is returned.
