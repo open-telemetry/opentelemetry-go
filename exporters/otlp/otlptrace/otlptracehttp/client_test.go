@@ -4,6 +4,8 @@
 package otlptracehttp_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -597,6 +599,58 @@ func TestClientInstrumentation(t *testing.T) {
 	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
 }
 
+func TestResponseBodySizeLimit(t *testing.T) {
+	// Override the limit to 1 byte so any non-empty response body exceeds it.
+	orig := *otlptracehttp.MaxResponseBodySize
+	*otlptracehttp.MaxResponseBodySize = 1
+	t.Cleanup(func() { *otlptracehttp.MaxResponseBodySize = orig })
+
+	// largeBody is larger than the 1-byte limit.
+	largeBody := []byte("xx")
+
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+	}{
+		{
+			name:        "success response body too large",
+			status:      http.StatusOK,
+			contentType: "application/x-protobuf",
+		},
+		{
+			name:        "error response body too large",
+			status:      http.StatusServiceUnavailable,
+			contentType: "text/plain",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write(largeBody)
+			}))
+			t.Cleanup(srv.Close)
+
+			client := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpointURL(srv.URL),
+				otlptracehttp.WithInsecure(),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+			)
+			exporter, err := otlptrace.New(t.Context(), client)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+			err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+			assert.ErrorContains(t, err, "response body too large")
+			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+		})
+	}
+}
+
 func TestGetBodyCalledOnRedirect(t *testing.T) {
 	// Test that req.GetBody is set correctly, allowing the HTTP transport
 	// to re-send the body on 307 redirects.
@@ -648,6 +702,72 @@ func TestGetBodyCalledOnRedirect(t *testing.T) {
 	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
 	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
 	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+}
+
+func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
+	// Test that req.GetBody replays the gzipped request body on redirects.
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/traces/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(server.Listener.Addr().String()),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithCompression(otlptracehttp.GzipCompression),
+	)
+
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+
+	for _, body := range requestBodies {
+		reader, err := gzip.NewReader(bytes.NewReader(body))
+		require.NoError(t, err)
+		func() {
+			defer func() { assert.NoError(t, reader.Close()) }()
+
+			decoded, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			assert.NotEmpty(t, decoded)
+		}()
+	}
 }
 
 func BenchmarkExporterExportSpans(b *testing.B) {

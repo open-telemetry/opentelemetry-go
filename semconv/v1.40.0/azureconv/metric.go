@@ -119,6 +119,9 @@ func (m CosmosDBClientActiveInstanceCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -142,6 +145,9 @@ func (m CosmosDBClientActiveInstanceCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m CosmosDBClientActiveInstanceCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -243,6 +249,9 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 	dbOperationName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.operation.name", dbOperationName),
@@ -271,6 +280,9 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return

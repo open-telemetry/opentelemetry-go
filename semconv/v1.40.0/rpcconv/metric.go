@@ -127,6 +127,9 @@ func (m ClientCallDuration) Record(
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("rpc.system.name", string(systemName)),
@@ -158,6 +161,9 @@ func (m ClientCallDuration) Record(
 // When this metric is reported alongside an RPC client span, the metric value
 // SHOULD be the same as the RPC client span duration.
 func (m ClientCallDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -279,6 +285,9 @@ func (m ServerCallDuration) Record(
 	systemName SystemNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("rpc.system.name", string(systemName)),
@@ -310,6 +319,9 @@ func (m ServerCallDuration) Record(
 // When this metric is reported alongside an RPC server span, the metric value
 // SHOULD be the same as the RPC server span duration.
 func (m ServerCallDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

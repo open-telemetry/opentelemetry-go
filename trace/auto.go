@@ -314,6 +314,8 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 	case attribute.STRING:
 		v := truncate(maxSpan.AttrValueLen, value.AsString())
 		return telemetry.StringValue(v)
+	case attribute.BYTESLICE:
+		return telemetry.BytesValue(value.AsByteSlice())
 	case attribute.BOOLSLICE:
 		slice := value.AsBoolSlice()
 		out := make([]telemetry.Value, 0, len(slice))
@@ -341,6 +343,13 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 		for _, v := range slice {
 			v = truncate(maxSpan.AttrValueLen, v)
 			out = append(out, telemetry.StringValue(v))
+		}
+		return telemetry.SliceValue(out...)
+	case attribute.SLICE:
+		slice := value.AsSlice()
+		out := make([]telemetry.Value, 0, len(slice))
+		for _, v := range slice {
+			out = append(out, convAttrValue(v))
 		}
 		return telemetry.SliceValue(out...)
 	}
