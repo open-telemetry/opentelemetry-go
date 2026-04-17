@@ -500,7 +500,7 @@ func TestBaggagePropagatorGetAllKeys(t *testing.T) {
 
 func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
 	prop := propagation.Baggage{}
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 	// Set a single baggage header exceeding 8192 bytes.
 	req.Header.Set("baggage", "key="+strings.Repeat("v", 8192))
 
@@ -511,7 +511,7 @@ func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
 
 func TestExtractManyBaggageHeadersAggregateBudget(t *testing.T) {
 	prop := propagation.Baggage{}
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 
 	// Send 100 baggage headers, each ~200 bytes. Total: ~20KB.
 	// Only headers fitting within the 8192-byte aggregate budget should be processed.
@@ -525,5 +525,5 @@ func TestExtractManyBaggageHeadersAggregateBudget(t *testing.T) {
 	// Each header is ~195 bytes. Budget of 8192 / ~195 = ~42 headers processed.
 	// The exact count depends on key length (k0..k99), but should be well under 100.
 	assert.Less(t, got.Len(), 100, "should not process all 100 headers")
-	assert.Greater(t, got.Len(), 0, "should process some headers")
+	assert.Positive(t, got.Len(), "should process some headers")
 }
