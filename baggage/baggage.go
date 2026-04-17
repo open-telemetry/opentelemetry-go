@@ -16,6 +16,7 @@ import (
 const (
 	maxMembers               = 64
 	maxBytesPerBaggageString = 8192
+	maxParseErrors           = 5
 
 	listDelimiter     = ","
 	keyValueDelimiter = "="
@@ -504,9 +505,14 @@ func Parse(bStr string) (Baggage, error) {
 		return Baggage{}, nil
 	}
 
+	if n := len(bStr); n > maxBytesPerBaggageString {
+		return Baggage{}, fmt.Errorf("%w: %d", errBaggageBytes, n)
+	}
+
 	b := make(baggage.List)
 	sizes := make(map[string]int) // Track per-key byte sizes
 	var totalBytes int
+	var parseErrors int
 	var truncateErr error
 	for memberStr := range strings.SplitSeq(bStr, listDelimiter) {
 		// Check member count limit.
@@ -517,7 +523,10 @@ func Parse(bStr string) (Baggage, error) {
 
 		m, err := parseMember(memberStr)
 		if err != nil {
-			truncateErr = errors.Join(truncateErr, err)
+			parseErrors++
+			if parseErrors <= maxParseErrors {
+				truncateErr = errors.Join(truncateErr, err)
+			}
 			continue // skip invalid member, keep processing
 		}
 
@@ -551,6 +560,10 @@ func Parse(bStr string) (Baggage, error) {
 		}
 		sizes[m.key] = memberBytes
 		totalBytes = newTotalBytes
+	}
+
+	if dropped := parseErrors - maxParseErrors; dropped > 0 {
+		truncateErr = errors.Join(truncateErr, fmt.Errorf("and %d more invalid members", dropped))
 	}
 
 	if len(b) == 0 {

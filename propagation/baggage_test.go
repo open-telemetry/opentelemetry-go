@@ -297,7 +297,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			wantMaxBytes: maxBytesPerBaggageString,
 		},
 		{
-			name: "skips large member that exceeds byte limit and continues",
+			name: "stops processing when aggregate byte budget exceeded",
 			headers: []string{
 				"small1=v1,small2=v2",
 				"large=" + strings.Repeat("x", maxBytesPerBaggageString),
@@ -306,7 +306,6 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want: members{
 				{Key: "small1", Value: "v1"},
 				{Key: "small2", Value: "v2"},
-				{Key: "small3", Value: "v3"},
 			},
 		},
 	}
@@ -497,4 +496,34 @@ func TestBaggagePropagatorGetAllKeys(t *testing.T) {
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
 	}
+}
+
+func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
+	prop := propagation.Baggage{}
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+	// Set a single baggage header exceeding 8192 bytes.
+	req.Header.Set("baggage", "key="+strings.Repeat("v", 8192))
+
+	ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
+	got := baggage.FromContext(ctx)
+	assert.Equal(t, 0, got.Len(), "oversized header should result in empty baggage")
+}
+
+func TestExtractManyBaggageHeadersAggregateBudget(t *testing.T) {
+	prop := propagation.Baggage{}
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+
+	// Send 100 baggage headers, each ~200 bytes. Total: ~20KB.
+	// Only headers fitting within the 8192-byte aggregate budget should be processed.
+	for i := range 100 {
+		req.Header.Add("baggage", fmt.Sprintf("k%d=%s", i, strings.Repeat("v", 190)))
+	}
+
+	ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
+	got := baggage.FromContext(ctx)
+
+	// Each header is ~195 bytes. Budget of 8192 / ~195 = ~42 headers processed.
+	// The exact count depends on key length (k0..k99), but should be well under 100.
+	assert.Less(t, got.Len(), 100, "should not process all 100 headers")
+	assert.Greater(t, got.Len(), 0, "should process some headers")
 }

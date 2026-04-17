@@ -15,7 +15,8 @@ const (
 
 	// W3C Baggage specification limits.
 	// https://www.w3.org/TR/baggage/#limits
-	maxMembers = 64
+	maxMembers               = 64
+	maxBytesPerBaggageString = 8192
 )
 
 // Baggage is a propagator that supports the W3C Baggage format.
@@ -72,7 +73,13 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	}
 
 	var members []baggage.Member
+	var totalBytes int
 	for _, bStr := range bVals {
+		totalBytes += len(bStr)
+		if totalBytes > maxBytesPerBaggageString {
+			break
+		}
+
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
 			errorhandler.GetErrorHandler().Handle(err)

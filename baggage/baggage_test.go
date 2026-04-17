@@ -528,8 +528,7 @@ func TestBaggageParse(t *testing.T) {
 		{
 			name: "invalid baggage string: too large",
 			in:   tooLarge,
-			// tooLarge is a single key without "=", so parseMember fails
-			err: errInvalidMember,
+			err:  errBaggageBytes,
 		},
 		{
 			name: "baggage string with too many members keeps first 64",
@@ -544,31 +543,26 @@ func TestBaggageParse(t *testing.T) {
 			err: errMemberNumber,
 		},
 		{
-			name: "baggage string exceeds byte limit returns partial result",
+			name: "baggage string at max size is accepted",
 			in: func() string {
-				// Create members that collectively exceed maxBytesPerBaggageString.
-				// Each member: "kN=" + value. We use values large enough that
-				// a few members fit but the total exceeds 8192 bytes.
+				// Create a baggage string of exactly maxBytesPerBaggageString.
+				// 3 members: "k0=" + 2727v + "," + "k1=" + 2727v + "," + "k2=" + 2727v
+				// = 3*(3+2727) + 2 = 8192
+				val := strings.Repeat("v", 2727)
 				var parts []string
-				val := strings.Repeat("v", 2000)
-				for i := range 10 {
+				for i := range 3 {
 					parts = append(parts, fmt.Sprintf("k%d=%s", i, val))
 				}
 				return strings.Join(parts, ",")
 			}(),
 			want: func() baggage.List {
-				// Only members that fit within 8192 bytes should be kept.
-				// Each member is ~2003 bytes ("kN=" + 2000 "v"s), plus comma.
-				// 4 members = 4*2003 + 3 commas = 8015 bytes (fits).
-				// 5 members = 5*2003 + 4 commas = 10019 bytes (exceeds).
 				b := make(baggage.List)
-				val := strings.Repeat("v", 2000)
-				for i := range 4 {
+				val := strings.Repeat("v", 2727)
+				for i := range 3 {
 					b[fmt.Sprintf("k%d", i)] = baggage.Item{Value: val}
 				}
 				return b
 			}(),
-			err: errBaggageBytes,
 		},
 		{
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
@@ -1271,4 +1265,38 @@ func BenchmarkMemberString(b *testing.B) {
 	for b.Loop() {
 		_ = member.String()
 	}
+}
+
+func BenchmarkParseOversized(b *testing.B) {
+	// 1MB oversized baggage string.
+	oversized := strings.Repeat("k=v,", 250000)
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		benchBaggage, _ = Parse(oversized)
+	}
+}
+
+func TestParseErrorCap(t *testing.T) {
+	// Build a baggage string with many invalid members (no '=' delimiter).
+	// All within the 8192 byte limit.
+	var parts []string
+	for i := range 20 {
+		parts = append(parts, fmt.Sprintf("bad%d", i))
+	}
+	// Add one valid member so the baggage is not empty.
+	parts = append(parts, "good=val")
+	bStr := strings.Join(parts, ",")
+
+	b, err := Parse(bStr)
+	assert.ErrorIs(t, err, errInvalidMember)
+	assert.Equal(t, 1, b.Len(), "should return the valid member")
+
+	// Count the number of joined errors.
+	errs := err.Error()
+	invalidCount := strings.Count(errs, "invalid baggage list-member")
+	assert.Equal(t, maxParseErrors, invalidCount,
+		"should cap individual parse errors at maxParseErrors")
+	assert.Contains(t, errs, "and 15 more invalid members")
 }
