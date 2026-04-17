@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -730,4 +731,53 @@ func TestPipelineProduceErrors(t *testing.T) {
 		assert.Equal(t, [3]int{3, 3, 3}, callbackCounts)
 		assert.Equal(t, 3, aggCallCount)
 	})
+}
+
+// TestPipelineNoDeadlockOnInstrumentCreationDuringCallback verifies that
+// creating a new instrument (e.g. a counter) inside an observable callback
+// does not deadlock. This is a regression test for the scenario where
+// produce() held the pipeline lock while executing callbacks, and a callback
+// tried to register a new instrument which also needed the lock.
+func TestPipelineNoDeadlockOnInstrumentCreationDuringCallback(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	oc, err := m.Int64ObservableCounter("observable-counter")
+	require.NoError(t, err)
+
+	// Register a callback that creates a new counter during collection.
+	// Before the fix, this would deadlock because produce() held the
+	// pipeline lock while running callbacks, and creating a counter
+	// calls addSync which also acquires the lock.
+	_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		o.ObserveInt64(oc, 10)
+		// This counter creation requires pipeline.addSync, which acquires
+		// the pipeline lock. If produce() still holds the lock, deadlock.
+		counter, cErr := m.Int64Counter("counter-created-in-callback")
+		if cErr != nil {
+			return cErr
+		}
+		counter.Add(context.Background(), 1)
+		return nil
+	}, oc)
+	require.NoError(t, err)
+
+	// Use a timeout to detect deadlock: if Collect doesn't return promptly,
+	// the test will fail via the race/deadlock rather than hanging forever.
+	done := make(chan error, 1)
+	go func() {
+		rm := metricdata.ResourceMetrics{}
+		done <- reader.Collect(t.Context(), &rm)
+	}()
+
+	select {
+	case err := <-done:
+		assert.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		// Dump goroutines to help diagnose the deadlock.
+		buf := make([]byte, 1<<16)
+		n := runtime.Stack(buf, true)
+		t.Fatalf("deadlock detected: produce() did not return within timeout\n%s", buf[:n])
+	}
 }
