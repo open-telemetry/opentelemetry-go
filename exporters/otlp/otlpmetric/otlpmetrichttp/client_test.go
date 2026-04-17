@@ -722,3 +722,80 @@ func BenchmarkExporterExportMetrics(b *testing.B) {
 		run(b)
 	})
 }
+
+func TestClientInstrumentationStaleStatusCode(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	const id = 0
+	origID := counter.SetExporterID(id)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	// Use a client that returns a 503 error once and then a network error.
+	var calls int
+	client := &http.Client{
+		Transport: roundTripperFunc(func(_ *http.Request) (*http.Response, error) {
+			calls++
+			if calls == 1 {
+				return &http.Response{
+					StatusCode: http.StatusServiceUnavailable,
+					Status: fmt.Sprintf("%d %s",
+						http.StatusServiceUnavailable,
+						http.StatusText(http.StatusServiceUnavailable)),
+					Header: make(http.Header),
+					Body:   io.NopCloser(strings.NewReader("")),
+				}, nil
+			}
+			return nil, errors.New("network error")
+		}),
+	}
+
+	ctx := t.Context()
+	exp, err := New(ctx,
+		WithHTTPClient(client),
+		WithInsecure(),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	require.NoError(t, err)
+
+	err = exp.Export(ctx, &metricdata.ResourceMetrics{})
+	assert.Error(t, err)
+
+	require.NoError(t, exp.Shutdown(ctx))
+
+	// Validate that the status code is 0 and not the stale 503 on self-observability metrics.
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &got))
+
+	require.Len(t, got.ScopeMetrics, 1)
+	metrics := got.ScopeMetrics[0].Metrics
+	var found bool
+	for _, m := range metrics {
+		if m.Name != (otelconv.SDKExporterOperationDuration{}).Name() {
+			continue
+		}
+		found = true
+		data := m.Data.(metricdata.Histogram[float64])
+		require.NotEmpty(t, data.DataPoints)
+		dp := data.DataPoints[0]
+		_, ok := dp.Attributes.Value(otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(0).Key)
+		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
+	}
+	assert.True(t, found, "expected to find operation duration metric")
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
