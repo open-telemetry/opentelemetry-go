@@ -770,6 +770,97 @@ func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
 	}
 }
 
+func TestClientInstrumentationStatusCodeResetOnRetry(t *testing.T) {
+	// Verify that a statusCode set by a previous retry attempt does not leak
+	// into op.End when the final attempt fails with a network error before
+	// receiving an HTTP response.
+	//
+	// Regression test for https://github.com/open-telemetry/opentelemetry-go/issues/8218
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	const id = 1
+	counter.SetExporterID(id)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	// First request returns 429 (retryable, sets statusCode=429 in the loop).
+	// Second request closes the connection before sending a response — a
+	// non-temporary network error that exits the retry loop immediately.
+	var mu sync.Mutex
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls++
+		n := calls
+		mu.Unlock()
+
+		if n == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		conn, _, err := hj.Hijack()
+		if err != nil {
+			return
+		}
+		conn.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  5 * time.Second,
+		}),
+	)
+	exporter, err := otlptrace.New(t.Context(), driver)
+	require.NoError(t, err)
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.Error(t, err)
+
+	require.NoError(t, exporter.Shutdown(t.Context()))
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	require.Len(t, got.ScopeMetrics, 1)
+
+	opDurationName := otelconv.SDKExporterOperationDuration{}.Name()
+	var opDuration *metricdata.Metrics
+	for i := range got.ScopeMetrics[0].Metrics {
+		m := &got.ScopeMetrics[0].Metrics[i]
+		if m.Name == opDurationName {
+			opDuration = m
+			break
+		}
+	}
+	require.NotNil(t, opDuration, "opDuration metric not found")
+
+	hist, ok := opDuration.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, hist.DataPoints, 1)
+
+	// The status code recorded must be 0 (no HTTP response on the final
+	// attempt), not 429 leaked from the first attempt.
+	statusAttr, found := hist.DataPoints[0].Attributes.Value(attribute.Key("http.response.status_code"))
+	if found {
+		assert.NotEqual(t, int64(http.StatusTooManyRequests), statusAttr.AsInt64(),
+			"status code 429 from a previous retry must not be reported when the final attempt fails with a network error")
+	}
+}
+
 func BenchmarkExporterExportSpans(b *testing.B) {
 	const n = 10
 

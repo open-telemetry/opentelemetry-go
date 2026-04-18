@@ -186,6 +186,11 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		default:
 		}
 
+		// Reset statusCode at the start of each attempt so a status from a
+		// previous retry does not leak into op.End if this attempt fails
+		// before receiving an HTTP response (e.g. network error).
+		statusCode = 0
+
 		request.reset(ctx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := d.client.Do(request.Request)
