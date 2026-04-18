@@ -346,14 +346,11 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	}
 }
 
-// truncateAttr returns a truncated version of attr. Only string, string-slice,
-// and byte-slice attribute values are truncated. String values are truncated
-// to at most limit characters, and byte-slice values are truncated to at most
-// limit bytes. Each string in a string slice is truncated in this fashion
 // truncateAttr returns a truncated version of attr. Only string, string
-// slice, and slice attribute values are truncated. String values are truncated
+// slice, byte slice, and slice attribute values are truncated. String values are truncated
 // to at most a length of limit. Each string slice value is truncated in this
-// fashion (the slice length itself is unaffected). For slice attribute values,
+// fashion (the slice length itself is unaffected), and byte slice values are truncated to at most
+// limit byte.. For slice attribute values,
 // the limit is applied to each element recursively.
 //
 // No truncation is performed for a negative limit.
@@ -392,7 +389,7 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 }
 
 // truncateValue returns a truncated version of v. Only string, string slice,
-// and (recursively) slice values are modified.
+// byte slice, and (recursively) slice values are modified.
 //
 // No truncation is performed for a negative limit.
 func truncateValue(limit int, v attribute.Value) attribute.Value {
@@ -405,6 +402,12 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 			ss[i] = truncate(limit, ss[i])
 		}
 		return attribute.StringSliceValue(ss)
+
+	case attribute.BYTESLICE:
+		bs := v.AsByteSlice()
+		if limit >= 0 && len(bs) > limit {
+			return attribute.ByteSliceValue(bs[:limit])
+		}
 	case attribute.SLICE:
 		sl := v.AsSlice()
 		if !slices.ContainsFunc(sl, func(e attribute.Value) bool { return needsTruncation(limit, e) }) {
@@ -434,6 +437,11 @@ func needsTruncation(limit int, v attribute.Value) bool {
 	switch v.Type() {
 	case attribute.STRING:
 		return stringNeedsTruncation(limit, v.AsString())
+	case attribute.BYTESLICE:
+		bs := v.AsByteSlice()
+		if limit >= 0 && len(bs) > limit {
+			return true
+		}
 	case attribute.STRINGSLICE:
 		for _, s := range v.AsStringSlice() {
 			if stringNeedsTruncation(limit, s) {

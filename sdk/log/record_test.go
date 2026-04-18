@@ -1292,6 +1292,18 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 				log.StringValue("tool"),
 			),
 		},
+		{
+			name:  "TruncationInNestedSliceOfBytes",
+			limit: 4,
+			input: log.SliceValue(
+				log.BytesValue([]byte("good")),
+				log.BytesValue([]byte("toolong")),
+			),
+			want: log.SliceValue(
+				log.BytesValue([]byte("good")),
+				log.BytesValue([]byte("tool")),
+			),
+		},
 	}
 
 	for _, tc := range testcases {

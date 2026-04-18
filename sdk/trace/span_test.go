@@ -225,6 +225,8 @@ func TestTruncateAttr(t *testing.T) {
 			limit: 128,
 			attr:  bytesAttr,
 			want:  bytesAttr,
+		},
+		{
 			// Multi-byte string: byte length (9) exceeds limit (5) but rune count (3) does not.
 			// Must not be truncated.
 			limit: 5,
@@ -324,6 +326,37 @@ func TestTruncateAttr(t *testing.T) {
 			limit: 2,
 			attr:  attribute.Slice(key, attribute.StringValue("日\x80")), // 2 runes (日 + invalid byte), 4 bytes
 			want:  attribute.Slice(key, attribute.StringValue("日")),
+		},
+		{
+			// BYTESLICE within SLICE: each byte slice is truncated.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.ByteSliceValue([]byte{1, 2, 3})),
+			want:  attribute.Slice(key, attribute.ByteSliceValue([]byte{1, 2})),
+		},
+		{
+			// BYTESLICE within SLICE: no truncation needed.
+			limit: 5,
+			attr:  attribute.Slice(key, attribute.ByteSliceValue([]byte{1, 2})),
+			want:  attribute.Slice(key, attribute.ByteSliceValue([]byte{1, 2})),
+		},
+		{
+			// Mixed SLICE: BYTESLICE + STRING (both need truncation).
+			limit: 2,
+			attr: attribute.Slice(key,
+				attribute.ByteSliceValue([]byte{1, 2, 3}),
+				attribute.StringValue("abc"),
+			),
+			want: attribute.Slice(key,
+				attribute.ByteSliceValue([]byte{1, 2}),
+				attribute.StringValue("ab"),
+			),
+		},
+
+		{
+			// BYTESLICE within SLICE: each byte slice is truncated.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.ByteSliceValue([]byte{1, 2, 3})),
+			want:  attribute.Slice(key, attribute.ByteSliceValue([]byte{1, 2})),
 		},
 	}
 
