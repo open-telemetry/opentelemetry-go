@@ -135,12 +135,15 @@ func (s Set) NewDistinctWithFilter(filter Filter) Distinct {
 	if s.Len() == 0 {
 		return Distinct{hash: emptySet.hash}
 	}
+	if filter == nil {
+		return s.Equivalent()
+	}
 	h := xxhash.New()
 	hasAttributes := false
 	iter := s.Iter()
 	for iter.Next() {
 		kv := iter.Attribute()
-		if filter == nil || filter(kv) {
+		if filter(kv) {
 			h = hashKV(h, kv)
 			hasAttributes = true
 		}
