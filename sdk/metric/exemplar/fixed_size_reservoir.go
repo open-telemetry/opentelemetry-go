@@ -104,9 +104,9 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 // Reservoir in making a sampling decision.
 //
 // The time t is the time when the measurement was made. The n is the value
-// and attr and fltr are used to compute the filtered attributes of the
-// measurement. OfferLazy allows the reservoir to only compute dropped
-// attributes if an exemplar is sampled.
+// and attr and fltr are used to compute the dropped (filtered-out)
+// attributes of the measurement. OfferLazy allows the reservoir to only
+// compute dropped attributes if an exemplar is sampled.
 func (r *FixedSizeReservoir) OfferLazy(
 	ctx context.Context,
 	t time.Time,
@@ -142,7 +142,9 @@ func (r *FixedSizeReservoir) OfferLazy(
 // The way a "replacement" count is computed is by looking at `n` number of
 // independent random numbers each corresponding to an offered measurement.
 // Of these numbers the smallest `k` (the same size as the storage
-// capacity) of them are kept as a subset. The maximum value in this
+// capacity) of them are kept as a subset. The maximum value in this subset
+// determines when the next offered measurement will replace an existing
+// exemplar.
 // By weighting the next count computation like described, it is able to
 // perform a uniformly-weighted sampling algorithm based on the number of
 // samples the reservoir has seen so far. The sampling will "slow down" as
