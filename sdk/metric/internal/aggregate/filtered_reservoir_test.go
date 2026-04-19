@@ -39,6 +39,12 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			expectConcurrentSafe: true,
 			expectOfferLazy:      true,
 		},
+		{
+			desc:                 "offer lazy not concurrent safe",
+			reservoir:            &notConcurrentSafeOfferLazyReservoir{},
+			expectConcurrentSafe: false,
+			expectOfferLazy:      true,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			reservoir := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, tc.reservoir)
@@ -57,7 +63,11 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			assert.Equal(t, reservoir.(*filteredExemplarReservoir[int64]).concurrentSafe, tc.expectConcurrentSafe)
 
 			if tc.expectOfferLazy {
-				assert.True(t, tc.reservoir.(*offerLazyReservoir).offerLazyCalled)
+				if r, ok := tc.reservoir.(offerLazyReporter); ok {
+					assert.True(t, r.OfferLazyCalled())
+				} else {
+					t.Fatal("reservoir does not implement offerLazyReporter")
+				}
 			}
 		})
 	}
@@ -111,9 +121,17 @@ func (r *concurrentSafeReservoir) Collect(dest *[]exemplar.Exemplar) {
 	r.base.Collect(dest)
 }
 
+type offerLazyReporter interface {
+	OfferLazyCalled() bool
+}
+
 type offerLazyReservoir struct {
 	concurrentSafeReservoir
 	offerLazyCalled bool
+}
+
+func (r *offerLazyReservoir) OfferLazyCalled() bool {
+	return r.offerLazyCalled
 }
 
 func (r *offerLazyReservoir) OfferLazy(
@@ -127,4 +145,28 @@ func (r *offerLazyReservoir) OfferLazy(
 	defer r.Unlock()
 	r.offerLazyCalled = true
 	r.base.Offer(ctx, t, val, getDroppedAttributes(attr, fltr))
+}
+
+type notConcurrentSafeOfferLazyReservoir struct {
+	notConcurrentSafeReservoir
+	offerLazyCalled bool
+}
+
+func (r *notConcurrentSafeOfferLazyReservoir) OfferLazyCalled() bool {
+	return r.offerLazyCalled
+}
+
+func (r *notConcurrentSafeOfferLazyReservoir) OfferLazy(
+	_ context.Context,
+	t time.Time,
+	val exemplar.Value,
+	attr attribute.Set,
+	fltr attribute.Filter,
+) {
+	r.offerLazyCalled = true
+	r.ex = exemplar.Exemplar{
+		FilteredAttributes: getDroppedAttributes(attr, fltr),
+		Time:               t,
+		Value:              val,
+	}
 }
