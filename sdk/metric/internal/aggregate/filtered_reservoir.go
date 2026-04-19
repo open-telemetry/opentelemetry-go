@@ -68,17 +68,20 @@ func (f *filteredExemplarReservoir[N]) Offer(
 	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
 		ts := time.Now()
-		if !f.concurrentSafe {
-			f.reservoirMux.Lock()
-			defer f.reservoirMux.Unlock()
-		}
-
 		if f.lazyRes != nil {
+			if !f.concurrentSafe {
+				f.reservoirMux.Lock()
+				defer f.reservoirMux.Unlock()
+			}
 			f.lazyRes.OfferLazy(ctx, ts, exemplar.NewValue(val), attr, fltr)
 			return
 		}
 
 		dropped := getDroppedAttributes(attr, fltr)
+		if !f.concurrentSafe {
+			f.reservoirMux.Lock()
+			defer f.reservoirMux.Unlock()
+		}
 		f.reservoir.Offer(ctx, ts, exemplar.NewValue(val), dropped)
 	}
 }
