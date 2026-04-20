@@ -24,10 +24,10 @@ all instruments fall into two overlapping logical categories: asynchronous or
 synchronous, and int64 or float64.
 
 All synchronous instruments ([Int64Counter], [Int64UpDownCounter],
-[Int64Histogram], [Float64Counter], [Float64UpDownCounter], and
-[Float64Histogram]) are used to measure the operation and performance of source
-code during the source code execution. These instruments only make measurements
-when the source code they instrument is run.
+[Int64Histogram], [Int64Gauge], [Float64Counter], [Float64UpDownCounter],
+[Float64Histogram], and [Float64Gauge]) are used to measure the operation and
+performance of source code during the source code execution. These instruments
+only make measurements when the source code they instrument is run.
 
 All asynchronous instruments ([Int64ObservableCounter],
 [Int64ObservableUpDownCounter], [Int64ObservableGauge],
@@ -82,11 +82,11 @@ Measurements are made by recording values and information about the values with
 an instrument. How these measurements are recorded depends on the instrument.
 
 Measurements for synchronous instruments ([Int64Counter], [Int64UpDownCounter],
-[Int64Histogram], [Float64Counter], [Float64UpDownCounter], and
-[Float64Histogram]) are recorded using the instrument methods directly. All
-counter instruments have an Add method that is used to measure an increment
-value, and all histogram instruments have a Record method to measure a data
-point.
+[Int64Histogram], [Int64Gauge], [Float64Counter], [Float64UpDownCounter],
+[Float64Histogram], and [Float64Gauge]) are recorded using the instrument
+methods directly. All counter instruments have an Add method that is used to
+measure an increment value, and all histogram and synchronous gauge
+instruments have a Record method to measure a data point.
 
 Asynchronous instruments ([Int64ObservableCounter],
 [Int64ObservableUpDownCounter], [Int64ObservableGauge],
