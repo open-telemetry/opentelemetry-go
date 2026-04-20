@@ -86,6 +86,7 @@ func (ssp *SSP) addOption(err error) []metric.AddOption {
 	}
 	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
 	defer func() {
+		clear(*attrs)
 		*attrs = (*attrs)[:0] // reset the slice for reuse
 		measureAttrsPool.Put(attrs)
 	}()

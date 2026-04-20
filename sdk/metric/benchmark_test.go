@@ -635,12 +635,14 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 								func() {
 									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
 									defer func() {
+										clear(*attrsSlice)
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
+										clear(*addOpt)
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
@@ -664,12 +666,14 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 								func() {
 									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
 									defer func() {
+										clear(*attrsSlice)
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
+										clear(*addOpt)
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
