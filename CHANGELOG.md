@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
 - Add `Slice` and `SliceValue` functions for new `SLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#8166)
+- Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8216)
+- Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8216)
+- Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8216)
+- Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8216)
 - Apply `AttributeValueLengthLimit` to `attribute.SLICE` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained string values. (#8217)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
@@ -44,6 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/exporters/prometheus` now uses `Value.String` formatting for label values following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8170)
 - Propagate errors from the exporter when calling `Shutdown` on `BatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#8197)
 - Fix stale status code reporting on self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8226)
+- Fix a concurrent `Collect` data race and potential panic in `go.opentelemetry.io/otel/exporters/prometheus` when `WithResourceAsConstantLabels` option is used. (#8227)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
