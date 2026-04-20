@@ -21,6 +21,7 @@ import (
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
@@ -46,6 +47,11 @@ func newNoopClient() *client {
 var exporterN atomic.Int64
 
 var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
+
+const (
+	contentTypeProto = "application/x-protobuf"
+	contentTypeJSON  = "application/json"
+)
 
 // maxResponseBodySize is the maximum number of bytes to read from a response
 // body. It is set to 4 MiB per the OTLP specification recommendation to
@@ -100,7 +106,14 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 		return nil, err
 	}
 
-	userAgent := "OTel Go OTLP over HTTP/protobuf logs exporter/" + Version()
+	contentType := contentTypeProto
+	agentEncoding := "protobuf"
+	if cfg.encoding.Value == JSONEncoding {
+		contentType = contentTypeJSON
+		agentEncoding = "JSON"
+	}
+
+	userAgent := "OTel Go OTLP over HTTP/" + agentEncoding + " logs exporter/" + Version()
 	req.Header.Set("User-Agent", userAgent)
 
 	if n := len(cfg.headers.Value); n > 0 {
@@ -108,10 +121,11 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 			req.Header.Set(k, v)
 		}
 	}
-	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Content-Type", contentType)
 
 	c := &httpClient{
 		compression: cfg.compression.Value,
+		encoding:    cfg.encoding.Value,
 		req:         req,
 		requestFunc: cfg.retryCfg.Value.RequestFunc(evaluate),
 		client:      hc,
@@ -127,6 +141,7 @@ type httpClient struct {
 	// req is cloned for every upload the client makes.
 	req         *http.Request
 	compression Compression
+	encoding    Encoding
 	requestFunc retry.RequestFunc
 	client      *http.Client
 
@@ -155,7 +170,14 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 	// after the Exporter is shutdown. Only thing to do here is send data.
 
 	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: data}
-	body, err := proto.Marshal(pbRequest)
+	var body []byte
+	var err error
+	switch c.encoding {
+	case JSONEncoding:
+		body, err = protojson.Marshal(pbRequest)
+	default:
+		body, err = proto.Marshal(pbRequest)
+	}
 	if err != nil {
 		return err
 	}
@@ -212,19 +234,26 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
-				var respProto collogpb.ExportLogsServiceResponse
+			var respProto collogpb.ExportLogsServiceResponse
+			switch resp.Header.Get("Content-Type") {
+			case contentTypeProto:
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
 				}
+			case contentTypeJSON:
+				if err := protojson.Unmarshal(respData.Bytes(), &respProto); err != nil {
+					return err
+				}
+			default:
+				return nil
+			}
 
-				if respProto.PartialSuccess != nil {
-					msg := respProto.PartialSuccess.GetErrorMessage()
-					n := respProto.PartialSuccess.GetRejectedLogRecords()
-					if n != 0 || msg != "" {
-						err := internal.LogPartialSuccessError(n, msg)
-						uploadErr = errors.Join(uploadErr, err)
-					}
+			if respProto.PartialSuccess != nil {
+				msg := respProto.PartialSuccess.GetErrorMessage()
+				n := respProto.PartialSuccess.GetRejectedLogRecords()
+				if n != 0 || msg != "" {
+					err := internal.LogPartialSuccessError(n, msg)
+					uploadErr = errors.Join(uploadErr, err)
 				}
 			}
 			return nil
