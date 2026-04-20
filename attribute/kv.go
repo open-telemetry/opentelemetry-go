@@ -71,14 +71,14 @@ func (kv KeyValue) String() string {
 			n += l*float64ArrayElemMaxLen + (l-1)*commaLen
 		}
 	case STRING:
-		n += len(kv.Value.stringly) + 2
+		n += len(kv.Value.stringly) + quotesLen
 	case STRINGSLICE:
 		n += jsonArrayBracketsLen
 		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
 			n += l*smallObjectLen + (l-1)*commaLen
 		}
 	case BYTESLICE:
-		n += base64.StdEncoding.EncodedLen(len(kv.Value.stringly)) + 2
+		n += base64.StdEncoding.EncodedLen(len(kv.Value.stringly)) + quotesLen
 	case SLICE:
 		n += jsonArrayBracketsLen
 		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
