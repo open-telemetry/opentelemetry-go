@@ -66,6 +66,13 @@ type FixedSizeReservoir struct {
 // parameters are the value and dropped (filtered) attributes of the
 // measurement respectively.
 func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
+	if r.k == 0 {
+		// A zero-sized reservoir can't hold anything; the random-index
+		// branch below would panic in rand.IntN(0). Callers that
+		// construct a zero reservoir directly (the SDK prevents it, but
+		// see #8232) should get a silent no-op, not a panic.
+		return
+	}
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
