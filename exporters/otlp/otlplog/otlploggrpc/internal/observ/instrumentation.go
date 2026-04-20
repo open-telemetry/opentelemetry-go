@@ -68,6 +68,7 @@ var (
 
 func get[T any](p *sync.Pool) *[]T { return p.Get().(*[]T) }
 func put[T any](p *sync.Pool, s *[]T) {
+	clear(*s) // erase elements to allow GC to collect what they refer to.
 	*s = (*s)[:0]
 	p.Put(s)
 }
@@ -274,7 +275,10 @@ var errPool = sync.Pool{
 // the provided non-nil err.
 func rejectedCount(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
-	defer errPool.Put(ps)
+	defer func() {
+		*ps = internal.PartialSuccess{} // erase fields to allow GC to collect them.
+		errPool.Put(ps)
+	}()
 
 	// check for partial success
 	if errors.As(err, ps) {

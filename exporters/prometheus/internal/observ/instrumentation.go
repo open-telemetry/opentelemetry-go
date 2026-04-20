@@ -71,6 +71,7 @@ var (
 func get[T any](p *sync.Pool) *[]T { return p.Get().(*[]T) }
 
 func put[T any](p *sync.Pool, s *[]T) {
+	clear(*s)     // erase elements to allow GC to collect what they refer to.
 	*s = (*s)[:0] // Reset.
 	p.Put(s)
 }

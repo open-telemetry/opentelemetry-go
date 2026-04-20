@@ -115,6 +115,7 @@ func (slp *SLP) addOption(err error) []metric.AddOption {
 	}
 	attrs := measureAttrsPool.Get().(*[]attribute.KeyValue)
 	defer func() {
+		clear(*attrs)
 		*attrs = (*attrs)[:0] // reset the slice
 		measureAttrsPool.Put(attrs)
 	}()

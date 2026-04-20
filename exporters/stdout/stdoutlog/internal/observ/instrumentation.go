@@ -71,6 +71,7 @@ func get[T any](pool *sync.Pool) *[]T {
 }
 
 func put[T any](pool *sync.Pool, value *[]T) {
+	clear(*value) // erase elements to allow GC to collect what they refer to.
 	*value = (*value)[:0]
 	pool.Put(value)
 }
