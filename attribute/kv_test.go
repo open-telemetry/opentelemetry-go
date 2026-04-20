@@ -67,6 +67,14 @@ func TestKeyValueConstructors(t *testing.T) {
 				Value: attribute.ByteSliceValue([]byte{123}),
 			},
 		},
+		{
+			name:   "Slice",
+			actual: attribute.Slice("k1", attribute.BoolValue(true), attribute.IntValue(42)),
+			expected: attribute.KeyValue{
+				Key:   "k1",
+				Value: attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(42)),
+			},
+		},
 	}
 
 	for _, test := range tt {
@@ -127,6 +135,11 @@ func TestKeyValueValid(t *testing.T) {
 			desc:  "non-empty key with BYTESLICE type Value should be valid",
 			valid: true,
 			kv:    attribute.ByteSlice("bytes", []byte{}),
+		},
+		{
+			desc:  "non-empty key with SLICE type Value should be valid",
+			valid: true,
+			kv:    attribute.Slice("slice", attribute.StringValue("value")),
 		},
 	}
 
@@ -222,6 +235,10 @@ func TestIncorrectCast(t *testing.T) {
 			name: "Empty",
 			val:  attribute.Value{},
 		},
+		{
+			name: "Slice",
+			val:  attribute.SliceValue(attribute.StringValue("value")),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -233,6 +250,7 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInt64()
 				tt.val.AsInt64Slice()
 				tt.val.AsInterface()
+				tt.val.AsSlice()
 				tt.val.AsString()
 				tt.val.AsStringSlice()
 				tt.val.AsByteSlice()

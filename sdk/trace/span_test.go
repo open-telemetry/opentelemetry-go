@@ -200,6 +200,107 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  strSliceAttr,
 			want:  strSliceAttr,
 		},
+		{
+			// Multi-byte string: byte length (9) exceeds limit (5) but rune count (3) does not.
+			// Must not be truncated.
+			limit: 5,
+			attr:  attribute.String(key, "日本語"),
+			want:  attribute.String(key, "日本語"),
+		},
+		{
+			// Multi-byte string: both byte length and rune count exceed limit.
+			// Must be truncated to limit runes.
+			limit: 2,
+			attr:  attribute.String(key, "日本語"),
+			want:  attribute.String(key, "日本"),
+		},
+		{
+			// STRINGSLICE with multi-byte elements: byte lengths exceed limit but rune counts do not.
+			// Must not be truncated.
+			limit: 1,
+			attr:  attribute.StringSlice(key, []string{"日", "本"}),
+			want:  attribute.StringSlice(key, []string{"日", "本"}),
+		},
+		// SLICE cases
+		{
+			limit: -1,
+			attr:  attribute.Slice(key, attribute.StringValue("value")),
+			want:  attribute.Slice(key, attribute.StringValue("value")),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Slice(key, attribute.BoolValue(true), attribute.StringValue("value")),
+			want:  attribute.Slice(key, attribute.BoolValue(true), attribute.StringValue("")),
+		},
+		{
+			limit: 5,
+			attr:  attribute.Slice(key, attribute.StringValue("value"), attribute.StringValue("toolong")),
+			want:  attribute.Slice(key, attribute.StringValue("value"), attribute.StringValue("toolo")),
+		},
+		{
+			// Nested SLICE: recursive truncation.
+			limit: 1,
+			attr:  attribute.Slice(key, attribute.SliceValue(attribute.StringValue("value"))),
+			want:  attribute.Slice(key, attribute.SliceValue(attribute.StringValue("v"))),
+		},
+		{
+			// STRINGSLICE within SLICE: each string element is truncated.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.StringSliceValue([]string{"abc", "de"})),
+			want:  attribute.Slice(key, attribute.StringSliceValue([]string{"ab", "de"})),
+		},
+		{
+			// STRINGSLICE within SLICE where all strings fit: no change.
+			// Exercises needsTruncation(STRINGSLICE) exhausting the loop without
+			// finding an over-limit string, returning false.
+			limit: 7,
+			attr:  attribute.Slice(key, attribute.StringSliceValue([]string{"value-0", "value-1"})),
+			want:  attribute.Slice(key, attribute.StringSliceValue([]string{"value-0", "value-1"})),
+		},
+		{
+			// Mixed SLICE: STRINGSLICE (all strings fit) + STRING (too long).
+			// Exercises recursive truncation over mixed slice elements: the
+			// STRINGSLICE element remains unchanged because each string fits
+			// within the limit, while the sibling STRING element is truncated.
+			limit: 3,
+			attr: attribute.Slice(key,
+				attribute.StringSliceValue([]string{"ab", "cd"}),
+				attribute.StringValue("toolong"),
+			),
+			want: attribute.Slice(key,
+				attribute.StringSliceValue([]string{"ab", "cd"}),
+				attribute.StringValue("too"),
+			),
+		},
+		{
+			// Nested SLICE (no truncation needed) alongside STRING (needs truncation).
+			// Exercises the truncateValue SLICE branch early-return path: truncateValue
+			// is called recursively on the nested SLICE but returns it unchanged because
+			// none of its elements require truncation.
+			limit: 3,
+			attr: attribute.Slice(key,
+				attribute.SliceValue(attribute.BoolValue(true)),
+				attribute.StringValue("toolong"),
+			),
+			want: attribute.Slice(key,
+				attribute.SliceValue(attribute.BoolValue(true)),
+				attribute.StringValue("too"),
+			),
+		},
+		{
+			// Multi-byte string whose byte length exceeds the limit but rune count
+			// does not: must not be truncated (guards use rune count, not byte length).
+			limit: 3,
+			attr:  attribute.Slice(key, attribute.StringValue("日本語")), // 3 runes, 9 bytes
+			want:  attribute.Slice(key, attribute.StringValue("日本語")),
+		},
+		{
+			// SLICE with invalid UTF-8 where rune count equals the limit:
+			// invalid byte is dropped.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.StringValue("日\x80")), // 2 runes (日 + invalid byte), 4 bytes
+			want:  attribute.Slice(key, attribute.StringValue("日")),
+		},
 	}
 
 	for _, test := range tests {

@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
 
 // keyVals is all the KeyValue generators that are used for testing. This is
@@ -38,36 +40,87 @@ var keyVals = []func(string) KeyValue{
 	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
 	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
+	func(k string) KeyValue { return Slice(k) },
+	func(k string) KeyValue { return Slice(k, BoolValue(true)) },
+	func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) },
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("triad"),
+			IntValue(3),
+			BoolValue(false),
+		)
+	},
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("quad"),
+			IntValue(4),
+			BoolValue(false),
+			Float64Value(4.25),
+		)
+	},
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("penta"),
+			IntValue(5),
+			BoolValue(true),
+			Float64Value(5.5),
+			ByteSliceValue([]byte("five")),
+		)
+	},
+	func(k string) KeyValue {
+		return Slice(k,
+			StringValue("nested"),
+			SliceValue(Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))),
+			BoolValue(true),
+			IntValue(6),
+			StringValue("tail"),
+			StringSliceValue([]string{"fallback"}),
+		)
+	},
 	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
 }
 
-func TestHashKVsEquality(t *testing.T) {
+func TestHashKVs(t *testing.T) {
 	type testcase struct {
+		num  int
 		hash uint64
 		kvs  []KeyValue
 	}
 
 	keys := []string{"k0", "k1"}
 
-	// Test all combinations up to length 3.
-	n := len(keyVals)
-	result := make([]testcase, 0, 1+len(keys)*(n+(n*n)+(n*n*n)))
+	// Track hashes as we generate them so collision detection stays linear.
+	i := 0
+	seen := make(map[uint64]testcase)
+	assertUniqueHash := func(kvs []KeyValue) {
+		hash := hashKVs(kvs)
+		tc := testcase{num: i, hash: hash, kvs: kvs}
+		i++
 
-	result = append(result, testcase{hashKVs(nil), nil})
+		if prev, ok := seen[hash]; ok {
+			t.Errorf("hashes equal: (%d: %d)%s == (%d: %d)%s",
+				prev.num, prev.hash, slice(prev.kvs), tc.num, tc.hash, slice(tc.kvs))
+			return
+		}
 
+		seen[hash] = tc
+	}
+
+	// Test empty slice.
+	assertUniqueHash(nil)
+
+	// Test all combinations of 1, 2, and 3 attributes with different keys and values.
 	for _, key := range keys {
 		for i := range keyVals {
 			kvs := []KeyValue{keyVals[i](key)}
-			hash := hashKVs(kvs)
-			result = append(result, testcase{hash, kvs})
+			assertUniqueHash(kvs)
 
 			for j := range keyVals {
 				kvs := []KeyValue{
 					keyVals[i](key),
 					keyVals[j](key),
 				}
-				hash := hashKVs(kvs)
-				result = append(result, testcase{hash, kvs})
+				assertUniqueHash(kvs)
 
 				for k := range keyVals {
 					kvs := []KeyValue{
@@ -75,46 +128,11 @@ func TestHashKVsEquality(t *testing.T) {
 						keyVals[j](key),
 						keyVals[k](key),
 					}
-					hash := hashKVs(kvs)
-					result = append(result, testcase{hash, kvs})
+					assertUniqueHash(kvs)
 				}
 			}
 		}
 	}
-
-	for i := 0; i < len(result); i++ {
-		hI, kvI := result[i].hash, result[i].kvs
-		for j := 0; j < len(result); j++ {
-			hJ, kvJ := result[j].hash, result[j].kvs
-			m := msg{i: i, j: j, hI: hI, hJ: hJ, kvI: kvI, kvJ: kvJ}
-			if i == j {
-				m.cmp = "=="
-				if hI != hJ {
-					t.Errorf("hashes not equal: %s", m)
-				}
-			} else {
-				m.cmp = "!="
-				if hI == hJ {
-					// Do not use testify/assert here. It is slow.
-					t.Errorf("hashes equal: %s", m)
-				}
-			}
-		}
-	}
-}
-
-type msg struct {
-	cmp      string
-	i, j     int
-	hI, hJ   uint64
-	kvI, kvJ []KeyValue
-}
-
-func (m msg) String() string {
-	return fmt.Sprintf(
-		"(%d: %d)%s %s (%d: %d)%s",
-		m.i, m.hI, slice(m.kvI), m.cmp, m.j, m.hJ, slice(m.kvJ),
-	)
 }
 
 func slice(kvs []KeyValue) string {
@@ -147,6 +165,53 @@ func BenchmarkHashKVs(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		hashKVs(attrs)
+	}
+}
+
+func BenchmarkHashValueSlice(b *testing.B) {
+	benches := []struct {
+		name string
+		v    Value
+	}{
+		{
+			name: "Len2",
+			v: SliceValue(
+				BoolValue(true),
+				StringValue("two"),
+			),
+		},
+		{
+			name: "Len5",
+			v: SliceValue(
+				BoolValue(true),
+				IntValue(2),
+				StringValue("three"),
+				Float64Value(4.5),
+				ByteSliceValue([]byte("five")),
+			),
+		},
+		{
+			name: "Len8Nested",
+			v: SliceValue(
+				BoolValue(true),
+				IntValue(2),
+				StringValue("three"),
+				Float64Value(4.5),
+				ByteSliceValue([]byte("five")),
+				SliceValue(StringValue("nested"), Int64Value(6)),
+				BoolSliceValue([]bool{true, false, true}),
+				StringSliceValue([]string{"seven", "eight"}),
+			),
+		},
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				hashValue(xxhash.New(), bench.v).Sum64()
+			}
+		})
 	}
 }
 
@@ -188,9 +253,9 @@ func FuzzHashKVs(f *testing.F) {
 			kvs = append(kvs, Bool(k5, b))
 		}
 
-		// Add slice types based on sliceType parameter
+		// Add slice types based on sliceType parameter.
 		if numAttrs > 5 {
-			switch sliceType % 5 {
+			switch sliceType % 6 {
 			case 0:
 				// Test BoolSlice with variable length.
 				bools := make([]bool, len(s)%5) // 0-4 elements
@@ -235,6 +300,21 @@ func FuzzHashKVs(f *testing.F) {
 					bytes[i] = byte(i + len(k1))
 				}
 				kvs = append(kvs, ByteSlice("bytes", bytes))
+			case 5:
+				values := make([]Value, len(s)%4) // 0-3 elements
+				for i := range values {
+					switch i % 4 {
+					case 0:
+						values[i] = BoolValue((i+len(k1))%2 == 0)
+					case 1:
+						values[i] = IntValue(i + len(k2))
+					case 2:
+						values[i] = StringValue(fmt.Sprintf("item_%d", i))
+					case 3:
+						values[i] = SliceValue(Float64Value(fVal), ByteSliceValue([]byte("bin")))
+					}
+				}
+				kvs = append(kvs, Slice("slice", values...))
 			}
 		}
 
@@ -315,6 +395,22 @@ func FuzzHashKVs(f *testing.F) {
 					val := modifiedKvs[0].Value.AsFloat64()
 					if !math.IsNaN(val) && !math.IsInf(val, 0) {
 						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
+					}
+				case SLICE:
+					origSlice := modifiedKvs[0].Value.AsSlice()
+					if len(origSlice) > 0 {
+						newSlice := slices.Clone(origSlice)
+						switch newSlice[0].Type() {
+						case INT64:
+							newSlice[0] = Int64Value(newSlice[0].AsInt64() + 1)
+						case BOOL:
+							newSlice[0] = BoolValue(!newSlice[0].AsBool())
+						case STRING:
+							newSlice[0] = StringValue(newSlice[0].AsString() + "_mod")
+						default:
+							newSlice[0] = StringValue("modified")
+						}
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice...)
 					}
 				case EMPTY:
 					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
