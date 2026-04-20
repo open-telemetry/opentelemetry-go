@@ -23,6 +23,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
 
@@ -106,78 +107,99 @@ func NewInstrumentation(id int64, componentType, serverAddress string, serverPor
 	return em, err
 }
 
-// TrackExport tracks an export operation and returns a function to complete the tracking.
-// The returned function should be called when the export operation completes.
-func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.ResourceMetrics) func(error) {
-	if em == nil || !em.enabled {
-		return func(error) {}
+// TrackExport tracks an export operation and returns an ExportOp to complete the tracking.
+func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.ResourceMetrics) ExportOp {
+	if em == nil {
+		return ExportOp{}
 	}
+	start := time.Now()
 
 	var dataPointCount int64
 	inflightEnabled := em.inflight.Enabled(ctx)
 	exportedEnabled := em.exported.Enabled(ctx)
-	durationEnabled := em.duration.Enabled(ctx)
 
 	if inflightEnabled || exportedEnabled {
 		dataPointCount = countDataPoints(rm)
-	}
-	var startTime time.Time
-	if durationEnabled {
-		startTime = time.Now()
 	}
 
 	if inflightEnabled {
 		em.inflight.Inst().Add(ctx, dataPointCount, em.addOpt)
 	}
 
-	return func(err error) {
-		if inflightEnabled {
-			em.inflight.Inst().Add(ctx, -dataPointCount, em.addOpt)
-		}
+	return ExportOp{
+		ctx:            ctx,
+		start:          start,
+		dataPointCount: dataPointCount,
+		inst:           em,
+	}
+}
 
-		if durationEnabled {
-			duration := time.Since(startTime).Seconds()
-			if err != nil {
-				attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
-				defer func() {
-					*attrsPtr = (*attrsPtr)[:0]
-					attrPool.Put(attrsPtr)
-				}()
+// ExportOp tracks the operation being observed by [Instrumentation.TrackExport].
+type ExportOp struct {
+	ctx            context.Context
+	start          time.Time
+	dataPointCount int64
 
-				*attrsPtr = append(*attrsPtr, em.attrs...)
-				*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
+	inst *Instrumentation
+}
 
-				recOptPtr := recOptPool.Get().(*[]metric.RecordOption)
-				defer func() {
-					*recOptPtr = (*recOptPtr)[:0]
-					recOptPool.Put(recOptPtr)
-				}()
+// End completes the observation of the operation being observed by a call to
+// [Instrumentation.TrackExport].
+//
+// Any error that is encountered is provided as err.
+func (e ExportOp) End(err error) {
+	if e.inst == nil {
+		return
+	}
+	if e.inst.inflight.Enabled(e.ctx) {
+		e.inst.inflight.Inst().Add(e.ctx, -e.dataPointCount, e.inst.addOpt)
+	}
 
-				set := attribute.NewSet(*attrsPtr...)
-				*recOptPtr = append(*recOptPtr, metric.WithAttributeSet(set))
+	success := successful(e.dataPointCount, err)
+	// Record successfully exported data points, even if the value is 0 which are
+	// meaningful to distribution aggregations.
+	if e.inst.exported.Enabled(e.ctx) {
+		e.inst.exported.Inst().Add(e.ctx, success, e.inst.addOpt)
+	}
 
-				em.duration.Inst().Record(ctx, duration, *recOptPtr...)
-			} else {
-				em.duration.Inst().Record(ctx, duration, em.recOpt)
-			}
-		}
+	if err != nil && e.inst.exported.Enabled(e.ctx) {
+		attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
+		defer func() {
+			*attrsPtr = (*attrsPtr)[:0]
+			attrPool.Put(attrsPtr)
+		}()
 
-		if exportedEnabled {
-			if err != nil {
-				attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
-				defer func() {
-					*attrsPtr = (*attrsPtr)[:0]
-					attrPool.Put(attrsPtr)
-				}()
+		*attrsPtr = append(*attrsPtr, e.inst.attrs...)
+		*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
 
-				*attrsPtr = append(*attrsPtr, em.attrs...)
-				*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
+		set := attribute.NewSet(*attrsPtr...)
+		e.inst.exported.Inst().Add(e.ctx, e.dataPointCount-success, metric.WithAttributeSet(set))
+	}
 
-				set := attribute.NewSet(*attrsPtr...)
-				em.exported.Inst().Add(ctx, dataPointCount, metric.WithAttributeSet(set))
-			} else {
-				em.exported.Inst().Add(ctx, dataPointCount, em.addOpt)
-			}
+	if e.inst.duration.Enabled(e.ctx) {
+		d := time.Since(e.start).Seconds()
+		if err != nil {
+			recOptPtr := recOptPool.Get().(*[]metric.RecordOption)
+			defer func() {
+				*recOptPtr = (*recOptPtr)[:0]
+				recOptPool.Put(recOptPtr)
+			}()
+
+			attrsPtr := attrPool.Get().(*[]attribute.KeyValue)
+			defer func() {
+				*attrsPtr = (*attrsPtr)[:0]
+				attrPool.Put(attrsPtr)
+			}()
+
+			*attrsPtr = append(*attrsPtr, e.inst.attrs...)
+			*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
+
+			set := attribute.NewSet(*attrsPtr...)
+			*recOptPtr = append(*recOptPtr, metric.WithAttributeSet(set))
+
+			e.inst.duration.Inst().Record(e.ctx, d, *recOptPtr...)
+		} else {
+			e.inst.duration.Inst().Record(e.ctx, d, e.inst.recOpt)
 		}
 	}
 }
@@ -214,6 +236,44 @@ func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
 		}
 	}
 	return total
+}
+
+// successful returns the number of successfully exported data points out of the n
+// that were exported based on the provided error.
+//
+// If err is nil, n is returned. All data points were successfully exported.
+//
+// If err is not nil and not an [internal.PartialSuccess] error, 0 is returned.
+// It is assumed all data points failed to be exported.
+//
+// If err is an [internal.PartialSuccess] error, the number of successfully
+// exported data points is computed by subtracting the RejectedItems field from n. If
+// RejectedItems is negative, n is returned. If RejectedItems is greater than
+// n, 0 is returned.
+func successful(n int64, err error) int64 {
+	if err == nil {
+		return n // All data points successfully exported.
+	}
+	// Split rejection calculation so successful is inlinable.
+	return n - rejected(n, err)
+}
+
+var errPartialPool = &sync.Pool{
+	New: func() any { return new(internal.PartialSuccess) },
+}
+
+// rejected returns how many out of the n data points exporter were rejected based on
+// the provided non-nil err.
+func rejected(n int64, err error) int64 {
+	ps := errPartialPool.Get().(*internal.PartialSuccess)
+	defer errPartialPool.Put(ps)
+	// Check for partial success.
+	if errors.As(err, ps) {
+		// Bound RejectedItems to [0, n]. This should not be needed,
+		// but be defensive as this is from an external source.
+		return min(max(ps.RejectedItems, 0), n)
+	}
+	return n // All data points rejected.
 }
 
 // ParseEndpoint extracts server address and port from an endpoint URL.
