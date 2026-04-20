@@ -99,8 +99,8 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
 
 	// Track export operation for self-observability
-	finishTracking := e.metrics.TrackExport(ctx, rm)
-	defer func() { finishTracking(finalErr) }()
+	op := e.metrics.TrackExport(ctx, rm)
+	defer func() { op.End(finalErr) }()
 
 	otlpRm, err := transform.ResourceMetrics(rm)
 	// Best effort upload of transformable metrics.

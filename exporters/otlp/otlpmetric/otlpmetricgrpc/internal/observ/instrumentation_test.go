@@ -23,6 +23,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
 
@@ -42,9 +43,8 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	finish := em.TrackExport(t.Context(), createTestResourceMetrics())
-	finish(nil)
-	finish(errors.New("test error"))
+	em.TrackExport(t.Context(), createTestResourceMetrics()).End(nil)
+	em.TrackExport(t.Context(), createTestResourceMetrics()).End(errors.New("test error"))
 
 	// Verify no metrics were recorded when disabled
 	rm := &metricdata.ResourceMetrics{}
@@ -192,6 +192,15 @@ func TestTrackExport(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.ServerAddress("localhost"),
+										semconv.ServerPort(4317),
+									),
+									Value: 0,
+								},
+								{
+									Attributes: attribute.NewSet(
 										semconv.ErrorType(errors.New("export failed")),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("test_component"),
@@ -246,6 +255,96 @@ func TestTrackExport(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "partial_success",
+			err: internal.PartialSuccess{
+				ErrorMessage:  "some points rejected",
+				RejectedItems: 3,
+				RejectedKind:  "metric data points",
+			},
+			wantMetrics: func(actualComponentName string) []metricdata.Metrics {
+				return []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.ServerAddress("localhost"),
+										semconv.ServerPort(4317),
+									),
+									Value: 7, // 10 total - 3 rejected
+								},
+								{
+									Attributes: attribute.NewSet(
+										semconv.ErrorType(internal.PartialSuccess{
+											ErrorMessage:  "some points rejected",
+											RejectedItems: 3,
+											RejectedKind:  "metric data points",
+										}),
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.ServerAddress("localhost"),
+										semconv.ServerPort(4317),
+									),
+									Value: 3, // 3 rejected
+								},
+							},
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: false,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.ServerAddress("localhost"),
+										semconv.ServerPort(4317),
+									),
+									Value: 0,
+								},
+							},
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+						Description: otelconv.SDKExporterOperationDuration{}.Description(),
+						Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.ErrorType(internal.PartialSuccess{
+											ErrorMessage:  "some points rejected",
+											RejectedItems: 3,
+											RejectedKind:  "metric data points",
+										}),
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.ServerAddress("localhost"),
+										semconv.ServerPort(4317),
+									),
+									Count: 1,
+								},
+							},
+						},
+					},
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -274,8 +373,7 @@ func TestTrackExport(t *testing.T) {
 			require.NotNil(t, em)
 			rm := createTestResourceMetrics()
 
-			finish := em.TrackExport(t.Context(), rm)
-			finish(tt.err)
+			em.TrackExport(t.Context(), rm).End(tt.err)
 
 			var got metricdata.ResourceMetrics
 			err = reader.Collect(t.Context(), &got)
@@ -565,7 +663,7 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.TrackExport(b.Context(), rm)(err)
+				inst.TrackExport(b.Context(), rm).End(err)
 			}
 		}
 	}
