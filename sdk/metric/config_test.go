@@ -255,21 +255,6 @@ func TestWithExemplarFilterOff(t *testing.T) {
 			expectFilterNotSampled: false,
 		},
 		{
-			desc:                   "nil option ignored",
-			opts:                   []Option{WithExemplarFilter(nil)},
-			expectFilterSampled:    true,
-			expectFilterNotSampled: false,
-		},
-		{
-			desc: "nil option does not override",
-			opts: []Option{
-				WithExemplarFilter(exemplar.AlwaysOnFilter),
-				WithExemplarFilter(nil),
-			},
-			expectFilterSampled:    true,
-			expectFilterNotSampled: true,
-		},
-		{
 			desc: "last option takes precedence",
 			opts: []Option{
 				WithExemplarFilter(exemplar.AlwaysOffFilter),

@@ -23,7 +23,7 @@ func reservoirFunc[N int64 | float64](
 	provider exemplar.ReservoirProvider,
 	filter exemplar.Filter,
 ) func(attribute.Set) aggregate.FilteredExemplarReservoir[N] {
-	if filter != nil && reflect.ValueOf(filter).Pointer() == reflect.ValueOf(exemplar.AlwaysOffFilter).Pointer() {
+	if reflect.ValueOf(filter).Pointer() == reflect.ValueOf(exemplar.AlwaysOffFilter).Pointer() {
 		return aggregate.DropReservoir[N]
 	}
 	return func(attrs attribute.Set) aggregate.FilteredExemplarReservoir[N] {
