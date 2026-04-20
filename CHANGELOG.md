@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8216)
 - Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8216)
 - Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8216)
+- Apply `AttributeValueLengthLimit` to `attribute.SLICE` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained string values. (#8217)
 - Add `Error` field on `Record` type in `go.opentelemetry.io/otel/log/logtest`. (#8148)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
@@ -46,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8152)
 - `go.opentelemetry.io/otel/exporters/prometheus` now uses `Value.String` formatting for label values following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8170)
 - Propagate errors from the exporter when calling `Shutdown` on `BatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#8197)
+- Fix a concurrent `Collect` data race and potential panic in `go.opentelemetry.io/otel/exporters/prometheus` when `WithResourceAsConstantLabels` option is used. (#8227)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
