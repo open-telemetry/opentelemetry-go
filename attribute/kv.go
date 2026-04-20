@@ -4,7 +4,11 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"encoding/base64"
 	"fmt"
+	"math"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -24,18 +28,68 @@ type KeyValue struct {
 //
 // [OpenTelemetry Attribute representation for non-OTLP]: https://opentelemetry.io/docs/specs/otel/common/#attribute-representation-for-non-otlp
 func (kv KeyValue) String() string {
-	const jsonSyntaxOverhead = len(`{"":""}`)
+	const jsonObjectSyntaxLen = len(`{"":}`)
 
 	var b strings.Builder
-	// Estimate the length of the resulting string to minimize allocations.
-	if kv.Value.Type() == STRING {
-		// For string values, we need to account for the quotes and potential escaping.
-		b.Grow(len(kv.Key) + len(kv.Value.stringly) + jsonSyntaxOverhead)
-	} else {
-		// For non-string values, use the smallObjectLen estimate.
-		// This can be improved in the future by adding specific estimates for different value types.
-		b.Grow(len(kv.Key) + smallObjectLen + jsonSyntaxOverhead)
+	n := len(kv.Key) + jsonObjectSyntaxLen
+	switch kv.Value.Type() {
+	case BOOL:
+		if kv.Value.AsBool() {
+			n += len("true")
+		} else {
+			n += len("false")
+		}
+	case BOOLSLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*boolArrayElemMaxLen + (l-1)*commaLen
+		}
+	case INT64:
+		var buf [int64ArrayElemMaxLen]byte
+		n += len(strconv.AppendInt(buf[:0], kv.Value.AsInt64(), 10))
+	case INT64SLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*int64ArrayElemMaxLen + (l-1)*commaLen
+		}
+	case FLOAT64:
+		val := kv.Value.AsFloat64()
+		switch {
+		case math.IsNaN(val):
+			n += len(`"NaN"`)
+		case math.IsInf(val, 1):
+			n += len(`"Infinity"`)
+		case math.IsInf(val, -1):
+			n += len(`"-Infinity"`)
+		default:
+			var buf [float64ArrayElemMaxLen]byte
+			n += len(strconv.AppendFloat(buf[:0], val, 'g', -1, 64))
+		}
+	case FLOAT64SLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*float64ArrayElemMaxLen + (l-1)*commaLen
+		}
+	case STRING:
+		n += len(kv.Value.stringly) + 2
+	case STRINGSLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*smallObjectLen + (l-1)*commaLen
+		}
+	case BYTESLICE:
+		n += base64.StdEncoding.EncodedLen(len(kv.Value.stringly)) + 2
+	case SLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*smallObjectLen + (l-1)*commaLen
+		}
+	case EMPTY:
+		n += len("null")
+	default:
+		n += len(`"unknown"`)
 	}
+	b.Grow(n)
 
 	_ = b.WriteByte('{')
 	appendJSONString(&b, string(kv.Key))
