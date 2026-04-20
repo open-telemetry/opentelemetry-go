@@ -6,6 +6,7 @@ package log_test
 import (
 	"context"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,7 +37,7 @@ type exporter struct {
 }
 
 func (e *exporter) Export(_ context.Context, r []log.Record) error {
-	e.records = r
+	e.records = slices.Clone(r) // don't retain the original slice
 	e.exportCalled = true
 	return nil
 }
