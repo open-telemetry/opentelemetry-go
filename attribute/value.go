@@ -413,7 +413,7 @@ const (
 	float64ArrayElemMaxLen = len("-1.7976931348623157e+308")
 	commaLen               = len(",")
 	quotesLen              = len(`""`)
-	// estimate for small JSON objects to help with Builder capacity calculations.
+	// estimate for a small JSON value to help with Builder capacity calculations.
 	smallObjectLen = len(`{"key":"value"}`)
 )
 
