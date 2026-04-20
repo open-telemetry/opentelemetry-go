@@ -406,6 +406,15 @@ func computeDataReflect(kvs []KeyValue) any {
 	return at.Interface()
 }
 
+// NewDistinctWithFilter returns a Distinct identifier for the
+// attributes in the Set that match the filter.
+func (s Set) NewDistinctWithFilter(filter Filter) Distinct {
+	if filter == nil {
+		return s.Equivalent()
+	}
+	return Distinct{hash: hashIteratorWithFilter(s.Iter(), filter)}
+}
+
 // MarshalJSON returns the JSON encoding of the Set.
 func (l *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(l.data)
