@@ -243,23 +243,25 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	originalCtx := ctx
 	ctx, cancel := context.WithTimeoutCause(ctx, r.timeout, errors.New("reader collect and export timeout"))
 	defer cancel()
+
+	var collectErr, exportErr error
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
-	err := r.Collect(ctx, rm)
-	if err == nil {
+	collectErr = r.Collect(ctx, rm)
+	if len(rm.ScopeMetrics) > 0 {
 		if r.batcher.size > 0 {
 			batches := r.batcher.splitResourceMetrics(rm)
 			for _, batch := range batches {
 				// The export timeout is applied individually to each batch by using
 				// the original context.
-				err = errors.Join(err, r.exportWithTimeout(originalCtx, batch))
+				exportErr = errors.Join(exportErr, r.exportWithTimeout(originalCtx, batch))
 			}
 		} else {
-			err = r.exporter.Export(ctx, rm)
+			exportErr = r.exporter.Export(ctx, rm)
 		}
 	}
 	r.rmPool.Put(rm)
-	return err
+	return errors.Join(collectErr, exportErr)
 }
 
 // Collect gathers all metric data related to the Reader from
@@ -304,9 +306,6 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 	}
 
 	err = ph.produce(ctx, rm)
-	if err != nil {
-		return err
-	}
 	for _, producer := range r.externalProducers.Load().([]Producer) {
 		externalMetrics, e := producer.Produce(ctx)
 		if e != nil {
