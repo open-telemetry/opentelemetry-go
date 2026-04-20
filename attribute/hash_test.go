@@ -135,56 +135,6 @@ func TestHashKVs(t *testing.T) {
 	}
 }
 
-func TestSetNewDistinctWithFilter(t *testing.T) {
-	k0 := String("k0", "v0")
-	k1 := String("k1", "v1")
-	s := NewSet(k0, k1)
-
-	t.Run("EmptySet", func(t *testing.T) {
-		empty := EmptySet()
-		d := empty.NewDistinctWithFilter(nil)
-		if d != (Distinct{hash: emptySet.hash}) {
-			t.Errorf("expected empty set hash, got %v", d)
-		}
-	})
-
-	t.Run("NilFilter", func(t *testing.T) {
-		d := s.NewDistinctWithFilter(nil)
-		if d != (&s).Equivalent() {
-			t.Errorf("expected %v, got %v", (&s).Equivalent(), d)
-		}
-	})
-
-	t.Run("FilterAll", func(t *testing.T) {
-		d := s.NewDistinctWithFilter(func(_ KeyValue) bool {
-			return true
-		})
-		if d != (&s).Equivalent() {
-			t.Errorf("expected %v, got %v", (&s).Equivalent(), d)
-		}
-	})
-
-	t.Run("FilterNone", func(t *testing.T) {
-		d := s.NewDistinctWithFilter(func(_ KeyValue) bool {
-			return false
-		})
-		if d != (Distinct{hash: emptySet.hash}) {
-			t.Errorf("expected empty set hash, got %v", d)
-		}
-	})
-
-	t.Run("FilterSome", func(t *testing.T) {
-		d := s.NewDistinctWithFilter(func(kv KeyValue) bool {
-			return string(kv.Key) == "k0"
-		})
-		expectedSet := NewSet(k0)
-		expected := (&expectedSet).Equivalent()
-		if d != expected {
-			t.Errorf("expected %v, got %v", expected, d)
-		}
-	})
-}
-
 func slice(kvs []KeyValue) string {
 	if len(kvs) == 0 {
 		return "[]"
