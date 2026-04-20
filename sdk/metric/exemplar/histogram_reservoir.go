@@ -28,9 +28,15 @@ func HistogramReservoirProvider(bounds []float64) ReservoirProvider {
 //
 // The passed bounds must be sorted before calling this function.
 func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
+	trackers := make([]nextTracker, len(bounds)+1)
+	for i := range trackers {
+		trackers[i].k = 1
+		trackers[i].reset()
+	}
 	return &HistogramReservoir{
-		bounds:  bounds,
-		storage: newStorage(len(bounds) + 1),
+		bounds:   bounds,
+		storage:  newStorage(len(bounds) + 1),
+		trackers: trackers,
 	}
 }
 
@@ -45,6 +51,9 @@ type HistogramReservoir struct {
 
 	// bounds are bucket bounds in ascending order.
 	bounds []float64
+
+	// trackers are the trackers for each bucket.
+	trackers []nextTracker
 }
 
 // Offer accepts the parameters associated with a measurement. The
@@ -71,7 +80,21 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 
 	idx := sort.SearchFloat64s(r.bounds, n)
 
-	r.store(ctx, idx, t, v, a)
+	tracker := &r.trackers[idx]
+	// See FixedSizeReservoir.Offer for an explanation of this logic.
+	count, next := tracker.incrementCount()
+	if count < 1 {
+		r.store(ctx, idx, t, v, a)
+	} else if count == next {
+		r.store(ctx, idx, t, v, a)
+		tracker.wMu.Lock()
+		defer tracker.wMu.Unlock()
+		newCount, newNext := tracker.loadCountAndNext()
+		if newNext < next || newCount < count {
+			return
+		}
+		tracker.advance()
+	}
 }
 
 // Collect returns all the held exemplars.
@@ -79,4 +102,7 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 // The Reservoir state is preserved after this call.
 func (r *HistogramReservoir) Collect(dest *[]Exemplar) {
 	r.storage.Collect(dest)
+	for i := range r.trackers {
+		r.trackers[i].reset()
+	}
 }
