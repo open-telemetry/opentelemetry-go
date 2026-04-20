@@ -24,7 +24,19 @@ type KeyValue struct {
 //
 // [OpenTelemetry Attribute representation for non-OTLP]: https://opentelemetry.io/docs/specs/otel/common/#attribute-representation-for-non-otlp
 func (kv KeyValue) String() string {
+	const jsonSyntaxOverhead = len(`{"":""}`)
+
 	var b strings.Builder
+	// Estimate the length of the resulting string to minimize allocations.
+	if kv.Value.Type() == STRING {
+		// For string values, we need to account for the quotes and potential escaping.
+		b.Grow(len(kv.Key) + len(kv.Value.stringly) + jsonSyntaxOverhead)
+	} else {
+		// For non-string values, use the smallObjectLen estimate.
+		// This can be improved in the future by adding specific estimates for different value types.
+		b.Grow(len(kv.Key) + smallObjectLen + jsonSyntaxOverhead)
+	}
+
 	_ = b.WriteByte('{')
 	appendJSONString(&b, string(kv.Key))
 	_ = b.WriteByte(':')
