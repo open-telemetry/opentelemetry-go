@@ -110,12 +110,21 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	count, next := r.incrementCount()
 	if count < r.k {
 		r.store(ctx, int(count), t, n, a)
-	} else if count == next {
+	} else if count >= next {
+		if !r.wMu.TryLock() {
+			return
+		}
+		defer r.wMu.Unlock()
+
+		_, currentNext := r.loadCountAndNext()
+		if currentNext > next {
+			return
+		}
+
 		// Overwrite a random existing measurement with the one offered.
 		idx := rand.IntN(int(r.k))
 		r.store(ctx, idx, t, n, a)
-		r.wMu.Lock()
-		defer r.wMu.Unlock()
+
 		newCount, newNext := r.loadCountAndNext()
 		if newNext < next || newCount < count {
 			// This Observe() raced with Collect(), and r.reset() has been

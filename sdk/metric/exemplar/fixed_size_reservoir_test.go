@@ -7,6 +7,8 @@ import (
 	"math"
 	"math/rand/v2"
 	"slices"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +84,52 @@ func TestNextTrackerAtomics(t *testing.T) {
 	count, next = nt.incrementCount()
 	assert.Equal(t, uint32(50), count)
 	assert.Equal(t, uint32(100), next)
+}
+
+func TestNewFixedSizeReservoirConcurrentSamplingCorrectness(t *testing.T) {
+	sampleSize := 1000
+	workers := 10
+	itemsPerWorker := 10000
+	totalItems := workers * itemsPerWorker
+
+	// The first half of the data is positive, and the second half is negative.
+	// This test is designed to ensure the reservoir doesn't stall early.
+	data := make([]float64, totalItems)
+	for i := range data {
+		if i < totalItems/2 {
+			data[i] = 1.0
+		} else {
+			data[i] = -1.0
+		}
+	}
+
+	r := NewFixedSizeReservoir(sampleSize)
+
+	var wg sync.WaitGroup
+	var idx atomic.Uint32
+
+	for range workers {
+		wg.Go(func() {
+			for {
+				curr := idx.Add(1) - 1
+				if curr >= uint32(len(data)) {
+					break
+				}
+				r.Offer(t.Context(), staticTime, NewValue(data[curr]), nil)
+			}
+		})
+	}
+	wg.Wait()
+
+	var negCount int
+	for i := range r.measurements {
+		if r.measurements[i].Value.Float64() < 0 {
+			negCount++
+		}
+	}
+
+	// We expect roughly half of the sampled items to be negative.
+	// Allow a wide delta because of randomness and concurrency. If negCount is
+	// zero, then we stalled before any negative observations were made.
+	assert.Greater(t, negCount, 100, "Should have sampled items from the second half of the interval")
 }
