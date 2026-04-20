@@ -607,54 +607,6 @@ func formatStringSliceReflect(v any) string {
 	return b.String()
 }
 
-func appendJSONValue(dst *strings.Builder, v Value) {
-	switch v.Type() {
-	case BOOL:
-		if v.AsBool() {
-			_, _ = dst.WriteString("true")
-		} else {
-			_, _ = dst.WriteString("false")
-		}
-	case BOOLSLICE:
-		_, _ = dst.WriteString(formatBoolSliceValue(v.slice))
-	case INT64:
-		var buf [int64ArrayElemMaxLen]byte
-		out := strconv.AppendInt(buf[:0], v.AsInt64(), 10)
-		_, _ = dst.Write(out)
-	case INT64SLICE:
-		_, _ = dst.WriteString(formatInt64SliceValue(v.slice))
-	case FLOAT64:
-		appendJSONFloat64(dst, v.AsFloat64())
-	case FLOAT64SLICE:
-		_, _ = dst.WriteString(formatFloat64SliceValue(v.slice))
-	case STRING:
-		appendJSONString(dst, v.stringly)
-	case STRINGSLICE:
-		_, _ = dst.WriteString(formatStringSliceValue(v.slice))
-	case BYTESLICE:
-		appendJSONString(dst, base64.StdEncoding.EncodeToString(v.asByteSlice()))
-	case EMPTY:
-		_, _ = dst.WriteString("null")
-	default:
-		appendJSONString(dst, "unknown")
-	}
-}
-
-func appendJSONFloat64(dst *strings.Builder, v float64) {
-	switch {
-	case math.IsNaN(v):
-		_, _ = dst.WriteString(`"NaN"`)
-	case math.IsInf(v, 1):
-		_, _ = dst.WriteString(`"Infinity"`)
-	case math.IsInf(v, -1):
-		_, _ = dst.WriteString(`"-Infinity"`)
-	default:
-		var buf [float64ArrayElemMaxLen]byte
-		out := strconv.AppendFloat(buf[:0], v, 'g', -1, 64)
-		_, _ = dst.Write(out)
-	}
-}
-
 // appendJSONString appends s to dst as a JSON string literal.
 //
 // This is adapted from the Go standard library's encoding/json
