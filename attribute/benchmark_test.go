@@ -4,7 +4,6 @@
 package attribute_test
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -37,18 +36,27 @@ func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
 	}
 }
 
-func benchmarkStringer(s fmt.Stringer) func(*testing.B) {
+func benchmarkValueString(v attribute.Value) func(*testing.B) {
 	return func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outStr = s.String()
+			outStr = v.String()
+		}
+	}
+}
+
+func benchmarkKeyValueString(kv attribute.KeyValue) func(*testing.B) {
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outStr = kv.String()
 		}
 	}
 }
 
 func runStringBenchmarks(b *testing.B, kv attribute.KeyValue) {
-	b.Run("String", benchmarkStringer(kv.Value))
-	b.Run("KeyValueString", benchmarkStringer(kv))
+	b.Run("String", benchmarkValueString(kv.Value))
+	b.Run("KeyValueString", benchmarkKeyValueString(kv))
 	b.Run("Emit", benchmarkEmit(kv))
 }
 
