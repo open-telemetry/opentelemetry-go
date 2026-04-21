@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
@@ -165,6 +167,7 @@ func TestTrackExport(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.RPCResponseStatusCode(codes.OK.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -243,6 +246,7 @@ func TestTrackExport(t *testing.T) {
 										semconv.ErrorType(errors.New("export failed")),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.RPCResponseStatusCode("Unknown"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -333,6 +337,7 @@ func TestTrackExport(t *testing.T) {
 										}),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.RPCResponseStatusCode("Unknown"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -433,8 +438,6 @@ func TestCountDataPoints(t *testing.T) {
 		})
 	}
 }
-
-
 
 func TestIsObservabilityEnabled(t *testing.T) {
 	tests := []struct {
@@ -607,7 +610,6 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 				if inst == nil {
 					b.Fatal("instrumentation should not be nil when enabled")
 				}
-
 			} else if inst != nil {
 				b.Fatal("instrumentation should be nil when disabled")
 			}
