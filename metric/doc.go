@@ -110,20 +110,19 @@ created the instrument to register a [Callback].
 # Avoiding Expensive Computations
 
 All synchronous instruments provide an Enabled method that reports whether the
-instrument will process measurements for the given context. Instrumentation
-authors can use this check to avoid performing computationally expensive
-operations when they would not be used. For example:
+instrument will process measurements for the given context. When no SDK is
+registered or the instrument is otherwise disabled, Enabled returns false. This
+can be used to skip all measurement work, making instrumentation effectively
+zero-cost in that case:
 
 	if counter.Enabled(ctx) {
 		counter.Add(ctx, 1, metric.WithAttributes(expensiveAttributes()...))
 	}
 
-When no SDK is registered, Enabled returns false and the guarded code is
-skipped entirely.
-
-The [WithAttributes] option performs non-trivial work on every call to build an
-[attribute.Set] from the provided attributes. If the instrument is disabled or
-no SDK is registered, that work is wasted. Using Enabled avoids this overhead.
+This is especially valuable when computing attributes is expensive, but even
+with simple attributes the guard is worthwhile: [WithAttributes] performs
+non-trivial work on every call to build an [attribute.Set] from the provided
+attributes, and that work is wasted if the measurement is not recorded.
 
 For performance sensitive code where the same attribute set is used repeatedly,
 prefer [WithAttributeSet]. It accepts a pre-built [attribute.Set], letting you
