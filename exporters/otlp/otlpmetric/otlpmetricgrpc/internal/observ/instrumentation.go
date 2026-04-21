@@ -9,14 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -53,19 +51,23 @@ type Instrumentation struct {
 	attrs    []attribute.KeyValue
 	addOpt   metric.AddOption
 	recOpt   metric.RecordOption
-	enabled  bool
 }
 
-// NewInstrumentation returns instrumentation for otlpmetric grpc exporter.
-// If self-observability is disabled, returns nil, nil.
-func NewInstrumentation(id int64, componentType, serverAddress string, serverPort int) (*Instrumentation, error) {
+// NewInstrumentation returns instrumentation for an OTLP over gPRC metric
+// exporter with the provided ID using the global MeterProvider.
+//
+// The id should be the unique exporter instance ID. It is used
+// to set the "component.name" attribute.
+//
+// The target is the endpoint the exporter is exporting to.
+//
+// If the experimental observability is disabled, nil is returned.
+func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 
-	em := &Instrumentation{
-		enabled: true,
-	}
+	em := &Instrumentation{}
 
 	meter := otel.GetMeterProvider().Meter(
 		"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc",
@@ -91,20 +93,66 @@ func NewInstrumentation(id int64, componentType, serverAddress string, serverPor
 		err = errors.Join(err, fmt.Errorf("failed to create duration metric: %w", instrumentErr))
 	}
 
-	// Set up common attributes
-	componentName := fmt.Sprintf("%s/%d", componentType, id)
-	em.attrs = []attribute.KeyValue{
-		semconv.OTelComponentTypeKey.String(componentType),
-		semconv.OTelComponentName(componentName),
-		semconv.ServerAddress(serverAddress),
-		semconv.ServerPort(serverPort),
-	}
+	em.attrs = BaseAttrs(id, target)
 
 	attrSet := attribute.NewSet(em.attrs...)
 	em.addOpt = metric.WithAttributeSet(attrSet)
 	em.recOpt = metric.WithAttributeSet(attrSet)
 
 	return em, err
+}
+
+// ComponentName returns the component name for the exporter with the
+// provided ID.
+func ComponentName(id int64) string {
+	t := string(otelconv.ComponentTypeOtlpGRPCMetricExporter)
+	return fmt.Sprintf("%s/%d", t, id)
+}
+
+// BaseAttrs returns the base attributes for the exporter with the provided ID
+// and target.
+//
+// The id should be the unique exporter instance ID. It is used
+// to set the "component.name" attribute.
+//
+// The target is the gRPC target the exporter is exporting to. It is expected
+// to be the output of the Client's CanonicalTarget method.
+func BaseAttrs(id int64, target string) []attribute.KeyValue {
+	host, port, err := ParseCanonicalTarget(target)
+	if err != nil || (host == "" && port < 0) {
+		if err != nil {
+			global.Debug("failed to parse target", "target", target, "error", err)
+		}
+		return []attribute.KeyValue{
+			semconv.OTelComponentName(ComponentName(id)),
+			semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCMetricExporter)),
+		}
+	}
+
+	// Do not use append so the slice is exactly allocated.
+
+	if port < 0 {
+		return []attribute.KeyValue{
+			semconv.OTelComponentName(ComponentName(id)),
+			semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCMetricExporter)),
+			semconv.ServerAddress(host),
+		}
+	}
+
+	if host == "" {
+		return []attribute.KeyValue{
+			semconv.OTelComponentName(ComponentName(id)),
+			semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCMetricExporter)),
+			semconv.ServerPort(port),
+		}
+	}
+
+	return []attribute.KeyValue{
+		semconv.OTelComponentName(ComponentName(id)),
+		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCMetricExporter)),
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
+	}
 }
 
 // TrackExport tracks an export operation and returns an ExportOp to complete the tracking.
@@ -276,35 +324,4 @@ func rejected(n int64, err error) int64 {
 	return n // All data points rejected.
 }
 
-// ParseEndpoint extracts server address and port from an endpoint URL.
-// Returns defaults if parsing fails or endpoint is empty.
-func ParseEndpoint(endpoint string) (address string, port int) {
-	address = "localhost"
-	port = 4317
 
-	if endpoint == "" {
-		return address, port
-	}
-
-	// Handle endpoint without scheme
-	if !strings.Contains(endpoint, "://") {
-		endpoint = "http://" + endpoint
-	}
-
-	u, err := url.Parse(endpoint)
-	if err != nil {
-		return address, port
-	}
-
-	if u.Hostname() != "" {
-		address = u.Hostname()
-	}
-
-	if u.Port() != "" {
-		if p, err := strconv.Atoi(u.Port()); err == nil {
-			port = p
-		}
-	}
-
-	return address, port
-}

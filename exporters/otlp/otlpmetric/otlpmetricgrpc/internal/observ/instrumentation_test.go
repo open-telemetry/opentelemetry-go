@@ -31,7 +31,7 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 	// Ensure feature is disabled
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 
-	em, err := NewInstrumentation(0, "test_component", "localhost", 4317)
+	em, err := NewInstrumentation(0, "dns:///localhost:4317")
 	require.NoError(t, err)
 	assert.Nil(t, em, "metrics should be nil when feature flag is false")
 
@@ -70,10 +70,9 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	em, err := NewInstrumentation(0, "test_component", "example.com", 4317)
+	em, err := NewInstrumentation(0, "dns:///example.com:4317")
 	require.NoError(t, err)
 	require.NotNil(t, em, "metrics should not be nil when feature flag is true")
-	assert.True(t, em.enabled, "metrics should be enabled when feature flag is true")
 
 	// Verify attributes are set correctly
 	assert.Len(t, em.attrs, 4, "attributes length mismatch")
@@ -96,10 +95,10 @@ func TestNewInstrumentation_Enabled(t *testing.T) {
 
 	assert.True(
 		t,
-		strings.HasPrefix(componentName, "test_component/"),
-		"component name should start with test_component/",
+		strings.HasPrefix(componentName, "otlp_grpc_metric_exporter/"),
+		"component name should start with otlp_grpc_metric_exporter/",
 	)
-	assert.Equal(t, "test_component", componentType, "component type mismatch")
+	assert.Equal(t, "otlp_grpc_metric_exporter", componentType, "component type mismatch")
 	assert.Equal(t, "example.com", serverAddress, "server address mismatch")
 	assert.Equal(t, 4317, serverPort, "server port mismatch")
 }
@@ -126,7 +125,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -146,7 +145,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -165,7 +164,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -193,7 +192,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -203,7 +202,7 @@ func TestTrackExport(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.ErrorType(errors.New("export failed")),
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -223,7 +222,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -243,7 +242,7 @@ func TestTrackExport(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.ErrorType(errors.New("export failed")),
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -275,7 +274,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -289,7 +288,7 @@ func TestTrackExport(t *testing.T) {
 											RejectedKind:  "metric data points",
 										}),
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -309,7 +308,7 @@ func TestTrackExport(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -333,7 +332,7 @@ func TestTrackExport(t *testing.T) {
 											RejectedKind:  "metric data points",
 										}),
 										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("test_component"),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -368,7 +367,7 @@ func TestTrackExport(t *testing.T) {
 			)
 			otel.SetMeterProvider(provider)
 
-			em, err := NewInstrumentation(0, "test_component", "localhost", 4317)
+			em, err := NewInstrumentation(0, "dns:///localhost:4317")
 			require.NoError(t, err)
 			require.NotNil(t, em)
 			rm := createTestResourceMetrics()
@@ -435,53 +434,7 @@ func TestCountDataPoints(t *testing.T) {
 	}
 }
 
-func TestParseEndpoint(t *testing.T) {
-	tests := []struct {
-		name        string
-		endpoint    string
-		wantAddress string
-		wantPort    int
-	}{
-		{
-			name:        "empty endpoint",
-			endpoint:    "",
-			wantAddress: "localhost",
-			wantPort:    4317,
-		},
-		{
-			name:        "host only",
-			endpoint:    "example.com",
-			wantAddress: "example.com",
-			wantPort:    4317,
-		},
-		{
-			name:        "host with port",
-			endpoint:    "example.com:9090",
-			wantAddress: "example.com",
-			wantPort:    9090,
-		},
-		{
-			name:        "full URL",
-			endpoint:    "https://example.com:9090/v1/metrics",
-			wantAddress: "example.com",
-			wantPort:    9090,
-		},
-		{
-			name:        "invalid URL",
-			endpoint:    "://invalid",
-			wantAddress: "localhost",
-			wantPort:    4317,
-		},
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			address, port := ParseEndpoint(tt.endpoint)
-			assert.Equal(t, tt.wantAddress, address, "address mismatch")
-			assert.Equal(t, tt.wantPort, port, "port mismatch")
-		})
-	}
-}
 
 func TestIsObservabilityEnabled(t *testing.T) {
 	tests := []struct {
@@ -646,7 +599,7 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			} else {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 			}
-			inst, instErr := NewInstrumentation(0, "otlp_grpc_metric_exporter", "localhost", 4317)
+			inst, instErr := NewInstrumentation(0, "dns:///localhost:4317")
 			if instErr != nil {
 				b.Fatal(instErr)
 			}
@@ -654,9 +607,7 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 				if inst == nil {
 					b.Fatal("instrumentation should not be nil when enabled")
 				}
-				if !inst.enabled {
-					b.Fatalf("instrumentation enabled state mismatch: got %v, want %v", inst.enabled, enabled)
-				}
+
 			} else if inst != nil {
 				b.Fatal("instrumentation should be nil when disabled")
 			}

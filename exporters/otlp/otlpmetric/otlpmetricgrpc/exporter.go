@@ -56,15 +56,10 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 	var metrics *observ.Instrumentation
 	var initErr error
 	if x.Observability.Enabled() {
-		// Extract server address and port from endpoint for self-observability.
-		serverAddress, serverPort := observ.ParseEndpoint(cfg.Metrics.Endpoint)
-
 		var err error
 		metrics, err = observ.NewInstrumentation(
 			counter.NextExporterID(),
-			string(otelconv.ComponentTypeOtlpGRPCMetricExporter),
-			serverAddress,
-			serverPort,
+			c.conn.CanonicalTarget(),
 		)
 		if err != nil {
 			initErr = err
