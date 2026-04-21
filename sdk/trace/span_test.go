@@ -351,7 +351,6 @@ func TestTruncateAttr(t *testing.T) {
 				attribute.StringValue("ab"),
 			),
 		},
-
 		{
 			// BYTESLICE within SLICE: each byte slice is truncated.
 			limit: 2,
