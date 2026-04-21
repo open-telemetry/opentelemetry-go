@@ -112,17 +112,17 @@ created the instrument to register a [Callback].
 All synchronous instruments provide an Enabled method that reports whether the
 instrument will process measurements for the given context. When no SDK is
 registered or the instrument is otherwise disabled, Enabled returns false. This
-can be used to skip all measurement work, making instrumentation effectively
-zero-cost in that case:
+can be used to avoid expensive measurement work when a measurement will not be
+recorded:
 
 	if counter.Enabled(ctx) {
 		counter.Add(ctx, 1, metric.WithAttributes(expensiveAttributes()...))
 	}
 
-This is especially valuable when computing attributes is expensive, but even
-with simple attributes the guard is worthwhile: [WithAttributes] performs
-non-trivial work on every call to build an [attribute.Set] from the provided
-attributes, and that work is wasted if the measurement is not recorded.
+This is especially valuable when computing attributes is expensive.
+[WithAttributes] performs non-trivial work on every call to build an
+[attribute.Set] from the provided attributes, and that work is wasted if the
+measurement is not recorded.
 
 For performance sensitive code where the same attribute set is used repeatedly,
 prefer [WithAttributeSet]. It accepts a pre-built [attribute.Set], letting you
