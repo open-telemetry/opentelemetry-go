@@ -36,7 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 - `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
 - `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to comply with the Metrics SDK specification.
-  This can break users who relied on the previous unlimited default; set `WithCardinalityLimit(0)` or the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable to preserve unlimited cardinality.
+  This can break users who relied on the previous unlimited default; set `WithCardinalityLimit(0)` or the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable to preserve unlimited cardinality. (#8247)
 
 ### Deprecated
 
