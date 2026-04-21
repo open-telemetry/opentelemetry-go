@@ -83,3 +83,17 @@ func TestNextTrackerAtomics(t *testing.T) {
 	assert.Equal(t, uint32(50), count)
 	assert.Equal(t, uint32(100), next)
 }
+
+// TestFixedSizeReservoirZeroCapacity pins the fix for #8232: a reservoir
+// of size 0 must not panic, divide by zero, or produce NaN/Inf internal
+// state. Offer is a no-op and Collect returns an empty slice.
+func TestFixedSizeReservoirZeroCapacity(t *testing.T) {
+	r := NewFixedSizeReservoir(0)
+	assert.NotPanics(t, func() {
+		r.Offer(t.Context(), staticTime, NewValue(int64(1)), nil)
+		r.Offer(t.Context(), staticTime, NewValue(int64(2)), nil)
+	})
+	var dest []Exemplar
+	r.Collect(&dest)
+	assert.Empty(t, dest)
+}

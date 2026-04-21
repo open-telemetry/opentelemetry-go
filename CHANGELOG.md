@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Propagate errors from the exporter when calling `Shutdown` on `BatchSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#8197)
 - Fix stale status code reporting on self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8226)
 - Fix a concurrent `Collect` data race and potential panic in `go.opentelemetry.io/otel/exporters/prometheus` when `WithResourceAsConstantLabels` option is used. (#8227)
+- `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` no longer panics or seeds its internal random-series with NaN when constructed with size 0. Offer becomes a no-op and Collect returns an empty slice. (#8232)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

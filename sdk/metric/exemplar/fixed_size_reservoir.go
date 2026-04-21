@@ -66,6 +66,12 @@ type FixedSizeReservoir struct {
 // parameters are the value and dropped (filtered) attributes of the
 // measurement respectively.
 func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
+	// A reservoir of size 0 samples nothing. Short-circuit before the
+	// algorithm below runs: Algorithm L would otherwise divide by zero
+	// when computing the next replacement count (#8232).
+	if r.k == 0 {
+		return
+	}
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
@@ -166,6 +172,13 @@ func (r *nextTracker) reset() {
 	// This resets the number of exemplars known.
 	// Random index inserts should only happen after the storage is full.
 	r.setCountAndNext(0, r.k)
+
+	// A reservoir of size 0 never stores any exemplars, so there is no
+	// random-sample series to seed. Skip the math.Log divisions that would
+	// otherwise produce NaN / Inf (#8232).
+	if r.k == 0 {
+		return
+	}
 
 	// Initial random number in the series used to generate r.next.
 	//
