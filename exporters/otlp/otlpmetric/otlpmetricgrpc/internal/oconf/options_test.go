@@ -598,6 +598,37 @@ func asGRPCOptions(opts []GenericOption) []GRPCOption {
 	return converted
 }
 
+func TestWithEncoding(t *testing.T) {
+	tests := []struct {
+		name     string
+		encoding Encoding
+		want     Encoding
+	}{
+		{
+			name:     "default encoding is protobuf",
+			encoding: EncodingProtobuf,
+			want:     EncodingProtobuf,
+		},
+		{
+			name:     "JSON encoding",
+			encoding: EncodingJSON,
+			want:     EncodingJSON,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewHTTPConfig(WithEncoding(tt.encoding))
+			assert.Equal(t, tt.want, cfg.Metrics.Encoding)
+		})
+	}
+}
+
+func TestDefaultEncodingIsProtobuf(t *testing.T) {
+	cfg := NewHTTPConfig()
+	assert.Equal(t, EncodingProtobuf, cfg.Metrics.Encoding)
+}
+
 func TestCleanPath(t *testing.T) {
 	type args struct {
 		urlPath     string

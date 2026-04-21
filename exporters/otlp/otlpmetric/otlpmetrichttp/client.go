@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,6 +21,7 @@ import (
 
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
@@ -31,6 +33,7 @@ type client struct {
 	// req is cloned for every upload the client makes.
 	req         *http.Request
 	compression Compression
+	encoding    Encoding
 	requestFunc retry.RequestFunc
 	httpClient  *http.Client
 }
@@ -101,7 +104,17 @@ func newClient(cfg oconf.Config) (*client, error) {
 		return nil, err
 	}
 
-	userAgent := "OTel Go OTLP over HTTP/protobuf metrics exporter/" + Version()
+	encoding := Encoding(cfg.Metrics.Encoding)
+	var userAgent string
+	var contentType string
+	switch encoding {
+	case EncodingJSON:
+		userAgent = "OTel Go OTLP over HTTP/JSON metrics exporter/" + Version()
+		contentType = "application/json"
+	default:
+		userAgent = "OTel Go OTLP over HTTP/protobuf metrics exporter/" + Version()
+		contentType = "application/x-protobuf"
+	}
 	req.Header.Set("User-Agent", userAgent)
 
 	if n := len(cfg.Metrics.Headers); n > 0 {
@@ -109,10 +122,11 @@ func newClient(cfg oconf.Config) (*client, error) {
 			req.Header.Set(k, v)
 		}
 	}
-	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Content-Type", contentType)
 
 	return &client{
 		compression: Compression(cfg.Metrics.Compression),
+		encoding:    encoding,
 		req:         req,
 		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:  httpClient,
@@ -142,7 +156,15 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	pbRequest := &colmetricpb.ExportMetricsServiceRequest{
 		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 	}
-	body, err := proto.Marshal(pbRequest)
+
+	var body []byte
+	var err error
+	switch c.encoding {
+	case EncodingJSON:
+		body, err = protojson.Marshal(pbRequest)
+	default:
+		body, err = proto.Marshal(pbRequest)
+	}
 	if err != nil {
 		return err
 	}
@@ -192,19 +214,30 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
-				var respProto colmetricpb.ExportMetricsServiceResponse
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
-					return err
-				}
+			// Read the media type from the Content-Type header, dropping
+			// parameters (e.g. charset), so we match application/json or
+			// application/x-protobuf
+			mediatype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+			if err != nil {
+				mediatype = ""
+			}
+			var respProto colmetricpb.ExportMetricsServiceResponse
+			switch mediatype {
+			case "application/x-protobuf":
+				err = proto.Unmarshal(respData.Bytes(), &respProto)
+			case "application/json":
+				err = protojson.Unmarshal(respData.Bytes(), &respProto)
+			}
+			if err != nil {
+				return err
+			}
 
-				if respProto.PartialSuccess != nil {
-					msg := respProto.PartialSuccess.GetErrorMessage()
-					n := respProto.PartialSuccess.GetRejectedDataPoints()
-					if n != 0 || msg != "" {
-						err := internal.MetricPartialSuccessError(n, msg)
-						uploadErr = errors.Join(uploadErr, err)
-					}
+			if respProto.PartialSuccess != nil {
+				msg := respProto.PartialSuccess.GetErrorMessage()
+				n := respProto.PartialSuccess.GetRejectedDataPoints()
+				if n != 0 || msg != "" {
+					err := internal.MetricPartialSuccessError(n, msg)
+					uploadErr = errors.Join(uploadErr, err)
 				}
 			}
 			return nil
