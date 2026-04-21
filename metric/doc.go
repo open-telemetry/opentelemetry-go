@@ -130,7 +130,7 @@ For performance sensitive code where the same attribute set is used repeatedly,
 prefer [WithAttributeSet]. It accepts a pre-built [attribute.Set], letting you
 pay the construction cost once and reuse it across many measurements:
 
-	attrs := attribute.NewSet(key.String("val"))
+	attrs := attribute.NewSet(attribute.String("key", "val"))
 	// ... later, on each call:
 	counter.Add(ctx, 1, metric.WithAttributeSet(attrs))
 
