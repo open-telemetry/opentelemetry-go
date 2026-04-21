@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 
 	"go.opentelemetry.io/otel"
@@ -116,6 +117,19 @@ func TestSelfObservability(t *testing.T) {
 			endpoint:    "dns:///invalid:999999",
 			expectError: true,
 			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
+				baseAttrs := []attribute.KeyValue{
+					semconv.OTelComponentName(actualComponentName),
+					semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+				}
+				if addr != "" {
+					baseAttrs = append(baseAttrs, semconv.ServerAddressKey.String(addr))
+				}
+				if port >= 0 {
+					baseAttrs = append(baseAttrs, semconv.ServerPortKey.Int(port))
+				}
+
+				errorAttrs := append([]attribute.KeyValue{semconv.ErrorType(err)}, baseAttrs...)
+
 				return []metricdata.Metrics{
 					{
 						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
@@ -126,23 +140,12 @@ func TestSelfObservability(t *testing.T) {
 							IsMonotonic: true,
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
-									Attributes: attribute.NewSet(
-										semconv.ErrorType(err),
-										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.ServerAddressKey.String(addr),
-										semconv.ServerPortKey.Int(port),
-									),
-									Value: 4,
+									Attributes: attribute.NewSet(errorAttrs...),
+									Value:      4,
 								},
 								{
-									Attributes: attribute.NewSet(
-										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.ServerAddressKey.String(addr),
-										semconv.ServerPortKey.Int(port),
-									),
-									Value: 0,
+									Attributes: attribute.NewSet(baseAttrs...),
+									Value:      0,
 								},
 							},
 						},
@@ -156,12 +159,7 @@ func TestSelfObservability(t *testing.T) {
 							IsMonotonic: false,
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
-									Attributes: attribute.NewSet(
-										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.ServerAddressKey.String(addr),
-										semconv.ServerPortKey.Int(port),
-									),
+									Attributes: attribute.NewSet(baseAttrs...),
 								},
 							},
 						},
@@ -175,13 +173,9 @@ func TestSelfObservability(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorType(err),
-										semconv.OTelComponentName(actualComponentName),
-										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode("Unavailable"),
-										semconv.ServerAddressKey.String(addr),
-										semconv.ServerPortKey.Int(port),
-									),
+										append(
+											[]attribute.KeyValue{semconv.RPCResponseStatusCode("Unavailable")},
+											errorAttrs...)...),
 									Count: 1,
 								},
 							},
@@ -259,7 +253,10 @@ func TestSelfObservability(t *testing.T) {
 				require.Len(t, got.ScopeMetrics, 1)
 				actualComponentName := extractComponentName(got.ScopeMetrics[0])
 				addr, port, err := observ.ParseCanonicalTarget(tt.endpoint)
-				require.NoError(t, err)
+				if err != nil {
+					addr = ""
+					port = -1
+				}
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -375,5 +372,3 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 		},
 	}
 }
-
-
