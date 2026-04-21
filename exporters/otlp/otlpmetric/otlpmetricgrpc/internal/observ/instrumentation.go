@@ -31,8 +31,13 @@ import (
 var (
 	attrPool = sync.Pool{
 		New: func() any {
-			// Pre-allocate for common attributes + dynamic error attribute
-			const n = 1 /* otel.component.type */ + 1 /* otel.component.name */ + 1 /* server.address */ + 1 /* server.port */ + 1 /* error.type */
+			// Pre-allocate for common attributes and dynamic error attributes.
+			const n = 1 /* otel.component.type */ +
+				1 /* otel.component.name */ +
+				1 /* server.address */ +
+				1 /* server.port */ +
+				1 /* error.type */ +
+				1 /* rpc.grpc.status_code */
 			s := make([]attribute.KeyValue, 0, n)
 			return &s
 		},
@@ -56,7 +61,7 @@ type Instrumentation struct {
 	recOpt   metric.RecordOption
 }
 
-// NewInstrumentation returns instrumentation for an OTLP over gPRC metric
+// NewInstrumentation returns instrumentation for an OTLP over gRPC metric
 // exporter with the provided ID using the global MeterProvider.
 //
 // The id should be the unique exporter instance ID. It is used
