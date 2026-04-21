@@ -732,3 +732,128 @@ func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue
 		panic("unknown number of attributes")
 	}
 }
+
+func BenchmarkMeasureNewAttributeSet(b *testing.B) {
+	ctx := b.Context()
+
+	instruments := []struct {
+		name string
+		make func(b *testing.B, meter metric.Meter) func(int)
+	}{
+		{
+			name: "Int64Counter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Counter("int64-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64Counter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64Counter("float64-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Int64UpDownCounter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64UpDownCounter("int64-up-down-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64UpDownCounter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64UpDownCounter("float64-up-down-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Int64Histogram",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Histogram("int64-histogram")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64Histogram",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64Histogram("float64-histogram")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Int64Gauge",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Gauge("int64-gauge")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64Gauge",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64Gauge("float64-gauge")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+	}
+
+	for _, filterName := range []string{"AlwaysOn", "AlwaysOff"} {
+		var filter exemplar.Filter
+		if filterName == "AlwaysOn" {
+			filter = exemplar.AlwaysOnFilter
+		} else {
+			filter = exemplar.AlwaysOffFilter
+		}
+
+		b.Run(filterName, func(b *testing.B) {
+			for _, inst := range instruments {
+				b.Run(inst.name, func(b *testing.B) {
+					var record func(int)
+
+					b.ReportAllocs()
+					b.ResetTimer()
+
+					for n := 0; n < b.N; n++ {
+						if n%10000 == 0 {
+							b.StopTimer()
+							rdr := NewManualReader()
+							provider := NewMeterProvider(
+								WithReader(rdr),
+								WithExemplarFilter(filter),
+							)
+							meter := provider.Meter("BenchmarkMeasureNewAttributeSet")
+							record = inst.make(b, meter)
+							b.StartTimer()
+						}
+						record(n)
+					}
+				})
+			}
+		})
+	}
+}
