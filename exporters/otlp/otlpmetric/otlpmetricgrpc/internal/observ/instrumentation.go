@@ -21,6 +21,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
@@ -97,7 +100,10 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 
 	attrSet := attribute.NewSet(em.attrs...)
 	em.addOpt = metric.WithAttributeSet(attrSet)
-	em.recOpt = metric.WithAttributeSet(attrSet)
+	em.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
+		[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
+		em.attrs...,
+	)...))
 
 	return em, err
 }
@@ -240,7 +246,11 @@ func (e ExportOp) End(err error) {
 			}()
 
 			*attrsPtr = append(*attrsPtr, e.inst.attrs...)
-			*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
+			*attrsPtr = append(
+				*attrsPtr,
+				semconv.ErrorType(err),
+				semconv.RPCResponseStatusCode(status.Code(err).String()),
+			)
 
 			set := attribute.NewSet(*attrsPtr...)
 			*recOptPtr = append(*recOptPtr, metric.WithAttributeSet(set))
@@ -323,5 +333,3 @@ func rejected(n int64, err error) int64 {
 	}
 	return n // All data points rejected.
 }
-
-
