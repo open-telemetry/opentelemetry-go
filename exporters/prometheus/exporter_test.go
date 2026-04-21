@@ -1192,6 +1192,45 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
+func TestCollectorWithResourceAsConstantLabelsConcurrentSafe(t *testing.T) {
+	// This test makes sure resource label initialization is concurrent safe
+	// when using WithResourceAsConstantLabels.
+	ctx := t.Context()
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName("prometheus_test")))
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+	t.Cleanup(func() {
+		assert.NoError(t, provider.Shutdown(ctx))
+	})
+
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	var wg sync.WaitGroup
+	const concurrencyLevel = 10
+	for range concurrencyLevel {
+		wg.Go(func() {
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
+		})
+	}
+	wg.Wait()
+}
+
 func TestShutdownExporter(t *testing.T) {
 	var handledError error
 	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })

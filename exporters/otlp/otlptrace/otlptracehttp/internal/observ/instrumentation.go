@@ -345,7 +345,7 @@ func (e ExportOp) End(err error, status int) {
 //
 // Otherwise, a new RecordOption is returned with the base attributes of the
 // Instrumentation plus the http.response.status_code attribute set to the
-// provided status, and if err is not nil, the error.type attribute set
+// provided status (if non-zero), and if err is not nil, the error.type attribute set
 // to the type of the error.
 func (i *Instrumentation) recordOption(err error, status int) metric.RecordOption {
 	if err == nil && status == http.StatusOK {
@@ -356,7 +356,9 @@ func (i *Instrumentation) recordOption(err error, status int) metric.RecordOptio
 	defer put(measureAttrsPool, attrs)
 	*attrs = append(*attrs, i.attrs...)
 
-	*attrs = append(*attrs, semconv.HTTPResponseStatusCode(status))
+	if status != 0 {
+		*attrs = append(*attrs, semconv.HTTPResponseStatusCode(status))
+	}
 	if err != nil {
 		*attrs = append(*attrs, semconv.ErrorType(err))
 	}
