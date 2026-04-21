@@ -121,10 +121,9 @@ operations when they would not be used. For example:
 When no SDK is registered, Enabled returns false and the guarded code is
 skipped entirely.
 
-The [WithAttributes] option evaluates eagerly: it copies, sorts,
-de-duplicates, and hashes the provided attributes on every call. If the result
-is only used with a no-op or disabled instrument, that work is wasted. Using
-Enabled avoids this overhead.
+The [WithAttributes] option performs non-trivial work on every call to build an
+[attribute.Set] from the provided attributes. If the instrument is disabled or
+no SDK is registered, that work is wasted. Using Enabled avoids this overhead.
 
 For performance sensitive code where the same attribute set is used repeatedly,
 prefer [WithAttributeSet]. It accepts a pre-built [attribute.Set], letting you
