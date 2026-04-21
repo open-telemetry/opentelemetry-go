@@ -114,16 +114,6 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 		if !r.wMu.TryLock() {
 			return
 		}
-		defer r.wMu.Unlock()
-
-		_, currentNext := r.loadCountAndNext()
-		if currentNext > next {
-			return
-		}
-
-		// Overwrite a random existing measurement with the one offered.
-		idx := rand.IntN(int(r.k))
-		r.store(ctx, idx, t, n, a)
 
 		newCount, newNext := r.loadCountAndNext()
 		if newNext < next || newCount < count {
@@ -131,9 +121,16 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 			// called since r.incrementCount(). Skip the call to advance in
 			// this case because our exemplar may have been collected in the
 			// previous interval.
+			r.wMu.Unlock()
 			return
 		}
+
 		r.advance()
+		r.wMu.Unlock()
+
+		// Overwrite a random existing measurement with the one offered.
+		idx := rand.IntN(int(r.k))
+		r.store(ctx, idx, t, n, a)
 	}
 }
 
