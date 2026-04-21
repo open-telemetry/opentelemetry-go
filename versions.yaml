@@ -56,6 +56,9 @@ modules:
   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc:
     version-refs:
       - ./internal/version.go
+  go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp:
+    version-refs:
+      - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc:
     version-refs:
       - ./internal/version.go
