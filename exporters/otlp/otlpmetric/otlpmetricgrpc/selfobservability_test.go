@@ -11,10 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"google.golang.org/grpc/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -41,7 +43,7 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name:        "success",
 			envValue:    "true",
-			endpoint:    coll.Addr().String(),
+			endpoint:    "dns:///" + coll.Addr().String(),
 			expectError: false,
 			wantMetrics: func(actualComponentName, addr string, port int, _ error) []metricdata.Metrics {
 				return []metricdata.Metrics{
@@ -96,6 +98,7 @@ func TestSelfObservability(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.RPCResponseStatusCode(codes.OK.String()),
 										semconv.ServerAddressKey.String(addr),
 										semconv.ServerPortKey.Int(port),
 									),
@@ -110,7 +113,7 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name:        "error",
 			envValue:    "true",
-			endpoint:    "invalid:999999",
+			endpoint:    "dns:///invalid:999999",
 			expectError: true,
 			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
 				return []metricdata.Metrics{
@@ -131,6 +134,15 @@ func TestSelfObservability(t *testing.T) {
 										semconv.ServerPortKey.Int(port),
 									),
 									Value: 4,
+								},
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Value: 0,
 								},
 							},
 						},
@@ -166,6 +178,7 @@ func TestSelfObservability(t *testing.T) {
 										semconv.ErrorType(err),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.RPCResponseStatusCode("Unavailable"),
 										semconv.ServerAddressKey.String(addr),
 										semconv.ServerPortKey.Int(port),
 									),
@@ -245,7 +258,8 @@ func TestSelfObservability(t *testing.T) {
 			} else {
 				require.Len(t, got.ScopeMetrics, 1)
 				actualComponentName := extractComponentName(got.ScopeMetrics[0])
-				addr, port := observ.ParseEndpoint(tt.endpoint)
+				addr, port, err := observ.ParseCanonicalTarget(tt.endpoint)
+				require.NoError(t, err)
 
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
@@ -361,3 +375,5 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 		},
 	}
 }
+
+
