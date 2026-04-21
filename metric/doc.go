@@ -107,6 +107,33 @@ respectively):
 If the criteria are not met, use the RegisterCallback method of the [Meter] that
 created the instrument to register a [Callback].
 
+# Avoiding Expensive Computations
+
+All synchronous instruments provide an Enabled method that reports whether the
+instrument will process measurements for the given context. Instrumentation
+authors can use this check to avoid performing computationally expensive
+operations when they would not be used. For example:
+
+	if counter.Enabled(ctx) {
+		counter.Add(ctx, 1, metric.WithAttributes(expensiveAttributes()...))
+	}
+
+When no SDK is registered, Enabled returns false and the guarded code is
+skipped entirely.
+
+The [WithAttributes] option evaluates eagerly: it copies, sorts,
+de-duplicates, and hashes the provided attributes on every call. If the result
+is only used with a no-op or disabled instrument, that work is wasted. Using
+Enabled avoids this overhead.
+
+For performance sensitive code where the same attribute set is used repeatedly,
+prefer [WithAttributeSet]. It accepts a pre-built [attribute.Set], letting you
+pay the construction cost once and reuse it across many measurements:
+
+	attrs := attribute.NewSet(key.String("val"))
+	// ... later, on each call:
+	counter.Add(ctx, 1, metric.WithAttributeSet(attrs))
+
 # API Implementations
 
 This package does not conform to the standard Go versioning policy, all of its
