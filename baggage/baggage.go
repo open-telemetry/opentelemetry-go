@@ -494,9 +494,10 @@ func New(members ...Member) (Baggage, error) {
 // from the W3C Baggage specification which allows duplicate list-members, but
 // conforms to the OpenTelemetry Baggage specification.
 //
-// If the baggage-string exceeds the maximum allowed members (64) or bytes
-// (8192), members are dropped until the limits are satisfied and an error is
-// returned along with the partial result.
+// If the baggage-string exceeds the maximum allowed bytes (8192), an empty
+// Baggage and an error are returned. If the baggage-string exceeds the maximum
+// allowed members (64), members are dropped until the limit is satisfied and
+// an error is returned along with the partial result.
 //
 // Invalid members are skipped and the error is returned along with the
 // partial result containing the valid members.
@@ -563,7 +564,7 @@ func Parse(bStr string) (Baggage, error) {
 	}
 
 	if dropped := parseErrors - maxParseErrors; dropped > 0 {
-		truncateErr = errors.Join(truncateErr, fmt.Errorf("and %d more invalid members", dropped))
+		truncateErr = errors.Join(truncateErr, fmt.Errorf("and %d more invalid member(s)", dropped))
 	}
 
 	if len(b) == 0 {

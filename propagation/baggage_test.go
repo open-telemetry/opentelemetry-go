@@ -522,8 +522,5 @@ func TestExtractManyBaggageHeadersAggregateBudget(t *testing.T) {
 	ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 	got := baggage.FromContext(ctx)
 
-	// Each header is ~195 bytes. Budget of 8192 / ~195 = ~42 headers processed.
-	// The exact count depends on key length (k0..k99), but should be well under 100.
-	assert.Less(t, got.Len(), 100, "should not process all 100 headers")
-	assert.Positive(t, got.Len(), "should process some headers")
+	assert.Equal(t, got.Len(), 42, "should enforce aggregate byte budget")
 }

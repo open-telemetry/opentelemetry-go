@@ -1298,5 +1298,25 @@ func TestParseErrorCap(t *testing.T) {
 	invalidCount := strings.Count(errs, "invalid baggage list-member")
 	assert.Equal(t, maxParseErrors, invalidCount,
 		"should cap individual parse errors at maxParseErrors")
-	assert.Contains(t, errs, "and 15 more invalid members")
+	assert.Contains(t, errs, "and 15 more invalid member(s)")
+}
+
+func TestParseErrorCapAllInvalid(t *testing.T) {
+	// All members invalid, no valid members. Exercises the len(b)==0
+	// return path with a capped error message.
+	var parts []string
+	for i := range 20 {
+		parts = append(parts, fmt.Sprintf("bad%d", i))
+	}
+	bStr := strings.Join(parts, ",")
+
+	b, err := Parse(bStr)
+	assert.ErrorIs(t, err, errInvalidMember)
+	assert.Equal(t, 0, b.Len(), "should return empty baggage")
+
+	errs := err.Error()
+	invalidCount := strings.Count(errs, "invalid baggage list-member")
+	assert.Equal(t, maxParseErrors, invalidCount,
+		"should cap individual parse errors at maxParseErrors")
+	assert.Contains(t, errs, "and 15 more invalid member(s)")
 }
