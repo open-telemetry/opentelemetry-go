@@ -16,6 +16,8 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+const maxBytesPerBaggageString = 8192
+
 type property struct {
 	Key, Value string
 }
@@ -164,7 +166,6 @@ func generateMembers(n int, prefix string) members {
 func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
 	const maxMembers = 64
-	const maxBytesPerBaggageString = 8192
 
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
@@ -502,7 +503,7 @@ func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
 	prop := propagation.Baggage{}
 	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 	// Set a single baggage header exceeding 8192 bytes.
-	req.Header.Set("baggage", "key="+strings.Repeat("v", 8192))
+	req.Header.Set("baggage", "key="+strings.Repeat("v", maxBytesPerBaggageString))
 
 	ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 	got := baggage.FromContext(ctx)
