@@ -206,6 +206,8 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 	}
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
+	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.
+	// This behavior is documented in WithUnsafeAttributes.
 	merged = append(merged, rawKVs...)
 	// TODO(#7743): Defer computing the full attribute.NewSet.
 	return attribute.NewSet(merged...)
