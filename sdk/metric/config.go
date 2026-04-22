@@ -25,7 +25,7 @@ type config struct {
 	cardinalityLimit int
 }
 
-const defaultCardinalityLimit = 0
+const defaultCardinalityLimit = 2000
 
 // readerSignals returns a force-flush and shutdown function for a
 // MeterProvider to call in their respective options. All Readers c contains
@@ -172,7 +172,10 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // The cardinality limit is the hard limit on the number of metric datapoints
 // that can be collected for a single instrument in a single collect cycle.
 //
-// Setting this to a zero or negative value means no limit is applied.
+// By default, if this option is not used, a limit of
+// 2000 is applied.
+//
+// Setting this to a zero or negative means no limit is applied.
 // This value applies to all instrument kinds, but can be overridden per kind by
 // the reader's cardinality limit selector (see [WithCardinalityLimitSelector]).
 func WithCardinalityLimit(limit int) Option {

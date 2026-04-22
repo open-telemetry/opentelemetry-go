@@ -268,11 +268,10 @@ func (e ExportOp) recordOption(err error, code int) metric.RecordOption {
 	defer put(attrsPool, attrs)
 
 	*attrs = append(*attrs, e.inst.presetAttrs...)
-	*attrs = append(
-		*attrs,
-		semconv.HTTPResponseStatusCode(code),
-		semconv.ErrorType(err),
-	)
+	if code != 0 {
+		*attrs = append(*attrs, semconv.HTTPResponseStatusCode(code))
+	}
+	*attrs = append(*attrs, semconv.ErrorType(err))
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 

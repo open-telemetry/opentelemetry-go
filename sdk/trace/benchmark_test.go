@@ -37,6 +37,10 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 		attribute.Float64Slice("float64Slice", []float64{42, -1}),
 		attribute.String("string", "value"),
 		attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
+		attribute.Slice("slice",
+			attribute.StringValue("value"),
+			attribute.StringSliceValue([]string{"value", "value-1"}),
+		),
 	}
 
 	links := make([]trace.Link, count)
@@ -78,6 +82,11 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 }
 
 func BenchmarkSpanLimits(b *testing.B) {
+	b.Run("None", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		benchmarkSpanLimits(b, limits)
+	})
+
 	b.Run("AttributeValueLengthLimit", func(b *testing.B) {
 		limits := sdktrace.NewSpanLimits()
 		limits.AttributeValueLengthLimit = 2

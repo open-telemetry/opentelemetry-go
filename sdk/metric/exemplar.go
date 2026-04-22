@@ -4,6 +4,7 @@
 package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"reflect"
 	"runtime"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -22,6 +23,9 @@ func reservoirFunc[N int64 | float64](
 	provider exemplar.ReservoirProvider,
 	filter exemplar.Filter,
 ) func(attribute.Set) aggregate.FilteredExemplarReservoir[N] {
+	if reflect.ValueOf(filter).Pointer() == reflect.ValueOf(exemplar.AlwaysOffFilter).Pointer() {
+		return aggregate.DropReservoir[N]
+	}
 	return func(attrs attribute.Set) aggregate.FilteredExemplarReservoir[N] {
 		return aggregate.NewFilteredExemplarReservoir[N](filter, provider(attrs))
 	}
