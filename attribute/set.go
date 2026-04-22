@@ -408,9 +408,12 @@ func computeDataReflect(kvs []KeyValue) any {
 
 // NewDistinctWithFilter returns a Distinct identifier for the
 // attributes in the Set that match the filter.
-func (s Set) NewDistinctWithFilter(filter Filter) Distinct {
+func (s *Set) NewDistinctWithFilter(filter Filter) Distinct {
 	if filter == nil {
 		return s.Equivalent()
+	}
+	if s == nil || s.hash == 0 {
+		return Distinct{hash: emptySet.hash}
 	}
 	return Distinct{hash: hashIteratorWithFilter(s.Iter(), filter)}
 }
