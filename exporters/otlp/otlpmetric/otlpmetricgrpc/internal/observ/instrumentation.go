@@ -17,12 +17,13 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
@@ -167,7 +168,7 @@ func BaseAttrs(id int64, target string) []attribute.KeyValue {
 }
 
 // TrackExport tracks an export operation and returns an ExportOp to complete the tracking.
-func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.ResourceMetrics) ExportOp {
+func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricpb.ResourceMetrics) ExportOp {
 	if em == nil {
 		return ExportOp{}
 	}
@@ -178,7 +179,7 @@ func (em *Instrumentation) TrackExport(ctx context.Context, rm *metricdata.Resou
 	exportedEnabled := em.exported.Enabled(ctx)
 
 	if inflightEnabled || exportedEnabled {
-		dataPointCount = countDataPoints(rm)
+		dataPointCount = countProtoDataPoints(rm)
 	}
 
 	if inflightEnabled {
@@ -267,8 +268,8 @@ func (e ExportOp) End(err error) {
 	}
 }
 
-// countDataPoints counts the total number of data points in a ResourceMetrics.
-func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
+// countProtoDataPoints counts the total number of data points in a ResourceMetrics.
+func countProtoDataPoints(rm *metricpb.ResourceMetrics) int64 {
 	if rm == nil {
 		return 0
 	}
@@ -277,24 +278,26 @@ func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
 	for _, sm := range rm.ScopeMetrics {
 		for _, m := range sm.Metrics {
 			switch data := m.Data.(type) {
-			case metricdata.Gauge[int64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.Gauge[float64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.Sum[int64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.Sum[float64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.Histogram[int64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.Histogram[float64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.ExponentialHistogram[int64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.ExponentialHistogram[float64]:
-				total += int64(len(data.DataPoints))
-			case metricdata.Summary:
-				total += int64(len(data.DataPoints))
+			case *metricpb.Metric_Gauge:
+				if data.Gauge != nil {
+					total += int64(len(data.Gauge.DataPoints))
+				}
+			case *metricpb.Metric_Sum:
+				if data.Sum != nil {
+					total += int64(len(data.Sum.DataPoints))
+				}
+			case *metricpb.Metric_Histogram:
+				if data.Histogram != nil {
+					total += int64(len(data.Histogram.DataPoints))
+				}
+			case *metricpb.Metric_ExponentialHistogram:
+				if data.ExponentialHistogram != nil {
+					total += int64(len(data.ExponentialHistogram.DataPoints))
+				}
+			case *metricpb.Metric_Summary:
+				if data.Summary != nil {
+					total += int64(len(data.Summary.DataPoints))
+				}
 			}
 		}
 	}

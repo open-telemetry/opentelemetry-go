@@ -92,11 +92,11 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (finalErr error) {
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
 
-	// Track export operation for self-observability
-	op := e.metrics.TrackExport(ctx, rm)
-	defer func() { op.End(finalErr) }()
-
 	otlpRm, err := transform.ResourceMetrics(rm)
+
+	// Track export operation for self-observability
+	op := e.metrics.TrackExport(ctx, otlpRm)
+	defer func() { op.End(finalErr) }()
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
