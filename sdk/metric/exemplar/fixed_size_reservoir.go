@@ -91,7 +91,6 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 	idx, sampled := r.shouldSample()
 	if sampled {
 		r.store(ctx, idx, t, n, a)
-		r.advance()
 	}
 }
 
@@ -119,7 +118,6 @@ func (r *FixedSizeReservoir) OfferLazy(
 	idx, sampled := r.shouldSample()
 	if sampled {
 		r.store(ctx, idx, t, n, getDroppedAttributes(attr, fltr))
-		r.advance()
 	}
 }
 
@@ -169,6 +167,7 @@ func (r *FixedSizeReservoir) shouldSample() (int, bool) {
 	} else if r.count == r.next {
 		// Overwrite a random existing measurement with the one offered.
 		idx := int(rand.Int64N(int64(cap(r.measurements))))
+		r.advance()
 		return idx, true
 	}
 	return 0, false
