@@ -46,7 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - Deprecate `Value.Emit` method in `go.opentelemetry.io/otel/attribute`.
-   Use `Value.String` instead. (#8176)
+  Use `Value.String` instead. (#8176)
 
 ### Fixed
 
