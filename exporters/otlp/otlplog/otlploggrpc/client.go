@@ -146,13 +146,13 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	ctx, cancel := c.exportContext(ctx)
 	defer cancel()
 
-	var count int64
-	for _, resLogs := range rl {
-		for _, scopeLogs := range resLogs.ScopeLogs {
-			count += int64(len(scopeLogs.LogRecords))
-		}
-	}
 	if c.instrumentation != nil {
+		var count int64
+		for _, resLogs := range rl {
+			for _, scopeLogs := range resLogs.ScopeLogs {
+				count += int64(len(scopeLogs.LogRecords))
+			}
+		}
 		eo := c.instrumentation.ExportLogs(ctx, count)
 		defer func() {
 			eo.End(uploadErr)
