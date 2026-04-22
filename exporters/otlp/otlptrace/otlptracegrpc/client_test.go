@@ -468,7 +468,8 @@ func TestClientInstrumentation(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	exp := newGRPCExporter(t, t.Context(), mc.endpoint)
-	err := exp.ExportSpans(t.Context(), roSpans)
+	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
+	err := exp.ExportSpans(t.Context(), localSpans)
 	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
 	require.NoError(t, exp.Shutdown(t.Context()))
 
@@ -489,7 +490,7 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 				},
@@ -500,11 +501,11 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
-						)...)},
+						)...), Value: 2},
 					},
 					Temporality: 0x1,
 					IsMonotonic: true,
@@ -530,12 +531,18 @@ func TestClientInstrumentation(t *testing.T) {
 		},
 	}
 	require.Len(t, got.ScopeMetrics, 1)
-	opt := []metricdatatest.Option{
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3)
+
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(
+		t,
+		want.Metrics[2],
+		gotMetrics[2],
 		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreExemplars(),
 		metricdatatest.IgnoreValue(),
-	}
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+	)
 }
 
 func canonical(t *testing.T, endpoint string) string {
