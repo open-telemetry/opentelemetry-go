@@ -178,20 +178,18 @@ type ExportOp struct {
 
 // End completes the observation of the operation being observed by a call to
 // [Instrumentation.ExportLogs].
-// Any error that is encountered is provided as err.
+// The success parameter is the number of logs exported successfully.
+// Any error encountered during export is provided as err.
 //
-// If err is not nil, all logs will be recorded as failures unless error is of
-// type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
-// of successfully exported logs will be determined by inspecting the
-// RejectedItems field of the PartialSuccess.
-func (e ExportOp) End(err error) {
+// If err is not nil, End records failed log exports as count-success with the
+// error.type attribute set from err.
+func (e ExportOp) End(success int64, err error) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
 	e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
 
-	success := successful(err, e.count)
 	e.inst.exported.Add(e.ctx, success, *addOpt...)
 
 	if err != nil {
@@ -224,44 +222,4 @@ func (i *Instrumentation) recordOption(err error) metric.RecordOption {
 	*attrs = append(*attrs, i.attrs...)
 	*attrs = append(*attrs, semconv.ErrorType(err))
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
-}
-
-// successful returns the number of successfully exported logs out of the n
-// that were exported based on the provided error.
-//
-// If err is nil, n is returned. All logs were successfully exported.
-//
-// If err is not nil and not an [internal.PartialSuccess] error, 0 is returned.
-// It is assumed all logs failed to be exported.
-//
-// If err is an [internal.PartialSuccess] error, the number of successfully
-// exported logs is computed by subtracting the RejectedItems field from n. If
-// RejectedItems is negative, n is returned. If RejectedItems is greater than
-// n, 0 is returned.
-func successful(err error, n int64) int64 {
-	if err == nil {
-		return n // All logs successfully exported.
-	}
-	// Split rejected calculation so successful is inlineable.
-	return n - rejectedCount(n, err)
-}
-
-var errPool = sync.Pool{
-	New: func() any {
-		return new(internal.PartialSuccess)
-	},
-}
-
-// rejectedCount returns how many out of the n logs exported were rejected based on
-// the provided non-nil err.
-func rejectedCount(n int64, err error) int64 {
-	ps := errPool.Get().(*internal.PartialSuccess)
-	defer errPool.Put(ps)
-
-	// check for partial success
-	if errors.As(err, ps) {
-		return min(max(ps.RejectedItems, 0), n)
-	}
-	// all logs exported
-	return n
 }
