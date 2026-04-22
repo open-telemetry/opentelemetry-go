@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -510,18 +511,79 @@ func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
 	assert.Equal(t, 0, got.Len(), "oversized header should result in empty baggage")
 }
 
-func TestExtractManyBaggageHeadersAggregateBudget(t *testing.T) {
-	prop := propagation.Baggage{}
-	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+type errHandler struct {
+	err error
+}
 
-	// Send 100 baggage headers, each ~200 bytes. Total: ~20KB.
-	// Only headers fitting within the 8192-byte aggregate budget should be processed.
-	for i := range 100 {
-		req.Header.Add("baggage", fmt.Sprintf("k%d=%s", i, strings.Repeat("v", 190)))
+func (e *errHandler) Handle(err error) { e.err = err }
+
+func TestExtractManyBaggageHeader(t *testing.T) {
+	tests := []struct {
+		name       string
+		headers    func() []string
+		want       func() members
+		wantErrStr []string
+	}{
+		{
+			name: "aggregate byte budget exceeded",
+			headers: func() []string {
+				// 100 headers, each ~195 bytes. Total: ~19.5KB, well over 8192.
+				h := make([]string, 100)
+				for i := range 100 {
+					h[i] = fmt.Sprintf("k%d=%s", i, strings.Repeat("v", 190))
+				}
+				return h
+			},
+			want: func() members {
+				m := make(members, 42)
+				for i := range 42 {
+					m[i] = member{Key: fmt.Sprintf("k%d", i), Value: strings.Repeat("v", 190)}
+				}
+				return m
+			},
+			wantErrStr: []string{"aggregate header size 8332 exceeds 8192 byte limit"},
+		},
+		{
+			name: "too many invalid headers triggers error cap",
+			headers: func() []string {
+				// 10 invalid headers (no '=' delimiter) followed by 1 valid.
+				// Each invalid header produces 1 parse error from baggage.Parse.
+				// maxParseErrors=5, so 5 errors are kept and 5 are summarized.
+				h := make([]string, 11)
+				for i := range 10 {
+					h[i] = fmt.Sprintf("bad%d", i)
+				}
+				h[10] = "good=val"
+				return h
+			},
+			want: func() members {
+				return members{{Key: "good", Value: "val"}}
+			},
+			wantErrStr: []string{"invalid baggage list-member", "and 5 more error(s)"},
+		},
 	}
 
-	ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
-	got := baggage.FromContext(ctx)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalErrorHandler := otel.GetErrorHandler()
+			eh := &errHandler{}
+			otel.SetErrorHandler(eh)
+			t.Cleanup(func() { otel.SetErrorHandler(originalErrorHandler) })
 
-	assert.Equal(t, got.Len(), 42, "should enforce aggregate byte budget")
+			prop := propagation.Baggage{}
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+			for _, h := range tt.headers() {
+				req.Header.Add("baggage", h)
+			}
+
+			ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
+			got := baggage.FromContext(ctx)
+
+			assert.Equal(t, tt.want().Baggage(t), got)
+			assert.Error(t, eh.err)
+			for _, s := range tt.wantErrStr {
+				assert.Contains(t, eh.err.Error(), s)
+			}
+		})
+	}
 }

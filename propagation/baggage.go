@@ -5,6 +5,8 @@ package propagation // import "go.opentelemetry.io/otel/propagation"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/internal/errorhandler"
@@ -17,6 +19,7 @@ const (
 	// https://www.w3.org/TR/baggage/#limits
 	maxMembers               = 64
 	maxBytesPerBaggageString = 8192
+	maxParseErrors           = 5
 )
 
 // Baggage is a propagator that supports the W3C Baggage format.
@@ -74,15 +77,28 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 
 	var members []baggage.Member
 	var totalBytes int
+	var parseErrors int
+	var truncateErr error
 	for _, bStr := range bVals {
 		totalBytes += len(bStr)
 		if totalBytes > maxBytesPerBaggageString {
+			parseErrors++
+			if parseErrors <= maxParseErrors {
+				truncateErr = errors.Join(truncateErr, fmt.Errorf("baggage: aggregate header size %d exceeds %d byte limit", totalBytes, maxBytesPerBaggageString))
+			}
 			break
 		}
 
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
-			errorhandler.GetErrorHandler().Handle(err)
+			if uw, ok := err.(interface{ Unwrap() []error }); ok {
+				parseErrors += len(uw.Unwrap())
+			} else {
+				parseErrors++
+			}
+			if parseErrors <= maxParseErrors {
+				truncateErr = errors.Join(truncateErr, err)
+			}
 		}
 		if currBag.Len() == 0 {
 			continue
@@ -93,10 +109,18 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 		}
 	}
 
+	if dropped := parseErrors - maxParseErrors; dropped > 0 {
+		truncateErr = errors.Join(truncateErr, fmt.Errorf("and %d more error(s)", dropped))
+	}
+
 	b, err := baggage.New(members...)
 	if err != nil {
-		errorhandler.GetErrorHandler().Handle(err)
+		truncateErr = errors.Join(truncateErr, err)
 	}
+	if truncateErr != nil {
+		errorhandler.GetErrorHandler().Handle(truncateErr)
+	}
+
 	if b.Len() == 0 {
 		return parent
 	}
