@@ -84,7 +84,14 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 		if totalBytes > maxBytesPerBaggageString {
 			parseErrors++
 			if parseErrors <= maxParseErrors {
-				truncateErr = errors.Join(truncateErr, fmt.Errorf("baggage: aggregate header size %d exceeds %d byte limit", totalBytes, maxBytesPerBaggageString))
+				truncateErr = errors.Join(
+					truncateErr,
+					fmt.Errorf(
+						"baggage: aggregate header size %d exceeds %d byte limit",
+						totalBytes,
+						maxBytesPerBaggageString,
+					),
+				)
 			}
 			break
 		}
