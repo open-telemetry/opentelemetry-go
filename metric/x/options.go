@@ -53,6 +53,10 @@ func (o *unsafeAttributesOption) Set(kvs []attribute.KeyValue) {
 // and associates them with a measurement without making a copy.
 // The caller must not modify the attributes slice after passing it to this function.
 // This is a work-in-progress, and does not yet have better performance than metric.WithAttributeSet.
+//
+// Attributes passed via WithUnsafeAttributes are merged with attributes from standard options
+// (e.g., metric.WithAttributes). If duplicate keys exist, attributes from WithUnsafeAttributes
+// take precedence and will override standard attributes, regardless of the order they are passed.
 func WithUnsafeAttributes(kvs ...attribute.KeyValue) metric.MeasurementOption {
 	return &unsafeAttributesOption{kvs: kvs}
 }
