@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package observ provides experimental observability instrumentation for the
-// otlptracehttp exporter.
-package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
+// otlpmetrichttp exporter.
+package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/observ"
 
 import (
 	"context"
@@ -17,10 +17,12 @@ import (
 	"sync"
 	"time"
 
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/x"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
@@ -29,7 +31,7 @@ import (
 
 const (
 	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
+	ScopeName = "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/observ"
 
 	// SchemaURL is the schema URL of the metrics produced by this
 	// instrumentation.
@@ -84,22 +86,22 @@ func put[T any](p *sync.Pool, s *[]T) {
 // ComponentName returns the component name for the exporter with the
 // provided ID.
 func ComponentName(id int64) string {
-	t := semconv.OTelComponentTypeOtlpHTTPSpanExporter.Value.AsString()
+	t := semconv.OTelComponentTypeOtlpHTTPMetricExporter.Value.AsString()
 	return fmt.Sprintf("%s/%d", t, id)
 }
 
 // Instrumentation is experimental instrumentation for the exporter.
 type Instrumentation struct {
-	inflightSpans metric.Int64UpDownCounter
-	exportedSpans metric.Int64Counter
-	opDuration    metric.Float64Histogram
+	inflightMetric metric.Int64UpDownCounter
+	exportedMetric metric.Int64Counter
+	opDuration     metric.Float64Histogram
 
 	attrs  []attribute.KeyValue
 	addOpt metric.AddOption
 	recOpt metric.RecordOption
 }
 
-// NewInstrumentation returns instrumentation for an OTLP over HTTP trace
+// NewInstrumentation returns instrumentation for an OTLP over HTTP metric
 // exporter with the provided ID and endpoint. It uses the global
 // MeterProvider to create the instrumentation.
 //
@@ -136,19 +138,19 @@ func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
 
 	var err error
 
-	inflightSpans, e := otelconv.NewSDKExporterSpanInflight(m)
+	inflightMetric, e := otelconv.NewSDKExporterMetricDataPointInflight(m)
 	if e != nil {
-		e = fmt.Errorf("failed to create span inflight metric: %w", e)
+		e = fmt.Errorf("failed to create inflight metric: %w", e)
 		err = errors.Join(err, e)
 	}
-	i.inflightSpans = inflightSpans.Inst()
+	i.inflightMetric = inflightMetric.Inst()
 
-	exportedSpans, e := otelconv.NewSDKExporterSpanExported(m)
+	exportedMetric, e := otelconv.NewSDKExporterMetricDataPointExported(m)
 	if e != nil {
-		e = fmt.Errorf("failed to create span exported metric: %w", e)
+		e = fmt.Errorf("failed to create exported metric: %w", e)
 		err = errors.Join(err, e)
 	}
-	i.exportedSpans = exportedSpans.Inst()
+	i.exportedMetric = exportedMetric.Inst()
 
 	opDuration, e := otelconv.NewSDKExporterOperationDuration(m)
 	if e != nil {
@@ -176,7 +178,7 @@ func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
 		}
 		return []attribute.KeyValue{
 			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+			semconv.OTelComponentTypeOtlpHTTPMetricExporter,
 		}
 	}
 
@@ -185,7 +187,7 @@ func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
 	if port < 0 {
 		return []attribute.KeyValue{
 			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+			semconv.OTelComponentTypeOtlpHTTPMetricExporter,
 			semconv.ServerAddress(host),
 		}
 	}
@@ -193,14 +195,14 @@ func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
 	if host == "" {
 		return []attribute.KeyValue{
 			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+			semconv.OTelComponentTypeOtlpHTTPMetricExporter,
 			semconv.ServerPort(port),
 		}
 	}
 
 	return []attribute.KeyValue{
 		semconv.OTelComponentName(ComponentName(id)),
-		semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+		semconv.OTelComponentTypeOtlpHTTPMetricExporter,
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 	}
@@ -255,64 +257,66 @@ func parseIP(ip string) string {
 	return addr.String()
 }
 
-// ExportSpans instruments the UploadTraces method of the client. It returns an
+// ExportMetrics instruments the UploadMetrics method of the client. It returns an
 // [ExportOp] that must have its [ExportOp.End] method called when the
-// operation end.
-func (i *Instrumentation) ExportSpans(ctx context.Context, nSpans int) ExportOp {
+// operation ends.
+func (i *Instrumentation) ExportMetrics(ctx context.Context, rm *metricpb.ResourceMetrics) ExportOp {
 	start := time.Now()
 
-	if i.inflightSpans.Enabled(ctx) {
+	nMetrics := countDataPoints(rm)
+
+	if i.inflightMetric.Enabled(ctx) {
 		addOpt := get[metric.AddOption](addOptPool)
 		defer put(addOptPool, addOpt)
 		*addOpt = append(*addOpt, i.addOpt)
-		i.inflightSpans.Add(ctx, int64(nSpans), *addOpt...)
+		i.inflightMetric.Add(ctx, nMetrics, *addOpt...)
 	}
 
 	return ExportOp{
-		ctx:    ctx,
-		start:  start,
-		nSpans: int64(nSpans),
-		inst:   i,
+		ctx:      ctx,
+		start:    start,
+		nMetrics: nMetrics,
+		inst:     i,
 	}
 }
 
 // ExportOp tracks the export operation being observed by
-// [Instrumentation.ExportSpans].
+// [Instrumentation.ExportMetrics].
 type ExportOp struct {
-	ctx    context.Context
-	start  time.Time
-	nSpans int64
+	ctx      context.Context
+	start    time.Time
+	nMetrics int64
 
 	inst *Instrumentation
 }
 
 // End completes the observation of the operation being observed by a call to
-// [Instrumentation.ExportSpans].
+// [Instrumentation.ExportMetrics].
 //
 // Any error that is encountered is provided as err.
 // The HTTP status code from the response is provided as status.
 //
-// If err is not nil, all spans will be recorded as failures unless error is of
+// If err is not nil, all metrics will be recorded as failures unless error is of
 // type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
-// of successfully exported spans will be determined by inspecting the
+// of successfully exported metrics will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, status int) {
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	if e.inst.inflightSpans.Enabled(e.ctx) {
-		e.inst.inflightSpans.Add(e.ctx, -e.nSpans, *addOpt...)
+	if e.inst.inflightMetric.Enabled(e.ctx) {
+		e.inst.inflightMetric.Add(e.ctx, -e.nMetrics, *addOpt...)
 	}
 
-	success := successful(e.nSpans, err)
-	// Record successfully exported spans, even if the value is 0 which are
+	success := successful(e.nMetrics, err)
+	// Record successfully exported metrics, even if the value is 0 which are
 	// meaningful to distribution aggregations.
-	if e.inst.exportedSpans.Enabled(e.ctx) {
-		e.inst.exportedSpans.Add(e.ctx, success, *addOpt...)
+	if e.inst.exportedMetric.Enabled(e.ctx) {
+		e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
 	}
 
-	if err != nil && e.inst.exportedSpans.Enabled(e.ctx) {
+	if err != nil && e.inst.exportedMetric.Enabled(e.ctx) {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
@@ -324,7 +328,7 @@ func (e ExportOp) End(err error, status int) {
 		// Reset addOpt with new attribute set.
 		*addOpt = append((*addOpt)[:0], o)
 
-		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
+		e.inst.exportedMetric.Add(e.ctx, e.nMetrics-success, *addOpt...)
 	}
 
 	if e.inst.opDuration.Enabled(e.ctx) {
@@ -368,21 +372,21 @@ func (i *Instrumentation) recordOption(err error, status int) metric.RecordOptio
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 
-// successful returns the number of successfully exported spans out of the n
+// successful returns the number of successfully exported metrics out of the n
 // that were exported based on the provided error.
 //
-// If err is nil, n is returned. All spans were successfully exported.
+// If err is nil, n is returned. All metrics were successfully exported.
 //
 // If err is not nil and not an [internal.PartialSuccess] error, 0 is returned.
-// It is assumed all spans failed to be exported.
+// It is assumed all metrics failed to be exported.
 //
 // If err is an [internal.PartialSuccess] error, the number of successfully
-// exported spans is computed by subtracting the RejectedItems field from n. If
+// exported metrics is computed by subtracting the RejectedItems field from n. If
 // RejectedItems is negative, n is returned. If RejectedItems is greater than
 // n, 0 is returned.
 func successful(n int64, err error) int64 {
 	if err == nil {
-		return n // All spans successfully exported.
+		return n // All metrics successfully exported.
 	}
 	// Split rejection calculation so successful is inlinable.
 	return n - rejected(n, err)
@@ -392,8 +396,8 @@ var errPartialPool = &sync.Pool{
 	New: func() any { return new(internal.PartialSuccess) },
 }
 
-// rejected returns how many out of the n spans exporter were rejected based on
-// the provided non-nil err.
+// rejected returns how many out of the n metrics were rejected based on the
+// provided non-nil err.
 func rejected(n int64, err error) int64 {
 	ps := errPartialPool.Get().(*internal.PartialSuccess)
 	defer errPartialPool.Put(ps)
@@ -403,5 +407,5 @@ func rejected(n int64, err error) int64 {
 		// but be defensive as this is from an external source.
 		return min(max(ps.RejectedItems, 0), n)
 	}
-	return n // All spans rejected.
+	return n // All metrics rejected.
 }
