@@ -25,7 +25,10 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
 
@@ -45,8 +48,10 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	otel.SetMeterProvider(provider)
 
-	em.TrackExport(t.Context(), createTestResourceMetrics()).End(nil)
-	em.TrackExport(t.Context(), createTestResourceMetrics()).End(errors.New("test error"))
+	testRm := createTestResourceMetrics()
+	otlpRm, _ := transform.ResourceMetrics(testRm)
+	em.TrackExport(t.Context(), otlpRm).End(nil)
+	em.TrackExport(t.Context(), otlpRm).End(errors.New("test error"))
 
 	// Verify no metrics were recorded when disabled
 	rm := &metricdata.ResourceMetrics{}
@@ -377,7 +382,9 @@ func TestTrackExport(t *testing.T) {
 			require.NotNil(t, em)
 			rm := createTestResourceMetrics()
 
-			em.TrackExport(t.Context(), rm).End(tt.err)
+			otlpRm, err := transform.ResourceMetrics(rm)
+			require.NoError(t, err)
+			em.TrackExport(t.Context(), otlpRm).End(tt.err)
 
 			var got metricdata.ResourceMetrics
 			err = reader.Collect(t.Context(), &got)
@@ -408,10 +415,10 @@ func TestTrackExport(t *testing.T) {
 	}
 }
 
-func TestCountDataPoints(t *testing.T) {
+func TestCountProtoDataPoints(t *testing.T) {
 	tests := []struct {
 		name     string
-		rm       *metricdata.ResourceMetrics
+		rm       *metricpb.ResourceMetrics
 		expected int64
 	}{
 		{
@@ -421,19 +428,53 @@ func TestCountDataPoints(t *testing.T) {
 		},
 		{
 			name:     "empty resource metrics",
-			rm:       &metricdata.ResourceMetrics{},
+			rm:       &metricpb.ResourceMetrics{},
 			expected: 0,
 		},
 		{
-			name:     "test data",
-			rm:       createTestResourceMetrics(),
-			expected: 10, // 2 gauge + 1 gauge + 1 sum + 1 sum + 1 histogram + 1 histogram + 1 exponential histogram + 1 exponential histogram + 1 summary
+			name: "test data",
+			rm: &metricpb.ResourceMetrics{
+				ScopeMetrics: []*metricpb.ScopeMetrics{
+					{
+						Metrics: []*metricpb.Metric{
+							{
+								Data: &metricpb.Metric_Gauge{
+									Gauge: &metricpb.Gauge{
+										DataPoints: []*metricpb.NumberDataPoint{
+											{}, {},
+										},
+									},
+								},
+							},
+							{
+								Data: &metricpb.Metric_Sum{
+									Sum: &metricpb.Sum{
+										DataPoints: []*metricpb.NumberDataPoint{
+											{},
+										},
+									},
+								},
+							},
+							{
+								Data: &metricpb.Metric_Histogram{
+									Histogram: &metricpb.Histogram{
+										DataPoints: []*metricpb.HistogramDataPoint{
+											{}, {}, {},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: 6, // 2 gauge + 1 sum + 3 histogram
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			count := countDataPoints(tt.rm)
+			count := countProtoDataPoints(tt.rm)
 			assert.Equal(t, tt.expected, count, "data points count mismatch")
 		})
 	}
@@ -589,7 +630,8 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 func BenchmarkInstrumentationTrackExport(b *testing.B) {
 	run := func(enabled bool, err error) func(*testing.B) {
 		return func(b *testing.B) {
-			rm := createTestResourceMetrics()
+			testRm := createTestResourceMetrics()
+			otlpRm, _ := transform.ResourceMetrics(testRm)
 			if enabled {
 				b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -616,7 +658,7 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.TrackExport(b.Context(), rm).End(err)
+				inst.TrackExport(b.Context(), otlpRm).End(err)
 			}
 		}
 	}
