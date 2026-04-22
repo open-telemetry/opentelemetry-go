@@ -648,4 +648,14 @@ func TestSetNewDistinctWithFilter(t *testing.T) {
 			t.Errorf("expected %v, got %v", expected, d)
 		}
 	})
+
+	t.Run("NilSet", func(t *testing.T) {
+		var ns *attribute.Set
+		d := ns.NewDistinctWithFilter(func(_ attribute.KeyValue) bool {
+			return true
+		})
+		if d != empty.Equivalent() {
+			t.Errorf("expected empty set hash %v, got %v", empty.Equivalent(), d)
+		}
+	})
 }
