@@ -22,9 +22,9 @@ func HistogramReservoirProvider(bounds []float64) ReservoirProvider {
 	}
 }
 
-// NewHistogramReservoir returns a [HistogramReservoir] that samples the last
-// measurement that falls within a histogram bucket. The histogram bucket
-// upper-boundaries are define by bounds.
+// NewHistogramReservoir returns a [HistogramReservoir] that samples at most
+// one exemplar per histogram bucket using a time-unbiased Algorithm L sampling
+// strategy. The histogram bucket upper-boundaries are defined by bounds.
 //
 // The passed bounds must be sorted before calling this function.
 func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
@@ -36,9 +36,9 @@ func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 
 var _ Reservoir = &HistogramReservoir{}
 
-// HistogramReservoir is a [Reservoir] that samples the last measurement that
-// falls within a histogram bucket. The histogram bucket upper-boundaries are
-// define by bounds.
+// HistogramReservoir is a [Reservoir] that samples at most one exemplar per
+// histogram bucket using a time-unbiased Algorithm L sampling strategy. The
+// histogram bucket upper-boundaries are defined by bounds.
 type HistogramReservoir struct {
 	reservoir.ConcurrentSafe
 	*storage
@@ -70,7 +70,7 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 	}
 
 	idx := sort.SearchFloat64s(r.bounds, n)
-	r.measurements[idx].offer(ctx, t, v, a)
+	r.storage.measurements[idx].offer(ctx, t, v, a)
 }
 
 // Collect returns all the held exemplars.

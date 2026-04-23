@@ -69,7 +69,10 @@ func TestHistogramReservoirSamplingCorrectness(t *testing.T) {
 	// Assert that each item was sampled at least some times (not 0).
 	// And that it is close to the expected 200 counts.
 	expectedCount := experiments / offersPerBucket
-	delta := float64(experiments) * 0.05 // 5% margin
+	// We allow a delta of 50, which is 25% of the expected count (200),
+	// or 5% of the total number of experiments. This is approximately 4
+	// standard deviations, making test flakes highly unlikely.
+	delta := float64(experiments) * 0.05
 
 	for i := 1; i <= offersPerBucket; i++ {
 		assert.InDelta(t, float64(expectedCount), float64(counts0[i]), delta, "Bucket 0 item %d", i)

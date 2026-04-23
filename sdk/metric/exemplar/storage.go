@@ -43,7 +43,7 @@ func (r *storage) Collect(dest *[]Exemplar) {
 	*dest = (*dest)[:n]
 }
 
-// reset is used for testing to reset the storage.
+// reset resets the Algorithm L sampling state for all buckets in the storage.
 func (r *storage) reset() {
 	for i := range r.measurements {
 		r.measurements[i].mux.Lock()
@@ -164,7 +164,8 @@ func (m *measurement) offer(ctx context.Context, ts time.Time, v Value, droppedA
 	m.count++
 }
 
-// reset resets m to the initial state. The caller must hold the lock.
+// reset resets the Algorithm L sampling state of m. It does not clear the
+// stored exemplar data. The caller must hold the lock.
 func (m *measurement) reset() {
 	// This resets the number of exemplars known.
 	m.count = 0
