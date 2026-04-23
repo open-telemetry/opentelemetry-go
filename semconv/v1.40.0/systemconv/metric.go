@@ -324,6 +324,7 @@ func (m CPUFrequency) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -350,6 +351,7 @@ func (m CPUFrequency) RecordSet(ctx context.Context, val int64, set attribute.Se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -439,6 +441,7 @@ func (m CPULogicalCount) Add(ctx context.Context, incr int64, attrs ...attribute
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -462,6 +465,7 @@ func (m CPULogicalCount) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -543,6 +547,7 @@ func (m CPUPhysicalCount) Add(ctx context.Context, incr int64, attrs ...attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -566,6 +571,7 @@ func (m CPUPhysicalCount) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -722,6 +728,7 @@ func (m CPUUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -748,6 +755,7 @@ func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -845,6 +853,7 @@ func (m DiskIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -871,6 +880,7 @@ func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -961,7 +971,6 @@ func (DiskIOTime) Description() string {
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
 func (m DiskIOTime) Add(
@@ -979,6 +988,7 @@ func (m DiskIOTime) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1003,7 +1013,6 @@ func (m DiskIOTime) Add(
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
 func (m DiskIOTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
@@ -1017,6 +1026,7 @@ func (m DiskIOTime) AddSet(ctx context.Context, incr float64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1107,6 +1117,7 @@ func (m DiskLimit) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1133,6 +1144,7 @@ func (m DiskLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1223,6 +1235,7 @@ func (m DiskMerged) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1249,6 +1262,7 @@ func (m DiskMerged) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1338,7 +1352,6 @@ func (DiskOperationTime) Description() string {
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) Add(
 	ctx context.Context,
@@ -1355,6 +1368,7 @@ func (m DiskOperationTime) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1378,7 +1392,6 @@ func (m DiskOperationTime) Add(
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
 	if !m.Float64Counter.Enabled(ctx) {
@@ -1391,6 +1404,7 @@ func (m DiskOperationTime) AddSet(ctx context.Context, incr float64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1487,6 +1501,7 @@ func (m DiskOperations) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1513,6 +1528,7 @@ func (m DiskOperations) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1609,6 +1625,7 @@ func (m FilesystemLimit) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1635,6 +1652,7 @@ func (m FilesystemLimit) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1752,6 +1770,7 @@ func (m FilesystemUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1783,6 +1802,7 @@ func (m FilesystemUsage) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1902,6 +1922,7 @@ func (m FilesystemUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1928,6 +1949,7 @@ func (m FilesystemUtilization) RecordSet(ctx context.Context, val int64, set att
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2041,6 +2063,7 @@ func (m MemoryLimit) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2061,6 +2084,7 @@ func (m MemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2150,6 +2174,7 @@ func (m MemoryLinuxAvailable) Add(ctx context.Context, incr int64, attrs ...attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2180,6 +2205,7 @@ func (m MemoryLinuxAvailable) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2264,6 +2290,7 @@ func (m MemoryLinuxShared) Add(ctx context.Context, incr int64, attrs ...attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2290,6 +2317,7 @@ func (m MemoryLinuxShared) AddSet(ctx context.Context, incr int64, set attribute
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2384,6 +2412,7 @@ func (m MemoryLinuxSlabUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2419,6 +2448,7 @@ func (m MemoryLinuxSlabUsage) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2638,6 +2668,7 @@ func (m NetworkConnectionCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2664,6 +2695,7 @@ func (m NetworkConnectionCount) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2764,7 +2796,6 @@ func (NetworkErrors) Description() string {
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -2783,6 +2814,7 @@ func (m NetworkErrors) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2805,7 +2837,6 @@ func (m NetworkErrors) Add(
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -2820,6 +2851,7 @@ func (m NetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2990,6 +3022,7 @@ func (m NetworkPacketCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3016,6 +3049,7 @@ func (m NetworkPacketCount) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3105,7 +3139,6 @@ func (NetworkPacketDropped) Description() string {
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -3124,6 +3157,7 @@ func (m NetworkPacketDropped) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3146,7 +3180,6 @@ func (m NetworkPacketDropped) Add(
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -3161,6 +3194,7 @@ func (m NetworkPacketDropped) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3259,6 +3293,7 @@ func (m PagingFaults) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3285,6 +3320,7 @@ func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3376,6 +3412,7 @@ func (m PagingOperations) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3402,6 +3439,7 @@ func (m PagingOperations) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3500,6 +3538,7 @@ func (m PagingUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3526,6 +3565,7 @@ func (m PagingUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3623,6 +3663,7 @@ func (m PagingUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -3649,6 +3690,7 @@ func (m PagingUtilization) RecordSet(ctx context.Context, val int64, set attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -3746,6 +3788,7 @@ func (m ProcessCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3772,6 +3815,7 @@ func (m ProcessCount) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3859,6 +3903,7 @@ func (m ProcessCreated) Add(ctx context.Context, incr int64, attrs ...attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3879,6 +3924,7 @@ func (m ProcessCreated) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3961,6 +4007,7 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -3985,6 +4032,7 @@ func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()

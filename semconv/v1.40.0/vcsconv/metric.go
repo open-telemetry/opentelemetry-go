@@ -236,6 +236,7 @@ func (m ChangeCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -266,6 +267,7 @@ func (m ChangeCount) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -391,6 +393,7 @@ func (m ChangeDuration) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -422,6 +425,7 @@ func (m ChangeDuration) RecordSet(ctx context.Context, val float64, set attribut
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -543,6 +547,7 @@ func (m ChangeTimeToApproval) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -573,6 +578,7 @@ func (m ChangeTimeToApproval) RecordSet(ctx context.Context, val float64, set at
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -723,6 +729,7 @@ func (m ChangeTimeToMerge) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -753,6 +760,7 @@ func (m ChangeTimeToMerge) RecordSet(ctx context.Context, val float64, set attri
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -896,6 +904,7 @@ func (m ContributorCount) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -925,6 +934,7 @@ func (m ContributorCount) RecordSet(ctx context.Context, val int64, set attribut
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1044,6 +1054,7 @@ func (m RefCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1074,6 +1085,7 @@ func (m RefCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1183,18 +1195,19 @@ func (RefLinesDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851
-//
 // This metric should be reported for each `vcs.line_change.type` value. For
 // example if a ref added 3 lines and removed 2 lines,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers).
 // If number of lines added/removed should be calculated from the start of time,
 // then `vcs.ref.base.name` SHOULD be set to an empty string.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefLinesDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1223,6 +1236,7 @@ func (m RefLinesDelta) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1264,6 +1278,7 @@ func (m RefLinesDelta) RecordSet(ctx context.Context, val int64, set attribute.S
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1380,16 +1395,17 @@ func (RefRevisionsDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851
-//
 // This metric should be reported for each `vcs.revision_delta.direction` value.
 // For example if branch `a` is 3 commits behind and 2 commits ahead of `trunk`,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers) and `vcs.ref.base.name` is set to `trunk`.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefRevisionsDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1418,6 +1434,7 @@ func (m RefRevisionsDelta) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1457,6 +1474,7 @@ func (m RefRevisionsDelta) RecordSet(ctx context.Context, val int64, set attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1567,8 +1585,9 @@ func (RefTime) Description() string {
 // All additional attrs passed are included in the recorded value.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefTime) Record(
 	ctx context.Context,
 	val float64,
@@ -1591,6 +1610,7 @@ func (m RefTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1622,6 +1642,7 @@ func (m RefTime) RecordSet(ctx context.Context, val float64, set attribute.Set) 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1727,6 +1748,7 @@ func (m RepositoryCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1753,6 +1775,7 @@ func (m RepositoryCount) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
