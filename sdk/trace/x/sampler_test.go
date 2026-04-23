@@ -290,7 +290,9 @@ func TestProbabilitySampler(t *testing.T) {
 		result := sampler.ShouldSample(params)
 
 		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
-		assert.Empty(t, result.Tracestate.Get("ot"))
+		ot := result.Tracestate.Get("ot")
+		require.NotEmpty(t, ot)
+		assert.Contains(t, ot, "th:")
 	})
 
 	t.Run("root span Drop", func(t *testing.T) {
