@@ -277,6 +277,29 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
 }
 
+func TestExportSpansRequestSizeLimit(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := t.Context()
+	exp := newGRPCExporter(
+		t,
+		ctx,
+		mc.endpoint,
+		otlptracegrpc.WithMaxRequestSize(1),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
+	)
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(context.WithoutCancel(t.Context()), t, 10*time.Second)
+		defer cancel()
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	err := exp.ExportSpans(ctx, roSpans)
+	assert.ErrorContains(t, err, "request message too large")
+	assert.Empty(t, mc.getResourceSpans(), "oversized request must fail before sending")
+}
+
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 

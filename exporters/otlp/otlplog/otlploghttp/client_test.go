@@ -1151,6 +1151,29 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	}
 }
 
+func TestRequestBodySizeLimit(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxRequestSize(1),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := newConfig(opts)
+	c, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{}})
+	assert.ErrorContains(t, err, "request body too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
+}
+
 func BenchmarkExporterExportLogs(b *testing.B) {
 	const n = 10
 
