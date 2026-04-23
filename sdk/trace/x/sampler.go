@@ -61,17 +61,7 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 		}
 	}
 
-	var newOtts string
-	// Only insert/update th when randomness is available (either from
-	// explicit rv value or trace ID with the random flag). Otherwise,
-	// erase any existing th to signal the span is not guaranteed to be
-	// statistically representative.
-	// See https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/#general-requirements
-	if hasRandomness || psc.TraceFlags().IsRandom() {
-		newOtts = InsertOrUpdateTraceStateThKeyValue(existingOtts, ps.thkv)
-	} else {
-		newOtts = eraseTraceStateThKeyValue(existingOtts)
-	}
+	newOtts := InsertOrUpdateTraceStateThKeyValue(existingOtts, ps.thkv)
 
 	if newOtts == "" {
 		state = state.Delete("ot")
