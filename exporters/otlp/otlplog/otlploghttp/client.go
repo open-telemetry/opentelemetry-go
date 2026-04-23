@@ -111,10 +111,11 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	c := &httpClient{
-		compression: cfg.compression.Value,
-		req:         req,
-		requestFunc: cfg.retryCfg.Value.RequestFunc(evaluate),
-		client:      hc,
+		compression:    cfg.compression.Value,
+		maxRequestSize: cfg.maxRequestSize.Value,
+		req:            req,
+		requestFunc:    cfg.retryCfg.Value.RequestFunc(evaluate),
+		client:         hc,
 	}
 
 	id := nextExporterID()
@@ -125,10 +126,11 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 
 type httpClient struct {
 	// req is cloned for every upload the client makes.
-	req         *http.Request
-	compression Compression
-	requestFunc retry.RequestFunc
-	client      *http.Client
+	req            *http.Request
+	compression    Compression
+	maxRequestSize int
+	requestFunc    retry.RequestFunc
+	client         *http.Client
 
 	inst *observ.Instrumentation
 }
@@ -159,15 +161,19 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 	if err != nil {
 		return err
 	}
-	request, err := c.newRequest(ctx, body)
-	if err != nil {
-		return err
-	}
 
 	var statusCode int
 	if c.inst != nil {
 		op := c.inst.ExportLogs(ctx, int64(len(data)))
 		defer func() { op.End(uploadErr, statusCode) }()
+	}
+
+	if maxSize := c.maxRequestSize; maxSize > 0 && len(body) > maxSize {
+		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
+	}
+	request, err := c.newRequest(ctx, body)
+	if err != nil {
+		return err
 	}
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {

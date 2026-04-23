@@ -168,6 +168,10 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	ctx, cancel := d.contextWithStop(ctx)
 	defer cancel()
 
+	if maxSize := d.cfg.MaxRequestSize; maxSize > 0 && len(rawRequest) > maxSize {
+		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
+	}
+
 	request, err := d.newRequest(rawRequest)
 	if err != nil {
 		return err
