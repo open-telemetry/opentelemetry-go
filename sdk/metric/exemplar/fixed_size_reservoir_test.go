@@ -53,6 +53,11 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+
+	// Verify that measurements were evenly distributed across buckets.
+	for i := range r.measurements {
+		assert.Equal(t, int64(1000), r.measurements[i].count, "Bucket %d count", i)
+	}
 }
 
 func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {

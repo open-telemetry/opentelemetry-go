@@ -70,8 +70,7 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 	}
 
 	idx := sort.SearchFloat64s(r.bounds, n)
-
-	r.store(ctx, idx, t, v, a)
+	r.measurements[idx].offer(ctx, t, v, a)
 }
 
 // Collect returns all the held exemplars.
