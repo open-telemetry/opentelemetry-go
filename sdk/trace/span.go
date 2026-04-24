@@ -350,8 +350,8 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 // slice, byte slice, and slice attribute values are truncated. String values are truncated
 // to at most a length of limit. Each string slice value is truncated in this
 // fashion (the slice length itself is unaffected), and byte slice values are truncated to at most
-// limit byte.. For slice attribute values,
-// the limit is applied to each element recursively.
+// limit bytes. For slice attribute values, the limit is applied to each
+// element recursively.
 //
 // No truncation is performed for a negative limit.
 func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
@@ -369,11 +369,11 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		}
 		return attr.Key.StringSlice(v)
 	case attribute.BYTESLICE:
-		v := attr.Value.AsByteSlice()
-		if len(v) > limit {
-			return attr.Key.ByteSlice(v[:limit])
+		v := attr.Value.AsString()
+		if len(v) <= limit {
+			return attr
 		}
-		return attr.Key.ByteSlice(v)
+		return attr.Key.ByteSlice([]byte(v[:limit]))
 	case attribute.SLICE:
 		v := attr.Value.AsSlice()
 		if !slices.ContainsFunc(v, func(e attribute.Value) bool { return needsTruncation(limit, e) }) {
@@ -404,9 +404,8 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		return attribute.StringSliceValue(ss)
 
 	case attribute.BYTESLICE:
-		bs := v.AsByteSlice()
-		if limit >= 0 && len(bs) > limit {
-			return attribute.ByteSliceValue(bs[:limit])
+		if limit >= 0 && len(v.AsString()) > limit {
+			return attribute.ByteSliceValue(v.AsByteSlice()[:limit])
 		}
 	case attribute.SLICE:
 		sl := v.AsSlice()
@@ -438,8 +437,7 @@ func needsTruncation(limit int, v attribute.Value) bool {
 	case attribute.STRING:
 		return stringNeedsTruncation(limit, v.AsString())
 	case attribute.BYTESLICE:
-		bs := v.AsByteSlice()
-		if limit >= 0 && len(bs) > limit {
+		if limit >= 0 && len(v.AsString()) > limit {
 			return true
 		}
 	case attribute.STRINGSLICE:

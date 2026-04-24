@@ -165,8 +165,8 @@ func TestSpanKindTransform(t *testing.T) {
 }
 
 func TestConvAttrValueBytes(t *testing.T) {
-	input := []byte("bytes")
-	testcases := []struct {
+	v := []byte("bytes")
+	tests := []struct {
 		name  string
 		want  []byte
 		limit int
@@ -193,15 +193,15 @@ func TestConvAttrValueBytes(t *testing.T) {
 		},
 	}
 	orig := maxSpan.AttrValueLen
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
-			maxSpan.AttrValueLen = tc.limit
+			maxSpan.AttrValueLen = test.limit
 
-			val := convAttrValue(attribute.ByteSliceValue(input))
+			val := convAttrValue(attribute.ByteSliceValue(v))
 
 			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
-			assert.Equal(t, tc.want, val.AsBytes())
+			assert.Equal(t, test.want, val.AsBytes())
 		})
 	}
 }
