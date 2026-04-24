@@ -215,7 +215,13 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 	code := codes.Unknown
 	if c.inst != nil {
-		op := c.inst.ExportSpans(ctx, len(protoSpans))
+		var spanCount int
+		for _, rs := range protoSpans {
+			for _, ss := range rs.ScopeSpans {
+				spanCount += len(ss.Spans)
+			}
+		}
+		op := c.inst.ExportSpans(ctx, spanCount)
 		defer func() { op.End(uploadErr, code) }()
 	}
 

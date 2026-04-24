@@ -705,7 +705,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: int64(len(resourceLogs)),
+										Value: int64(len(logRecords)),
 									},
 								},
 							},
@@ -831,7 +831,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: 0,
+										Value: 2,
 									},
 									{
 										Attributes: attribute.NewSet(
@@ -843,7 +843,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											semconv.ErrorType(wantErr),
 										),
-										Value: 1,
+										Value: 2,
 									},
 								},
 							},
@@ -976,7 +976,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											wantErrTypeAttr,
 										),
-										Value: 1,
+										Value: int64(len(logRecords)),
 									},
 								},
 							},
@@ -1144,7 +1144,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
 							),
-							Value: int64(len(resourceLogs)) - n,
+							Value: int64(len(logRecords)) - n,
 						},
 						{
 							Attributes: attribute.NewSet(

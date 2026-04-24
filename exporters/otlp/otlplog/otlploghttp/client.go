@@ -164,7 +164,13 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 
 	var statusCode int
 	if c.inst != nil {
-		op := c.inst.ExportLogs(ctx, int64(len(data)))
+		var count int64
+		for _, resLogs := range data {
+			for _, scopeLogs := range resLogs.ScopeLogs {
+				count += int64(len(scopeLogs.LogRecords))
+			}
+		}
+		op := c.inst.ExportLogs(ctx, count)
 		defer func() { op.End(uploadErr, statusCode) }()
 	}
 

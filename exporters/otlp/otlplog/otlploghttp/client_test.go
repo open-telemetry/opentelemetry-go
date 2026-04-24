@@ -1038,7 +1038,7 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(baseAttrs...)},
+						{Attributes: attribute.NewSet(baseAttrs...), Value: 0},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 				},
@@ -1049,11 +1049,11 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterLogExported{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(baseAttrs...)},
+						{Attributes: attribute.NewSet(baseAttrs...), Value: 2},
 						{Attributes: attribute.NewSet(append(
 							baseAttrs,
 							otelconv.SDKExporterLogExported{}.AttrErrorType("*errors.joinError"),
-						)...)},
+						)...), Value: 2},
 					},
 					Temporality: 0x1,
 					IsMonotonic: true,
@@ -1078,12 +1078,25 @@ func TestClientInstrumentation(t *testing.T) {
 	}
 
 	require.Len(t, got.ScopeMetrics, 1)
-	opt := []metricdatatest.Option{
+
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3, "expected 3 metrics")
+
+	// Assert counters without IgnoreValue
+	optCounters := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+	}
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], optCounters...)
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], optCounters...)
+
+	// Assert duration with IgnoreValue
+	optDuration := []metricdatatest.Option{
 		metricdatatest.IgnoreTimestamp(),
 		metricdatatest.IgnoreExemplars(),
 		metricdatatest.IgnoreValue(),
 	}
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+	metricdatatest.AssertEqual(t, want.Metrics[2], gotMetrics[2], optDuration...)
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
