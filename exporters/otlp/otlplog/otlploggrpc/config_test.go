@@ -112,6 +112,7 @@ func TestNewConfig(t *testing.T) {
 				WithServiceConfig("{}"),
 				WithDialOption(dialOptions...),
 				WithGRPCConn(&grpc.ClientConn{}),
+				WithMaxRequestSize(1),
 				WithTimeout(2 * time.Second),
 				WithRetry(RetryConfig(rc)),
 			},
@@ -120,6 +121,7 @@ func TestNewConfig(t *testing.T) {
 				insecure:           newSetting(true),
 				headers:            newSetting(headers),
 				compression:        newSetting(GzipCompression),
+				maxRequestSize:     newSetting(1),
 				timeout:            newSetting(2 * time.Second),
 				retryCfg:           newSetting(rc),
 				gRPCCredentials:    newSetting(credentials.NewTLS(tlsCfg)),
@@ -494,6 +496,9 @@ func TestNewConfig(t *testing.T) {
 				return func() { otel.SetErrorHandler(orig) }
 			}(otel.GetErrorHandler()))
 			c := newConfig(tc.options)
+			if !tc.want.maxRequestSize.Set {
+				tc.want.maxRequestSize = newSetting(defaultMaxRequestSize)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
