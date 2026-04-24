@@ -149,6 +149,16 @@ var (
 	}}
 )
 
+type logsServiceClientFunc func(context.Context, *collogpb.ExportLogsServiceRequest, ...grpc.CallOption) (*collogpb.ExportLogsServiceResponse, error)
+
+func (f logsServiceClientFunc) Export(
+	ctx context.Context,
+	req *collogpb.ExportLogsServiceRequest,
+	opts ...grpc.CallOption,
+) (*collogpb.ExportLogsServiceResponse, error) {
+	return f(ctx, req, opts...)
+}
+
 func TestThrottleDelay(t *testing.T) {
 	c := codes.ResourceExhausted
 	testcases := []struct {
@@ -265,6 +275,26 @@ func TestRetryableGRPCStatusResourceExhaustedWithRetryInfo(t *testing.T) {
 	ok, d := retryableGRPCStatus(s)
 	assert.True(t, ok)
 	assert.Equal(t, delay, d)
+}
+
+func TestUploadLogsRequestSizeLimit(t *testing.T) {
+	var calls int
+	c := &client{
+		maxRequestSize: 1,
+		requestFunc: func(ctx context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		},
+		lsc: logsServiceClientFunc(
+			func(context.Context, *collogpb.ExportLogsServiceRequest, ...grpc.CallOption) (*collogpb.ExportLogsServiceResponse, error) {
+				calls++
+				return &collogpb.ExportLogsServiceResponse{}, nil
+			},
+		),
+	}
+
+	err := c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{}})
+	assert.ErrorContains(t, err, "request message too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
 }
 
 func TestNewClient(t *testing.T) {
@@ -675,7 +705,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: int64(len(resourceLogs)),
+										Value: int64(len(logRecords)),
 									},
 								},
 							},
@@ -801,7 +831,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: 0,
+										Value: 2,
 									},
 									{
 										Attributes: attribute.NewSet(
@@ -813,7 +843,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											semconv.ErrorType(wantErr),
 										),
-										Value: 1,
+										Value: 2,
 									},
 								},
 							},
@@ -946,7 +976,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											wantErrTypeAttr,
 										),
-										Value: 1,
+										Value: int64(len(logRecords)),
 									},
 								},
 							},
@@ -1114,7 +1144,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
 							),
-							Value: int64(len(resourceLogs)) - n,
+							Value: int64(len(logRecords)) - n,
 						},
 						{
 							Attributes: attribute.NewSet(

@@ -45,7 +45,6 @@ func Example() {
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(reader),
-		metric.WithCardinalityLimit(2000),
 	)
 
 	// Handle shutdown properly so that nothing leaks.

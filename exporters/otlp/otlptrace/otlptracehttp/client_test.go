@@ -8,6 +8,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -530,7 +531,8 @@ func TestClientInstrumentation(t *testing.T) {
 	exporter, err := otlptrace.New(t.Context(), driver)
 	require.NoError(t, err)
 
-	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
+	err = exporter.ExportSpans(t.Context(), localSpans)
 	assert.Error(t, err)
 
 	require.NoError(t, exporter.Shutdown(t.Context()))
@@ -552,7 +554,7 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 				},
@@ -563,11 +565,11 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
-						)...)},
+						)...), Value: 2},
 					},
 					Temporality: 0x1,
 					IsMonotonic: true,
@@ -591,12 +593,18 @@ func TestClientInstrumentation(t *testing.T) {
 		},
 	}
 	require.Len(t, got.ScopeMetrics, 1)
-	opt := []metricdatatest.Option{
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3)
+
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(
+		t,
+		want.Metrics[2],
+		gotMetrics[2],
 		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreExemplars(),
 		metricdatatest.IgnoreValue(),
-	}
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+	)
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
@@ -649,6 +657,29 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+}
+
+func TestRequestBodySizeLimit(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithMaxRequestSize(1),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+	)
+	exporter, err := otlptrace.New(t.Context(), client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.ErrorContains(t, err, "request body too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
 }
 
 func TestGetBodyCalledOnRedirect(t *testing.T) {
@@ -817,4 +848,80 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 		run(b)
 	})
+}
+
+func TestClientInstrumentationStaleStatusCode(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	const id = 0
+	counter.SetExporterID(id)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	// Use a client that returns a 503 error once and then a network error.
+	var calls int
+	client := &http.Client{
+		Transport: roundTripperFunc(func(_ *http.Request) (*http.Response, error) {
+			calls++
+			if calls == 1 {
+				return &http.Response{
+					StatusCode: http.StatusServiceUnavailable,
+					Status: fmt.Sprintf("%d %s",
+						http.StatusServiceUnavailable,
+						http.StatusText(http.StatusServiceUnavailable)),
+					Header: make(http.Header),
+					Body:   io.NopCloser(strings.NewReader("")),
+				}, nil
+			}
+			return nil, errors.New("network error")
+		}),
+	}
+
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithHTTPClient(client),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	exporter, err := otlptrace.New(t.Context(), driver)
+	require.NoError(t, err)
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.Error(t, err)
+
+	require.NoError(t, exporter.Shutdown(t.Context()))
+
+	// Validate that the status code is 0 and not the stale 503 on self-observability metrics.
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	require.Len(t, got.ScopeMetrics, 1)
+	metrics := got.ScopeMetrics[0].Metrics
+	var found bool
+	for _, m := range metrics {
+		if m.Name != (otelconv.SDKExporterOperationDuration{}).Name() {
+			continue
+		}
+		found = true
+		data := m.Data.(metricdata.Histogram[float64])
+		require.NotEmpty(t, data.DataPoints)
+		dp := data.DataPoints[0]
+		_, ok := dp.Attributes.Value(otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(0).Key)
+		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
+	}
+	assert.True(t, found, "expected to find operation duration metric")
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }
