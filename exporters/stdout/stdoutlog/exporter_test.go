@@ -476,7 +476,7 @@ func TestObservability(t *testing.T) {
 		{
 			name:    "Disabled",
 			enabled: false,
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, _ func() metricdata.ScopeMetrics) {
 				exporter := &Exporter{}
 				assert.Nil(t, exporter.inst)
 			},
@@ -536,7 +536,7 @@ func TestObservability(t *testing.T) {
 }
 
 func BenchmarkExporterObservability(b *testing.B) {
-	ctx := context.Background()
+	ctx := b.Context()
 	rec := getRecord(time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC))
 	records := []sdklog.Record{rec}
 
@@ -576,18 +576,6 @@ func BenchmarkExporterObservability(b *testing.B) {
 		b.ResetTimer()
 		for b.Loop() {
 			buf.Reset()
-			_ = exporter.Export(ctx, records)
-		}
-	})
-
-	b.Run("UploadFailed", func(b *testing.B) {
-		setupObservability(b)
-		writeErr := errors.New("write failed")
-		exporter, err := New(WithWriter(&failingWriter{err: writeErr}))
-		require.NoError(b, err)
-		b.ReportAllocs()
-		b.ResetTimer()
-		for b.Loop() {
 			_ = exporter.Export(ctx, records)
 		}
 	})
