@@ -248,7 +248,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			})
 			continue
 		}
-		n := len(c.resourceKeyVals.keys) + 2 // resource attrs + scope name + scope version
+		// resource attributes + scope attributes + scope name + scope version + scope schema url
+		n := len(c.resourceKeyVals.keys) + 3 + scopeMetrics.Scope.Attributes.Len()
 		kv := keyVals{
 			keys: make([]string, 0, n),
 			vals: make([]string, 0, n),
@@ -258,14 +259,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals, e := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
+			attrKeys, attrVals, e := getScopeAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			if e != nil {
 				reportError(ch, nil, e)
 				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d: %w", j, e))
 				continue
-			}
-			for i := range attrKeys {
-				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
 			}
 			kv.keys = append(kv.keys, attrKeys...)
 			kv.vals = append(kv.vals, attrVals...)
@@ -648,6 +646,27 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			slices.Sort(vals)
 			values = append(values, strings.Join(vals, ";"))
 		}
+	}
+	return keys, values, nil
+}
+
+func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
+	filtered, _ := attrs.Filter(func(kv attribute.KeyValue) bool {
+		switch string(kv.Key) {
+		case "name", "version", "schema_url":
+			return false
+		default:
+			return true
+		}
+	})
+
+	keys, values, err := getAttrs(filtered, labelNamer)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range keys {
+		keys[i] = scopeLabelPrefix + keys[i]
 	}
 	return keys, values, nil
 }
