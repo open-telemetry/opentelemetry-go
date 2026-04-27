@@ -36,13 +36,28 @@ func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
 	}
 }
 
-func benchmarkString(kv attribute.KeyValue) func(*testing.B) {
+func benchmarkValueString(v attribute.Value) func(*testing.B) {
 	return func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			outStr = kv.Value.String()
+			outStr = v.String()
 		}
 	}
+}
+
+func benchmarkKeyValueString(kv attribute.KeyValue) func(*testing.B) {
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			outStr = kv.String()
+		}
+	}
+}
+
+func runStringBenchmarks(b *testing.B, kv attribute.KeyValue) {
+	b.Run("String", benchmarkValueString(kv.Value))
+	b.Run("KeyValueString", benchmarkKeyValueString(kv))
+	b.Run("Emit", benchmarkEmit(kv))
 }
 
 func BenchmarkBool(b *testing.B) {
@@ -67,8 +82,7 @@ func BenchmarkBool(b *testing.B) {
 			outBool = kv.Value.AsBool()
 		}
 	})
-	b.Run("String", benchmarkString(kv))
-	b.Run("Emit", benchmarkEmit(kv))
+	runStringBenchmarks(b, kv)
 }
 
 func BenchmarkBoolSlice(b *testing.B) {
@@ -101,8 +115,7 @@ func BenchmarkBoolSlice(b *testing.B) {
 					outBoolSlice = kv.Value.AsBoolSlice()
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
@@ -123,8 +136,7 @@ func BenchmarkInt(b *testing.B) {
 			outKV = attribute.Int(k, v)
 		}
 	})
-	b.Run("String", benchmarkString(kv))
-	b.Run("Emit", benchmarkEmit(kv))
+	runStringBenchmarks(b, kv)
 }
 
 func BenchmarkIntSlice(b *testing.B) {
@@ -151,8 +163,7 @@ func BenchmarkIntSlice(b *testing.B) {
 					outKV = attribute.IntSlice(k, v)
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
@@ -179,8 +190,7 @@ func BenchmarkInt64(b *testing.B) {
 			outInt64 = kv.Value.AsInt64()
 		}
 	})
-	b.Run("String", benchmarkString(kv))
-	b.Run("Emit", benchmarkEmit(kv))
+	runStringBenchmarks(b, kv)
 }
 
 func BenchmarkInt64Slice(b *testing.B) {
@@ -213,8 +223,7 @@ func BenchmarkInt64Slice(b *testing.B) {
 					outInt64Slice = kv.Value.AsInt64Slice()
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
@@ -241,8 +250,7 @@ func BenchmarkFloat64(b *testing.B) {
 			outFloat64 = kv.Value.AsFloat64()
 		}
 	})
-	b.Run("String", benchmarkString(kv))
-	b.Run("Emit", benchmarkEmit(kv))
+	runStringBenchmarks(b, kv)
 }
 
 func BenchmarkFloat64Slice(b *testing.B) {
@@ -275,8 +283,7 @@ func BenchmarkFloat64Slice(b *testing.B) {
 					outFloat64Slice = kv.Value.AsFloat64Slice()
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
@@ -303,8 +310,7 @@ func BenchmarkString(b *testing.B) {
 			outStr = kv.Value.AsString()
 		}
 	})
-	b.Run("String", benchmarkString(kv))
-	b.Run("Emit", benchmarkEmit(kv))
+	runStringBenchmarks(b, kv)
 }
 
 func BenchmarkStringSlice(b *testing.B) {
@@ -337,8 +343,7 @@ func BenchmarkStringSlice(b *testing.B) {
 					outStrSlice = kv.Value.AsStringSlice()
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
@@ -389,8 +394,7 @@ func BenchmarkSlice(b *testing.B) {
 					outValueSlice = kv.Value.AsSlice()
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
@@ -420,8 +424,7 @@ func BenchmarkByteSlice(b *testing.B) {
 		}
 	})
 
-	b.Run("String", benchmarkString(kv))
-	b.Run("Emit", benchmarkEmit(kv))
+	runStringBenchmarks(b, kv)
 }
 
 func BenchmarkSetEquals(b *testing.B) {

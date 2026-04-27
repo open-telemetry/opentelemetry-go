@@ -4,13 +4,99 @@
 package attribute // import "go.opentelemetry.io/otel/attribute"
 
 import (
+	"encoding/base64"
 	"fmt"
+	"math"
+	"reflect"
+	"strconv"
+	"strings"
 )
 
 // KeyValue holds a key and value pair.
 type KeyValue struct {
 	Key   Key
 	Value Value
+}
+
+// String returns a string representation of kv using the
+// [OpenTelemetry Attribute representation for non-OTLP] rules.
+//
+// The returned string is a JSON object containing a single key-value pair.
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+//
+// [OpenTelemetry Attribute representation for non-OTLP]: https://opentelemetry.io/docs/specs/otel/common/#attribute-representation-for-non-otlp
+func (kv KeyValue) String() string {
+	const jsonObjectSyntaxLen = len(`{"":}`)
+
+	var b strings.Builder
+	n := len(kv.Key) + jsonObjectSyntaxLen
+	switch kv.Value.Type() {
+	case BOOL:
+		if kv.Value.AsBool() {
+			n += len("true")
+		} else {
+			n += len("false")
+		}
+	case BOOLSLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*boolArrayElemMaxLen + (l-1)*commaLen
+		}
+	case INT64:
+		var buf [int64ArrayElemMaxLen]byte
+		n += len(strconv.AppendInt(buf[:0], kv.Value.AsInt64(), 10))
+	case INT64SLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*int64ArrayElemMaxLen + (l-1)*commaLen
+		}
+	case FLOAT64:
+		val := kv.Value.AsFloat64()
+		switch {
+		case math.IsNaN(val):
+			n += len(`"NaN"`)
+		case math.IsInf(val, 1):
+			n += len(`"Infinity"`)
+		case math.IsInf(val, -1):
+			n += len(`"-Infinity"`)
+		default:
+			var buf [float64ArrayElemMaxLen]byte
+			n += len(strconv.AppendFloat(buf[:0], val, 'g', -1, 64))
+		}
+	case FLOAT64SLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*float64ArrayElemMaxLen + (l-1)*commaLen
+		}
+	case STRING:
+		n += len(kv.Value.stringly) + quotesLen
+	case STRINGSLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*smallObjectLen + (l-1)*commaLen
+		}
+	case BYTESLICE:
+		n += base64.StdEncoding.EncodedLen(len(kv.Value.stringly)) + quotesLen
+	case SLICE:
+		n += jsonArrayBracketsLen
+		if l := reflect.ValueOf(kv.Value.slice).Len(); l > 0 {
+			n += l*smallObjectLen + (l-1)*commaLen
+		}
+	case EMPTY:
+		n += len("null")
+	default:
+		n += len(`"unknown"`)
+	}
+	b.Grow(n)
+
+	_ = b.WriteByte('{')
+	appendJSONString(&b, string(kv.Key))
+	_ = b.WriteByte(':')
+	appendJSONValue(&b, kv.Value)
+	_ = b.WriteByte('}')
+	return b.String()
 }
 
 // Valid reports whether kv is a valid OpenTelemetry attribute.
