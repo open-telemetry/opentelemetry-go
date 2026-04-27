@@ -20,8 +20,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
 )
 
 type concurrentBuffer struct {
@@ -672,4 +682,200 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 		}
 		_ = err
 	})
+}
+
+const blpComponentID int64 = 0
+
+func TestBatchProcessorMetricsDisabled(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+
+	counter.SetExporterID(blpComponentID)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	e := newTestExporter(nil)
+	bp := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(2),
+		WithExportMaxBatchSize(2),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	ctx := t.Context()
+
+	r := new(Record)
+	r.SetBody(log.BoolValue(true))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.ForceFlush(ctx))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+	for _, sm := range rm.ScopeMetrics {
+		assert.NotEqual(t, observ.ScopeName, sm.Scope.Name,
+			"observ metrics should not be present when disabled")
+	}
+
+	e.Stop()
+	require.NoError(t, bp.Shutdown(ctx))
+}
+
+func TestBatchProcessorMetrics(t *testing.T) {
+	counter.SetExporterID(blpComponentID)
+
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	origLogger := global.GetLogger()
+	t.Cleanup(func() { global.SetLogger(origLogger) })
+	buf := new(concurrentBuffer)
+	stdr.SetVerbosity(1)
+	global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	e := newTestExporter(nil)
+	e.ExportTrigger = make(chan struct{})
+	bp := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(1),
+		WithExportMaxBatchSize(1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	ctx := t.Context()
+
+	r := new(Record)
+	r.SetBody(log.BoolValue(true))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.Eventually(t, func() bool {
+		return e.ExportN() > 0
+	}, 2*time.Second, time.Microsecond, "export not started")
+
+	assertBLPMetrics(t, reader,
+		blpQCap(1),
+		blpQSize(0),
+		blpProcessed(blpDPt(blpSet(), 1)),
+	)
+
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.Eventually(t, func() bool {
+		return len(bp.exporter.input) == cap(bp.exporter.input)
+	}, 2*time.Second, time.Microsecond, "buffer channel not filled")
+
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.OnEmit(ctx, r))
+
+	wantMsg := `"level"=1 "msg"="dropped log records" "dropped"=1`
+	require.Eventually(t, func() bool {
+		return strings.Contains(buf.String(), wantMsg)
+	}, 2*time.Second, time.Microsecond, "drop not detected")
+
+	assertBLPMetrics(t, reader,
+		blpQCap(1),
+		blpQSize(1),
+		blpProcessed(
+			blpDPt(blpSet(), 1),
+			blpDPt(blpSet(observ.ErrQueueFull), 1),
+		),
+	)
+
+	close(e.ExportTrigger)
+	e.Stop()
+	require.NoError(t, bp.Shutdown(ctx))
+}
+
+func blpSet(attrs ...attribute.KeyValue) attribute.Set {
+	return attribute.NewSet(append([]attribute.KeyValue{
+		semconv.OTelComponentTypeBatchingLogProcessor,
+		observ.BLPComponentName(blpComponentID),
+	}, attrs...)...)
+}
+
+func blpDPt(set attribute.Set, value int64) metricdata.DataPoint[int64] {
+	return metricdata.DataPoint[int64]{Attributes: set, Value: value}
+}
+
+func blpQCap(v int64) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKProcessorLogQueueCapacity{}.Name(),
+		Description: otelconv.SDKProcessorLogQueueCapacity{}.Description(),
+		Unit:        otelconv.SDKProcessorLogQueueCapacity{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: false,
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: blpSet(), Value: v}},
+		},
+	}
+}
+
+func blpQSize(v int64) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKProcessorLogQueueSize{}.Name(),
+		Description: otelconv.SDKProcessorLogQueueSize{}.Description(),
+		Unit:        otelconv.SDKProcessorLogQueueSize{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: false,
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: blpSet(), Value: v}},
+		},
+	}
+}
+
+func blpProcessed(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKProcessorLogProcessed{}.Name(),
+		Description: otelconv.SDKProcessorLogProcessed{}.Description(),
+		Unit:        otelconv.SDKProcessorLogProcessed{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  dPts,
+		},
+	}
+}
+
+func assertBLPMetrics(
+	t *testing.T,
+	reader sdkmetric.Reader,
+	wantMetrics ...metricdata.Metrics,
+) {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	var found bool
+	var gotScope metricdata.ScopeMetrics
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name == observ.ScopeName {
+			gotScope = sm
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "observ scope %q not found in collected metrics", observ.ScopeName)
+
+	metricdatatest.AssertEqual(
+		t,
+		metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{
+				Name:      observ.ScopeName,
+				Version:   sdk.Version(),
+				SchemaURL: observ.SchemaURL,
+			},
+			Metrics: wantMetrics,
+		},
+		gotScope,
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+	)
 }
