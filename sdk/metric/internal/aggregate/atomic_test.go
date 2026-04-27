@@ -236,3 +236,54 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 		})
 	})
 }
+
+func TestAtomicUnderflowTracker(t *testing.T) {
+	tests := []struct {
+		name       string
+		maxSize    int
+		values     []float64
+		wantValues []bool // whether each value was accepted
+	}{
+		{
+			name:       "maxSize 160 accepts everything",
+			maxSize:    160,
+			values:     []float64{1.0, math.MaxFloat64, math.SmallestNonzeroFloat64},
+			wantValues: []bool{true, true, true},
+		},
+		{
+			name:       "maxSize 2 accepts adjacent scale -10 bins",
+			maxSize:    2,
+			values:     []float64{1.0, 2.0},
+			wantValues: []bool{true, true},
+		},
+		{
+			name:       "maxSize 2 rejects far apart positive bins",
+			maxSize:    2,
+			values:     []float64{math.MaxFloat64, math.SmallestNonzeroFloat64},
+			wantValues: []bool{true, false},
+		},
+		{
+			name:       "maxSize 2 rejects far apart negative bins",
+			maxSize:    2,
+			values:     []float64{-math.MaxFloat64, -math.SmallestNonzeroFloat64},
+			wantValues: []bool{true, false},
+		},
+		{
+			name:       "maxSize 2 accepts far apart if of different signs",
+			maxSize:    2,
+			values:     []float64{math.MaxFloat64, -math.SmallestNonzeroFloat64},
+			wantValues: []bool{true, true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var tracker atomicUnderflowTracker
+			tracker.maxSize = tt.maxSize
+			for i, v := range tt.values {
+				got := tracker.checkAndRecord(v)
+				assert.Equal(t, tt.wantValues[i], got, "value index %d (%v)", i, v)
+			}
+		})
+	}
+}

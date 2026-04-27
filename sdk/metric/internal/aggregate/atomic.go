@@ -273,3 +273,70 @@ func (m *limitedSyncMap) Len() int {
 	defer m.lenMux.Unlock()
 	return m.len
 }
+
+type atomicUnderflowTracker struct {
+	maxSize int
+	seenPos atomic.Uint32
+	seenNeg atomic.Uint32
+}
+
+func (t *atomicUnderflowTracker) checkAndRecord(value float64) bool {
+	maxSize := t.maxSize
+	if maxSize > 2 {
+		return true // No underflow possible if maxSize >= 3
+	}
+	absV := math.Abs(value)
+	if absV == 0 {
+		return true
+	}
+
+	// At Scale -10, the base is 2^1024. A bucket index I covers [2^(1024*I), 2^(1024*(I+1))).
+	// We can determine the bucket index instantly by extracting the base-2 exponent.
+	// math.Frexp returns the fraction in [0.5, 1.0) and the exponent such that absV = frac * 2^exp.
+	frac, expInt := math.Frexp(absV)
+	exp := int32(expInt) // nolint: gosec // float64 exponent fits in int32
+	var correction int32 = 1
+	if frac == 0.5 {
+		correction = 2
+	}
+	bin := (exp - correction) >> 10
+	bitIdx := bin + 2
+
+	if bitIdx < 0 || bitIdx >= 8 {
+		return true // Invalid? Or ignore.
+	}
+	bit := uint32(1 << bitIdx)
+
+	maskPtr := &t.seenPos
+	if value < 0 {
+		maskPtr = &t.seenNeg
+	}
+
+	for {
+		mask := maskPtr.Load()
+		newMask := mask | bit
+		if mask > 0 {
+			minBit := -1
+			for i := range uint32(8) {
+				if newMask&(1<<i) != 0 {
+					minBit = int(i)
+					break
+				}
+			}
+			maxBit := -1
+			for i := 7; i >= 0; i-- {
+				if newMask&(1<<i) != 0 {
+					maxBit = i
+					break
+				}
+			}
+			if maxBit-minBit+1 > maxSize {
+				return false // Exceeds maxSize!
+			}
+		}
+		if maskPtr.CompareAndSwap(mask, newMask) {
+			break
+		}
+	}
+	return true
+}
