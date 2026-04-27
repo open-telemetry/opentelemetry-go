@@ -82,62 +82,110 @@ func (*FixedSizeReservoir) randomFloat64() float64 {
 // when the measurement was made. This information may be used by the
 // Reservoir in making a sampling decision.
 //
-// The time t is the time when the measurement was made. The v and a
+// The time t is the time when the measurement was made. The n and a
 // parameters are the value and dropped (filtered) attributes of the
 // measurement respectively.
 func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
-	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
-	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
-	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
-	// 481–493 (https://dl.acm.org/doi/10.1145/198429.198435).
-	//
-	// A high-level overview of "Algorithm L":
-	//   0) Pre-calculate the random count greater than the storage size when
-	//      an exemplar will be replaced.
-	//   1) Accept all measurements offered until the configured storage size is
-	//      reached.
-	//   2) Loop:
-	//      a) When the pre-calculate count is reached, replace a random
-	//         existing exemplar with the offered measurement.
-	//      b) Calculate the next random count greater than the existing one
-	//         which will replace another exemplars
-	//
-	// The way a "replacement" count is computed is by looking at `n` number of
-	// independent random numbers each corresponding to an offered measurement.
-	// Of these numbers the smallest `k` (the same size as the storage
-	// capacity) of them are kept as a subset. The maximum value in this
-	// subset, called `w` is used to weight another random number generation
-	// for the next count that will be considered.
-	//
-	// By weighting the next count computation like described, it is able to
-	// perform a uniformly-weighted sampling algorithm based on the number of
-	// samples the reservoir has seen so far. The sampling will "slow down" as
-	// more and more samples are offered so as to reduce a bias towards those
-	// offered just prior to the end of the collection.
-	//
-	// This algorithm is preferred because of its balance of simplicity and
-	// performance. It will compute three random numbers (the bulk of
-	// computation time) for each item that becomes part of the reservoir, but
-	// it does not spend any time on items that do not. In particular it has an
-	// asymptotic runtime of O(k(1 + log(n/k)) where n is the number of
-	// measurements offered and k is the reservoir size.
-	//
-	// See https://en.wikipedia.org/wiki/Reservoir_sampling for an overview of
-	// this and other reservoir sampling algorithms. See
-	// https://github.com/MrAlias/reservoir-sampling for a performance
-	// comparison of reservoir sampling algorithms.
-
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	idx, sampled := r.shouldSample()
+	if sampled {
+		r.store(ctx, idx, t, n, a)
+	}
+}
+
+// OfferLazy accepts the parameters associated with a measurement. The
+// parameters will be stored as an exemplar if the Reservoir decides to
+// sample the measurement.
+//
+// The passed ctx needs to contain any baggage or span that were active
+// when the measurement was made. This information may be used by the
+// Reservoir in making a sampling decision.
+//
+// The time t is the time when the measurement was made. The n is the value
+// and attr and fltr are used to compute the dropped (filtered-out)
+// attributes of the measurement. OfferLazy allows the reservoir to only
+// compute dropped attributes if an exemplar is sampled.
+func (r *FixedSizeReservoir) OfferLazy(
+	ctx context.Context,
+	t time.Time,
+	n Value,
+	attr attribute.Set,
+	fltr attribute.Filter,
+) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	idx, sampled := r.shouldSample()
+	if sampled {
+		r.store(ctx, idx, t, n, getDroppedAttributes(attr, fltr))
+	}
+}
+
+// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
+// 1994). "Reservoir-Sampling Algorithms of Time Complexity
+// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
+// 481–493 (https://dl.acm.org/doi/10.1145/198429.198435).
+//
+// A high-level overview of "Algorithm L":
+//  0. Pre-calculate the random count greater than the storage size when
+//     an exemplar will be replaced.
+//  1. Accept all measurements offered until the configured storage size is
+//     reached.
+//  2. Loop:
+//     a) When the pre-calculate count is reached, replace a random
+//     existing exemplar with the offered measurement.
+//     b) Calculate the next random count greater than the existing one
+//     which will replace another exemplars
+//
+// The way a "replacement" count is computed is by looking at `n` number of
+// independent random numbers each corresponding to an offered measurement.
+// Of these numbers the smallest `k` (the same size as the storage
+// capacity) of them are kept as a subset. The maximum value in this subset
+// determines when the next offered measurement will replace an existing
+// exemplar.
+// By weighting the next count computation like described, it is able to
+// perform a uniformly-weighted sampling algorithm based on the number of
+// samples the reservoir has seen so far. The sampling will "slow down" as
+// more and more samples are offered so as to reduce a bias towards those
+// offered just prior to the end of the collection.
+//
+// This algorithm is preferred because of its balance of simplicity and
+// performance. It will compute three random numbers (the bulk of
+// computation time) for each item that becomes part of the reservoir, but
+// it does not spend any time on items that do not. In particular it has an
+// asymptotic runtime of O(k(1 + log(n/k)) where n is the number of
+// measurements offered and k is the reservoir size.
+//
+// See https://en.wikipedia.org/wiki/Reservoir_sampling for an overview of
+// this and other reservoir sampling algorithms. See
+// https://github.com/MrAlias/reservoir-sampling for a performance
+// comparison of reservoir sampling algorithms.
+func (r *FixedSizeReservoir) shouldSample() (int, bool) {
+	defer func() { r.count++ }()
 	if int(r.count) < cap(r.measurements) {
-		r.store(ctx, int(r.count), t, n, a)
+		return int(r.count), true
 	} else if r.count == r.next {
 		// Overwrite a random existing measurement with the one offered.
 		idx := int(rand.Int64N(int64(cap(r.measurements))))
-		r.store(ctx, idx, t, n, a)
 		r.advance()
+		return idx, true
 	}
-	r.count++
+	return 0, false
+}
+
+func getDroppedAttributes(attr attribute.Set, fltr attribute.Filter) []attribute.KeyValue {
+	if fltr == nil {
+		return nil
+	}
+	var dropped []attribute.KeyValue
+	iter := attr.Iter()
+	for iter.Next() {
+		kv := iter.Attribute()
+		if !fltr(kv) {
+			dropped = append(dropped, kv)
+		}
+	}
+	return dropped
 }
 
 // reset resets r to the initial state.

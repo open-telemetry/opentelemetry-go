@@ -107,15 +107,15 @@ type deltaHistogram[N int64 | float64] struct {
 func (s *deltaHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
+	attr attribute.Set,
+	fltr attribute.Filter,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		hPt := &histogramPoint[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(attr, fltr, func(a attribute.Set) any {
+		return &histogramPoint[N]{
+			res:   s.newRes(a),
+			attrs: a,
 			// N+1 buckets. For example:
 			//
 			//   bounds = [0, 5, 10]
@@ -125,7 +125,6 @@ func (s *deltaHistogram[N]) measure(
 			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
-		return hPt
 	}).(*histogramPoint[N])
 
 	// This search will return an index in the range [0, len(s.bounds)], where
@@ -141,7 +140,7 @@ func (s *deltaHistogram[N]) measure(
 	if !s.noSum {
 		h.total.add(value)
 	}
-	h.res.Offer(ctx, value, droppedAttr)
+	h.res.Offer(ctx, value, attr, fltr)
 }
 
 // newDeltaHistogram returns a histogram that is reset each time it is
@@ -278,13 +277,13 @@ func newCumulativeHistogram[N int64 | float64](
 func (s *cumulativeHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
+	attr attribute.Set,
+	fltr attribute.Filter,
 ) {
-	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		hPt := &hotColdHistogramPoint[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
+	h := s.values.LoadOrStoreAttr(attr, fltr, func(a attribute.Set) any {
+		return &hotColdHistogramPoint[N]{
+			res:   s.newRes(a),
+			attrs: a,
 			// N+1 buckets. For example:
 			//
 			//   bounds = [0, 5, 10]
@@ -302,7 +301,6 @@ func (s *cumulativeHistogram[N]) measure(
 			},
 			startTime: now(),
 		}
-		return hPt
 	}).(*hotColdHistogramPoint[N])
 
 	// This search will return an index in the range [0, len(s.bounds)], where
@@ -322,7 +320,7 @@ func (s *cumulativeHistogram[N]) measure(
 	if !s.noSum {
 		h.hotColdPoint[hotIdx].total.add(value)
 	}
-	h.res.Offer(ctx, value, droppedAttr)
+	h.res.Offer(ctx, value, attr, fltr)
 }
 
 func (s *cumulativeHistogram[N]) collect(

@@ -36,6 +36,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
+- Add `NewDistinctWithFilter` method to `Set` type in `go.opentelemetry.io/otel/attribute` to support efficient attribute filtering during hashing. (#8230)
+- Add `OfferLazy` method to `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` to support lazy evaluation of dropped attributes. (#8230)
 
 ### Changed
 
@@ -48,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 - `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
 - Optimize `go.opentelemetry.io/otel/sdk/metric` to return a drop reservoir when `exemplar.AlwaysOffFilter` is configured. (#8211)
+- Improve the performance of `go.opentelemetry.io/otel/sdk/metric` when an attribute.Filter is applied to measurements by a `View` or by `x.WithDefaultAttributes`. (#8230)
 
 ### Deprecated
 
