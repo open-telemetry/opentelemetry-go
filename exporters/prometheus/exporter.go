@@ -262,7 +262,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			attrKeys, attrVals, e := getScopeAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			if e != nil {
 				reportError(ch, nil, e)
-				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d: %w", j, e))
+				err = errors.Join(err, fmt.Errorf("failed to translate scope attributes for ScopeMetrics %d: %w", j, e))
 				continue
 			}
 			kv.keys = append(kv.keys, attrKeys...)
@@ -651,24 +651,53 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 }
 
 func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
-	filtered, _ := attrs.Filter(func(kv attribute.KeyValue) bool {
-		switch string(kv.Key) {
-		case "name", "version", "schema_url":
-			return false
-		default:
-			return true
+	keys := make([]string, 0, attrs.Len())
+	values := make([]string, 0, attrs.Len())
+	itr := attrs.Iter()
+
+	if labelNamer.UTF8Allowed {
+		for itr.Next() {
+			kv := itr.Attribute()
+			key := string(kv.Key)
+			if isReservedScopeLabel(key) {
+				continue
+			}
+			keys = append(keys, scopeLabelPrefix+key)
+			values = append(values, kv.Value.String())
 		}
-	})
-
-	keys, values, err := getAttrs(filtered, labelNamer)
-	if err != nil {
-		return nil, nil, err
+		return keys, values, nil
 	}
 
-	for i := range keys {
-		keys[i] = scopeLabelPrefix + keys[i]
+	keysMap := make(map[string][]string)
+	for itr.Next() {
+		kv := itr.Attribute()
+		key, err := labelNamer.Build(string(kv.Key))
+		if err != nil {
+			// TODO(#7066) Handle this error better.
+			return nil, nil, err
+		}
+		if isReservedScopeLabel(key) {
+			continue
+		}
+		keysMap[key] = append(keysMap[key], kv.Value.String())
 	}
+
+	for key, vals := range keysMap {
+		keys = append(keys, scopeLabelPrefix+key)
+		slices.Sort(vals)
+		values = append(values, strings.Join(vals, ";"))
+	}
+
 	return keys, values, nil
+}
+
+func isReservedScopeLabel(key string) bool {
+	switch key {
+	case "name", "version", "schema_url":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {

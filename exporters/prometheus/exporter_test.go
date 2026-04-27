@@ -837,6 +837,7 @@ func TestScopeAttributeConflictsDropped(t *testing.T) {
 			attribute.String("name", "dropped-name"),
 			attribute.String("version", "dropped-version"),
 			attribute.String("schema_url", "dropped-schema-url"),
+			attribute.String("schema.url", "dropped-translated-schema-url"),
 			attribute.String("custom.scope", "kept"),
 		),
 	)
