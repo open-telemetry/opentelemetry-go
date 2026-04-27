@@ -549,7 +549,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 			),
 		}
 
-		if config.StackTrace() {
+		if s.tracer.provider.shouldRecordExceptionStackTrace(config.StackTrace()) {
 			opts = append(opts, trace.WithAttributes(
 				semconv.ExceptionStacktrace(recordStackTrace()),
 			))
@@ -624,7 +624,7 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	))
 
 	c := trace.NewEventConfig(opts...)
-	if c.StackTrace() {
+	if s.tracer.provider.shouldRecordExceptionStackTrace(c.StackTrace()) {
 		opts = append(opts, trace.WithAttributes(
 			semconv.ExceptionStacktrace(recordStackTrace()),
 		))
