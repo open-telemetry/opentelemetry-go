@@ -578,6 +578,7 @@ func (m ScheduleDuration) Record(ctx context.Context, val float64, attrs ...attr
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -601,6 +602,7 @@ func (m ScheduleDuration) RecordSet(ctx context.Context, val float64, set attrib
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()

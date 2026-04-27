@@ -67,6 +67,7 @@ var (
 func get[T any](p *sync.Pool) *[]T { return p.Get().(*[]T) }
 
 func put[T any](p *sync.Pool, s *[]T) {
+	clear(*s)
 	*s = (*s)[:0] // Reset.
 	p.Put(s)
 }
