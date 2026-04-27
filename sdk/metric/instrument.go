@@ -176,6 +176,43 @@ func (i instID) normalize() instID {
 	return i
 }
 
+type rawAttributesOption interface {
+	RawAttributes() []attribute.KeyValue
+}
+
+func extractRawKVs[T any](opts []T) []attribute.KeyValue {
+	var rawKVs []attribute.KeyValue
+	var count int
+	for _, opt := range opts {
+		if r, ok := any(opt).(rawAttributesOption); ok {
+			count++
+			if count == 1 {
+				rawKVs = r.RawAttributes()
+			} else {
+				if count == 2 {
+					// Create a new slice to avoid modifying the original slice from the first option.
+					rawKVs = append([]attribute.KeyValue(nil), rawKVs...)
+				}
+				rawKVs = append(rawKVs, r.RawAttributes()...)
+			}
+		}
+	}
+	return rawKVs
+}
+
+func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
+	if len(rawKVs) == 0 {
+		return configAttrs
+	}
+	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
+	merged = append(merged, configAttrs.ToSlice()...)
+	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.
+	// This behavior is documented in WithUnsafeAttributes.
+	merged = append(merged, rawKVs...)
+	// TODO(#7743): Defer computing the full attribute.NewSet.
+	return attribute.NewSet(merged...)
+}
+
 type int64Inst struct {
 	measures []aggregate.Measure[int64]
 
@@ -194,12 +231,14 @@ var (
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	rawKVs := extractRawKVs(opts)
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	rawKVs := extractRawKVs(opts)
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
@@ -234,12 +273,14 @@ var (
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	rawKVs := extractRawKVs(opts)
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
-	i.aggregate(ctx, val, c.Attributes())
+	rawKVs := extractRawKVs(opts)
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
