@@ -366,7 +366,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				assert.Equal(t, expected, got)
 			} else {
 				assert.Equal(t, tt.wantCount, got.Len(), "expected member count")
-				assert.Equal(t, tt.wantBytes, len(got.String()), "expected baggage size")
+				assert.Len(t, got.String(), tt.wantBytes, "expected baggage size")
 			}
 		})
 	}
