@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
@@ -116,11 +117,19 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 
 func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
 	request := &collectortracepb.ExportTraceServiceRequest{}
-	if contentType != "application/x-protobuf" {
-		return request, fmt.Errorf("invalid content-type: %s, only application/x-protobuf is supported", contentType)
+	switch contentType {
+	case "application/x-protobuf":
+		err := proto.Unmarshal(rawRequest, request)
+		return request, err
+	case "application/json":
+		err := protojson.Unmarshal(rawRequest, request)
+		return request, err
+	default:
+		return request, fmt.Errorf(
+			"invalid content-type: %s, only application/x-protobuf or application/json is supported",
+			contentType,
+		)
 	}
-	err := proto.Unmarshal(rawRequest, request)
-	return request, err
 }
 
 func (c *mockCollector) checkHeaders(r *http.Request) bool {

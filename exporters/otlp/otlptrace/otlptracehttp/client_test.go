@@ -185,6 +185,18 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: customProxyHeader,
 			},
 		},
+		{
+			name: "with protobuf encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithProtocol(otlptracehttp.ProtocolHTTPProtobuf),
+			},
+		},
+		{
+			name: "with JSON encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithProtocol(otlptracehttp.ProtocolHTTPJSON),
+			},
+		},
 	}
 
 	for _, tc := range tests {

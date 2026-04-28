@@ -38,3 +38,29 @@ const (
 	// MarshalJSON tells the driver to send using json format.
 	MarshalJSON
 )
+
+// Protocol describes the transport protocol used to send data to the collector.
+type Protocol int
+
+const (
+	// ProtocolGRPC describes the "grpc" protocol.
+	ProtocolGRPC Protocol = iota
+	// ProtocolHTTPProtobuf describes the "http/protobuf" protocol.
+	ProtocolHTTPProtobuf
+	// ProtocolHTTPJSON describes the "http/json" protocol.
+	ProtocolHTTPJSON
+)
+
+// String returns the string representation of the Protocol.
+func (p Protocol) String() string {
+	switch p {
+	case ProtocolGRPC:
+		return "grpc"
+	case ProtocolHTTPProtobuf:
+		return "http/protobuf"
+	case ProtocolHTTPJSON:
+		return "http/json"
+	default:
+		return "unknown"
+	}
+}
