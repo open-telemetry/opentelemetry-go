@@ -494,10 +494,11 @@ func New(members ...Member) (Baggage, error) {
 // from the W3C Baggage specification which allows duplicate list-members, but
 // conforms to the OpenTelemetry Baggage specification.
 //
-// If the baggage-string exceeds the maximum allowed bytes (8192), an empty
-// Baggage and an error are returned. If the baggage-string exceeds the maximum
-// allowed members (64), members are dropped until the limit is satisfied and
-// an error is returned along with the partial result.
+// If the raw baggage-string exceeds the maximum allowed bytes (8192), an
+// empty Baggage and an error are returned. If adding valid members would
+// cause the parsed baggage to exceed the maximum allowed bytes (8192), or if
+// the baggage-string exceeds the maximum allowed members (64), parsing stops
+// and an error is returned along with the partial result.
 //
 // Invalid members are skipped and the error is returned along with the
 // partial result containing the valid members.
