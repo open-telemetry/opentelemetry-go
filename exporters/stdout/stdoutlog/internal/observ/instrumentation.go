@@ -154,11 +154,12 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
-
-	i.inflight.Add(ctx, count, *addOpt...)
+	if i.inflight.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
+		i.inflight.Add(ctx, count, *addOpt...)
+	}
 
 	return ExportOp{
 		count: count,
@@ -188,11 +189,15 @@ func (e ExportOp) End(success int64, err error) {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.addOpt)
 
-	e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
+	if e.inst.inflight.Enabled(e.ctx) {
+		e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
+	}
 
-	e.inst.exported.Add(e.ctx, success, *addOpt...)
+	if e.inst.exported.Enabled(e.ctx) {
+		e.inst.exported.Add(e.ctx, success, *addOpt...)
+	}
 
-	if err != nil {
+	if err != nil && e.inst.exported.Enabled(e.ctx) {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
