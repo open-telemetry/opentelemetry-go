@@ -703,3 +703,283 @@ func BenchmarkSum(b *testing.B) {
 		}.PrecomputedSum(false)
 	}))
 }
+
+func TestDeltaSumLazyCleanupGoals(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	t.Run("Int64", testDeltaSumLazyCleanupGoals[int64]())
+	c.Reset()
+	t.Run("Float64", testDeltaSumLazyCleanupGoals[float64]())
+}
+
+func testDeltaSumLazyCleanupGoals[N int64 | float64]() func(t *testing.T) {
+	mono := false
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.Sum(mono)
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrBob,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(3),
+							Value:      1,
+						},
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(3),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(5),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(6),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: attribute.NewSet(userCarol),
+							StartTime:  y2kPlus(6),
+							Time:       y2kPlus(9),
+							Value:      1,
+						},
+						{
+							Attributes: attribute.NewSet(userDave),
+							StartTime:  y2kPlus(6),
+							Time:       y2kPlus(9),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestDeltaSumLazyCleanupEarlyOverflow(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	t.Run("Int64", testDeltaSumLazyCleanupEarlyOverflow[int64]())
+	c.Reset()
+	t.Run("Float64", testDeltaSumLazyCleanupEarlyOverflow[float64]())
+}
+
+func testDeltaSumLazyCleanupEarlyOverflow[N int64 | float64]() func(t *testing.T) {
+	mono := false
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.Sum(mono)
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+				{ctx, 1, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrBob,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(3),
+							Value:      1,
+						},
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(3),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 1, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(5),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 1, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: attribute.NewSet(userCarol),
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(8),
+							Value:      1,
+						},
+						{
+							Attributes: attribute.NewSet(userDave),
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(8),
+							Value:      1,
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestDeltaSumLazyCleanupExistingOverflow(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	t.Run("Int64", testDeltaSumLazyCleanupExistingOverflow[int64]())
+	c.Reset()
+	t.Run("Float64", testDeltaSumLazyCleanupExistingOverflow[float64]())
+}
+
+func testDeltaSumLazyCleanupExistingOverflow[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		mono := false
+		in, out := Builder[N]{
+			Temporality:      metricdata.DeltaTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 2,
+		}.Sum(mono)
+		ctx := context.Background()
+
+		// Step 1: Measure A.
+		in(ctx, 1, alice)
+		got := new(metricdata.Aggregation)
+		out(got)
+
+		// Step 2: Measure B, C.
+		in(ctx, 1, bob)
+		in(ctx, 1, carol)
+		out(got)
+
+		// Step 3: Measure carol, dave, then alice.
+		in(ctx, 1, carol)
+		in(ctx, 1, dave)
+		in(ctx, 1, alice)
+		out(got)
+
+		s, ok := (*got).(metricdata.Sum[N])
+		require.True(t, ok)
+
+		expected := []metricdata.DataPoint[N]{
+			{
+				Attributes: attribute.NewSet(userCarol),
+				StartTime:  y2kPlus(5),
+				Time:       y2kPlus(9),
+				Value:      1,
+			},
+			{
+				Attributes: attribute.NewSet(userDave),
+				StartTime:  y2kPlus(5),
+				Time:       y2kPlus(9),
+				Value:      1,
+			},
+			{
+				Attributes: overflowSet,
+				StartTime:  y2kPlus(5),
+				Time:       y2kPlus(9),
+				Value:      1,
+			},
+		}
+
+		require.Len(t, s.DataPoints, 3, "incorrect data size")
+		assert.ElementsMatch(t, expected, s.DataPoints)
+	}
+}
+
+
+
+
+
+
