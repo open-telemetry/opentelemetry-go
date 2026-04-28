@@ -15,6 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/x"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
@@ -629,6 +630,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
+						optionPool := sync.Pool{
+							New: func() any {
+								return metric.WithAttributeSet(*attribute.EmptySet())
+							},
+						}
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
 								// Wrap in a function so we can use defer.
@@ -644,8 +650,18 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
+
 									set := attribute.NewSet(*attrsSlice...)
-									*addOpt = append(*addOpt, metric.WithAttributeSet(set))
+									opt := optionPool.Get().(metric.MeasurementOption)
+									defer optionPool.Put(opt)
+
+									if s, ok := opt.(x.Settable[attribute.Set]); ok {
+										s.Set(set)
+									} else {
+										opt = metric.WithAttributeSet(set)
+									}
+
+									*addOpt = append(*addOpt, opt.(metric.AddOption))
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}
@@ -658,6 +674,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					b.Run("Dynamic/WithAttributes", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
+						optionPool := sync.Pool{
+							New: func() any {
+								return metric.WithAttributes()
+							},
+						}
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
 								// Wrap in a function so we can use defer.
@@ -673,7 +694,18 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
-									*addOpt = append(*addOpt, metric.WithAttributes(*attrsSlice...))
+
+									set := attribute.NewSet(*attrsSlice...)
+									opt := optionPool.Get().(metric.MeasurementOption)
+									defer optionPool.Put(opt)
+
+									if s, ok := opt.(x.Settable[attribute.Set]); ok {
+										s.Set(set)
+									} else {
+										opt = metric.WithAttributes(*attrsSlice...)
+									}
+
+									*addOpt = append(*addOpt, opt.(metric.AddOption))
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}
