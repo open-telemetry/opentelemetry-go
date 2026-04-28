@@ -80,6 +80,9 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	var parseErrors int
 	var truncateErr error
 	for _, bStr := range bVals {
+		if len(bStr) > 0 && totalBytes > 0 {
+			totalBytes++ // comma separator between combined header values
+		}
 		totalBytes += len(bStr)
 		if totalBytes > maxBytesPerBaggageString {
 			parseErrors++

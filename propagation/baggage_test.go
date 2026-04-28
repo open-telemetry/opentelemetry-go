@@ -164,17 +164,29 @@ func generateMembers(n int, prefix string) members {
 	return m
 }
 
+// generateFixedWidthBaggageHeader creates a baggage header where every member
+// has the same byte length, ensuring deterministic String() size regardless of
+// which members baggage.New() keeps after map-order truncation.
+// Each member is "prefixNN=vNN" with zero-padded indices.
+func generateFixedWidthBaggageHeader(n int, prefix string) string {
+	parts := make([]string, n)
+	for i := range parts {
+		parts[i] = fmt.Sprintf("%s%02d=v%02d", prefix, i, i)
+	}
+	return strings.Join(parts, ",")
+}
+
 func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
 	const maxMembers = 64
 
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
-		name         string
-		headers      []string
-		want         members
-		wantCount    int // Used when want is nil and we only care about count.
-		wantMaxBytes int // Used to check that baggage size doesn't exceed limit.
+		name      string
+		headers   []string
+		want      members
+		wantCount int // Used when want is nil and we only care about count.
+		wantBytes int // Used to check exact baggage size when want is nil.
 	}{
 		{
 			name:    "non conflicting headers",
@@ -241,13 +253,13 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 		{
 			name: "multiple headers exceeds total max members limit keeps 64",
 			headers: []string{
-				generateBaggageHeader(maxMembers/2, "a"),
-				generateBaggageHeader(maxMembers/2, "b"),
-				generateBaggageHeader(1, "c"),
+				generateFixedWidthBaggageHeader(maxMembers/2, "a"),
+				generateFixedWidthBaggageHeader(maxMembers/2, "b"),
+				generateFixedWidthBaggageHeader(1, "c"),
 			},
-			want:         nil, // Non-deterministic truncation by baggage.New()
-			wantCount:    maxMembers,
-			wantMaxBytes: maxBytesPerBaggageString,
+			want:      nil, // Non-deterministic truncation by baggage.New()
+			wantCount: maxMembers,
+			wantBytes: maxMembers*7 + maxMembers - 1, // 64 uniform "xNN=vNN" members + 63 commas
 		},
 		{
 			name:    "single header at max bytes limit",
@@ -267,9 +279,9 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 			},
-			want:         nil, // Non-deterministic: either k or y will be kept
-			wantCount:    1,   // Only one member fits
-			wantMaxBytes: maxBytesPerBaggageString,
+			want:      nil, // Non-deterministic: either k or y will be kept
+			wantCount: 1,   // Only one member fits
+			wantBytes: maxBytesPerBaggageString,
 		},
 		{
 			name: "multiple headers within total max bytes",
@@ -284,6 +296,33 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
+			name: "empty headers between non-empty do not count comma separators",
+			headers: []string{
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				"",
+				"",
+				// The comma as the separator of member would take 1 byte.
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
+			},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
+				{Key: "y", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2-1)},
+			},
+		},
+		{
+			name: "multiple headers exceed total max bytes due to comma separator",
+			headers: []string{
+				// Two equal halves: each is exactly maxBytesPerBaggageString/2 bytes.
+				// Without the comma separator: 4096 + 4096 = 8192 (at limit).
+				// With the comma separator: 4096 + 1 + 4096 = 8193 (over limit).
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+			},
+			want:      nil,
+			wantCount: 1,
+			wantBytes: maxBytesPerBaggageString / 2,
+		},
+		{
 			name: "many headers exceeding member limit caps collection early",
 			headers: func() []string {
 				// 100 headers with 10 members each = 1000 total members.
@@ -291,12 +330,12 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				// New() truncates to exactly maxMembers.
 				h := make([]string, 100)
 				for i := range h {
-					h[i] = generateBaggageHeader(10, fmt.Sprintf("h%d_k", i))
+					h[i] = generateFixedWidthBaggageHeader(10, fmt.Sprintf("h%02d_k", i))
 				}
 				return h
 			}(),
-			wantCount:    maxMembers,
-			wantMaxBytes: maxBytesPerBaggageString,
+			wantCount: maxMembers,
+			wantBytes: maxMembers*11 + maxMembers - 1, // 64 uniform "hNN_kNN=vNN" members + 63 commas
 		},
 		{
 			name: "stops processing when aggregate byte budget exceeded",
@@ -325,10 +364,9 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			if tt.want != nil {
 				expected := tt.want.Baggage(t)
 				assert.Equal(t, expected, got)
-			} else if tt.wantCount > 0 {
-				// If only count is specified, verify count and byte limit
+			} else {
 				assert.Equal(t, tt.wantCount, got.Len(), "expected member count")
-				assert.LessOrEqual(t, len(got.String()), tt.wantMaxBytes, "baggage size exceeds limit")
+				assert.Equal(t, tt.wantBytes, len(got.String()), "expected baggage size")
 			}
 		})
 	}
@@ -541,7 +579,7 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 				}
 				return m
 			},
-			wantErrStr: []string{"aggregate header size 8332 exceeds 8192 byte limit"},
+			wantErrStr: []string{"aggregate header size 8374 exceeds 8192 byte limit"},
 		},
 		{
 			name: "too many invalid headers triggers error cap",
