@@ -466,7 +466,8 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 
 	hPt, ok := h.values.Load(alice.Equivalent())
 	require.True(t, ok)
-	hcHistPt := hPt.(*hotColdHistogramPoint[int64])
+	e := hPt.(*entry)
+	hcHistPt := e.value.(*hotColdHistogramPoint[int64])
 	readIdx := hcHistPt.hcwg.swapHotAndWait()
 	var bucketCounts []uint64
 	hcHistPt.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)

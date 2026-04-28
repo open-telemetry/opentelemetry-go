@@ -931,7 +931,7 @@ func testDeltaSumLazyCleanupExistingOverflow[N int64 | float64]() func(t *testin
 			Filter:           attrFltr,
 			AggregationLimit: 2,
 		}.Sum(mono)
-		ctx := context.Background()
+		ctx := t.Context()
 
 		// Step 1: Measure A.
 		in(ctx, 1, alice)
@@ -977,9 +977,3 @@ func testDeltaSumLazyCleanupExistingOverflow[N int64 | float64]() func(t *testin
 		assert.ElementsMatch(t, expected, s.DataPoints)
 	}
 }
-
-
-
-
-
-

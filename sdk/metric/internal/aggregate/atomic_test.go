@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
@@ -234,5 +235,39 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 				a.Update(N(5))
 			}
 		})
+	})
+}
+
+func BenchmarkLimitedSyncMap(b *testing.B) {
+	b.Run("LoadOrStoreNoClear", func(b *testing.B) {
+		var m limitedSyncMap
+		attr := attribute.NewSet(attribute.String("key", "value"))
+		newValue := func(attribute.Set) any { return 1 }
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.LoadOrStoreAttr(attr, newValue)
+		}
+	})
+
+	b.Run("LoadOrStoreWithClear", func(b *testing.B) {
+		var m limitedSyncMap
+		attr := attribute.NewSet(attribute.String("key", "value"))
+		newValue := func(attribute.Set) any { return 1 }
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+			m.LoadOrStoreAttr(attr, newValue)
+		}
+	})
+
+	b.Run("OnlyClear", func(b *testing.B) {
+		var m limitedSyncMap
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+		}
 	})
 }
