@@ -476,7 +476,7 @@ func TestObservability(t *testing.T) {
 		{
 			name:    "Disabled",
 			enabled: false,
-			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+			test: func(t *testing.T, _ func() metricdata.ScopeMetrics) {
 				var buf bytes.Buffer
 				exporter, err := New(WithWriter(&buf))
 				require.NoError(t, err)
