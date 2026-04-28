@@ -24,7 +24,7 @@ import (
 
 const (
 	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/stdoutlog/internal/observ"
+	ScopeName = "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
 
 	// ComponentType uniquely identifies the OpenTelemetry Exporter component
 	// being instrumented.
