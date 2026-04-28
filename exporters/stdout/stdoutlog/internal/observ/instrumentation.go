@@ -96,7 +96,7 @@ func getAttrs(id int64) []attribute.KeyValue {
 	attrs := make([]attribute.KeyValue, 0, 2)
 	attrs = append(attrs,
 		semconv.OTelComponentName(GetComponentName(id)),
-		semconv.OTelComponentNameKey.String(ComponentType))
+		semconv.OTelComponentTypeKey.String(ComponentType))
 
 	return attrs
 }

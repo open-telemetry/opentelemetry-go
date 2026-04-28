@@ -595,7 +595,7 @@ func (w *failingWriter) Write([]byte) (int, error) {
 func stdoutObservAttrSet(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(observ.GetComponentName(0)),
-		semconv.OTelComponentNameKey.String(observ.ComponentType),
+		semconv.OTelComponentTypeKey.String(observ.ComponentType),
 	}
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))
