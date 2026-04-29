@@ -404,8 +404,11 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		return attribute.StringSliceValue(ss)
 
 	case attribute.BYTESLICE:
-		if limit >= 0 && len(v.AsString()) > limit {
-			return attribute.ByteSliceValue(v.AsByteSlice()[:limit])
+		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
+		// avoids allocating the full slice before truncation.
+		s := v.AsString()
+		if limit >= 0 && len(s) > limit {
+			return attribute.ByteSliceValue([]byte(s[:limit]))
 		}
 	case attribute.SLICE:
 		sl := v.AsSlice()
@@ -437,6 +440,8 @@ func needsTruncation(limit int, v attribute.Value) bool {
 	case attribute.STRING:
 		return stringNeedsTruncation(limit, v.AsString())
 	case attribute.BYTESLICE:
+		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
+		// avoids memory allocation.
 		if limit >= 0 && len(v.AsString()) > limit {
 			return true
 		}

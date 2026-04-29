@@ -315,11 +315,13 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 		v := truncate(maxSpan.AttrValueLen, value.AsString())
 		return telemetry.StringValue(v)
 	case attribute.BYTESLICE:
-		v := value.AsByteSlice()
-		if maxSpan.AttrValueLen >= 0 && len(v) > maxSpan.AttrValueLen {
-			return telemetry.BytesValue(v[:maxSpan.AttrValueLen])
+		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
+		// avoids allocating the full slice before truncation.
+		s := value.AsString()
+		if maxSpan.AttrValueLen >= 0 && len(s) > maxSpan.AttrValueLen {
+			return telemetry.BytesValue([]byte(s[:maxSpan.AttrValueLen]))
 		}
-		return telemetry.BytesValue(v)
+		return telemetry.BytesValue([]byte(s))
 	case attribute.BOOLSLICE:
 		slice := value.AsBoolSlice()
 		out := make([]telemetry.Value, 0, len(slice))
