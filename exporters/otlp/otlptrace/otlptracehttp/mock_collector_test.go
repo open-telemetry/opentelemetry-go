@@ -88,7 +88,13 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 	response := collectortracepb.ExportTraceServiceResponse{
 		PartialSuccess: c.partial,
 	}
-	rawResponse, err := proto.Marshal(&response)
+	var rawResponse []byte
+	var err error
+	if c.injectContentType == "application/json" {
+		rawResponse, err = protojson.Marshal(&response)
+	} else {
+		rawResponse, err = proto.Marshal(&response)
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -186,15 +186,24 @@ func TestEndToEnd(t *testing.T) {
 			},
 		},
 		{
-			name: "with protobuf encoding",
+			name: "with protobuf request encoding",
 			opts: []otlptracehttp.Option{
 				otlptracehttp.WithProtocol(otlptracehttp.ProtocolHTTPProtobuf),
 			},
 		},
 		{
-			name: "with JSON encoding",
+			name: "with JSON request encoding",
 			opts: []otlptracehttp.Option{
 				otlptracehttp.WithProtocol(otlptracehttp.ProtocolHTTPJSON),
+			},
+		},
+		{
+			name: "with JSON collector response encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithProtocol(otlptracehttp.ProtocolHTTPJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
 			},
 		},
 	}
