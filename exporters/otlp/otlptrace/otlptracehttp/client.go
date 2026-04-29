@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/retry"
-	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -294,13 +293,6 @@ func (d *client) marshalRequest(pbRequst *coltracepb.ExportTraceServiceRequest) 
 			return nil, fmt.Errorf("failed to marshal request body in json: %w", err)
 		}
 		return rawRequest, nil
-	}
-
-	if d.cfg.Protocol != otlpconfig.ProtocolHTTPProtobuf {
-		global.Warn(
-			"unrecognized protocol; expected http/protobuf or http/json, defaulting to http/protobuf",
-			"protocol", d.cfg.Protocol.String(),
-		)
 	}
 
 	rawRequest, err := proto.Marshal(pbRequst)
