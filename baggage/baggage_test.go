@@ -1274,7 +1274,7 @@ func BenchmarkParseOversized(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		benchBaggage, _ = Parse(oversized)
+		_, _ = Parse(oversized)
 	}
 }
 

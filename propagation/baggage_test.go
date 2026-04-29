@@ -296,7 +296,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
-			name: "empty headers between non-empty do not count comma separators",
+			name: "empty headers between non-empty do count comma separators",
 			headers: []string{
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
 				"",
@@ -306,7 +306,6 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 			want: members{
 				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
-				{Key: "y", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2-1)},
 			},
 		},
 		{

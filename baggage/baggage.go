@@ -14,9 +14,12 @@ import (
 )
 
 const (
+	maxParseErrors = 5
+
+	// W3C Baggage specification limits.
+	// https://www.w3.org/TR/baggage/#limits
 	maxMembers               = 64
 	maxBytesPerBaggageString = 8192
-	maxParseErrors           = 5
 
 	listDelimiter     = ","
 	keyValueDelimiter = "="

@@ -15,11 +15,12 @@ import (
 const (
 	baggageHeader = "baggage"
 
+	maxParseErrors = 5
+
 	// W3C Baggage specification limits.
 	// https://www.w3.org/TR/baggage/#limits
 	maxMembers               = 64
 	maxBytesPerBaggageString = 8192
-	maxParseErrors           = 5
 )
 
 // Baggage is a propagator that supports the W3C Baggage format.
@@ -80,7 +81,7 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	var parseErrors int
 	var truncateErr error
 	for _, bStr := range bVals {
-		if bStr != "" && totalBytes > 0 {
+		if totalBytes > 0 {
 			totalBytes++ // comma separator between combined header values
 		}
 		totalBytes += len(bStr)
