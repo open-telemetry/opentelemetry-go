@@ -162,6 +162,9 @@ func WithView(views ...View) Option {
 // [exemplar.AlwaysOffFilter].
 func WithExemplarFilter(filter exemplar.Filter) Option {
 	return optionFunc(func(cfg config) config {
+		if filter == nil {
+			return cfg
+		}
 		cfg.exemplarFilter = filter
 		return cfg
 	})
