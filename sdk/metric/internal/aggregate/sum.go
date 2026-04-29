@@ -31,7 +31,7 @@ func (s *sumValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	sv := s.values.LoadOrReuseAttr(fltrAttr, func(attr attribute.Set) any {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		return &sumValue[N]{
@@ -40,7 +40,7 @@ func (s *sumValueMap[N]) measure(
 			startTime:     now(),
 			dropExemplars: isDrop,
 		}
-	}).(*sumValue[N])
+	}, nil).(*sumValue[N])
 	sv.n.add(value)
 	// It is possible for collection to race with measurement and observe the
 	// exemplar in the batch of metrics after the add() for cumulative sums.
@@ -61,17 +61,44 @@ func newDeltaSum[N int64 | float64](
 	return &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
-		hotColdValMap: [2]sumValueMap[N]{
+		hotColdValMap: [2]lazySumValueMap[N]{
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: lazyLimitedSyncMap{aggLimit: limit},
 				newRes: r,
 			},
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: lazyLimitedSyncMap{aggLimit: limit},
 				newRes: r,
 			},
 		},
 	}
+}
+
+// lazySumValueMap is a map of sumValues backed by a lazyLimitedSyncMap.
+type lazySumValueMap[N int64 | float64] struct {
+	values lazyLimitedSyncMap
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+}
+
+func (s *lazySumValueMap[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	sv := s.values.LoadOrReuseAttr(fltrAttr, func(attr attribute.Set) any {
+		return &sumValue[N]{
+			res:   s.newRes(attr),
+			attrs: attr,
+			// delta aggregators ignore val.startTime, so we leave it zero to save a clock fetch.
+		}
+	}, func(v any) {
+		sv := v.(*sumValue[N])
+		sv.n.reset()
+		// delta aggregators ignore val.startTime, so we do not reset it.
+	}).(*sumValue[N])
+	sv.n.add(value)
+	sv.res.Offer(ctx, value, droppedAttr)
 }
 
 // deltaSum is the storage for sums which resets every collection interval.
@@ -80,7 +107,7 @@ type deltaSum[N int64 | float64] struct {
 	start     time.Time
 
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]sumValueMap[N]
+	hotColdValMap [2]lazySumValueMap[N]
 }
 
 func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
@@ -105,17 +132,26 @@ func (s *deltaSum[N]) collect(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
-	dPts := reset(sData.DataPoints, n, n)
+	dPts := reset(sData.DataPoints, 0, n)
 
-	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
-		dPts[i].Attributes = val.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = val.n.load()
-		i++
+		newPt := metricdata.DataPoint[N]{
+			Attributes: val.attrs,
+			StartTime:  s.start,
+			Time:       t,
+			Value:      val.n.load(),
+		}
+		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		// Filter out exemplars from previous collection intervals.
+		filteredExemplars := newPt.Exemplars[:0]
+		for _, e := range newPt.Exemplars {
+			if !e.Time.Before(s.start) {
+				filteredExemplars = append(filteredExemplars, e)
+			}
+		}
+		newPt.Exemplars = filteredExemplars
+		dPts = append(dPts, newPt)
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
@@ -125,7 +161,7 @@ func (s *deltaSum[N]) collect(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return i
+	return len(dPts)
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -238,21 +274,30 @@ func (s *precomputedSum[N]) delta(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
-	dPts := reset(sData.DataPoints, n, n)
+	dPts := reset(sData.DataPoints, 0, n)
 
-	var i int
 	s.hotColdValMap[readIdx].values.Range(func(key, value any) bool {
 		val := value.(*sumValue[N])
 		n := val.n.load()
 
 		delta := n - s.reported[key]
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
-		dPts[i].Attributes = val.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = delta
+		newPt := metricdata.DataPoint[N]{
+			Attributes: val.attrs,
+			StartTime:  s.start,
+			Time:       t,
+			Value:      delta,
+		}
+		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		// Filter out exemplars from previous collection intervals.
+		filteredExemplars := newPt.Exemplars[:0]
+		for _, e := range newPt.Exemplars {
+			if !e.Time.Before(s.start) {
+				filteredExemplars = append(filteredExemplars, e)
+			}
+		}
+		newPt.Exemplars = filteredExemplars
+		dPts = append(dPts, newPt)
 		newReported[key] = n
-		i++
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
@@ -263,7 +308,7 @@ func (s *precomputedSum[N]) delta(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return i
+	return len(dPts)
 }
 
 func (s *precomputedSum[N]) cumulative(
@@ -282,17 +327,18 @@ func (s *precomputedSum[N]) cumulative(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
-	dPts := reset(sData.DataPoints, n, n)
+	dPts := reset(sData.DataPoints, 0, n)
 
-	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
-		dPts[i].Attributes = val.attrs
-		dPts[i].StartTime = s.start
-		dPts[i].Time = t
-		dPts[i].Value = val.n.load()
-		i++
+		newPt := metricdata.DataPoint[N]{
+			Attributes: val.attrs,
+			StartTime:  s.start,
+			Time:       t,
+			Value:      val.n.load(),
+		}
+		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		dPts = append(dPts, newPt)
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
@@ -300,5 +346,5 @@ func (s *precomputedSum[N]) cumulative(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return i
+	return len(dPts)
 }
