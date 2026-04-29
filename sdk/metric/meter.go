@@ -147,7 +147,7 @@ func (m *meter) int64ObservableInstrument(
 		for _, insert := range m.int64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, allowedKeys, insert.readerDefaultAggregation(id.Kind))
+			in, _, err := insert.Instrument(id, allowedKeys, insert.readerDefaultAggregation(id.Kind))
 			if err != nil {
 				return inst, err
 			}
@@ -330,7 +330,7 @@ func (m *meter) float64ObservableInstrument(
 		for _, insert := range m.float64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, allowedKeys, insert.readerDefaultAggregation(id.Kind))
+			in, _, err := insert.Instrument(id, allowedKeys, insert.readerDefaultAggregation(id.Kind))
 			if err != nil {
 				return inst, err
 			}
@@ -643,7 +643,7 @@ func (p int64InstProvider) aggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
-) ([]aggregate.Measure[int64], error) {
+) ([]aggregate.Measure[int64], []any, error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -672,7 +672,7 @@ func (p int64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.int64Resolver.HistogramAggregators(inst, allowedKeys, boundaries)
+	measures, _, err := p.int64Resolver.HistogramAggregators(inst, allowedKeys, boundaries)
 	return measures, errors.Join(aggError, err)
 }
 
@@ -688,8 +688,8 @@ func (p int64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
-		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &int64Inst{measures: aggs}, err
+		aggs, instances, err := p.aggs(kind, name, desc, u, allowedKeys)
+		return &int64Inst{measures: aggs, aggregators: instances}, err
 	})
 }
 
@@ -717,7 +717,7 @@ func (p float64InstProvider) aggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
-) ([]aggregate.Measure[float64], error) {
+) ([]aggregate.Measure[float64], []any, error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -746,7 +746,7 @@ func (p float64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.float64Resolver.HistogramAggregators(inst, allowedKeys, boundaries)
+	measures, _, err := p.float64Resolver.HistogramAggregators(inst, allowedKeys, boundaries)
 	return measures, errors.Join(aggError, err)
 }
 
@@ -762,8 +762,8 @@ func (p float64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
-		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &float64Inst{measures: aggs}, err
+		aggs, instances, err := p.aggs(kind, name, desc, u, allowedKeys)
+		return &float64Inst{measures: aggs, aggregators: instances}, err
 	})
 }
 

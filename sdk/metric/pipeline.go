@@ -241,10 +241,11 @@ func (i *inserter[N]) Instrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
-) ([]aggregate.Measure[N], error) {
+) ([]aggregate.Measure[N], []any, error) {
 	var (
-		matched  bool
-		measures []aggregate.Measure[N]
+		matched   bool
+		measures  []aggregate.Measure[N]
+		instances []any
 	)
 
 	var err error
@@ -255,7 +256,7 @@ func (i *inserter[N]) Instrument(
 			continue
 		}
 		matched = true
-		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
+		in, aggInst, id, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
@@ -268,6 +269,7 @@ func (i *inserter[N]) Instrument(
 		}
 		seen[id] = struct{}{}
 		measures = append(measures, in)
+		instances = append(instances, aggInst)
 	}
 
 	if err != nil {
@@ -275,7 +277,7 @@ func (i *inserter[N]) Instrument(
 	}
 
 	if matched {
-		return measures, err
+		return measures, instances, err
 	}
 
 	// Apply implicit default view if no explicit matched.
@@ -290,7 +292,7 @@ func (i *inserter[N]) Instrument(
 	if allowedKeys != nil {
 		stream.AttributeFilter = attribute.NewAllowKeysFilter(allowedKeys...)
 	}
-	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
+	in, aggInst, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, readerAggregation)
 	if e != nil {
 		if err == nil {
 			err = errCreatingAggregators
@@ -300,8 +302,9 @@ func (i *inserter[N]) Instrument(
 	if in != nil {
 		// Ensured to have not seen given matched was false.
 		measures = append(measures, in)
+		instances = append(instances, aggInst)
 	}
-	return measures, err
+	return measures, instances, err
 }
 
 // addCallback registers a single instrument callback to be run when
@@ -318,6 +321,7 @@ var aggIDCount atomic.Uint64
 type aggVal[N int64 | float64] struct {
 	ID      uint64
 	Measure aggregate.Measure[N]
+	AggInst any
 	Err     error
 }
 
@@ -365,7 +369,7 @@ func (i *inserter[N]) cachedAggregator(
 	kind InstrumentKind,
 	stream Stream,
 	readerAggregation Aggregation,
-) (meas aggregate.Measure[N], aggID uint64, err error) {
+) (meas aggregate.Measure[N], aggInst any, aggID uint64, err error) {
 	switch stream.Aggregation.(type) {
 	case nil:
 		// The aggregation was not overridden with a view. Use the aggregation
@@ -380,7 +384,7 @@ func (i *inserter[N]) cachedAggregator(
 	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
-		return nil, 0, fmt.Errorf(
+		return nil, nil, 0, fmt.Errorf(
 			"creating aggregator with instrumentKind: %d, aggregation %v: %w",
 			kind, stream.Aggregation, err,
 		)
@@ -407,12 +411,12 @@ func (i *inserter[N]) cachedAggregator(
 		// A value less than or equal to zero will disable the aggregation
 		// limits for the builder (an all the created aggregates).
 		b.AggregationLimit = i.getCardinalityLimit(kind)
-		in, out, err := i.aggregateFunc(b, stream.Aggregation, kind)
+		in, out, aggInst, err := i.aggregateFunc(b, stream.Aggregation, kind)
 		if err != nil {
-			return aggVal[N]{0, nil, err}
+			return aggVal[N]{ID: 0, Measure: nil, AggInst: nil, Err: err}
 		}
 		if in == nil { // Drop aggregator.
-			return aggVal[N]{0, nil, nil}
+			return aggVal[N]{ID: 0, Measure: nil, AggInst: nil, Err: nil}
 		}
 		i.pipeline.addSync(scope, instrumentSync{
 			// Use the first-seen name casing for this and all subsequent
@@ -423,9 +427,9 @@ func (i *inserter[N]) cachedAggregator(
 			compAgg:     out,
 		})
 		id := aggIDCount.Add(1)
-		return aggVal[N]{id, in, err}
+		return aggVal[N]{ID: id, Measure: in, AggInst: aggInst, Err: err}
 	})
-	return cv.Measure, cv.ID, cv.Err
+	return cv.Measure, cv.AggInst, cv.ID, cv.Err
 }
 
 // getCardinalityLimit returns the cardinality limit for the given instrument kind.
@@ -505,7 +509,7 @@ func (i *inserter[N]) aggregateFunc(
 	b aggregate.Builder[N],
 	agg Aggregation,
 	kind InstrumentKind,
-) (meas aggregate.Measure[N], comp aggregate.ComputeAggregation, err error) {
+) (meas aggregate.Measure[N], comp aggregate.ComputeAggregation, aggInst any, err error) {
 	switch a := agg.(type) {
 	case AggregationDefault:
 		return i.aggregateFunc(b, DefaultAggregationSelector(kind), kind)
@@ -525,11 +529,11 @@ func (i *inserter[N]) aggregateFunc(
 		case InstrumentKindObservableUpDownCounter:
 			meas, comp = b.PrecomputedSum(false)
 		case InstrumentKindCounter, InstrumentKindHistogram:
-			meas, comp = b.Sum(true)
+			meas, comp, aggInst = b.Sum(true)
 		default:
 			// InstrumentKindUpDownCounter, InstrumentKindObservableGauge, and
 			// instrumentKindUndefined or other invalid instrument kinds.
-			meas, comp = b.Sum(false)
+			meas, comp, aggInst = b.Sum(false)
 		}
 	case AggregationExplicitBucketHistogram:
 		var noSum bool
@@ -562,7 +566,7 @@ func (i *inserter[N]) aggregateFunc(
 		err = errUnknownAggregation
 	}
 
-	return meas, comp, err
+	return meas, comp, aggInst, err
 }
 
 // isAggregatorCompatible checks if the aggregation can be used by the instrument.
@@ -672,18 +676,22 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument, allowedKeys []attribute.Key) ([]aggregate.Measure[N], error) {
-	var measures []aggregate.Measure[N]
+func (r resolver[N]) Aggregators(id Instrument, allowedKeys []attribute.Key) ([]aggregate.Measure[N], []any, error) {
+	var (
+		measures  []aggregate.Measure[N]
+		instances []any
+	)
 
 	var err error
 	for _, i := range r.inserters {
-		in, e := i.Instrument(id, allowedKeys, i.readerDefaultAggregation(id.Kind))
+		in, aggInst, e := i.Instrument(id, allowedKeys, i.readerDefaultAggregation(id.Kind))
 		if e != nil {
 			err = errors.Join(err, e)
 		}
 		measures = append(measures, in...)
+		instances = append(instances, aggInst...)
 	}
-	return measures, err
+	return measures, instances, err
 }
 
 // HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
@@ -693,8 +701,11 @@ func (r resolver[N]) HistogramAggregators(
 	id Instrument,
 	allowedKeys []attribute.Key,
 	boundaries []float64,
-) ([]aggregate.Measure[N], error) {
-	var measures []aggregate.Measure[N]
+) ([]aggregate.Measure[N], []any, error) {
+	var (
+		measures  []aggregate.Measure[N]
+		instances []any
+	)
 
 	var err error
 	for _, i := range r.inserters {
@@ -703,11 +714,12 @@ func (r resolver[N]) HistogramAggregators(
 			histAgg.Boundaries = boundaries
 			agg = histAgg
 		}
-		in, e := i.Instrument(id, allowedKeys, agg)
+		in, aggInst, e := i.Instrument(id, allowedKeys, agg)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
 		measures = append(measures, in...)
+		instances = append(instances, aggInst...)
 	}
-	return measures, err
+	return measures, instances, err
 }

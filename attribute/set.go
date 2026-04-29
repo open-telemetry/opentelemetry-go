@@ -211,6 +211,47 @@ func NewSet(kvs ...KeyValue) Set {
 	return s
 }
 
+// NewDistinctWithFilter returns a Distinct identifier for the filtered attribute set,
+// and the sorted and de-duplicated slice of attributes. It modifies the input slice
+// in-place to sort and de-duplicate the attributes.
+//
+// The returned Distinct represents the equivalence class of the attribute set after
+// the filter is applied. The returned slice contains all unique attributes, including
+// those that did not pass the filter.
+func NewDistinctWithFilter(kvs []KeyValue, filter Filter) (Distinct, []KeyValue) {
+	if len(kvs) == 0 {
+		return Distinct{hash: emptyHash}, kvs
+	}
+
+	// Stable sort so the following de-duplication can implement
+	// last-value-wins semantics.
+	slices.SortStableFunc(kvs, func(a, b KeyValue) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+
+	position := len(kvs) - 1
+	offset := position - 1
+
+	// De-duplicate with last-value-wins semantics.
+	for ; offset >= 0; offset-- {
+		if kvs[offset].Key == kvs[position].Key {
+			continue
+		}
+		position--
+		kvs[offset], kvs[position] = kvs[position], kvs[offset]
+	}
+	kvs = kvs[position:]
+
+	h := xxhash.New()
+	for _, kv := range kvs {
+		if filter == nil || filter(kv) {
+			h = hashKV(h, kv)
+		}
+	}
+
+	return Distinct{hash: h.Sum64()}, kvs
+}
+
 // NewSetWithSortable returns a new Set. See the documentation for
 // NewSetWithSortableFiltered for more details.
 //
