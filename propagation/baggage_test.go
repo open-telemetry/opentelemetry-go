@@ -279,8 +279,10 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 			},
-			want:      nil, // Non-deterministic: either k or y will be kept
-			wantCount: 1,   // Only one member fits
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
+			},
+			wantCount: 1, // Only one member fits
 			wantBytes: maxBytesPerBaggageString,
 		},
 		{
