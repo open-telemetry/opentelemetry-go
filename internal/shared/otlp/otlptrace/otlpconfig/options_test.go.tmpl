@@ -440,9 +440,35 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test With Protocol",
+			name: "Test With http/protobuf Protocol",
 			opts: []GenericOption{
 				WithProtocol(ProtocolHTTPProtobuf),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With http/json Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPJSON),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPJSON, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With grpc Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolGRPC),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {
