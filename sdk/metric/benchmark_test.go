@@ -905,6 +905,7 @@ func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
 			var rdr Reader
 			var meter metric.Meter
 			var count int
+			out := new(metricdata.ResourceMetrics)
 
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -929,7 +930,7 @@ func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
 					b.StartTimer()
 				}
 
-				_ = rdr.Collect(ctx, new(metricdata.ResourceMetrics))
+				_ = rdr.Collect(ctx, out)
 				count++
 			}
 		})
