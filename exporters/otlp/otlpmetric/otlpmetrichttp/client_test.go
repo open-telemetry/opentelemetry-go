@@ -515,6 +515,30 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	}
 }
 
+func TestRequestBodySizeLimit(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxRequestSize(1),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	c, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Shutdown(t.Context()) })
+
+	err = c.UploadMetrics(t.Context(), &mpb.ResourceMetrics{})
+	assert.ErrorContains(t, err, "request body too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
+}
+
 func TestClientInstrumentation(t *testing.T) {
 	// Enable instrumentation for this test.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")

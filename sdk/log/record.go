@@ -503,7 +503,11 @@ func (r *Record) applyValueLimitsAndDedup(val log.Value) log.Value {
 			}
 			val = log.SliceValue(newSl...)
 		}
-
+	case log.KindBytes:
+		bs := val.AsBytes()
+		if r.attributeValueLengthLimit >= 0 && len(bs) > r.attributeValueLengthLimit {
+			val = log.BytesValue(bs[:r.attributeValueLengthLimit])
+		}
 	case log.KindMap:
 		kvs := val.AsMap()
 		var newKvs []log.KeyValue
@@ -557,6 +561,11 @@ func (r *Record) needsValueLimitsOrDedup(val log.Value) bool {
 		return r.attributeValueLengthLimit >= 0 && len(val.AsString()) > r.attributeValueLengthLimit
 	case log.KindSlice:
 		if slices.ContainsFunc(val.AsSlice(), r.needsValueLimitsOrDedup) {
+			return true
+		}
+	case log.KindBytes:
+		bs := val.AsBytes()
+		if r.attributeValueLengthLimit >= 0 && len(bs) > r.attributeValueLengthLimit {
 			return true
 		}
 	case log.KindMap:

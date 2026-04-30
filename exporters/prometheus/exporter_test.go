@@ -818,6 +818,52 @@ func TestMultiScopes(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestScopeAttributeConflictsDropped(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+	)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter(
+		"scope-name",
+		otelmetric.WithInstrumentationVersion("scope-version"),
+		otelmetric.WithSchemaURL("https://example.com/schema"),
+		otelmetric.WithInstrumentationAttributes(
+			attribute.String("name", "dropped-name"),
+			attribute.String("version", "dropped-version"),
+			attribute.String("schema_url", "dropped-schema-url"),
+			attribute.String("schema.url", "dropped-translated-schema-url"),
+			attribute.String("custom.scope", "kept"),
+		),
+	)
+
+	counter, err := meter.Int64Counter("scope_conflict")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	got, err := registry.Gather()
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Metric, 1)
+
+	labels := map[string]string{}
+	for _, label := range got[0].Metric[0].Label {
+		labels[label.GetName()] = label.GetValue()
+	}
+
+	assert.Equal(t, map[string]string{
+		"otel_scope_custom_scope": "kept",
+		"otel_scope_name":         "scope-name",
+		"otel_scope_schema_url":   "https://example.com/schema",
+		"otel_scope_version":      "scope-version",
+	}, labels)
+}
+
 func TestBridgeScopeIgnored(t *testing.T) {
 	var handledError error
 	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
