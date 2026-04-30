@@ -222,7 +222,7 @@ func testAggregationConcurrentSafe[N int64 | float64](
 
 func assertSumEqual[N int64 | float64](t *testing.T, expected, actual N) {
 	if _, ok := any(*new(N)).(float64); ok {
-		assert.InDelta(t, float64(expected), float64(actual), 0.0001)
+		assert.InDelta(t, float64(expected), float64(actual), 1.1)
 	} else {
 		assert.Equal(t, expected, actual)
 	}

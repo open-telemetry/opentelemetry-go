@@ -155,11 +155,12 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
+			h := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			v, _ := h.values.Load(alice.Equivalent())
+			dp := v.(*cumulativePoint[int64]).points[0]
 
 			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
 			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
@@ -197,11 +198,12 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 			restore := withHandler(t)
 			defer restore()
 
-			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+			h := newCumulativeExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
 				h.measure(t.Context(), v, alice, nil)
 			}
-			dp := h.values[alice.Equivalent()]
+			v, _ := h.values.Load(alice.Equivalent())
+			dp := v.(*cumulativePoint[float64]).points[0]
 
 			assert.Equal(t, tt.expected.max, dp.minMax.maximum.Load())
 			assert.Equal(t, tt.expected.min, dp.minMax.minimum.Load())
@@ -1258,27 +1260,53 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 	}
 }
 
-func TestExpoHistogramRecordUnderflow(t *testing.T) {
-	var errs []error
-	original := global.GetErrorHandler()
-	global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
-		errs = append(errs, e)
-	}))
-	t.Cleanup(func() {
-		global.SetErrorHandler(original)
-	})
+func TestExpoHistogramUnderflow(t *testing.T) {
+	tests := []struct {
+		name    string
+		run     func(ctx context.Context)
+		wantErr string
+	}{
+		{
+			name: "delta measure downscale underflow",
+			run: func(ctx context.Context) {
+				h := newDeltaExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				h.measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
+				h.measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
+			},
+			wantErr: "exponential histogram underflow (exceeds maxSize at scale -10)",
+		},
+		{
+			name: "cumulative tracker measure underflow",
+			run: func(ctx context.Context) {
+				h := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				h.measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
+				h.measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
+			},
+			wantErr: "exponential histogram underflow (exceeds maxSize at scale -10)",
+		},
+	}
 
-	dp := newExpoHistogramDataPoint[float64](attribute.NewSet(), 1, 20, false, false)
-	// Force scale to a low value
-	dp.scale.Store(-10)
-	dp.record(1)
-	dp.record(math.MaxFloat64)
-	require.Len(t, errs, 1)
-	assert.EqualError(t, errs[0], "exponential histogram scale underflow")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var errs []error
+			original := global.GetErrorHandler()
+			global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				errs = append(errs, e)
+			}))
+			t.Cleanup(func() {
+				global.SetErrorHandler(original)
+			})
+
+			tt.run(t.Context())
+
+			require.Len(t, errs, 1)
+			assert.EqualError(t, errs[0], tt.wantErr)
+		})
+	}
 }
 
 func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
-	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+	h := newDeltaExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 	ctx := t.Context()
 
 	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
@@ -1286,7 +1314,7 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
 
 	var dest metricdata.Aggregation
-	h.delta(&dest)
+	h.collect(&dest)
 	eh := dest.(metricdata.ExponentialHistogram[float64])
 	assert.Empty(t, eh.DataPoints)
 }
