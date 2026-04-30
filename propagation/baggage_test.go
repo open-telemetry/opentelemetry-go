@@ -127,7 +127,7 @@ func TestExtractValidBaggage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mapCarr := propagation.MapCarrier{}
 			mapCarr["baggage"] = tt.header
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 			req.Header.Set("baggage", tt.header)
 
 			// test with http header carrier (which implements ValuesGetter)
@@ -313,7 +313,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 			req.Header["Baggage"] = tt.headers
 
 			ctx := t.Context()
@@ -378,7 +378,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 			req.Header.Set("baggage", tt.header)
 
 			expected := tt.has.Baggage(t)
@@ -431,7 +431,7 @@ func TestInjectBaggageToHTTPReq(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 			ctx := baggage.ContextWithBaggage(t.Context(), tt.mems.Baggage(t))
 			propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
@@ -478,7 +478,7 @@ func TestBaggageInjectExtractRoundtrip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := tt.mems.Baggage(t)
-			req, _ := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
 			ctx := baggage.ContextWithBaggage(t.Context(), b)
 			propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 

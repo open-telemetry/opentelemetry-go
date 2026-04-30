@@ -249,6 +249,20 @@ func TestDefault(t *testing.T) {
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
 }
 
+func TestDefaultWithContext(t *testing.T) {
+	ctx := t.Context()
+	res1 := resource.DefaultWithContext(ctx)
+	res2 := resource.DefaultWithContext(ctx)
+	assert.Same(t, res1, res2)
+}
+
+func TestEnvironmentWithContext(t *testing.T) {
+	t.Setenv(envVar, "key=value")
+	ctx := t.Context()
+	res := resource.EnvironmentWithContext(ctx)
+	assert.Equal(t, map[string]string{"key": "value"}, toMap(res))
+}
+
 func TestEquivalentStability(t *testing.T) {
 	r1 := resource.NewSchemaless(
 		attribute.String("a", "1"),
@@ -738,7 +752,7 @@ func TestWithProcess(t *testing.T) {
 func toMap(res *resource.Resource) map[string]string {
 	m := map[string]string{}
 	for _, attr := range res.Attributes() {
-		m[string(attr.Key)] = attr.Value.Emit()
+		m[string(attr.Key)] = attr.Value.String()
 	}
 	return m
 }

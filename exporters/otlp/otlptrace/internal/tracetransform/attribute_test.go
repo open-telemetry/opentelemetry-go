@@ -26,6 +26,12 @@ func TestAttributes(t *testing.T) {
 				attribute.Int64("int64 to int64", 1234567),
 				attribute.Float64("float64 to double", 1.61),
 				attribute.String("string to string", "string"),
+				attribute.ByteSlice("bytes to bytes", []byte("bytes")),
+				attribute.Slice("slice to array",
+					attribute.BoolValue(true),
+					attribute.ByteSliceValue([]byte("bytes")),
+					attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+				),
 				attribute.Bool("bool to bool", true),
 				{Key: "empty to empty"},
 			},
@@ -59,6 +65,49 @@ func TestAttributes(t *testing.T) {
 					Value: &commonpb.AnyValue{
 						Value: &commonpb.AnyValue_StringValue{
 							StringValue: "string",
+						},
+					},
+				},
+				{
+					Key: "bytes to bytes",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_BytesValue{
+							BytesValue: []byte("bytes"),
+						},
+					},
+				},
+				{
+					Key: "slice to array",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_ArrayValue{
+							ArrayValue: &commonpb.ArrayValue{
+								Values: []*commonpb.AnyValue{
+									{
+										Value: &commonpb.AnyValue_BoolValue{
+											BoolValue: true,
+										},
+									},
+									{
+										Value: &commonpb.AnyValue_BytesValue{
+											BytesValue: []byte("bytes"),
+										},
+									},
+									{
+										Value: &commonpb.AnyValue_ArrayValue{
+											ArrayValue: &commonpb.ArrayValue{
+												Values: []*commonpb.AnyValue{
+													{
+														Value: &commonpb.AnyValue_IntValue{
+															IntValue: 2,
+														},
+													},
+													{},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

@@ -164,6 +164,82 @@ func TestSpanKindTransform(t *testing.T) {
 	}
 }
 
+func TestConvAttrValueBytes(t *testing.T) {
+	v := []byte("bytes")
+	tests := []struct {
+		name  string
+		want  []byte
+		limit int
+	}{
+		{
+			name:  "Unlimited",
+			want:  []byte("bytes"),
+			limit: -1,
+		},
+		{
+			name:  "Zero",
+			want:  []byte(""),
+			limit: 0,
+		},
+		{
+			name:  "Truncate",
+			want:  []byte("by"),
+			limit: 2,
+		},
+		{
+			name:  "NoTruncation",
+			want:  []byte("bytes"),
+			limit: 10,
+		},
+	}
+	orig := maxSpan.AttrValueLen
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+			maxSpan.AttrValueLen = test.limit
+
+			val := convAttrValue(attribute.ByteSliceValue(v))
+
+			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+			assert.Equal(t, test.want, val.AsBytes())
+		})
+	}
+}
+
+func TestConvAttrValueSlice(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.SliceValue(
+		attribute.BoolValue(true),
+		attribute.IntValue(2),
+		attribute.SliceValue(
+			attribute.StringValue("nested"),
+			attribute.ByteSliceValue([]byte("bytes")),
+		),
+	))
+
+	assert.Equal(t, telemetry.ValueKindSlice, val.Kind())
+
+	slice := val.AsSlice()
+	if assert.Len(t, slice, 3) {
+		assert.Equal(t, telemetry.ValueKindBool, slice[0].Kind())
+		assert.True(t, slice[0].AsBool())
+
+		assert.Equal(t, telemetry.ValueKindInt64, slice[1].Kind())
+		assert.EqualValues(t, 2, slice[1].AsInt64())
+
+		assert.Equal(t, telemetry.ValueKindSlice, slice[2].Kind())
+		nested := slice[2].AsSlice()
+		if assert.Len(t, nested, 2) {
+			assert.Equal(t, telemetry.ValueKindString, nested[0].Kind())
+			assert.Equal(t, "nested", nested[0].AsString())
+
+			assert.Equal(t, telemetry.ValueKindBytes, nested[1].Kind())
+			assert.Equal(t, []byte("bytes"), nested[1].AsBytes())
+		}
+	}
+}
+
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {
 	t.Parallel()
 

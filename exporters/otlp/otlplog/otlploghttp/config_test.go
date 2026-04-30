@@ -107,19 +107,21 @@ func TestNewConfig(t *testing.T) {
 				WithTLSClientConfig(tlsCfg),
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
+				WithMaxRequestSize(1),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
-				endpoint:    newSetting("test"),
-				path:        newSetting("/path"),
-				insecure:    newSetting(true),
-				tlsCfg:      newSetting(tlsCfg),
-				headers:     newSetting(headers),
-				compression: newSetting(GzipCompression),
-				timeout:     newSetting(time.Second),
-				retryCfg:    newSetting(rc),
+				endpoint:       newSetting("test"),
+				path:           newSetting("/path"),
+				insecure:       newSetting(true),
+				tlsCfg:         newSetting(tlsCfg),
+				headers:        newSetting(headers),
+				compression:    newSetting(GzipCompression),
+				maxRequestSize: newSetting(1),
+				timeout:        newSetting(time.Second),
+				retryCfg:       newSetting(rc),
 			},
 		},
 		{
@@ -509,6 +511,9 @@ func TestNewConfig(t *testing.T) {
 				return func() { otel.SetErrorHandler(orig) }
 			}(otel.GetErrorHandler()))
 			c := newConfig(tc.options)
+			if !tc.want.maxRequestSize.Set {
+				tc.want.maxRequestSize = newSetting(defaultMaxRequestSize)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)

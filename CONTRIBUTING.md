@@ -808,11 +808,11 @@ func (c *Component) initObservability() {
 
 #### Performance
 
-When observability is disabled there should be little to no overhead.
+When observability is disabled or the instrument is not `Enabled`, there should be little to no overhead.
 
 ```go
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
-	if e.inst != nil {
+	if e.inst != nil && e.inst.Enabled(ctx) {
 		attrs := expensiveOperation()
 		e.inst.recordSpanInflight(ctx, int64(len(spans)), attrs...)
 	}
@@ -829,7 +829,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 }
 
 func (i *instrumentation) recordSpanInflight(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-	if i == nil || i.inflight == nil {
+	if i == nil || i.inflight == nil || !i.inflight.Enabled(ctx) {
 		return
 	}
 	i.inflight.Add(ctx, count, metric.WithAttributes(attrs...))
@@ -865,6 +865,9 @@ var (
 )
 
 func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...attribute.KeyValue) {
+    if !i.counter.Enabled(ctx) {
+        return
+    }
     attrs := attrPool.Get().(*[]attribute.KeyValue)
     defer func() {
         *attrs = (*attrs)[:0] // Reset.
@@ -1007,16 +1010,20 @@ Ensure observability measurements receive the correct context, especially for tr
 ```go
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
     // Use the provided context for observability measurements
-    e.inst.recordSpanExportStarted(ctx, len(spans))
+    if e.inst.Enabled(ctx) {
+        e.inst.recordSpanExportStarted(ctx, len(spans))
+    }
  
     err := e.doExport(ctx, spans)
 
-    if err != nil {
-        e.inst.recordSpanExportFailed(ctx, len(spans), err)
-    } else {
-        e.inst.recordSpanExportSucceeded(ctx, len(spans))
+    if e.inst.Enabled(ctx) {
+        if err != nil {
+            e.inst.recordSpanExportFailed(ctx, len(spans), err)
+        } else {
+            e.inst.recordSpanExportSucceeded(ctx, len(spans))
+        }
     }
- 
+
     return err
 }
 ```
@@ -1108,6 +1115,68 @@ func TestObservability(t *testing.T) {
 
 Test order should not affect results.
 Ensure that any global state (e.g. component ID counters) is reset between tests.
+
+### Experimental Features
+
+To support the development of new features in the specification, we use the following patterns to implement in-development features without adding new public artifacts in stable modules.
+
+#### Experimental behavior with no API artifacts
+
+Features that change behavior without changing the API (e.g., exemplar collection, auto-generation of identifiers) are implemented behind a feature gate.
+The implementation resides in an `/internal/x` package and is activated through environment variables with the `OTEL_GO_X_` prefix (e.g., `OTEL_GO_X_OBSERVABILITY`).
+The feature must be documented in a `README.md` file in the `/internal/x` package.
+
+#### Experimental methods on SDK-only interfaces
+
+Features that require new methods on SDK interfaces are defined as a new interface in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+The SDK uses type assertions (without importing the unstable package) to check if passing types implement these experimental interfaces.
+The SDK must not depend on the experimental module.
+
+#### Experimental structs, functions, or interfaces
+
+Features that don't need any changes to the existing stable package are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+
+#### Experimental signals and components
+
+New telemetry signals (e.g., Logs before stabilization) and components (e.g. bridges) are hosted in new, unstable modules (e.g., `go.opentelemetry.io/otel/log` before 1.0.0).
+The package should have the final name it will use once stabilized (i.e. not `/x`), and is released at a v0.x.y version to indicate it is not stable.
+Most new components are hosted in [opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib).
+
+#### Experimental options for API or SDK functions
+
+Experimental Options functions are implemented in an experimental module (e.g., `go.opentelemetry.io/otel/sdk/x`).
+The return type of the Option function must embed the option's type (e.g. `metric.InstrumentOption`), and have an `Experimental()` method to prevent the API from panicking when the option is used.
+The SDK uses type assertions (without importing the unstable package) to check if passing types implement these experimental interfaces.
+The SDK must not depend on the experimental module.
+
+For example:
+
+```go
+type myOption struct {
+    // Embed the stable option type.
+    metric.InstrumentOption
+    value string
+}
+
+// Experimental prevents the API from panicking when the option is used.
+func (o myOption) Experimental() {}
+
+// The SDK can use type assertions to use this function.
+func (o myOption) Value() string { return o.value }
+
+func WithMyOption(value string) metric.InstrumentOption {
+    return myOption{value: value}
+}
+```
+
+#### Not Supported
+
+The following kinds of experimental features are **not currently supported** on stable interfaces:
+
+- Experimental methods on API interfaces
+- Experimental fields for API or SDK exported structs
+
+In some cases forks or long-lived branches may be used for prototyping these features.
 
 ## Approvers and Maintainers
 

@@ -34,6 +34,7 @@ func AssertEqual[T Recording | Record](t TestingT, want, got T, opts ...AssertOp
 		cmpopts.SortSlices(
 			func(a, b log.KeyValue) bool { return a.Key < b.Key },
 		), // Unordered compare of the key values.
+		cmpopts.EquateErrors(),
 		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
 	}
 	cmpOpts = append(cmpOpts, cfg.cmpOpts...)

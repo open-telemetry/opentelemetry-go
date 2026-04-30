@@ -91,14 +91,18 @@ type collector struct {
 	namespace                string
 	resourceAttributesFilter attribute.Filter
 
-	mu                sync.Mutex // mu protects all members below from the concurrent access.
+	mu                sync.Mutex
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	metricFamilies    map[string]*dto.MetricFamily
-	resourceKeyVals   keyVals
-	metricNamer       otlptranslator.MetricNamer
-	labelNamer        otlptranslator.LabelNamer
-	unitNamer         otlptranslator.UnitNamer
+
+	resourceKeyValsOnce sync.Once
+	resourceKeyVals     keyVals
+	resourceKeyValsErr  error
+
+	metricNamer otlptranslator.MetricNamer
+	labelNamer  otlptranslator.LabelNamer
+	unitNamer   otlptranslator.UnitNamer
 
 	inst *observ.Instrumentation
 
@@ -226,11 +230,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.targetInfo
 	}
 
-	if c.resourceAttributesFilter != nil && len(c.resourceKeyVals.keys) == 0 {
-		e := c.createResourceAttributes(metrics.Resource)
-		if e != nil {
-			otel.Handle(e)
-			err = errors.Join(err, fmt.Errorf("failed to createResourceAttributes: %w", e))
+	if c.resourceAttributesFilter != nil {
+		c.resourceKeyValsOnce.Do(func() {
+			c.resourceKeyVals, c.resourceKeyValsErr = c.createResourceAttributes(metrics.Resource)
+		})
+		if c.resourceKeyValsErr != nil {
+			otel.Handle(c.resourceKeyValsErr)
+			err = errors.Join(err, fmt.Errorf("failed to createResourceAttributes: %w", c.resourceKeyValsErr))
 			return
 		}
 	}
@@ -617,7 +623,7 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 		for itr.Next() {
 			kv := itr.Attribute()
 			keys = append(keys, string(kv.Key))
-			values = append(values, kv.Value.Emit())
+			values = append(values, kv.Value.String())
 		}
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
@@ -631,10 +637,10 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 				return nil, nil, err
 			}
 			if _, ok := keysMap[key]; !ok {
-				keysMap[key] = []string{kv.Value.Emit()}
+				keysMap[key] = []string{kv.Value.String()}
 			} else {
 				// if the sanitized key is a duplicate, append to the list of keys
-				keysMap[key] = append(keysMap[key], kv.Value.Emit())
+				keysMap[key] = append(keysMap[key], kv.Value.String())
 			}
 		}
 		for key, vals := range keysMap {
@@ -719,18 +725,14 @@ func (c *collector) namingMetricType(m metricdata.Metrics) otlptranslator.Metric
 	return otlptranslator.MetricTypeUnknown
 }
 
-func (c *collector) createResourceAttributes(res *resource.Resource) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+func (c *collector) createResourceAttributes(res *resource.Resource) (keyVals, error) {
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
 	resourceKeys, resourceValues, err := getAttrs(resourceAttrs, c.labelNamer)
 	if err != nil {
-		return err
+		return keyVals{}, err
 	}
 
-	c.resourceKeyVals = keyVals{keys: resourceKeys, vals: resourceValues}
-	return nil
+	return keyVals{keys: resourceKeys, vals: resourceValues}, nil
 }
 
 func (c *collector) validateMetrics(name, description string, metricType *dto.MetricType) (drop bool, help string) {
@@ -812,7 +814,7 @@ func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.La
 		if err != nil {
 			return nil, err
 		}
-		labels[name] = attr.Value.Emit()
+		labels[name] = attr.Value.String()
 	}
 	return labels, nil
 }
