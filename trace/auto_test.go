@@ -165,12 +165,45 @@ func TestSpanKindTransform(t *testing.T) {
 }
 
 func TestConvAttrValueBytes(t *testing.T) {
-	t.Parallel()
+	v := []byte("bytes")
+	tests := []struct {
+		name  string
+		want  []byte
+		limit int
+	}{
+		{
+			name:  "Unlimited",
+			want:  []byte("bytes"),
+			limit: -1,
+		},
+		{
+			name:  "Zero",
+			want:  []byte(""),
+			limit: 0,
+		},
+		{
+			name:  "Truncate",
+			want:  []byte("by"),
+			limit: 2,
+		},
+		{
+			name:  "NoTruncation",
+			want:  []byte("bytes"),
+			limit: 10,
+		},
+	}
+	orig := maxSpan.AttrValueLen
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+			maxSpan.AttrValueLen = test.limit
 
-	val := convAttrValue(attribute.ByteSliceValue([]byte("bytes")))
+			val := convAttrValue(attribute.ByteSliceValue(v))
 
-	assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
-	assert.Equal(t, []byte("bytes"), val.AsBytes())
+			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+			assert.Equal(t, test.want, val.AsBytes())
+		})
+	}
 }
 
 func TestConvAttrValueSlice(t *testing.T) {
