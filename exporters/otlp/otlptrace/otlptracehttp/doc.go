@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package otlptracehttp provides an OTLP span exporter using HTTP with protobuf payloads.
+Package otlptracehttp provides an OTLP span exporter using HTTP with protobuf or JSON payloads.
 By default the telemetry is sent to https://localhost:4318/v1/traces.
 
 Exporter should be created using [New].
