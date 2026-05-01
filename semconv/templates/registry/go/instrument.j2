@@ -133,6 +133,7 @@ func (m {{ name }}) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -172,6 +173,7 @@ func (m {{ h.to_go_name(metric.metric_name, pkg) }}) Add(ctx context.Context, in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -200,6 +202,7 @@ func (m {{ h.to_go_name(metric.metric_name, pkg) }}) AddSet(ctx context.Context,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -235,6 +238,7 @@ func (m {{ name }}) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -275,6 +279,7 @@ func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lowe
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -304,6 +309,7 @@ func (m {{ name }}) RecordSet(ctx context.Context, val {{ value_type(metric) | l
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
