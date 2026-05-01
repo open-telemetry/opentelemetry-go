@@ -230,7 +230,7 @@ type entry struct {
 type lazyLimitedSyncMap struct {
 	m        sync.Map
 	aggLimit int
-	len      atomic.Int64
+	len      int
 	lenMux   sync.Mutex
 	cycle    atomic.Uint64
 }
@@ -240,8 +240,8 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 	newValue func(attribute.Set) any,
 	resetValue func(any),
 ) any {
-	currentCycle := m.cycle.Load()
 	actual, loaded := m.m.Load(fltrAttr.Equivalent())
+	currentCycle := m.cycle.Load()
 	if loaded {
 		ent := actual.(*entry)
 		if ent.cycle.Load() == currentCycle {
@@ -275,7 +275,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 	}
 
 	// Determine if we need to use overflow
-	if m.aggLimit > 0 && int(m.len.Load()) >= m.aggLimit-1 {
+	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		targetAttr = overflowSet
 		actual, loaded = m.m.Load(targetAttr.Equivalent())
 		if loaded {
@@ -297,7 +297,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 			ent.value.Store(existingVal)
 		}
 		ent.cycle.Store(currentCycle)
-		m.len.Add(1)
+		m.len++
 		return existingVal
 	}
 
@@ -313,17 +313,21 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 		// because we are holding lenMux and only slow-path can insert/reuse.
 		return ent.value.Load()
 	}
-	m.len.Add(1)
+	m.len++
 	return newVal
 }
 
 func (m *lazyLimitedSyncMap) Clear() {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
 	m.cycle.Add(1)
-	m.len.Store(0)
+	m.len = 0
 }
 
 func (m *lazyLimitedSyncMap) Len() int {
-	return int(m.len.Load())
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	return m.len
 }
 
 func (m *lazyLimitedSyncMap) Range(f func(key, value any) bool) {
