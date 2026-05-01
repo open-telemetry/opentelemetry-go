@@ -178,6 +178,7 @@ func (i instID) normalize() instID {
 
 type rawAttributesOption interface {
 	RawAttributes() []attribute.KeyValue
+	Experimental()
 }
 
 func extractRawKVs[T any](opts []T) []attribute.KeyValue {
