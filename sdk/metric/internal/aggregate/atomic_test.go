@@ -245,7 +245,7 @@ func BenchmarkSyncMap(b *testing.B) {
 		makeMap func() syncMap
 	}{
 		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{}} }},
-		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap{}} }},
+		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap[any]{}} }},
 	}
 
 	attr := attribute.NewSet(attribute.String("key", "value"))
@@ -306,7 +306,7 @@ func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, newVa
 }
 
 type lazySyncMapTestWrapper struct {
-	*lazyLimitedSyncMap
+	*lazyLimitedSyncMap[any]
 }
 
 func (w lazySyncMapTestWrapper) Clear() {
@@ -328,7 +328,7 @@ func TestSyncMap_Limit(t *testing.T) {
 		},
 		{
 			"lazyLimitedSyncMap",
-			func(limit int) syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap{aggLimit: limit}} },
+			func(limit int) syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap[any]{aggLimit: limit}} },
 		},
 	}
 
@@ -374,7 +374,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 		makeMap func() syncMap
 	}{
 		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: 5}} }},
-		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap{aggLimit: 5}} }},
+		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap[any]{aggLimit: 5}} }},
 	}
 
 	for _, tt := range tests {
@@ -411,7 +411,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 
 // Specific tests for lazyLimitedSyncMap's cycle and GC behavior.
 func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
-	var m lazyLimitedSyncMap
+	var m lazyLimitedSyncMap[any]
 	m.aggLimit = 10
 	attr1 := attribute.NewSet(attribute.String("k", "v"))
 
@@ -446,7 +446,7 @@ func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
 }
 
 func TestLazyLimitedSyncMap_RangeAndGC(t *testing.T) {
-	var m lazyLimitedSyncMap
+	var m lazyLimitedSyncMap[any]
 	m.aggLimit = 10
 	attr1 := attribute.NewSet(attribute.String("k", "v"))
 

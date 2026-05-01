@@ -227,32 +227,32 @@ type entry struct {
 
 // lazyLimitedSyncMap is a custom wrapper around sync.Map that provides
 // cardinality limiting and lazy cleanup using a cycle counter.
-type lazyLimitedSyncMap struct {
+type lazyLimitedSyncMap[V any] struct {
 	m        sync.Map
 	aggLimit int
 	len      int
 	lenMux   sync.Mutex
 	cycle    atomic.Uint64
 
-	newValue  func(attribute.Set) any
-	resetFunc func(any)
+	newValue  func(attribute.Set) V
+	resetFunc func(V)
 }
 
-func newLazyLimitedSyncMap(limit int, newValue func(attribute.Set) any, resetFunc func(any)) lazyLimitedSyncMap {
-	return lazyLimitedSyncMap{
+func newLazyLimitedSyncMap[V any](limit int, newValue func(attribute.Set) V, resetFunc func(V)) lazyLimitedSyncMap[V] {
+	return lazyLimitedSyncMap[V]{
 		aggLimit:  limit,
 		newValue:  newValue,
 		resetFunc: resetFunc,
 	}
 }
 
-func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
+func (m *lazyLimitedSyncMap[V]) LoadOrReuseAttr(fltrAttr attribute.Set) V {
 	actual, loaded := m.m.Load(fltrAttr.Equivalent())
 	currentCycle := m.cycle.Load()
 	if loaded {
 		ent := actual.(*entry)
 		if ent.cycle.Load() == currentCycle {
-			return ent.value.Load()
+			return ent.value.Load().(V)
 		}
 	}
 
@@ -261,7 +261,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
 	if loadedOverflow {
 		ent := actualOverflow.(*entry)
 		if ent.cycle.Load() == currentCycle {
-			return ent.value.Load()
+			return ent.value.Load().(V)
 		}
 	}
 
@@ -277,7 +277,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
 	if loaded {
 		ent := actual.(*entry)
 		if ent.cycle.Load() == currentCycle {
-			return ent.value.Load()
+			return ent.value.Load().(V)
 		}
 	}
 
@@ -288,7 +288,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
 		if loaded {
 			ent := actual.(*entry)
 			if ent.cycle.Load() == currentCycle {
-				return ent.value.Load()
+				return ent.value.Load().(V)
 			}
 		}
 	}
@@ -296,7 +296,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
 	if loaded {
 		// reuse existing stale entry
 		ent := actual.(*entry)
-		existingVal := ent.value.Load()
+		existingVal := ent.value.Load().(V)
 		ent.cycle.Store(currentCycle)
 		m.len++
 		return existingVal
@@ -312,13 +312,13 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
 		ent := actual.(*entry)
 		// If another thread inserted it, it must be for the current cycle,
 		// because we are holding lenMux and only slow-path can insert/reuse.
-		return ent.value.Load()
+		return ent.value.Load().(V)
 	}
 	m.len++
 	return newVal
 }
 
-func (m *lazyLimitedSyncMap) Clear() {
+func (m *lazyLimitedSyncMap[V]) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	m.cycle.Add(1)
@@ -327,19 +327,19 @@ func (m *lazyLimitedSyncMap) Clear() {
 	if m.resetFunc != nil {
 		m.m.Range(func(_, value any) bool {
 			ent := value.(*entry)
-			m.resetFunc(ent.value.Load())
+			m.resetFunc(ent.value.Load().(V))
 			return true
 		})
 	}
 }
 
-func (m *lazyLimitedSyncMap) Len() int {
+func (m *lazyLimitedSyncMap[V]) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	return m.len
 }
 
-func (m *lazyLimitedSyncMap) Range(f func(key, value any) bool) {
+func (m *lazyLimitedSyncMap[V]) Range(f func(key, value any) bool) {
 	currentCycle := m.cycle.Load()
 	m.m.Range(func(key, value any) bool {
 		ent := value.(*entry)

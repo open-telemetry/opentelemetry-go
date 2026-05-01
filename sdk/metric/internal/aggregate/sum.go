@@ -58,25 +58,25 @@ func newDeltaSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaSum[N] {
-	newVal := func(attr attribute.Set) any {
+	newVal := func(attr attribute.Set) *sumValue[N] {
 		return &sumValue[N]{
 			res:   r(attr),
 			attrs: attr,
 			// delta aggregators ignore val.startTime, so we leave it zero to save a clock fetch.
 		}
 	}
-	resetFunc := func(v any) {
-		v.(*sumValue[N]).n.reset()
+	resetFunc := func(v *sumValue[N]) {
+		v.n.reset()
 	}
 	return &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
 		hotColdValMap: [2]lazySumValueMap[N]{
 			{
-				values: newLazyLimitedSyncMap(limit, newVal, resetFunc),
+				values: newLazyLimitedSyncMap[*sumValue[N]](limit, newVal, resetFunc),
 			},
 			{
-				values: newLazyLimitedSyncMap(limit, newVal, resetFunc),
+				values: newLazyLimitedSyncMap[*sumValue[N]](limit, newVal, resetFunc),
 			},
 		},
 	}
@@ -84,7 +84,7 @@ func newDeltaSum[N int64 | float64](
 
 // lazySumValueMap is a map of sumValues backed by a lazyLimitedSyncMap.
 type lazySumValueMap[N int64 | float64] struct {
-	values lazyLimitedSyncMap
+	values lazyLimitedSyncMap[*sumValue[N]]
 }
 
 func (s *lazySumValueMap[N]) measure(
@@ -93,7 +93,7 @@ func (s *lazySumValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrReuseAttr(fltrAttr).(*sumValue[N])
+	sv := s.values.LoadOrReuseAttr(fltrAttr)
 	sv.n.add(value)
 	sv.res.Offer(ctx, value, droppedAttr)
 }

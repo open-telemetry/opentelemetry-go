@@ -53,7 +53,7 @@ func (s *lastValueMap[N]) measure(
 }
 
 type lazyLastValueMap[N int64 | float64] struct {
-	values lazyLimitedSyncMap
+	values lazyLimitedSyncMap[*lastValuePoint[N]]
 }
 
 func (s *lazyLastValueMap[N]) measure(
@@ -62,7 +62,7 @@ func (s *lazyLastValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrReuseAttr(fltrAttr).(*lastValuePoint[N])
+	lv := s.values.LoadOrReuseAttr(fltrAttr)
 
 	lv.value.Store(value)
 	if !lv.dropExemplars {
@@ -74,7 +74,7 @@ func newDeltaLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaLastValue[N] {
-	newVal := func(attr attribute.Set) any {
+	newVal := func(attr attribute.Set) *lastValuePoint[N] {
 		res := r(attr)
 		_, isDrop := res.(*dropRes[N])
 		p := &lastValuePoint[N]{
@@ -85,8 +85,8 @@ func newDeltaLastValue[N int64 | float64](
 		}
 		return p
 	}
-	resetFunc := func(v any) {
-		v.(*lastValuePoint[N]).value.Store(0)
+	resetFunc := func(v *lastValuePoint[N]) {
+		v.value.Store(0)
 	}
 
 	return &deltaLastValue[N]{
@@ -94,10 +94,10 @@ func newDeltaLastValue[N int64 | float64](
 		start:  now(),
 		hotColdValMap: [2]lazyLastValueMap[N]{
 			{
-				values: newLazyLimitedSyncMap(limit, newVal, resetFunc),
+				values: newLazyLimitedSyncMap[*lastValuePoint[N]](limit, newVal, resetFunc),
 			},
 			{
-				values: newLazyLimitedSyncMap(limit, newVal, resetFunc),
+				values: newLazyLimitedSyncMap[*lastValuePoint[N]](limit, newVal, resetFunc),
 			},
 		},
 	}

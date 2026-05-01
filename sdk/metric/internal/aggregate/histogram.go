@@ -105,7 +105,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]lazyLimitedSyncMap
+	hotColdValMap [2]lazyLimitedSyncMap[*histogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -122,7 +122,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrReuseAttr(fltrAttr).(*histogramPoint[N])
+	h := s.hotColdValMap[hotIdx].LoadOrReuseAttr(fltrAttr)
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -157,13 +157,13 @@ func newDeltaHistogram[N int64 | float64](
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
 
-	newVal := func(attr attribute.Set) any {
+	newVal := func(attr attribute.Set) *histogramPoint[N] {
 		res := r(attr)
 		_, isDrop := res.(*dropRes[N])
 		return &histogramPoint[N]{
-			res:                    res,
-			attrs:                  attr,
-			dropExemplars:          isDrop,
+			res:           res,
+			attrs:         attr,
+			dropExemplars: isDrop,
 			// N+1 buckets. For example:
 			//
 			//   bounds = [0, 5, 10]
@@ -174,8 +174,8 @@ func newDeltaHistogram[N int64 | float64](
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(b)+1)},
 		}
 	}
-	resetFunc := func(v any) {
-		v.(*histogramPoint[N]).reset()
+	resetFunc := func(v *histogramPoint[N]) {
+		v.reset()
 	}
 
 	return &deltaHistogram[N]{
@@ -184,9 +184,9 @@ func newDeltaHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]lazyLimitedSyncMap{
-			newLazyLimitedSyncMap(limit, newVal, resetFunc),
-			newLazyLimitedSyncMap(limit, newVal, resetFunc),
+		hotColdValMap: [2]lazyLimitedSyncMap[*histogramPoint[N]]{
+			newLazyLimitedSyncMap[*histogramPoint[N]](limit, newVal, resetFunc),
+			newLazyLimitedSyncMap[*histogramPoint[N]](limit, newVal, resetFunc),
 		},
 	}
 }
