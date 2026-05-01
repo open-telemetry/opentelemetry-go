@@ -246,7 +246,7 @@ func newLazyLimitedSyncMap[V any](limit int, newValue func(attribute.Set) V, res
 	}
 }
 
-func (m *lazyLimitedSyncMap[V]) LoadOrReuseAttr(fltrAttr attribute.Set) V {
+func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set) V {
 	actual, loaded := m.m.Load(fltrAttr.Equivalent())
 	currentCycle := m.cycle.Load()
 	if loaded {

@@ -259,7 +259,7 @@ func BenchmarkSyncMap(b *testing.B) {
 			}
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				m.LoadOrReuseAttr(attr, newValue)
+				m.LoadOrStoreAttr(attr, newValue)
 			}
 		})
 
@@ -271,7 +271,7 @@ func BenchmarkSyncMap(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				m.Clear()
-				m.LoadOrReuseAttr(attr, newValue)
+				m.LoadOrStoreAttr(attr, newValue)
 			}
 		})
 
@@ -287,7 +287,7 @@ func BenchmarkSyncMap(b *testing.B) {
 
 // syncMap represents the shared functionality between limitedSyncMap and lazyLimitedSyncMap.
 type syncMap interface {
-	LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any
+	LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any
 	Clear()
 	Len() int
 	Range(f func(key, value any) bool)
@@ -301,8 +301,8 @@ func (w limitedSyncMapTestWrapper) Clear() {
 	w.limitedSyncMap.Clear()
 }
 
-func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
-	return w.LoadOrStoreAttr(fltrAttr, newValue)
+func (w limitedSyncMapTestWrapper) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
+	return w.limitedSyncMap.LoadOrStoreAttr(fltrAttr, newValue)
 }
 
 type lazySyncMapTestWrapper struct {
@@ -313,8 +313,8 @@ func (w lazySyncMapTestWrapper) Clear() {
 	w.lazyLimitedSyncMap.Clear()
 }
 
-func (w lazySyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, _ func(attribute.Set) any) any {
-	return w.lazyLimitedSyncMap.LoadOrReuseAttr(fltrAttr)
+func (w lazySyncMapTestWrapper) LoadOrStoreAttr(fltrAttr attribute.Set, _ func(attribute.Set) any) any {
+	return w.lazyLimitedSyncMap.LoadOrStoreAttr(fltrAttr)
 }
 
 func TestSyncMap_Limit(t *testing.T) {
@@ -348,21 +348,21 @@ func TestSyncMap_Limit(t *testing.T) {
 			}
 
 			// Add first (normal)
-			v1 := m.LoadOrReuseAttr(attr1, newVal)
+			v1 := m.LoadOrStoreAttr(attr1, newVal)
 			assert.Equal(t, 1, m.Len())
 
 			// Add second (normal)
-			v2 := m.LoadOrReuseAttr(attr2, newVal)
+			v2 := m.LoadOrStoreAttr(attr2, newVal)
 			assert.Equal(t, 2, m.Len())
 
 			// Add third (overflow)
-			v3 := m.LoadOrReuseAttr(attr3, newVal)
+			v3 := m.LoadOrStoreAttr(attr3, newVal)
 			assert.Equal(t, 3, m.Len()) // Overflow counts as the 3rd entry
 			assert.NotSame(t, v1, v3)
 			assert.NotSame(t, v2, v3)
 
 			// Add fourth (overflow) - should return same overflow value
-			v4 := m.LoadOrReuseAttr(attr4, newVal)
+			v4 := m.LoadOrStoreAttr(attr4, newVal)
 			assert.Same(t, v3, v4)
 		})
 	}
@@ -389,7 +389,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 			// 100 routines trying to read/write the same key
 			for range 100 {
 				wg.Go(func() {
-					m.LoadOrReuseAttr(attr, func(attribute.Set) any { return 1 })
+					m.LoadOrStoreAttr(attr, func(attribute.Set) any { return 1 })
 				})
 			}
 			wg.Wait()
@@ -399,7 +399,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 			for range 100 {
 				wg.Go(func() {
 					m.Clear()
-					m.LoadOrReuseAttr(attr, func(attribute.Set) any { return 1 })
+					m.LoadOrStoreAttr(attr, func(attribute.Set) any { return 1 })
 				})
 			}
 			wg.Wait()
@@ -423,7 +423,7 @@ func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
 
 	// Cycle 0
 	m.newValue = func(attribute.Set) any { return newVal(attr1) }
-	v1 := m.LoadOrReuseAttr(attr1)
+	v1 := m.LoadOrStoreAttr(attr1)
 	assert.Equal(t, 1, v1)
 	assert.Equal(t, 1, m.Len())
 
@@ -432,7 +432,7 @@ func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
 	assert.Equal(t, 0, m.Len())
 
 	// Re-inserting the same key should reuse the map entry, without calling newVal
-	v2 := m.LoadOrReuseAttr(attr1)
+	v2 := m.LoadOrStoreAttr(attr1)
 	assert.Equal(t, 1, v2, "Value should be reused without calling newVal")
 	assert.Equal(t, 1, m.Len())
 
@@ -454,7 +454,7 @@ func TestLazyLimitedSyncMap_RangeAndGC(t *testing.T) {
 
 	// Cycle 0: add item
 	m.newValue = newVal
-	m.LoadOrReuseAttr(attr1)
+	m.LoadOrStoreAttr(attr1)
 
 	// Cycle 1: item is stale
 	m.Clear()

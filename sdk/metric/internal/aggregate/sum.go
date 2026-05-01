@@ -93,7 +93,7 @@ func (s *lazySumValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrReuseAttr(fltrAttr)
+	sv := s.values.LoadOrStoreAttr(fltrAttr)
 	sv.n.add(value)
 	sv.res.Offer(ctx, value, droppedAttr)
 }

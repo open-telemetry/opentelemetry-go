@@ -122,7 +122,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrReuseAttr(fltrAttr)
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr)
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element

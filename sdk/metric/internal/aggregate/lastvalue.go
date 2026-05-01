@@ -62,7 +62,7 @@ func (s *lazyLastValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrReuseAttr(fltrAttr)
+	lv := s.values.LoadOrStoreAttr(fltrAttr)
 
 	lv.value.Store(value)
 	if !lv.dropExemplars {
