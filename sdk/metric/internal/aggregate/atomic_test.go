@@ -291,7 +291,11 @@ type limitedSyncMapTestWrapper struct {
 	*limitedSyncMap
 }
 
-func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any, _ func(any)) any {
+func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(
+	fltrAttr attribute.Set,
+	newValue func(attribute.Set) any,
+	_ func(any),
+) any {
 	return w.LoadOrStoreAttr(fltrAttr, newValue)
 }
 
@@ -300,7 +304,10 @@ func TestSyncMap_Limit(t *testing.T) {
 		name    string
 		makeMap func(limit int) syncMap
 	}{
-		{"limitedSyncMap", func(limit int) syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: limit}} }},
+		{
+			"limitedSyncMap",
+			func(limit int) syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: limit}} },
+		},
 		{"lazyLimitedSyncMap", func(limit int) syncMap { return &lazyLimitedSyncMap{aggLimit: limit} }},
 	}
 

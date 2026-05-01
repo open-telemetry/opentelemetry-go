@@ -142,15 +142,7 @@ func (s *deltaSum[N]) collect(
 			Time:       t,
 			Value:      val.n.load(),
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		// Filter out exemplars from previous collection intervals.
-		filteredExemplars := newPt.Exemplars[:0]
-		for _, e := range newPt.Exemplars {
-			if !e.Time.Before(s.start) {
-				filteredExemplars = append(filteredExemplars, e)
-			}
-		}
-		newPt.Exemplars = filteredExemplars
+		collectExemplarsAfter[N](&newPt.Exemplars, s.start, val.res.Collect)
 		dPts = append(dPts, newPt)
 		return true
 	})
@@ -287,15 +279,7 @@ func (s *precomputedSum[N]) delta(
 			Time:       t,
 			Value:      delta,
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		// Filter out exemplars from previous collection intervals.
-		filteredExemplars := newPt.Exemplars[:0]
-		for _, e := range newPt.Exemplars {
-			if !e.Time.Before(s.start) {
-				filteredExemplars = append(filteredExemplars, e)
-			}
-		}
-		newPt.Exemplars = filteredExemplars
+		collectExemplarsAfter[N](&newPt.Exemplars, s.start, val.res.Collect)
 		dPts = append(dPts, newPt)
 		newReported[key] = n
 		return true
@@ -337,7 +321,7 @@ func (s *precomputedSum[N]) cumulative(
 			Time:       t,
 			Value:      val.n.load(),
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&newPt.Exemplars, s.start, val.res.Collect)
 		dPts = append(dPts, newPt)
 		return true
 	})
