@@ -97,7 +97,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap
+	hotColdValMap [2]lazyLimitedSyncMap
 
 	start    time.Time
 	noMinMax bool
@@ -114,7 +114,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.hotColdValMap[hotIdx].LoadOrReuseAttr(fltrAttr, func(attr attribute.Set) any {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		hPt := &histogramPoint[N]{
@@ -131,6 +131,13 @@ func (s *deltaHistogram[N]) measure(
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
+	}, func(v any) {
+		hp := v.(*histogramPoint[N])
+		hp.total.reset()
+		hp.minMax.set.Store(false)
+		for i := range hp.counts {
+			hp.counts[i].Store(0)
+		}
 	}).(*histogramPoint[N])
 
 	// This search will return an index in the range [0, len(s.bounds)], where
@@ -171,7 +178,7 @@ func newDeltaHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]limitedSyncMap{
+		hotColdValMap: [2]lazyLimitedSyncMap{
 			{aggLimit: limit},
 			{aggLimit: limit},
 		},
@@ -221,7 +228,7 @@ func (s *deltaHistogram[N]) collect(
 			}
 		}
 
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&hDPts[i].Exemplars, s.start, val.res.Collect)
 
 		i++
 		return true

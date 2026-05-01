@@ -52,6 +52,36 @@ func (s *lastValueMap[N]) measure(
 	}
 }
 
+type lazyLastValueMap[N int64 | float64] struct {
+	values lazyLimitedSyncMap
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+}
+
+func (s *lazyLastValueMap[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	lv := s.values.LoadOrReuseAttr(fltrAttr, func(attr attribute.Set) any {
+		r := s.newRes(attr)
+		_, isDrop := r.(*dropRes[N])
+		p := &lastValuePoint[N]{
+			res:           r,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+		}
+		p.value.Store(value)
+		return p
+	}, nil).(*lastValuePoint[N])
+
+	lv.value.Store(value)
+	if !lv.dropExemplars {
+		lv.res.Offer(ctx, value, droppedAttr)
+	}
+}
+
 func newDeltaLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
@@ -59,13 +89,13 @@ func newDeltaLastValue[N int64 | float64](
 	return &deltaLastValue[N]{
 		newRes: r,
 		start:  now(),
-		hotColdValMap: [2]lastValueMap[N]{
+		hotColdValMap: [2]lazyLastValueMap[N]{
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: lazyLimitedSyncMap{aggLimit: limit},
 				newRes: r,
 			},
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: lazyLimitedSyncMap{aggLimit: limit},
 				newRes: r,
 			},
 		},
@@ -78,7 +108,7 @@ type deltaLastValue[N int64 | float64] struct {
 	start  time.Time
 
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]lastValueMap[N]
+	hotColdValMap [2]lazyLastValueMap[N]
 }
 
 func (s *deltaLastValue[N]) measure(
@@ -125,7 +155,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = v.value.Load()
-		collectExemplars[N](&dPts[i].Exemplars, v.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, v.res.Collect)
 		i++
 		return true
 	})
