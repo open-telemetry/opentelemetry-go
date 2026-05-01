@@ -15,50 +15,64 @@ import (
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
 
+type keyVal struct {
+	name string
+	kv   func(string) KeyValue
+}
+
 // keyVals is all the KeyValue generators that are used for testing. This is
 // not []KeyValue so different keys can be used with the test Values.
-var keyVals = []func(string) KeyValue{
-	func(k string) KeyValue { return Bool(k, true) },
-	func(k string) KeyValue { return Bool(k, false) },
-	func(k string) KeyValue { return BoolSlice(k, []bool{false, true}) },
-	func(k string) KeyValue { return BoolSlice(k, []bool{true, true, false}) },
-	func(k string) KeyValue { return Int(k, -1278) },
-	func(k string) KeyValue { return Int(k, 0) }, // Should be different than false above.
-	func(k string) KeyValue { return IntSlice(k, []int{3, 23, 21, -8, 0}) },
-	func(k string) KeyValue { return IntSlice(k, []int{1}) },
-	func(k string) KeyValue { return Int64(k, 1) }, // Should be different from true and []int{1}.
-	func(k string) KeyValue { return Int64(k, 29369) },
-	func(k string) KeyValue { return Int64Slice(k, []int64{3826, -38, -29, -1}) },
-	func(k string) KeyValue { return Int64Slice(k, []int64{8, -328, 29, 0}) },
-	func(k string) KeyValue { return Float64(k, -0.3812381) },
-	func(k string) KeyValue { return Float64(k, 1e32) },
-	func(k string) KeyValue { return Float64Slice(k, []float64{0.1, -3.8, -29., 0.3321}) },
-	func(k string) KeyValue { return Float64Slice(k, []float64{-13e8, -32.8, 4., 1e28}) },
-	func(k string) KeyValue { return String(k, "foo") },
-	func(k string) KeyValue { return String(k, "bar") },
-	func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) },
-	func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) },
-	func(k string) KeyValue { return ByteSlice(k, []byte("foo")) },
-	func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) },
-	func(k string) KeyValue { return Slice(k) },
-	func(k string) KeyValue { return Slice(k, BoolValue(true)) },
-	func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) },
-	func(k string) KeyValue {
+var keyVals = []keyVal{
+	{name: "BoolTrue", kv: func(k string) KeyValue { return Bool(k, true) }},
+	{name: "BoolFalse", kv: func(k string) KeyValue { return Bool(k, false) }},
+	{name: "BoolSliceLen2", kv: func(k string) KeyValue { return BoolSlice(k, []bool{false, true}) }},
+	{name: "BoolSliceLen3", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true, true, false}) }},
+	{name: "IntNegative", kv: func(k string) KeyValue { return Int(k, -1278) }},
+	{name: "IntZero", kv: func(k string) KeyValue { return Int(k, 0) }}, // Should be different than false above.
+	{name: "IntSliceLen5", kv: func(k string) KeyValue { return IntSlice(k, []int{3, 23, 21, -8, 0}) }},
+	{name: "IntSliceLen1", kv: func(k string) KeyValue { return IntSlice(k, []int{1}) }},
+	{
+		name: "Int64One",
+		kv:   func(k string) KeyValue { return Int64(k, 1) },
+	}, // Should be different from true and []int{1}.
+	{name: "Int64", kv: func(k string) KeyValue { return Int64(k, 29369) }},
+	{name: "Int64SliceLen4", kv: func(k string) KeyValue { return Int64Slice(k, []int64{3826, -38, -29, -1}) }},
+	{name: "Int64SliceWithZero", kv: func(k string) KeyValue { return Int64Slice(k, []int64{8, -328, 29, 0}) }},
+	{name: "Float64", kv: func(k string) KeyValue { return Float64(k, -0.3812381) }},
+	{name: "Float64Large", kv: func(k string) KeyValue { return Float64(k, 1e32) }},
+	{
+		name: "Float64SliceLen4",
+		kv:   func(k string) KeyValue { return Float64Slice(k, []float64{0.1, -3.8, -29., 0.3321}) },
+	},
+	{
+		name: "Float64SliceLarge",
+		kv:   func(k string) KeyValue { return Float64Slice(k, []float64{-13e8, -32.8, 4., 1e28}) },
+	},
+	{name: "StringFoo", kv: func(k string) KeyValue { return String(k, "foo") }},
+	{name: "StringBar", kv: func(k string) KeyValue { return String(k, "bar") }},
+	{name: "StringSliceLen3", kv: func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) }},
+	{name: "StringSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) }},
+	{name: "ByteSliceFoo", kv: func(k string) KeyValue { return ByteSlice(k, []byte("foo")) }},
+	{name: "ByteSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) }},
+	{name: "SliceLen0", kv: func(k string) KeyValue { return Slice(k) }},
+	{name: "SliceLen1", kv: func(k string) KeyValue { return Slice(k, BoolValue(true)) }},
+	{name: "SliceLen2", kv: func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) }},
+	{name: "SliceLen3", kv: func(k string) KeyValue {
 		return Slice(k,
 			StringValue("triad"),
 			IntValue(3),
 			BoolValue(false),
 		)
-	},
-	func(k string) KeyValue {
+	}},
+	{name: "SliceLen4", kv: func(k string) KeyValue {
 		return Slice(k,
 			StringValue("quad"),
 			IntValue(4),
 			BoolValue(false),
 			Float64Value(4.25),
 		)
-	},
-	func(k string) KeyValue {
+	}},
+	{name: "SliceLen5", kv: func(k string) KeyValue {
 		return Slice(k,
 			StringValue("penta"),
 			IntValue(5),
@@ -66,8 +80,8 @@ var keyVals = []func(string) KeyValue{
 			Float64Value(5.5),
 			ByteSliceValue([]byte("five")),
 		)
-	},
-	func(k string) KeyValue {
+	}},
+	{name: "SliceNested", kv: func(k string) KeyValue {
 		return Slice(k,
 			StringValue("nested"),
 			SliceValue(Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))),
@@ -76,8 +90,8 @@ var keyVals = []func(string) KeyValue{
 			StringValue("tail"),
 			StringSliceValue([]string{"fallback"}),
 		)
-	},
-	func(k string) KeyValue { return KeyValue{Key: Key(k)} }, // Empty value.
+	}},
+	{name: "EmptyValue", kv: func(k string) KeyValue { return KeyValue{Key: Key(k)} }},
 }
 
 func TestHashKVs(t *testing.T) {
@@ -112,21 +126,21 @@ func TestHashKVs(t *testing.T) {
 	// Test all combinations of 1, 2, and 3 attributes with different keys and values.
 	for _, key := range keys {
 		for i := range keyVals {
-			kvs := []KeyValue{keyVals[i](key)}
+			kvs := []KeyValue{keyVals[i].kv(key)}
 			assertUniqueHash(kvs)
 
 			for j := range keyVals {
 				kvs := []KeyValue{
-					keyVals[i](key),
-					keyVals[j](key),
+					keyVals[i].kv(key),
+					keyVals[j].kv(key),
 				}
 				assertUniqueHash(kvs)
 
 				for k := range keyVals {
 					kvs := []KeyValue{
-						keyVals[i](key),
-						keyVals[j](key),
-						keyVals[k](key),
+						keyVals[i].kv(key),
+						keyVals[j].kv(key),
+						keyVals[k].kv(key),
 					}
 					assertUniqueHash(kvs)
 				}
@@ -158,13 +172,35 @@ func slice(kvs []KeyValue) string {
 func BenchmarkHashKVs(b *testing.B) {
 	attrs := make([]KeyValue, len(keyVals))
 	for i := range keyVals {
-		attrs[i] = keyVals[i]("k")
+		attrs[i] = keyVals[i].kv("k")
 	}
 
-	b.ResetTimer()
-	b.ReportAllocs()
-	for b.Loop() {
-		hashKVs(attrs)
+	benches := []struct {
+		name string
+		kvs  []KeyValue
+	}{
+		{
+			name: "All",
+			kvs:  attrs,
+		},
+	}
+	for _, gen := range keyVals {
+		benches = append(benches, struct {
+			name string
+			kvs  []KeyValue
+		}{
+			name: gen.name,
+			kvs:  []KeyValue{gen.kv("k")},
+		})
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				hashKVs(bench.kvs)
+			}
+		})
 	}
 }
 

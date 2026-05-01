@@ -78,7 +78,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix a concurrent `Collect` data race and potential panic in `go.opentelemetry.io/otel/exporters/prometheus` when `WithResourceAsConstantLabels` option is used. (#8227)
 - Fix race condition in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by reverting #7447. (#8249)
 - Fix counting of spans and logs in self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8254)
+- Drop conflicting scope attributes named `name`, `version`, or `schema_url` from metric labels in `go.opentelemetry.io/otel/exporters/prometheus`, preserving the dedicated `otel_scope_name`, `otel_scope_version`, and `otel_scope_schema_url` labels. (#8264)
 - Enforce the 8192-byte baggage size limit during extraction/parsing, changing behavior when the limit is exceeded in `go.opentelemetry.io/otel/baggage` and `go.opentelemetry.io/otel/propagation`. (#8222)
+
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
