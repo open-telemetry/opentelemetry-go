@@ -129,18 +129,17 @@ func (s *deltaSum[N]) collect(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
-	dPts := reset(sData.DataPoints, 0, n)
+	dPts := reset(sData.DataPoints, n, n)
 
+	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      val.n.load(),
-		}
-		collectExemplarsAfter[N](&newPt.Exemplars, s.start, val.res.Collect)
-		dPts = append(dPts, newPt)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
+		dPts[i].Attributes = val.attrs
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = val.n.load()
+		i++
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
@@ -150,7 +149,7 @@ func (s *deltaSum[N]) collect(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return len(dPts)
+	return i
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -263,22 +262,21 @@ func (s *precomputedSum[N]) delta(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
-	dPts := reset(sData.DataPoints, 0, n)
+	dPts := reset(sData.DataPoints, n, n)
 
+	var i int
 	s.hotColdValMap[readIdx].values.Range(func(key, value any) bool {
 		val := value.(*sumValue[N])
 		n := val.n.load()
 
 		delta := n - s.reported[key]
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      delta,
-		}
-		collectExemplarsAfter[N](&newPt.Exemplars, s.start, val.res.Collect)
-		dPts = append(dPts, newPt)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
+		dPts[i].Attributes = val.attrs
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = delta
 		newReported[key] = n
+		i++
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
@@ -308,18 +306,17 @@ func (s *precomputedSum[N]) cumulative(
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
 	n := s.hotColdValMap[readIdx].values.Len()
-	dPts := reset(sData.DataPoints, 0, n)
+	dPts := reset(sData.DataPoints, n, n)
 
+	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      val.n.load(),
-		}
-		collectExemplarsAfter[N](&newPt.Exemplars, s.start, val.res.Collect)
-		dPts = append(dPts, newPt)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
+		dPts[i].Attributes = val.attrs
+		dPts[i].StartTime = s.start
+		dPts[i].Time = t
+		dPts[i].Value = val.n.load()
+		i++
 		return true
 	})
 	s.hotColdValMap[readIdx].values.Clear()
