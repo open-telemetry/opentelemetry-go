@@ -406,9 +406,9 @@ func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
 	m.Clear(nil)
 	assert.Equal(t, 0, m.Len())
 
-	// Re-inserting the same key should reuse the map entry, but call newVal again
+	// Re-inserting the same key should reuse the map entry, without calling newVal
 	v2 := m.LoadOrReuseAttr(attr1, func(attribute.Set) any { return newVal(attr1) })
-	assert.Equal(t, 2, v2)
+	assert.Equal(t, 1, v2, "Value should be reused without calling newVal")
 	assert.Equal(t, 1, m.Len())
 
 	// Check underlying map length to ensure no growth
