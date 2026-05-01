@@ -245,7 +245,7 @@ func BenchmarkSyncMap(b *testing.B) {
 		makeMap func() syncMap
 	}{
 		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{}} }},
-		{"lazyLimitedSyncMap", func() syncMap { return &lazyLimitedSyncMap{} }},
+		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap{}} }},
 	}
 
 	attr := attribute.NewSet(attribute.String("key", "value"))
@@ -254,6 +254,9 @@ func BenchmarkSyncMap(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name+"/LoadOrStoreNoClear", func(b *testing.B) {
 			m := tt.makeMap()
+			if w, ok := m.(lazySyncMapTestWrapper); ok {
+				w.newValue = newValue
+			}
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				m.LoadOrReuseAttr(attr, newValue)
@@ -262,9 +265,12 @@ func BenchmarkSyncMap(b *testing.B) {
 
 		b.Run(tt.name+"/LoadOrStoreWithClear", func(b *testing.B) {
 			m := tt.makeMap()
+			if w, ok := m.(lazySyncMapTestWrapper); ok {
+				w.newValue = newValue
+			}
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				m.Clear(nil)
+				m.Clear()
 				m.LoadOrReuseAttr(attr, newValue)
 			}
 		})
@@ -273,7 +279,7 @@ func BenchmarkSyncMap(b *testing.B) {
 			m := tt.makeMap()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				m.Clear(nil)
+				m.Clear()
 			}
 		})
 	}
@@ -282,7 +288,7 @@ func BenchmarkSyncMap(b *testing.B) {
 // syncMap represents the shared functionality between limitedSyncMap and lazyLimitedSyncMap.
 type syncMap interface {
 	LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any
-	Clear(resetFunc func(any))
+	Clear()
 	Len() int
 	Range(f func(key, value any) bool)
 }
@@ -291,15 +297,24 @@ type limitedSyncMapTestWrapper struct {
 	*limitedSyncMap
 }
 
-func (w limitedSyncMapTestWrapper) Clear(_ func(any)) {
+func (w limitedSyncMapTestWrapper) Clear() {
 	w.limitedSyncMap.Clear()
 }
 
-func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(
-	fltrAttr attribute.Set,
-	newValue func(attribute.Set) any,
-) any {
+func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
 	return w.LoadOrStoreAttr(fltrAttr, newValue)
+}
+
+type lazySyncMapTestWrapper struct {
+	*lazyLimitedSyncMap
+}
+
+func (w lazySyncMapTestWrapper) Clear() {
+	w.lazyLimitedSyncMap.Clear()
+}
+
+func (w lazySyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, _ func(attribute.Set) any) any {
+	return w.lazyLimitedSyncMap.LoadOrReuseAttr(fltrAttr)
 }
 
 func TestSyncMap_Limit(t *testing.T) {
@@ -311,7 +326,10 @@ func TestSyncMap_Limit(t *testing.T) {
 			"limitedSyncMap",
 			func(limit int) syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: limit}} },
 		},
-		{"lazyLimitedSyncMap", func(limit int) syncMap { return &lazyLimitedSyncMap{aggLimit: limit} }},
+		{
+			"lazyLimitedSyncMap",
+			func(limit int) syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap{aggLimit: limit}} },
+		},
 	}
 
 	for _, tt := range tests {
@@ -325,6 +343,9 @@ func TestSyncMap_Limit(t *testing.T) {
 			attr4 := attribute.NewSet(attribute.String("key", "4"))
 
 			newVal := func(attribute.Set) any { return new(int) }
+			if w, ok := m.(lazySyncMapTestWrapper); ok {
+				w.newValue = newVal
+			}
 
 			// Add first (normal)
 			v1 := m.LoadOrReuseAttr(attr1, newVal)
@@ -353,12 +374,15 @@ func TestSyncMap_Concurrent(t *testing.T) {
 		makeMap func() syncMap
 	}{
 		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: 5}} }},
-		{"lazyLimitedSyncMap", func() syncMap { return &lazyLimitedSyncMap{aggLimit: 5} }},
+		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap{aggLimit: 5}} }},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := tt.makeMap()
+			if w, ok := m.(lazySyncMapTestWrapper); ok {
+				w.newValue = func(attribute.Set) any { return 1 }
+			}
 			attr := attribute.NewSet(attribute.String("k", "v"))
 
 			var wg sync.WaitGroup
@@ -374,7 +398,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 			// 100 routines clearing and loading
 			for range 100 {
 				wg.Go(func() {
-					m.Clear(nil)
+					m.Clear()
 					m.LoadOrReuseAttr(attr, func(attribute.Set) any { return 1 })
 				})
 			}
@@ -398,16 +422,17 @@ func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
 	}
 
 	// Cycle 0
-	v1 := m.LoadOrReuseAttr(attr1, func(attribute.Set) any { return newVal(attr1) })
+	m.newValue = func(attribute.Set) any { return newVal(attr1) }
+	v1 := m.LoadOrReuseAttr(attr1)
 	assert.Equal(t, 1, v1)
 	assert.Equal(t, 1, m.Len())
 
 	// Clear -> moves to Cycle 1
-	m.Clear(nil)
+	m.Clear()
 	assert.Equal(t, 0, m.Len())
 
 	// Re-inserting the same key should reuse the map entry, without calling newVal
-	v2 := m.LoadOrReuseAttr(attr1, func(attribute.Set) any { return newVal(attr1) })
+	v2 := m.LoadOrReuseAttr(attr1)
 	assert.Equal(t, 1, v2, "Value should be reused without calling newVal")
 	assert.Equal(t, 1, m.Len())
 
@@ -428,10 +453,11 @@ func TestLazyLimitedSyncMap_RangeAndGC(t *testing.T) {
 	newVal := func(attribute.Set) any { return 1 }
 
 	// Cycle 0: add item
-	m.LoadOrReuseAttr(attr1, newVal)
+	m.newValue = newVal
+	m.LoadOrReuseAttr(attr1)
 
 	// Cycle 1: item is stale
-	m.Clear(nil)
+	m.Clear()
 
 	// Range should yield nothing
 	yieldCount := 0
@@ -442,9 +468,9 @@ func TestLazyLimitedSyncMap_RangeAndGC(t *testing.T) {
 	assert.Equal(t, 0, yieldCount, "Stale items should not be yielded")
 
 	// Move to Cycle 4 (Cycle 0 + 4)
-	m.Clear(nil) // Cycle 2
-	m.Clear(nil) // Cycle 3
-	m.Clear(nil) // Cycle 4
+	m.Clear() // Cycle 2
+	m.Clear() // Cycle 3
+	m.Clear() // Cycle 4
 
 	// Underlying map should still have the item
 	physLen := 0

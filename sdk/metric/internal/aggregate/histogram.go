@@ -122,24 +122,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrReuseAttr(fltrAttr, func(attr attribute.Set) any {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
-		hPt := &histogramPoint[N]{
-			res:           r,
-			attrs:         attr,
-			dropExemplars: isDrop,
-			// N+1 buckets. For example:
-			//
-			//   bounds = [0, 5, 10]
-			//
-			// Then,
-			//
-			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
-			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
-		}
-		return hPt
-	}).(*histogramPoint[N])
+	h := s.hotColdValMap[hotIdx].LoadOrReuseAttr(fltrAttr).(*histogramPoint[N])
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -173,6 +156,28 @@ func newDeltaHistogram[N int64 | float64](
 	// complete control over the fix.
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
+
+	newVal := func(attr attribute.Set) any {
+		res := r(attr)
+		_, isDrop := res.(*dropRes[N])
+		return &histogramPoint[N]{
+			res:                    res,
+			attrs:                  attr,
+			dropExemplars:          isDrop,
+			// N+1 buckets. For example:
+			//
+			//   bounds = [0, 5, 10]
+			//
+			// Then,
+			//
+			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
+			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(b)+1)},
+		}
+	}
+	resetFunc := func(v any) {
+		v.(*histogramPoint[N]).reset()
+	}
+
 	return &deltaHistogram[N]{
 		start:    now(),
 		noMinMax: noMinMax,
@@ -180,8 +185,8 @@ func newDeltaHistogram[N int64 | float64](
 		bounds:   b,
 		newRes:   r,
 		hotColdValMap: [2]lazyLimitedSyncMap{
-			{aggLimit: limit},
-			{aggLimit: limit},
+			newLazyLimitedSyncMap(limit, newVal, resetFunc),
+			newLazyLimitedSyncMap(limit, newVal, resetFunc),
 		},
 	}
 }
@@ -235,9 +240,7 @@ func (s *deltaHistogram[N]) collect(
 		return true
 	})
 	// Unused attribute sets do not report.
-	s.hotColdValMap[readIdx].Clear(func(v any) {
-		v.(*histogramPoint[N]).reset()
-	})
+	s.hotColdValMap[readIdx].Clear()
 	// The delta collection cycle resets.
 	s.start = t
 

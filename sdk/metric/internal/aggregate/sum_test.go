@@ -1001,9 +1001,7 @@ type lazyBenchmarker struct {
 func (b *lazyBenchmarker) pseudoCollect() {
 	readIdx := b.hcwg.swapHotAndWait()
 	b.hotColdValMap[readIdx].values.Range(func(_, _ any) bool { return true })
-	b.hotColdValMap[readIdx].values.Clear(func(v any) {
-		v.(*sumValue[int64]).n.reset()
-	})
+	b.hotColdValMap[readIdx].values.Clear()
 }
 
 func (b *lazyBenchmarker) measure(ctx context.Context, value int64, fltrAttr attribute.Set) {

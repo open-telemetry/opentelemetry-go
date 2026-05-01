@@ -233,12 +233,20 @@ type lazyLimitedSyncMap struct {
 	len      int
 	lenMux   sync.Mutex
 	cycle    atomic.Uint64
+
+	newValue  func(attribute.Set) any
+	resetFunc func(any)
 }
 
-func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
-	fltrAttr attribute.Set,
-	newValue func(attribute.Set) any,
-) any {
+func newLazyLimitedSyncMap(limit int, newValue func(attribute.Set) any, resetFunc func(any)) lazyLimitedSyncMap {
+	return lazyLimitedSyncMap{
+		aggLimit:  limit,
+		newValue:  newValue,
+		resetFunc: resetFunc,
+	}
+}
+
+func (m *lazyLimitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set) any {
 	actual, loaded := m.m.Load(fltrAttr.Equivalent())
 	currentCycle := m.cycle.Load()
 	if loaded {
@@ -295,7 +303,7 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 	}
 
 	// create new entry
-	newVal := newValue(targetAttr)
+	newVal := m.newValue(targetAttr)
 	newEnt := &entry{}
 	newEnt.value.Store(newVal)
 	newEnt.cycle.Store(currentCycle)
@@ -310,16 +318,16 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 	return newVal
 }
 
-func (m *lazyLimitedSyncMap) Clear(resetFunc func(any)) {
+func (m *lazyLimitedSyncMap) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	m.cycle.Add(1)
 	m.len = 0
 
-	if resetFunc != nil {
+	if m.resetFunc != nil {
 		m.m.Range(func(_, value any) bool {
 			ent := value.(*entry)
-			resetFunc(ent.value.Load())
+			m.resetFunc(ent.value.Load())
 			return true
 		})
 	}
