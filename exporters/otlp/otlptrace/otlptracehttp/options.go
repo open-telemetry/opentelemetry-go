@@ -17,8 +17,8 @@ import (
 // collector.
 type Compression otlpconfig.Compression
 
-// Protocol describes the protocol used for sending payloads to the collector.
-type Protocol otlpconfig.Protocol
+// Encoding describes the encoding used for payloads sent to the collector.
+type Encoding int
 
 // HTTPTransportProxyFunc is a function that resolves which URL to use as proxy for a given request.
 // This type is compatible with http.Transport.Proxy and can be used to set a custom proxy function
@@ -32,11 +32,13 @@ const (
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
 	GzipCompression = Compression(otlpconfig.GzipCompression)
+)
 
-	// ProtocolHTTPProtobuf tells the driver to send protocol-encoded payloads.
-	ProtocolHTTPProtobuf = Protocol(otlpconfig.ProtocolHTTPProtobuf)
-	// ProtocolHTTPJSON tells the driver to send JSON-encoded payloads.
-	ProtocolHTTPJSON = Protocol(otlpconfig.ProtocolHTTPJSON)
+const (
+	// EncodingProtobuf tells the driver to send protobuf-encoded payloads.
+	EncodingProtobuf Encoding = iota
+	// EncodingJSON tells the driver to send JSON-encoded payloads.
+	EncodingJSON
 )
 
 // Option applies an option to the HTTP client.
@@ -114,9 +116,13 @@ func WithCompression(compression Compression) Option {
 	return wrappedOption{otlpconfig.WithCompression(otlpconfig.Compression(compression))}
 }
 
-// WithProtocol tells the driver to use a specific protocol for the request payload.
-func WithProtocol(protocol Protocol) Option {
-	return wrappedOption{otlpconfig.WithProtocol(otlpconfig.Protocol(protocol))}
+// WithEncoding tells the driver to use a specific encoding for the request payload.
+func WithEncoding(encoding Encoding) Option {
+	protocol := otlpconfig.ProtocolHTTPProtobuf
+	if encoding == EncodingJSON {
+		protocol = otlpconfig.ProtocolHTTPJSON
+	}
+	return wrappedOption{otlpconfig.WithProtocol(protocol)}
 }
 
 // WithURLPath allows one to override the default URL path used

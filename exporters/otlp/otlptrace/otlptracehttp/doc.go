@@ -67,7 +67,7 @@ OTEL_EXPORTER_OTLP_PROTOCOL, OTEL_EXPORTER_OTLP_TRACES_PROTOCOL (default: "http/
 the transport protocol the exporter uses. For OTLP/HTTP exporters, it indicates the encoding format of the payloads sent to the collector.
 Supported value: "http/protobuf", "http/json".
 OTEL_EXPORTER_OTLP_TRACES_PROTOCOL takes precedence over OTEL_EXPORTER_OTLP_PROTOCOL.
-The configuration can be overridden by [WithProtocol] option.
+The configuration can be overridden by [WithEncoding] option.
 
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
 */
