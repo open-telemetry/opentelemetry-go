@@ -206,6 +206,19 @@ func TestEndToEnd(t *testing.T) {
 				InjectContentType: "application/json",
 			},
 		},
+		{
+			name: "with JSON collector response encoding and partial success",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithProtocol(otlptracehttp.ProtocolHTTPJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+				Partial: &coltracepb.ExportTracePartialSuccess{
+					RejectedSpans: 1,
+					ErrorMessage:  "missing required attribute aaa",
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

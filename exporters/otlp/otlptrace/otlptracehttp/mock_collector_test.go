@@ -20,10 +20,10 @@ import (
 	"github.com/stretchr/testify/require"
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 )
 
@@ -91,7 +91,7 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 	var rawResponse []byte
 	var err error
 	if c.injectContentType == "application/json" {
-		rawResponse, err = protojson.Marshal(&response)
+		rawResponse, err = otlpjson.MarshalExportTraceServiceResponse(&response)
 	} else {
 		rawResponse, err = proto.Marshal(&response)
 	}
@@ -128,7 +128,7 @@ func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortra
 		err := proto.Unmarshal(rawRequest, request)
 		return request, err
 	case "application/json":
-		err := protojson.Unmarshal(rawRequest, request)
+		err := otlpjson.UnmarshalExportTraceServiceRequest(rawRequest, request)
 		return request, err
 	default:
 		return request, fmt.Errorf(

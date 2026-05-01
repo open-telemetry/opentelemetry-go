@@ -20,7 +20,6 @@ import (
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -28,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/retry"
 )
 
@@ -235,7 +235,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 					return err
 				}
 			case contentTypeJSON:
-				if err := protojson.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				if err := otlpjson.UnmarshalExportTraceServiceResponse(respData.Bytes(), &respProto); err != nil {
 					return err
 				}
 			default:
@@ -288,7 +288,7 @@ func (d *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 func (d *client) marshalRequest(pbRequst *coltracepb.ExportTraceServiceRequest) ([]byte, error) {
 	if d.cfg.Protocol == otlpconfig.ProtocolHTTPJSON {
-		rawRequest, err := protojson.Marshal(pbRequst)
+		rawRequest, err := otlpjson.MarshalExportTraceServiceRequest(pbRequst)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal request body in json: %w", err)
 		}
