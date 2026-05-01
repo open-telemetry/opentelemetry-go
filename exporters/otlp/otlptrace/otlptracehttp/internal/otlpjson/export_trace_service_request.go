@@ -341,12 +341,32 @@ func decodeResourceSpans(jrs *ResourceSpans) *tracepb.ResourceSpans {
 		rs.Resource = &resourcepb.Resource{
 			Attributes:             decodeKeyValues(jrs.Resource.Attributes),
 			DroppedAttributesCount: jrs.Resource.DroppedAttributesCount,
+			EntityRefs:             decodeEntityRefs(jrs.Resource.EntityRefs),
 		}
 	}
 	for _, ss := range jrs.ScopeSpans {
 		rs.ScopeSpans = append(rs.ScopeSpans, decodeScopeSpans(ss))
 	}
 	return rs
+}
+
+func decodeEntityRefs(jers []*EntityRef) []*commonpb.EntityRef {
+	if len(jers) == 0 {
+		return nil
+	}
+	ers := make([]*commonpb.EntityRef, len(jers))
+	for i, jer := range jers {
+		if jer == nil {
+			continue
+		}
+		ers[i] = &commonpb.EntityRef{
+			SchemaUrl:       jer.SchemaURL,
+			Type:            jer.Type,
+			IdKeys:          jer.IdKeys,
+			DescriptionKeys: jer.DescriptionKeys,
+		}
+	}
+	return ers
 }
 
 func decodeScopeSpans(jss *ScopeSpans) *tracepb.ScopeSpans {

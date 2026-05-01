@@ -27,6 +27,13 @@ func spanForTest() *coltracepb.ExportTraceServiceRequest {
 					Key:   "service.name",
 					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "svc"}},
 				}},
+				DroppedAttributesCount: 1,
+				EntityRefs: []*commonpb.EntityRef{{
+					SchemaUrl:       "http://example.com",
+					Type:            "service.instance",
+					IdKeys:          []string{"service.instance.id", "service.name", "service.namespace"},
+					DescriptionKeys: []string{"service.version"},
+				}},
 			},
 			ScopeSpans: []*tracepb.ScopeSpans{{
 				Scope: &commonpb.InstrumentationScope{Name: "lib", Version: "1.0"},
@@ -316,28 +323,159 @@ func TestUnmarshalAcceptsBothHexCases(t *testing.T) {
 	}
 }
 
-func TestUnmarshalAcceptsUint64AsStringOrNumber(t *testing.T) {
+func TestUnmarshalAcceptsIntAndUint64AsStringOrNumber(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		value string
 	}{
-		{"as_string", `"1617187200000000000"`},
-		{"as_number", `1617187200000000000`},
+		{"uint64_as_string", `"1617187200000000000"`},
+		{"uint64_as_number", `1617187200000000000`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			input := `{"resourceSpans":[{"scopeSpans":[{"spans":[{
-				"traceId":"00000000000000000000000000000001",
-				"spanId":"0000000000000001",
-				"startTimeUnixNano":` + tc.value + `
-			}]}]}]}`
+			var i Uint64
+			require.NoError(t, json.Unmarshal([]byte(tc.value), &i))
+			assert.Equal(t, uint64(1617187200000000000), uint64(i))
+		})
+	}
 
-			var req coltracepb.ExportTraceServiceRequest
-			require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
-			assert.Equal(
-				t,
-				uint64(1_617_187_200_000_000_000),
-				req.ResourceSpans[0].ScopeSpans[0].Spans[0].StartTimeUnixNano,
-			)
+	for _, tc := range []struct {
+		name  string
+		value string
+	}{
+		{"int64_as_string", `"-42"`},
+		{"int64_as_number", `-42`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var i Int64
+			require.NoError(t, json.Unmarshal([]byte(tc.value), &i))
+			assert.Equal(t, int64(-42), int64(i))
+		})
+	}
+}
+
+func TestAnyValueRoundTrip(t *testing.T) {
+	tests := []struct {
+		name  string
+		proto *commonpb.AnyValue
+		check func(t *testing.T, got *commonpb.AnyValue)
+	}{
+		{
+			name:  "string",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "hello"}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.Equal(t, "hello", got.GetStringValue())
+			},
+		},
+		{
+			name:  "bool_true",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_BoolValue{BoolValue: true}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, got.GetBoolValue())
+			},
+		},
+		{
+			name:  "bool_false",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_BoolValue{BoolValue: false}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				_, ok := got.Value.(*commonpb.AnyValue_BoolValue)
+				require.True(t, ok, "expected BoolValue variant")
+				assert.False(t, got.GetBoolValue())
+			},
+		},
+		{
+			name:  "int",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 42}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.Equal(t, int64(42), got.GetIntValue())
+			},
+		},
+		{
+			name:  "double",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 3.14}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.InEpsilon(t, 3.14, got.GetDoubleValue(), 1e-9)
+			},
+		},
+		{
+			name: "bytes",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_BytesValue{
+				BytesValue: []byte{0xDE, 0xAD, 0xBE, 0xEF},
+			}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.Equal(t, []byte{0xDE, 0xAD, 0xBE, 0xEF}, got.GetBytesValue())
+			},
+		},
+		{
+			name: "array_of_mixed_values",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_ArrayValue{
+				ArrayValue: &commonpb.ArrayValue{Values: []*commonpb.AnyValue{
+					{Value: &commonpb.AnyValue_StringValue{StringValue: "a"}},
+					{Value: &commonpb.AnyValue_IntValue{IntValue: 1}},
+					{Value: &commonpb.AnyValue_BoolValue{BoolValue: true}},
+				}},
+			}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				arr := got.GetArrayValue()
+				require.NotNil(t, arr)
+				require.Len(t, arr.Values, 3)
+				assert.Equal(t, "a", arr.Values[0].GetStringValue())
+				assert.Equal(t, int64(1), arr.Values[1].GetIntValue())
+				assert.True(t, arr.Values[2].GetBoolValue())
+			},
+		},
+		{
+			name: "kvlist",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_KvlistValue{
+				KvlistValue: &commonpb.KeyValueList{Values: []*commonpb.KeyValue{
+					{
+						Key:   "nested_str",
+						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "v"}},
+					},
+					{
+						Key:   "nested_int",
+						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: 99}},
+					},
+				}},
+			}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				kvl := got.GetKvlistValue()
+				require.NotNil(t, kvl)
+				require.Len(t, kvl.Values, 2)
+				assert.Equal(t, "nested_str", kvl.Values[0].Key)
+				assert.Equal(t, "v", kvl.Values[0].Value.GetStringValue())
+				assert.Equal(t, "nested_int", kvl.Values[1].Key)
+				assert.Equal(t, int64(99), kvl.Values[1].Value.GetIntValue())
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &coltracepb.ExportTraceServiceRequest{
+				ResourceSpans: []*tracepb.ResourceSpans{{
+					ScopeSpans: []*tracepb.ScopeSpans{{
+						Spans: []*tracepb.Span{{
+							TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
+							Attributes: []*commonpb.KeyValue{{
+								Key:   "test",
+								Value: tc.proto,
+							}},
+						}},
+					}},
+				}},
+			}
+
+			data, err := MarshalExportTraceServiceRequest(req)
+			require.NoError(t, err)
+
+			var decoded coltracepb.ExportTraceServiceRequest
+			require.NoError(t, UnmarshalExportTraceServiceRequest(data, &decoded))
+
+			attrs := decoded.ResourceSpans[0].ScopeSpans[0].Spans[0].Attributes
+			require.Len(t, attrs, 1)
+			assert.Equal(t, "test", attrs[0].Key)
+			tc.check(t, attrs[0].Value)
 		})
 	}
 }
@@ -350,6 +488,7 @@ func TestRoundTrip(t *testing.T) {
 
 	var decoded coltracepb.ExportTraceServiceRequest
 	require.NoError(t, UnmarshalExportTraceServiceRequest(data, &decoded))
+	require.NotEmpty(t, original.ResourceSpans)
 
 	orig := original.ResourceSpans[0].ScopeSpans[0].Spans[0]
 	got := decoded.ResourceSpans[0].ScopeSpans[0].Spans[0]
@@ -381,6 +520,17 @@ func TestRoundTrip(t *testing.T) {
 	rs := decoded.ResourceSpans[0]
 	assert.Equal(t, "service.name", rs.Resource.Attributes[0].Key)
 	assert.Equal(t, "svc", rs.Resource.Attributes[0].Value.GetStringValue())
+	assert.Equal(t, uint32(1), rs.Resource.DroppedAttributesCount)
+
+	require.NotEmpty(t, rs.Resource.EntityRefs)
+	assert.Equal(t, "http://example.com", rs.Resource.EntityRefs[0].SchemaUrl)
+	assert.Equal(t, "service.instance", rs.Resource.EntityRefs[0].Type)
+	assert.Equal(t,
+		[]string{"service.instance.id", "service.name", "service.namespace"},
+		rs.Resource.EntityRefs[0].IdKeys,
+	)
+	assert.Equal(t, []string{"service.version"}, rs.Resource.EntityRefs[0].DescriptionKeys)
+
 	assert.Equal(t, "lib", rs.ScopeSpans[0].Scope.Name)
 	assert.Equal(t, "1.0", rs.ScopeSpans[0].Scope.Version)
 }
