@@ -23,6 +23,14 @@ type histogramPoint[N int64 | float64] struct {
 	histogramPointCounters[N]
 }
 
+func (hp *histogramPoint[N]) reset() {
+	hp.total.reset()
+	hp.minMax.set.Store(false)
+	for i := range hp.counts {
+		hp.counts[i].Store(0)
+	}
+}
+
 // hotColdHistogramPoint a hot and cold histogram points, used in cumulative
 // aggregations.
 type hotColdHistogramPoint[N int64 | float64] struct {
@@ -131,13 +139,6 @@ func (s *deltaHistogram[N]) measure(
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
-	}, func(v any) {
-		hp := v.(*histogramPoint[N])
-		hp.total.reset()
-		hp.minMax.set.Store(false)
-		for i := range hp.counts {
-			hp.counts[i].Store(0)
-		}
 	}).(*histogramPoint[N])
 
 	// This search will return an index in the range [0, len(s.bounds)], where
@@ -234,7 +235,9 @@ func (s *deltaHistogram[N]) collect(
 		return true
 	})
 	// Unused attribute sets do not report.
-	s.hotColdValMap[readIdx].Clear()
+	s.hotColdValMap[readIdx].Clear(func(v any) {
+		v.(*histogramPoint[N]).reset()
+	})
 	// The delta collection cycle resets.
 	s.start = t
 

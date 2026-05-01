@@ -92,10 +92,6 @@ func (s *lazySumValueMap[N]) measure(
 			attrs: attr,
 			// delta aggregators ignore val.startTime, so we leave it zero to save a clock fetch.
 		}
-	}, func(v any) {
-		sv := v.(*sumValue[N])
-		sv.n.reset()
-		// delta aggregators ignore val.startTime, so we do not reset it.
 	}).(*sumValue[N])
 	sv.n.add(value)
 	sv.res.Offer(ctx, value, droppedAttr)
@@ -146,7 +142,9 @@ func (s *deltaSum[N]) collect(
 		dPts = append(dPts, newPt)
 		return true
 	})
-	s.hotColdValMap[readIdx].values.Clear()
+	s.hotColdValMap[readIdx].values.Clear(func(v any) {
+		v.(*sumValue[N]).n.reset()
+	})
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -238,7 +236,7 @@ func newPrecomputedSum[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedSum[N] {
 	return &precomputedSum[N]{
-		deltaSum: newDeltaSum(monotonic, limit, r),
+		deltaSum: newDeltaSum[N](monotonic, limit, r),
 	}
 }
 
@@ -284,7 +282,9 @@ func (s *precomputedSum[N]) delta(
 		newReported[key] = n
 		return true
 	})
-	s.hotColdValMap[readIdx].values.Clear()
+	s.hotColdValMap[readIdx].values.Clear(func(v any) {
+		v.(*sumValue[N]).n.reset()
+	})
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -325,7 +325,9 @@ func (s *precomputedSum[N]) cumulative(
 		dPts = append(dPts, newPt)
 		return true
 	})
-	s.hotColdValMap[readIdx].values.Clear()
+	s.hotColdValMap[readIdx].values.Clear(func(v any) {
+		v.(*sumValue[N]).n.reset()
+	})
 
 	sData.DataPoints = dPts
 	*dest = sData

@@ -74,7 +74,7 @@ func (s *lazyLastValueMap[N]) measure(
 		}
 		p.value.Store(value)
 		return p
-	}, nil).(*lastValuePoint[N])
+	}).(*lastValuePoint[N])
 
 	lv.value.Store(value)
 	if !lv.dropExemplars {
@@ -161,7 +161,9 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	})
 	gData.DataPoints = dPts
 	// Do not report stale values.
-	s.hotColdValMap[readIdx].values.Clear()
+	s.hotColdValMap[readIdx].values.Clear(func(v any) {
+		v.(*lastValuePoint[N]).value.Store(0)
+	})
 	*dest = gData
 	return i
 }

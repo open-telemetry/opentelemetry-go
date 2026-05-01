@@ -238,7 +238,6 @@ type lazyLimitedSyncMap struct {
 func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 	fltrAttr attribute.Set,
 	newValue func(attribute.Set) any,
-	resetValue func(any),
 ) any {
 	actual, loaded := m.m.Load(fltrAttr.Equivalent())
 	currentCycle := m.cycle.Load()
@@ -290,12 +289,6 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 		// reuse existing stale entry
 		ent := actual.(*entry)
 		existingVal := ent.value.Load()
-		if resetValue != nil {
-			resetValue(existingVal)
-		} else {
-			existingVal = newValue(targetAttr)
-			ent.value.Store(existingVal)
-		}
 		ent.cycle.Store(currentCycle)
 		m.len++
 		return existingVal
@@ -317,11 +310,19 @@ func (m *lazyLimitedSyncMap) LoadOrReuseAttr(
 	return newVal
 }
 
-func (m *lazyLimitedSyncMap) Clear() {
+func (m *lazyLimitedSyncMap) Clear(resetFunc func(any)) {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	m.cycle.Add(1)
 	m.len = 0
+
+	if resetFunc != nil {
+		m.m.Range(func(_, value any) bool {
+			ent := value.(*entry)
+			resetFunc(ent.value.Load())
+			return true
+		})
+	}
 }
 
 func (m *lazyLimitedSyncMap) Len() int {
