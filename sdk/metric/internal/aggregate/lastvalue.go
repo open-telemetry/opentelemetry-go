@@ -33,7 +33,7 @@ func (s *lastValueMap[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrReuseAttr(fltrAttr, func(attr attribute.Set) any {
+	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		p := &lastValuePoint[N]{
@@ -44,7 +44,7 @@ func (s *lastValueMap[N]) measure(
 		}
 		p.value.Store(value)
 		return p
-	}, nil).(*lastValuePoint[N])
+	}).(*lastValuePoint[N])
 
 	lv.value.Store(value)
 	if !lv.dropExemplars {

@@ -244,7 +244,7 @@ func BenchmarkSyncMap(b *testing.B) {
 		name    string
 		makeMap func() syncMap
 	}{
-		{"limitedSyncMap", func() syncMap { return &limitedSyncMap{} }},
+		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{}} }},
 		{"lazyLimitedSyncMap", func() syncMap { return &lazyLimitedSyncMap{} }},
 	}
 
@@ -287,12 +287,20 @@ type syncMap interface {
 	Range(f func(key, value any) bool)
 }
 
+type limitedSyncMapTestWrapper struct {
+	*limitedSyncMap
+}
+
+func (w limitedSyncMapTestWrapper) LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any, _ func(any)) any {
+	return w.LoadOrStoreAttr(fltrAttr, newValue)
+}
+
 func TestSyncMap_Limit(t *testing.T) {
 	tests := []struct {
 		name    string
 		makeMap func(limit int) syncMap
 	}{
-		{"limitedSyncMap", func(limit int) syncMap { return &limitedSyncMap{aggLimit: limit} }},
+		{"limitedSyncMap", func(limit int) syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: limit}} }},
 		{"lazyLimitedSyncMap", func(limit int) syncMap { return &lazyLimitedSyncMap{aggLimit: limit} }},
 	}
 
@@ -334,7 +342,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 		name    string
 		makeMap func() syncMap
 	}{
-		{"limitedSyncMap", func() syncMap { return &limitedSyncMap{aggLimit: 5} }},
+		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: 5}} }},
 		{"lazyLimitedSyncMap", func() syncMap { return &lazyLimitedSyncMap{aggLimit: 5} }},
 	}
 

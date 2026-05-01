@@ -351,7 +351,7 @@ type limitedSyncMap struct {
 	lenMux   sync.Mutex
 }
 
-func (m *limitedSyncMap) LoadOrReuseAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any, _ func(any)) any {
+func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
 	actual, loaded := m.Load(fltrAttr.Equivalent())
 	if loaded {
 		return actual
