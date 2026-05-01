@@ -479,9 +479,22 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "Test Environment Protocol",
+			name: "Test Environment Protocol with http/protobuf",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Protocol with grpc",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) {
 				if grpcOption {

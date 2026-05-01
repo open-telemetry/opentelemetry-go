@@ -50,17 +50,3 @@ const (
 	// ProtocolHTTPJSON describes the "http/json" protocol.
 	ProtocolHTTPJSON
 )
-
-// String returns the string representation of the Protocol.
-func (p Protocol) String() string {
-	switch p {
-	case ProtocolGRPC:
-		return "grpc"
-	case ProtocolHTTPProtobuf:
-		return "http/protobuf"
-	case ProtocolHTTPJSON:
-		return "http/json"
-	default:
-		return "unknown"
-	}
-}

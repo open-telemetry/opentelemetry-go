@@ -380,7 +380,7 @@ func WithProtocol(protocol Protocol) GenericOption {
 		// For OTLP/HTTP endpoints, this is the encoding format of the payloads sent to the collector.
 		func(cfg Config) Config {
 			if protocol == ProtocolGRPC {
-				global.Warn("grpc is not a valid protocol for OTLP/HTTP, defaulting to ProtocolHTTPProtobuf")
+				global.Warn("grpc is not a valid protocol for OTLP/HTTP, defaulting to http/protobuf")
 				protocol = ProtocolHTTPProtobuf
 			}
 			cfg.Traces.Protocol = protocol
@@ -388,7 +388,7 @@ func WithProtocol(protocol Protocol) GenericOption {
 		},
 		// For OTLP/gRPC endpoints, it's always "grpc".
 		func(cfg Config) Config {
-			global.Debug("Protocol option is ignored for OTLP/gRPC and set to ProtocolGRPC")
+			global.Debug("Protocol option is ignored for OTLP/gRPC and set to grpc")
 			cfg.Traces.Protocol = ProtocolGRPC
 			return cfg
 		},

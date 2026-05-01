@@ -219,6 +219,12 @@ func TestEndToEnd(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "with the collector responding unsupported content type",
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "text/plain",
+			},
+		},
 	}
 
 	for _, tc := range tests {
