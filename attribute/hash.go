@@ -128,3 +128,22 @@ func hashValueSlice(h xxhash.Hash, vals []Value) xxhash.Hash {
 	}
 	return h
 }
+
+func hashIteratorWithFilter(iter Iterator, filter Filter) uint64 {
+	if iter.Len() == 0 {
+		return emptySet.hash
+	}
+	h := xxhash.New()
+	hasAttributes := false
+	for iter.Next() {
+		kv := iter.Attribute()
+		if filter(kv) {
+			h = hashKV(h, kv)
+			hasAttributes = true
+		}
+	}
+	if !hasAttributes {
+		return emptySet.hash
+	}
+	return h.Sum64()
+}

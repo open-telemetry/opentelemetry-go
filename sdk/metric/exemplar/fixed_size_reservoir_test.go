@@ -8,8 +8,11 @@ import (
 	"math/rand/v2"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestNewFixedSizeReservoir(t *testing.T) {
@@ -53,6 +56,57 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	// Check the intensity/rate of the sampled distribution is preserved
 	// ensuring no bias in our random sampling algorithm.
 	assert.InDelta(t, 1/mean, intensity, 0.02) // Within 5σ.
+}
+
+func TestFixedSizeReservoirOfferLazy(t *testing.T) {
+	k0 := attribute.String("k0", "v0")
+	k1 := attribute.String("k1", "v1")
+	set := attribute.NewSet(k0, k1)
+
+	fltr := func(kv attribute.KeyValue) bool {
+		return string(kv.Key) == "k0"
+	}
+
+	t.Run("Filtering", func(t *testing.T) {
+		r1 := NewFixedSizeReservoir(1)
+		r2 := NewFixedSizeReservoir(1)
+
+		ctx := t.Context()
+		ts := time.Now()
+		val := NewValue(int64(42))
+
+		// Offer with pre-filtered attributes (k1 is dropped by filter)
+		r1.Offer(ctx, ts, val, []attribute.KeyValue{k1})
+
+		// OfferLazy with full set and filter
+		r2.OfferLazy(ctx, ts, val, set, fltr)
+
+		var dest1, dest2 []Exemplar
+		r1.Collect(&dest1)
+		r2.Collect(&dest2)
+
+		assert.Equal(t, dest1, dest2)
+	})
+
+	t.Run("UnderCapacity", func(t *testing.T) {
+		r1 := NewFixedSizeReservoir(2)
+		r2 := NewFixedSizeReservoir(2)
+
+		ctx := t.Context()
+		ts := time.Now()
+
+		r1.Offer(ctx, ts, NewValue(int64(1)), []attribute.KeyValue{k1})
+		r1.Offer(ctx, ts, NewValue(int64(2)), []attribute.KeyValue{k1})
+
+		r2.OfferLazy(ctx, ts, NewValue(int64(1)), set, fltr)
+		r2.OfferLazy(ctx, ts, NewValue(int64(2)), set, fltr)
+
+		var dest1, dest2 []Exemplar
+		r1.Collect(&dest1)
+		r2.Collect(&dest2)
+
+		assert.Equal(t, dest1, dest2)
+	})
 }
 
 func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {

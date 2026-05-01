@@ -599,3 +599,63 @@ func BenchmarkNewSetStringAttrs(b *testing.B) {
 		})
 	}
 }
+
+func TestSetNewDistinctWithFilter(t *testing.T) {
+	k0 := attribute.String("k0", "v0")
+	k1 := attribute.String("k1", "v1")
+	s := attribute.NewSet(k0, k1)
+	empty := attribute.NewSet()
+
+	t.Run("EmptySet", func(t *testing.T) {
+		d := empty.NewDistinctWithFilter(nil)
+		if d != empty.Equivalent() {
+			t.Errorf("expected empty set hash, got %v", d)
+		}
+	})
+
+	t.Run("NilFilter", func(t *testing.T) {
+		d := s.NewDistinctWithFilter(nil)
+		if d != (&s).Equivalent() {
+			t.Errorf("expected %v, got %v", (&s).Equivalent(), d)
+		}
+	})
+
+	t.Run("FilterAll", func(t *testing.T) {
+		d := s.NewDistinctWithFilter(func(_ attribute.KeyValue) bool {
+			return true
+		})
+		if d != (&s).Equivalent() {
+			t.Errorf("expected %v, got %v", (&s).Equivalent(), d)
+		}
+	})
+
+	t.Run("FilterNone", func(t *testing.T) {
+		d := s.NewDistinctWithFilter(func(_ attribute.KeyValue) bool {
+			return false
+		})
+		if d != empty.Equivalent() {
+			t.Errorf("expected empty set hash %v, got %v", empty.Equivalent(), d)
+		}
+	})
+
+	t.Run("FilterSome", func(t *testing.T) {
+		d := s.NewDistinctWithFilter(func(kv attribute.KeyValue) bool {
+			return string(kv.Key) == "k0"
+		})
+		expectedSet := attribute.NewSet(k0)
+		expected := (&expectedSet).Equivalent()
+		if d != expected {
+			t.Errorf("expected %v, got %v", expected, d)
+		}
+	})
+
+	t.Run("NilSet", func(t *testing.T) {
+		var ns *attribute.Set
+		d := ns.NewDistinctWithFilter(func(_ attribute.KeyValue) bool {
+			return true
+		})
+		if d != empty.Equivalent() {
+			t.Errorf("expected empty set hash %v, got %v", empty.Equivalent(), d)
+		}
+	})
+}

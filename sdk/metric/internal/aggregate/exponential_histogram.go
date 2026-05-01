@@ -330,32 +330,46 @@ type expoHistogram[N int64 | float64] struct {
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
+	attr attribute.Set,
+	fltr attribute.Filter,
 ) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
 		return
 	}
 
+	var equiv attribute.Distinct
+	if fltr != nil {
+		equiv = attr.NewDistinctWithFilter(fltr)
+	} else {
+		equiv = attr.Equivalent()
+	}
+
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	v, ok := e.values[fltrAttr.Equivalent()]
+	v, ok := e.values[equiv]
 	if !ok {
+		var fltrAttr attribute.Set
+		if fltr != nil {
+			fltrAttr, _ = attr.Filter(fltr)
+		} else {
+			fltrAttr = attr
+		}
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
+		equiv = fltrAttr.Equivalent()
 		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
+		v, ok = e.values[equiv]
 		if !ok {
 			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 			v.res = e.newRes(fltrAttr)
 
-			e.values[fltrAttr.Equivalent()] = v
+			e.values[equiv] = v
 		}
 	}
 	v.record(value)
-	v.res.Offer(ctx, value, droppedAttr)
+	v.res.Offer(ctx, value, attr, fltr)
 }
 
 func (e *expoHistogram[N]) delta(
