@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -536,9 +537,9 @@ func newRM(a metricdata.Aggregation) *metricdata.ResourceMetrics {
 //   - In the "Naive" case, the user uses the API and SDK in the simplest and
 //     most obvious way without applying any performance optimizations.
 func BenchmarkEndToEndCounterAdd(b *testing.B) {
-	testCounter := func(b *testing.B, mp metric.MeterProvider) metric.Float64Counter {
+	testCounter := func(b *testing.B, mp metric.MeterProvider) metric.Int64Counter {
 		meter := mp.Meter("BenchmarkEndToEndCounterAdd")
-		counter, err := meter.Float64Counter("test.counter")
+		counter, err := meter.Int64Counter("test.counter")
 		assert.NoError(b, err)
 		return counter
 	}
@@ -551,178 +552,142 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 		},
 	}
 	ctx := b.Context()
-	for _, mp := range []struct {
-		name     string
-		provider func() metric.MeterProvider
+	for _, temp := range []struct {
+		name        string
+		temporality metricdata.Temporality
 	}{
-		{
-			name: "NoFilter",
-			provider: func() metric.MeterProvider {
-				return NewMeterProvider(
-					WithReader(NewManualReader()),
-					WithExemplarFilter(exemplar.AlwaysOffFilter),
-				)
-			},
-		},
-		{
-			name: "Filtered",
-			provider: func() metric.MeterProvider {
-				view := NewView(
-					Instrument{
-						Name: "test.counter",
-					},
-					// Filter out one attribute from each call.
-					Stream{AttributeFilter: attribute.NewDenyKeysFilter("a")},
-				)
-				return NewMeterProvider(
-					WithView(view),
-					WithReader(NewManualReader()),
-					WithExemplarFilter(exemplar.AlwaysOffFilter),
-				)
-			},
-		},
+		{"Cumulative", metricdata.CumulativeTemporality},
+		{"Delta", metricdata.DeltaTemporality},
 	} {
-		b.Run(mp.name, func(b *testing.B) {
-			for _, attrsLen := range []int{1, 5, 10} {
-				attrPool := sync.Pool{
-					New: func() any {
-						// Pre-allocate common capacity
-						s := make([]attribute.KeyValue, 0, attrsLen)
-						// Return a pointer to avoid extra allocation on Put().
-						return &s
+		b.Run(temp.name, func(b *testing.B) {
+			for _, mp := range []struct {
+				name     string
+				provider func() metric.MeterProvider
+			}{
+				{
+					name: "NoFilter",
+					provider: func() metric.MeterProvider {
+						return NewMeterProvider(
+							WithReader(NewManualReader(WithTemporalitySelector(func(InstrumentKind) metricdata.Temporality {
+								return temp.temporality
+							}))),
+							WithExemplarFilter(exemplar.AlwaysOffFilter),
+						)
 					},
-				}
-				b.Run(fmt.Sprintf("Attributes/%d", attrsLen), func(b *testing.B) {
-					// This case shows the performance of our API + SDK when
-					// following our contributor guidance for recording
-					// cached attributes by passing attribute.Set:
-					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#cache-common-attribute-sets-for-repeated-measurements
-					b.Run("Precomputed/WithAttributeSet", func(b *testing.B) {
-						counter := testCounter(b, mp.provider())
-						precomputedOpts := []metric.AddOption{
-							metric.WithAttributeSet(attribute.NewSet(attributes(attrsLen)...)),
-						}
-						b.ReportAllocs()
-						b.RunParallel(func(pb *testing.PB) {
-							for pb.Next() {
-								counter.Add(ctx, 1, precomputedOpts...)
-							}
-						})
-					})
-					// This case shows the performance of our API + SDK when
-					// following our contributor guidance for recording
-					// cached attributes by passing []attribute.KeyValue:
-					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#cache-common-attribute-sets-for-repeated-measurements
-					b.Run("Precomputed/WithAttributes", func(b *testing.B) {
-						counter := testCounter(b, mp.provider())
-						precomputedOpts := []metric.AddOption{metric.WithAttributes(attributes(attrsLen)...)}
-						b.ReportAllocs()
-						b.RunParallel(func(pb *testing.PB) {
-							for pb.Next() {
-								counter.Add(ctx, 1, precomputedOpts...)
-							}
-						})
-					})
-					// This case shows the performance of our API + SDK when
-					// following our contributor guidance for recording
-					// varying attributes by passing attribute.Set:
-					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
-					b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
-						counter := testCounter(b, mp.provider())
-						b.ReportAllocs()
-						optionPool := sync.Pool{
+				},
+			} {
+				b.Run(mp.name, func(b *testing.B) {
+					for _, attrsLen := range []int{1, 10} {
+						attrPool := sync.Pool{
 							New: func() any {
-								return metric.WithAttributeSet(*attribute.EmptySet())
+								// Pre-allocate common capacity
+								s := make([]attribute.KeyValue, 0, attrsLen)
+								// Return a pointer to avoid extra allocation on Put().
+								return &s
 							},
 						}
-						b.RunParallel(func(pb *testing.PB) {
-							for pb.Next() {
-								// Wrap in a function so we can use defer.
-								func() {
-									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-									defer func() {
-										*attrsSlice = (*attrsSlice)[:0] // Reset.
-										attrPool.Put(attrsSlice)
-									}()
-									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
-									addOpt := addOptPool.Get().(*[]metric.AddOption)
-									defer func() {
-										*addOpt = (*addOpt)[:0]
-										addOptPool.Put(addOpt)
-									}()
-
-									set := attribute.NewSet(*attrsSlice...)
-									opt := optionPool.Get().(metric.MeasurementOption)
-									defer optionPool.Put(opt)
-
-									if s, ok := opt.(x.Settable[attribute.Set]); ok {
-										s.Set(set)
-									} else {
-										opt = metric.WithAttributeSet(set)
+						b.Run(fmt.Sprintf("Attributes/%d", attrsLen), func(b *testing.B) {
+							// This case shows the performance of using a pre-bound instrument.
+							b.Run("Precomputed/Bound", func(b *testing.B) {
+								counter := testCounter(b, mp.provider())
+								if binder, ok := counter.(x.Int64Binder); ok {
+									bound := binder.Bind(attributes(attrsLen)...)
+									b.ReportAllocs()
+									b.RunParallel(func(pb *testing.PB) {
+										for pb.Next() {
+											bound.Add(ctx, 1)
+										}
+									})
+								} else {
+									b.Fatal("counter does not implement x.Binder")
+								}
+							})
+							// This case shows the performance of our API + SDK when
+							// following our contributor guidance for recording
+							// cached attributes by passing attribute.Set:
+							// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#cache-common-attribute-sets-for-repeated-measurements
+							b.Run("Precomputed/WithAttributeSet", func(b *testing.B) {
+								counter := testCounter(b, mp.provider())
+								precomputedOpts := []metric.AddOption{
+									metric.WithAttributeSet(attribute.NewSet(attributes(attrsLen)...)),
+								}
+								b.ReportAllocs()
+								b.RunParallel(func(pb *testing.PB) {
+									for pb.Next() {
+										counter.Add(ctx, 1, precomputedOpts...)
 									}
+								})
+							})
+							// This case shows the performance of re-binding the instrument each time.
+							b.Run("Dynamic/Bound", func(b *testing.B) {
+								counter := testCounter(b, mp.provider())
+								if binder, ok := counter.(x.Int64Binder); ok {
+									b.ReportAllocs()
+									b.RunParallel(func(pb *testing.PB) {
+										for pb.Next() {
+											// Wrap in a function so we can use defer.
+											func() {
+												attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
+												defer func() {
+													*attrsSlice = (*attrsSlice)[:0] // Reset.
+													attrPool.Put(attrsSlice)
+												}()
+												*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
+												bound := binder.Bind(*attrsSlice...)
+												bound.Add(ctx, 1)
+											}()
+										}
+									})
+								} else {
+									b.Fatal("counter does not implement x.Binder")
+								}
+							})
+							// This case shows the performance of our API + SDK when
+							// following our contributor guidance for recording
+							// varying attributes by passing attribute.Set:
+							// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
+							b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
+								counter := testCounter(b, mp.provider())
+								b.ReportAllocs()
+								optionPool := sync.Pool{
+									New: func() any {
+										return metric.WithAttributeSet(*attribute.EmptySet())
+									},
+								}
+								b.RunParallel(func(pb *testing.PB) {
+									for pb.Next() {
+										// Wrap in a function so we can use defer.
+										func() {
+											attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
+											defer func() {
+												*attrsSlice = (*attrsSlice)[:0] // Reset.
+												attrPool.Put(attrsSlice)
+											}()
+											*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
+											addOpt := addOptPool.Get().(*[]metric.AddOption)
+											defer func() {
+												*addOpt = (*addOpt)[:0]
+												addOptPool.Put(addOpt)
+											}()
 
-									*addOpt = append(*addOpt, opt.(metric.AddOption))
-									counter.Add(ctx, 1, *addOpt...)
-								}()
-							}
-						})
-					})
-					// This case shows the performance of our API + SDK when
-					// following our contributor guidance for recording
-					// varying attributes by passing []attribute.KeyValue:
-					// https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#attribute-and-option-allocation-management
-					b.Run("Dynamic/WithAttributes", func(b *testing.B) {
-						counter := testCounter(b, mp.provider())
-						b.ReportAllocs()
-						optionPool := sync.Pool{
-							New: func() any {
-								return metric.WithAttributes()
-							},
-						}
-						b.RunParallel(func(pb *testing.PB) {
-							for pb.Next() {
-								// Wrap in a function so we can use defer.
-								func() {
-									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-									defer func() {
-										*attrsSlice = (*attrsSlice)[:0] // Reset.
-										attrPool.Put(attrsSlice)
-									}()
-									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
-									addOpt := addOptPool.Get().(*[]metric.AddOption)
-									defer func() {
-										*addOpt = (*addOpt)[:0]
-										addOptPool.Put(addOpt)
-									}()
+											set := attribute.NewSet(*attrsSlice...)
+											opt := optionPool.Get().(metric.MeasurementOption)
+											defer optionPool.Put(opt)
 
-									set := attribute.NewSet(*attrsSlice...)
-									opt := optionPool.Get().(metric.MeasurementOption)
-									defer optionPool.Put(opt)
+											if s, ok := opt.(x.Settable[attribute.Set]); ok {
+												s.Set(set)
+											} else {
+												opt = metric.WithAttributeSet(set)
+											}
 
-									if s, ok := opt.(x.Settable[attribute.Set]); ok {
-										s.Set(set)
-									} else {
-										opt = metric.WithAttributes(*attrsSlice...)
+											*addOpt = append(*addOpt, opt.(metric.AddOption))
+											counter.Add(ctx, 1, *addOpt...)
+										}()
 									}
-
-									*addOpt = append(*addOpt, opt.(metric.AddOption))
-									counter.Add(ctx, 1, *addOpt...)
-								}()
-							}
+								})
+							})
 						})
-					})
-					// This case shows the performance of our API + SDK when
-					// users use it in the "obvious" way, without explicitly
-					// trying to optimize for performance.
-					b.Run("Naive/WithAttributes", func(b *testing.B) {
-						counter := testCounter(b, mp.provider())
-						b.ReportAllocs()
-						b.RunParallel(func(pb *testing.PB) {
-							for pb.Next() {
-								counter.Add(ctx, 1, metric.WithAttributes(attributes(attrsLen)...))
-							}
-						})
-					})
+					}
 				})
 			}
 		})
@@ -888,4 +853,16 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 			}
 		})
 	}
+}
+
+// BenchmarkIdealAtomicCounter measures the performance of just incrementing
+// an atomic counter in parallel, to establish a baseline for contention.
+func BenchmarkIdealAtomicCounter(b *testing.B) {
+	var count atomic.Int64
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			count.Add(1)
+		}
+	})
 }

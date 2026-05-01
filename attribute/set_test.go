@@ -254,6 +254,42 @@ func TestFiltering(t *testing.T) {
 	}
 }
 
+func TestNewDistinctWithFilter(t *testing.T) {
+	kvs := []attribute.KeyValue{
+		attribute.String("B", "1"),
+		attribute.String("A", "1"),
+		attribute.String("C", "1"),
+		attribute.String("B", "2"), // Duplicate key, should win over B=1
+		attribute.String("D", "1"),
+	}
+	// Filter to keep A, B, and D. Drop C.
+	filter := func(kv attribute.KeyValue) bool {
+		return kv.Key != "C"
+	}
+
+	// Create a copy since NewDistinctWithFilter modifies in-place.
+	input := make([]attribute.KeyValue, len(kvs))
+	copy(input, kvs)
+
+	distinct, compacted := attribute.NewDistinctWithFilter(input, filter)
+
+	// Verify the returned slice is correctly sorted and de-duplicated.
+	// Note: the filter applies to the hash computation, NOT the physical slice returned.
+	require.Len(t, compacted, 4)
+	assert.Equal(t, "A", string(compacted[0].Key))
+	assert.Equal(t, "B", string(compacted[1].Key))
+	assert.Equal(t, "2", compacted[1].Value.AsString()) // Last value wins
+	assert.Equal(t, "C", string(compacted[2].Key))
+	assert.Equal(t, "D", string(compacted[3].Key))
+
+	// Verify the computed Distinct matches the baseline from NewSetWithFiltered.
+	input2 := make([]attribute.KeyValue, len(kvs))
+	copy(input2, kvs)
+	expectedSet, _ := attribute.NewSetWithFiltered(input2, filter)
+
+	assert.Equal(t, expectedSet.Equivalent(), distinct)
+}
+
 func TestUniqueness(t *testing.T) {
 	short := []attribute.KeyValue{
 		attribute.String("A", "0"),

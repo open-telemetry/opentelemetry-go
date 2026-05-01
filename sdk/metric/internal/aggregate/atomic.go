@@ -261,6 +261,10 @@ func (m *limitedSyncMap) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(a
 	return actual
 }
 
+func (m *limitedSyncMap) LoadByDistinct(d attribute.Distinct) (any, bool) {
+	return m.Load(d)
+}
+
 func (m *limitedSyncMap) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
