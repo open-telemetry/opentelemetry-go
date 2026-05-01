@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewFixedSizeReservoir(t *testing.T) {
@@ -20,6 +21,20 @@ func TestNewFixedSizeReservoir(t *testing.T) {
 	t.Run("Float64", ReservoirTest[float64](func(n int) (ReservoirProvider, int) {
 		return FixedSizeReservoirProvider(n), n
 	}))
+}
+
+func TestNewFixedSizeReservoirZeroSize(t *testing.T) {
+	r := NewFixedSizeReservoir(0)
+
+	require.NotPanics(t, func() {
+		r.Offer(t.Context(), staticTime, NewValue(float64(1)), nil)
+	})
+
+	var dest []Exemplar
+	require.NotPanics(t, func() {
+		r.Collect(&dest)
+	})
+	assert.Empty(t, dest)
 }
 
 func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {

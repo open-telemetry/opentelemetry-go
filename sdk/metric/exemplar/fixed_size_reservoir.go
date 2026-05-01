@@ -86,6 +86,10 @@ func (*FixedSizeReservoir) randomFloat64() float64 {
 // parameters are the value and dropped (filtered) attributes of the
 // measurement respectively.
 func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
+	if cap(r.measurements) == 0 {
+		return
+	}
+
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
@@ -142,6 +146,13 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 // reset resets r to the initial state.
 func (r *FixedSizeReservoir) reset() {
+	if cap(r.measurements) == 0 {
+		r.count = 0
+		r.next = 0
+		r.w = 0
+		return
+	}
+
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
@@ -164,6 +175,10 @@ func (r *FixedSizeReservoir) reset() {
 // advance updates the count at which the offered measurement will overwrite an
 // existing exemplar.
 func (r *FixedSizeReservoir) advance() {
+	if cap(r.measurements) == 0 {
+		return
+	}
+
 	// Calculate the next value in the random number series.
 	//
 	// The current value of r.w is based on the max of a distribution of random
