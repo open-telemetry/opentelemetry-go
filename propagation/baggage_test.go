@@ -311,6 +311,19 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
+			name: "empty headers before non-empty do count comma separators",
+			headers: []string{
+				// The comma as the separator of member would take 1 byte.
+				"",
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				// The comma as the separator of member would take 1 byte.
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
+			},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
+			},
+		},
+		{
 			name: "multiple headers exceed total max bytes due to comma separator",
 			headers: []string{
 				// Two equal halves: each is exactly maxBytesPerBaggageString/2 bytes.
