@@ -11,8 +11,11 @@ import (
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -31,6 +34,9 @@ type Exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	shutdownOnce sync.Once
+
+	// Self-observability metrics
+	metrics *observ.Instrumentation
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
@@ -46,12 +52,27 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		as = metric.DefaultAggregationSelector
 	}
 
+	var metrics *observ.Instrumentation
+	var initErr error
+	if x.Observability.Enabled() {
+		var err error
+		metrics, err = observ.NewInstrumentation(
+			counter.NextExporterID(),
+			c.conn.CanonicalTarget(),
+		)
+		if err != nil {
+			initErr = err
+		}
+	}
+
 	return &Exporter{
 		client: c,
 
 		temporalitySelector: ts,
 		aggregationSelector: as,
-	}, nil
+
+		metrics: metrics,
+	}, initErr
 }
 
 // Temporality returns the Temporality to use for an instrument kind.
@@ -68,10 +89,14 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 //
 // This method returns an error if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
-func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (finalErr error) {
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
 
 	otlpRm, err := transform.ResourceMetrics(rm)
+
+	// Track export operation for self-observability
+	op := e.metrics.TrackExport(ctx, otlpRm)
+	defer func() { op.End(finalErr) }()
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
 	upErr := e.client.UploadMetrics(ctx, otlpRm)
