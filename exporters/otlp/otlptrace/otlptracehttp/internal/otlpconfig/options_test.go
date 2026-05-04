@@ -428,6 +428,112 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 
+		// Protocol Tests
+		{
+			name: "Test Default Protocol",
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With http/protobuf Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPProtobuf),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With http/json Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPJSON),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPJSON, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With grpc Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolGRPC),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Protocol with http/protobuf",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Protocol with grpc",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Protocol",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Mixed Environment and With Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPProtobuf),
+			},
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/json",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+
 		// Timeout Tests
 		{
 			name: "Test With Timeout",
