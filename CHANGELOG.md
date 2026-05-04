@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
+- Add `http/json` support, and the `WithEncoding` option to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7804)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
 
 ### Changed

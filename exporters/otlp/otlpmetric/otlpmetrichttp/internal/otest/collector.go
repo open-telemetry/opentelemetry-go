@@ -29,12 +29,19 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
+
+// otlpProtoJSONUnmarshal decodes OTLP/JSON requests in tests per the spec:
+// unknown JSON fields are ignored for forward compatibility.
+var otlpProtoJSONUnmarshal = protojson.UnmarshalOptions{
+	DiscardUnknown: true,
+}
 
 // Collector is the collection target a Client sends metric uploads to.
 type Collector interface {
@@ -300,9 +307,9 @@ func (c *HTTPCollector) handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *HTTPCollector) record(r *http.Request) ExportResult {
-	// Currently only supports protobuf.
-	if v := r.Header.Get("Content-Type"); v != "application/x-protobuf" {
-		err := fmt.Errorf("content-type not supported: %s", v)
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/x-protobuf" && contentType != "application/json" {
+		err := fmt.Errorf("content-type not supported: %s", contentType)
 		return ExportResult{Err: err}
 	}
 
@@ -311,7 +318,12 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 		return ExportResult{Err: err}
 	}
 	pbRequest := &collpb.ExportMetricsServiceRequest{}
-	err = proto.Unmarshal(body, pbRequest)
+	switch contentType {
+	case "application/json":
+		err = otlpProtoJSONUnmarshal.Unmarshal(body, pbRequest)
+	default:
+		err = proto.Unmarshal(body, pbRequest)
+	}
 	if err != nil {
 		return ExportResult{
 			Err: &HTTPResponseError{

@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -23,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -87,6 +90,236 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	require.NoError(t, client.Shutdown(ctx))
 	got := coll.Collect().Dump()
 	require.Len(t, got, 1, "upload of one ResourceMetrics")
+}
+
+func TestClientWithJSONEncoding(t *testing.T) {
+	ctx := t.Context()
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(EncodingJSON)}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	// Non-empty payload with AggregationTemporality exercises OTLP/JSON enums on the collector path.
+	rm := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Name: "cum-counter",
+				Data: &mpb.Metric_Sum{Sum: &mpb.Sum{
+					AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+					IsMonotonic:            true,
+					DataPoints: []*mpb.NumberDataPoint{{
+						TimeUnixNano: 1,
+						Value:        &mpb.NumberDataPoint_AsDouble{AsDouble: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+	require.NoError(t, client.UploadMetrics(ctx, rm))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding")
+	m := got[0].ScopeMetrics[0].Metrics[0]
+	assert.Equal(t, "cum-counter", m.GetName())
+	assert.Equal(t, mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		m.GetSum().GetAggregationTemporality())
+
+	// Verify the Content-Type header was set correctly for JSON
+	headers := coll.Headers()
+	require.Contains(t, headers, "Content-Type")
+	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+}
+
+func TestClientJSONEncodingParsesJSONResponsePartialSuccess(t *testing.T) {
+	ctx := t.Context()
+	const wantN int64 = 4
+	const wantMsg = "dropped"
+	tests := []struct {
+		contentType string
+	}{
+		{
+			contentType: "application/json",
+		},
+		{
+			contentType: "application/json; charset=utf-8",
+		},
+	}
+	for _, test := range tests {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			resp := &colmetricpb.ExportMetricsServiceResponse{
+				PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+					RejectedDataPoints: wantN,
+					ErrorMessage:       wantMsg,
+				},
+			}
+			body, err := protojson.Marshal(resp)
+			require.NoError(t, err)
+			w.Header().Set("Content-Type", test.contentType)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(body)
+		}))
+		t.Cleanup(srv.Close)
+
+		u, err := url.Parse(srv.URL)
+		require.NoError(t, err)
+		opts := []Option{WithEndpoint(u.Host), WithInsecure(), WithEncoding(EncodingJSON)}
+		cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+		cl, err := newClient(cfg)
+		require.NoError(t, err)
+
+		wantErr := internal.MetricPartialSuccessError(wantN, wantMsg)
+		assert.ErrorIs(t, cl.UploadMetrics(ctx, &mpb.ResourceMetrics{}), wantErr)
+		assert.NoError(t, cl.Shutdown(ctx))
+	}
+}
+
+func TestClientJSONEncodingParsesJSONResponseUnknownFields(t *testing.T) {
+	ctx := t.Context()
+	const wantN int64 = 4
+	const wantMsg = "dropped"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := &colmetricpb.ExportMetricsServiceResponse{
+			PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+				RejectedDataPoints: wantN,
+				ErrorMessage:       wantMsg,
+			},
+		}
+		base, err := protojson.Marshal(resp)
+		require.NoError(t, err)
+
+		// Simulate a newer server adding OTLP/JSON fields clients do not know yet.
+		body := bytes.TrimSuffix(base, []byte("}"))
+		body = append(body, []byte(`,"unknownOtlpForwardCompatField":[{"k":"v"}]`)...)
+		body = append(body, '}')
+
+		var strict colmetricpb.ExportMetricsServiceResponse
+		require.Error(t, protojson.Unmarshal(body, &strict),
+			"sanity: default unmarshaling must reject unknown fields so this test guards DiscardUnknown")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+
+	cfg := oconf.NewHTTPConfig(asHTTPOptions([]Option{
+		WithEndpoint(u.Host),
+		WithInsecure(),
+		WithEncoding(EncodingJSON),
+	})...)
+	cl, err := newClient(cfg)
+	require.NoError(t, err)
+
+	wantErr := internal.MetricPartialSuccessError(wantN, wantMsg)
+	assert.ErrorIs(t, cl.UploadMetrics(ctx, &mpb.ResourceMetrics{}), wantErr)
+	assert.NoError(t, cl.Shutdown(ctx))
+}
+
+func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
+	ctx := t.Context()
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	addr := coll.Addr().String()
+	opts := []Option{
+		WithEndpoint(addr),
+		WithInsecure(),
+		WithEncoding(EncodingJSON),
+		WithCompression(GzipCompression),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	// Collector gunzips JSON; numeric OTLP enums match
+	rm := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Name: "cum-counter",
+				Data: &mpb.Metric_Sum{Sum: &mpb.Sum{
+					AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+					IsMonotonic:            true,
+					DataPoints: []*mpb.NumberDataPoint{{
+						TimeUnixNano: 1,
+						Value:        &mpb.NumberDataPoint_AsDouble{AsDouble: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+	require.NoError(t, client.UploadMetrics(ctx, rm))
+	require.NoError(t, client.Shutdown(ctx))
+	got := coll.Collect().Dump()
+	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding and gzip compression")
+	m := got[0].ScopeMetrics[0].Metrics[0]
+	assert.Equal(t, "cum-counter", m.GetName())
+	assert.Equal(t, mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		m.GetSum().GetAggregationTemporality())
+
+	headers := coll.Headers()
+	require.Contains(t, headers, "Content-Type")
+	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
+	require.Contains(t, headers, "Content-Encoding")
+	assert.Equal(t, []string{"gzip"}, headers["Content-Encoding"])
+}
+
+func TestClientJSONEncodingUsesNumericEnums(t *testing.T) {
+	ctx := t.Context()
+	var gotRaw string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		gotRaw = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+
+	cfg := oconf.NewHTTPConfig(asHTTPOptions([]Option{
+		WithEndpoint(u.Host),
+		WithInsecure(),
+		WithEncoding(EncodingJSON),
+	})...)
+	cl, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, cl.Shutdown(context.Background()))
+	})
+
+	wantAgg := mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
+	rm := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Name: "cum-counter",
+				Data: &mpb.Metric_Sum{Sum: &mpb.Sum{
+					AggregationTemporality: wantAgg,
+					IsMonotonic:            true,
+					DataPoints: []*mpb.NumberDataPoint{{
+						TimeUnixNano: 1,
+						Value:        &mpb.NumberDataPoint_AsDouble{AsDouble: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+
+	require.NoError(t, cl.UploadMetrics(ctx, rm))
+	require.NotEmpty(t, gotRaw)
+	// Ensure OTLP/JSON encoding uses numeric enums for aggregation temporality.
+	w := strconv.Itoa(int(wantAgg))
+	require.True(t, regexp.MustCompile(`"aggregationTemporality"\s*:\s*`+regexp.QuoteMeta(w)+`\b`).MatchString(gotRaw),
+		`expected OTLP JSON to encode aggregation temporality as a number`)
+	require.NotContains(t, gotRaw, "AGGREGATION_TEMPORALITY_CUMULATIVE")
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
@@ -167,6 +400,37 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSON", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(EncodingJSON))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{"application/json"}, got["Content-Type"])
+		require.Regexp(t, "OTel Go OTLP over HTTP/JSON metrics exporter/[01]\\..*", got)
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithEncodingJSONAndCompressionGZip", func(t *testing.T) {
+		exp, coll := factoryFunc("", nil, WithEncoding(EncodingJSON), WithCompression(GzipCompression))
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		// Ensure everything is flushed.
+		require.NoError(t, exp.Shutdown(ctx))
+
+		got := coll.Headers()
+		require.Contains(t, got, "Content-Type")
+		assert.Equal(t, []string{"application/json"}, got["Content-Type"])
+		require.Contains(t, got, "Content-Encoding")
+		assert.Equal(t, []string{"gzip"}, got["Content-Encoding"])
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
