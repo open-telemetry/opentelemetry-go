@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `go.opentelemetry.io/otel/sdk/metric/exemplar.FixedSizeReservoirProvider` now returns a no-op reservoir when configured with a non-positive size, and `NewFixedSizeReservoir` returns `nil` for `k <= 0`. This preserves safe drop-all behavior when exemplar sampling is disabled. (#8295)
+
 ### Added
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
