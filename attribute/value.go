@@ -412,6 +412,9 @@ const (
 	int64ArrayElemMaxLen   = len("-9223372036854775808")
 	float64ArrayElemMaxLen = len("-1.7976931348623157e+308")
 	commaLen               = len(",")
+	quotesLen              = len(`""`)
+	// estimate for a small JSON value to help with Builder capacity calculations.
+	smallObjectLen = len(`{"key":"value"}`)
 )
 
 func sliceValue(v []Value) any {
@@ -827,8 +830,8 @@ func appendValueSliceValue(dst *strings.Builder, v any) {
 }
 
 func appendValueSlice(dst *strings.Builder, vals []Value) {
-	// Estimate 10 bytes per value for small values and commas.
-	dst.Grow(jsonArrayBracketsLen + len(vals)*commaLen + len(vals)*10)
+	// Estimate for small values and commas.
+	dst.Grow(jsonArrayBracketsLen + len(vals)*commaLen + len(vals)*smallObjectLen)
 	_ = dst.WriteByte('[')
 	for i, val := range vals {
 		if i > 0 {
@@ -840,8 +843,8 @@ func appendValueSlice(dst *strings.Builder, vals []Value) {
 }
 
 func appendValueSliceReflect(dst *strings.Builder, rv reflect.Value) {
-	// Estimate 10 bytes per value for small values and commas.
-	dst.Grow(jsonArrayBracketsLen + rv.Len()*commaLen + rv.Len()*10)
+	// Estimate for small values and commas.
+	dst.Grow(jsonArrayBracketsLen + rv.Len()*commaLen + rv.Len()*smallObjectLen)
 	_ = dst.WriteByte('[')
 	for i := 0; i < rv.Len(); i++ {
 		if i > 0 {
