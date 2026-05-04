@@ -57,7 +57,7 @@ type (
 		TLSCfg         *tls.Config
 		Headers        map[string]string
 		Compression    Compression
-		Encoding    Encoding
+		Encoding       Encoding
 		MaxRequestSize int
 		Timeout        time.Duration
 		URLPath        string
@@ -95,7 +95,7 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultMetricsPath,
 			Compression:    NoCompression,
-			Encoding:    EncodingProtobuf,
+			Encoding:       EncodingProtobuf,
 			MaxRequestSize: DefaultMaxRequestSize,
 			Timeout:        DefaultTimeout,
 
