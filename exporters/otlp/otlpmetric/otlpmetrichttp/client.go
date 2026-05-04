@@ -75,6 +75,12 @@ var otlpProtoJSON = protojson.MarshalOptions{
 	UseEnumNumbers: true,
 }
 
+// otlpProtoJSONUnmarshal decodes OTLP/JSON responses per the spec: unknown
+// JSON fields are ignored for forward compatibility with newer servers.
+var otlpProtoJSONUnmarshal = protojson.UnmarshalOptions{
+	DiscardUnknown: true,
+}
+
 // newClient creates a new HTTP metric client.
 func newClient(cfg oconf.Config) (*client, error) {
 	if cfg.Metrics.Insecure && cfg.Metrics.TLSCfg != nil {
@@ -255,7 +261,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			case "application/x-protobuf":
 				err = proto.Unmarshal(respData.Bytes(), &respProto)
 			case "application/json":
-				err = protojson.Unmarshal(respData.Bytes(), &respProto)
+				err = otlpProtoJSONUnmarshal.Unmarshal(respData.Bytes(), &respProto)
 			}
 			if err != nil {
 				return err

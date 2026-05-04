@@ -157,6 +157,52 @@ func TestClientJSONEncodingParsesJSONResponsePartialSuccess(t *testing.T) {
 	}
 }
 
+func TestClientJSONEncodingParsesJSONResponseUnknownFields(t *testing.T) {
+	ctx := t.Context()
+	const wantN int64 = 4
+	const wantMsg = "dropped"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		resp := &colmetricpb.ExportMetricsServiceResponse{
+			PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+				RejectedDataPoints: wantN,
+				ErrorMessage:       wantMsg,
+			},
+		}
+		base, err := protojson.Marshal(resp)
+		require.NoError(t, err)
+
+		// Simulate a newer server adding OTLP/JSON fields clients do not know yet.
+		body := bytes.TrimSuffix(base, []byte("}"))
+		body = append(body, []byte(`,"unknownOtlpForwardCompatField":[{"k":"v"}]`)...)
+		body = append(body, '}')
+
+		var strict colmetricpb.ExportMetricsServiceResponse
+		require.Error(t, protojson.Unmarshal(body, &strict),
+			"sanity: default unmarshaling must reject unknown fields so this test guards DiscardUnknown")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+
+	cfg := oconf.NewHTTPConfig(asHTTPOptions([]Option{
+		WithEndpoint(u.Host),
+		WithInsecure(),
+		WithEncoding(EncodingJSON),
+	})...)
+	cl, err := newClient(cfg)
+	require.NoError(t, err)
+
+	wantErr := internal.MetricPartialSuccessError(wantN, wantMsg)
+	assert.ErrorIs(t, cl.UploadMetrics(ctx, &mpb.ResourceMetrics{}), wantErr)
+	assert.NoError(t, cl.Shutdown(ctx))
+}
+
 func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
 	ctx := t.Context()
 	coll, err := otest.NewHTTPCollector("", nil)

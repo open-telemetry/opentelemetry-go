@@ -37,6 +37,12 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
+// otlpProtoJSONUnmarshal decodes OTLP/JSON requests in tests per the spec:
+// unknown JSON fields are ignored for forward compatibility.
+var otlpProtoJSONUnmarshal = protojson.UnmarshalOptions{
+	DiscardUnknown: true,
+}
+
 // Collector is the collection target a Client sends metric uploads to.
 type Collector interface {
 	Collect() *Storage
@@ -314,7 +320,7 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 	pbRequest := &collpb.ExportMetricsServiceRequest{}
 	switch contentType {
 	case "application/json":
-		err = protojson.Unmarshal(body, pbRequest)
+		err = otlpProtoJSONUnmarshal.Unmarshal(body, pbRequest)
 	default:
 		err = proto.Unmarshal(body, pbRequest)
 	}
