@@ -623,6 +623,16 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 							}
 						})
 					})
+					b.Run("Precomputed/WithUnsafeAttributes", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						precomputedOpts := []metric.AddOption{x.WithUnsafeAttributes(attributes(attrsLen)...)}
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							for pb.Next() {
+								counter.Add(ctx, 1, precomputedOpts...)
+							}
+						})
+					})
 					// This case shows the performance of our API + SDK when
 					// following our contributor guidance for recording
 					// varying attributes by passing attribute.Set:
@@ -706,6 +716,35 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 									}
 
 									*addOpt = append(*addOpt, opt.(metric.AddOption))
+									counter.Add(ctx, 1, *addOpt...)
+								}()
+							}
+						})
+					})
+					b.Run("Dynamic/WithUnsafeAttributes", func(b *testing.B) {
+						counter := testCounter(b, mp.provider())
+						b.ReportAllocs()
+						b.RunParallel(func(pb *testing.PB) {
+							opt := x.WithUnsafeAttributes()
+							for pb.Next() {
+								func() {
+									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
+									defer func() {
+										*attrsSlice = (*attrsSlice)[:0] // Reset.
+										attrPool.Put(attrsSlice)
+									}()
+									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
+									addOpt := addOptPool.Get().(*[]metric.AddOption)
+									defer func() {
+										*addOpt = (*addOpt)[:0]
+										addOptPool.Put(addOpt)
+									}()
+									if settable, ok := opt.(x.Settable[[]attribute.KeyValue]); ok {
+										settable.Set(*attrsSlice)
+									} else {
+										opt = x.WithUnsafeAttributes(*attrsSlice...)
+									}
+									*addOpt = append(*addOpt, opt)
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}
