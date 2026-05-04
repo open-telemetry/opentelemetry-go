@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.43.0
 	go.opentelemetry.io/otel/trace v1.43.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/sys v0.42.0
+	golang.org/x/sys v0.43.0
 )
 
 require (
@@ -31,3 +31,5 @@ replace go.opentelemetry.io/otel/trace => ../trace
 replace go.opentelemetry.io/otel/metric => ../metric
 
 replace go.opentelemetry.io/otel/sdk/metric => ./metric
+
+replace go.opentelemetry.io/otel/metric/x => ../metric/x

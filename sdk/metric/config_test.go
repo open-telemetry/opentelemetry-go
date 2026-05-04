@@ -339,6 +339,12 @@ func TestWithCardinalityLimit(t *testing.T) {
 			expectedLimit: 1234,
 		},
 		{
+			name:          "zero cardinality limit from env disables limit",
+			envValue:      "0",
+			options:       []Option{},
+			expectedLimit: 0,
+		},
+		{
 			name:          "invalid env value uses default",
 			envValue:      "not-a-number",
 			options:       []Option{},

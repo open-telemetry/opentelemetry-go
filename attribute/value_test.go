@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -93,20 +94,27 @@ func TestValue(t *testing.T) {
 			wantValue: []byte("hello world"),
 		},
 		{
+			name:      "Key.Slice() correctly returns keys's internal []Value value",
+			value:     k.Slice(attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")).Value,
+			wantType:  attribute.SLICE,
+			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
+		},
+		{
 			name:      "empty value",
 			value:     attribute.Value{},
 			wantType:  attribute.EMPTY,
 			wantValue: nil,
 		},
 	} {
-		t.Logf("Running test case %s", testcase.name)
-		if testcase.value.Type() != testcase.wantType {
-			t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
-		}
-		got := testcase.value.AsInterface()
-		if diff := cmp.Diff(testcase.wantValue, got); diff != "" {
-			t.Errorf("+got, -want: %s", diff)
-		}
+		t.Run(testcase.name, func(t *testing.T) {
+			if testcase.value.Type() != testcase.wantType {
+				t.Errorf("wrong value type, got %#v, expected %#v", testcase.value.Type(), testcase.wantType)
+			}
+			got := testcase.value.AsInterface()
+			if diff := cmp.Diff(testcase.wantValue, got, cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				t.Errorf("+got, -want: %s", diff)
+			}
+		})
 	}
 }
 
@@ -155,6 +163,18 @@ func TestEquivalence(t *testing.T) {
 		{
 			attribute.ByteSlice("ByteSlice", []byte("one")),
 			attribute.ByteSlice("ByteSlice", []byte("one")),
+		},
+		{
+			attribute.Slice("Slice",
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.SliceValue(attribute.StringValue("nested")),
+			),
+			attribute.Slice("Slice",
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.SliceValue(attribute.StringValue("nested")),
+			),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
@@ -256,6 +276,10 @@ func TestNotEquivalence(t *testing.T) {
 			attribute.StringSlice("StringSlice", []string{"one", "two"}),
 		},
 		{
+			attribute.Slice("Slice", attribute.BoolValue(true), attribute.IntValue(42)),
+			attribute.Slice("Slice", attribute.BoolValue(true), attribute.IntValue(43)),
+		},
+		{
 			attribute.KeyValue{Key: "Empty"},
 			attribute.String("Empty", ""),
 		},
@@ -334,4 +358,405 @@ func TestAsSlice(t *testing.T) {
 	kv = attribute.ByteSlice("ByteSlice", b1)
 	b2 := kv.Value.AsByteSlice()
 	assert.Equal(t, b1, b2)
+
+	for _, tc := range []struct {
+		name string
+		in   []attribute.Value
+	}{
+		{
+			name: "empty",
+			in:   []attribute.Value{},
+		},
+		{
+			name: "len1",
+			in:   []attribute.Value{attribute.BoolValue(true)},
+		},
+		{
+			name: "len2",
+			in:   []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42)},
+		},
+		{
+			name: "len3",
+			in:   []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("test")},
+		},
+		{
+			name: "len4",
+			in: []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.StringValue("test"),
+				attribute.Float64Value(1.25),
+			},
+		},
+		{
+			name: "len5",
+			in: []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.StringValue("test"),
+				attribute.Float64Value(1.25),
+				attribute.ByteSliceValue([]byte("bin")),
+			},
+		},
+		{
+			name: "reflect path",
+			in: []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.StringValue("test"),
+				attribute.Float64Value(1.25),
+				attribute.ByteSliceValue([]byte("bin")),
+				attribute.SliceValue(attribute.BoolValue(false)),
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kv = attribute.Slice("Slice", tc.in...)
+			assert.Equal(t, tc.in, kv.Value.AsSlice())
+		})
+	}
+}
+
+func TestValueString(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		v    attribute.Value
+		want string
+	}{
+		{
+			name: "bool",
+			v:    attribute.BoolValue(true),
+			want: "true",
+		},
+		{
+			name: "bool false",
+			v:    attribute.BoolValue(false),
+			want: "false",
+		},
+		{
+			name: "bool slice len1 fast path",
+			v:    attribute.BoolSliceValue([]bool{false}),
+			want: `[false]`,
+		},
+		{
+			name: "bool slice len2 fast path",
+			v:    attribute.BoolSliceValue([]bool{true, false}),
+			want: `[true,false]`,
+		},
+		{
+			name: "empty bool slice",
+			v:    attribute.BoolSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty bool slice literal",
+			v:    attribute.BoolSliceValue([]bool{}),
+			want: "[]",
+		},
+		{
+			name: "bool slice",
+			v:    attribute.BoolSliceValue([]bool{true, false, true}),
+			want: `[true,false,true]`,
+		},
+		{
+			name: "bool slice reflect path",
+			v:    attribute.BoolSliceValue([]bool{false, true, false, true}),
+			want: `[false,true,false,true]`,
+		},
+		{
+			name: "int64",
+			v:    attribute.Int64Value(-42),
+			want: "-42",
+		},
+		{
+			name: "int",
+			v:    attribute.IntValue(7),
+			want: "7",
+		},
+		{
+			name: "int64 slice len1 fast path",
+			v:    attribute.Int64SliceValue([]int64{-1}),
+			want: `[-1]`,
+		},
+		{
+			name: "int64 slice len2 fast path",
+			v:    attribute.Int64SliceValue([]int64{1, -2}),
+			want: `[1,-2]`,
+		},
+		{
+			name: "empty int slice",
+			v:    attribute.IntSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty int slice literal",
+			v:    attribute.IntSliceValue([]int{}),
+			want: "[]",
+		},
+		{
+			name: "empty int64 slice literal",
+			v:    attribute.Int64SliceValue([]int64{}),
+			want: "[]",
+		},
+		{
+			name: "int slice",
+			v:    attribute.IntSliceValue([]int{1, -2, 3}),
+			want: `[1,-2,3]`,
+		},
+		{
+			name: "int64 slice reflect path",
+			v:    attribute.Int64SliceValue([]int64{1, -2, 3, -4}),
+			want: `[1,-2,3,-4]`,
+		},
+		{
+			name: "float64",
+			v:    attribute.Float64Value(1.23e10),
+			want: "1.23e+10",
+		},
+		{
+			name: "float64 negative zero",
+			v:    attribute.Float64Value(math.Copysign(0, -1)),
+			want: "-0",
+		},
+		{
+			name: "float64 NaN",
+			v:    attribute.Float64Value(math.NaN()),
+			want: "NaN",
+		},
+		{
+			name: "float64 +Inf",
+			v:    attribute.Float64Value(math.Inf(1)),
+			want: "Infinity",
+		},
+		{
+			name: "float64 -Inf",
+			v:    attribute.Float64Value(math.Inf(-1)),
+			want: "-Infinity",
+		},
+		{
+			name: "empty float64 slice",
+			v:    attribute.Float64SliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty float64 slice literal",
+			v:    attribute.Float64SliceValue([]float64{}),
+			want: "[]",
+		},
+		{
+			name: "float64 slice len1 fast path",
+			v:    attribute.Float64SliceValue([]float64{math.Inf(-1)}),
+			want: `["-Infinity"]`,
+		},
+		{
+			name: "float64 slice len3 fast path",
+			v:    attribute.Float64SliceValue([]float64{1.25, math.Copysign(0, -1), 2.5}),
+			want: `[1.25,-0,2.5]`,
+		},
+		{
+			name: "float64 slice",
+			v: attribute.Float64SliceValue([]float64{
+				1,
+				math.NaN(),
+				math.Inf(1),
+				math.Inf(-1),
+				math.Copysign(0, -1),
+			}),
+			want: `[1,"NaN","Infinity","-Infinity",-0]`,
+		},
+		{
+			name: "float64 slice fast path",
+			v: attribute.Float64SliceValue([]float64{
+				math.NaN(),
+				math.Inf(1),
+			}),
+			want: `["NaN","Infinity"]`,
+		},
+		{
+			name: "string",
+			v:    attribute.StringValue(`hello "world"`),
+			want: `hello "world"`,
+		},
+		{
+			name: "empty string",
+			v:    attribute.StringValue(""),
+			want: "",
+		},
+		{
+			name: "empty string slice",
+			v:    attribute.StringSliceValue(nil),
+			want: "[]",
+		},
+		{
+			name: "empty string slice literal",
+			v:    attribute.StringSliceValue([]string{}),
+			want: "[]",
+		},
+		{
+			name: "string slice len1 fast path",
+			v:    attribute.StringSliceValue([]string{""}),
+			want: `[""]`,
+		},
+		{
+			name: "string slice len3 fast path",
+			v:    attribute.StringSliceValue([]string{"snowman ☃", "left\u2028right", "left\u2029right"}),
+			want: `["snowman ☃","left\u2028right","left\u2029right"]`,
+		},
+		{
+			name: "string slice",
+			v: attribute.StringSliceValue([]string{
+				`hello "world"`,
+				"line\nbreak",
+				string([]byte{0xff, 'a'}),
+				"\u2028",
+			}),
+			want: `["hello \"world\"","line\nbreak","\ufffda","\u2028"]`,
+		},
+		{
+			name: "string slice fast path escapes",
+			v: attribute.StringSliceValue([]string{
+				"tab\treturn\rformfeed\fbackslash\\quote\"backspace\b",
+				string([]byte{0x01}) + "\u2029",
+			}),
+			want: `["tab\treturn\rformfeed\fbackslash\\quote\"backspace\b","\u0001\u2029"]`,
+		},
+		{
+			name: "string slice leaves HTML characters unescaped",
+			v:    attribute.StringSliceValue([]string{"<tag>&"}),
+			want: `["<tag>&"]`,
+		},
+		{
+			name: "string slice replaces invalid utf8 after copied prefix",
+			v:    attribute.StringSliceValue([]string{string([]byte{'a', 0xff, 'b'})}),
+			want: `["a\ufffdb"]`,
+		},
+		{
+			name: "byte slice",
+			v:    attribute.ByteSliceValue([]byte("hello world")),
+			want: "aGVsbG8gd29ybGQ=",
+		},
+		{
+			name: "empty byte slice",
+			v:    attribute.ByteSliceValue(nil),
+			want: "",
+		},
+		{
+			name: "empty slice",
+			v:    attribute.SliceValue(),
+			want: "[]",
+		},
+		{
+			name: "slice len5 fast path",
+			v: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.IntValue(7),
+				attribute.Float64Value(math.Copysign(0, -1)),
+				attribute.StringValue(`hello "world"`),
+				attribute.ByteSliceValue([]byte("bin")),
+			),
+			want: `[true,7,-0,"hello \"world\"","Ymlu"]`,
+		},
+		{
+			name: "slice len1 fast path",
+			v:    attribute.SliceValue(attribute.BoolValue(false)),
+			want: `[false]`,
+		},
+		{
+			name: "slice len2 fast path",
+			v: attribute.SliceValue(
+				attribute.IntValue(7),
+				attribute.StringValue(`hello "world"`),
+			),
+			want: `[7,"hello \"world\""]`,
+		},
+		{
+			name: "slice len3 fast path",
+			v: attribute.SliceValue(
+				attribute.Float64Value(1.25),
+				attribute.Float64Value(math.Inf(1)),
+				attribute.Float64Value(math.Inf(-1)),
+			),
+			want: `[1.25,"Infinity","-Infinity"]`,
+		},
+		{
+			name: "slice",
+			v: attribute.SliceValue(
+				attribute.StringValue("hello \"world\""),
+				attribute.Float64Value(math.NaN()),
+				attribute.ByteSliceValue([]byte("bin")),
+				attribute.SliceValue(attribute.BoolValue(true), attribute.Value{}),
+			),
+			want: `["hello \"world\"","NaN","Ymlu",[true,null]]`,
+		},
+		{
+			name: "slice reflect path nested slice values",
+			v: attribute.SliceValue(
+				attribute.BoolSliceValue([]bool{}),
+				attribute.BoolSliceValue([]bool{true}),
+				attribute.BoolSliceValue([]bool{true, false}),
+				attribute.BoolSliceValue([]bool{true, false, true}),
+				attribute.BoolSliceValue([]bool{false, true, false, true}),
+				attribute.Int64SliceValue([]int64{}),
+				attribute.Int64SliceValue([]int64{-1}),
+				attribute.Int64SliceValue([]int64{1, -2}),
+				attribute.Int64SliceValue([]int64{1, -2, 3}),
+				attribute.Int64SliceValue([]int64{1, -2, 3, -4}),
+				attribute.Float64SliceValue([]float64{}),
+				attribute.Float64SliceValue([]float64{math.Inf(-1)}),
+				attribute.Float64SliceValue([]float64{math.NaN(), math.Inf(1)}),
+				attribute.Float64SliceValue([]float64{1.25, math.Copysign(0, -1), 2.5}),
+				attribute.Float64SliceValue([]float64{1, math.NaN(), math.Inf(1), math.Inf(-1)}),
+				attribute.StringSliceValue([]string{}),
+				attribute.StringSliceValue([]string{""}),
+				attribute.StringSliceValue([]string{`hello "world"`, "line\nbreak"}),
+				attribute.StringSliceValue([]string{"snowman ☃", "left\u2028right", "left\u2029right"}),
+				attribute.StringSliceValue([]string{
+					"tab\treturn\rformfeed\fbackslash\\quote\"backspace\b",
+					string([]byte{0x01}) + "\u2029",
+					"<tag>&",
+					string([]byte{'a', 0xff, 'b'}),
+				}),
+				attribute.SliceValue(),
+				attribute.SliceValue(attribute.BoolValue(true)),
+				attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(2)),
+				attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(2), attribute.StringValue("x")),
+				attribute.SliceValue(
+					attribute.BoolValue(true),
+					attribute.IntValue(2),
+					attribute.StringValue("x"),
+					attribute.Float64Value(math.Inf(1)),
+				),
+				attribute.SliceValue(
+					attribute.BoolValue(true),
+					attribute.IntValue(2),
+					attribute.StringValue("x"),
+					attribute.Float64Value(math.Inf(1)),
+					attribute.ByteSliceValue([]byte("bin")),
+				),
+				attribute.SliceValue(
+					attribute.BoolValue(true),
+					attribute.IntValue(2),
+					attribute.StringValue("x"),
+					attribute.Float64Value(math.Inf(1)),
+					attribute.ByteSliceValue([]byte("bin")),
+					attribute.Value{},
+				),
+			),
+			want: `[[],[true],[true,false],[true,false,true],[false,true,false,true],[]` +
+				`,[-1],[1,-2],[1,-2,3],[1,-2,3,-4],[]` +
+				`,["-Infinity"],["NaN","Infinity"],[1.25,-0,2.5],[1,"NaN","Infinity","-Infinity"],[]` +
+				`,[""],["hello \"world\"","line\nbreak"],["snowman ☃","left\u2028right","left\u2029right"]` +
+				`,["tab\treturn\rformfeed\fbackslash\\quote\"backspace\b","\u0001\u2029","<tag>&","a\ufffdb"]` +
+				`,[],[true],[true,2],[true,2,"x"],[true,2,"x","Infinity"],[true,2,"x","Infinity","Ymlu"],[true,2,"x","Infinity","Ymlu",null]]`,
+		},
+		{
+			name: "empty",
+			v:    attribute.Value{},
+			want: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.v.String())
+		})
+	}
 }

@@ -19,7 +19,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 )
 
 replace go.opentelemetry.io/otel => ../../..
@@ -33,3 +33,5 @@ replace go.opentelemetry.io/otel/trace => ../../../trace
 replace go.opentelemetry.io/otel/metric => ../../../metric
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../../sdk/metric
+
+replace go.opentelemetry.io/otel/metric/x => ../../../metric/x

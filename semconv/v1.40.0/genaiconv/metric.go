@@ -218,6 +218,9 @@ func (m ClientOperationDuration) Record(
 	providerName ProviderNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("gen_ai.operation.name", string(operationName)),
@@ -248,6 +251,9 @@ func (m ClientOperationDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -372,6 +378,9 @@ func (m ClientTokenUsage) Record(
 	tokenType TokenTypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("gen_ai.operation.name", string(operationName)),
@@ -404,6 +413,9 @@ func (m ClientTokenUsage) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientTokenUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -519,6 +531,9 @@ func (m ServerRequestDuration) Record(
 	providerName ProviderNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("gen_ai.operation.name", string(operationName)),
@@ -549,6 +564,9 @@ func (m ServerRequestDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -671,6 +689,9 @@ func (m ServerTimePerOutputToken) Record(
 	providerName ProviderNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("gen_ai.operation.name", string(operationName)),
@@ -701,6 +722,9 @@ func (m ServerTimePerOutputToken) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerTimePerOutputToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -815,6 +839,9 @@ func (m ServerTimeToFirstToken) Record(
 	providerName ProviderNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("gen_ai.operation.name", string(operationName)),
@@ -845,6 +872,9 @@ func (m ServerTimeToFirstToken) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerTimeToFirstToken) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

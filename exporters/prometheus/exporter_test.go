@@ -56,6 +56,27 @@ func scrapeWithContinueOnError(ctx context.Context, reg *prometheus.Registry) (i
 	return rr.Code, rr.Body.String()
 }
 
+func TestGetAttrs(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.BoolSlice("bools", []bool{true, false}),
+		attribute.Float64("float", math.Inf(1)),
+		attribute.StringSlice("strings", []string{"foo", "bar"}),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: true})
+	require.NoError(t, err)
+	require.Equal(t, []string{"bools", "float", "strings"}, keys)
+	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
+}
+
+func TestAttributesToLabels(t *testing.T) {
+	labels, err := attributesToLabels([]attribute.KeyValue{
+		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
+	}, otlptranslator.LabelNamer{})
+	require.NoError(t, err)
+	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
+}
+
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
 		name                string
@@ -797,6 +818,52 @@ func TestMultiScopes(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestScopeAttributeConflictsDropped(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+	)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter(
+		"scope-name",
+		otelmetric.WithInstrumentationVersion("scope-version"),
+		otelmetric.WithSchemaURL("https://example.com/schema"),
+		otelmetric.WithInstrumentationAttributes(
+			attribute.String("name", "dropped-name"),
+			attribute.String("version", "dropped-version"),
+			attribute.String("schema_url", "dropped-schema-url"),
+			attribute.String("schema.url", "dropped-translated-schema-url"),
+			attribute.String("custom.scope", "kept"),
+		),
+	)
+
+	counter, err := meter.Int64Counter("scope_conflict")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	got, err := registry.Gather()
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Metric, 1)
+
+	labels := map[string]string{}
+	for _, label := range got[0].Metric[0].Label {
+		labels[label.GetName()] = label.GetValue()
+	}
+
+	assert.Equal(t, map[string]string{
+		"otel_scope_custom_scope": "kept",
+		"otel_scope_name":         "scope-name",
+		"otel_scope_schema_url":   "https://example.com/schema",
+		"otel_scope_version":      "scope-version",
+	}, labels)
+}
+
 func TestBridgeScopeIgnored(t *testing.T) {
 	var handledError error
 	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
@@ -1168,6 +1235,45 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 		})
 	}
 
+	wg.Wait()
+}
+
+func TestCollectorWithResourceAsConstantLabelsConcurrentSafe(t *testing.T) {
+	// This test makes sure resource label initialization is concurrent safe
+	// when using WithResourceAsConstantLabels.
+	ctx := t.Context()
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName("prometheus_test")))
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+	t.Cleanup(func() {
+		assert.NoError(t, provider.Shutdown(ctx))
+	})
+
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	var wg sync.WaitGroup
+	const concurrencyLevel = 10
+	for range concurrencyLevel {
+		wg.Go(func() {
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
+		})
+	}
 	wg.Wait()
 }
 

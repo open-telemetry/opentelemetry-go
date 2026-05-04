@@ -25,6 +25,7 @@ module-sets:
     version: v0.65.0
     modules:
       - go.opentelemetry.io/otel/exporters/prometheus
+      - go.opentelemetry.io/otel/metric/x
   experimental-logs:
     version: v0.19.0
     modules:
@@ -53,6 +54,9 @@ modules:
     version-refs:
       - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc:
+    version-refs:
+      - ./internal/version.go
+  go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp:
     version-refs:
       - ./internal/version.go
   go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc:

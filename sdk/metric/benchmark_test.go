@@ -15,6 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/x"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
@@ -629,6 +630,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					b.Run("Dynamic/WithAttributeSet", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
+						optionPool := sync.Pool{
+							New: func() any {
+								return metric.WithAttributeSet(*attribute.EmptySet())
+							},
+						}
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
 								// Wrap in a function so we can use defer.
@@ -644,8 +650,18 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
+
 									set := attribute.NewSet(*attrsSlice...)
-									*addOpt = append(*addOpt, metric.WithAttributeSet(set))
+									opt := optionPool.Get().(metric.MeasurementOption)
+									defer optionPool.Put(opt)
+
+									if s, ok := opt.(x.Settable[attribute.Set]); ok {
+										s.Set(set)
+									} else {
+										opt = metric.WithAttributeSet(set)
+									}
+
+									*addOpt = append(*addOpt, opt.(metric.AddOption))
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}
@@ -658,6 +674,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 					b.Run("Dynamic/WithAttributes", func(b *testing.B) {
 						counter := testCounter(b, mp.provider())
 						b.ReportAllocs()
+						optionPool := sync.Pool{
+							New: func() any {
+								return metric.WithAttributes()
+							},
+						}
 						b.RunParallel(func(pb *testing.PB) {
 							for pb.Next() {
 								// Wrap in a function so we can use defer.
@@ -673,7 +694,18 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
-									*addOpt = append(*addOpt, metric.WithAttributes(*attrsSlice...))
+
+									set := attribute.NewSet(*attrsSlice...)
+									opt := optionPool.Get().(metric.MeasurementOption)
+									defer optionPool.Put(opt)
+
+									if s, ok := opt.(x.Settable[attribute.Set]); ok {
+										s.Set(set)
+									} else {
+										opt = metric.WithAttributes(*attrsSlice...)
+									}
+
+									*addOpt = append(*addOpt, opt.(metric.AddOption))
 									counter.Add(ctx, 1, *addOpt...)
 								}()
 							}
@@ -730,5 +762,130 @@ func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue
 		)
 	default:
 		panic("unknown number of attributes")
+	}
+}
+
+func BenchmarkMeasureNewAttributeSet(b *testing.B) {
+	ctx := b.Context()
+
+	instruments := []struct {
+		name string
+		make func(b *testing.B, meter metric.Meter) func(int)
+	}{
+		{
+			name: "Int64Counter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Counter("int64-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64Counter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64Counter("float64-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Int64UpDownCounter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64UpDownCounter("int64-up-down-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64UpDownCounter",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64UpDownCounter("float64-up-down-counter")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Int64Histogram",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Histogram("int64-histogram")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64Histogram",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64Histogram("float64-histogram")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Int64Gauge",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Gauge("int64-gauge")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+		{
+			name: "Float64Gauge",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Float64Gauge("float64-gauge")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
+	}
+
+	for _, filterName := range []string{"AlwaysOn", "AlwaysOff"} {
+		var filter exemplar.Filter
+		if filterName == "AlwaysOn" {
+			filter = exemplar.AlwaysOnFilter
+		} else {
+			filter = exemplar.AlwaysOffFilter
+		}
+
+		b.Run(filterName, func(b *testing.B) {
+			for _, inst := range instruments {
+				b.Run(inst.name, func(b *testing.B) {
+					var record func(int)
+
+					b.ReportAllocs()
+					b.ResetTimer()
+
+					for n := 0; n < b.N; n++ {
+						if n%10000 == 0 {
+							b.StopTimer()
+							rdr := NewManualReader()
+							provider := NewMeterProvider(
+								WithReader(rdr),
+								WithExemplarFilter(filter),
+							)
+							meter := provider.Meter("BenchmarkMeasureNewAttributeSet")
+							record = inst.make(b, meter)
+							b.StartTimer()
+						}
+						record(n)
+					}
+				})
+			}
+		})
 	}
 }

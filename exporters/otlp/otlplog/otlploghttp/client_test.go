@@ -886,6 +886,75 @@ func TestGetBodyCalledOnRedirect(t *testing.T) {
 	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
 }
 
+func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
+	// Test that req.GetBody replays the gzipped request body on redirects.
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/logs/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	opts := []Option{
+		WithEndpoint(server.Listener.Addr().String()),
+		WithInsecure(),
+		WithCompression(GzipCompression),
+	}
+	cfg := newConfig(opts)
+	client, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	exporter, err := newExporter(client, cfg)
+	require.NoError(t, err)
+	ctx := t.Context()
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.Export(ctx, make([]log.Record, 1))
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+
+	for _, body := range requestBodies {
+		reader, err := gzip.NewReader(bytes.NewReader(body))
+		require.NoError(t, err)
+		func() {
+			defer func() { assert.NoError(t, reader.Close()) }()
+
+			decoded, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			assert.NotEmpty(t, decoded)
+		}()
+	}
+}
+
 // SetExporterID sets the exporter ID counter to v and returns the previous
 // value.
 //
@@ -969,7 +1038,7 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterLogInflight{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(baseAttrs...)},
+						{Attributes: attribute.NewSet(baseAttrs...), Value: 0},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 				},
@@ -980,11 +1049,11 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterLogExported{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(baseAttrs...)},
+						{Attributes: attribute.NewSet(baseAttrs...), Value: 2},
 						{Attributes: attribute.NewSet(append(
 							baseAttrs,
 							otelconv.SDKExporterLogExported{}.AttrErrorType("*errors.joinError"),
-						)...)},
+						)...), Value: 2},
 					},
 					Temporality: 0x1,
 					IsMonotonic: true,
@@ -1009,12 +1078,25 @@ func TestClientInstrumentation(t *testing.T) {
 	}
 
 	require.Len(t, got.ScopeMetrics, 1)
-	opt := []metricdatatest.Option{
+
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3, "expected 3 metrics")
+
+	// Assert counters without IgnoreValue
+	optCounters := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+	}
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], optCounters...)
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], optCounters...)
+
+	// Assert duration with IgnoreValue
+	optDuration := []metricdatatest.Option{
 		metricdatatest.IgnoreTimestamp(),
 		metricdatatest.IgnoreExemplars(),
 		metricdatatest.IgnoreValue(),
 	}
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+	metricdatatest.AssertEqual(t, want.Metrics[2], gotMetrics[2], optDuration...)
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
@@ -1069,6 +1151,29 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	}
 }
 
+func TestRequestBodySizeLimit(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxRequestSize(1),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := newConfig(opts)
+	c, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{}})
+	assert.ErrorContains(t, err, "request body too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
+}
+
 func BenchmarkExporterExportLogs(b *testing.B) {
 	const n = 10
 
@@ -1113,4 +1218,77 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 	})
 
 	b.Run("NoObservability", run)
+}
+
+func TestClientInstrumentationStaleStatusCode(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	const id = 0
+	SetExporterID(id)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	// Use a client that returns a 503 error once and then a network error.
+	var calls int
+	client := &http.Client{
+		Transport: roundTripperFunc(func(_ *http.Request) (*http.Response, error) {
+			calls++
+			if calls == 1 {
+				return &http.Response{
+					StatusCode: http.StatusServiceUnavailable,
+					Status:     "503 " + http.StatusText(http.StatusServiceUnavailable),
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			}
+			return nil, errors.New("network error")
+		}),
+	}
+
+	opts := []Option{
+		WithHTTPClient(client),
+		WithInsecure(),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	cfg := newConfig(opts)
+	c, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), resourceLogs)
+	assert.Error(t, err)
+
+	// Validate that the status code is 0 and not the stale 503 on self-observability metrics.
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	require.Len(t, got.ScopeMetrics, 1)
+	metrics := got.ScopeMetrics[0].Metrics
+	var found bool
+	for _, m := range metrics {
+		if m.Name != (otelconv.SDKExporterOperationDuration{}).Name() {
+			continue
+		}
+		found = true
+		data := m.Data.(metricdata.Histogram[float64])
+		require.NotEmpty(t, data.DataPoints)
+		dp := data.DataPoints[0]
+		_, ok := dp.Attributes.Value(otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(0).Key)
+		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
+	}
+	assert.True(t, found, "expected to find operation duration metric")
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }
