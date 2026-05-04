@@ -103,10 +103,30 @@ func TestClientWithJSONEncoding(t *testing.T) {
 	client, err := newClient(cfg)
 	require.NoError(t, err)
 
-	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	// Non-empty payload with AggregationTemporality exercises OTLP/JSON enums on the collector path.
+	rm := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Name: "cum-counter",
+				Data: &mpb.Metric_Sum{Sum: &mpb.Sum{
+					AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+					IsMonotonic:            true,
+					DataPoints: []*mpb.NumberDataPoint{{
+						TimeUnixNano: 1,
+						Value:        &mpb.NumberDataPoint_AsDouble{AsDouble: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+	require.NoError(t, client.UploadMetrics(ctx, rm))
 	require.NoError(t, client.Shutdown(ctx))
 	got := coll.Collect().Dump()
 	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding")
+	m := got[0].ScopeMetrics[0].Metrics[0]
+	assert.Equal(t, "cum-counter", m.GetName())
+	assert.Equal(t, mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		m.GetSum().GetAggregationTemporality())
 
 	// Verify the Content-Type header was set correctly for JSON
 	headers := coll.Headers()
@@ -219,12 +239,31 @@ func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
 	client, err := newClient(cfg)
 	require.NoError(t, err)
 
-	require.NoError(t, client.UploadMetrics(ctx, &mpb.ResourceMetrics{}))
+	// Collector gunzips JSON; numeric OTLP enums match
+	rm := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Name: "cum-counter",
+				Data: &mpb.Metric_Sum{Sum: &mpb.Sum{
+					AggregationTemporality: mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+					IsMonotonic:            true,
+					DataPoints: []*mpb.NumberDataPoint{{
+						TimeUnixNano: 1,
+						Value:        &mpb.NumberDataPoint_AsDouble{AsDouble: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+	require.NoError(t, client.UploadMetrics(ctx, rm))
 	require.NoError(t, client.Shutdown(ctx))
 	got := coll.Collect().Dump()
 	require.Len(t, got, 1, "upload of one ResourceMetrics with JSON encoding and gzip compression")
+	m := got[0].ScopeMetrics[0].Metrics[0]
+	assert.Equal(t, "cum-counter", m.GetName())
+	assert.Equal(t, mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+		m.GetSum().GetAggregationTemporality())
 
-	// Verify headers
 	headers := coll.Headers()
 	require.Contains(t, headers, "Content-Type")
 	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
