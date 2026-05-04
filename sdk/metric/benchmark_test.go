@@ -889,3 +889,65 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkCounterAddAfterCollect(b *testing.B) {
+	ctx := b.Context()
+
+	// Create a reader that uses delta temporality.
+	deltaTemporalitySelector := func(InstrumentKind) metricdata.Temporality {
+		return metricdata.DeltaTemporality
+	}
+	r := NewManualReader(WithTemporalitySelector(deltaTemporalitySelector))
+
+	provider := NewMeterProvider(
+		WithReader(r),
+		WithExemplarFilter(exemplar.AlwaysOffFilter),
+	)
+	meter := provider.Meter("BenchmarkCounterAddAfterCollect")
+	counter, err := meter.Float64Counter("test.counter")
+	assert.NoError(b, err)
+
+	// Use 10 attributes.
+	attrs := attributes(10)
+	opts := []metric.AddOption{metric.WithAttributes(attrs...)}
+
+	rm := new(metricdata.ResourceMetrics)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		_ = r.Collect(ctx, rm) // This clears the sync.Map for delta.
+		b.StartTimer()
+
+		counter.Add(ctx, 1, opts...)
+	}
+}
+
+func BenchmarkCounterAddNoCollect(b *testing.B) {
+	ctx := b.Context()
+
+	// Create a reader that uses delta temporality.
+	deltaTemporalitySelector := func(InstrumentKind) metricdata.Temporality {
+		return metricdata.DeltaTemporality
+	}
+	r := NewManualReader(WithTemporalitySelector(deltaTemporalitySelector))
+
+	provider := NewMeterProvider(
+		WithReader(r),
+		WithExemplarFilter(exemplar.AlwaysOffFilter),
+	)
+	meter := provider.Meter("BenchmarkCounterAddAfterCollect")
+	counter, err := meter.Float64Counter("test.counter")
+	assert.NoError(b, err)
+
+	// Use 10 attributes.
+	attrs := attributes(10)
+	opts := []metric.AddOption{metric.WithAttributes(attrs...)}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		counter.Add(ctx, 1, opts...)
+	}
+}
