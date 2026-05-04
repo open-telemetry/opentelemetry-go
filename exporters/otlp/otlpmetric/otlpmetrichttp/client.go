@@ -69,6 +69,12 @@ var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use T
 // This is a variable to allow tests to override it.
 var maxResponseBodySize int64 = 4 * 1024 * 1024
 
+// otlpProtoJSON configures JSON payloads for OTLP/HTTP.
+// OTLP/JSON represents enum fields as integers, unlike protobuf JSON defaults.
+var otlpProtoJSON = protojson.MarshalOptions{
+	UseEnumNumbers: true,
+}
+
 // newClient creates a new HTTP metric client.
 func newClient(cfg oconf.Config) (*client, error) {
 	if cfg.Metrics.Insecure && cfg.Metrics.TLSCfg != nil {
@@ -171,7 +177,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	var err error
 	switch c.encoding {
 	case EncodingJSON:
-		body, err = protojson.Marshal(pbRequest)
+		body, err = otlpProtoJSON.Marshal(pbRequest)
 	default:
 		body, err = proto.Marshal(pbRequest)
 	}

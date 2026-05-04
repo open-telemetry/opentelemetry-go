@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -182,6 +184,57 @@ func TestClientWithJSONEncodingAndGzipCompression(t *testing.T) {
 	assert.Equal(t, []string{"application/json"}, headers["Content-Type"])
 	require.Contains(t, headers, "Content-Encoding")
 	assert.Equal(t, []string{"gzip"}, headers["Content-Encoding"])
+}
+
+func TestClientJSONEncodingUsesNumericEnums(t *testing.T) {
+	ctx := t.Context()
+	var gotRaw string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		gotRaw = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+
+	cfg := oconf.NewHTTPConfig(asHTTPOptions([]Option{
+		WithEndpoint(u.Host),
+		WithInsecure(),
+		WithEncoding(EncodingJSON),
+	})...)
+	cl, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, cl.Shutdown(context.Background()))
+	})
+
+	wantAgg := mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
+	rm := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Name: "cum-counter",
+				Data: &mpb.Metric_Sum{Sum: &mpb.Sum{
+					AggregationTemporality: wantAgg,
+					IsMonotonic:            true,
+					DataPoints: []*mpb.NumberDataPoint{{
+						TimeUnixNano: 1,
+						Value:        &mpb.NumberDataPoint_AsDouble{AsDouble: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+
+	require.NoError(t, cl.UploadMetrics(ctx, rm))
+	require.NotEmpty(t, gotRaw)
+	// Ensure OTLP/JSON encoding uses numeric enums for aggregation temporality.
+	w := strconv.Itoa(int(wantAgg))
+	require.True(t, regexp.MustCompile(`"aggregationTemporality"\s*:\s*`+regexp.QuoteMeta(w)+`\b`).MatchString(gotRaw),
+		`expected OTLP JSON to encode aggregation temporality as a number`)
+	require.NotContains(t, gotRaw, "AGGREGATION_TEMPORALITY_CUMULATIVE")
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
