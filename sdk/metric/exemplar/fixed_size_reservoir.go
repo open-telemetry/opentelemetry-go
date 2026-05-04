@@ -16,6 +16,9 @@ import (
 
 // FixedSizeReservoirProvider returns a provider of [FixedSizeReservoir].
 func FixedSizeReservoirProvider(k int) ReservoirProvider {
+	if k <= 0 {
+		return func(attribute.Set) Reservoir { return &noopReservoir{} }
+	}
 	return func(attribute.Set) Reservoir {
 		return NewFixedSizeReservoir(k)
 	}
@@ -25,8 +28,30 @@ func FixedSizeReservoirProvider(k int) ReservoirProvider {
 // k exemplars. If there are k or less measurements made, the Reservoir will
 // sample each one. If there are more than k, the Reservoir will then randomly
 // sample all additional measurement with a decreasing probability.
+//
+// The parameter k must be greater than 0. Providing a value of 0 or less will
+// cause a panic.
 func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
+	if k <= 0 {
+		return nil
+	}
 	return newFixedSizeReservoir(newStorage(k))
+}
+
+// noopReservoir is a no-op implementation of Reservoir used when exemplar
+// sampling is disabled (e.g., when a fixed-size reservoir is configured
+// with a non-positive size). It safely drops all offers and returns no
+// exemplars on collect.
+type noopReservoir struct{}
+
+func (*noopReservoir) Offer(context.Context, time.Time, Value, []attribute.KeyValue) {}
+
+func (*noopReservoir) Collect(dest *[]Exemplar) {
+	// Clear elements to allow GC to reclaim referenced objects.
+	for i := range *dest {
+		(*dest)[i] = Exemplar{}
+	}
+	*dest = (*dest)[:0]
 }
 
 var _ Reservoir = &FixedSizeReservoir{}

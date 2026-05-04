@@ -22,6 +22,11 @@ func TestNewFixedSizeReservoir(t *testing.T) {
 	}))
 }
 
+func TestNewFixedSizeReservoirZeroSize(t *testing.T) {
+	r := NewFixedSizeReservoir(0)
+	assert.Nil(t, r)
+}
+
 func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	intensity := 0.1
 	sampleSize := 1000
