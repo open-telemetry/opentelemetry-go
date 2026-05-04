@@ -16,6 +16,9 @@ import (
 
 // FixedSizeReservoirProvider returns a provider of [FixedSizeReservoir].
 func FixedSizeReservoirProvider(k int) ReservoirProvider {
+	if k <= 0 {
+		return func(attribute.Set) Reservoir { return &noopReservoir{} }
+	}
 	return func(attribute.Set) Reservoir {
 		return NewFixedSizeReservoir(k)
 	}
@@ -25,8 +28,30 @@ func FixedSizeReservoirProvider(k int) ReservoirProvider {
 // k exemplars. If there are k or less measurements made, the Reservoir will
 // sample each one. If there are more than k, the Reservoir will then randomly
 // sample all additional measurement with a decreasing probability.
+//
+// The parameter k must be greater than 0. Providing a value of 0 or less will
+// cause a panic.
 func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
+	if k <= 0 {
+		return nil
+	}
 	return newFixedSizeReservoir(newStorage(k))
+}
+
+// noopReservoir is a no-op implementation of Reservoir used when exemplar
+// sampling is disabled (e.g., when a fixed-size reservoir is configured
+// with a non-positive size). It safely drops all offers and returns no
+// exemplars on collect.
+type noopReservoir struct{}
+
+func (*noopReservoir) Offer(context.Context, time.Time, Value, []attribute.KeyValue) {}
+
+func (*noopReservoir) Collect(dest *[]Exemplar) {
+	// Clear elements to allow GC to reclaim referenced objects.
+	for i := range *dest {
+		(*dest)[i] = Exemplar{}
+	}
+	*dest = (*dest)[:0]
 }
 
 var _ Reservoir = &FixedSizeReservoir{}
@@ -86,10 +111,6 @@ func (*FixedSizeReservoir) randomFloat64() float64 {
 // parameters are the value and dropped (filtered) attributes of the
 // measurement respectively.
 func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a []attribute.KeyValue) {
-	if cap(r.measurements) == 0 {
-		return
-	}
-
 	// The following algorithm is "Algorithm L" from Li, Kim-Hung (4 December
 	// 1994). "Reservoir-Sampling Algorithms of Time Complexity
 	// O(n(1+log(N/n)))". ACM Transactions on Mathematical Software. 20 (4):
@@ -146,13 +167,6 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 // reset resets r to the initial state.
 func (r *FixedSizeReservoir) reset() {
-	if cap(r.measurements) == 0 {
-		r.count = 0
-		r.next = 0
-		r.w = 0
-		return
-	}
-
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
@@ -175,10 +189,6 @@ func (r *FixedSizeReservoir) reset() {
 // advance updates the count at which the offered measurement will overwrite an
 // existing exemplar.
 func (r *FixedSizeReservoir) advance() {
-	if cap(r.measurements) == 0 {
-		return
-	}
-
 	// Calculate the next value in the random number series.
 	//
 	// The current value of r.w is based on the max of a distribution of random

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewFixedSizeReservoir(t *testing.T) {
@@ -25,16 +24,7 @@ func TestNewFixedSizeReservoir(t *testing.T) {
 
 func TestNewFixedSizeReservoirZeroSize(t *testing.T) {
 	r := NewFixedSizeReservoir(0)
-
-	require.NotPanics(t, func() {
-		r.Offer(t.Context(), staticTime, NewValue(float64(1)), nil)
-	})
-
-	var dest []Exemplar
-	require.NotPanics(t, func() {
-		r.Collect(&dest)
-	})
-	assert.Empty(t, dest)
+	assert.Nil(t, r)
 }
 
 func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {

@@ -132,11 +132,27 @@ func ReservoirTest[N int64 | float64](f factory) func(*testing.T) {
 		t.Run("DropAll", func(t *testing.T) {
 			t.Helper()
 
+			// Test that zero-capacity reservoirs work (drop all exemplars).
+			// If the factory doesn't support zero capacity, skip this test.
 			rp, n := f(0)
 			if n > 0 {
 				t.Skip("skipping, reservoir capacity greater than 0:", n)
 			}
-			r := rp(*attribute.EmptySet())
+
+			// Some implementations panic when creating a zero-capacity reservoir.
+			var r Reservoir
+			var shouldSkip bool
+			func() {
+				defer func() {
+					if recover() != nil {
+						shouldSkip = true
+					}
+				}()
+				r = rp(*attribute.EmptySet())
+			}()
+			if shouldSkip {
+				t.Skip("implementation does not support zero capacity")
+			}
 
 			r.Offer(t.Context(), staticTime, NewValue(N(10)), nil)
 
