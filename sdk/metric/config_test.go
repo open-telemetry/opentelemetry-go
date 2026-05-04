@@ -300,6 +300,21 @@ func TestWithExemplarFilterOff(t *testing.T) {
 			expectFilterSampled:    true,
 			expectFilterNotSampled: true,
 		},
+		{
+			desc:                   "nil filter option",
+			opts:                   []Option{WithExemplarFilter(nil)},
+			expectFilterSampled:    true,
+			expectFilterNotSampled: false,
+		},
+		{
+			desc: "nil filter option after another filter",
+			opts: []Option{
+				WithExemplarFilter(exemplar.AlwaysOnFilter),
+				WithExemplarFilter(nil),
+			},
+			expectFilterSampled:    true,
+			expectFilterNotSampled: true,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			if tc.env != "" {
