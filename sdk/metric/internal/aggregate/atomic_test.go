@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
@@ -234,5 +236,128 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 				a.Update(N(5))
 			}
 		})
+	})
+}
+
+func TestLimitedSyncMapLimit(t *testing.T) {
+	m := newLimitedSyncMap[any](3)
+	newValue := func(attribute.Set) any { return new(int) }
+
+	attr1 := attribute.NewSet(attribute.String("key", "1"))
+	attr2 := attribute.NewSet(attribute.String("key", "2"))
+	attr3 := attribute.NewSet(attribute.String("key", "3"))
+	attr4 := attribute.NewSet(attribute.String("key", "4"))
+
+	// Add first (normal)
+	v1 := m.LoadOrStoreAttr(attr1, newValue)
+	assert.Equal(t, 1, m.Len())
+
+	// Add second (normal)
+	v2 := m.LoadOrStoreAttr(attr2, newValue)
+	assert.Equal(t, 2, m.Len())
+
+	// Add third (overflow)
+	v3 := m.LoadOrStoreAttr(attr3, newValue)
+	assert.Equal(t, 3, m.Len()) // Overflow counts as the 3rd entry
+	assert.NotSame(t, v1, v3)
+	assert.NotSame(t, v2, v3)
+
+	// Add fourth (overflow) - should return same overflow value
+	v4 := m.LoadOrStoreAttr(attr4, newValue)
+	assert.Same(t, v3, v4)
+
+	// Clear the map. Should be able to add new keys up to limit again.
+	m.Clear()
+	assert.Equal(t, 0, m.Len())
+
+	attr5 := attribute.NewSet(attribute.String("key", "5"))
+	attr6 := attribute.NewSet(attribute.String("key", "6"))
+	attr7 := attribute.NewSet(attribute.String("key", "7"))
+	attr8 := attribute.NewSet(attribute.String("key", "8"))
+
+	v5 := m.LoadOrStoreAttr(attr5, newValue)
+	assert.Equal(t, 1, m.Len())
+
+	v6 := m.LoadOrStoreAttr(attr6, newValue)
+	assert.Equal(t, 2, m.Len())
+
+	assert.NotSame(t, v5, v6, "Different keys should return different values")
+
+	v7 := m.LoadOrStoreAttr(attr7, newValue)
+	assert.Equal(t, 3, m.Len()) // Overflow counts as 3rd entry
+	assert.NotSame(t, v5, v7, "Overflow should be different from normal values")
+	assert.NotSame(t, v6, v7, "Overflow should be different from normal values")
+
+	v8 := m.LoadOrStoreAttr(attr8, newValue)
+	assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
+}
+
+func TestLimitedSyncMapConcurrentSafe(t *testing.T) {
+	m := newLimitedSyncMap[any](5)
+	newValue := func(attribute.Set) any { return 1 }
+	attr := attribute.NewSet(attribute.String("k", "v"))
+
+	var wg sync.WaitGroup
+	// 100 routines trying to read/write the same key
+	for range 100 {
+		wg.Go(func() {
+			m.LoadOrStoreAttr(attr, newValue)
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, 1, m.Len())
+
+	// 10 routines trying to read/write DIFFERENT keys exceeding limit
+	var wg2 sync.WaitGroup
+	attrs := []attribute.Set{
+		attribute.NewSet(attribute.String("k", "1")),
+		attribute.NewSet(attribute.String("k", "2")),
+		attribute.NewSet(attribute.String("k", "3")),
+		attribute.NewSet(attribute.String("k", "4")),
+		attribute.NewSet(attribute.String("k", "5")),
+		attribute.NewSet(attribute.String("k", "6")),
+		attribute.NewSet(attribute.String("k", "7")),
+		attribute.NewSet(attribute.String("k", "8")),
+		attribute.NewSet(attribute.String("k", "9")),
+		attribute.NewSet(attribute.String("k", "10")),
+	}
+	for _, a := range attrs {
+		attrCopy := a
+		wg2.Go(func() {
+			m.LoadOrStoreAttr(attrCopy, newValue)
+		})
+	}
+	wg2.Wait()
+	// Map should be at limit (5)
+	assert.Equal(t, 5, m.Len())
+}
+
+func BenchmarkSyncMap(b *testing.B) {
+	attr := attribute.NewSet(attribute.String("key", "value"))
+	newValue := func(attribute.Set) any { return 1 }
+
+	b.Run("limitedSyncMap/LoadOrStoreNoClear", func(b *testing.B) {
+		m := newLimitedSyncMap[any](10)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.LoadOrStoreAttr(attr, newValue)
+		}
+	})
+
+	b.Run("limitedSyncMap/LoadOrStoreWithClear", func(b *testing.B) {
+		m := newLimitedSyncMap[any](10)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+			m.LoadOrStoreAttr(attr, newValue)
+		}
+	})
+
+	b.Run("limitedSyncMap/OnlyClear", func(b *testing.B) {
+		m := newLimitedSyncMap[any](10)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+		}
 	})
 }
