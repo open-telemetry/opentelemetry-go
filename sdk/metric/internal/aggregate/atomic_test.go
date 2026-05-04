@@ -244,7 +244,7 @@ func BenchmarkSyncMap(b *testing.B) {
 		name    string
 		makeMap func() syncMap
 	}{
-		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{}} }},
+		{"limitedSyncMap", func() syncMap { return &limitedSyncMap{} }},
 		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap[any]{}} }},
 	}
 
@@ -293,18 +293,6 @@ type syncMap interface {
 	Range(f func(key, value any) bool)
 }
 
-type limitedSyncMapTestWrapper struct {
-	*limitedSyncMap
-}
-
-func (w limitedSyncMapTestWrapper) Clear() {
-	w.limitedSyncMap.Clear()
-}
-
-func (w limitedSyncMapTestWrapper) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
-	return w.limitedSyncMap.LoadOrStoreAttr(fltrAttr, newValue)
-}
-
 type lazySyncMapTestWrapper struct {
 	*lazyLimitedSyncMap[any]
 }
@@ -324,7 +312,7 @@ func TestSyncMap_Limit(t *testing.T) {
 	}{
 		{
 			"limitedSyncMap",
-			func(limit int) syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: limit}} },
+			func(limit int) syncMap { return &limitedSyncMap{aggLimit: limit} },
 		},
 		{
 			"lazyLimitedSyncMap",
@@ -364,6 +352,31 @@ func TestSyncMap_Limit(t *testing.T) {
 			// Add fourth (overflow) - should return same overflow value
 			v4 := m.LoadOrStoreAttr(attr4, newVal)
 			assert.Same(t, v3, v4)
+
+			// Clear the map. Should be able to add new keys up to limit again.
+			m.Clear()
+			assert.Equal(t, 0, m.Len())
+
+			attr5 := attribute.NewSet(attribute.String("key", "5"))
+			attr6 := attribute.NewSet(attribute.String("key", "6"))
+			attr7 := attribute.NewSet(attribute.String("key", "7"))
+			attr8 := attribute.NewSet(attribute.String("key", "8"))
+
+			v5 := m.LoadOrStoreAttr(attr5, newVal)
+			assert.Equal(t, 1, m.Len())
+
+			v6 := m.LoadOrStoreAttr(attr6, newVal)
+			assert.Equal(t, 2, m.Len())
+
+			assert.NotSame(t, v5, v6, "Different keys should return different values")
+
+			v7 := m.LoadOrStoreAttr(attr7, newVal)
+			assert.Equal(t, 3, m.Len()) // Overflow counts as 3rd entry
+			assert.NotSame(t, v5, v7, "Overflow should be different from normal values")
+			assert.NotSame(t, v6, v7, "Overflow should be different from normal values")
+
+			v8 := m.LoadOrStoreAttr(attr8, newVal)
+			assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
 		})
 	}
 }
@@ -373,7 +386,7 @@ func TestSyncMap_Concurrent(t *testing.T) {
 		name    string
 		makeMap func() syncMap
 	}{
-		{"limitedSyncMap", func() syncMap { return limitedSyncMapTestWrapper{&limitedSyncMap{aggLimit: 5}} }},
+		{"limitedSyncMap", func() syncMap { return &limitedSyncMap{aggLimit: 5} }},
 		{"lazyLimitedSyncMap", func() syncMap { return lazySyncMapTestWrapper{&lazyLimitedSyncMap[any]{aggLimit: 5}} }},
 	}
 
@@ -405,6 +418,30 @@ func TestSyncMap_Concurrent(t *testing.T) {
 			wg.Wait()
 			// At the end, len should be 1
 			assert.Equal(t, 1, m.Len())
+
+			// 10 routines trying to read/write DIFFERENT keys exceeding limit
+			var wg2 sync.WaitGroup
+			attrs := []attribute.Set{
+				attribute.NewSet(attribute.String("k", "1")),
+				attribute.NewSet(attribute.String("k", "2")),
+				attribute.NewSet(attribute.String("k", "3")),
+				attribute.NewSet(attribute.String("k", "4")),
+				attribute.NewSet(attribute.String("k", "5")),
+				attribute.NewSet(attribute.String("k", "6")),
+				attribute.NewSet(attribute.String("k", "7")),
+				attribute.NewSet(attribute.String("k", "8")),
+				attribute.NewSet(attribute.String("k", "9")),
+				attribute.NewSet(attribute.String("k", "10")),
+			}
+			for _, attr := range attrs {
+				a := attr
+				wg2.Go(func() {
+					m.LoadOrStoreAttr(a, func(attribute.Set) any { return 1 })
+				})
+			}
+			wg2.Wait()
+			// Map should be at limit (5)
+			assert.Equal(t, 5, m.Len())
 		})
 	}
 }
@@ -467,21 +504,37 @@ func TestLazyLimitedSyncMap_RangeAndGC(t *testing.T) {
 	})
 	assert.Equal(t, 0, yieldCount, "Stale items should not be yielded")
 
-	// Move to Cycle 4 (Cycle 0 + 4)
+	// Move to Cycle 2. Clear should trigger GC for Cycle 0 item.
 	m.Clear() // Cycle 2
-	m.Clear() // Cycle 3
-	m.Clear() // Cycle 4
-
-	// Underlying map should still have the item
-	physLen := 0
-	m.m.Range(func(_, _ any) bool { physLen++; return true })
-	assert.Equal(t, 1, physLen)
-
-	// Range at Cycle 4 should trigger GC for Cycle 0 item (4 > 0 + 3)
-	m.Range(func(_, _ any) bool { return true })
 
 	// Underlying map should now be empty
-	physLen = 0
+	physLen := 0
 	m.m.Range(func(_, _ any) bool { physLen++; return true })
-	assert.Equal(t, 0, physLen, "Item should be GC'd after 4 cycles")
+	assert.Equal(t, 0, physLen, "Item should be GC'd after 2 cycles in Clear")
+}
+
+func TestLazyLimitedSyncMap_Reset(t *testing.T) {
+	var m lazyLimitedSyncMap[*int]
+	m.aggLimit = 10
+	attr1 := attribute.NewSet(attribute.String("k", "v"))
+
+	m.newValue = func(attribute.Set) *int {
+		v := 1
+		return &v
+	}
+	m.resetFunc = func(v *int) {
+		*v = 0
+	}
+
+	// Cycle 0
+	v1 := m.LoadOrStoreAttr(attr1)
+	assert.Equal(t, 1, *v1)
+
+	// Clear -> moves to Cycle 1, should call resetFunc
+	m.Clear()
+
+	// Re-inserting the same key should reuse the map entry and it should be reset!
+	v2 := m.LoadOrStoreAttr(attr1)
+	assert.Equal(t, 0, *v2, "Value should be reset by resetFunc")
+	assert.Same(t, v1, v2, "Entry should be reused")
 }

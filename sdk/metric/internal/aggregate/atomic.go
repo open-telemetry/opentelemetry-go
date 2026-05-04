@@ -324,13 +324,20 @@ func (m *lazyLimitedSyncMap[V]) Clear() {
 	m.cycle.Add(1)
 	m.len = 0
 
-	if m.resetFunc != nil {
-		m.m.Range(func(_, value any) bool {
-			ent := value.(*entry)
-			m.resetFunc(ent.value.Load().(V))
+	currentCycle := m.cycle.Load()
+
+	m.m.Range(func(key, value any) bool {
+		ent := value.(*entry)
+		c := ent.cycle.Load()
+		if currentCycle >= c+2 {
+			m.m.Delete(key)
 			return true
-		})
-	}
+		}
+		if m.resetFunc != nil {
+			m.resetFunc(ent.value.Load().(V))
+		}
+		return true
+	})
 }
 
 func (m *lazyLimitedSyncMap[V]) Len() int {
@@ -346,10 +353,6 @@ func (m *lazyLimitedSyncMap[V]) Range(f func(key, value any) bool) {
 		c := ent.cycle.Load()
 		if c == currentCycle {
 			return f(key, ent.value.Load())
-		}
-		// Cleanup entries older than 1 cycles
-		if currentCycle >= c+2 {
-			m.m.Delete(key)
 		}
 		return true
 	})
