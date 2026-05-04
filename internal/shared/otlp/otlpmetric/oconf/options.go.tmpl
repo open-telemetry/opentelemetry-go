@@ -52,25 +52,15 @@ type (
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 	SignalConfig struct {
-<<<<<<< HEAD
-		Endpoint    string
-		Insecure    bool
-		TLSCfg      *tls.Config
-		Headers     map[string]string
-		Compression Compression
-		Encoding    Encoding
-		Timeout     time.Duration
-		URLPath     string
-=======
 		Endpoint       string
 		Insecure       bool
 		TLSCfg         *tls.Config
 		Headers        map[string]string
 		Compression    Compression
+		Encoding       Encoding
 		MaxRequestSize int
 		Timeout        time.Duration
 		URLPath        string
->>>>>>> main
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -105,7 +95,7 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultMetricsPath,
 			Compression:    NoCompression,
-			Encoding:    EncodingProtobuf,
+			Encoding:       EncodingProtobuf,
 			MaxRequestSize: DefaultMaxRequestSize,
 			Timeout:        DefaultTimeout,
 
