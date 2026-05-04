@@ -870,6 +870,7 @@ func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...
     }
     attrs := attrPool.Get().(*[]attribute.KeyValue)
     defer func() {
+		clear(*attrs)         // Clear references to strings/etc to let GC collect them.
         *attrs = (*attrs)[:0] // Reset.
         attrPool.Put(attrs)
     }()
@@ -880,6 +881,7 @@ func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...
 
 	addOpt := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*addOpt)
 		*addOpt = (*addOpt)[:0]
 		addOptPool.Put(addOpt)
 	}()
