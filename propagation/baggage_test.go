@@ -12,9 +12,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 )
+
+const maxBytesPerBaggageString = 8192
 
 type property struct {
 	Key, Value string
@@ -161,18 +164,29 @@ func generateMembers(n int, prefix string) members {
 	return m
 }
 
+// generateFixedWidthBaggageHeader creates a baggage header where every member
+// has the same byte length, ensuring deterministic String() size regardless of
+// which members baggage.New() keeps after map-order truncation.
+// Each member is "prefixNN=vNN" with zero-padded indices.
+func generateFixedWidthBaggageHeader(n int, prefix string) string {
+	parts := make([]string, n)
+	for i := range parts {
+		parts[i] = fmt.Sprintf("%s%02d=v%02d", prefix, i, i)
+	}
+	return strings.Join(parts, ",")
+}
+
 func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 	// W3C Baggage spec limits: https://www.w3.org/TR/baggage/#limits
 	const maxMembers = 64
-	const maxBytesPerBaggageString = 8192
 
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
-		name         string
-		headers      []string
-		want         members
-		wantCount    int // Used when want is nil and we only care about count.
-		wantMaxBytes int // Used to check that baggage size doesn't exceed limit.
+		name      string
+		headers   []string
+		want      members
+		wantCount int // Used when want is nil and we only care about count.
+		wantBytes int // Used to check exact baggage size when want is nil.
 	}{
 		{
 			name:    "non conflicting headers",
@@ -239,13 +253,13 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 		{
 			name: "multiple headers exceeds total max members limit keeps 64",
 			headers: []string{
-				generateBaggageHeader(maxMembers/2, "a"),
-				generateBaggageHeader(maxMembers/2, "b"),
-				generateBaggageHeader(1, "c"),
+				generateFixedWidthBaggageHeader(maxMembers/2, "a"),
+				generateFixedWidthBaggageHeader(maxMembers/2, "b"),
+				generateFixedWidthBaggageHeader(1, "c"),
 			},
-			want:         nil, // Non-deterministic truncation by baggage.New()
-			wantCount:    maxMembers,
-			wantMaxBytes: maxBytesPerBaggageString,
+			want:      nil, // Non-deterministic truncation by baggage.New()
+			wantCount: maxMembers,
+			wantBytes: maxMembers*7 + maxMembers - 1, // 64 uniform "xNN=vNN" members + 63 commas
 		},
 		{
 			name:    "single header at max bytes limit",
@@ -265,9 +279,11 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 			},
-			want:         nil, // Non-deterministic: either k or y will be kept
-			wantCount:    1,   // Only one member fits
-			wantMaxBytes: maxBytesPerBaggageString,
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
+			},
+			wantCount: 1, // Only one member fits
+			wantBytes: maxBytesPerBaggageString,
 		},
 		{
 			name: "multiple headers within total max bytes",
@@ -282,6 +298,45 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
+			name: "empty headers between non-empty do count comma separators",
+			headers: []string{
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				"",
+				"",
+				// The comma as the separator of member would take 1 byte.
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
+			},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
+			},
+		},
+		{
+			name: "empty headers before non-empty do count comma separators",
+			headers: []string{
+				// The comma as the separator of member would take 1 byte.
+				"",
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				// The comma as the separator of member would take 1 byte.
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
+			},
+			want: members{
+				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
+			},
+		},
+		{
+			name: "multiple headers exceed total max bytes due to comma separator",
+			headers: []string{
+				// Two equal halves: each is exactly maxBytesPerBaggageString/2 bytes.
+				// Without the comma separator: 4096 + 4096 = 8192 (at limit).
+				// With the comma separator: 4096 + 1 + 4096 = 8193 (over limit).
+				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
+			},
+			want:      nil,
+			wantCount: 1,
+			wantBytes: maxBytesPerBaggageString / 2,
+		},
+		{
 			name: "many headers exceeding member limit caps collection early",
 			headers: func() []string {
 				// 100 headers with 10 members each = 1000 total members.
@@ -289,15 +344,15 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				// New() truncates to exactly maxMembers.
 				h := make([]string, 100)
 				for i := range h {
-					h[i] = generateBaggageHeader(10, fmt.Sprintf("h%d_k", i))
+					h[i] = generateFixedWidthBaggageHeader(10, fmt.Sprintf("h%02d_k", i))
 				}
 				return h
 			}(),
-			wantCount:    maxMembers,
-			wantMaxBytes: maxBytesPerBaggageString,
+			wantCount: maxMembers,
+			wantBytes: maxMembers*11 + maxMembers - 1, // 64 uniform "hNN_kNN=vNN" members + 63 commas
 		},
 		{
-			name: "skips large member that exceeds byte limit and continues",
+			name: "stops processing when aggregate byte budget exceeded",
 			headers: []string{
 				"small1=v1,small2=v2",
 				"large=" + strings.Repeat("x", maxBytesPerBaggageString),
@@ -306,7 +361,6 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want: members{
 				{Key: "small1", Value: "v1"},
 				{Key: "small2", Value: "v2"},
-				{Key: "small3", Value: "v3"},
 			},
 		},
 	}
@@ -324,10 +378,9 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			if tt.want != nil {
 				expected := tt.want.Baggage(t)
 				assert.Equal(t, expected, got)
-			} else if tt.wantCount > 0 {
-				// If only count is specified, verify count and byte limit
+			} else {
 				assert.Equal(t, tt.wantCount, got.Len(), "expected member count")
-				assert.LessOrEqual(t, len(got.String()), tt.wantMaxBytes, "baggage size exceeds limit")
+				assert.Len(t, got.String(), tt.wantBytes, "expected baggage size")
 			}
 		})
 	}
@@ -496,5 +549,93 @@ func TestBaggagePropagatorGetAllKeys(t *testing.T) {
 	got := propagator.Fields()
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("GetAllKeys: -got +want %s", diff)
+	}
+}
+
+func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
+	prop := propagation.Baggage{}
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+	// Set a single baggage header exceeding 8192 bytes.
+	req.Header.Set("baggage", "key="+strings.Repeat("v", maxBytesPerBaggageString))
+
+	ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
+	got := baggage.FromContext(ctx)
+	assert.Equal(t, 0, got.Len(), "oversized header should result in empty baggage")
+}
+
+type errHandler struct {
+	err error
+}
+
+func (e *errHandler) Handle(err error) { e.err = err }
+
+func TestExtractManyBaggageHeader(t *testing.T) {
+	tests := []struct {
+		name       string
+		headers    func() []string
+		want       func() members
+		wantErrStr []string
+	}{
+		{
+			name: "aggregate byte budget exceeded",
+			headers: func() []string {
+				// 100 headers, each ~195 bytes. Total: ~19.5KB, well over 8192.
+				h := make([]string, 100)
+				for i := range 100 {
+					h[i] = fmt.Sprintf("k%d=%s", i, strings.Repeat("v", 190))
+				}
+				return h
+			},
+			want: func() members {
+				m := make(members, 42)
+				for i := range 42 {
+					m[i] = member{Key: fmt.Sprintf("k%d", i), Value: strings.Repeat("v", 190)}
+				}
+				return m
+			},
+			wantErrStr: []string{"aggregate header size 8374 exceeds 8192 byte limit"},
+		},
+		{
+			name: "too many invalid headers triggers error cap",
+			headers: func() []string {
+				// 10 invalid headers (no '=' delimiter) followed by 1 valid.
+				// Each invalid header produces 1 parse error from baggage.Parse.
+				// maxParseErrors=5, so 5 errors are kept and 5 are summarized.
+				h := make([]string, 11)
+				for i := range 10 {
+					h[i] = fmt.Sprintf("bad%d", i)
+				}
+				h[10] = "good=val"
+				return h
+			},
+			want: func() members {
+				return members{{Key: "good", Value: "val"}}
+			},
+			wantErrStr: []string{"invalid baggage list-member", "and 5 more error(s)"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalErrorHandler := otel.GetErrorHandler()
+			eh := &errHandler{}
+			otel.SetErrorHandler(eh)
+			t.Cleanup(func() { otel.SetErrorHandler(originalErrorHandler) })
+
+			prop := propagation.Baggage{}
+			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+			for _, h := range tt.headers() {
+				req.Header.Add("baggage", h)
+			}
+
+			ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
+			got := baggage.FromContext(ctx)
+
+			assert.Equal(t, tt.want().Baggage(t), got)
+			assert.Error(t, eh.err)
+			for _, s := range tt.wantErrStr {
+				assert.Contains(t, eh.err.Error(), s)
+			}
+		})
 	}
 }
