@@ -151,7 +151,7 @@ func (r *FixedSizeReservoir) reset() {
 		r.next = math.MaxInt64
 		r.w = 0
 		return
-    }
+	}
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
