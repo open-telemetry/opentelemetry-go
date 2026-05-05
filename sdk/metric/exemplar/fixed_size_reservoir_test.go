@@ -24,16 +24,16 @@ func TestNewFixedSizeReservoir(t *testing.T) {
 }
 
 func TestNewFixedSizeReservoirZeroSize(t *testing.T) {
-    r := NewFixedSizeReservoir(0)
-    require.NotNil(t, r)
+	r := NewFixedSizeReservoir(0)
+	require.NotNil(t, r)
 
-    // Offer should be a no-op and not panic.
-    r.Offer(t.Context(), staticTime, NewValue(float64(10)), nil)
+	// Offer should be a no-op and not panic.
+	r.Offer(t.Context(), staticTime, NewValue(float64(10)), nil)
 
-    // Collect should leave dest empty.
-    dest := []Exemplar{{}} // pre-filled sentinel
-    r.Collect(&dest)
-    assert.Empty(t, dest)
+	// Collect should leave dest empty.
+	dest := []Exemplar{{}} // pre-filled sentinel
+	r.Collect(&dest)
+	assert.Empty(t, dest)
 }
 
 func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
