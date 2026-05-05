@@ -146,6 +146,12 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 // reset resets r to the initial state.
 func (r *FixedSizeReservoir) reset() {
+	if cap(r.measurements) == 0 {
+		r.count = 0
+		r.next = math.MaxInt64
+		r.w = 0
+		return
+    }
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
