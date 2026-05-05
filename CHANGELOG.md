@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+- Add experimental `FixedSizeRoundRobinReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar/x`. Use this for better concurrent performance than `FixedSizeReservoir`, but with some bias due to using round-robin. (#8305)
 
 ### Fixed
 
