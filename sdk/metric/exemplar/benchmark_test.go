@@ -23,7 +23,7 @@ func BenchmarkFixedSizeReservoirOffer(b *testing.B) {
 			// number of collect calls.
 			if i%100 == 99 {
 				reservoir.mu.Lock()
-				reservoir.reset()
+				reservoir.nt.reset()
 				reservoir.mu.Unlock()
 			}
 			i++
