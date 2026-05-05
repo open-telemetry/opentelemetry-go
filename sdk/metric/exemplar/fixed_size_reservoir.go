@@ -146,8 +146,6 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 // reset resets r to the initial state.
 func (r *FixedSizeReservoir) reset() {
-	
-
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
@@ -170,8 +168,6 @@ func (r *FixedSizeReservoir) reset() {
 // advance updates the count at which the offered measurement will overwrite an
 // existing exemplar.
 func (r *FixedSizeReservoir) advance() {
-
-
 	// Calculate the next value in the random number series.
 	//
 	// The current value of r.w is based on the max of a distribution of random
