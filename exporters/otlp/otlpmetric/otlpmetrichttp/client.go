@@ -35,7 +35,7 @@ type client struct {
 	// req is cloned for every upload the client makes.
 	req            *http.Request
 	compression    Compression
-	encoding    Encoding
+	encoding       Encoding
 	maxRequestSize int
 	requestFunc    retry.RequestFunc
 	httpClient     *http.Client
@@ -146,7 +146,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 
 	return &client{
 		compression:    Compression(cfg.Metrics.Compression),
-		encoding:    encoding,
+		encoding:       encoding,
 		maxRequestSize: cfg.Metrics.MaxRequestSize,
 		req:            req,
 		requestFunc:    cfg.RetryConfig.RequestFunc(evaluate),
