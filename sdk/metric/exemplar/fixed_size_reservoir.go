@@ -146,12 +146,7 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 // reset resets r to the initial state.
 func (r *FixedSizeReservoir) reset() {
-	if cap(r.measurements) == 0 {
-		r.count = 0
-		r.next = math.MaxInt64
-		r.w = 0
-		return
-	}
+	
 
 	// This resets the number of exemplars known.
 	r.count = 0
@@ -175,9 +170,7 @@ func (r *FixedSizeReservoir) reset() {
 // advance updates the count at which the offered measurement will overwrite an
 // existing exemplar.
 func (r *FixedSizeReservoir) advance() {
-	if cap(r.measurements) == 0 {
-		return
-	}
+
 
 	// Calculate the next value in the random number series.
 	//
@@ -209,6 +202,10 @@ func (r *FixedSizeReservoir) advance() {
 //
 // The Reservoir state is preserved after this call.
 func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
+	if cap(r.measurements) == 0 {
+		*dest = (*dest)[:0]
+		return
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.storage.Collect(dest)

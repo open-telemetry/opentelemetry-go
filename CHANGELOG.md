@@ -59,7 +59,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` to safely handle non-positive sizes.
-  Capacity checks in `Offer()`, `reset()`, and `advance()` methods prevent panics and ensure safe no-op behavior when reservoir size is zero or negative. (#8232)
+  Capacity checks in `Offer()`, `Collect()` methods prevent panics and ensure safe no-op behavior when reservoir size is zero or negative. (#8232)
 
 - Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`.
   The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
