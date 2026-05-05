@@ -293,7 +293,8 @@ func TestClientJSONEncodingUsesNumericEnums(t *testing.T) {
 	cl, err := newClient(cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		require.NoError(t, cl.Shutdown(t.Context()))
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, cl.Shutdown(context.Background()))
 	})
 
 	wantAgg := mpb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE
