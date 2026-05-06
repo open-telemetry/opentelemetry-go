@@ -57,7 +57,7 @@ func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
 	if cap(r.measurements) > 0 {
 		r.reset()
 	}
-    return r
+	return r
 }
 
 // randomFloat64 returns, as a float64, a uniform pseudo-random number in the
