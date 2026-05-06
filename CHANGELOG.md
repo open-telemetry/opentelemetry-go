@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` now samples Exemplars to distribute them evenly over time. (#8306)
+
 ### Fixed
 
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
