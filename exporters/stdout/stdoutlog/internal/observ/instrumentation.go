@@ -183,11 +183,11 @@ type ExportOp struct {
 // If err is not nil, End records failed log exports as count-success with the
 // error.type attribute set from err.
 func (e ExportOp) End(success int64, err error) {
-	inflightSpansEnable := e.inst.inflight.Enabled(e.ctx)
-	exportedSpansEnable := e.inst.exported.Enabled(e.ctx)
+	inflightLogsEnable := e.inst.inflight.Enabled(e.ctx)
+	exportedLogsEnable := e.inst.exported.Enabled(e.ctx)
 	opDurationEnable := e.inst.duration.Enabled(e.ctx)
 
-	if !inflightSpansEnable && !exportedSpansEnable && !opDurationEnable {
+	if !inflightLogsEnable && !exportedLogsEnable && !opDurationEnable {
 		return
 	}
 
@@ -195,16 +195,16 @@ func (e ExportOp) End(success int64, err error) {
 	defer put(addOptPool, addOpt)
 	*addOpt = append(*addOpt, e.inst.setOpt)
 
-	if inflightSpansEnable {
+	if inflightLogsEnable {
 		e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
 	}
 
-	if exportedSpansEnable {
+	if exportedLogsEnable {
 		e.inst.exported.Add(e.ctx, success, *addOpt...)
 	}
 
 	mOpt := e.inst.setOpt
-	if err != nil && exportedSpansEnable {
+	if err != nil && exportedLogsEnable {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
