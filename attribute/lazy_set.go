@@ -42,6 +42,12 @@ func NewLazyFilteredSet(set Set, filter Filter) LazyFilteredSet {
 				dropped = append(dropped, kv)
 			}
 		}
+		if len(dropped) == 0 {
+			return LazyFilteredSet{orig: set, distinct: set.Equivalent()}
+		}
+		if len(kvs) == 0 {
+			return LazyFilteredSet{orig: set, distinct: Distinct{hash: emptySet.hash}, dropped: dropped}
+		}
 		filtered := newSet(kvs)
 		return LazyFilteredSet{orig: set, distinct: filtered.Equivalent(), fallback: &filtered, dropped: dropped}
 	}

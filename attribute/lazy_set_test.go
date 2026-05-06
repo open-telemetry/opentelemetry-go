@@ -54,7 +54,7 @@ func TestLazyFilteredSetVariousSizes(t *testing.T) {
 		size   int
 		filter func(attribute.KeyValue) bool
 	}{
-		// Sizes 1-10 use default filter (accept all) to guarantee full coverage of switch cases
+		// Sizes 1-10 use the default even-value filter to exercise all switch cases.
 		{name: "Size1", size: 1},
 		{name: "Size2", size: 2},
 		{name: "Size3", size: 3},
