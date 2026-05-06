@@ -8,14 +8,6 @@ import (
 	"math/rand/v2"
 )
 
-func newNextTracker(k int) *nextTracker {
-	nt := &nextTracker{
-		k: k,
-	}
-	nt.reset()
-	return nt
-}
-
 // nextTracker tracks the next measurement that should be sampled using Algorithm L.
 type nextTracker struct {
 	// count is the number of measurement seen.
@@ -41,9 +33,9 @@ func (t *nextTracker) reset() {
 	// t.next below.
 	t.next = int64(t.k) - 1
 
-	// Initial random number in the series used to generate r.next.
+	// Initial random number in the series used to generate t.next.
 	//
-	// This is set before r.advance to reset or initialize the random number
+	// This is set before t.advance to reset or initialize the random number
 	// series. Without doing so it would always be 0 or never restart a new
 	// random number series.
 	//
@@ -60,27 +52,27 @@ func (t *nextTracker) advance() {
 	// Use the current random number in the series to calculate the count of the
 	// next measurement that will be stored.
 	//
-	// Given 0 < r.w < 1, each iteration will result in subsequent r.w being
+	// Given 0 < t.w < 1, each iteration will result in subsequent t.w being
 	// smaller. This translates here into the next next being selected against
 	// a distribution with a higher mean (i.e. the expected value will increase
 	// and replacements become less likely)
 	//
-	// Important to note, the new r.next will always be at least 1 more than
-	// the last r.next.
+	// Important to note, the new t.next will always be at least 1 more than
+	// the last t.next.
 	t.next += int64(math.Log(randomFloat64())/math.Log(1-t.w)) + 1
 
 	// Calculate the next value in the random number series.
 	//
-	// The current value of r.w is based on the max of a distribution of random
+	// The current value of t.w is based on the max of a distribution of random
 	// numbers (i.e. `w = max(u_1,u_2,...,u_k)` for `k` equal to the capacity
 	// of the storage and each `u` in the interval (0,w)). To calculate the
-	// next r.w we use the fact that when the next exemplar is selected to be
+	// next t.w we use the fact that when the next exemplar is selected to be
 	// included in the storage an existing one will be dropped, and the
-	// corresponding random number in the set used to calculate r.w will also
+	// corresponding random number in the set used to calculate t.w will also
 	// be replaced. The replacement random number will also be within (0,w),
-	// therefore the next r.w will be based on the same distribution (i.e.
-	// `max(u_1,u_2,...,u_k)`). Therefore, we can sample the next r.w by
-	// computing the next random number `u` and take r.w as `w * u^(1/k)`.
+	// therefore the next t.w will be based on the same distribution (i.e.
+	// `max(u_1,u_2,...,u_k)`). Therefore, we can sample the next t.w by
+	// computing the next random number `u` and take t.w as `w * u^(1/k)`.
 	t.w *= math.Exp(math.Log(randomFloat64()) / float64(t.k))
 }
 
