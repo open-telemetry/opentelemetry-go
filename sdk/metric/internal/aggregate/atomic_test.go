@@ -246,13 +246,13 @@ func TestLimitedSyncMapOverflow(t *testing.T) {
 	b := attribute.NewSet(attribute.String("key", "val2"))
 
 	// Store a
-	val := m.LoadOrStoreAttr(a, nil, func(_ attribute.Set) any {
+	val := m.LoadOrStoreAttr(attribute.NewLazyFilteredSet(a, nil), func(_ attribute.Set) any {
 		return "a"
 	})
 	assert.Equal(t, "a", val)
 
 	// Try to store b (should fail because limit is 2, so 1 user set + 1 overflow)
-	val = m.LoadOrStoreAttr(b, nil, func(attr attribute.Set) any {
+	val = m.LoadOrStoreAttr(attribute.NewLazyFilteredSet(b, nil), func(attr attribute.Set) any {
 		if attr == overflowSet {
 			return "overflow"
 		}

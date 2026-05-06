@@ -91,18 +91,10 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, a attribute.Set, fltr attribute.Filter) {
+				meas := b.filter(func(_ context.Context, v N, lazySet attribute.LazyFilteredSet) {
 					assert.Equal(t, value, v, "measured incorrect value")
-					var gotF attribute.Set
-					if fltr != nil {
-						gotF, _ = a.Filter(fltr)
-					} else {
-						gotF = a
-					}
-					assert.Equal(t, wantF, gotF, "measured incorrect filtered attributes")
-
-					gotD := getDroppedAttributes(a, fltr)
-					assert.ElementsMatch(t, wantD, gotD, "measured incorrect dropped attributes")
+					assert.Equal(t, wantF, lazySet.Filtered(), "measured incorrect filtered attributes")
+					assert.ElementsMatch(t, wantD, lazySet.Dropped(), "measured incorrect dropped attributes")
 				})
 				meas(t.Context(), value, attr)
 			}

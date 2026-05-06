@@ -30,10 +30,8 @@ type lastValueMap[N int64 | float64] struct {
 func (s *lastValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
-	lazySet := attribute.NewLazyFilteredSet(attr, fltr)
 	lv := s.values.LoadOrStoreAttr(lazySet, func(a attribute.Set) any {
 		r := s.newRes(a)
 		_, isDrop := r.(*dropRes[N])
@@ -85,12 +83,11 @@ type deltaLastValue[N int64 | float64] struct {
 func (s *deltaLastValue[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, attr, fltr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, lazySet)
 }
 
 func (s *deltaLastValue[N]) collect(

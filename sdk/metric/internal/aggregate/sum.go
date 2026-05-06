@@ -28,10 +28,8 @@ type sumValueMap[N int64 | float64] struct {
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
-	lazySet := attribute.NewLazyFilteredSet(attr, fltr)
 	sv := s.values.LoadOrStoreAttr(lazySet, func(a attribute.Set) any {
 		r := s.newRes(a)
 		_, isDrop := r.(*dropRes[N])
@@ -87,12 +85,11 @@ type deltaSum[N int64 | float64] struct {
 func (s *deltaSum[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, attr, fltr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, lazySet)
 }
 
 func (s *deltaSum[N]) collect(

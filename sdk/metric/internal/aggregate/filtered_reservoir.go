@@ -22,13 +22,13 @@ type FilteredExemplarReservoir[N int64 | float64] interface {
 	// The passed ctx needs to contain any baggage or span that were active
 	// when the measurement was made. This information may be used by the
 	// Reservoir in making a sampling decision.
-	Offer(ctx context.Context, val N, attr attribute.Set, fltr attribute.Filter)
+	Offer(ctx context.Context, val N, lazySet attribute.LazyFilteredSet)
 	// Collect returns all the held exemplars in the reservoir.
 	Collect(dest *[]exemplar.Exemplar)
 }
 
 type lazyReservoir interface {
-	OfferLazy(context.Context, time.Time, exemplar.Value, attribute.Set, attribute.Filter)
+	OfferLazy(context.Context, time.Time, exemplar.Value, attribute.LazyFilteredSet)
 }
 
 // filteredExemplarReservoir handles the pre-sampled exemplar of measurements made.
@@ -62,8 +62,7 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 func (f *filteredExemplarReservoir[N]) Offer(
 	ctx context.Context,
 	val N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
@@ -73,11 +72,11 @@ func (f *filteredExemplarReservoir[N]) Offer(
 				f.reservoirMux.Lock()
 				defer f.reservoirMux.Unlock()
 			}
-			f.lazyRes.OfferLazy(ctx, ts, exemplar.NewValue(val), attr, fltr)
+			f.lazyRes.OfferLazy(ctx, ts, exemplar.NewValue(val), lazySet)
 			return
 		}
 
-		dropped := getDroppedAttributes(attr, fltr)
+		dropped := lazySet.Dropped()
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
@@ -92,19 +91,4 @@ func (f *filteredExemplarReservoir[N]) Collect(dest *[]exemplar.Exemplar) {
 		defer f.reservoirMux.Unlock()
 	}
 	f.reservoir.Collect(dest)
-}
-
-func getDroppedAttributes(attr attribute.Set, fltr attribute.Filter) []attribute.KeyValue {
-	if fltr == nil {
-		return nil
-	}
-	var dropped []attribute.KeyValue
-	iter := attr.Iter()
-	for iter.Next() {
-		kv := iter.Attribute()
-		if !fltr(kv) {
-			dropped = append(dropped, kv)
-		}
-	}
-	return dropped
 }

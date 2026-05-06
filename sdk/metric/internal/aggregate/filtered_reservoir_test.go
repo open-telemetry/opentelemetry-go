@@ -51,7 +51,7 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			var wg sync.WaitGroup
 			for range 5 {
 				wg.Go(func() {
-					reservoir.Offer(t.Context(), 25, *attribute.EmptySet(), nil)
+					reservoir.Offer(t.Context(), 25, attribute.NewLazyFilteredSet(*attribute.EmptySet(), nil))
 				})
 			}
 			into := []exemplar.Exemplar{}
@@ -138,13 +138,12 @@ func (r *offerLazyReservoir) OfferLazy(
 	ctx context.Context,
 	t time.Time,
 	val exemplar.Value,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	r.Lock()
 	defer r.Unlock()
 	r.offerLazyCalled = true
-	r.base.Offer(ctx, t, val, getDroppedAttributes(attr, fltr))
+	r.base.Offer(ctx, t, val, lazySet.Dropped())
 }
 
 type notConcurrentSafeOfferLazyReservoir struct {
@@ -160,12 +159,11 @@ func (r *notConcurrentSafeOfferLazyReservoir) OfferLazy(
 	_ context.Context,
 	t time.Time,
 	val exemplar.Value,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	r.offerLazyCalled = true
 	r.ex = exemplar.Exemplar{
-		FilteredAttributes: getDroppedAttributes(attr, fltr),
+		FilteredAttributes: lazySet.Dropped(),
 		Time:               t,
 		Value:              val,
 	}

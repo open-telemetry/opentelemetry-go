@@ -229,14 +229,11 @@ type limitedSyncMap struct {
 }
 
 func (m *limitedSyncMap) LoadOrStoreAttr(
-	attr attribute.Set,
-	filter attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 	newValue func(attribute.Set) any,
 ) any {
-	equiv := attr.Equivalent()
-	if filter != nil {
-		equiv = attr.NewDistinctWithFilter(filter)
-	}
+	equiv := lazySet.Distinct()
+
 	actual, loaded := m.Load(equiv)
 	if loaded {
 		return actual
@@ -260,14 +257,11 @@ func (m *limitedSyncMap) LoadOrStoreAttr(
 	}
 
 	var fltrAttr attribute.Set
-	switch {
-	case m.aggLimit > 0 && m.len >= m.aggLimit-1:
+	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
 		equiv = overflowSet.Equivalent()
-	case filter != nil:
-		fltrAttr, _ = attr.Filter(filter)
-	default:
-		fltrAttr = attr
+	} else {
+		fltrAttr = lazySet.Filtered()
 	}
 	actual, loaded = m.LoadOrStore(equiv, newValue(fltrAttr))
 	if !loaded {

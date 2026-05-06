@@ -110,14 +110,13 @@ func (r *FixedSizeReservoir) OfferLazy(
 	ctx context.Context,
 	t time.Time,
 	n Value,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	idx, sampled := r.shouldSample()
 	if sampled {
-		r.store(ctx, idx, t, n, getDroppedAttributes(attr, fltr))
+		r.store(ctx, idx, t, n, lazySet.Dropped())
 	}
 }
 
@@ -171,21 +170,6 @@ func (r *FixedSizeReservoir) shouldSample() (int, bool) {
 		return idx, true
 	}
 	return 0, false
-}
-
-func getDroppedAttributes(attr attribute.Set, fltr attribute.Filter) []attribute.KeyValue {
-	if fltr == nil {
-		return nil
-	}
-	var dropped []attribute.KeyValue
-	iter := attr.Iter()
-	for iter.Next() {
-		kv := iter.Attribute()
-		if !fltr(kv) {
-			dropped = append(dropped, kv)
-		}
-	}
-	return dropped
 }
 
 // reset resets r to the initial state.

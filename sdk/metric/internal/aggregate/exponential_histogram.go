@@ -331,15 +331,12 @@ type expoHistogram[N int64 | float64] struct {
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
 		return
 	}
-
-	lazySet := attribute.NewLazyFilteredSet(attr, fltr)
 	equiv := lazySet.Distinct()
 
 	e.valuesMu.Lock()
@@ -347,12 +344,7 @@ func (e *expoHistogram[N]) measure(
 
 	v, ok := e.values[equiv]
 	if !ok {
-		var fltrAttr attribute.Set
-		if fltr != nil {
-			fltrAttr = lazySet.Filtered()
-		} else {
-			fltrAttr = attr
-		}
+		fltrAttr := lazySet.Filtered()
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
 		equiv = fltrAttr.Equivalent()
 		// If we overflowed, make sure we add to the existing overflow series

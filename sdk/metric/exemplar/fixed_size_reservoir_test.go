@@ -79,7 +79,7 @@ func TestFixedSizeReservoirOfferLazy(t *testing.T) {
 		r1.Offer(ctx, ts, val, []attribute.KeyValue{k1})
 
 		// OfferLazy with full set and filter
-		r2.OfferLazy(ctx, ts, val, set, fltr)
+		r2.OfferLazy(ctx, ts, val, attribute.NewLazyFilteredSet(set, fltr))
 
 		var dest1, dest2 []Exemplar
 		r1.Collect(&dest1)
@@ -94,12 +94,13 @@ func TestFixedSizeReservoirOfferLazy(t *testing.T) {
 
 		ctx := t.Context()
 		ts := time.Now()
+		lazySet := attribute.NewLazyFilteredSet(set, fltr)
 
 		r1.Offer(ctx, ts, NewValue(int64(1)), []attribute.KeyValue{k1})
 		r1.Offer(ctx, ts, NewValue(int64(2)), []attribute.KeyValue{k1})
 
-		r2.OfferLazy(ctx, ts, NewValue(int64(1)), set, fltr)
-		r2.OfferLazy(ctx, ts, NewValue(int64(2)), set, fltr)
+		r2.OfferLazy(ctx, ts, NewValue(int64(1)), lazySet)
+		r2.OfferLazy(ctx, ts, NewValue(int64(2)), lazySet)
 
 		var dest1, dest2 []Exemplar
 		r1.Collect(&dest1)

@@ -109,10 +109,8 @@ type deltaHistogram[N int64 | float64] struct {
 func (s *deltaHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
-	lazySet := attribute.NewLazyFilteredSet(attr, fltr)
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
 	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(lazySet, func(a attribute.Set) any {
@@ -285,10 +283,8 @@ func newCumulativeHistogram[N int64 | float64](
 func (s *cumulativeHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	attr attribute.Set,
-	fltr attribute.Filter,
+	lazySet attribute.LazyFilteredSet,
 ) {
-	lazySet := attribute.NewLazyFilteredSet(attr, fltr)
 	h := s.values.LoadOrStoreAttr(lazySet, func(a attribute.Set) any {
 		r := s.newRes(a)
 		_, isDrop := r.(*dropRes[N])

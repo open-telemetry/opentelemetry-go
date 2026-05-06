@@ -57,17 +57,17 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	return DropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, a attribute.Set, fltr attribute.Filter)
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, lazySet attribute.LazyFilteredSet)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
 		fltr := b.Filter // Copy to make it immutable after assignment.
 		return func(ctx context.Context, n N, a attribute.Set) {
-			f(ctx, n, a, fltr)
+			f(ctx, n, attribute.NewLazyFilteredSet(a, fltr))
 		}
 	}
 	return func(ctx context.Context, n N, a attribute.Set) {
-		f(ctx, n, a, nil)
+		f(ctx, n, attribute.NewLazyFilteredSet(a, nil))
 	}
 }
 
