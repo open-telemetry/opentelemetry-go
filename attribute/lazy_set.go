@@ -81,10 +81,9 @@ func (s LazyFilteredSet) Filtered() Set {
 	kvs := make([]KeyValue, 0, count)
 
 	switch d := s.orig.data.(type) {
-	case [1]KeyValue:
-		if s.mask&1 != 0 {
-			kvs = append(kvs, d[0])
-		}
+	// case [1]KeyValue is unreachable because any set of size 1 will either be
+	// accepted in full (short-circuiting at s.distinct == s.orig.Equivalent())
+	// or rejected in full (short-circuiting at s.mask == 0).
 	case [2]KeyValue:
 		for i := range 2 {
 			if s.mask&(1<<i) != 0 {

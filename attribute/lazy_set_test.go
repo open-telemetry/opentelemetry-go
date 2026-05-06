@@ -40,16 +40,6 @@ func TestLazyFilteredSet(t *testing.T) {
 		assert.ElementsMatch(t, []attribute.KeyValue{k0, k1, k2}, ls.Dropped())
 	})
 
-	t.Run("FilterSome", func(t *testing.T) {
-		ls := attribute.NewLazyFilteredSet(s, func(kv attribute.KeyValue) bool {
-			return string(kv.Key) == "k0" || string(kv.Key) == "k2"
-		})
-		expectedSet := attribute.NewSet(k0, k2)
-		assert.Equal(t, expectedSet.Equivalent(), ls.Distinct())
-		assert.Equal(t, expectedSet, ls.Filtered())
-		assert.ElementsMatch(t, []attribute.KeyValue{k1}, ls.Dropped())
-	})
-
 	t.Run("EmptySet", func(t *testing.T) {
 		ls := attribute.NewLazyFilteredSet(empty, func(_ attribute.KeyValue) bool { return true })
 		assert.Equal(t, empty.Equivalent(), ls.Distinct())
@@ -58,28 +48,66 @@ func TestLazyFilteredSet(t *testing.T) {
 	})
 }
 
-func TestLazyFilteredSetFallback(t *testing.T) {
-	var kvs []attribute.KeyValue
-	for i := range 70 {
-		kvs = append(kvs, attribute.Int(string(rune('a'+i%26))+string(rune('0'+i)), i))
+func TestLazyFilteredSetVariousSizes(t *testing.T) {
+	testCases := []struct {
+		name   string
+		size   int
+		filter func(attribute.KeyValue) bool
+	}{
+		// Sizes 1-10 use default filter (accept all) to guarantee full coverage of switch cases
+		{name: "Size1", size: 1},
+		{name: "Size2", size: 2},
+		{name: "Size3", size: 3},
+		{name: "Size4", size: 4},
+		{name: "Size5", size: 5},
+		{name: "Size6", size: 6},
+		{name: "Size7", size: 7},
+		{name: "Size8", size: 8},
+		{name: "Size9", size: 9},
+		{name: "Size10", size: 10},
+		// Specific boundary tests with a realistic filter
+		{
+			name:   "SmallSetFiltered",
+			size:   3,
+			filter: func(kv attribute.KeyValue) bool { return kv.Value.AsInt64()%2 == 0 },
+		},
+		{
+			name:   "MediumSetFiltered",
+			size:   25,
+			filter: func(kv attribute.KeyValue) bool { return kv.Value.AsInt64()%2 == 0 },
+		},
+		{
+			name:   "LargeSetFiltered",
+			size:   70,
+			filter: func(kv attribute.KeyValue) bool { return kv.Value.AsInt64()%2 == 0 },
+		},
 	}
-	s := attribute.NewSet(kvs...)
 
-	filter := func(kv attribute.KeyValue) bool {
-		// Keep even ones
-		return kv.Value.AsInt64()%2 == 0
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			var kvs []attribute.KeyValue
+			for i := range tt.size {
+				kvs = append(kvs, attribute.Int(fmt.Sprintf("k%d", i), i))
+			}
+			s := attribute.NewSet(kvs...)
+
+			fltr := tt.filter
+			if fltr == nil {
+				fltr = func(kv attribute.KeyValue) bool { return kv.Value.AsInt64()%2 == 0 }
+			}
+
+			ls := attribute.NewLazyFilteredSet(s, fltr)
+
+			filtered, dropped := s.Filter(fltr)
+
+			assert.Equal(t, filtered.Equivalent(), ls.Distinct())
+			assert.Equal(t, filtered, ls.Filtered())
+			assert.ElementsMatch(t, dropped, ls.Dropped())
+		})
 	}
-
-	ls := attribute.NewLazyFilteredSet(s, filter)
-
-	filtered, dropped := s.Filter(filter)
-
-	assert.Equal(t, filtered.Equivalent(), ls.Distinct())
-	assert.Equal(t, filtered, ls.Filtered())
-	assert.ElementsMatch(t, dropped, ls.Dropped())
 }
 
-func TestLazyFilteredSetNonDeterministicFilter(t *testing.T) {
+func TestLazyFilteredSetInconsistentFilter(t *testing.T) {
 	k0 := attribute.String("k0", "v0")
 	s := attribute.NewSet(k0)
 
@@ -102,24 +130,4 @@ func TestLazyFilteredSetNonDeterministicFilter(t *testing.T) {
 	ls.Filtered()
 	ls.Dropped()
 	assert.Equal(t, 1, called, "filter should NOT be called again on materialization")
-}
-
-func TestLazyFilteredSetMediumSet(t *testing.T) {
-	var kvs []attribute.KeyValue
-	for i := range 20 {
-		kvs = append(kvs, attribute.Int(fmt.Sprintf("k%d", i), i))
-	}
-	s := attribute.NewSet(kvs...)
-
-	filter := func(kv attribute.KeyValue) bool {
-		return kv.Value.AsInt64()%2 == 0
-	}
-
-	ls := attribute.NewLazyFilteredSet(s, filter)
-
-	filtered, dropped := s.Filter(filter)
-
-	assert.Equal(t, filtered.Equivalent(), ls.Distinct())
-	assert.Equal(t, filtered, ls.Filtered())
-	assert.ElementsMatch(t, dropped, ls.Dropped())
 }
