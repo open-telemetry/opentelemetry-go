@@ -102,10 +102,10 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 // when the measurement was made. This information may be used by the
 // Reservoir in making a sampling decision.
 //
-// The time t is the time when the measurement was made. The n is the value
-// and attr and fltr are used to compute the dropped (filtered-out)
-// attributes of the measurement. OfferLazy allows the reservoir to only
-// compute dropped attributes if an exemplar is sampled.
+// The time t is the time when the measurement was made. The n is the value,
+// and lazySet is used to obtain the dropped (filtered-out) attributes if
+// the measurement is sampled. OfferLazy avoids computing dropped attributes
+// unless they are needed.
 func (r *FixedSizeReservoir) OfferLazy(
 	ctx context.Context,
 	t time.Time,

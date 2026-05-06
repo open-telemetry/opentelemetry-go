@@ -31,7 +31,18 @@ func NewLazyFilteredSet(set Set, filter Filter) LazyFilteredSet {
 	}
 
 	if set.Len() > 64 {
-		filtered, dropped := set.Filter(filter)
+		var kvs []KeyValue
+		var dropped []KeyValue
+		iter := set.Iter()
+		for iter.Next() {
+			kv := iter.Attribute()
+			if filter(kv) {
+				kvs = append(kvs, kv)
+			} else {
+				dropped = append(dropped, kv)
+			}
+		}
+		filtered := newSet(kvs)
 		return LazyFilteredSet{orig: set, distinct: filtered.Equivalent(), fallback: &filtered, dropped: dropped}
 	}
 

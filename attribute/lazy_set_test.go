@@ -108,26 +108,47 @@ func TestLazyFilteredSetVariousSizes(t *testing.T) {
 }
 
 func TestLazyFilteredSetInconsistentFilter(t *testing.T) {
-	k0 := attribute.String("k0", "v0")
-	s := attribute.NewSet(k0)
-
-	called := 0
-	filter := func(_ attribute.KeyValue) bool {
-		called++
-		return called == 1 // True only on first call
+	testCases := []struct {
+		name string
+		size int
+	}{
+		{
+			name: "SmallSet",
+			size: 1,
+		},
+		{
+			name: "LargeSet",
+			size: 70,
+		},
 	}
 
-	ls := attribute.NewLazyFilteredSet(s, filter)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			var kvs []attribute.KeyValue
+			for i := range tt.size {
+				kvs = append(kvs, attribute.Int(fmt.Sprintf("k%d", i), i))
+			}
+			s := attribute.NewSet(kvs...)
 
-	filtered := ls.Filtered()
-	dropped := ls.Dropped()
+			called := 0
+			filter := func(_ attribute.KeyValue) bool {
+				called++
+				return called <= tt.size // True only on first pass
+			}
 
-	assert.Equal(t, 1, called, "filter should be called exactly once per attribute")
+			ls := attribute.NewLazyFilteredSet(s, filter)
 
-	assert.Equal(t, attribute.NewSet(k0), filtered)
-	assert.Empty(t, dropped)
+			filtered := ls.Filtered()
+			dropped := ls.Dropped()
 
-	ls.Filtered()
-	ls.Dropped()
-	assert.Equal(t, 1, called, "filter should NOT be called again on materialization")
+			assert.Equal(t, tt.size, called, "filter should be called exactly once per attribute")
+
+			assert.Equal(t, s, filtered)
+			assert.Empty(t, dropped)
+
+			ls.Filtered()
+			ls.Dropped()
+			assert.Equal(t, tt.size, called, "filter should NOT be called again on materialization")
+		})
+	}
 }
