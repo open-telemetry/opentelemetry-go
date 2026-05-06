@@ -37,7 +37,8 @@ type bucket struct {
 func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 	buckets := make([]bucket, len(bounds)+1)
 	for i := range buckets {
-		buckets[i].nt = *newNextTracker(1)
+		buckets[i].nt.k = 1
+		buckets[i].nt.reset()
 	}
 	return &HistogramReservoir{
 		bounds:  bounds,
