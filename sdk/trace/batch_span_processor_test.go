@@ -43,7 +43,18 @@ type testBatchExporter struct {
 	droppedCount  int
 	idx           int
 	err           error
+	sizer         BatchSpanProcessorSizer
 }
+
+type testTraceSizer struct {
+	unit    BatchSpanProcessorSizerType
+	batch   func([]ReadOnlySpan) int
+	perItem func(ReadOnlySpan) int
+}
+
+func (s testTraceSizer) Type() BatchSpanProcessorSizerType  { return s.unit }
+func (s testTraceSizer) BatchSize(spans []ReadOnlySpan) int { return s.batch(spans) }
+func (s testTraceSizer) ItemSize(span ReadOnlySpan) int     { return s.perItem(span) }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
 	t.mu.Lock()
@@ -72,6 +83,10 @@ func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpa
 func (t *testBatchExporter) Shutdown(context.Context) error {
 	t.shutdownCount++
 	return nil
+}
+
+func (t *testBatchExporter) BatchSpanProcessorExportSizer() BatchSpanProcessorSizer {
+	return t.sizer
 }
 
 func (t *testBatchExporter) len() int {
@@ -297,6 +312,122 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBatchSpanProcessorMaxExportBatchBytes(t *testing.T) {
+	t.Run("Split", func(t *testing.T) {
+		te := testBatchExporter{}
+		tp := basicTracerProvider(t)
+		bsp := NewBatchSpanProcessor(
+			&te,
+			WithBatchTimeout(time.Hour),
+			WithMaxQueueSize(10),
+			WithMaxExportBatchSize(5),
+			WithExportSizer(testTraceSizer{
+				unit: BatchSpanProcessorSizerTypeBytes,
+				batch: func(spans []ReadOnlySpan) int {
+					size := 0
+					for _, span := range spans {
+						size += len(span.Name())
+					}
+					return size
+				},
+				perItem: func(span ReadOnlySpan) int { return len(span.Name()) },
+			}),
+		)
+		tp.RegisterSpanProcessor(bsp)
+		tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytes")
+
+		for _, name := range []string{"aa", "bbb", "c", "dddd"} {
+			_, span := tr.Start(t.Context(), name)
+			span.End()
+		}
+
+		require.NoError(t, bsp.ForceFlush(t.Context()))
+
+		assert.Equal(t, 4, te.len())
+		assert.Equal(t, []int{2, 2}, te.sizes)
+	})
+
+	t.Run("DropOversized", func(t *testing.T) {
+		orig := otel.GetErrorHandler()
+		t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+		var errs []error
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			errs = append(errs, err)
+		}))
+
+		te := testBatchExporter{}
+		tp := basicTracerProvider(t)
+		bsp := NewBatchSpanProcessor(
+			&te,
+			WithBatchTimeout(time.Hour),
+			WithMaxQueueSize(10),
+			WithMaxExportBatchSize(3),
+			WithExportSizer(testTraceSizer{
+				unit: BatchSpanProcessorSizerTypeBytes,
+				batch: func(spans []ReadOnlySpan) int {
+					size := 0
+					for _, span := range spans {
+						size += len(span.Name())
+					}
+					return size
+				},
+				perItem: func(span ReadOnlySpan) int { return len(span.Name()) },
+			}),
+		)
+		tp.RegisterSpanProcessor(bsp)
+		tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytesOversized")
+
+		for _, name := range []string{"four", "a", "bb"} {
+			_, span := tr.Start(t.Context(), name)
+			span.End()
+		}
+
+		require.NoError(t, bsp.ForceFlush(t.Context()))
+
+		assert.Equal(t, 2, te.len())
+		assert.Equal(t, []int{2}, te.sizes)
+		require.Len(t, errs, 1)
+		assert.Contains(t, errs[0].Error(), "dropping span larger than max export batch size")
+	})
+}
+
+func TestBatchSpanProcessorExportBatchSizeUnitBytes(t *testing.T) {
+	te := testBatchExporter{
+		sizer: testTraceSizer{
+			unit: BatchSpanProcessorSizerTypeBytes,
+			batch: func(spans []ReadOnlySpan) int {
+				size := 0
+				for _, span := range spans {
+					size += len(span.Name())
+				}
+				return size
+			},
+			perItem: func(span ReadOnlySpan) int { return len(span.Name()) },
+		},
+	}
+	tp := basicTracerProvider(t)
+	bsp := NewBatchSpanProcessor(
+		&te,
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(10),
+		WithExportBatchSizeUnit(BatchSpanProcessorSizerTypeBytes),
+		WithMaxExportBatchSize(5),
+	)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("BatchSpanProcessorExportBatchSizeUnitBytes")
+
+	for _, name := range []string{"aa", "bbb", "c", "dddd"} {
+		_, span := tr.Start(t.Context(), name)
+		span.End()
+	}
+
+	require.NoError(t, bsp.ForceFlush(t.Context()))
+
+	assert.Equal(t, 4, te.len())
+	assert.Equal(t, []int{2, 2}, te.sizes)
 }
 
 type stuckExporter struct {

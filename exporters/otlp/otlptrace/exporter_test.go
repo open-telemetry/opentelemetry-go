@@ -12,6 +12,7 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
@@ -48,4 +49,11 @@ func TestExporterClientError(t *testing.T) {
 	assert.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
 
 	assert.NoError(t, exp.Shutdown(ctx))
+}
+
+func TestExporterBatchSpanProcessorExportSizer(t *testing.T) {
+	exp := otlptrace.NewUnstarted(&client{})
+	sizer := exp.BatchSpanProcessorExportSizer()
+	assert.Equal(t, tracesdk.BatchSpanProcessorSizerTypeBytes, sizer.Type())
+	assert.Positive(t, sizer.BatchSize(tracetest.SpanStubs{{Name: "span"}}.Snapshots()))
 }

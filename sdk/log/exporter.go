@@ -98,6 +98,50 @@ func (c chunkExporter) Export(ctx context.Context, records []Record) error {
 	return nil
 }
 
+// sizedExporter wraps an Exporter's Export method so it is called with export
+// payloads that do not exceed a maximum configured size in the selected unit.
+type sizedExporter struct {
+	Exporter
+
+	size  int
+	sizer BatchExportSizer
+}
+
+func newSizedExporter(exporter Exporter, size int, sizer BatchExportSizer) Exporter {
+	if size <= 0 || sizer == nil {
+		return exporter
+	}
+	return &sizedExporter{Exporter: exporter, size: size, sizer: sizer}
+}
+
+func (e *sizedExporter) Export(ctx context.Context, records []Record) error {
+	for start := 0; start < len(records); {
+		if itemSize := e.sizer.ItemSize(records[start]); itemSize > e.size {
+			otel.Handle(
+				fmt.Errorf(
+					"dropping log record larger than max export batch size: %d %s > %d %s",
+					itemSize,
+					e.sizer.Type(),
+					e.size,
+					e.sizer.Type(),
+				),
+			)
+			start++
+			continue
+		}
+
+		end := start + 1
+		for end < len(records) && e.sizer.BatchSize(records[start:end+1]) <= e.size {
+			end++
+		}
+		if err := e.Exporter.Export(ctx, records[start:end]); err != nil {
+			return err
+		}
+		start = end
+	}
+	return nil
+}
+
 // timeoutExporter wraps an Exporter and ensures any call to Export will have a
 // timeout for the context.
 type timeoutExporter struct {

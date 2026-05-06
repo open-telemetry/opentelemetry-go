@@ -39,6 +39,7 @@ type testExporter struct {
 	inputMu sync.Mutex
 	input   chan instruction
 	done    chan struct{}
+	sizer   BatchExportSizer
 }
 
 func newTestExporter(err error) *testExporter {
@@ -127,6 +128,10 @@ func (e *testExporter) ForceFlushN() int {
 	return int(e.forceFlushN.Load())
 }
 
+func (e *testExporter) BatchProcessorExportSizer() BatchExportSizer {
+	return e.sizer
+}
+
 func TestChunker(t *testing.T) {
 	t.Run("ZeroSize", func(t *testing.T) {
 		exp := newTestExporter(nil)
@@ -184,6 +189,87 @@ func TestChunker(t *testing.T) {
 		c = newChunkExporter(exp, 10)
 		err = c.Export(ctx, records)
 		assert.ErrorIs(t, err, assert.AnError, "with chunking")
+	})
+}
+
+func TestByteSizeExporter(t *testing.T) {
+	measure := func(records []Record) int {
+		size := 0
+		for _, record := range records {
+			size += len(record.Body().AsString())
+		}
+		return size
+	}
+
+	t.Run("ZeroSize", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 0, testLogSizer{
+			unit:    BatchExportSizerTypeBytes,
+			batch:   func(records []Record) int { return measure(records) },
+			perItem: func(record Record) int { return measure([]Record{record}) },
+		})
+		assert.Same(t, exp, e)
+	})
+
+	t.Run("NilSizer", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 10, nil)
+		assert.Same(t, exp, e)
+	})
+
+	t.Run("Split", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 5, testLogSizer{
+			unit:    BatchExportSizerTypeBytes,
+			batch:   func(records []Record) int { return measure(records) },
+			perItem: func(record Record) int { return measure([]Record{record}) },
+		})
+
+		records := make([]Record, 4)
+		for i, body := range []string{"aa", "bbb", "c", "dddd"} {
+			records[i].SetBody(log.StringValue(body))
+		}
+
+		require.NoError(t, e.Export(t.Context(), records))
+
+		got := exp.Records()
+		require.Len(t, got, 2)
+		assert.Len(t, got[0], 2)
+		assert.Len(t, got[1], 2)
+	})
+
+	t.Run("DropOversized", func(t *testing.T) {
+		orig := otel.GetErrorHandler()
+		t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+		var errs []error
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			errs = append(errs, err)
+		}))
+
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 3, testLogSizer{
+			unit:    BatchExportSizerTypeBytes,
+			batch:   func(records []Record) int { return measure(records) },
+			perItem: func(record Record) int { return measure([]Record{record}) },
+		})
+
+		records := make([]Record, 3)
+		for i, body := range []string{"four", "a", "bb"} {
+			records[i].SetBody(log.StringValue(body))
+		}
+
+		require.NoError(t, e.Export(t.Context(), records))
+
+		got := exp.Records()
+		require.Len(t, got, 1)
+		assert.Len(t, got[0], 2)
+		require.Len(t, errs, 1)
+		assert.Contains(t, errs[0].Error(), "dropping log record larger than max export batch size")
 	})
 }
 
