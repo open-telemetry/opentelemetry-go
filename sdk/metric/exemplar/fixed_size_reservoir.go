@@ -24,10 +24,12 @@ func FixedSizeReservoirProvider(k int) ReservoirProvider {
 // sample each one. If there are more than k, the Reservoir will then randomly
 // sample all additional measurement with a decreasing probability.
 func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
-	return &FixedSizeReservoir{
-		nt:      newNextTracker(k),
+	r := &FixedSizeReservoir{
 		storage: make([]measurement, k),
 	}
+	r.nt.k = k
+	r.nt.reset()
+	return r
 }
 
 var _ Reservoir = &FixedSizeReservoir{}
@@ -40,7 +42,7 @@ type FixedSizeReservoir struct {
 	reservoir.ConcurrentSafe
 	mu      sync.Mutex
 	storage []measurement
-	nt      *nextTracker
+	nt      nextTracker
 }
 
 // Offer accepts the parameters associated with a measurement. The
