@@ -54,14 +54,10 @@ func newFixedSizeReservoir(s *storage) *FixedSizeReservoir {
 	r := &FixedSizeReservoir{
 		storage: s,
 	}
-	if cap(r.measurements) == 0 {
-		r.count = 0
-		r.next = math.MaxInt64
-		r.w = 0
-	} else {
+	if cap(r.measurements) > 0 {
 		r.reset()
 	}
-	return r
+    return r
 }
 
 // randomFloat64 returns, as a float64, a uniform pseudo-random number in the
