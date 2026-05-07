@@ -301,3 +301,30 @@ func ExampleMeter_attributes() {
 			metric.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)))
 	})
 }
+
+// Use [Int64Counter.Enabled] to avoid performing expensive operations when the
+// instrument is not being observed. Use [WithAttributeSet] to pre-build an
+// [attribute.Set] once and reuse it across many measurements.
+func ExampleMeter_performanceOptimization() {
+	apiCounter, err := meter.Int64Counter(
+		"api.counter",
+		metric.WithDescription("Number of API calls."),
+		metric.WithUnit("{call}"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Pre-build the attribute set once at init time.
+	attrs := metric.WithAttributeSet(attribute.NewSet(
+		attribute.String("api.name", "users"),
+	))
+
+	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
+		// Enabled returns false when no SDK is registered or when a view
+		// drops this instrument, avoiding all measurement overhead.
+		if apiCounter.Enabled(r.Context()) {
+			apiCounter.Add(r.Context(), 1, attrs)
+		}
+	})
+}

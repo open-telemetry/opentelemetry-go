@@ -248,7 +248,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			})
 			continue
 		}
-		n := len(c.resourceKeyVals.keys) + 2 // resource attrs + scope name + scope version
+		// resource attributes + scope attributes + scope name + scope version + scope schema url
+		n := len(c.resourceKeyVals.keys) + 3 + scopeMetrics.Scope.Attributes.Len()
 		kv := keyVals{
 			keys: make([]string, 0, n),
 			vals: make([]string, 0, n),
@@ -258,14 +259,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals, e := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
+			attrKeys, attrVals, e := getScopeAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			if e != nil {
 				reportError(ch, nil, e)
-				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d: %w", j, e))
+				err = errors.Join(err, fmt.Errorf("failed to translate scope attributes for ScopeMetrics %d: %w", j, e))
 				continue
-			}
-			for i := range attrKeys {
-				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
 			}
 			kv.keys = append(kv.keys, attrKeys...)
 			kv.vals = append(kv.vals, attrVals...)
@@ -650,6 +648,56 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 		}
 	}
 	return keys, values, nil
+}
+
+func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
+	keys := make([]string, 0, attrs.Len())
+	values := make([]string, 0, attrs.Len())
+	itr := attrs.Iter()
+
+	if labelNamer.UTF8Allowed {
+		for itr.Next() {
+			kv := itr.Attribute()
+			key := string(kv.Key)
+			if isReservedScopeLabel(key) {
+				continue
+			}
+			keys = append(keys, scopeLabelPrefix+key)
+			values = append(values, kv.Value.String())
+		}
+		return keys, values, nil
+	}
+
+	keysMap := make(map[string][]string)
+	for itr.Next() {
+		kv := itr.Attribute()
+		key, err := labelNamer.Build(string(kv.Key))
+		if err != nil {
+			// TODO(#7066) Handle this error better.
+			return nil, nil, err
+		}
+		if isReservedScopeLabel(key) {
+			continue
+		}
+		keysMap[key] = append(keysMap[key], kv.Value.String())
+	}
+
+	for key, vals := range keysMap {
+		keys = append(keys, scopeLabelPrefix+key)
+		slices.Sort(vals)
+		values = append(values, strings.Join(vals, ";"))
+	}
+
+	return keys, values, nil
+}
+
+func isReservedScopeLabel(key string) bool {
+	switch key {
+	case "name", "version", "schema_url":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
