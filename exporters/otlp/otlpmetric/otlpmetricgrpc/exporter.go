@@ -89,18 +89,22 @@ func (e *Exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 //
 // This method returns an error if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
-func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (finalErr error) {
+func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	defer global.Debug("OTLP/gRPC exporter export", "Data", rm)
 
 	otlpRm, err := transform.ResourceMetrics(rm)
 
 	// Track export operation for self-observability
 	op := e.inst.TrackExport(ctx, otlpRm)
-	defer func() { op.End(finalErr) }()
+
+	var upErr error
+	defer func() { op.End(upErr) }()
+
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
-	upErr := e.client.UploadMetrics(ctx, otlpRm)
+	upErr = e.client.UploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
+
 	if upErr != nil {
 		if err == nil {
 			return fmt.Errorf("failed to upload metrics: %w", upErr)
