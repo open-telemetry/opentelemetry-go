@@ -172,8 +172,8 @@ func newDeltaHistogram[N int64 | float64](
 		bounds:   b,
 		newRes:   r,
 		hotColdValMap: [2]limitedSyncMap{
-			{aggLimit: limit},
-			{aggLimit: limit},
+			{state: &cardinalityState{limit: limit}},
+			{state: &cardinalityState{limit: limit}},
 		},
 	}
 }
@@ -278,7 +278,7 @@ func newCumulativeHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		values:   limitedSyncMap{aggLimit: limit},
+		values:   limitedSyncMap{state: &cardinalityState{limit: limit}},
 	}
 }
 

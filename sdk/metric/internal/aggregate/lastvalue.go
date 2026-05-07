@@ -61,11 +61,11 @@ func newDeltaLastValue[N int64 | float64](
 		start:  now(),
 		hotColdValMap: [2]lastValueMap[N]{
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: limitedSyncMap{state: &cardinalityState{limit: limit}},
 				newRes: r,
 			},
 			{
-				values: limitedSyncMap{aggLimit: limit},
+				values: limitedSyncMap{state: &cardinalityState{limit: limit}},
 				newRes: r,
 			},
 		},
@@ -148,7 +148,7 @@ func newCumulativeLastValue[N int64 | float64](
 ) *cumulativeLastValue[N] {
 	return &cumulativeLastValue[N]{
 		lastValueMap: lastValueMap[N]{
-			values: limitedSyncMap{aggLimit: limit},
+			values: limitedSyncMap{state: &cardinalityState{limit: limit}},
 			newRes: r,
 		},
 		start: now(),
