@@ -991,6 +991,17 @@ func TestAttributeToStringPairByteSlice(t *testing.T) {
 	assert.Equal(t, "[1,2,3]", v)
 }
 
+func TestAttributeToStringPairSlice(t *testing.T) {
+	k, v := attributeToStringPair(attribute.Slice("slice",
+		attribute.BoolValue(true),
+		attribute.ByteSliceValue([]byte("bin")),
+		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+	))
+
+	assert.Equal(t, "slice", k)
+	assert.Equal(t, `[true,"Ymlu",[2,null]]`, v)
+}
+
 func zkmodelIDPtr(n uint64) *zkmodel.ID {
 	id := zkmodel.ID(n)
 	return &id

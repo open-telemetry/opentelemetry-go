@@ -268,11 +268,10 @@ func (e ExportOp) recordOption(err error, code int) metric.RecordOption {
 	defer put(attrsPool, attrs)
 
 	*attrs = append(*attrs, e.inst.presetAttrs...)
-	*attrs = append(
-		*attrs,
-		semconv.HTTPResponseStatusCode(code),
-		semconv.ErrorType(err),
-	)
+	if code != 0 {
+		*attrs = append(*attrs, semconv.HTTPResponseStatusCode(code))
+	}
+	*attrs = append(*attrs, semconv.ErrorType(err))
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 
@@ -316,7 +315,7 @@ func rejected(n int64, err error) int64 {
 	return n
 }
 
-// parseEndpoint parses the host and port from target that has the form
+// parseTarget parses the host and port from target that has the form
 // "host[:port]", or it returns an error if the target is not parsable.
 //
 // If no port is specified, -1 is returned.

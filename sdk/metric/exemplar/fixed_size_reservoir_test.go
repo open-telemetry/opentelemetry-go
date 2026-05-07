@@ -10,19 +10,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestNewFixedSizeReservoir(t *testing.T) {
 	t.Run("Int64", ReservoirTest[int64](func(n int) (ReservoirProvider, int) {
-		provider := FixedSizeReservoirProvider(n)
-		return provider, int(provider(attribute.NewSet()).(*FixedSizeReservoir).k)
+		return FixedSizeReservoirProvider(n), n
 	}))
 
 	t.Run("Float64", ReservoirTest[float64](func(n int) (ReservoirProvider, int) {
-		provider := FixedSizeReservoirProvider(n)
-		return provider, int(provider(attribute.NewSet()).(*FixedSizeReservoir).k)
+		return FixedSizeReservoirProvider(n), n
 	}))
 }
 
@@ -66,20 +62,4 @@ func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {
 	t.Run("Float64", reservoirConcurrentSafeTest[float64](func(n int) (ReservoirProvider, int) {
 		return FixedSizeReservoirProvider(n), n
 	}))
-}
-
-func TestNextTrackerAtomics(t *testing.T) {
-	capacity := uint32(10)
-	nt := newNextTracker(capacity)
-	nt.setCountAndNext(0, 11)
-	count, next := nt.incrementCount()
-	assert.Equal(t, uint32(0), count)
-	assert.Equal(t, uint32(11), next)
-	count, secondNext := nt.incrementCount()
-	assert.Equal(t, uint32(1), count)
-	assert.Equal(t, next, secondNext)
-	nt.setCountAndNext(50, 100)
-	count, next = nt.incrementCount()
-	assert.Equal(t, uint32(50), count)
-	assert.Equal(t, uint32(100), next)
 }

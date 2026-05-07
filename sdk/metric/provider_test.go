@@ -176,32 +176,40 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 }
 
 func TestMeterProviderCardinalityLimit(t *testing.T) {
-	const uniqueAttributesCount = 10
-
 	tests := []struct {
-		name           string
-		options        []Option
-		wantDataPoints int
+		name                  string
+		options               []Option
+		uniqueAttributesCount int
+		wantDataPoints        int
+		wantOverflowPoints    int
 	}{
 		{
-			name:           "no limit (default)",
-			options:        nil,
-			wantDataPoints: uniqueAttributesCount,
+			name:                  "default limit",
+			options:               nil,
+			uniqueAttributesCount: defaultCardinalityLimit + 5,
+			wantDataPoints:        defaultCardinalityLimit,
+			wantOverflowPoints:    1,
 		},
 		{
-			name:           "no limit (limit=0)",
-			options:        []Option{WithCardinalityLimit(0)},
-			wantDataPoints: uniqueAttributesCount,
+			name:                  "no limit (limit=0)",
+			options:               []Option{WithCardinalityLimit(0)},
+			uniqueAttributesCount: 10,
+			wantDataPoints:        10,
+			wantOverflowPoints:    0,
 		},
 		{
-			name:           "no limit (negative)",
-			options:        []Option{WithCardinalityLimit(-5)},
-			wantDataPoints: uniqueAttributesCount,
+			name:                  "no limit (negative)",
+			options:               []Option{WithCardinalityLimit(-5)},
+			uniqueAttributesCount: 10,
+			wantDataPoints:        10,
+			wantOverflowPoints:    0,
 		},
 		{
-			name:           "limit=5",
-			options:        []Option{WithCardinalityLimit(5)},
-			wantDataPoints: 5,
+			name:                  "limit=5",
+			options:               []Option{WithCardinalityLimit(5)},
+			uniqueAttributesCount: 10,
+			wantDataPoints:        5,
+			wantOverflowPoints:    1,
 		},
 	}
 
@@ -216,7 +224,7 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 			counter, err := meter.Int64Counter("metric")
 			require.NoError(t, err, "failed to create counter")
 
-			for i := range uniqueAttributesCount {
+			for i := range tt.uniqueAttributesCount {
 				counter.Add(
 					t.Context(),
 					1,
@@ -241,6 +249,16 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 				tt.wantDataPoints,
 				"unexpected number of data points",
 			)
+
+			overflow := attribute.NewSet(attribute.Bool("otel.metric.overflow", true))
+			var overflowPoints int
+			for _, dp := range sumData.DataPoints {
+				attrs := dp.Attributes
+				if attrs.Equals(&overflow) {
+					overflowPoints++
+				}
+			}
+			assert.Equal(t, tt.wantOverflowPoints, overflowPoints, "unexpected overflow data points")
 		})
 	}
 }

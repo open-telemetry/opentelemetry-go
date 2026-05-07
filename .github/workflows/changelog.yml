@@ -7,7 +7,7 @@ name: changelog
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
     branches:
       - main
 

@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"math"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -23,6 +24,7 @@ var (
 	outFloat64Slice []float64
 	outStr          string
 	outStrSlice     []string
+	outValueSlice   []attribute.Value
 )
 
 func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
@@ -333,6 +335,58 @@ func BenchmarkStringSlice(b *testing.B) {
 				b.ReportAllocs()
 				for i := 0; i < b.N; i++ {
 					outStrSlice = kv.Value.AsStringSlice()
+				}
+			})
+			b.Run("String", benchmarkString(kv))
+			b.Run("Emit", benchmarkEmit(kv))
+		})
+	}
+}
+
+func BenchmarkSlice(b *testing.B) {
+	for _, bench := range []struct {
+		name string
+		v    []attribute.Value
+	}{
+		{
+			name: "Len3",
+			v: []attribute.Value{
+				attribute.BoolValue(true),
+				attribute.IntValue(42),
+				attribute.StringValue("test"),
+			},
+		},
+		{
+			name: "Len5Nested",
+			v: []attribute.Value{
+				attribute.StringValue("quote\""),
+				attribute.Float64Value(math.Inf(1)),
+				attribute.ByteSliceValue([]byte("bin")),
+				attribute.SliceValue(attribute.StringValue("nested"), attribute.Value{}),
+				attribute.BoolValue(false),
+			},
+		},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			k, v := "slice", bench.v
+			kv := attribute.Slice(k, v...)
+
+			b.Run("Value", func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					outV = attribute.SliceValue(v...)
+				}
+			})
+			b.Run("KeyValue", func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					outKV = attribute.Slice(k, v...)
+				}
+			})
+			b.Run("AsSlice", func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					outValueSlice = kv.Value.AsSlice()
 				}
 			})
 			b.Run("String", benchmarkString(kv))

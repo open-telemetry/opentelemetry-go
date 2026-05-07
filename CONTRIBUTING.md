@@ -808,11 +808,11 @@ func (c *Component) initObservability() {
 
 #### Performance
 
-When observability is disabled there should be little to no overhead.
+When observability is disabled or the instrument is not `Enabled`, there should be little to no overhead.
 
 ```go
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
-	if e.inst != nil {
+	if e.inst != nil && e.inst.Enabled(ctx) {
 		attrs := expensiveOperation()
 		e.inst.recordSpanInflight(ctx, int64(len(spans)), attrs...)
 	}
@@ -829,7 +829,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 }
 
 func (i *instrumentation) recordSpanInflight(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-	if i == nil || i.inflight == nil {
+	if i == nil || i.inflight == nil || !i.inflight.Enabled(ctx) {
 		return
 	}
 	i.inflight.Add(ctx, count, metric.WithAttributes(attrs...))
@@ -865,6 +865,9 @@ var (
 )
 
 func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...attribute.KeyValue) {
+    if !i.counter.Enabled(ctx) {
+        return
+    }
     attrs := attrPool.Get().(*[]attribute.KeyValue)
     defer func() {
         *attrs = (*attrs)[:0] // Reset.
@@ -1007,16 +1010,20 @@ Ensure observability measurements receive the correct context, especially for tr
 ```go
 func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
     // Use the provided context for observability measurements
-    e.inst.recordSpanExportStarted(ctx, len(spans))
+    if e.inst.Enabled(ctx) {
+        e.inst.recordSpanExportStarted(ctx, len(spans))
+    }
  
     err := e.doExport(ctx, spans)
 
-    if err != nil {
-        e.inst.recordSpanExportFailed(ctx, len(spans), err)
-    } else {
-        e.inst.recordSpanExportSucceeded(ctx, len(spans))
+    if e.inst.Enabled(ctx) {
+        if err != nil {
+            e.inst.recordSpanExportFailed(ctx, len(spans), err)
+        } else {
+            e.inst.recordSpanExportSucceeded(ctx, len(spans))
+        }
     }
- 
+
     return err
 }
 ```

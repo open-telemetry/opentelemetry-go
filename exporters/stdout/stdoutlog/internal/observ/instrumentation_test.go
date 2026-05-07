@@ -146,12 +146,12 @@ func logExportedDuration(err error) metricdata.Metrics {
 	}
 }
 
-func setup(t *testing.T) (*Instrumentation, func() metricdata.ScopeMetrics) {
-	t.Helper()
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+func setup(tb testing.TB) (*Instrumentation, func() metricdata.ScopeMetrics) {
+	tb.Helper()
+	tb.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	original := otel.GetMeterProvider()
-	t.Cleanup(func() {
+	tb.Cleanup(func() {
 		otel.SetMeterProvider(original)
 	})
 
@@ -160,13 +160,13 @@ func setup(t *testing.T) (*Instrumentation, func() metricdata.ScopeMetrics) {
 	otel.SetMeterProvider(mp)
 
 	inst, err := NewInstrumentation(ID)
-	require.NoError(t, err)
-	require.NotNil(t, inst)
+	require.NoError(tb, err)
+	require.NotNil(tb, inst)
 
 	return inst, func() metricdata.ScopeMetrics {
 		var rm metricdata.ResourceMetrics
-		require.NoError(t, reader.Collect(t.Context(), &rm))
-		require.Len(t, rm.ScopeMetrics, 1)
+		require.NoError(tb, reader.Collect(tb.Context(), &rm))
+		require.Len(tb, rm.ScopeMetrics, 1)
 		return rm.ScopeMetrics[0]
 	}
 }
@@ -204,67 +204,30 @@ func assertMetrics(
 func TestInstrumentationExportLogs(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
-	inst.ExportLogs(t.Context(), n).End(nil)
+	inst.ExportLogs(t.Context(), n).End(n, nil)
 	assertMetrics(t, collect(), n, n, nil)
-}
-
-func TestInstrumentationExportLogPartialErrors(t *testing.T) {
-	inst, collect := setup(t)
-	const n = 10
-	const success = 5
-
-	err := internal.PartialSuccess{RejectedItems: n - success}
-	inst.ExportLogs(t.Context(), n).End(err)
-
-	assertMetrics(t, collect(), n, success, err)
 }
 
 func TestInstrumentationExportLogAllErrors(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
 	const success = 0
-	inst.ExportLogs(t.Context(), n).End(assert.AnError)
+	inst.ExportLogs(t.Context(), n).End(success, assert.AnError)
 
 	assertMetrics(t, collect(), n, success, assert.AnError)
 }
 
-func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
-	inst, collect := setup(t)
-	const n = 10
-	err := internal.PartialSuccess{RejectedItems: -5}
-	inst.ExportLogs(t.Context(), n).End(err)
-
-	success := int64(n)
-	assertMetrics(t, collect(), n, success, err)
-
-	err.RejectedItems = n + 5
-	inst.ExportLogs(t.Context(), n).End(err)
-
-	success += 0
-	assertMetrics(t, collect(), n+n, success, err)
-}
-
 func BenchmarkInstrumentationExportLogs(b *testing.B) {
-	setup := func(tb *testing.B) *Instrumentation {
-		tb.Helper()
-		tb.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-		inst, err := NewInstrumentation(ID)
-		if err != nil {
-			tb.Fatalf("failed to create instrumentation: %v", err)
-		}
-		return inst
-	}
-	run := func(err error) func(*testing.B) {
+	run := func(success int64, err error) func(*testing.B) {
 		return func(b *testing.B) {
-			inst := setup(b)
+			inst, _ := setup(b)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.ExportLogs(b.Context(), 10).End(err)
+				inst.ExportLogs(b.Context(), 10).End(success, err)
 			}
 		}
 	}
-	b.Run("NoError", run(nil))
-	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}))
-	b.Run("FullError", run(assert.AnError))
+	b.Run("NoError", run(10, nil))
+	b.Run("FullError", run(0, assert.AnError))
 }

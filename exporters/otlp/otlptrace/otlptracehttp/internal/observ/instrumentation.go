@@ -167,7 +167,7 @@ func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
 // to set the "component.name" attribute.
 //
 // The endpoint is the HTTP endpoint the exporter is exporting to. It should be
-// in the format "host:port" or a full URL.
+// in the format "host[:port]".
 func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
 	host, port, err := parseEndpoint(endpoint)
 	if err != nil || (host == "" && port < 0) {
@@ -345,7 +345,7 @@ func (e ExportOp) End(err error, status int) {
 //
 // Otherwise, a new RecordOption is returned with the base attributes of the
 // Instrumentation plus the http.response.status_code attribute set to the
-// provided status, and if err is not nil, the error.type attribute set
+// provided status (if non-zero), and if err is not nil, the error.type attribute set
 // to the type of the error.
 func (i *Instrumentation) recordOption(err error, status int) metric.RecordOption {
 	if err == nil && status == http.StatusOK {
@@ -356,7 +356,9 @@ func (i *Instrumentation) recordOption(err error, status int) metric.RecordOptio
 	defer put(measureAttrsPool, attrs)
 	*attrs = append(*attrs, i.attrs...)
 
-	*attrs = append(*attrs, semconv.HTTPResponseStatusCode(status))
+	if status != 0 {
+		*attrs = append(*attrs, semconv.HTTPResponseStatusCode(status))
+	}
 	if err != nil {
 		*attrs = append(*attrs, semconv.ErrorType(err))
 	}
