@@ -461,7 +461,7 @@ func BenchmarkExemplars(b *testing.B) {
 		mp := NewMeterProvider(WithReader(r), WithView(v))
 		return mp.Meter(name), r
 	}
-	// Reads number of logical CPUs but respects GOMAXPROCS
+	// Reads number of logical CPUs but respects GOMAXPROCS.
 	nCPU := runtime.GOMAXPROCS(0) // Size of the fixed reservoir used.
 
 	b.Setenv("OTEL_GO_X_EXEMPLAR", "true")
