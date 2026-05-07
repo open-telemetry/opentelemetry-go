@@ -219,13 +219,18 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 	return hotIdx
 }
 
+type cardinalityState struct {
+	limit int
+	count atomic.Int64
+	mux   sync.Mutex
+}
+
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
 // attribute sets and provides a Len() function.
 type limitedSyncMap[V any] struct {
 	sync.Map
-	aggLimit int
-	len      int
-	lenMux   sync.Mutex
+	state *cardinalityState
+	len   int // local len for this map
 }
 
 func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
@@ -240,8 +245,8 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 		return actual.(V)
 	}
 	// Slow path: add a new attribute set.
-	m.lenMux.Lock()
-	defer m.lenMux.Unlock()
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
 
 	// re-fetch now that we hold the lock to ensure we don't use the overflow
 	// set unless we are sure the attribute set isn't being written
@@ -251,25 +256,31 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 		return actual.(V)
 	}
 
-	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
+	if m.state.limit > 0 && m.state.count.Load() >= int64(m.state.limit-1) {
 		fltrAttr = overflowSet
 	}
 	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
 	if !loaded {
+		m.state.count.Add(1)
 		m.len++
 	}
 	return actual.(V)
 }
 
 func (m *limitedSyncMap[V]) Clear() {
-	m.lenMux.Lock()
-	defer m.lenMux.Unlock()
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
+	m.state.count.Add(-int64(m.len))
 	m.len = 0
 	m.Map.Clear()
 }
 
 func (m *limitedSyncMap[V]) Len() int {
-	m.lenMux.Lock()
-	defer m.lenMux.Unlock()
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
 	return m.len
+}
+
+func (m *limitedSyncMap[V]) LoadByDistinct(d attribute.Distinct) (any, bool) {
+	return m.Load(d)
 }
