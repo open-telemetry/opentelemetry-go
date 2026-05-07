@@ -36,7 +36,7 @@ type Exporter struct {
 	shutdownOnce sync.Once
 
 	// Self-observability metrics
-	metrics *observ.Instrumentation
+	inst *observ.Instrumentation
 }
 
 func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
@@ -52,11 +52,11 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		as = metric.DefaultAggregationSelector
 	}
 
-	var metrics *observ.Instrumentation
+	var inst *observ.Instrumentation
 	var initErr error
 	if x.Observability.Enabled() {
 		var err error
-		metrics, err = observ.NewInstrumentation(
+		inst, err = observ.NewInstrumentation(
 			counter.NextExporterID(),
 			c.conn.CanonicalTarget(),
 		)
@@ -71,7 +71,7 @@ func newExporter(c *client, cfg oconf.Config) (*Exporter, error) {
 		temporalitySelector: ts,
 		aggregationSelector: as,
 
-		metrics: metrics,
+		inst: inst,
 	}, initErr
 }
 
@@ -95,7 +95,7 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) (
 	otlpRm, err := transform.ResourceMetrics(rm)
 
 	// Track export operation for self-observability
-	op := e.metrics.TrackExport(ctx, otlpRm)
+	op := e.inst.TrackExport(ctx, otlpRm)
 	defer func() { op.End(finalErr) }()
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
