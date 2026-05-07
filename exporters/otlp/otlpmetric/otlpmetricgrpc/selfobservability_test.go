@@ -35,11 +35,12 @@ func TestSelfObservability(t *testing.T) {
 	defer coll.Shutdown()
 
 	tests := []struct {
-		name        string
-		envValue    string
-		endpoint    string
-		expectError bool
-		wantMetrics func(actualComponentName, addr string, port int, err error) []metricdata.Metrics
+		name         string
+		envValue     string
+		endpoint     string
+		expectError  bool
+		setupMetrics func(*metricdata.ResourceMetrics)
+		wantMetrics  func(actualComponentName, addr string, port int, err error) []metricdata.Metrics
 	}{
 		{
 			name:        "success",
@@ -185,6 +186,89 @@ func TestSelfObservability(t *testing.T) {
 			},
 		},
 		{
+			name:        "partial success (transform error)",
+			envValue:    "true",
+			endpoint:    "dns:///" + coll.Addr().String(),
+			expectError: true,
+			setupMetrics: func(rm *metricdata.ResourceMetrics) {
+				// Add a metric with invalid temporality
+				rm.ScopeMetrics[0].Metrics = append(rm.ScopeMetrics[0].Metrics, metricdata.Metrics{
+					Name: "invalid_temporality_metric",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.Temporality(99),
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Value: 1},
+						},
+					},
+				})
+			},
+			wantMetrics: func(actualComponentName, addr string, port int, _ error) []metricdata.Metrics {
+				return []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Value: 4,
+								},
+							},
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: false,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Value: 0,
+								},
+							},
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+						Description: otelconv.SDKExporterOperationDuration{}.Description(),
+						Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(
+										semconv.OTelComponentName(actualComponentName),
+										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.ServerAddressKey.String(addr),
+										semconv.ServerPortKey.Int(port),
+									),
+									Count: 1,
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
 			name:        "disabled",
 			envValue:    "false",
 			endpoint:    coll.Addr().String(),
@@ -229,6 +313,9 @@ func TestSelfObservability(t *testing.T) {
 			})
 
 			rm := createTestResourceMetrics()
+			if tt.setupMetrics != nil {
+				tt.setupMetrics(rm)
+			}
 			exportErr := exp.Export(t.Context(), rm)
 			if tt.expectError {
 				assert.Error(t, exportErr)
