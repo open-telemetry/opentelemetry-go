@@ -102,11 +102,7 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 
 		currBag, err := baggage.Parse(bStr)
 		if err != nil {
-			if uw, ok := err.(interface{ Unwrap() []error }); ok {
-				parseErrors += len(uw.Unwrap())
-			} else {
-				parseErrors++
-			}
+			parseErrors++
 			if parseErrors <= maxParseErrors {
 				truncateErr = errors.Join(truncateErr, err)
 			}

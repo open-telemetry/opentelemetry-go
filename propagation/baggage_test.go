@@ -613,6 +613,24 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 			},
 			wantErrStr: []string{"invalid baggage list-member", "and 5 more error(s)"},
 		},
+		{
+			name: "single header with many invalid members preserves inner error",
+			headers: func() []string {
+				// One header with 10 invalid members. baggage.Parse caps its own
+				// joined error at maxParseErrors=5 and appends its own summary.
+				// extractMultiBaggage must count this as a single failing header
+				// so the inner error is still attached to the outer error chain.
+				invalid := make([]string, 10)
+				for i := range invalid {
+					invalid[i] = fmt.Sprintf("bad%d", i)
+				}
+				return []string{strings.Join(invalid, ",") + ",good=val"}
+			},
+			want: func() members {
+				return members{{Key: "good", Value: "val"}}
+			},
+			wantErrStr: []string{"invalid baggage list-member", "and 5 more invalid member(s)"},
+		},
 	}
 
 	for _, tt := range tests {
