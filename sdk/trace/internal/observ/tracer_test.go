@@ -164,7 +164,8 @@ func TestTracerRemoteParent(t *testing.T) {
 			SpanID:     tapi.SpanID{0x01},
 			TraceFlags: 0x1,
 			Remote:     true,
-		}))
+		}),
+	)
 
 	_, _ = tracer.Start(ctx, "span")
 	check(t, collect(), sampledLive(1), remoteStarted(1))

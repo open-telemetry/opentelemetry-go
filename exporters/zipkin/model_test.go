@@ -992,7 +992,8 @@ func TestAttributeToStringPairByteSlice(t *testing.T) {
 }
 
 func TestAttributeToStringPairSlice(t *testing.T) {
-	k, v := attributeToStringPair(attribute.Slice("slice",
+	k, v := attributeToStringPair(attribute.Slice(
+		"slice",
 		attribute.BoolValue(true),
 		attribute.ByteSliceValue([]byte("bin")),
 		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),

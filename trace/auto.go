@@ -478,7 +478,8 @@ func (s *autoSpan) RecordError(err error, opts ...EventOption) {
 	cfg := NewEventConfig(opts...)
 
 	attrs := cfg.Attributes()
-	attrs = append(attrs,
+	attrs = append(
+		attrs,
 		semconv.ExceptionType(typeStr(err)),
 		semconv.ExceptionMessage(err.Error()),
 	)

@@ -572,7 +572,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			if diff := cmp.Diff(
 				tc.expected,
 				got,
-				cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				cmp.AllowUnexported(attribute.Value{}),
+			); diff != "" {
 				t.Fatalf("attributes differ: diff %+v,", diff)
 			}
 		})

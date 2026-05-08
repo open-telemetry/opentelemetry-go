@@ -25,11 +25,9 @@ var (
 // conventions. It represents the type of error encountered by the component.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // BatteryStateAttr is an attribute conforming to the hw.battery.state semantic
 // conventions. It represents the current state of the battery.
@@ -100,10 +98,8 @@ var (
 // utilization.
 type PhysicalDiskStateAttr string
 
-var (
-	// PhysicalDiskStateRemaining is the remaining.
-	PhysicalDiskStateRemaining PhysicalDiskStateAttr = "remaining"
-)
+// PhysicalDiskStateRemaining is the remaining.
+var PhysicalDiskStateRemaining PhysicalDiskStateAttr = "remaining"
 
 // StateAttr is an attribute conforming to the hw.state semantic conventions. It
 // represents the current state of the component.
@@ -568,7 +564,7 @@ func (BatteryTimeLeft) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The state is the the current state of the component
+// # The state is the the current state of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m BatteryTimeLeft) Record(
@@ -1017,7 +1013,7 @@ func (Energy) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m Energy) Add(
@@ -1148,7 +1144,7 @@ func (Errors) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m Errors) Add(
@@ -3162,7 +3158,7 @@ func (LogicalDiskUsage) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The logicalDiskState is the state of the logical disk space usage
+// # The logicalDiskState is the state of the logical disk space usage
 //
 // All additional attrs passed are included in the recorded value.
 func (m LogicalDiskUsage) Add(
@@ -3300,7 +3296,7 @@ func (LogicalDiskUtilization) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The logicalDiskState is the state of the logical disk space usage
+// # The logicalDiskState is the state of the logical disk space usage
 //
 // All additional attrs passed are included in the recorded value.
 func (m LogicalDiskUtilization) Record(
@@ -4402,7 +4398,7 @@ func (PhysicalDiskEnduranceUtilization) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The physicalDiskState is the state of the physical disk endurance utilization
+// # The physicalDiskState is the state of the physical disk endurance utilization
 //
 // All additional attrs passed are included in the recorded value.
 func (m PhysicalDiskEnduranceUtilization) Record(
@@ -4900,7 +4896,7 @@ func (Power) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -5480,9 +5476,9 @@ func (Status) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The state is the the current state of the component
+// # The state is the the current state of the component
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 //

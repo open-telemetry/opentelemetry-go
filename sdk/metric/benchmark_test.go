@@ -477,7 +477,7 @@ func BenchmarkExemplars(b *testing.B) {
 				{Exemplars: make([]metricdata.Exemplar[int64], 0, nCPU)},
 			},
 		})
-		e := &(rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Exemplars)
+		e := &rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Exemplars
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -502,7 +502,7 @@ func BenchmarkExemplars(b *testing.B) {
 				{Exemplars: make([]metricdata.Exemplar[int64], 0, 1)},
 			},
 		})
-		e := &(rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64]).DataPoints[0].Exemplars)
+		e := &rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64]).DataPoints[0].Exemplars
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -737,11 +737,13 @@ func attributes(number int) []attribute.KeyValue {
 func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue {
 	switch number {
 	case 1:
-		return append(kvs,
+		return append(
+			kvs,
 			attribute.String("a", "a"),
 		)
 	case 5:
-		return append(kvs,
+		return append(
+			kvs,
 			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
@@ -749,7 +751,8 @@ func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue
 			attribute.String("e", "e"),
 		)
 	case 10:
-		return append(kvs,
+		return append(
+			kvs,
 			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
