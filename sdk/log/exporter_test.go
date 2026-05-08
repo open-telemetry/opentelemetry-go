@@ -25,6 +25,10 @@ type instruction struct {
 	Flush  chan [][]Record
 }
 
+type bytesSizerFunc func([]Record) int
+
+func (f bytesSizerFunc) ExportSize(records []Record) int { return f(records) }
+
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
@@ -35,11 +39,11 @@ type testExporter struct {
 	// Counts of method calls.
 	exportN, shutdownN, forceFlushN atomic.Int32
 
-	stopped atomic.Bool
-	inputMu sync.Mutex
-	input   chan instruction
-	done    chan struct{}
-	sizer   BatchExportSizer
+	stopped    atomic.Bool
+	inputMu    sync.Mutex
+	input      chan instruction
+	done       chan struct{}
+	exportSize func([]Record) int
 }
 
 func newTestExporter(err error) *testExporter {
@@ -128,8 +132,11 @@ func (e *testExporter) ForceFlushN() int {
 	return int(e.forceFlushN.Load())
 }
 
-func (e *testExporter) BatchProcessorExportSizer() BatchExportSizer {
-	return e.sizer
+func (e *testExporter) ExportSize(records []Record) int {
+	if e.exportSize == nil {
+		return 0
+	}
+	return e.exportSize(records)
 }
 
 func TestChunker(t *testing.T) {
@@ -204,11 +211,7 @@ func TestByteSizeExporter(t *testing.T) {
 	t.Run("ZeroSize", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		e := newSizedExporter(exp, 0, testLogSizer{
-			unit:    BatchExportSizerTypeBytes,
-			batch:   func(records []Record) int { return measure(records) },
-			perItem: func(record Record) int { return measure([]Record{record}) },
-		})
+		e := newSizedExporter(exp, 0, bytesSizerFunc(measure))
 		assert.Same(t, exp, e)
 	})
 
@@ -222,11 +225,7 @@ func TestByteSizeExporter(t *testing.T) {
 	t.Run("Split", func(t *testing.T) {
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		e := newSizedExporter(exp, 5, testLogSizer{
-			unit:    BatchExportSizerTypeBytes,
-			batch:   func(records []Record) int { return measure(records) },
-			perItem: func(record Record) int { return measure([]Record{record}) },
-		})
+		e := newSizedExporter(exp, 5, bytesSizerFunc(measure))
 
 		records := make([]Record, 4)
 		for i, body := range []string{"aa", "bbb", "c", "dddd"} {
@@ -252,11 +251,7 @@ func TestByteSizeExporter(t *testing.T) {
 
 		exp := newTestExporter(nil)
 		t.Cleanup(exp.Stop)
-		e := newSizedExporter(exp, 3, testLogSizer{
-			unit:    BatchExportSizerTypeBytes,
-			batch:   func(records []Record) int { return measure(records) },
-			perItem: func(record Record) int { return measure([]Record{record}) },
-		})
+		e := newSizedExporter(exp, 3, bytesSizerFunc(measure))
 
 		records := make([]Record, 3)
 		for i, body := range []string{"four", "a", "bb"} {

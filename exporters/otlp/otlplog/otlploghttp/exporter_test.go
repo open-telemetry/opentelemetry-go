@@ -62,16 +62,14 @@ func TestExporterExport(t *testing.T) {
 	assert.Equal(t, want, got, "transformed log records")
 }
 
-func TestExporterBatchProcessorExportSizer(t *testing.T) {
+func TestExporterExportSize(t *testing.T) {
 	e, err := newExporter(newNoopClient(), config{})
 	require.NoError(t, err)
 
 	var record log.Record
 	record.SetBody(apilog.StringValue("span"))
 
-	sizer := e.BatchProcessorExportSizer()
-	assert.Equal(t, log.BatchExportSizerTypeBytes, sizer.Type())
-	assert.Positive(t, sizer.BatchSize([]log.Record{record}))
+	assert.Positive(t, e.ExportSize([]log.Record{record}))
 }
 
 func TestExporterShutdown(t *testing.T) {

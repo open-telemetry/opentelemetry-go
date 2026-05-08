@@ -60,24 +60,10 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	return e.client.Load().UploadLogs(ctx, otlp)
 }
 
-// BatchProcessorExportSizer returns a byte sizer for full serialized OTLP log
-// export requests.
-func (*Exporter) BatchProcessorExportSizer() log.BatchExportSizer {
-	return otlpLogExportSizerHTTP{}
-}
-
-type otlpLogExportSizerHTTP struct{}
-
-func (otlpLogExportSizerHTTP) Type() log.BatchExportSizerType {
-	return log.BatchExportSizerTypeBytes
-}
-
-func (otlpLogExportSizerHTTP) BatchSize(records []log.Record) int {
+// ExportSize returns the size, in bytes, of the serialized OTLP log export
+// request for records.
+func (*Exporter) ExportSize(records []log.Record) int {
 	return resourceLogsRequestSize(transformResourceLogs(records))
-}
-
-func (s otlpLogExportSizerHTTP) ItemSize(record log.Record) int {
-	return s.BatchSize([]log.Record{record})
 }
 
 func resourceLogsRequestSize(rls []*logpb.ResourceLogs) int {

@@ -111,26 +111,14 @@ const (
 	BatchExportSizerTypeBytes BatchExportSizerType = "bytes"
 )
 
-// BatchExportSizer reports batch and item sizes for a batch processor.
-type BatchExportSizer interface {
-	Type() BatchExportSizerType
-	BatchSize([]Record) int
-	ItemSize(Record) int
+// BytesSizer reports the serialized size, in bytes, of an export batch.
+//
+// Exporters can implement this interface to enable byte-based batching when
+// [WithExportBatchSizeUnit] is configured with
+// [BatchExportSizerTypeBytes].
+type BytesSizer interface {
+	ExportSize([]Record) int
 }
-
-type recordCountSizer struct{}
-
-func (recordCountSizer) Type() BatchExportSizerType     { return BatchExportSizerTypeItems }
-func (recordCountSizer) BatchSize(records []Record) int { return len(records) }
-func (recordCountSizer) ItemSize(Record) int            { return 1 }
-
-type recordBytesSizer struct {
-	measure func([]Record) int
-}
-
-func (recordBytesSizer) Type() BatchExportSizerType       { return BatchExportSizerTypeBytes }
-func (s recordBytesSizer) BatchSize(records []Record) int { return s.measure(records) }
-func (s recordBytesSizer) ItemSize(record Record) int     { return s.measure([]Record{record}) }
 
 // NewBatchProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
@@ -142,21 +130,25 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
-	resolveBatchExportSizer(exporter, &cfg)
+	resolveBatchExportSizeUnit(exporter, &cfg)
+	var bytesSizer BytesSizer
+	if cfg.exportBatchSizeUnit == BatchExportSizerTypeBytes {
+		bytesSizer, _ = exporter.(BytesSizer)
+	}
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
 	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
 	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
 	// Wrap export to ensure ForceFlush and Shutdown calls are batched
 	// appropriately on export.
-	if cfg.exportSizer.Type() == BatchExportSizerTypeBytes {
-		exporter = newSizedExporter(exporter, cfg.expMaxBatchSize.Value, cfg.exportSizer)
+	if cfg.exportBatchSizeUnit == BatchExportSizerTypeBytes {
+		exporter = newSizedExporter(exporter, cfg.expMaxBatchSize.Value, bytesSizer)
 	} else {
 		exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 	}
 
 	batchSize := cfg.expMaxBatchSize.Value
-	if cfg.exportSizer.Type() == BatchExportSizerTypeBytes {
+	if cfg.exportBatchSizeUnit == BatchExportSizerTypeBytes {
 		batchSize = cfg.maxQSize.Value
 	}
 	b := &BatchProcessor{
@@ -171,35 +163,21 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	return b
 }
 
-type exportBatchSizerProvider interface {
-	BatchProcessorExportSizer() BatchExportSizer
-}
-
-func resolveBatchExportSizer(exporter Exporter, cfg *batchConfig) {
-	if cfg.exportSizer != nil && cfg.exportSizer.Type() == cfg.exportBatchSizeUnit {
-		return
-	}
-
+func resolveBatchExportSizeUnit(exporter Exporter, cfg *batchConfig) {
 	switch cfg.exportBatchSizeUnit {
 	case BatchExportSizerTypeBytes:
-		if provider, ok := exporter.(exportBatchSizerProvider); ok {
-			if sizer := provider.BatchProcessorExportSizer(); sizer != nil &&
-				sizer.Type() == BatchExportSizerTypeBytes {
-				cfg.exportSizer = sizer
-				return
-			}
+		if _, ok := exporter.(BytesSizer); ok {
+			return
 		}
 		global.Warn(
 			"byte batch sizing requested, exporter does not provide byte sizing support; falling back to item sizing",
 		)
-		fallthrough
+		cfg.exportBatchSizeUnit = BatchExportSizerTypeItems
 	case BatchExportSizerTypeItems:
-		cfg.exportSizer = recordCountSizer{}
 	default:
 		global.Warn("unknown batch size unit; falling back to item sizing", "unit", cfg.exportBatchSizeUnit)
-		cfg.exportSizer = recordCountSizer{}
+		cfg.exportBatchSizeUnit = BatchExportSizerTypeItems
 	}
-	cfg.exportBatchSizeUnit = cfg.exportSizer.Type()
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
@@ -441,13 +419,11 @@ type batchConfig struct {
 	expMaxBatchSize     setting[int]
 	expBufferSize       setting[int]
 	exportBatchSizeUnit BatchExportSizerType
-	exportSizer         BatchExportSizer
 }
 
 func newBatchConfig(options []BatchProcessorOption) batchConfig {
 	c := batchConfig{
 		exportBatchSizeUnit: BatchExportSizerTypeItems,
-		exportSizer:         recordCountSizer{},
 	}
 	for _, o := range options {
 		c = o.apply(c)
@@ -559,20 +535,6 @@ func WithExportMaxBatchSize(size int) BatchProcessorOption {
 	})
 }
 
-// WithExportSizer sets how WithExportMaxBatchSize is measured.
-//
-// The default sizer measures in items. A byte sizer should measure the
-// exporter's serialized representation and may include container overhead.
-func WithExportSizer(sizer BatchExportSizer) BatchProcessorOption {
-	return batchOptionFunc(func(cfg batchConfig) batchConfig {
-		if sizer != nil {
-			cfg.exportBatchSizeUnit = sizer.Type()
-			cfg.exportSizer = sizer
-		}
-		return cfg
-	})
-}
-
 // WithExportBatchSizeUnit sets whether WithExportMaxBatchSize is measured in
 // items or bytes.
 //
@@ -587,21 +549,12 @@ func WithExportBatchSizeUnit(unit BatchExportSizerType) BatchProcessorOption {
 
 // WithExportMaxBatchBytes sets the maximum serialized batch size of every
 // export, in bytes.
-//
-// The measure function must return the size, in bytes, of the serialized batch
-// representation used by the exporter and may include container overhead.
-//
-// If size is less than one, or if measure is nil, item-based batching remains
-// in effect.
-func WithExportMaxBatchBytes(size int, measure func([]Record) int) BatchProcessorOption {
+func WithExportMaxBatchBytes(size int) BatchProcessorOption {
 	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		if size > 0 {
 			cfg.expMaxBatchSize = newSetting(size)
 		}
 		cfg.exportBatchSizeUnit = BatchExportSizerTypeBytes
-		if measure != nil {
-			cfg.exportSizer = recordBytesSizer{measure: measure}
-		}
 		return cfg
 	})
 }

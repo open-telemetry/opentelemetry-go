@@ -43,18 +43,8 @@ type testBatchExporter struct {
 	droppedCount  int
 	idx           int
 	err           error
-	sizer         BatchSpanProcessorSizer
+	exportSize    func([]ReadOnlySpan) int
 }
-
-type testTraceSizer struct {
-	unit    BatchSpanProcessorSizerType
-	batch   func([]ReadOnlySpan) int
-	perItem func(ReadOnlySpan) int
-}
-
-func (s testTraceSizer) Type() BatchSpanProcessorSizerType  { return s.unit }
-func (s testTraceSizer) BatchSize(spans []ReadOnlySpan) int { return s.batch(spans) }
-func (s testTraceSizer) ItemSize(span ReadOnlySpan) int     { return s.perItem(span) }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
 	t.mu.Lock()
@@ -85,8 +75,11 @@ func (t *testBatchExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (t *testBatchExporter) BatchSpanProcessorExportSizer() BatchSpanProcessorSizer {
-	return t.sizer
+func (t *testBatchExporter) ExportSize(spans []ReadOnlySpan) int {
+	if t.exportSize == nil {
+		return 0
+	}
+	return t.exportSize(spans)
 }
 
 func (t *testBatchExporter) len() int {
@@ -317,23 +310,20 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 func TestBatchSpanProcessorMaxExportBatchBytes(t *testing.T) {
 	t.Run("Split", func(t *testing.T) {
 		te := testBatchExporter{}
+		te.exportSize = func(spans []ReadOnlySpan) int {
+			size := 0
+			for _, span := range spans {
+				size += len(span.Name())
+			}
+			return size
+		}
 		tp := basicTracerProvider(t)
 		bsp := NewBatchSpanProcessor(
 			&te,
 			WithBatchTimeout(time.Hour),
 			WithMaxQueueSize(10),
+			WithExportBatchSizeUnit(BatchSpanProcessorSizerTypeBytes),
 			WithMaxExportBatchSize(5),
-			WithExportSizer(testTraceSizer{
-				unit: BatchSpanProcessorSizerTypeBytes,
-				batch: func(spans []ReadOnlySpan) int {
-					size := 0
-					for _, span := range spans {
-						size += len(span.Name())
-					}
-					return size
-				},
-				perItem: func(span ReadOnlySpan) int { return len(span.Name()) },
-			}),
 		)
 		tp.RegisterSpanProcessor(bsp)
 		tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytes")
@@ -359,23 +349,20 @@ func TestBatchSpanProcessorMaxExportBatchBytes(t *testing.T) {
 		}))
 
 		te := testBatchExporter{}
+		te.exportSize = func(spans []ReadOnlySpan) int {
+			size := 0
+			for _, span := range spans {
+				size += len(span.Name())
+			}
+			return size
+		}
 		tp := basicTracerProvider(t)
 		bsp := NewBatchSpanProcessor(
 			&te,
 			WithBatchTimeout(time.Hour),
 			WithMaxQueueSize(10),
+			WithExportBatchSizeUnit(BatchSpanProcessorSizerTypeBytes),
 			WithMaxExportBatchSize(3),
-			WithExportSizer(testTraceSizer{
-				unit: BatchSpanProcessorSizerTypeBytes,
-				batch: func(spans []ReadOnlySpan) int {
-					size := 0
-					for _, span := range spans {
-						size += len(span.Name())
-					}
-					return size
-				},
-				perItem: func(span ReadOnlySpan) int { return len(span.Name()) },
-			}),
 		)
 		tp.RegisterSpanProcessor(bsp)
 		tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytesOversized")
@@ -396,16 +383,12 @@ func TestBatchSpanProcessorMaxExportBatchBytes(t *testing.T) {
 
 func TestBatchSpanProcessorExportBatchSizeUnitBytes(t *testing.T) {
 	te := testBatchExporter{
-		sizer: testTraceSizer{
-			unit: BatchSpanProcessorSizerTypeBytes,
-			batch: func(spans []ReadOnlySpan) int {
-				size := 0
-				for _, span := range spans {
-					size += len(span.Name())
-				}
-				return size
-			},
-			perItem: func(span ReadOnlySpan) int { return len(span.Name()) },
+		exportSize: func(spans []ReadOnlySpan) int {
+			size := 0
+			for _, span := range spans {
+				size += len(span.Name())
+			}
+			return size
 		},
 	}
 	tp := basicTracerProvider(t)

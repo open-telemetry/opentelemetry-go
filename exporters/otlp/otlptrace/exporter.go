@@ -44,24 +44,10 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) 
 	return nil
 }
 
-// BatchSpanProcessorExportSizer returns a byte sizer for full serialized OTLP
-// trace export requests.
-func (*Exporter) BatchSpanProcessorExportSizer() tracesdk.BatchSpanProcessorSizer {
-	return otlpTraceExportSizer{}
-}
-
-type otlpTraceExportSizer struct{}
-
-func (otlpTraceExportSizer) Type() tracesdk.BatchSpanProcessorSizerType {
-	return tracesdk.BatchSpanProcessorSizerTypeBytes
-}
-
-func (otlpTraceExportSizer) BatchSize(spans []tracesdk.ReadOnlySpan) int {
+// ExportSize returns the size, in bytes, of the serialized OTLP trace export
+// request for spans.
+func (*Exporter) ExportSize(spans []tracesdk.ReadOnlySpan) int {
 	return resourceSpansRequestSize(tracetransform.Spans(spans))
-}
-
-func (s otlpTraceExportSizer) ItemSize(span tracesdk.ReadOnlySpan) int {
-	return s.BatchSize([]tracesdk.ReadOnlySpan{span})
 }
 
 func resourceSpansRequestSize(rss []*tracepb.ResourceSpans) int {

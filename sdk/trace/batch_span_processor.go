@@ -59,10 +59,6 @@ type BatchSpanProcessorOptions struct {
 	// default unit is items.
 	ExportBatchSizeUnit BatchSpanProcessorSizerType
 
-	// ExportSizer configures how MaxExportBatchSize is measured. The default
-	// sizer measures batch size in items.
-	ExportSizer BatchSpanProcessorSizer
-
 	// BlockOnQueueFull blocks onEnd() and onStart() method if the queue is full
 	// AND if BlockOnQueueFull is set to true.
 	// Blocking option should be used carefully as it can severely affect the performance of an
@@ -80,27 +76,14 @@ const (
 	BatchSpanProcessorSizerTypeBytes BatchSpanProcessorSizerType = "bytes"
 )
 
-// BatchSpanProcessorSizer reports batch and item sizes for a batch span
-// processor.
-type BatchSpanProcessorSizer interface {
-	Type() BatchSpanProcessorSizerType
-	BatchSize([]ReadOnlySpan) int
-	ItemSize(ReadOnlySpan) int
+// BytesSizer reports the serialized size, in bytes, of an export batch.
+//
+// Exporters can implement this interface to enable byte-based batching when
+// [WithExportBatchSizeUnit] is configured with
+// [BatchSpanProcessorSizerTypeBytes].
+type BytesSizer interface {
+	ExportSize([]ReadOnlySpan) int
 }
-
-type spanCountSizer struct{}
-
-func (spanCountSizer) Type() BatchSpanProcessorSizerType  { return BatchSpanProcessorSizerTypeItems }
-func (spanCountSizer) BatchSize(spans []ReadOnlySpan) int { return len(spans) }
-func (spanCountSizer) ItemSize(ReadOnlySpan) int          { return 1 }
-
-type spanBytesSizer struct {
-	measure func([]ReadOnlySpan) int
-}
-
-func (spanBytesSizer) Type() BatchSpanProcessorSizerType    { return BatchSpanProcessorSizerTypeBytes }
-func (s spanBytesSizer) BatchSize(spans []ReadOnlySpan) int { return s.measure(spans) }
-func (s spanBytesSizer) ItemSize(span ReadOnlySpan) int     { return s.measure([]ReadOnlySpan{span}) }
 
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
 // spans and sends them to a trace.Exporter when complete.
@@ -146,12 +129,11 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		MaxQueueSize:        maxQueueSize,
 		MaxExportBatchSize:  maxExportBatchSize,
 		ExportBatchSizeUnit: BatchSpanProcessorSizerTypeItems,
-		ExportSizer:         spanCountSizer{},
 	}
 	for _, opt := range options {
 		opt(&o)
 	}
-	resolveBatchSpanProcessorSizer(exporter, &o)
+	resolveBatchSpanProcessorSizeUnit(exporter, &o)
 	bsp := &batchSpanProcessor{
 		e:      exporter,
 		o:      o,
@@ -179,35 +161,21 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	return bsp
 }
 
-type exportSizerProvider interface {
-	BatchSpanProcessorExportSizer() BatchSpanProcessorSizer
-}
-
-func resolveBatchSpanProcessorSizer(exporter SpanExporter, o *BatchSpanProcessorOptions) {
-	if o.ExportSizer != nil && o.ExportSizer.Type() == o.ExportBatchSizeUnit {
-		return
-	}
-
+func resolveBatchSpanProcessorSizeUnit(exporter SpanExporter, o *BatchSpanProcessorOptions) {
 	switch o.ExportBatchSizeUnit {
 	case BatchSpanProcessorSizerTypeBytes:
-		if provider, ok := exporter.(exportSizerProvider); ok {
-			if sizer := provider.BatchSpanProcessorExportSizer(); sizer != nil &&
-				sizer.Type() == BatchSpanProcessorSizerTypeBytes {
-				o.ExportSizer = sizer
-				return
-			}
+		if _, ok := exporter.(BytesSizer); ok {
+			return
 		}
 		global.Warn(
 			"byte batch sizing requested, exporter does not provide byte sizing support; falling back to item sizing",
 		)
-		fallthrough
+		o.ExportBatchSizeUnit = BatchSpanProcessorSizerTypeItems
 	case BatchSpanProcessorSizerTypeItems:
-		o.ExportSizer = spanCountSizer{}
 	default:
 		global.Warn("unknown batch size unit; falling back to item sizing", "unit", o.ExportBatchSizeUnit)
-		o.ExportSizer = spanCountSizer{}
+		o.ExportBatchSizeUnit = BatchSpanProcessorSizerTypeItems
 	}
-	o.ExportBatchSizeUnit = o.ExportSizer.Type()
 }
 
 var processorIDCounter atomic.Int64
@@ -333,20 +301,6 @@ func WithMaxExportBatchSize(size int) BatchSpanProcessorOption {
 	}
 }
 
-// WithExportSizer returns a BatchSpanProcessorOption that configures how
-// MaxExportBatchSize is measured for a BatchSpanProcessor.
-//
-// The default sizer measures in items. A byte sizer should measure the
-// exporter's serialized representation and may include container overhead.
-func WithExportSizer(sizer BatchSpanProcessorSizer) BatchSpanProcessorOption {
-	return func(o *BatchSpanProcessorOptions) {
-		if sizer != nil {
-			o.ExportBatchSizeUnit = sizer.Type()
-			o.ExportSizer = sizer
-		}
-	}
-}
-
 // WithExportBatchSizeUnit returns a BatchSpanProcessorOption that configures
 // whether MaxExportBatchSize is measured in items or bytes.
 //
@@ -361,21 +315,12 @@ func WithExportBatchSizeUnit(unit BatchSpanProcessorSizerType) BatchSpanProcesso
 // WithMaxExportBatchBytes returns a BatchSpanProcessorOption that configures
 // the maximum serialized batch size, in bytes, allowed for a
 // BatchSpanProcessor.
-//
-// The measure function must return the size, in bytes, of the serialized batch
-// representation used by the exporter and may include container overhead.
-//
-// If size is less than one, or if measure is nil, item-based batching remains
-// in effect.
-func WithMaxExportBatchBytes(size int, measure func([]ReadOnlySpan) int) BatchSpanProcessorOption {
+func WithMaxExportBatchBytes(size int) BatchSpanProcessorOption {
 	return func(o *BatchSpanProcessorOptions) {
 		if size > 0 {
 			o.MaxExportBatchSize = size
 		}
 		o.ExportBatchSizeUnit = BatchSpanProcessorSizerTypeBytes
-		if measure != nil {
-			o.ExportSizer = spanBytesSizer{measure: measure}
-		}
 	}
 }
 
@@ -522,7 +467,7 @@ func (bsp *batchSpanProcessor) addSpanToBatch(sd ReadOnlySpan) (bool, ReadOnlySp
 	defer bsp.batchMutex.Unlock()
 
 	bsp.batch = append(bsp.batch, sd)
-	size := bsp.o.ExportSizer.BatchSize(bsp.batch)
+	size := bsp.batchSize(bsp.batch)
 	if size < bsp.o.MaxExportBatchSize {
 		return false, nil, nil
 	}
@@ -542,8 +487,8 @@ func (bsp *batchSpanProcessor) addSpanToBatch(sd ReadOnlySpan) (bool, ReadOnlySp
 }
 
 func (bsp *batchSpanProcessor) oversizedSpanError(sd ReadOnlySpan) error {
-	size := bsp.o.ExportSizer.ItemSize(sd)
-	unit := bsp.o.ExportSizer.Type()
+	size := bsp.itemSize(sd)
+	unit := bsp.o.ExportBatchSizeUnit
 	return fmt.Errorf(
 		"dropping span larger than max export batch size: %d %s > %d %s",
 		size,
@@ -551,6 +496,24 @@ func (bsp *batchSpanProcessor) oversizedSpanError(sd ReadOnlySpan) error {
 		bsp.o.MaxExportBatchSize,
 		unit,
 	)
+}
+
+func (bsp *batchSpanProcessor) batchSize(spans []ReadOnlySpan) int {
+	if bsp.o.ExportBatchSizeUnit == BatchSpanProcessorSizerTypeBytes {
+		if sizer, ok := bsp.e.(BytesSizer); ok {
+			return sizer.ExportSize(spans)
+		}
+	}
+	return len(spans)
+}
+
+func (bsp *batchSpanProcessor) itemSize(span ReadOnlySpan) int {
+	if bsp.o.ExportBatchSizeUnit == BatchSpanProcessorSizerTypeBytes {
+		if sizer, ok := bsp.e.(BytesSizer); ok {
+			return sizer.ExportSize([]ReadOnlySpan{span})
+		}
+	}
+	return 1
 }
 
 func (bsp *batchSpanProcessor) enqueue(sd ReadOnlySpan) {

@@ -95,11 +95,9 @@ func TestExporterExport(t *testing.T) {
 	}
 }
 
-func TestExporterBatchProcessorExportSizer(t *testing.T) {
+func TestExporterExportSize(t *testing.T) {
 	e := newExporter(&mockClient{})
-	sizer := e.BatchProcessorExportSizer()
-	assert.Equal(t, sdklog.BatchExportSizerTypeBytes, sizer.Type())
-	assert.Positive(t, sizer.BatchSize(records[:1]))
+	assert.Positive(t, e.ExportSize(records[:1]))
 }
 
 func TestExporterShutdown(t *testing.T) {

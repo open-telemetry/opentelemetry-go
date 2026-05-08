@@ -29,16 +29,6 @@ type concurrentBuffer struct {
 	m sync.Mutex
 }
 
-type testLogSizer struct {
-	unit    BatchExportSizerType
-	batch   func([]Record) int
-	perItem func(Record) int
-}
-
-func (s testLogSizer) Type() BatchExportSizerType     { return s.unit }
-func (s testLogSizer) BatchSize(records []Record) int { return s.batch(records) }
-func (s testLogSizer) ItemSize(record Record) int     { return s.perItem(record) }
-
 func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -82,7 +72,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(dfltExpMaxBatchSize),
 				expBufferSize:       newSetting(dfltExpBufferSize),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 		{
@@ -101,7 +90,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(2),
 				expBufferSize:       newSetting(3),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 		{
@@ -119,7 +107,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(1),
 				expBufferSize:       newSetting(dfltExpBufferSize),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 		{
@@ -138,7 +125,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(dfltExpMaxBatchSize),
 				expBufferSize:       newSetting(dfltExpBufferSize),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 		{
@@ -156,7 +142,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(dfltExpMaxBatchSize),
 				expBufferSize:       newSetting(dfltExpBufferSize),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 		{
@@ -182,7 +167,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(2),
 				expBufferSize:       newSetting(2),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 		{
@@ -199,7 +183,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expMaxBatchSize:     newSetting(1),
 				expBufferSize:       newSetting(3),
 				exportBatchSizeUnit: BatchExportSizerTypeItems,
-				exportSizer:         recordCountSizer{},
 			},
 		},
 	}
@@ -225,6 +208,7 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 
 	t.Run("Split", func(t *testing.T) {
 		e := newTestExporter(nil)
+		e.exportSize = measure
 		t.Cleanup(e.Stop)
 
 		b := NewBatchProcessor(
@@ -232,14 +216,8 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 			WithMaxQueueSize(10),
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
+			WithExportBatchSizeUnit(BatchExportSizerTypeBytes),
 			WithExportMaxBatchSize(5),
-			WithExportSizer(testLogSizer{
-				unit: BatchExportSizerTypeBytes,
-				batch: func(records []Record) int {
-					return measure(records)
-				},
-				perItem: func(record Record) int { return measure([]Record{record}) },
-			}),
 		)
 
 		for _, body := range []string{"aa", "bbb", "c", "dddd"} {
@@ -266,6 +244,7 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 		}))
 
 		e := newTestExporter(nil)
+		e.exportSize = measure
 		t.Cleanup(e.Stop)
 
 		b := NewBatchProcessor(
@@ -273,14 +252,8 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 			WithMaxQueueSize(10),
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
+			WithExportBatchSizeUnit(BatchExportSizerTypeBytes),
 			WithExportMaxBatchSize(3),
-			WithExportSizer(testLogSizer{
-				unit: BatchExportSizerTypeBytes,
-				batch: func(records []Record) int {
-					return measure(records)
-				},
-				perItem: func(record Record) int { return measure([]Record{record}) },
-			}),
 		)
 
 		for _, body := range []string{"four", "a", "bb"} {
@@ -301,16 +274,12 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 
 func TestBatchProcessorExportBatchSizeUnitBytes(t *testing.T) {
 	e := newTestExporter(nil)
-	e.sizer = testLogSizer{
-		unit: BatchExportSizerTypeBytes,
-		batch: func(records []Record) int {
-			size := 0
-			for _, record := range records {
-				size += len(record.Body().AsString())
-			}
-			return size
-		},
-		perItem: func(record Record) int { return len(record.Body().AsString()) },
+	e.exportSize = func(records []Record) int {
+		size := 0
+		for _, record := range records {
+			size += len(record.Body().AsString())
+		}
+		return size
 	}
 	t.Cleanup(e.Stop)
 

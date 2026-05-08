@@ -104,10 +104,10 @@ type sizedExporter struct {
 	Exporter
 
 	size  int
-	sizer BatchExportSizer
+	sizer BytesSizer
 }
 
-func newSizedExporter(exporter Exporter, size int, sizer BatchExportSizer) Exporter {
+func newSizedExporter(exporter Exporter, size int, sizer BytesSizer) Exporter {
 	if size <= 0 || sizer == nil {
 		return exporter
 	}
@@ -116,14 +116,14 @@ func newSizedExporter(exporter Exporter, size int, sizer BatchExportSizer) Expor
 
 func (e *sizedExporter) Export(ctx context.Context, records []Record) error {
 	for start := 0; start < len(records); {
-		if itemSize := e.sizer.ItemSize(records[start]); itemSize > e.size {
+		if itemSize := e.sizer.ExportSize([]Record{records[start]}); itemSize > e.size {
 			otel.Handle(
 				fmt.Errorf(
 					"dropping log record larger than max export batch size: %d %s > %d %s",
 					itemSize,
-					e.sizer.Type(),
+					BatchExportSizerTypeBytes,
 					e.size,
-					e.sizer.Type(),
+					BatchExportSizerTypeBytes,
 				),
 			)
 			start++
@@ -131,7 +131,7 @@ func (e *sizedExporter) Export(ctx context.Context, records []Record) error {
 		}
 
 		end := start + 1
-		for end < len(records) && e.sizer.BatchSize(records[start:end+1]) <= e.size {
+		for end < len(records) && e.sizer.ExportSize(records[start:end+1]) <= e.size {
 			end++
 		}
 		if err := e.Exporter.Export(ctx, records[start:end]); err != nil {
