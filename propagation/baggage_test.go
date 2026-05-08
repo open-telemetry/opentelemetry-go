@@ -274,16 +274,12 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want:    members{},
 		},
 		{
-			name: "multiple headers exceed total max bytes keeps one that fits",
+			name: "multiple headers exceed total max bytes drops everything",
 			headers: []string{
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString-2),
 			},
-			want: members{
-				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString-2)},
-			},
-			wantCount: 1, // Only one member fits
-			wantBytes: maxBytesPerBaggageString,
+			want: members{},
 		},
 		{
 			name: "multiple headers within total max bytes",
@@ -306,9 +302,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				// The comma as the separator of member would take 1 byte.
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
 			},
-			want: members{
-				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
-			},
+			want: members{},
 		},
 		{
 			name: "empty headers before non-empty do count comma separators",
@@ -319,9 +313,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				// The comma as the separator of member would take 1 byte.
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2-1),
 			},
-			want: members{
-				{Key: "k", Value: strings.Repeat("v", maxBytesPerBaggageString/2-2)},
-			},
+			want: members{},
 		},
 		{
 			name: "multiple headers exceed total max bytes due to comma separator",
@@ -332,9 +324,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 				"k=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
 				"y=" + strings.Repeat("v", maxBytesPerBaggageString/2-2),
 			},
-			want:      nil,
-			wantCount: 1,
-			wantBytes: maxBytesPerBaggageString / 2,
+			want: members{},
 		},
 		{
 			name: "many headers exceeding member limit caps collection early",
@@ -350,18 +340,6 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			}(),
 			wantCount: maxMembers,
 			wantBytes: maxMembers*11 + maxMembers - 1, // 64 uniform "hNN_kNN=vNN" members + 63 commas
-		},
-		{
-			name: "stops processing when aggregate byte budget exceeded",
-			headers: []string{
-				"small1=v1,small2=v2",
-				"large=" + strings.Repeat("x", maxBytesPerBaggageString),
-				"small3=v3",
-			},
-			want: members{
-				{Key: "small1", Value: "v1"},
-				{Key: "small2", Value: "v2"},
-			},
 		},
 	}
 
@@ -577,7 +555,7 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 		wantErrStr []string
 	}{
 		{
-			name: "aggregate byte budget exceeded",
+			name: "aggregate byte budget exceeded drops everything",
 			headers: func() []string {
 				// 100 headers, each ~195 bytes. Total: ~19.5KB, well over 8192.
 				h := make([]string, 100)
@@ -587,11 +565,7 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 				return h
 			},
 			want: func() members {
-				m := make(members, 42)
-				for i := range 42 {
-					m[i] = member{Key: fmt.Sprintf("k%d", i), Value: strings.Repeat("v", 190)}
-				}
-				return m
+				return members{}
 			},
 			wantErrStr: []string{"aggregate header size 8374 exceeds 8192 byte limit"},
 		},
