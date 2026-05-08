@@ -269,7 +269,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			},
 		},
 		{
-			name:    "single header exceeds max bytes limit drops oversized member",
+			name:    "single header exceeds max bytes limit will be dropped entirely",
 			headers: []string{"k=" + strings.Repeat("v", maxBytesPerBaggageString-1)},
 			want:    members{},
 		},
