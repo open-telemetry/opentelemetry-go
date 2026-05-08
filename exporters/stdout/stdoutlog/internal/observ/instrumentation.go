@@ -204,7 +204,7 @@ func (e ExportOp) End(success int64, err error) {
 	}
 
 	mOpt := e.inst.setOpt
-	if err != nil && exportedLogsEnable {
+	if err != nil && (exportedLogsEnable || opDurationEnable) {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
@@ -213,8 +213,10 @@ func (e ExportOp) End(success int64, err error) {
 
 		mOpt = metric.WithAttributeSet(attribute.NewSet(*attrs...))
 
-		*addOpt = append((*addOpt)[:0], mOpt)
-		e.inst.exported.Add(e.ctx, e.count-success, *addOpt...)
+		if exportedLogsEnable {
+			*addOpt = append((*addOpt)[:0], mOpt)
+			e.inst.exported.Add(e.ctx, e.count-success, *addOpt...)
+		}
 	}
 
 	if opDurationEnable {
