@@ -498,10 +498,14 @@ func New(members ...Member) (Baggage, error) {
 // conforms to the OpenTelemetry Baggage specification.
 //
 // If the raw baggage-string exceeds the maximum allowed bytes (8192), an
-// empty Baggage and an error are returned. If adding valid members would
-// cause the parsed baggage to exceed the maximum allowed bytes (8192), or if
-// the baggage-string exceeds the maximum allowed members (64), parsing stops
-// and an error is returned along with the partial result.
+// empty Baggage and an error are returned.
+//
+// Otherwise, members are parsed left-to-right and accumulated until one of
+// the following conditions is reached, at which point parsing stops and an
+// error is returned alongside the partial result:
+//   - accepting the next member would cause the encoded baggage to exceed
+//     8192 bytes, or
+//   - the baggage already contains 64 distinct keys.
 //
 // Invalid members are skipped and the error is returned along with the
 // partial result containing the valid members.
