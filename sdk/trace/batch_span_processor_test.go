@@ -886,7 +886,8 @@ func assertObsScopeMetrics(
 	}
 
 	if len(wantProcessedDataPoints) > 0 {
-		wantMetrics = append(wantMetrics,
+		wantMetrics = append(
+			wantMetrics,
 			metricdata.Metrics{
 				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
 				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),

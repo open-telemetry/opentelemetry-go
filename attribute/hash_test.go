@@ -58,14 +58,16 @@ var keyVals = []keyVal{
 	{name: "SliceLen1", kv: func(k string) KeyValue { return Slice(k, BoolValue(true)) }},
 	{name: "SliceLen2", kv: func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) }},
 	{name: "SliceLen3", kv: func(k string) KeyValue {
-		return Slice(k,
+		return Slice(
+			k,
 			StringValue("triad"),
 			IntValue(3),
 			BoolValue(false),
 		)
 	}},
 	{name: "SliceLen4", kv: func(k string) KeyValue {
-		return Slice(k,
+		return Slice(
+			k,
 			StringValue("quad"),
 			IntValue(4),
 			BoolValue(false),
@@ -73,7 +75,8 @@ var keyVals = []keyVal{
 		)
 	}},
 	{name: "SliceLen5", kv: func(k string) KeyValue {
-		return Slice(k,
+		return Slice(
+			k,
 			StringValue("penta"),
 			IntValue(5),
 			BoolValue(true),
@@ -82,7 +85,8 @@ var keyVals = []keyVal{
 		)
 	}},
 	{name: "SliceNested", kv: func(k string) KeyValue {
-		return Slice(k,
+		return Slice(
+			k,
 			StringValue("nested"),
 			SliceValue(Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))),
 			BoolValue(true),

@@ -41,7 +41,8 @@ func Example() {
 		},
 	}
 	got := rec.Result()
-	logtest.AssertEqual(t, want, got,
+	logtest.AssertEqual(
+		t, want, got,
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			r = r.Clone()
 			r.Context = nil           // Ignore context.

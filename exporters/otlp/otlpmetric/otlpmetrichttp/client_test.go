@@ -255,7 +255,8 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
-		exp, err := New(t.Context(),
+		exp, err := New(
+			t.Context(),
 			WithEndpoint("localhost:4318"),
 			WithInsecure(),
 			WithTLSClientConfig(&tls.Config{}),
@@ -780,7 +781,8 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	exp, err := New(ctx,
+	exp, err := New(
+		ctx,
 		WithHTTPClient(client),
 		WithInsecure(),
 		WithRetry(RetryConfig{

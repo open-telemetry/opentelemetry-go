@@ -749,7 +749,8 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
-		exp, err := New(t.Context(),
+		exp, err := New(
+			t.Context(),
 			WithEndpoint("localhost:4318"),
 			WithInsecure(),
 			WithTLSClientConfig(&tls.Config{}),

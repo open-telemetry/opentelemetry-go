@@ -289,11 +289,13 @@ func TestTruncateAttr(t *testing.T) {
 			// STRINGSLICE element remains unchanged because each string fits
 			// within the limit, while the sibling STRING element is truncated.
 			limit: 3,
-			attr: attribute.Slice(key,
+			attr: attribute.Slice(
+				key,
 				attribute.StringSliceValue([]string{"ab", "cd"}),
 				attribute.StringValue("toolong"),
 			),
-			want: attribute.Slice(key,
+			want: attribute.Slice(
+				key,
 				attribute.StringSliceValue([]string{"ab", "cd"}),
 				attribute.StringValue("too"),
 			),
@@ -304,11 +306,13 @@ func TestTruncateAttr(t *testing.T) {
 			// is called recursively on the nested SLICE but returns it unchanged because
 			// none of its elements require truncation.
 			limit: 3,
-			attr: attribute.Slice(key,
+			attr: attribute.Slice(
+				key,
 				attribute.SliceValue(attribute.BoolValue(true)),
 				attribute.StringValue("toolong"),
 			),
-			want: attribute.Slice(key,
+			want: attribute.Slice(
+				key,
 				attribute.SliceValue(attribute.BoolValue(true)),
 				attribute.StringValue("too"),
 			),
@@ -342,11 +346,13 @@ func TestTruncateAttr(t *testing.T) {
 		{
 			// Mixed SLICE: BYTESLICE + STRING (both need truncation).
 			limit: 2,
-			attr: attribute.Slice(key,
+			attr: attribute.Slice(
+				key,
 				attribute.ByteSliceValue([]byte{1, 2, 3}),
 				attribute.StringValue("abc"),
 			),
-			want: attribute.Slice(key,
+			want: attribute.Slice(
+				key,
 				attribute.ByteSliceValue([]byte{1, 2}),
 				attribute.StringValue("ab"),
 			),
