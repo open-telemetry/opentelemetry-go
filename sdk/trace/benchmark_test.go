@@ -36,10 +36,12 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 		attribute.Float64("float64", 42),
 		attribute.Float64Slice("float64Slice", []float64{42, -1}),
 		attribute.String("string", "value"),
+		attribute.ByteSlice("byteSlice", []byte("value")),
 		attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
 		attribute.Slice("slice",
 			attribute.StringValue("value"),
 			attribute.StringSliceValue([]string{"value", "value-1"}),
+			attribute.ByteSliceValue([]byte{1, 2, 3}),
 		),
 	}
 
