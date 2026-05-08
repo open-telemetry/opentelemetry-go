@@ -245,6 +245,10 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	defer cancel()
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
+	defer func() {
+		*rm = metricdata.ResourceMetrics{} // erase fields to allow GC to collect them.
+		r.rmPool.Put(rm)
+	}()
 	err := r.Collect(ctx, rm)
 	if err == nil {
 		if r.batcher.size > 0 {
@@ -258,7 +262,6 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 			err = r.exporter.Export(ctx, rm)
 		}
 	}
-	r.rmPool.Put(rm)
 	return err
 }
 
