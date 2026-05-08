@@ -24,7 +24,8 @@ func ExampleMeter_synchronous() {
 	// Create a histogram using the global MeterProvider.
 	workDuration, err := meter.Int64Histogram(
 		"workDuration",
-		metric.WithUnit("ms"))
+		metric.WithUnit("ms"),
+	)
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)

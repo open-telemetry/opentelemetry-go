@@ -352,7 +352,8 @@ func TestObservability(t *testing.T) {
 			otel.SetMeterProvider(mp)
 
 			exporter, err := stdouttrace.New(
-				stdouttrace.WithWriter(io.Discard))
+				stdouttrace.WithWriter(io.Discard),
+			)
 			require.NoError(t, err)
 
 			tt.callExportSpans(t, exporter)

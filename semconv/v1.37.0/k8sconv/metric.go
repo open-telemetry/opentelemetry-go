@@ -1057,12 +1057,12 @@ func (ContainerStatusReason) Description() string {
 // Corresponds to the `reason` field of the: [K8s ContainerStateWaiting] or
 // [K8s ContainerStateTerminated]
 //
-// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
-// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-//
 // All possible container state reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current state reason will be non-zero.
+//
+// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
+// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
 func (m ContainerStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -1177,11 +1177,11 @@ func (ContainerStatusState) Description() string {
 // The containerStatusState is the the state of the container.
 // [K8s ContainerState]
 //
-// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
-//
 // All possible container states will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current state will be non-zero.
+//
+// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
 func (m ContainerStatusState) Add(
 	ctx context.Context,
 	incr int64,
