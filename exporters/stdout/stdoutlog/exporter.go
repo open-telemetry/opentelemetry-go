@@ -33,18 +33,14 @@ func New(options ...Option) (*Exporter, error) {
 		enc.SetIndent("", "\t")
 	}
 
-	inst, err := observ.NewInstrumentation(counter.NextExporterID())
-	if err != nil {
-		return nil, err
-	}
-
-	e := Exporter{
+	e := &Exporter{
 		timestamps: cfg.Timestamps,
-		inst:       inst,
 	}
 	e.encoder.Store(enc)
 
-	return &e, nil
+	var err error
+	e.inst, err = observ.NewInstrumentation(counter.NextExporterID())
+	return e, err
 }
 
 // Export exports log records to writer.
