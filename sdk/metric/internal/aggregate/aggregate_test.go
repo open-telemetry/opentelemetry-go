@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -91,10 +92,10 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, f attribute.Set, d []attribute.KeyValue) {
+				meas := b.filter(func(_ context.Context, v N, lazySet attribute.LazyFilteredSet) {
 					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
-					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
+					assert.Equal(t, wantF, lazySet.Filtered(), "measured incorrect filtered attributes")
+					assert.ElementsMatch(t, wantD, lazySet.Dropped(), "measured incorrect dropped attributes")
 				})
 				meas(t.Context(), value, attr)
 			}
@@ -282,3 +283,84 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 		}
 	})
 }
+
+func TestInconsistentFilterFunction(t *testing.T) {
+	k0 := attribute.String("k0", "v0")
+	s := attribute.NewSet(k0)
+
+	testCases := []struct {
+		name    string
+		factory func(Builder[int64]) (Measure[int64], ComputeAggregation)
+	}{
+		{
+			name: "Sum",
+			factory: func(b Builder[int64]) (Measure[int64], ComputeAggregation) {
+				return b.Sum(true)
+			},
+		},
+		{
+			name: "LastValue",
+			factory: func(b Builder[int64]) (Measure[int64], ComputeAggregation) {
+				return b.LastValue()
+			},
+		},
+		{
+			name: "Histogram",
+			factory: func(b Builder[int64]) (Measure[int64], ComputeAggregation) {
+				return b.ExplicitBucketHistogram([]float64{1, 5}, false, false)
+			},
+		},
+		{
+			name: "ExponentialHistogram",
+			factory: func(b Builder[int64]) (Measure[int64], ComputeAggregation) {
+				return b.ExponentialBucketHistogram(4, 20, false, false)
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			called := 0
+			filter := func(_ attribute.KeyValue) bool {
+				called++
+				return called == 1 // True only on first call
+			}
+
+			res := &mockReservoir[int64]{}
+
+			b := Builder[int64]{
+				Filter: filter,
+				ReservoirFunc: func(_ attribute.Set) FilteredExemplarReservoir[int64] {
+					return res
+				},
+			}
+
+			in, out := tt.factory(b)
+
+			ctx := t.Context()
+			in(ctx, 1, s)
+
+			assert.Equal(t, 1, called, "filter should be called exactly once during measurement")
+
+			assert.True(t, res.called, "reservoir Offer should be called")
+			assert.Equal(t, attribute.NewSet(k0), res.lazySet.Filtered(), "filtered set should match")
+			assert.Empty(t, res.lazySet.Dropped(), "dropped attributes should be empty")
+
+			var dest metricdata.Aggregation
+			out(&dest)
+			assert.Equal(t, 1, called, "filter should not be called again during collection")
+		})
+	}
+}
+
+type mockReservoir[N int64 | float64] struct {
+	called  bool
+	lazySet attribute.LazyFilteredSet
+}
+
+func (r *mockReservoir[N]) Offer(_ context.Context, _ N, lazySet attribute.LazyFilteredSet) {
+	r.called = true
+	r.lazySet = lazySet
+}
+
+func (*mockReservoir[N]) Collect(_ *[]exemplar.Exemplar) {}

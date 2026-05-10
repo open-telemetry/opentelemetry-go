@@ -21,6 +21,7 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 		desc                 string
 		reservoir            exemplar.Reservoir
 		expectConcurrentSafe bool
+		expectOfferLazy      bool
 	}{
 		{
 			desc:                 "concurrent safe",
@@ -32,13 +33,25 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			reservoir:            &notConcurrentSafeReservoir{},
 			expectConcurrentSafe: false,
 		},
+		{
+			desc:                 "offer lazy",
+			reservoir:            &offerLazyReservoir{},
+			expectConcurrentSafe: true,
+			expectOfferLazy:      true,
+		},
+		{
+			desc:                 "offer lazy not concurrent safe",
+			reservoir:            &notConcurrentSafeOfferLazyReservoir{},
+			expectConcurrentSafe: false,
+			expectOfferLazy:      true,
+		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			reservoir := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, tc.reservoir)
 			var wg sync.WaitGroup
 			for range 5 {
 				wg.Go(func() {
-					reservoir.Offer(t.Context(), 25, []attribute.KeyValue{})
+					reservoir.Offer(t.Context(), 25, attribute.NewLazyFilteredSet(*attribute.EmptySet(), nil))
 				})
 			}
 			into := []exemplar.Exemplar{}
@@ -48,6 +61,14 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			wg.Wait()
 			assert.Len(t, into, 1)
 			assert.Equal(t, reservoir.(*filteredExemplarReservoir[int64]).concurrentSafe, tc.expectConcurrentSafe)
+
+			if tc.expectOfferLazy {
+				if r, ok := tc.reservoir.(offerLazyReporter); ok {
+					assert.True(t, r.OfferLazyCalled())
+				} else {
+					t.Fatal("reservoir does not implement offerLazyReporter")
+				}
+			}
 		})
 	}
 }
@@ -98,4 +119,52 @@ func (r *concurrentSafeReservoir) Collect(dest *[]exemplar.Exemplar) {
 	r.Lock()
 	defer r.Unlock()
 	r.base.Collect(dest)
+}
+
+type offerLazyReporter interface {
+	OfferLazyCalled() bool
+}
+
+type offerLazyReservoir struct {
+	concurrentSafeReservoir
+	offerLazyCalled bool
+}
+
+func (r *offerLazyReservoir) OfferLazyCalled() bool {
+	return r.offerLazyCalled
+}
+
+func (r *offerLazyReservoir) OfferLazy(
+	ctx context.Context,
+	t time.Time,
+	val exemplar.Value,
+	lazySet attribute.LazyFilteredSet,
+) {
+	r.Lock()
+	defer r.Unlock()
+	r.offerLazyCalled = true
+	r.base.Offer(ctx, t, val, lazySet.Dropped())
+}
+
+type notConcurrentSafeOfferLazyReservoir struct {
+	notConcurrentSafeReservoir
+	offerLazyCalled bool
+}
+
+func (r *notConcurrentSafeOfferLazyReservoir) OfferLazyCalled() bool {
+	return r.offerLazyCalled
+}
+
+func (r *notConcurrentSafeOfferLazyReservoir) OfferLazy(
+	_ context.Context,
+	t time.Time,
+	val exemplar.Value,
+	lazySet attribute.LazyFilteredSet,
+) {
+	r.offerLazyCalled = true
+	r.ex = exemplar.Exemplar{
+		FilteredAttributes: lazySet.Dropped(),
+		Time:               t,
+		Value:              val,
+	}
 }

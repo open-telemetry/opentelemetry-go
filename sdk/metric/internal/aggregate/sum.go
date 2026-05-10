@@ -28,15 +28,14 @@ type sumValueMap[N int64 | float64] struct {
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
+	lazySet attribute.LazyFilteredSet,
 ) {
-	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		r := s.newRes(attr)
+	sv := s.values.LoadOrStoreAttr(lazySet, func(a attribute.Set) any {
+		r := s.newRes(a)
 		_, isDrop := r.(*dropRes[N])
 		return &sumValue[N]{
 			res:           r,
-			attrs:         attr,
+			attrs:         a,
 			startTime:     now(),
 			dropExemplars: isDrop,
 		}
@@ -46,7 +45,7 @@ func (s *sumValueMap[N]) measure(
 	// exemplar in the batch of metrics after the add() for cumulative sums.
 	// This is an accepted tradeoff to avoid locking during measurement.
 	if !sv.dropExemplars {
-		sv.res.Offer(ctx, value, droppedAttr)
+		sv.res.Offer(ctx, value, lazySet)
 	}
 }
 
@@ -83,10 +82,14 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]sumValueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
+func (s *deltaSum[N]) measure(
+	ctx context.Context,
+	value N,
+	lazySet attribute.LazyFilteredSet,
+) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	s.hotColdValMap[hotIdx].measure(ctx, value, lazySet)
 }
 
 func (s *deltaSum[N]) collect(
@@ -210,7 +213,7 @@ func newPrecomputedSum[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedSum[N] {
 	return &precomputedSum[N]{
-		deltaSum: newDeltaSum(monotonic, limit, r),
+		deltaSum: newDeltaSum[N](monotonic, limit, r),
 	}
 }
 

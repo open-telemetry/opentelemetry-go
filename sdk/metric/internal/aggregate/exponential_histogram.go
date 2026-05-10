@@ -331,23 +331,25 @@ type expoHistogram[N int64 | float64] struct {
 func (e *expoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
+	lazySet attribute.LazyFilteredSet,
 ) {
 	// Ignore NaN and infinity.
 	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
 		return
 	}
+	equiv := lazySet.Distinct()
 
 	e.valuesMu.Lock()
 	defer e.valuesMu.Unlock()
 
-	v, ok := e.values[fltrAttr.Equivalent()]
+	v, ok := e.values[equiv]
 	if !ok {
+		fltrAttr := lazySet.Filtered()
 		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
+		equiv = fltrAttr.Equivalent()
 		// If we overflowed, make sure we add to the existing overflow series
 		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
+		v, ok = e.values[equiv]
 		if !ok {
 			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 			r := e.newRes(fltrAttr)
@@ -355,12 +357,12 @@ func (e *expoHistogram[N]) measure(
 			v.res = r
 			v.dropExemplars = isDrop
 
-			e.values[fltrAttr.Equivalent()] = v
+			e.values[equiv] = v
 		}
 	}
 	v.record(value)
 	if !v.dropExemplars {
-		v.res.Offer(ctx, value, droppedAttr)
+		v.res.Offer(ctx, value, lazySet)
 	}
 }
 
