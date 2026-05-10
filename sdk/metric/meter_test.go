@@ -2659,6 +2659,48 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			},
 		},
 		{
+			name:     "Int64Counter_Bind",
+			instName: "sint_bind",
+			record: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint_bind", x.WithDefaultAttributes(k1))
+				require.NoError(t, err)
+				if binder, ok := ctr.(x.Int64Binder); ok {
+					bound := binder.Bind(k1.String("alice"), k2.String("bob"))
+					bound.Add(t.Context(), 3)
+				} else {
+					t.Fatal("counter does not implement Binder")
+				}
+			},
+			wantData: func(attrs attribute.Set) metricdata.Aggregation {
+				return metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 3}},
+				}
+			},
+		},
+		{
+			name:     "Int64Counter_BindAndAdd",
+			instName: "sint_bind_add",
+			record: func(t *testing.T, m metric.Meter) {
+				ctr, err := m.Int64Counter("sint_bind_add", x.WithDefaultAttributes(k1))
+				require.NoError(t, err)
+				if binder, ok := ctr.(x.Int64Binder); ok {
+					bound := binder.Bind(k1.String("alice"))
+					bound.Add(t.Context(), 3, metric.WithAttributes(k2.String("bob")))
+				} else {
+					t.Fatal("counter does not implement Binder")
+				}
+			},
+			wantData: func(attrs attribute.Set) metricdata.Aggregation {
+				return metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 3}},
+				}
+			},
+		},
+		{
 			name:     "Float64Counter",
 			instName: "sfloat",
 			record: func(t *testing.T, m metric.Meter) {
