@@ -113,10 +113,10 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregati
 func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation, any) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s := newDeltaSum[N](monotonic, b.AggregationLimit, b.resFunc())
+		s := newDeltaSum[N](monotonic, b.AggregationLimit, b.resFunc(), b.Filter)
 		return b.filter(s.measure), s.collect, s
 	default:
-		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc())
+		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc(), b.Filter)
 		return b.filter(s.measure), s.collect, s
 	}
 }
