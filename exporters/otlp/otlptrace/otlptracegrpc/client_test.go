@@ -93,7 +93,8 @@ func TestNewEndToEnd(t *testing.T) {
 					grpc.WithConnectParams(grpc.ConnectParams{
 						Backoff:           backoff.DefaultConfig,
 						MinConnectTimeout: time.Second,
-					})),
+					}),
+				),
 			},
 		},
 	}
