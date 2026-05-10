@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -427,16 +429,49 @@ type int64MeasureBinder interface {
 }
 
 // boundFloat64Counter implements metric.Float64Counter using resolved measures.
-// This is the slow-path wrapper for instruments with multiple aggregators.
 type boundFloat64Counter struct {
 	embedded.Float64Counter
-	measures []metric.Float64Counter
+	inst           *float64Inst
+	preboundAttrs  attribute.Set
+	
+	directCounters []metric.Float64Counter
+	resolved       atomic.Bool
+	mux            sync.Mutex
 }
 
 func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
-	for _, m := range b.measures {
-		m.Add(ctx, val, opts...)
+	cfg := metric.NewAddConfig(opts)
+	extraAttrs := cfg.Attributes()
+
+	if extraAttrs.Len() == 0 {
+		if b.resolved.Load() {
+			for _, c := range b.directCounters {
+				c.Add(ctx, val)
+			}
+			return
+		}
+
+		b.mux.Lock()
+		defer b.mux.Unlock()
+
+		if !b.resolved.Load() {
+			b.directCounters = b.inst.resolveBoundCounter(b.preboundAttrs)
+			b.resolved.Store(true)
+		}
+
+		for _, c := range b.directCounters {
+			c.Add(ctx, val)
+		}
+		return
 	}
+
+	// Slow path: merge and fallback
+	kvs1 := b.preboundAttrs.ToSlice()
+	kvs2 := extraAttrs.ToSlice()
+	mergedKvs := append(kvs1, kvs2...)
+	mergedSet := attribute.NewSet(mergedKvs...)
+	
+	b.inst.aggregate(ctx, val, mergedSet)
 }
 
 func (*boundFloat64Counter) Enabled(_ context.Context) bool {
@@ -444,68 +479,93 @@ func (*boundFloat64Counter) Enabled(_ context.Context) bool {
 }
 
 // boundInt64Counter implements metric.Int64Counter using resolved measures.
-// This is the slow-path wrapper for instruments with multiple aggregators.
 type boundInt64Counter struct {
 	embedded.Int64Counter
-	measures []metric.Int64Counter
+	inst           *int64Inst
+	preboundAttrs  attribute.Set
+	
+	directCounters []metric.Int64Counter
+	resolved       atomic.Bool
+	mux            sync.Mutex
 }
 
 func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
-	for _, m := range b.measures {
-		m.Add(ctx, val, opts...)
+	cfg := metric.NewAddConfig(opts)
+	extraAttrs := cfg.Attributes()
+
+	if extraAttrs.Len() == 0 {
+		if b.resolved.Load() {
+			for _, c := range b.directCounters {
+				c.Add(ctx, val)
+			}
+			return
+		}
+
+		b.mux.Lock()
+		defer b.mux.Unlock()
+
+		if !b.resolved.Load() {
+			b.directCounters = b.inst.resolveBoundCounterInt64(b.preboundAttrs)
+			b.resolved.Store(true)
+		}
+
+		for _, c := range b.directCounters {
+			c.Add(ctx, val)
+		}
+		return
 	}
+
+	// Slow path: merge and fallback
+	kvs1 := b.preboundAttrs.ToSlice()
+	kvs2 := extraAttrs.ToSlice()
+	mergedKvs := append(kvs1, kvs2...)
+	mergedSet := attribute.NewSet(mergedKvs...)
+	
+	b.inst.aggregate(ctx, val, mergedSet)
 }
 
 func (*boundInt64Counter) Enabled(_ context.Context) bool {
 	return true
 }
 
-// Bind implements x.Float64Binder for float64Inst.
-func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
-	// Fast path: if there is only one aggregator (common case), we can avoid
-	// allocating the measures slice and the boundFloat64Counter wrapper.
-	if len(i.aggregators) == 1 {
-		if b, ok := i.aggregators[0].(float64MeasureBinder); ok {
-			if m := b.LookupBoundMeasure(attrs); m != nil {
-				return m
-			}
-		}
-	}
-
-	// Slow path: multiple aggregators.
+func (i *float64Inst) resolveBoundCounter(attrs attribute.Set) []metric.Float64Counter {
 	var measures []metric.Float64Counter
 	for _, agg := range i.aggregators {
 		if b, ok := agg.(float64MeasureBinder); ok {
-			m := b.LookupBoundMeasure(attrs)
+			m := b.LookupBoundMeasure(attrs.ToSlice())
 			if m != nil {
 				measures = append(measures, m)
 			}
 		}
 	}
-	return &boundFloat64Counter{measures: measures}
+	return measures
+}
+
+func (i *int64Inst) resolveBoundCounterInt64(attrs attribute.Set) []metric.Int64Counter {
+	var measures []metric.Int64Counter
+	for _, agg := range i.aggregators {
+		if b, ok := agg.(int64MeasureBinder); ok {
+			m := b.LookupBoundMeasureInt64(attrs.ToSlice())
+			if m != nil {
+				measures = append(measures, m)
+			}
+		}
+	}
+	return measures
+}
+
+// Bind implements x.Float64Binder for float64Inst.
+func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
+	return &boundFloat64Counter{
+		inst:          i,
+		preboundAttrs: attribute.NewSet(attrs...),
+	}
 }
 
 // Bind implements x.Int64Binder for int64Inst.
 func (i *int64Inst) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
-	// Fast path: if there is only one aggregator (common case), we can avoid
-	// allocating the measures slice and the boundInt64Counter wrapper.
-	if len(i.aggregators) == 1 {
-		if b, ok := i.aggregators[0].(int64MeasureBinder); ok {
-			if m := b.LookupBoundMeasureInt64(attrs); m != nil {
-				return m
-			}
-		}
+	return &boundInt64Counter{
+		inst:          i,
+		preboundAttrs: attribute.NewSet(attrs...),
 	}
-
-	// Slow path: multiple aggregators.
-	var measures []metric.Int64Counter
-	for _, agg := range i.aggregators {
-		if b, ok := agg.(int64MeasureBinder); ok {
-			m := b.LookupBoundMeasureInt64(attrs)
-			if m != nil {
-				measures = append(measures, m)
-			}
-		}
-	}
-	return &boundInt64Counter{measures: measures}
 }
