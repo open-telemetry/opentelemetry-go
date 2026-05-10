@@ -284,3 +284,106 @@ func (m *limitedSyncMap) Len() int {
 func (m *limitedSyncMap) LoadByDistinct(d attribute.Distinct) (any, bool) {
 	return m.Load(d)
 }
+
+// HotColdSyncMap manages two limitedSyncMaps for hot/cold swapping.
+type HotColdSyncMap struct {
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap
+	state         *cardinalityState
+}
+
+// NewHotColdSyncMap returns a new HotColdSyncMap.
+func NewHotColdSyncMap(limit int) *HotColdSyncMap {
+	state := &cardinalityState{limit: limit}
+	return &HotColdSyncMap{
+		state: state,
+		hotColdValMap: [2]limitedSyncMap{
+			{state: state},
+			{state: state},
+		},
+	}
+}
+
+// LoadOrStoreUnbound looks up or stores a value in the current hot map.
+func (m *HotColdSyncMap) LoadOrStoreUnbound(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
+	hotIdx := m.hcwg.start()
+	defer m.hcwg.done(hotIdx)
+	return m.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, newValue)
+}
+
+// LoadOrStoreBound looks up a value in both maps, or stores it in the current hot map.
+func (m *HotColdSyncMap) LoadOrStoreBound(fltrAttr attribute.Set, newValue func(attribute.Set) any) any {
+	d := fltrAttr.Equivalent()
+	
+	startedAndHot := m.hcwg.startedCountAndHotIdx.Load()
+	hotIdx := startedAndHot >> 63
+	coldIdx := 1 - hotIdx
+
+	// Check hot map
+	if actual, loaded := m.hotColdValMap[hotIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+
+	// Check cold map
+	if actual, loaded := m.hotColdValMap[coldIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+
+	// Cache miss: take lock and create in HOT map
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
+
+	// Double check hot map
+	if actual, loaded := m.hotColdValMap[hotIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+	// Double check cold map
+	if actual, loaded := m.hotColdValMap[coldIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+
+	// Handle limit
+	if m.state.limit > 0 && m.state.count.Load() >= int64(m.state.limit-1) {
+		fltrAttr = overflowSet
+		d = fltrAttr.Equivalent()
+		if actual, loaded := m.hotColdValMap[hotIdx].LoadByDistinct(d); loaded {
+			return actual
+		}
+	}
+
+	val := newValue(fltrAttr)
+	m.hotColdValMap[hotIdx].Store(d, val)
+	if fltrAttr != overflowSet {
+		m.state.count.Add(1)
+		m.hotColdValMap[hotIdx].len++
+	}
+	return val
+}
+
+// SwapHotAndWait swaps the hot and cold maps and waits for active writers to finish.
+func (m *HotColdSyncMap) SwapHotAndWait() uint64 {
+	return m.hcwg.swapHotAndWait()
+}
+
+// Range calls f sequentially for each key and value present in the specified map.
+func (m *HotColdSyncMap) Range(readIdx uint64, f func(key, value any) bool) {
+	m.hotColdValMap[readIdx].Range(f)
+}
+
+// Delete deletes the value for a key from the specified map and decrements cardinality.
+func (m *HotColdSyncMap) Delete(readIdx uint64, key any) {
+	m.hotColdValMap[readIdx].Delete(key)
+	m.state.count.Add(-1)
+	m.hotColdValMap[readIdx].len--
+}
+
+// Len returns the length of the specified map.
+func (m *HotColdSyncMap) Len(readIdx uint64) int {
+	return m.hotColdValMap[readIdx].Len()
+}
+
+// Clear clears the specified map.
+func (m *HotColdSyncMap) Clear(readIdx uint64) {
+	m.hotColdValMap[readIdx].Clear()
+}
+

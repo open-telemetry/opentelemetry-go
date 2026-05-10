@@ -5,7 +5,6 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -21,6 +20,7 @@ type sumValue[N int64 | float64] struct {
 	attrs         attribute.Set
 	startTime     time.Time
 	dropExemplars bool
+	isBound       bool // true if this entry was created by or used by a bound instrument
 
 	// boundFloat64 caches the bound instrument to avoid allocations on the fast path.
 	// It is only populated when N is float64.
@@ -102,23 +102,15 @@ func newDeltaSum[N int64 | float64](
 	monotonic bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
+	filter attribute.Filter,
 ) *deltaSum[N] {
-	state := &cardinalityState{limit: limit}
 	return &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
-		hotColdValMap: [2]sumValueMap[N]{
-			{
-				values: limitedSyncMap{state: state},
-				newRes: r,
-			},
-			{
-				values: limitedSyncMap{state: state},
-				newRes: r,
-			},
-		},
-		cardinality: state,
-		reported:    make(map[any]N),
+		vals:      NewHotColdSyncMap(limit),
+		reported:  make(map[any]N),
+		filter:    filter,
+		newRes:    r,
 	}
 }
 
@@ -127,18 +119,29 @@ type deltaSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
 
-	hcwg          hotColdWaitGroup
-	hotColdValMap [2]sumValueMap[N]
+	vals *HotColdSyncMap
 
-	cardinality  *cardinalityState
-	pinnedValues sync.Map  // attribute.Distinct -> *sumValue[N]
-	reported     map[any]N // last reported values for pinned instruments
+	reported map[any]N // last reported values for pinned instruments
+	filter   attribute.Filter
+	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
 func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	hotIdx := s.hcwg.start()
-	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
+	sv := s.vals.LoadOrStoreUnbound(fltrAttr, func(attr attribute.Set) any {
+		r := s.newRes(attr)
+		_, isDrop := r.(*dropRes[N])
+		return &sumValue[N]{
+			res:           r,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+		}
+	}).(*sumValue[N])
+	
+	sv.n.add(value)
+	if !sv.dropExemplars {
+		sv.res.Offer(ctx, value, droppedAttr)
+	}
 }
 
 func (s *deltaSum[N]) collect(
@@ -153,52 +156,71 @@ func (s *deltaSum[N]) collect(
 	sData.IsMonotonic = s.monotonic
 
 	// delta always clears values on collection
-	readIdx := s.hcwg.swapHotAndWait()
+	readIdx := s.vals.SwapHotAndWait()
+	hotIdx := 1 - readIdx
 	
-	// Count total data points needed: map entries + pinned entries!
-	nPinned := 0
-	s.pinnedValues.Range(func(_, _ any) bool {
-		nPinned++
+	// We don't know the total count ahead of time easily because we only collect
+	// bound entries from hot map, and all from cold map.
+	dPts := reset(sData.DataPoints, 0, s.vals.Len(readIdx))
+
+	// 1. Collect from cold map
+	s.vals.Range(readIdx, func(key, value any) bool {
+		val := value.(*sumValue[N])
+		
+		if val.isBound {
+			// Pinned/Bound entry: calculate delta
+			n := val.n.load()
+			last := s.reported[key]
+			delta := n - last
+			
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      delta,
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
+			
+			s.reported[key] = n // Update reported value
+			// Do NOT delete from map!
+		} else {
+			// Non-bound entry: collect and delete
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      val.n.load(),
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
+			
+			s.vals.Delete(readIdx, key)
+		}
 		return true
 	})
-	
-	n := s.hotColdValMap[readIdx].values.Len() + nPinned
-	dPts := reset(sData.DataPoints, 0, n)
 
-	// 1. Collect from hot map (unbound)
-	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
+	// 2. Collect ONLY bound entries from hot map
+	s.vals.Range(hotIdx, func(key, value any) bool {
 		val := value.(*sumValue[N])
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      val.n.load(),
+		
+		if val.isBound {
+			n := val.n.load()
+			last := s.reported[key]
+			delta := n - last
+			
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      delta,
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
+			
+			s.reported[key] = n // Update reported value
+			// Do NOT delete from map!
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
-		return true
-	})
-	s.hotColdValMap[readIdx].values.Clear()
-
-	// 2. Collect from pinned values (bound)
-	s.pinnedValues.Range(func(key, value any) bool {
-		val := value.(*sumValue[N])
-		n := val.n.load()
-		
-		// Calculate delta
-		last := s.reported[key]
-		delta := n - last
-		
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      delta,
-		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
-		
-		s.reported[key] = n // Update reported value
 		return true
 	})
 
@@ -219,54 +241,26 @@ func (s *deltaSum[N]) LookupBoundMeasure(attrs []attribute.KeyValue) metric.Floa
 		return nil
 	}
 
-	d, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	_, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	compactedSet := attribute.NewSet(compacted...)
+	fltrAttr, _ := compactedSet.Filter(sFloat.filter)
 
-	// Check pinned values first
-	if actual, loaded := sFloat.pinnedValues.Load(d); loaded {
-		return actual.(*sumValue[float64]).boundFloat64
-	}
-
-	// Cache miss: handle limit and create
-	sFloat.cardinality.mux.Lock()
-	defer sFloat.cardinality.mux.Unlock()
-
-	// Double check
-	if actual, loaded := sFloat.pinnedValues.Load(d); loaded {
-		return actual.(*sumValue[float64]).boundFloat64
-	}
-
-	var fltrAttr attribute.Set
-	if sFloat.cardinality.limit > 0 && sFloat.cardinality.count.Load() >= int64(sFloat.cardinality.limit-1) {
-		fltrAttr = overflowSet
-		// If overflow is already in pinnedValues, return it!
-		if actual, loaded := sFloat.pinnedValues.Load(overflowSet.Equivalent()); loaded {
-			return actual.(*sumValue[float64]).boundFloat64
+	sv := sFloat.vals.LoadOrStoreBound(fltrAttr, func(attr attribute.Set) any {
+		r := sFloat.newRes(attr)
+		_, isDrop := r.(*dropRes[float64])
+		newSV := &sumValue[float64]{
+			res:           r,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+			isBound:       true,
 		}
-	} else {
-		fltrAttr = attribute.NewSet(compacted...)
-	}
+		newSV.boundFloat64 = &boundFloat64SumValue{sv: newSV}
+		return newSV
+	}).(*sumValue[float64])
 
-	r := sFloat.hotColdValMap[0].newRes(fltrAttr) // Use map 0's newRes, they are same.
-	_, isDrop := r.(*dropRes[float64])
-	newSV := &sumValue[float64]{
-		res:           r,
-		attrs:         fltrAttr,
-		startTime:     now(),
-		dropExemplars: isDrop,
-	}
-	
-	b := &boundFloat64SumValue{sv: newSV}
-	newSV.boundFloat64 = b
-
-	sFloat.pinnedValues.Store(d, newSV)
-	if fltrAttr != overflowSet {
-		sFloat.cardinality.count.Add(1)
-	} else {
-		// Store also under overflow distinct if it was created here
-		sFloat.pinnedValues.Store(overflowSet.Equivalent(), newSV)
-	}
-
-	return b
+	sv.isBound = true // Mark as bound in case it was loaded as unbound!
+	return sv.boundFloat64
 }
 
 // LookupBoundMeasureInt64 returns an Int64Counter that can be used to record measurements
@@ -277,49 +271,26 @@ func (s *deltaSum[N]) LookupBoundMeasureInt64(attrs []attribute.KeyValue) metric
 		return nil
 	}
 
-	d, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	_, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	compactedSet := attribute.NewSet(compacted...)
+	fltrAttr, _ := compactedSet.Filter(sInt.filter)
 
-	if actual, loaded := sInt.pinnedValues.Load(d); loaded {
-		return actual.(*sumValue[int64]).boundInt64
-	}
-
-	sInt.cardinality.mux.Lock()
-	defer sInt.cardinality.mux.Unlock()
-
-	if actual, loaded := sInt.pinnedValues.Load(d); loaded {
-		return actual.(*sumValue[int64]).boundInt64
-	}
-
-	var fltrAttr attribute.Set
-	if sInt.cardinality.limit > 0 && sInt.cardinality.count.Load() >= int64(sInt.cardinality.limit-1) {
-		fltrAttr = overflowSet
-		if actual, loaded := sInt.pinnedValues.Load(overflowSet.Equivalent()); loaded {
-			return actual.(*sumValue[int64]).boundInt64
+	sv := sInt.vals.LoadOrStoreBound(fltrAttr, func(attr attribute.Set) any {
+		r := sInt.newRes(attr)
+		_, isDrop := r.(*dropRes[int64])
+		newSV := &sumValue[int64]{
+			res:           r,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+			isBound:       true,
 		}
-	} else {
-		fltrAttr = attribute.NewSet(compacted...)
-	}
+		newSV.boundInt64 = &boundInt64SumValue{sv: newSV}
+		return newSV
+	}).(*sumValue[int64])
 
-	r := sInt.hotColdValMap[0].newRes(fltrAttr)
-	_, isDrop := r.(*dropRes[int64])
-	newSV := &sumValue[int64]{
-		res:           r,
-		attrs:         fltrAttr,
-		startTime:     now(),
-		dropExemplars: isDrop,
-	}
-	
-	b := &boundInt64SumValue{sv: newSV}
-	newSV.boundInt64 = b
-
-	sInt.pinnedValues.Store(d, newSV)
-	if fltrAttr != overflowSet {
-		sInt.cardinality.count.Add(1)
-	} else {
-		sInt.pinnedValues.Store(overflowSet.Equivalent(), newSV)
-	}
-
-	return b
+	sv.isBound = true // Mark as bound in case it was loaded as unbound!
+	return sv.boundInt64
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -329,6 +300,7 @@ func newCumulativeSum[N int64 | float64](
 	monotonic bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
+	filter attribute.Filter,
 ) *cumulativeSum[N] {
 	state := &cardinalityState{limit: limit}
 	return &cumulativeSum[N]{
@@ -339,6 +311,7 @@ func newCumulativeSum[N int64 | float64](
 			newRes: r,
 		},
 		cardinality: state,
+		filter:      filter,
 	}
 }
 
@@ -349,6 +322,7 @@ type cumulativeSum[N int64 | float64] struct {
 
 	sumValueMap[N]
 	cardinality *cardinalityState
+	filter      attribute.Filter
 }
 
 func (s *cumulativeSum[N]) collect(
@@ -406,15 +380,16 @@ func (s *cumulativeSum[N]) LookupBoundMeasure(attrs []attribute.KeyValue) metric
 		return nil
 	}
 
-	// This call does not allocate. It sorts and de-duplicates the attrs slice in-place
-	// and computes the hash based on the aggregator's filter.
-	d, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	_, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	compactedSet := attribute.NewSet(compacted...)
+	fltrAttr, _ := compactedSet.Filter(sFloat.filter)
+	d := fltrAttr.Equivalent()
+
 	var sv *sumValue[float64]
 	if actual, loaded := sFloat.values.LoadByDistinct(d); loaded {
 		sv = actual.(*sumValue[float64])
+		sv.isBound = true
 	} else {
-		// Cache miss: create the Set and use LoadOrStoreAttr.
-		fltrAttr := attribute.NewSet(compacted...)
 		sv = sFloat.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 			r := sFloat.newRes(attr)
 			_, isDrop := r.(*dropRes[float64])
@@ -423,8 +398,8 @@ func (s *cumulativeSum[N]) LookupBoundMeasure(attrs []attribute.KeyValue) metric
 				attrs:         attr,
 				startTime:     now(),
 				dropExemplars: isDrop,
+				isBound:       true,
 			}
-			// Pre-allocate the bound instrument wrapper to avoid allocations on cache hit.
 			newSV.boundFloat64 = &boundFloat64SumValue{sv: newSV}
 			return newSV
 		}).(*sumValue[float64])
@@ -441,12 +416,16 @@ func (s *cumulativeSum[N]) LookupBoundMeasureInt64(attrs []attribute.KeyValue) m
 		return nil
 	}
 
-	d, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	_, compacted := attribute.NewDistinctWithFilter(attrs, nil)
+	compactedSet := attribute.NewSet(compacted...)
+	fltrAttr, _ := compactedSet.Filter(sInt.filter)
+	d := fltrAttr.Equivalent()
+
 	var sv *sumValue[int64]
 	if actual, loaded := sInt.values.LoadByDistinct(d); loaded {
 		sv = actual.(*sumValue[int64])
+		sv.isBound = true
 	} else {
-		fltrAttr := attribute.NewSet(compacted...)
 		sv = sInt.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 			r := sInt.newRes(attr)
 			_, isDrop := r.(*dropRes[int64])
@@ -455,6 +434,7 @@ func (s *cumulativeSum[N]) LookupBoundMeasureInt64(attrs []attribute.KeyValue) m
 				attrs:         attr,
 				startTime:     now(),
 				dropExemplars: isDrop,
+				isBound:       true,
 			}
 			newSV.boundInt64 = &boundInt64SumValue{sv: newSV}
 			return newSV
@@ -473,7 +453,7 @@ func newPrecomputedSum[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedSum[N] {
 	return &precomputedSum[N]{
-		deltaSum: newDeltaSum[N](monotonic, limit, r),
+		deltaSum: newDeltaSum[N](monotonic, limit, r, nil),
 	}
 }
 
@@ -497,14 +477,14 @@ func (s *precomputedSum[N]) delta(
 	sData.IsMonotonic = s.monotonic
 
 	// delta always clears values on collection
-	readIdx := s.hcwg.swapHotAndWait()
+	readIdx := s.vals.SwapHotAndWait()
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
-	n := s.hotColdValMap[readIdx].values.Len()
+	n := s.vals.Len(readIdx)
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(key, value any) bool {
+	s.vals.Range(readIdx, func(key, value any) bool {
 		val := value.(*sumValue[N])
 		n := val.n.load()
 
@@ -518,7 +498,7 @@ func (s *precomputedSum[N]) delta(
 		i++
 		return true
 	})
-	s.hotColdValMap[readIdx].values.Clear()
+	s.vals.Clear(readIdx)
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -541,14 +521,14 @@ func (s *precomputedSum[N]) cumulative(
 	sData.IsMonotonic = s.monotonic
 
 	// cumulative precomputed always clears values on collection
-	readIdx := s.hcwg.swapHotAndWait()
+	readIdx := s.vals.SwapHotAndWait()
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
-	n := s.hotColdValMap[readIdx].values.Len()
+	n := s.vals.Len(readIdx)
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
+	s.vals.Range(readIdx, func(_, value any) bool {
 		val := value.(*sumValue[N])
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
@@ -558,7 +538,7 @@ func (s *precomputedSum[N]) cumulative(
 		i++
 		return true
 	})
-	s.hotColdValMap[readIdx].values.Clear()
+	s.vals.Clear(readIdx)
 
 	sData.DataPoints = dPts
 	*dest = sData
