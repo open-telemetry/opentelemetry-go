@@ -50,6 +50,8 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 		randomness, hasRandomness = tracestateRandomness(existingOtts)
 	}
 
+	// When there is no explicit randomness, we use the trace ID. Trace ID is presumed to be random
+	// even without the random flag set.
 	if !hasRandomness {
 		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
 	}
