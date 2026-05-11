@@ -26,7 +26,8 @@ import (
 func Example() {
 	// Create resource.
 	res, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
 			semconv.ServiceName("my-service"),
 			semconv.ServiceVersion("0.1.0"),
 		))

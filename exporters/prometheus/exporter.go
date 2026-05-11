@@ -455,7 +455,8 @@ func addExponentialHistogramMetric[N int64 | float64](
 			scale,
 			dp.ZeroThreshold,
 			dp.StartTime,
-			values...)
+			values...,
+		)
 		if e != nil {
 			reportError(ch, desc, e)
 			err = errors.Join(
