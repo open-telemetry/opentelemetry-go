@@ -4,11 +4,8 @@
 package x // import "go.opentelemetry.io/otel/sdk/trace/x"
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
-
-	"go.opentelemetry.io/otel"
 )
 
 // InsertOrUpdateTraceStateThKeyValue inserts or updates the threshold (th) key-value
@@ -57,13 +54,11 @@ func tracestateRandomness(otts string) (randomness uint64, hasRandomness bool) {
 	}
 
 	if len(otts) < start+14 || (len(otts) > start+14 && otts[start+14] != ';') {
-		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %s", otts))
 		return 0, false
 	}
 
 	rv, err := strconv.ParseUint(otts[start:start+14], 16, 56)
 	if err != nil {
-		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %s", otts))
 		return 0, false
 	}
 	randomness = rv
