@@ -4,7 +4,7 @@
 package x
 
 import (
-	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	mrand "math/rand"
 	"strings"
@@ -99,8 +99,9 @@ func TestProbabilitySampler(t *testing.T) {
 	t.Run("inclusive sampling", func(t *testing.T) {
 		const numSamplers = 100
 		const numTraces = 50
+		rng := mrand.New(mrand.NewSource(1))
 		for range numSamplers {
-			ratioLo, ratioHi := mrand.Float64(), mrand.Float64()
+			ratioLo, ratioHi := rng.Float64(), rng.Float64()
 			if ratioHi < ratioLo {
 				ratioLo, ratioHi = ratioHi, ratioLo
 			}
@@ -108,7 +109,8 @@ func TestProbabilitySampler(t *testing.T) {
 			samplerLo := ProbabilitySampler(ratioLo)
 			for range numTraces {
 				traceID := trace.TraceID{}
-				_, _ = rand.Read(traceID[:])
+				binary.BigEndian.PutUint64(traceID[0:8], rng.Uint64())
+				binary.BigEndian.PutUint64(traceID[8:16], rng.Uint64())
 				params := sdktrace.SamplingParameters{
 					ParentContext: trace.ContextWithSpanContext(
 						t.Context(),
@@ -188,7 +190,7 @@ func TestProbabilitySampler(t *testing.T) {
 		assert.Equal(t, "value", result.Tracestate.Get("vendor"))
 	})
 
-	t.Run("RecordAndSample without randomness flag erases ot.th from tracestate", func(t *testing.T) {
+	t.Run("RecordAndSample without randomness flag inserts ot.th in tracestate", func(t *testing.T) {
 		sampler := ProbabilitySampler(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
@@ -213,17 +215,13 @@ func TestProbabilitySampler(t *testing.T) {
 
 		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
 		ot := result.Tracestate.Get("ot")
-		assert.NotContains(
-			t,
-			ot,
-			"th:",
-			"ot value should not contain th when TraceFlags has no randomness flag and no rv in tracestate, got %q",
-			ot,
-		)
+		require.NotEmpty(t, ot)
+		assert.True(t, strings.HasPrefix(ot, "th:8"), "ot should have updated th for 0.5 sampler, got %q", ot)
+		assert.Contains(t, ot, "other:value")
 		assert.Equal(t, "v", result.Tracestate.Get("vendor"))
 	})
 
-	t.Run("RecordAndSample when ot becomes empty deletes ot from tracestate", func(t *testing.T) {
+	t.Run("RecordAndSample without randomness flag keeps ot.th in tracestate", func(t *testing.T) {
 		sampler := ProbabilitySampler(0.5)
 		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
 		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
@@ -247,7 +245,7 @@ func TestProbabilitySampler(t *testing.T) {
 		result := sampler.ShouldSample(params)
 
 		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
-		assert.Empty(t, result.Tracestate.Get("ot"))
+		assert.Equal(t, "th:8", result.Tracestate.Get("ot"))
 		assert.Equal(t, "value", result.Tracestate.Get("vendor"))
 	})
 
