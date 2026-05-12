@@ -26,6 +26,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/otel/exporters/prometheus
       - go.opentelemetry.io/otel/metric/x
+      - go.opentelemetry.io/otel/sdk/metric/exemplar/x
   experimental-logs:
     version: v0.19.0
     modules:
