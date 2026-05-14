@@ -145,7 +145,9 @@ func (r *FixedSizeReservoir) reset() {
 	// This resets the number of exemplars known.
 	r.count = 0
 	// Random index inserts should only happen after the storage is full.
-	r.next = int64(cap(r.measurements))
+	// -1 accounts for the fact that advance() will unconditionally add 1 to
+	// r.next below.
+	r.next = int64(cap(r.measurements)) - 1
 
 	// Initial random number in the series used to generate r.next.
 	//

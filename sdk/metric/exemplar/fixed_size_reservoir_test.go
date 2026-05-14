@@ -63,3 +63,25 @@ func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {
 		return FixedSizeReservoirProvider(n), n
 	}))
 }
+
+func TestFixedSizeReservoirSamplesAfterFilling(t *testing.T) {
+	k := 1
+	sampledSecondItem := false
+	// Run many times because it is random.
+	// Ensure it is possible to sample the `k+1`th item.
+	for range 1000 {
+		r := NewFixedSizeReservoir(k)
+		// Offer k items (1 item)
+		r.Offer(t.Context(), staticTime, NewValue(float64(1)), nil)
+		// Offer the k+1 item (2nd item)
+		r.Offer(t.Context(), staticTime, NewValue(float64(2)), nil)
+
+		var dest []Exemplar
+		r.Collect(&dest)
+		if len(dest) == 1 && dest[0].Value.Float64() == 2 {
+			sampledSecondItem = true
+			break
+		}
+	}
+	assert.True(t, sampledSecondItem, "should have sampled the second item at least once in 1000 tries")
+}
