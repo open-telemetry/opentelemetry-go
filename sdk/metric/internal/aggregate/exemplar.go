@@ -5,6 +5,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -15,6 +16,14 @@ var exemplarPool = sync.Pool{
 }
 
 func collectExemplars[N int64 | float64](out *[]metricdata.Exemplar[N], f func(*[]exemplar.Exemplar)) {
+	collectExemplarsAfter[N](out, time.Time{}, f)
+}
+
+func collectExemplarsAfter[N int64 | float64](
+	out *[]metricdata.Exemplar[N],
+	startTime time.Time,
+	f func(*[]exemplar.Exemplar),
+) {
 	dest := exemplarPool.Get().(*[]exemplar.Exemplar)
 	defer func() {
 		clear(*dest) // Erase elements to let GC collect objects.
@@ -27,7 +36,11 @@ func collectExemplars[N int64 | float64](out *[]metricdata.Exemplar[N], f func(*
 	f(dest)
 
 	*out = reset(*out, len(*dest), cap(*dest))
-	for i, e := range *dest {
+	i := 0
+	for _, e := range *dest {
+		if !startTime.IsZero() && e.Time.Before(startTime) {
+			continue
+		}
 		(*out)[i].FilteredAttributes = e.FilteredAttributes
 		(*out)[i].Time = e.Time
 		(*out)[i].SpanID = e.SpanID
@@ -39,5 +52,7 @@ func collectExemplars[N int64 | float64](out *[]metricdata.Exemplar[N], f func(*
 		case exemplar.Float64ValueType:
 			(*out)[i].Value = N(e.Value.Float64())
 		}
+		i++
 	}
+	*out = (*out)[:i]
 }

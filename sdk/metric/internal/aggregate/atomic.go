@@ -219,6 +219,145 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 	return hotIdx
 }
 
+// entry wraps the user value with a cycle counter to enable lazy deletion.
+type entry struct {
+	value atomic.Value
+	cycle atomic.Uint64
+}
+
+// lazyLimitedSyncMap is a custom wrapper around sync.Map that provides
+// cardinality limiting and lazy cleanup using a cycle counter.
+type lazyLimitedSyncMap[V any] struct {
+	m        sync.Map
+	aggLimit int
+	len      int
+	lenMux   sync.Mutex
+	cycle    atomic.Uint64
+
+	newValue  func(attribute.Set) V
+	resetFunc func(V)
+}
+
+func newLazyLimitedSyncMap[V any](limit int, newValue func(attribute.Set) V, resetFunc func(V)) lazyLimitedSyncMap[V] {
+	return lazyLimitedSyncMap[V]{
+		aggLimit:  limit,
+		newValue:  newValue,
+		resetFunc: resetFunc,
+	}
+}
+
+func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set) V {
+	actual, loaded := m.m.Load(fltrAttr.Equivalent())
+	currentCycle := m.cycle.Load()
+	if loaded {
+		ent := actual.(*entry)
+		if ent.cycle.Load() == currentCycle {
+			return ent.value.Load().(V)
+		}
+	}
+
+	// If the overflow set exists and is active in current cycle, assume we overflowed.
+	actualOverflow, loadedOverflow := m.m.Load(overflowSet.Equivalent())
+	if loadedOverflow {
+		ent := actualOverflow.(*entry)
+		if ent.cycle.Load() == currentCycle {
+			return ent.value.Load().(V)
+		}
+	}
+
+	// Slow path: add or reuse.
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+
+	// re-fetch now that we hold the lock
+	currentCycle = m.cycle.Load()
+	targetAttr := fltrAttr
+
+	actual, loaded = m.m.Load(targetAttr.Equivalent())
+	if loaded {
+		ent := actual.(*entry)
+		if ent.cycle.Load() == currentCycle {
+			return ent.value.Load().(V)
+		}
+	}
+
+	// Determine if we need to use overflow
+	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
+		targetAttr = overflowSet
+		actual, loaded = m.m.Load(targetAttr.Equivalent())
+		if loaded {
+			ent := actual.(*entry)
+			if ent.cycle.Load() == currentCycle {
+				return ent.value.Load().(V)
+			}
+		}
+	}
+
+	if loaded {
+		// reuse existing stale entry
+		ent := actual.(*entry)
+		existingVal := ent.value.Load().(V)
+		ent.cycle.Store(currentCycle)
+		m.len++
+		return existingVal
+	}
+
+	// create new entry
+	newVal := m.newValue(targetAttr)
+	newEnt := &entry{}
+	newEnt.value.Store(newVal)
+	newEnt.cycle.Store(currentCycle)
+	actual, loaded = m.m.LoadOrStore(targetAttr.Equivalent(), newEnt)
+	if loaded {
+		ent := actual.(*entry)
+		// If another thread inserted it, it must be for the current cycle,
+		// because we are holding lenMux and only slow-path can insert/reuse.
+		return ent.value.Load().(V)
+	}
+	m.len++
+	return newVal
+}
+
+func (m *lazyLimitedSyncMap[V]) Clear() {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	m.cycle.Add(1)
+	m.len = 0
+
+	currentCycle := m.cycle.Load()
+
+	m.m.Range(func(key, value any) bool {
+		ent := value.(*entry)
+		c := ent.cycle.Load()
+		if currentCycle >= c+2 {
+			m.m.Delete(key)
+			return true
+		}
+		if m.resetFunc != nil {
+			m.resetFunc(ent.value.Load().(V))
+		}
+		return true
+	})
+}
+
+func (m *lazyLimitedSyncMap[V]) Len() int {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	return m.len
+}
+
+func (m *lazyLimitedSyncMap[V]) Range(f func(key, value any) bool) {
+	currentCycle := m.cycle.Load()
+	m.m.Range(func(key, value any) bool {
+		ent := value.(*entry)
+		c := ent.cycle.Load()
+		if c == currentCycle {
+			return f(key, ent.value.Load())
+		}
+		return true
+	})
+}
+
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
 // attribute sets and provides a Len() function.
 type limitedSyncMap struct {
