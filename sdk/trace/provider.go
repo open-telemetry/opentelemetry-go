@@ -22,6 +22,32 @@ import (
 
 const defaultTracerName = "go.opentelemetry.io/otel/sdk/tracer"
 
+// StackTraceMode configures how the TracerProvider adds stack traces to
+// exception events for recorded errors and panics.
+type StackTraceMode int
+
+const (
+	// StackTraceModeDefault does not add stack traces unless the span or event
+	// uses trace.WithStackTrace(true).
+	StackTraceModeDefault StackTraceMode = iota
+	// StackTraceModeAlways adds stack traces for all recorded errors and panics.
+	StackTraceModeAlways
+	// StackTraceModeNever never adds stack traces, even when
+	// trace.WithStackTrace(true) is used.
+	StackTraceModeNever
+)
+
+func (m StackTraceMode) String() string {
+	switch m {
+	case StackTraceModeAlways:
+		return "Always"
+	case StackTraceModeNever:
+		return "Never"
+	default:
+		return "Default"
+	}
+}
+
 // tracerProviderConfig.
 type tracerProviderConfig struct {
 	// processors contains collection of SpanProcessors that are processing pipeline
@@ -42,6 +68,9 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	// stackTraceMode configures stack trace capture for recorded errors and panics.
+	stackTraceMode StackTraceMode
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
@@ -52,12 +81,14 @@ func (cfg tracerProviderConfig) MarshalLog() any {
 		IDGeneratorType string
 		SpanLimits      SpanLimits
 		Resource        *resource.Resource
+		StackTraceMode  string
 	}{
 		SpanProcessors:  cfg.processors,
 		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
 		IDGeneratorType: fmt.Sprintf("%T", cfg.idGenerator),
 		SpanLimits:      cfg.spanLimits,
 		Resource:        cfg.resource,
+		StackTraceMode:  cfg.stackTraceMode.String(),
 	}
 }
 
@@ -74,10 +105,11 @@ type TracerProvider struct {
 
 	// These fields are not protected by the lock mu. They are assumed to be
 	// immutable after creation of the TracerProvider.
-	sampler     Sampler
-	idGenerator IDGenerator
-	spanLimits  SpanLimits
-	resource    *resource.Resource
+	sampler        Sampler
+	idGenerator    IDGenerator
+	spanLimits     SpanLimits
+	resource       *resource.Resource
+	stackTraceMode StackTraceMode
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -112,11 +144,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer: make(map[instrumentation.Scope]*tracer),
-		sampler:     o.sampler,
-		idGenerator: o.idGenerator,
-		spanLimits:  o.spanLimits,
-		resource:    o.resource,
+		namedTracer:    make(map[instrumentation.Scope]*tracer),
+		sampler:        o.sampler,
+		idGenerator:    o.idGenerator,
+		spanLimits:     o.spanLimits,
+		resource:       o.resource,
+		stackTraceMode: o.stackTraceMode,
 	}
 	global.Info("TracerProvider created", "config", o)
 
@@ -389,6 +422,36 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 		}
 		return cfg
 	})
+}
+
+// WithAlwaysStackTrace configures the TracerProvider to capture a stack trace
+// for all recorded errors and panics.
+func WithAlwaysStackTrace() TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.stackTraceMode = StackTraceModeAlways
+		return cfg
+	})
+}
+
+// WithNeverStackTrace configures the TracerProvider to never capture stack
+// traces for recorded errors and panics, including when trace.WithStackTrace(true)
+// is passed on a span or event.
+func WithNeverStackTrace() TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.stackTraceMode = StackTraceModeNever
+		return cfg
+	})
+}
+
+func (p *TracerProvider) shouldRecordExceptionStackTrace(spanRequested bool) bool {
+	switch p.stackTraceMode {
+	case StackTraceModeNever:
+		return false
+	case StackTraceModeAlways:
+		return true
+	default:
+		return spanRequested
+	}
 }
 
 // WithSampler returns a TracerProviderOption that will configure the Sampler
