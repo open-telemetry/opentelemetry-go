@@ -443,7 +443,8 @@ func TestKeyValueFromAttribute(t *testing.T) {
 		},
 		{
 			desc: "Slice",
-			kv: attribute.Slice("k",
+			kv: attribute.Slice(
+				"k",
 				attribute.BoolValue(true),
 				attribute.StringValue("foo"),
 				attribute.SliceValue(attribute.IntValue(7)),

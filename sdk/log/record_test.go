@@ -100,13 +100,15 @@ func TestRecordBody(t *testing.T) {
 		{
 			name: "nested map",
 			body: log.MapValue(
-				log.Map("key",
+				log.Map(
+					"key",
 					log.Int64("key", 1),
 					log.Int64("key", 2),
 				),
 			),
 			want: log.MapValue(
-				log.Map("key",
+				log.Map(
+					"key",
 					log.Int64("key", 2),
 				),
 			),
@@ -175,7 +177,8 @@ func TestRecordBody(t *testing.T) {
 			body: log.SliceValue(
 				log.MapValue(
 					log.String("outer", "value"),
-					log.Slice("inner_slice",
+					log.Slice(
+						"inner_slice",
 						log.MapValue(log.String("deep", "value1"), log.String("deep", "value2")),
 					),
 				),
@@ -183,7 +186,8 @@ func TestRecordBody(t *testing.T) {
 			want: log.SliceValue(
 				log.MapValue(
 					log.String("outer", "value"),
-					log.Slice("inner_slice",
+					log.Slice(
+						"inner_slice",
 						log.MapValue(log.String("deep", "value2")),
 					),
 				),
@@ -272,7 +276,8 @@ func TestRecordBody(t *testing.T) {
 			name: "deeply nested structure with deduplication",
 			body: log.SliceValue(
 				log.MapValue(
-					log.Map("nested",
+					log.Map(
+						"nested",
 						log.String("key", "value1"),
 						log.String("key", "value2"),
 					),
@@ -280,7 +285,8 @@ func TestRecordBody(t *testing.T) {
 			),
 			want: log.SliceValue(
 				log.MapValue(
-					log.Map("nested",
+					log.Map(
+						"nested",
 						log.String("key", "value2"),
 					),
 				),
@@ -290,7 +296,8 @@ func TestRecordBody(t *testing.T) {
 			name: "deeply nested structure without deduplication",
 			body: log.SliceValue(
 				log.MapValue(
-					log.Map("nested",
+					log.Map(
+						"nested",
 						log.String("key1", "value1"),
 						log.String("key2", "value2"),
 					),
@@ -298,7 +305,8 @@ func TestRecordBody(t *testing.T) {
 			),
 			want: log.SliceValue(
 				log.MapValue(
-					log.Map("nested",
+					log.Map(
+						"nested",
 						log.String("key1", "value1"),
 						log.String("key2", "value2"),
 					),
@@ -358,13 +366,15 @@ func TestRecordBody(t *testing.T) {
 			name: "map with nested slice containing duplicates",
 			body: log.MapValue(
 				log.String("outer", "value"),
-				log.Slice("nested_slice",
+				log.Slice(
+					"nested_slice",
 					log.MapValue(log.String("inner", "val1"), log.String("inner", "val2")),
 				),
 			),
 			want: log.MapValue(
 				log.String("outer", "value"),
-				log.Slice("nested_slice",
+				log.Slice(
+					"nested_slice",
 					log.MapValue(log.String("inner", "val2")),
 				),
 			),
@@ -374,13 +384,15 @@ func TestRecordBody(t *testing.T) {
 			body: log.MapValue(
 				log.String("key1", "value1"),
 				log.String("key1", "value2"), // key dedup
-				log.Slice("slice",
+				log.Slice(
+					"slice",
 					log.MapValue(log.String("nested", "val1"), log.String("nested", "val2")), // nested value dedup
 				),
 			),
 			want: log.MapValue(
 				log.String("key1", "value2"),
-				log.Slice("slice",
+				log.Slice(
+					"slice",
 					log.MapValue(log.String("nested", "val2")),
 				),
 			),
@@ -1008,12 +1020,14 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 		{
 			name: "NestedSliceInMap",
 			input: log.MapValue(
-				log.Slice("slice_key",
+				log.Slice(
+					"slice_key",
 					log.MapValue(log.String("nested", "value1"), log.String("nested", "value2")),
 				),
 			),
 			want: log.MapValue(
-				log.Slice("slice_key",
+				log.Slice(
+					"slice_key",
 					log.MapValue(log.String("nested", "value2")),
 				),
 			),
@@ -1022,18 +1036,24 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 		{
 			name: "DeeplyNestedStructure",
 			input: log.MapValue(
-				log.Map("level1",
-					log.Map("level2",
-						log.Slice("level3",
+				log.Map(
+					"level1",
+					log.Map(
+						"level2",
+						log.Slice(
+							"level3",
 							log.MapValue(log.String("deep", "value1"), log.String("deep", "value2")),
 						),
 					),
 				),
 			),
 			want: log.MapValue(
-				log.Map("level1",
-					log.Map("level2",
-						log.Slice("level3",
+				log.Map(
+					"level1",
+					log.Map(
+						"level2",
+						log.Slice(
+							"level3",
 							log.MapValue(log.String("deep", "value2")),
 						),
 					),
@@ -1043,10 +1063,10 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 		},
 		{
 			name: "NestedMapWithoutDuplicateKeys",
-			input: log.SliceValue((log.MapValue(
+			input: log.SliceValue(log.MapValue(
 				log.String("key1", "value1"),
 				log.String("key2", "value2"),
-			))),
+			)),
 			want: log.SliceValue(log.MapValue(
 				log.String("key1", "value1"),
 				log.String("key2", "value2"),
@@ -1513,12 +1533,14 @@ func TestRecordAddAttributesDoesNotMutateInput(t *testing.T) {
 }
 
 func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
-	nestedSlice := log.Slice("nested_slice",
+	nestedSlice := log.Slice(
+		"nested_slice",
 		log.SliceValue(log.StringValue("nested_inner1"), log.StringValue("nested_inner2")),
 		log.StringValue("nested_outer"),
 	)
 
-	nestedMap := log.Map("nested_map",
+	nestedMap := log.Map(
+		"nested_map",
 		log.String("nested_key1", "nested_value1"),
 		log.Map("nested_map", log.String("nested_inner_key", "nested_inner_value")),
 		log.String("nested_key1", "duplicate"), // This will trigger dedup.
@@ -1551,11 +1573,13 @@ func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 				return true
 			})
 			wantAttr := []log.KeyValue{
-				log.Slice("nested_slice",
+				log.Slice(
+					"nested_slice",
 					log.SliceValue(log.StringValue("nested_inn"), log.StringValue("nested_inn")),
 					log.StringValue("nested_out"),
 				),
-				log.Map("nested_map",
+				log.Map(
+					"nested_map",
 					log.String("nested_key1", "duplicate"),
 					log.Map("nested_map", log.String("nested_inner_key", "nested_inn")),
 				),
@@ -1677,21 +1701,25 @@ func BenchmarkAddAttributes(b *testing.B) {
 	// Attributes with nested maps that have duplicates (triggers recursive deduplication).
 	nestedDupAttrs := []log.KeyValue{
 		log.String("simple", "value"),
-		log.Map("map1",
+		log.Map(
+			"map1",
 			log.String("inner1", "value1"),
 			log.String("inner2", "value2"),
 			log.String("inner1", "duplicate"), // duplicate in nested map
 		),
-		log.Map("map2",
+		log.Map(
+			"map2",
 			log.String("key", "original"),
-			log.Map("deeply_nested",
+			log.Map(
+				"deeply_nested",
 				log.String("deep1", "value1"),
 				log.String("deep2", "value2"),
 				log.String("deep1", "duplicate_deep"), // duplicate in deeply nested map
 			),
 			log.String("key", "overwrite"), // duplicate key at this level
 		),
-		log.Slice("slice_with_maps",
+		log.Slice(
+			"slice_with_maps",
 			log.MapValue(
 				log.String("slice_key", "value1"),
 				log.String("slice_key", "duplicate"), // duplicate in slice element
@@ -1910,21 +1938,25 @@ func BenchmarkSetAttributes(b *testing.B) {
 	// Attributes with nested maps that have duplicates (triggers recursive deduplication).
 	nestedDupAttrs := []log.KeyValue{
 		log.String("simple", "value"),
-		log.Map("map1",
+		log.Map(
+			"map1",
 			log.String("inner1", "value1"),
 			log.String("inner2", "value2"),
 			log.String("inner1", "duplicate"), // duplicate in nested map
 		),
-		log.Map("map2",
+		log.Map(
+			"map2",
 			log.String("key", "original"),
-			log.Map("deeply_nested",
+			log.Map(
+				"deeply_nested",
 				log.String("deep1", "value1"),
 				log.String("deep2", "value2"),
 				log.String("deep1", "duplicate_deep"), // duplicate in deeply nested map
 			),
 			log.String("key", "overwrite"), // duplicate key at this level
 		),
-		log.Slice("slice_with_maps",
+		log.Slice(
+			"slice_with_maps",
 			log.MapValue(
 				log.String("slice_key", "value1"),
 				log.String("slice_key", "duplicate"), // duplicate in slice element
@@ -2150,12 +2182,14 @@ func BenchmarkSetBody(b *testing.B) {
 	// Nested map with duplicates.
 	nestedDupMapValue := log.MapValue(
 		log.String("outer1", "value1"),
-		log.Map("nested",
+		log.Map(
+			"nested",
 			log.String("inner1", "value1"),
 			log.String("inner2", "value2"),
 			log.String("inner1", "duplicate"), // duplicate in nested map
 		),
-		log.Slice("slice_with_maps",
+		log.Slice(
+			"slice_with_maps",
 			log.MapValue(
 				log.String("slice_key", "value1"),
 				log.String("slice_key", "duplicate"), // duplicate in slice element
