@@ -141,6 +141,10 @@ type Stream struct {
 	// the attribute will not be recorded, otherwise, if it returns true, it
 	// will record the attribute.
 	//
+	// Note: When a View filters out attributes, those dropped attributes might 
+	// still show up on Exemplars. This is because Exemplars retain the original 
+	// measurement attributes regardless of View or aggregation filtering.
+	//
 	// Use NewAllowKeysFilter from "go.opentelemetry.io/otel/attribute" to
 	// provide an allow-list of attribute keys here.
 	AttributeFilter attribute.Filter
