@@ -23,9 +23,9 @@ var (
 // Stream to use for matching Instruments. Otherwise, if the view does not
 // match, false is returned.
 //
-// Note: When a View filters out attributes, those dropped attributes might 
-// still show up on Exemplars. This is because Exemplars retain the original 
-// measurement attributes regardless of View or aggregation filtering.
+// Note: Attributes filtered out by a View may still appear on Exemplars,
+// because Exemplars are recorded with the original measurement attributes
+// before View attribute filtering is applied.
 type View func(Instrument) (Stream, bool)
 
 // NewView returns a View that applies the Stream mask for all instruments that
