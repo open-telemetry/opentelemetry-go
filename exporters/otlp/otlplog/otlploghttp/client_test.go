@@ -47,8 +47,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 var (
@@ -749,7 +749,8 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
-		exp, err := New(t.Context(),
+		exp, err := New(
+			t.Context(),
 			WithEndpoint("localhost:4318"),
 			WithInsecure(),
 			WithTLSClientConfig(&tls.Config{}),

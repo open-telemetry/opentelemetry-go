@@ -142,10 +142,8 @@ const (
 	ErrorTypeKey = attribute.Key("error.type")
 )
 
-var (
-	// A fallback error value to be used when the instrumentation doesn't define a custom value
-	ErrorTypeOther = ErrorTypeKey.String("_OTHER")
-)
+// A fallback error value to be used when the instrumentation doesn't define a custom value
+var ErrorTypeOther = ErrorTypeKey.String("_OTHER")
 
 // Describes FaaS attributes.
 const (
