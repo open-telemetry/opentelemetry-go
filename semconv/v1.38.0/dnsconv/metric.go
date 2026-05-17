@@ -25,11 +25,9 @@ var (
 // conventions. It represents the describes the error the DNS lookup failed with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // LookupDuration is an instrument used to record metric values conforming to the
 // "dns.lookup.duration" semantic conventions. It represents the measures the
@@ -64,7 +62,7 @@ func NewLookupDuration(
 		opt...,
 	)
 	if err != nil {
-	    return LookupDuration{noop.Float64Histogram{}}, err
+		return LookupDuration{noop.Float64Histogram{}}, err
 	}
 	return LookupDuration{i}, nil
 }

@@ -42,6 +42,7 @@ func (r *reader) aggregation(
 
 func (r *reader) register(p sdkProducer)      { r.producer = p }
 func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
+
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }

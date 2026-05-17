@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -352,7 +352,8 @@ func TestObservability(t *testing.T) {
 			otel.SetMeterProvider(mp)
 
 			exporter, err := stdouttrace.New(
-				stdouttrace.WithWriter(io.Discard))
+				stdouttrace.WithWriter(io.Discard),
+			)
 			require.NoError(t, err)
 
 			tt.callExportSpans(t, exporter)

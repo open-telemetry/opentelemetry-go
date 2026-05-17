@@ -434,13 +434,15 @@ func TestValueMarshalJSON(t *testing.T) {
 				log.Int("three", 3),
 				log.String("four", "4"),
 				log.Bytes("five", []byte{5}),
-				log.Slice("six",
+				log.Slice(
+					"six",
 					log.IntValue(6),
 					log.MapValue(
 						log.Int("seven", 7),
 					),
 				),
-				log.Map("eight",
+				log.Map(
+					"eight",
 					log.Int("nine", 9),
 				),
 			),
