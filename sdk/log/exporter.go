@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
 // Exporter handles the delivery of log records to external receivers.
@@ -323,4 +324,27 @@ func (e *bufferExporter) Shutdown(ctx context.Context) error {
 		return errors.Join(ctx.Err(), e.Exporter.Shutdown(ctx))
 	}
 	return e.Exporter.Shutdown(ctx)
+}
+
+// metricsExporter wraps an Exporter to record log processing metrics
+// just before calling the wrapped exporter.
+type metricsExporter struct {
+	Exporter
+	inst *observ.BLP
+}
+
+// newMetricsExporter creates a metricsExporter that wraps the given exporter.
+func newMetricsExporter(exporter Exporter, inst *observ.BLP) Exporter {
+	return &metricsExporter{
+		Exporter: exporter,
+		inst:     inst,
+	}
+}
+
+// Export records the number of log records as a metric then forwards
+// them to the wrapped Exporter. Error returned from wrapped exporter
+// is not considered as per specification (to be measured by exporter).
+func (e *metricsExporter) Export(ctx context.Context, records []Record) error {
+	e.inst.Processed(ctx, int64(len(records)))
+	return e.Exporter.Export(ctx, records)
 }
