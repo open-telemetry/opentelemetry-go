@@ -42,38 +42,6 @@ func TestTracestateRandomness(t *testing.T) {
 	}
 }
 
-func TestEraseTraceStateThKeyValue(t *testing.T) {
-	testCases := []struct {
-		name string
-		otts string
-		want string
-	}{
-		{"empty string", "", ""},
-		{"no th in existing", "rv:0123456789abcd;other:value", "rv:0123456789abcd;other:value"},
-		{"only th returns empty", "th:0ad", ""},
-		{"th at front", "th:0ad;rv:0123456789abcd", "rv:0123456789abcd"},
-		{"th in middle", "rv:0123456789abcd;th:0ad;other:value", "rv:0123456789abcd;other:value"},
-		{"th at end", "rv:0123456789abcd;th:0ad", "rv:0123456789abcd"},
-		{
-			"th substring in another key (path:0) is not erased",
-			"path:0",
-			"path:0",
-		},
-		{
-			"erase real th only when another key ends with th before colon",
-			"path:0;th:0ad",
-			"path:0",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := eraseTraceStateThKeyValue(tc.otts)
-			assert.Equal(t, tc.want, got)
-		})
-	}
-}
-
 func TestInsertOrUpdateTraceStateThKeyValue(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -108,6 +76,44 @@ func TestInsertOrUpdateTraceStateThKeyValue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := InsertOrUpdateTraceStateThKeyValue(tc.existingOtts, tc.thkv)
 			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func BenchmarkTracestateRandomness(b *testing.B) {
+	for _, tc := range []struct {
+		name string
+		otts string
+	}{
+		{name: "rv at beginning", otts: "rv:0123456789abcd;th:0;other:value"},
+		{name: "rv in middle", otts: "th:0;rv:0123456789abcd;other:value"},
+		{name: "no rv", otts: "th:0;other:value"},
+		{name: "invalid rv", otts: "rv:0123456789abcg;other:value"},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _ = tracestateRandomness(tc.otts)
+			}
+		})
+	}
+}
+
+func BenchmarkInsertOrUpdateTraceStateThKeyValue(b *testing.B) {
+	for _, tc := range []struct {
+		name         string
+		existingOtts string
+		thkv         string
+	}{
+		{name: "insert missing th", existingOtts: "rv:0123456789abcd;other:value", thkv: "th:8"},
+		{name: "replace existing th", existingOtts: "rv:0123456789abcd;th:0ad;other:value", thkv: "th:8"},
+		{name: "single th", existingOtts: "th:0ad", thkv: "th:8"},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_ = InsertOrUpdateTraceStateThKeyValue(tc.existingOtts, tc.thkv)
+			}
 		})
 	}
 }
