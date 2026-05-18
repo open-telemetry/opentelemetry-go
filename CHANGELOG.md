@@ -39,6 +39,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
+- Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
+  The package contains semantic conventions from the `v1.41.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
 
 ### Changed
 
@@ -50,7 +53,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 - `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
-- Optimize `go.opentelemetry.io/otel/sdk/metric` to return a drop reservoir when `exemplar.AlwaysOffFilter` is configured. (#8211)
+- Optimize `go.opentelemetry.io/otel/sdk/metric` to return a drop reservoir and short-circuit `Offer` calls to the exemplar reservoir when `exemplar.AlwaysOffFilter` is configured. (#8211) (#8267)
 
 ### Deprecated
 
@@ -79,6 +82,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix a concurrent `Collect` data race and potential panic in `go.opentelemetry.io/otel/exporters/prometheus` when `WithResourceAsConstantLabels` option is used. (#8227)
 - Fix race condition in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by reverting #7447. (#8249)
 - Fix counting of spans and logs in self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8254)
+- Drop conflicting scope attributes named `name`, `version`, or `schema_url` from metric labels in `go.opentelemetry.io/otel/exporters/prometheus`, preserving the dedicated `otel_scope_name`, `otel_scope_version`, and `otel_scope_schema_url` labels. (#8264)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
