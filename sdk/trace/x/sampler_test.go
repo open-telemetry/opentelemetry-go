@@ -392,3 +392,132 @@ func TestProbabilitySampler(t *testing.T) {
 		assert.True(t, strings.HasPrefix(ot, "th:"), "ot should contain th, got %q", ot)
 	})
 }
+
+func BenchmarkProbabilitySamplerShouldSample(b *testing.B) {
+	traceIDSample, err := trace.TraceIDFromHex("00000000000000000080000000000000")
+	if err != nil {
+		b.Fatalf("trace ID: %v", err)
+	}
+	traceIDDrop, err := trace.TraceIDFromHex("0000000000000000007fffffffffffff")
+	if err != nil {
+		b.Fatalf("trace ID: %v", err)
+	}
+	traceIDMin, err := trace.TraceIDFromHex("00000000000000010000000000000001")
+	if err != nil {
+		b.Fatalf("trace ID: %v", err)
+	}
+	spanID, err := trace.SpanIDFromHex("00f067aa0ba902b7")
+	if err != nil {
+		b.Fatalf("span ID: %v", err)
+	}
+
+	stateWithRV, err := trace.ParseTraceState("ot=rv:80000000000000;other:value,vendor=value")
+	if err != nil {
+		b.Fatalf("trace state with rv: %v", err)
+	}
+	stateWithLowRV, err := trace.ParseTraceState("ot=rv:00000000000000;other:value,vendor=value")
+	if err != nil {
+		b.Fatalf("trace state with low rv: %v", err)
+	}
+	stateWithExistingTh, err := trace.ParseTraceState("ot=th:0;rv:80000000000000;other:value,vendor=value")
+	if err != nil {
+		b.Fatalf("trace state with existing th: %v", err)
+	}
+	stateVendorOnly, err := trace.ParseTraceState("vendor=value")
+	if err != nil {
+		b.Fatalf("trace state vendor: %v", err)
+	}
+
+	parentWithRV := trace.ContextWithSpanContext(
+		b.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceIDSample,
+			SpanID:     spanID,
+			TraceFlags: trace.TraceFlags(0),
+			TraceState: stateWithRV,
+		}),
+	)
+	parentWithLowRV := trace.ContextWithSpanContext(
+		b.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceIDDrop,
+			SpanID:     spanID,
+			TraceFlags: trace.TraceFlags(0),
+			TraceState: stateWithLowRV,
+		}),
+	)
+	parentWithExistingTh := trace.ContextWithSpanContext(
+		b.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceIDSample,
+			SpanID:     spanID,
+			TraceFlags: trace.TraceFlags(0),
+			TraceState: stateWithExistingTh,
+		}),
+	)
+	parentVendorOnly := trace.ContextWithSpanContext(
+		b.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceIDSample,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsRandom,
+			TraceState: stateVendorOnly,
+		}),
+	)
+
+	cases := []struct {
+		name    string
+		sampler sdktrace.Sampler
+		params  sdktrace.SamplingParameters
+	}{
+		{
+			name:    "record and sample with explicit rv",
+			sampler: ProbabilitySampler(0.5),
+			params: sdktrace.SamplingParameters{
+				ParentContext: parentWithRV,
+				TraceID:       traceIDSample,
+			},
+		},
+		{
+			name:    "drop with explicit low rv",
+			sampler: ProbabilitySampler(0.5),
+			params: sdktrace.SamplingParameters{
+				ParentContext: parentWithLowRV,
+				TraceID:       traceIDDrop,
+			},
+		},
+		{
+			name:    "record and sample replacing existing th",
+			sampler: ProbabilitySampler(0.5),
+			params: sdktrace.SamplingParameters{
+				ParentContext: parentWithExistingTh,
+				TraceID:       traceIDSample,
+			},
+		},
+		{
+			name:    "record and sample from trace id randomness",
+			sampler: ProbabilitySampler(0.5),
+			params: sdktrace.SamplingParameters{
+				ParentContext: parentVendorOnly,
+				TraceID:       traceIDSample,
+			},
+		},
+		{
+			name:    "probability one with minimal non-zero trace id",
+			sampler: ProbabilitySampler(1),
+			params: sdktrace.SamplingParameters{
+				ParentContext: b.Context(),
+				TraceID:       traceIDMin,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_ = tc.sampler.ShouldSample(tc.params)
+			}
+		})
+	}
+}
