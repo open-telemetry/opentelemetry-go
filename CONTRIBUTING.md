@@ -752,8 +752,8 @@ Encapsulate setup in constructor functions, ensuring clear ownership and scope:
 import (
 	"errors"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 type SDKComponent struct {
@@ -876,6 +876,7 @@ func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...
     }
     attrs := attrPool.Get().(*[]attribute.KeyValue)
     defer func() {
+		clear(*attrs)         // Clear references to strings/etc to let GC collect them.
         *attrs = (*attrs)[:0] // Reset.
         attrPool.Put(attrs)
     }()
@@ -886,6 +887,7 @@ func (i *instrumentation) record(ctx context.Context, value int64, baseAttrs ...
 
 	addOpt := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*addOpt)
 		*addOpt = (*addOpt)[:0]
 		addOptPool.Put(addOpt)
 	}()
@@ -1052,7 +1054,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 All observability metrics should follow the [OpenTelemetry Semantic Conventions for SDK metrics](https://github.com/open-telemetry/semantic-conventions/blob/1cf2476ae5e518225a766990a28a6d5602bd5a30/docs/otel/sdk-metrics.md).
 
-Use the metric semantic conventions convenience package [otelconv](./semconv/v1.40.0/otelconv/metric.go).
+Use the metric semantic conventions convenience package [otelconv](./semconv/v1.41.0/otelconv/metric.go).
 
 ##### Component Identification
 

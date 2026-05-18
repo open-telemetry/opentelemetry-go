@@ -6,6 +6,7 @@ package log_test
 import (
 	"context"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 type exporter struct {
@@ -36,7 +37,7 @@ type exporter struct {
 }
 
 func (e *exporter) Export(_ context.Context, r []log.Record) error {
-	e.records = r
+	e.records = slices.Clone(r) // don't retain the original slice
 	e.exportCalled = true
 	return nil
 }
