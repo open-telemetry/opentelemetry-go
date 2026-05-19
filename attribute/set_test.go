@@ -575,6 +575,94 @@ func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	return attrs
 }
 
+func TestSetString(t *testing.T) {
+	tests := []struct {
+		name string
+		set  *attribute.Set
+		want string
+	}{
+		{
+			name: "Nil",
+			set:  nil,
+			want: "{}",
+		},
+		{
+			name: "Empty",
+			set:  setPtr(attribute.NewSet()),
+			want: "{}",
+		},
+		{
+			name: "SingleBool",
+			set:  setPtr(attribute.NewSet(attribute.Bool("a", true))),
+			want: `{"a":true}`,
+		},
+		{
+			name: "SingleInt",
+			set:  setPtr(attribute.NewSet(attribute.Int64("count", 42))),
+			want: `{"count":42}`,
+		},
+		{
+			name: "SingleFloat",
+			set:  setPtr(attribute.NewSet(attribute.Float64("pi", 3.14))),
+			want: `{"pi":3.14}`,
+		},
+		{
+			name: "SingleString",
+			set:  setPtr(attribute.NewSet(attribute.String("name", "hello"))),
+			want: `{"name":"hello"}`,
+		},
+		{
+			name: "MultipleAttributes",
+			set: setPtr(attribute.NewSet(
+				attribute.String("b", "world"),
+				attribute.Int64("a", 1),
+			)),
+			want: `{"a":1,"b":"world"}`,
+		},
+		{
+			name: "BoolSlice",
+			set:  setPtr(attribute.NewSet(attribute.BoolSlice("flags", []bool{true, false}))),
+			want: `{"flags":[true,false]}`,
+		},
+		{
+			name: "Int64Slice",
+			set:  setPtr(attribute.NewSet(attribute.Int64Slice("nums", []int64{1, 2, 3}))),
+			want: `{"nums":[1,2,3]}`,
+		},
+		{
+			name: "Float64Slice",
+			set:  setPtr(attribute.NewSet(attribute.Float64Slice("vals", []float64{1.5, 2.5}))),
+			want: `{"vals":[1.5,2.5]}`,
+		},
+		{
+			name: "StringSlice",
+			set:  setPtr(attribute.NewSet(attribute.StringSlice("tags", []string{"a", "b"}))),
+			want: `{"tags":["a","b"]}`,
+		},
+		{
+			name: "ByteSlice",
+			set:  setPtr(attribute.NewSet(attribute.ByteSlice("data", []byte("foo")))),
+			want: `{"data":"Zm9v"}`,
+		},
+		{
+			name: "KeyNeedsEscaping",
+			set:  setPtr(attribute.NewSet(attribute.String("k\"ey", "val"))),
+			want: `{"k\"ey":"val"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.String()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func setPtr(s attribute.Set) *attribute.Set {
+	return &s
+}
+
 func BenchmarkNewSetStringAttrs(b *testing.B) {
 	testCases := []struct {
 		name     string
