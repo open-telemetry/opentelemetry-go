@@ -245,17 +245,13 @@ func parse(d ast.Decl) []string {
 	var out []string
 	switch decl := d.(type) {
 	case *ast.FuncDecl:
-		if decl.Name.IsExported() {
-			out = []string{decl.Name.Name}
-		}
+		out = []string{decl.Name.Name}
 	case *ast.GenDecl:
 		if decl.Tok == token.CONST || decl.Tok == token.VAR {
 			for _, spec := range decl.Specs {
 				if valueSpec, ok := spec.(*ast.ValueSpec); ok {
 					for _, name := range valueSpec.Names {
-						if name.IsExported() {
-							out = append(out, name.Name)
-						}
+						out = append(out, name.Name)
 					}
 				}
 			}
