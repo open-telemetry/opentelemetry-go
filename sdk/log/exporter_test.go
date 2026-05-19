@@ -8,6 +8,7 @@ import (
 	"io"
 	stdlog "log"
 	"slices"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -25,6 +26,10 @@ type instruction struct {
 	Flush  chan [][]Record
 }
 
+type bytesSizerFunc func([]Record) int
+
+func (f bytesSizerFunc) ExportSize(records []Record) int { return f(records) }
+
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
@@ -35,10 +40,11 @@ type testExporter struct {
 	// Counts of method calls.
 	exportN, shutdownN, forceFlushN atomic.Int32
 
-	stopped atomic.Bool
-	inputMu sync.Mutex
-	input   chan instruction
-	done    chan struct{}
+	stopped    atomic.Bool
+	inputMu    sync.Mutex
+	input      chan instruction
+	done       chan struct{}
+	exportSize func([]Record) int
 }
 
 func newTestExporter(err error) *testExporter {
@@ -127,6 +133,13 @@ func (e *testExporter) ForceFlushN() int {
 	return int(e.forceFlushN.Load())
 }
 
+func (e *testExporter) ExportSize(records []Record) int {
+	if e.exportSize == nil {
+		return 0
+	}
+	return e.exportSize(records)
+}
+
 func TestChunker(t *testing.T) {
 	t.Run("ZeroSize", func(t *testing.T) {
 		exp := newTestExporter(nil)
@@ -184,6 +197,75 @@ func TestChunker(t *testing.T) {
 		c = newChunkExporter(exp, 10)
 		err = c.Export(ctx, records)
 		assert.ErrorIs(t, err, assert.AnError, "with chunking")
+	})
+}
+
+func TestByteSizeExporter(t *testing.T) {
+	measure := func(records []Record) int {
+		size := 0
+		for _, record := range records {
+			size += len(record.Body().AsString())
+		}
+		return size
+	}
+
+	t.Run("ZeroSize", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 0, bytesSizerFunc(measure))
+		assert.Same(t, exp, e)
+	})
+
+	t.Run("NilSizer", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 10, nil)
+		assert.Same(t, exp, e)
+	})
+
+	t.Run("Split", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 5, bytesSizerFunc(measure))
+
+		records := make([]Record, 4)
+		for i, body := range []string{"aa", "bbb", "c", "dddd"} {
+			records[i].SetBody(log.StringValue(body))
+		}
+
+		require.NoError(t, e.Export(t.Context(), records))
+
+		got := exp.Records()
+		require.Len(t, got, 2)
+		assert.Len(t, got[0], 2)
+		assert.Len(t, got[1], 2)
+	})
+
+	t.Run("DropOversized", func(t *testing.T) {
+		orig := otel.GetErrorHandler()
+		t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+		var errs []error
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			errs = append(errs, err)
+		}))
+
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		e := newSizedExporter(exp, 3, bytesSizerFunc(measure))
+
+		records := make([]Record, 3)
+		for i, body := range []string{"four", "a", "bb"} {
+			records[i].SetBody(log.StringValue(body))
+		}
+
+		require.NoError(t, e.Export(t.Context(), records))
+
+		got := exp.Records()
+		require.Len(t, got, 1)
+		assert.Len(t, got[0], 2)
+		require.Len(t, errs, 1)
+		assert.Contains(t, errs[0].Error(), "dropping log record larger than max export batch size")
 	})
 }
 
@@ -317,6 +399,113 @@ func TestTimeoutExporter(t *testing.T) {
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 		close(out)
 	})
+}
+
+func BenchmarkSizedExporterExport(b *testing.B) {
+	measure := func(records []Record) int {
+		size := 0
+		for _, record := range records {
+			size += len(record.Body().AsString())
+		}
+		return size
+	}
+
+	records := make([]Record, 512)
+	for i := range records {
+		records[i].SetBody(log.StringValue("0123456789"))
+	}
+
+	b.Run("GallopingSearch", func(b *testing.B) {
+		exp := newSizedExporter(defaultNoopExporter, 320, bytesSizerFunc(measure))
+		b.ReportAllocs()
+		b.ResetTimer()
+		for range b.N {
+			require.NoError(b, exp.Export(b.Context(), records))
+		}
+	})
+
+	b.Run("BinarySearch", func(b *testing.B) {
+		exp := &binarySizedExporter{
+			Exporter: defaultNoopExporter,
+			size:     320,
+			sizer:    bytesSizerFunc(measure),
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for range b.N {
+			require.NoError(b, exp.Export(b.Context(), records))
+		}
+	})
+
+	b.Run("LinearScan", func(b *testing.B) {
+		exp := &linearSizedExporter{
+			Exporter: defaultNoopExporter,
+			size:     320,
+			sizer:    bytesSizerFunc(measure),
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for range b.N {
+			require.NoError(b, exp.Export(b.Context(), records))
+		}
+	})
+}
+
+type binarySizedExporter struct {
+	Exporter
+	size  int
+	sizer BytesSizer
+}
+
+func (e *binarySizedExporter) Export(ctx context.Context, records []Record) error {
+	for start := 0; start < len(records); {
+		if itemSize := e.sizer.ExportSize(records[start : start+1]); itemSize > e.size {
+			start++
+			continue
+		}
+
+		end := start + 1
+		if remaining := len(records) - start; remaining > 1 {
+			overflow := sort.Search(remaining-1, func(i int) bool {
+				return e.sizer.ExportSize(records[start:start+i+2]) > e.size
+			})
+			if overflow == remaining-1 {
+				end = len(records)
+			} else {
+				end = start + overflow + 1
+			}
+		}
+		if err := e.Exporter.Export(ctx, records[start:end]); err != nil {
+			return err
+		}
+		start = end
+	}
+	return nil
+}
+
+type linearSizedExporter struct {
+	Exporter
+	size  int
+	sizer BytesSizer
+}
+
+func (e *linearSizedExporter) Export(ctx context.Context, records []Record) error {
+	for start := 0; start < len(records); {
+		if itemSize := e.sizer.ExportSize(records[start : start+1]); itemSize > e.size {
+			start++
+			continue
+		}
+
+		end := start + 1
+		for end < len(records) && e.sizer.ExportSize(records[start:end+1]) <= e.size {
+			end++
+		}
+		if err := e.Exporter.Export(ctx, records[start:end]); err != nil {
+			return err
+		}
+		start = end
+	}
+	return nil
 }
 
 func TestBufferExporter(t *testing.T) {

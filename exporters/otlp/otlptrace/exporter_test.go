@@ -49,3 +49,52 @@ func TestExporterClientError(t *testing.T) {
 
 	assert.NoError(t, exp.Shutdown(ctx))
 }
+
+func TestExporterExportSize(t *testing.T) {
+	exp := otlptrace.NewUnstarted(&client{})
+	assert.Positive(t, exp.ExportSize(tracetest.SpanStubs{{Name: "span"}}.Snapshots()))
+}
+
+func TestExporterExportSizeTracker(t *testing.T) {
+	exp := otlptrace.NewUnstarted(&client{})
+	tracker := exp.NewExportSizeTracker()
+	spans := tracetest.SpanStubs{
+		{Name: "span-1"},
+		{Name: "span-2"},
+		{Name: "span-3"},
+	}.Snapshots()
+
+	for i := range spans {
+		assert.Equal(t, exp.ExportSize(spans[:i+1]), tracker.Add(spans[i]))
+	}
+}
+
+func BenchmarkExporterExportSizeTracker(b *testing.B) {
+	exp := otlptrace.NewUnstarted(&client{})
+	spans := make(tracetest.SpanStubs, 512)
+	for i := range spans {
+		spans[i].Name = "span-with-fixed-name"
+	}
+	snapshots := spans.Snapshots()
+
+	b.Run("IncrementalTracker", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for range b.N {
+			tracker := exp.NewExportSizeTracker()
+			for _, span := range snapshots {
+				_ = tracker.Add(span)
+			}
+		}
+	})
+
+	b.Run("FullBatchExportSize", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for range b.N {
+			for i := range snapshots {
+				_ = exp.ExportSize(snapshots[:i+1])
+			}
+		}
+	})
+}
