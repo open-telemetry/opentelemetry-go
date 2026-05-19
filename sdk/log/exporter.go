@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -116,14 +117,14 @@ func newSizedExporter(exporter Exporter, size int, sizer BytesSizer) Exporter {
 
 func (e *sizedExporter) Export(ctx context.Context, records []Record) error {
 	for start := 0; start < len(records); {
-		if itemSize := e.sizer.ExportSize([]Record{records[start]}); itemSize > e.size {
+		if itemSize := e.sizer.ExportSize(records[start : start+1]); itemSize > e.size {
 			otel.Handle(
 				fmt.Errorf(
 					"dropping log record larger than max export batch size: %d %s > %d %s",
 					itemSize,
-					BatchExportSizerTypeBytes,
+					"bytes",
 					e.size,
-					BatchExportSizerTypeBytes,
+					"bytes",
 				),
 			)
 			start++
@@ -131,8 +132,22 @@ func (e *sizedExporter) Export(ctx context.Context, records []Record) error {
 		}
 
 		end := start + 1
-		for end < len(records) && e.sizer.ExportSize(records[start:end+1]) <= e.size {
-			end++
+		if remaining := len(records) - start; remaining > 1 {
+			fit := 1
+			step := 1
+			for fit+step <= remaining && e.sizer.ExportSize(records[start:start+fit+step]) <= e.size {
+				fit += step
+				step *= 2
+			}
+
+			maxFit := min(remaining, fit+step)
+			overflow := sort.Search(maxFit-fit, func(i int) bool {
+				return e.sizer.ExportSize(records[start:start+fit+i+1]) > e.size
+			})
+			end = start + fit + overflow
+			if overflow == maxFit-fit {
+				end = start + maxFit
+			}
 		}
 		if err := e.Exporter.Export(ctx, records[start:end]); err != nil {
 			return err

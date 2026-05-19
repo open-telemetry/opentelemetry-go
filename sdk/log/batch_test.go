@@ -66,12 +66,12 @@ func TestNewBatchConfig(t *testing.T) {
 		{
 			name: "Defaults",
 			want: batchConfig{
-				maxQSize:            newSetting(dfltMaxQSize),
-				expInterval:         newSetting(dfltExpInterval),
-				expTimeout:          newSetting(dfltExpTimeout),
-				expMaxBatchSize:     newSetting(dfltExpMaxBatchSize),
-				expBufferSize:       newSetting(dfltExpBufferSize),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(dfltMaxQSize),
+				expInterval:      newSetting(dfltExpInterval),
+				expTimeout:       newSetting(dfltExpTimeout),
+				expMaxBatchSize:  newSetting(dfltExpMaxBatchSize),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -84,12 +84,12 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportBufferSize(3),
 			},
 			want: batchConfig{
-				maxQSize:            newSetting(10),
-				expInterval:         newSetting(time.Microsecond),
-				expTimeout:          newSetting(time.Hour),
-				expMaxBatchSize:     newSetting(2),
-				expBufferSize:       newSetting(3),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(10),
+				expInterval:      newSetting(time.Microsecond),
+				expTimeout:       newSetting(time.Hour),
+				expMaxBatchSize:  newSetting(2),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(3),
 			},
 		},
 		{
@@ -101,12 +101,12 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpMaxBatchSize: strconv.Itoa(1),
 			},
 			want: batchConfig{
-				maxQSize:            newSetting(10),
-				expInterval:         newSetting(100 * time.Millisecond),
-				expTimeout:          newSetting(1000 * time.Millisecond),
-				expMaxBatchSize:     newSetting(1),
-				expBufferSize:       newSetting(dfltExpBufferSize),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(10),
+				expInterval:      newSetting(100 * time.Millisecond),
+				expTimeout:       newSetting(1000 * time.Millisecond),
+				expMaxBatchSize:  newSetting(1),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -119,12 +119,12 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportBufferSize(-2),
 			},
 			want: batchConfig{
-				maxQSize:            newSetting(dfltMaxQSize),
-				expInterval:         newSetting(dfltExpInterval),
-				expTimeout:          newSetting(dfltExpTimeout),
-				expMaxBatchSize:     newSetting(dfltExpMaxBatchSize),
-				expBufferSize:       newSetting(dfltExpBufferSize),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(dfltMaxQSize),
+				expInterval:      newSetting(dfltExpInterval),
+				expTimeout:       newSetting(dfltExpTimeout),
+				expMaxBatchSize:  newSetting(dfltExpMaxBatchSize),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -136,12 +136,12 @@ func TestNewBatchConfig(t *testing.T) {
 				envarExpMaxBatchSize: "-1",
 			},
 			want: batchConfig{
-				maxQSize:            newSetting(dfltMaxQSize),
-				expInterval:         newSetting(dfltExpInterval),
-				expTimeout:          newSetting(dfltExpTimeout),
-				expMaxBatchSize:     newSetting(dfltExpMaxBatchSize),
-				expBufferSize:       newSetting(dfltExpBufferSize),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(dfltMaxQSize),
+				expInterval:      newSetting(dfltExpInterval),
+				expTimeout:       newSetting(dfltExpTimeout),
+				expMaxBatchSize:  newSetting(dfltExpMaxBatchSize),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -161,12 +161,12 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportBufferSize(2),
 			},
 			want: batchConfig{
-				maxQSize:            newSetting(3),
-				expInterval:         newSetting(time.Microsecond),
-				expTimeout:          newSetting(time.Hour),
-				expMaxBatchSize:     newSetting(2),
-				expBufferSize:       newSetting(2),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(3),
+				expInterval:      newSetting(time.Microsecond),
+				expTimeout:       newSetting(time.Hour),
+				expMaxBatchSize:  newSetting(2),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(2),
 			},
 		},
 		{
@@ -177,12 +177,12 @@ func TestNewBatchConfig(t *testing.T) {
 				WithExportBufferSize(3),
 			},
 			want: batchConfig{
-				maxQSize:            newSetting(1),
-				expInterval:         newSetting(dfltExpInterval),
-				expTimeout:          newSetting(dfltExpTimeout),
-				expMaxBatchSize:     newSetting(1),
-				expBufferSize:       newSetting(3),
-				exportBatchSizeUnit: BatchExportSizerTypeItems,
+				maxQSize:         newSetting(1),
+				expInterval:      newSetting(dfltExpInterval),
+				expTimeout:       newSetting(dfltExpTimeout),
+				expMaxBatchSize:  newSetting(1),
+				expMaxBatchBytes: setting[int]{},
+				expBufferSize:    newSetting(3),
 			},
 		},
 	}
@@ -216,8 +216,7 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 			WithMaxQueueSize(10),
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
-			WithExportBatchSizeUnit(BatchExportSizerTypeBytes),
-			WithExportMaxBatchSize(5),
+			WithExportMaxBatchBytes(5),
 		)
 
 		for _, body := range []string{"aa", "bbb", "c", "dddd"} {
@@ -252,8 +251,7 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 			WithMaxQueueSize(10),
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
-			WithExportBatchSizeUnit(BatchExportSizerTypeBytes),
-			WithExportMaxBatchSize(3),
+			WithExportMaxBatchBytes(3),
 		)
 
 		for _, body := range []string{"four", "a", "bb"} {
@@ -272,7 +270,7 @@ func TestBatchProcessorMaxExportBatchBytes(t *testing.T) {
 	})
 }
 
-func TestBatchProcessorExportBatchSizeUnitBytes(t *testing.T) {
+func TestBatchProcessorExportMaxBatchBytes(t *testing.T) {
 	e := newTestExporter(nil)
 	e.exportSize = func(records []Record) int {
 		size := 0
@@ -288,8 +286,7 @@ func TestBatchProcessorExportBatchSizeUnitBytes(t *testing.T) {
 		WithMaxQueueSize(10),
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
-		WithExportBatchSizeUnit(BatchExportSizerTypeBytes),
-		WithExportMaxBatchSize(5),
+		WithExportMaxBatchBytes(5),
 	)
 
 	for _, body := range []string{"aa", "bbb", "c", "dddd"} {

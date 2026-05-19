@@ -50,6 +50,12 @@ func (*Exporter) ExportSize(spans []tracesdk.ReadOnlySpan) int {
 	return resourceSpansRequestSize(tracetransform.Spans(spans))
 }
 
+// NewExportSizeTracker returns an exact incremental byte-size tracker for OTLP
+// trace export requests.
+func (*Exporter) NewExportSizeTracker() tracesdk.ExportSizeTracker {
+	return tracetransform.NewSizeTracker()
+}
+
 func resourceSpansRequestSize(rss []*tracepb.ResourceSpans) int {
 	size := 0
 	for _, rs := range rss {
@@ -98,7 +104,10 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-var _ tracesdk.SpanExporter = (*Exporter)(nil)
+var (
+	_ tracesdk.SpanExporter          = (*Exporter)(nil)
+	_ tracesdk.IncrementalBytesSizer = (*Exporter)(nil)
+)
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, client Client) (*Exporter, error) {
