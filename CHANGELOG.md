@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
+- Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based probabilistic sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#probabilitysampler). (#8123)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
 - Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
   The package contains semantic conventions from the `v1.41.0` version of the OpenTelemetry Semantic Conventions.
