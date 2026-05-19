@@ -74,7 +74,7 @@ func TestInsertOrUpdateTraceStateThKeyValue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := InsertOrUpdateTraceStateThKeyValue(tc.existingOtts, tc.thkv)
+			got := insertOrUpdateTraceStateThKeyValue(tc.existingOtts, tc.thkv)
 			assert.Equal(t, tc.want, got)
 		})
 	}
@@ -112,7 +112,7 @@ func BenchmarkInsertOrUpdateTraceStateThKeyValue(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				_ = InsertOrUpdateTraceStateThKeyValue(tc.existingOtts, tc.thkv)
+				_ = insertOrUpdateTraceStateThKeyValue(tc.existingOtts, tc.thkv)
 			}
 		})
 	}
