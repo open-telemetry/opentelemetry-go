@@ -374,7 +374,8 @@ func (ContainerCPULimitCurrent) Description() string {
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -406,7 +407,8 @@ func (m ContainerCPULimitCurrent) Add(ctx context.Context, incr int64, attrs ...
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -496,7 +498,8 @@ func (ContainerCPULimitDesired) Description() string {
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -528,7 +531,8 @@ func (m ContainerCPULimitDesired) Add(ctx context.Context, incr int64, attrs ...
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -739,7 +743,8 @@ func (ContainerCPURequestCurrent) Description() string {
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -771,7 +776,8 @@ func (m ContainerCPURequestCurrent) Add(ctx context.Context, incr int64, attrs .
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -862,7 +868,8 @@ func (ContainerCPURequestDesired) Description() string {
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -894,7 +901,8 @@ func (m ContainerCPURequestDesired) Add(ctx context.Context, incr int64, attrs .
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -1322,7 +1330,8 @@ func (ContainerMemoryLimitCurrent) Description() string {
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -1354,7 +1363,8 @@ func (m ContainerMemoryLimitCurrent) Add(ctx context.Context, incr int64, attrs 
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -1446,7 +1456,8 @@ func (ContainerMemoryLimitDesired) Description() string {
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -1478,7 +1489,8 @@ func (m ContainerMemoryLimitDesired) Add(ctx context.Context, incr int64, attrs 
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -1570,7 +1582,8 @@ func (ContainerMemoryRequestCurrent) Description() string {
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -1602,7 +1615,8 @@ func (m ContainerMemoryRequestCurrent) Add(ctx context.Context, incr int64, attr
 // (status.containerStatuses[*].resources). Also see `Actual Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
@@ -1693,7 +1707,8 @@ func (ContainerMemoryRequestDesired) Description() string {
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -1725,7 +1740,8 @@ func (m ContainerMemoryRequestDesired) Add(ctx context.Context, incr int64, attr
 // (spec.containers[*].resources). Also see `Desired Resources` in
 //
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]
-//  for more details.
+//
+//	for more details.
 //
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
@@ -2042,12 +2058,12 @@ func (ContainerStatusReason) Description() string {
 // Corresponds to the `reason` field of the: [K8s ContainerStateWaiting] or
 // [K8s ContainerStateTerminated]
 //
-// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
-// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-//
 // All possible container state reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current state reason will be non-zero.
+//
+// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
+// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
 func (m ContainerStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -2170,11 +2186,11 @@ func (ContainerStatusState) Description() string {
 // The containerStatusState is the the state of the container.
 // [K8s ContainerState]
 //
-// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
-//
 // All possible container states will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current state will be non-zero.
+//
+// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
 func (m ContainerStatusState) Add(
 	ctx context.Context,
 	incr int64,
@@ -9231,11 +9247,11 @@ func (PodStatusPhase) Description() string {
 // The podStatusPhase is the the phase for the pod. Corresponds to the `phase`
 // field of the: [K8s PodStatus]
 //
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
-//
 // All possible pod phases will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current phase will be non-zero.
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusPhase) Add(
 	ctx context.Context,
 	incr int64,
@@ -9358,11 +9374,11 @@ func (PodStatusReason) Description() string {
 // The podStatusReason is the the reason for the pod state. Corresponds to the
 // `reason` field of the: [K8s PodStatus]
 //
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
-//
 // All possible pod status reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current reason will be non-zero.
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusReason) Add(
 	ctx context.Context,
 	incr int64,
