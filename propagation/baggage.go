@@ -99,19 +99,19 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 			return parent
 		}
 
-		currBag, err := baggage.Parse(bStr)
-		if err != nil {
-			parseErrors++
-			if parseErrors <= maxParseErrors {
-				truncateErr = errors.Join(truncateErr, err)
+		// If members exceed the limit, stop parsing baggage.
+		if len(members) <= maxMembers {
+			currBag, err := baggage.Parse(bStr)
+			if err != nil {
+				parseErrors++
+				if parseErrors <= maxParseErrors {
+					truncateErr = errors.Join(truncateErr, err)
+				}
 			}
-		}
-		if currBag.Len() == 0 {
-			continue
-		}
-		members = append(members, currBag.Members()...)
-		if len(members) >= maxMembers {
-			break
+			if currBag.Len() == 0 {
+				continue
+			}
+			members = append(members, currBag.Members()...)
 		}
 	}
 

@@ -327,19 +327,16 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			want: members{},
 		},
 		{
-			name: "many headers exceeding member limit caps collection early",
+			name: "many headers total max members and max bytes",
 			headers: func() []string {
 				// 100 headers with 10 members each = 1000 total members.
-				// The cap should stop collecting after ~maxMembers and
-				// New() truncates to exactly maxMembers.
 				h := make([]string, 100)
 				for i := range h {
 					h[i] = generateFixedWidthBaggageHeader(10, fmt.Sprintf("h%02d_k", i))
 				}
 				return h
 			}(),
-			wantCount: maxMembers,
-			wantBytes: maxMembers*11 + maxMembers - 1, // 64 uniform "hNN_kNN=vNN" members + 63 commas
+			want: members{},
 		},
 	}
 
@@ -604,6 +601,19 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 				return members{{Key: "good", Value: "val"}}
 			},
 			wantErrStr: []string{"invalid baggage list-member", "and 5 more invalid member(s)"},
+		},
+		{
+			name: "member cap does not stop aggregate byte accounting",
+			headers: func() []string {
+				return []string{
+					generateFixedWidthBaggageHeader(64, "a"),
+					"oversized=" + strings.Repeat("v", maxBytesPerBaggageString),
+				}
+			},
+			want: func() members {
+				return members{}
+			},
+			wantErrStr: []string{"exceeds 8192 byte limit"},
 		},
 	}
 
