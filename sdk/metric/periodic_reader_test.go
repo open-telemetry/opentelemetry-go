@@ -147,6 +147,25 @@ func TestIntervalEnvAndOption(t *testing.T) {
 	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
+func TestWithContext(t *testing.T) {
+	ctx := t.Context()
+	opts := []PeriodicReaderOption{WithContext(ctx)}
+	assert.Equal(t, ctx, newPeriodicReaderConfig(opts).baseCtx)
+	assert.Equal(t, context.Background(), newPeriodicReaderConfig(nil).baseCtx)
+	assert.Equal(t, context.Background(), newPeriodicReaderConfig([]PeriodicReaderOption{WithContext(nil)}).baseCtx, "nil ctx should use default")
+}
+
+func TestPeriodicReaderContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel() // pre-cancel so the run goroutine exits immediately on start
+
+	r := NewPeriodicReader(new(fnExporter), WithContext(ctx))
+	r.register(testSDKProducer{})
+
+	// The run goroutine exits when ctx is done; Shutdown should complete without hanging.
+	require.NoError(t, r.Shutdown(t.Context()))
+}
+
 type fnExporter struct {
 	temporalityFunc TemporalitySelector
 	aggregationFunc AggregationSelector
