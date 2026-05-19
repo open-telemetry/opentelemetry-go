@@ -8,10 +8,9 @@ import (
 	"strings"
 )
 
-// InsertOrUpdateTraceStateThKeyValue inserts or updates the threshold (th) key-value
-// in the OTel tracestate "ot" field. It is exported for use by samplers that need
-// to set the threshold (e.g., AlwaysOn sampler setting th:0).
-func InsertOrUpdateTraceStateThKeyValue(existingOtts, thkv string) string {
+// insertOrUpdateTraceStateThKeyValue inserts or updates the threshold (th) key-value
+// in the OTel tracestate "ot" field.
+func insertOrUpdateTraceStateThKeyValue(existingOtts, thkv string) string {
 	if existingOtts == "" {
 		return thkv
 	}

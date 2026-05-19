@@ -63,7 +63,7 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 		}
 	}
 
-	newOtts := InsertOrUpdateTraceStateThKeyValue(existingOtts, ps.thkv)
+	newOtts := insertOrUpdateTraceStateThKeyValue(existingOtts, ps.thkv)
 
 	if newOtts == "" {
 		state = state.Delete("ot")
