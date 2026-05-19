@@ -3,6 +3,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - 'Makefile'
+      - '.github/workflows/benchmark.yml'
   workflow_dispatch:
 
 # Declare default permissions as read only.
