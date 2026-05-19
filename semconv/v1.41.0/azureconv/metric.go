@@ -175,6 +175,77 @@ func (CosmosDBClientActiveInstanceCount) AttrServerAddress(val string) attribute
 	return attribute.String("server.address", val)
 }
 
+// CosmosDBClientActiveInstanceCountObservable is an instrument used to record
+// metric values conforming to the "azure.cosmosdb.client.active_instance.count"
+// semantic conventions. It represents the number of active client instances.
+type CosmosDBClientActiveInstanceCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newCosmosDBClientActiveInstanceCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of active client instances."),
+	metric.WithUnit("{instance}"),
+}
+
+// NewCosmosDBClientActiveInstanceCountObservable returns a new
+// CosmosDBClientActiveInstanceCountObservable instrument.
+func NewCosmosDBClientActiveInstanceCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (CosmosDBClientActiveInstanceCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CosmosDBClientActiveInstanceCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCosmosDBClientActiveInstanceCountObservableOpts
+	} else {
+		opt = append(opt, newCosmosDBClientActiveInstanceCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"azure.cosmosdb.client.active_instance.count",
+		opt...,
+	)
+	if err != nil {
+		return CosmosDBClientActiveInstanceCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return CosmosDBClientActiveInstanceCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CosmosDBClientActiveInstanceCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CosmosDBClientActiveInstanceCountObservable) Name() string {
+	return "azure.cosmosdb.client.active_instance.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CosmosDBClientActiveInstanceCountObservable) Unit() string {
+	return "{instance}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CosmosDBClientActiveInstanceCountObservable) Description() string {
+	return "Number of active client instances."
+}
+
+// AttrServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (CosmosDBClientActiveInstanceCountObservable) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
+}
+
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the name of the database host.
+func (CosmosDBClientActiveInstanceCountObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
 // CosmosDBClientOperationRequestCharge is an instrument used to record metric
 // values conforming to the "azure.cosmosdb.client.operation.request_charge"
 // semantic conventions. It represents the [Request units] consumed by the
