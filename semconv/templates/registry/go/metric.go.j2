@@ -53,6 +53,7 @@ var (
 {%- for metric in ctx.metrics %}
 {%- set metric_name = h.to_go_name(metric.metric_name, ctx.root_namespace) %}
 {%- set metric_inst = metric.metric_name | map_text("instrument", i.instrument_default(metric)) %}
+{%- set metric_bucket_boundaries = metric.metric_name | map_text("custom_bucket_boundaries", "") %}
 
 {{ h.metric_typedoc(metric, ctx.root_namespace) | comment | trim }}
 type {{ metric_name }} struct {
@@ -62,6 +63,9 @@ type {{ metric_name }} struct {
 var new{{ metric_name }}Opts = []metric.{{ metric_inst }}Option{
 	metric.WithDescription("{{ i.desc(metric) }}"),
 	metric.WithUnit("{{metric.unit}}"),
+{%- if metric.instrument == "histogram" and metric_bucket_boundaries != "" %}
+	metric.WithExplicitBucketBoundaries({{ metric_bucket_boundaries }}...),
+{%- endif %}
 }
 
 {{ ["New" ~ metric_name ~ " returns a new " ~ metric_name ~ " instrument."] | comment }}
