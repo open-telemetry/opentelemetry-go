@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 const (
@@ -69,6 +69,7 @@ func get[T any](pool *sync.Pool) *[]T {
 }
 
 func put[T any](pool *sync.Pool, value *[]T) {
+	clear(*value) // erase elements to allow GC to collect what they refer to.
 	*value = (*value)[:0]
 	pool.Put(value)
 }
@@ -304,7 +305,10 @@ var errPool = sync.Pool{
 // the provided non-nil err.
 func rejected(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
-	defer errPool.Put(ps)
+	defer func() {
+		*ps = internal.PartialSuccess{} // erase fields to allow GC to collect them.
+		errPool.Put(ps)
+	}()
 
 	if errors.As(err, ps) {
 		// Bound RejectedItems to [0, n]. This should not be needed,
