@@ -69,6 +69,11 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 		state = state.Delete("ot")
 		return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
 	}
+
+	if existingOtts == newOtts {
+		return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
+	}
+
 	combined, err := state.Insert("ot", newOtts)
 	if err != nil {
 		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
