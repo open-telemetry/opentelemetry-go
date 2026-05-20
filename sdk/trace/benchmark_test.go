@@ -36,10 +36,13 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 		attribute.Float64("float64", 42),
 		attribute.Float64Slice("float64Slice", []float64{42, -1}),
 		attribute.String("string", "value"),
+		attribute.ByteSlice("byteSlice", []byte("value")),
 		attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
-		attribute.Slice("slice",
+		attribute.Slice(
+			"slice",
 			attribute.StringValue("value"),
 			attribute.StringSliceValue([]string{"value", "value-1"}),
+			attribute.ByteSliceValue([]byte{1, 2, 3}),
 		),
 	}
 
@@ -421,7 +424,8 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 		sdktrace.WithBatcher(
 			tracetest.NewNoopExporter(),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
+		),
+	)
 	b.Cleanup(func() {
 		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		_ = tp.Shutdown(context.Background())

@@ -31,10 +31,11 @@ import (
 
 type client struct {
 	// req is cloned for every upload the client makes.
-	req         *http.Request
-	compression Compression
-	requestFunc retry.RequestFunc
-	httpClient  *http.Client
+	req            *http.Request
+	compression    Compression
+	maxRequestSize int
+	requestFunc    retry.RequestFunc
+	httpClient     *http.Client
 
 	inst *observ.Instrumentation
 }
@@ -119,11 +120,12 @@ func newClient(cfg oconf.Config) (*client, error) {
 	inst, err := observ.NewInstrumentation(counter.NextExporterID(), cfg.Metrics.Endpoint)
 
 	return &client{
-		compression: Compression(cfg.Metrics.Compression),
-		req:         req,
-		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
-		httpClient:  httpClient,
-		inst:        inst,
+		compression:    Compression(cfg.Metrics.Compression),
+		maxRequestSize: cfg.Metrics.MaxRequestSize,
+		req:            req,
+		requestFunc:    cfg.RetryConfig.RequestFunc(evaluate),
+		httpClient:     httpClient,
+		inst:           inst,
 	}, err
 }
 
@@ -153,6 +155,9 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	body, err := proto.Marshal(pbRequest)
 	if err != nil {
 		return err
+	}
+	if maxSize := c.maxRequestSize; maxSize > 0 && len(body) > maxSize {
+		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
 	}
 	request, err := c.newRequest(ctx, body)
 	if err != nil {

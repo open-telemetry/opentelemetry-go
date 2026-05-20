@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 // To enable metrics in your application using the SDK,
@@ -26,7 +26,8 @@ import (
 func Example() {
 	// Create resource.
 	res, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
 			semconv.ServiceName("my-service"),
 			semconv.ServiceVersion("0.1.0"),
 		))
@@ -45,7 +46,6 @@ func Example() {
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
 		metric.WithReader(reader),
-		metric.WithCardinalityLimit(2000),
 	)
 
 	// Handle shutdown properly so that nothing leaks.

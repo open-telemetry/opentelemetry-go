@@ -18,7 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
@@ -50,18 +50,21 @@ var (
 			telemetry.BoolValue(false),
 			telemetry.BoolValue(true),
 		),
-		telemetry.Slice("int slice",
+		telemetry.Slice(
+			"int slice",
 			telemetry.IntValue(-1),
 			telemetry.IntValue(-30),
 			telemetry.IntValue(328),
 		),
-		telemetry.Slice("int64 slice",
+		telemetry.Slice(
+			"int64 slice",
 			telemetry.Int64Value(1030),
 			telemetry.Int64Value(0),
 			telemetry.Int64Value(0),
 		),
 		telemetry.Slice("float64 slice", telemetry.Float64Value(1e9)),
-		telemetry.Slice("string slice",
+		telemetry.Slice(
+			"string slice",
 			telemetry.StringValue("one"),
 			telemetry.StringValue("two"),
 		),
@@ -165,12 +168,45 @@ func TestSpanKindTransform(t *testing.T) {
 }
 
 func TestConvAttrValueBytes(t *testing.T) {
-	t.Parallel()
+	v := []byte("bytes")
+	tests := []struct {
+		name  string
+		want  []byte
+		limit int
+	}{
+		{
+			name:  "Unlimited",
+			want:  []byte("bytes"),
+			limit: -1,
+		},
+		{
+			name:  "Zero",
+			want:  []byte(""),
+			limit: 0,
+		},
+		{
+			name:  "Truncate",
+			want:  []byte("by"),
+			limit: 2,
+		},
+		{
+			name:  "NoTruncation",
+			want:  []byte("bytes"),
+			limit: 10,
+		},
+	}
+	orig := maxSpan.AttrValueLen
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+			maxSpan.AttrValueLen = test.limit
 
-	val := convAttrValue(attribute.ByteSliceValue([]byte("bytes")))
+			val := convAttrValue(attribute.ByteSliceValue(v))
 
-	assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
-	assert.Equal(t, []byte("bytes"), val.AsBytes())
+			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+			assert.Equal(t, test.want, val.AsBytes())
+		})
+	}
 }
 
 func TestConvAttrValueSlice(t *testing.T) {

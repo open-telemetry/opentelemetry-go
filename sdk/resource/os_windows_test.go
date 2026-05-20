@@ -22,7 +22,8 @@ func TestPlatformOSDescription(t *testing.T) {
 
 func TestReadRegistryValues(t *testing.T) {
 	k, err := registry.OpenKey(
-		registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE)
+		registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE,
+	)
 
 	require.NoError(t, err, "should open Windows CurrentVersion registry key")
 
