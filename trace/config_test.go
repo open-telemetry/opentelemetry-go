@@ -562,3 +562,18 @@ func TestExperimentalOptionSafe(t *testing.T) {
 	assert.NotPanics(t, func() { _ = NewSpanEndConfig(opt) })
 	assert.NotPanics(t, func() { _ = NewEventConfig(opt) })
 }
+
+func TestNilOptionSafe(t *testing.T) {
+	assert.NotPanics(t, func() { _ = NewTracerConfig(nil) })
+	assert.NotPanics(t, func() { _ = NewSpanStartConfig(nil) })
+	assert.NotPanics(t, func() { _ = NewSpanEndConfig(nil) })
+	assert.NotPanics(t, func() { _ = NewEventConfig(nil) })
+
+	v1 := "semver:0.0.1"
+	c := NewTracerConfig(nil, WithInstrumentationVersion(v1), nil)
+	assert.Equal(t, v1, c.InstrumentationVersion())
+
+	wantKind := SpanKindServer
+	sc := NewSpanStartConfig(nil, WithSpanKind(wantKind), nil)
+	assert.Equal(t, wantKind, sc.SpanKind())
+}

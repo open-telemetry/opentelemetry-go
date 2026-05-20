@@ -42,6 +42,9 @@ type experimentalOption interface {
 func NewTracerConfig(options ...TracerOption) TracerConfig {
 	var config TracerConfig
 	for _, option := range options {
+		if option == nil {
+			continue
+		}
 		if _, ok := option.(experimentalOption); ok {
 			continue
 		}
@@ -110,6 +113,9 @@ func (cfg *SpanConfig) SpanKind() SpanKind {
 func NewSpanStartConfig(options ...SpanStartOption) SpanConfig {
 	var c SpanConfig
 	for _, option := range options {
+		if option == nil {
+			continue
+		}
 		if _, ok := option.(experimentalOption); ok {
 			continue
 		}
@@ -125,6 +131,9 @@ func NewSpanStartConfig(options ...SpanStartOption) SpanConfig {
 func NewSpanEndConfig(options ...SpanEndOption) SpanConfig {
 	var c SpanConfig
 	for _, option := range options {
+		if option == nil {
+			continue
+		}
 		if _, ok := option.(experimentalOption); ok {
 			continue
 		}
@@ -180,6 +189,9 @@ func (cfg *EventConfig) StackTrace() bool {
 func NewEventConfig(options ...EventOption) EventConfig {
 	var c EventConfig
 	for _, option := range options {
+		if option == nil {
+			continue
+		}
 		if _, ok := option.(experimentalOption); ok {
 			continue
 		}
