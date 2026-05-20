@@ -194,6 +194,7 @@ func (m CPUTime) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -227,6 +228,7 @@ func (m CPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -488,6 +490,7 @@ func (m MemoryGCCycles) Add(ctx context.Context, incr int64, attrs ...attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -510,6 +513,7 @@ func (m MemoryGCCycles) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -650,6 +654,7 @@ func (m MemoryGCPauseDuration) Record(ctx context.Context, val float64, attrs ..
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -673,6 +678,7 @@ func (m MemoryGCPauseDuration) RecordSet(ctx context.Context, val float64, set a
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -942,6 +948,7 @@ func (m ScheduleDuration) Record(ctx context.Context, val float64, attrs ...attr
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -965,6 +972,7 @@ func (m ScheduleDuration) RecordSet(ctx context.Context, val float64, set attrib
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
