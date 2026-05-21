@@ -381,6 +381,71 @@ func (CPUFrequency) AttrCPULogicalNumber(val int) attribute.KeyValue {
 	return attribute.Int("cpu.logical_number", val)
 }
 
+// CPUFrequencyObservable is an instrument used to record metric values
+// conforming to the "system.cpu.frequency" semantic conventions. It represents
+// the operating frequency of the logical CPU in Hertz.
+type CPUFrequencyObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newCPUFrequencyObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Operating frequency of the logical CPU in Hertz."),
+	metric.WithUnit("Hz"),
+}
+
+// NewCPUFrequencyObservable returns a new CPUFrequencyObservable instrument.
+func NewCPUFrequencyObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (CPUFrequencyObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPUFrequencyObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPUFrequencyObservableOpts
+	} else {
+		opt = append(opt, newCPUFrequencyObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"system.cpu.frequency",
+		opt...,
+	)
+	if err != nil {
+		return CPUFrequencyObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return CPUFrequencyObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPUFrequencyObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPUFrequencyObservable) Name() string {
+	return "system.cpu.frequency"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPUFrequencyObservable) Unit() string {
+	return "Hz"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPUFrequencyObservable) Description() string {
+	return "Operating frequency of the logical CPU in Hertz."
+}
+
+// AttrCPULogicalNumber returns an optional attribute for the
+// "cpu.logical_number" semantic convention. It represents the logical CPU number
+// [0..n-1].
+func (CPUFrequencyObservable) AttrCPULogicalNumber(val int) attribute.KeyValue {
+	return attribute.Int("cpu.logical_number", val)
+}
+
 // CPULogicalCount is an instrument used to record metric values conforming to
 // the "system.cpu.logical.count" semantic conventions. It represents the reports
 // the number of logical (virtual) processor cores created by the operating
@@ -488,6 +553,66 @@ func (m CPULogicalCount) AddSet(ctx context.Context, incr int64, set attribute.S
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// CPULogicalCountObservable is an instrument used to record metric values
+// conforming to the "system.cpu.logical.count" semantic conventions. It
+// represents the reports the number of logical (virtual) processor cores created
+// by the operating system to manage multitasking.
+type CPULogicalCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newCPULogicalCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Reports the number of logical (virtual) processor cores created by the operating system to manage multitasking."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewCPULogicalCountObservable returns a new CPULogicalCountObservable
+// instrument.
+func NewCPULogicalCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (CPULogicalCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPULogicalCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPULogicalCountObservableOpts
+	} else {
+		opt = append(opt, newCPULogicalCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.cpu.logical.count",
+		opt...,
+	)
+	if err != nil {
+		return CPULogicalCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return CPULogicalCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPULogicalCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPULogicalCountObservable) Name() string {
+	return "system.cpu.logical.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPULogicalCountObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPULogicalCountObservable) Description() string {
+	return "Reports the number of logical (virtual) processor cores created by the operating system to manage multitasking."
+}
+
 // CPUPhysicalCount is an instrument used to record metric values conforming to
 // the "system.cpu.physical.count" semantic conventions. It represents the
 // reports the number of actual physical processor cores on the hardware.
@@ -592,6 +717,66 @@ func (m CPUPhysicalCount) AddSet(ctx context.Context, incr int64, set attribute.
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// CPUPhysicalCountObservable is an instrument used to record metric values
+// conforming to the "system.cpu.physical.count" semantic conventions. It
+// represents the reports the number of actual physical processor cores on the
+// hardware.
+type CPUPhysicalCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newCPUPhysicalCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Reports the number of actual physical processor cores on the hardware."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewCPUPhysicalCountObservable returns a new CPUPhysicalCountObservable
+// instrument.
+func NewCPUPhysicalCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (CPUPhysicalCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPUPhysicalCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPUPhysicalCountObservableOpts
+	} else {
+		opt = append(opt, newCPUPhysicalCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.cpu.physical.count",
+		opt...,
+	)
+	if err != nil {
+		return CPUPhysicalCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return CPUPhysicalCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPUPhysicalCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPUPhysicalCountObservable) Name() string {
+	return "system.cpu.physical.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPUPhysicalCountObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPUPhysicalCountObservable) Description() string {
+	return "Reports the number of actual physical processor cores on the hardware."
 }
 
 // CPUTime is an instrument used to record metric values conforming to the
@@ -791,6 +976,79 @@ func (CPUUtilization) AttrCPULogicalNumber(val int) attribute.KeyValue {
 	return attribute.Int("cpu.logical_number", val)
 }
 
+// CPUUtilizationObservable is an instrument used to record metric values
+// conforming to the "system.cpu.utilization" semantic conventions. It represents
+// the for each logical CPU, the utilization is calculated as the change in
+// cumulative CPU time (cpu.time) over a measurement interval, divided by the
+// elapsed time.
+type CPUUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newCPUUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("For each logical CPU, the utilization is calculated as the change in cumulative CPU time (cpu.time) over a measurement interval, divided by the elapsed time."),
+	metric.WithUnit("1"),
+}
+
+// NewCPUUtilizationObservable returns a new CPUUtilizationObservable instrument.
+func NewCPUUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (CPUUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPUUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPUUtilizationObservableOpts
+	} else {
+		opt = append(opt, newCPUUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"system.cpu.utilization",
+		opt...,
+	)
+	if err != nil {
+		return CPUUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return CPUUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPUUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPUUtilizationObservable) Name() string {
+	return "system.cpu.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPUUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPUUtilizationObservable) Description() string {
+	return "For each logical CPU, the utilization is calculated as the change in cumulative CPU time (cpu.time) over a measurement interval, divided by the elapsed time."
+}
+
+// AttrCPUMode returns an optional attribute for the "cpu.mode" semantic
+// convention. It represents the mode of the CPU.
+func (CPUUtilizationObservable) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
+}
+
+// AttrCPULogicalNumber returns an optional attribute for the
+// "cpu.logical_number" semantic convention. It represents the logical CPU number
+// [0..n-1].
+func (CPUUtilizationObservable) AttrCPULogicalNumber(val int) attribute.KeyValue {
+	return attribute.Int("cpu.logical_number", val)
+}
+
 // DiskIO is an instrument used to record metric values conforming to the
 // "system.disk.io" semantic conventions. It represents the disk bytes
 // transferred.
@@ -912,6 +1170,76 @@ func (DiskIO) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
 // AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
 func (DiskIO) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// DiskIOObservable is an instrument used to record metric values conforming to
+// the "system.disk.io" semantic conventions. It represents the disk bytes
+// transferred.
+type DiskIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newDiskIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Disk bytes transferred."),
+	metric.WithUnit("By"),
+}
+
+// NewDiskIOObservable returns a new DiskIOObservable instrument.
+func NewDiskIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (DiskIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskIOObservableOpts
+	} else {
+		opt = append(opt, newDiskIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.disk.io",
+		opt...,
+	)
+	if err != nil {
+		return DiskIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return DiskIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskIOObservable) Name() string {
+	return "system.disk.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskIOObservable) Description() string {
+	return "Disk bytes transferred."
+}
+
+// AttrDiskIODirection returns an optional attribute for the "disk.io.direction"
+// semantic convention. It represents the disk IO operation direction.
+func (DiskIOObservable) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (DiskIOObservable) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
@@ -1057,6 +1385,70 @@ func (DiskIOTime) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
+// DiskIOTimeObservable is an instrument used to record metric values conforming
+// to the "system.disk.io_time" semantic conventions. It represents the time disk
+// spent activated.
+type DiskIOTimeObservable struct {
+	metric.Float64ObservableCounter
+}
+
+var newDiskIOTimeObservableOpts = []metric.Float64ObservableCounterOption{
+	metric.WithDescription("Time disk spent activated."),
+	metric.WithUnit("s"),
+}
+
+// NewDiskIOTimeObservable returns a new DiskIOTimeObservable instrument.
+func NewDiskIOTimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableCounterOption,
+) (DiskIOTimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskIOTimeObservable{noop.Float64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskIOTimeObservableOpts
+	} else {
+		opt = append(opt, newDiskIOTimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableCounter(
+		"system.disk.io_time",
+		opt...,
+	)
+	if err != nil {
+		return DiskIOTimeObservable{noop.Float64ObservableCounter{}}, err
+	}
+	return DiskIOTimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskIOTimeObservable) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskIOTimeObservable) Name() string {
+	return "system.disk.io_time"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskIOTimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskIOTimeObservable) Description() string {
+	return "Time disk spent activated."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (DiskIOTimeObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
 // DiskLimit is an instrument used to record metric values conforming to the
 // "system.disk.limit" semantic conventions. It represents the total storage
 // capacity of the disk.
@@ -1172,6 +1564,70 @@ func (m DiskLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 // AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
 func (DiskLimit) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// DiskLimitObservable is an instrument used to record metric values conforming
+// to the "system.disk.limit" semantic conventions. It represents the total
+// storage capacity of the disk.
+type DiskLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDiskLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The total storage capacity of the disk."),
+	metric.WithUnit("By"),
+}
+
+// NewDiskLimitObservable returns a new DiskLimitObservable instrument.
+func NewDiskLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DiskLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskLimitObservableOpts
+	} else {
+		opt = append(opt, newDiskLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.disk.limit",
+		opt...,
+	)
+	if err != nil {
+		return DiskLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DiskLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskLimitObservable) Name() string {
+	return "system.disk.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskLimitObservable) Description() string {
+	return "The total storage capacity of the disk."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (DiskLimitObservable) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
@@ -1296,6 +1752,76 @@ func (DiskMerged) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValu
 // AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
 func (DiskMerged) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// DiskMergedObservable is an instrument used to record metric values conforming
+// to the "system.disk.merged" semantic conventions. It represents the number of
+// disk reads/writes merged into single physical disk access operations.
+type DiskMergedObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newDiskMergedObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of disk reads/writes merged into single physical disk access operations."),
+	metric.WithUnit("{operation}"),
+}
+
+// NewDiskMergedObservable returns a new DiskMergedObservable instrument.
+func NewDiskMergedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (DiskMergedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskMergedObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskMergedObservableOpts
+	} else {
+		opt = append(opt, newDiskMergedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.disk.merged",
+		opt...,
+	)
+	if err != nil {
+		return DiskMergedObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return DiskMergedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskMergedObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskMergedObservable) Name() string {
+	return "system.disk.merged"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskMergedObservable) Unit() string {
+	return "{operation}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskMergedObservable) Description() string {
+	return "The number of disk reads/writes merged into single physical disk access operations."
+}
+
+// AttrDiskIODirection returns an optional attribute for the "disk.io.direction"
+// semantic convention. It represents the disk IO operation direction.
+func (DiskMergedObservable) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (DiskMergedObservable) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
@@ -1443,6 +1969,77 @@ func (DiskOperationTime) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
+// DiskOperationTimeObservable is an instrument used to record metric values
+// conforming to the "system.disk.operation_time" semantic conventions. It
+// represents the sum of the time each operation took to complete.
+type DiskOperationTimeObservable struct {
+	metric.Float64ObservableCounter
+}
+
+var newDiskOperationTimeObservableOpts = []metric.Float64ObservableCounterOption{
+	metric.WithDescription("Sum of the time each operation took to complete."),
+	metric.WithUnit("s"),
+}
+
+// NewDiskOperationTimeObservable returns a new DiskOperationTimeObservable
+// instrument.
+func NewDiskOperationTimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableCounterOption,
+) (DiskOperationTimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskOperationTimeObservable{noop.Float64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskOperationTimeObservableOpts
+	} else {
+		opt = append(opt, newDiskOperationTimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableCounter(
+		"system.disk.operation_time",
+		opt...,
+	)
+	if err != nil {
+		return DiskOperationTimeObservable{noop.Float64ObservableCounter{}}, err
+	}
+	return DiskOperationTimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskOperationTimeObservable) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskOperationTimeObservable) Name() string {
+	return "system.disk.operation_time"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskOperationTimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskOperationTimeObservable) Description() string {
+	return "Sum of the time each operation took to complete."
+}
+
+// AttrDiskIODirection returns an optional attribute for the "disk.io.direction"
+// semantic convention. It represents the disk IO operation direction.
+func (DiskOperationTimeObservable) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (DiskOperationTimeObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
 // DiskOperations is an instrument used to record metric values conforming to the
 // "system.disk.operations" semantic conventions. It represents the disk
 // operations count.
@@ -1564,6 +2161,76 @@ func (DiskOperations) AttrDiskIODirection(val DiskIODirectionAttr) attribute.Key
 // AttrDevice returns an optional attribute for the "system.device" semantic
 // convention. It represents the device identifier.
 func (DiskOperations) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// DiskOperationsObservable is an instrument used to record metric values
+// conforming to the "system.disk.operations" semantic conventions. It represents
+// the disk operations count.
+type DiskOperationsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newDiskOperationsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Disk operations count."),
+	metric.WithUnit("{operation}"),
+}
+
+// NewDiskOperationsObservable returns a new DiskOperationsObservable instrument.
+func NewDiskOperationsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (DiskOperationsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskOperationsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskOperationsObservableOpts
+	} else {
+		opt = append(opt, newDiskOperationsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.disk.operations",
+		opt...,
+	)
+	if err != nil {
+		return DiskOperationsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return DiskOperationsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskOperationsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskOperationsObservable) Name() string {
+	return "system.disk.operations"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskOperationsObservable) Unit() string {
+	return "{operation}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskOperationsObservable) Description() string {
+	return "Disk operations count."
+}
+
+// AttrDiskIODirection returns an optional attribute for the "disk.io.direction"
+// semantic convention. It represents the disk IO operation direction.
+func (DiskOperationsObservable) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (DiskOperationsObservable) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
@@ -1704,6 +2371,93 @@ func (FilesystemLimit) AttrFilesystemMountpoint(val string) attribute.KeyValue {
 // "system.filesystem.type" semantic convention. It represents the filesystem
 // type.
 func (FilesystemLimit) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.type", string(val))
+}
+
+// FilesystemLimitObservable is an instrument used to record metric values
+// conforming to the "system.filesystem.limit" semantic conventions. It
+// represents the total storage capacity of the filesystem.
+type FilesystemLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newFilesystemLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The total storage capacity of the filesystem."),
+	metric.WithUnit("By"),
+}
+
+// NewFilesystemLimitObservable returns a new FilesystemLimitObservable
+// instrument.
+func NewFilesystemLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (FilesystemLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return FilesystemLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newFilesystemLimitObservableOpts
+	} else {
+		opt = append(opt, newFilesystemLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.filesystem.limit",
+		opt...,
+	)
+	if err != nil {
+		return FilesystemLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return FilesystemLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m FilesystemLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (FilesystemLimitObservable) Name() string {
+	return "system.filesystem.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (FilesystemLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (FilesystemLimitObservable) Description() string {
+	return "The total storage capacity of the filesystem."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the identifier for the device where the filesystem
+// resides.
+func (FilesystemLimitObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// AttrFilesystemMode returns an optional attribute for the
+// "system.filesystem.mode" semantic convention. It represents the filesystem
+// mode.
+func (FilesystemLimitObservable) AttrFilesystemMode(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mode", val)
+}
+
+// AttrFilesystemMountpoint returns an optional attribute for the
+// "system.filesystem.mountpoint" semantic convention. It represents the
+// filesystem mount path.
+func (FilesystemLimitObservable) AttrFilesystemMountpoint(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mountpoint", val)
+}
+
+// AttrFilesystemType returns an optional attribute for the
+// "system.filesystem.type" semantic convention. It represents the filesystem
+// type.
+func (FilesystemLimitObservable) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
 	return attribute.String("system.filesystem.type", string(val))
 }
 
@@ -1864,6 +2618,100 @@ func (FilesystemUsage) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyV
 	return attribute.String("system.filesystem.type", string(val))
 }
 
+// FilesystemUsageObservable is an instrument used to record metric values
+// conforming to the "system.filesystem.usage" semantic conventions. It
+// represents the reports a filesystem's space usage across different states.
+type FilesystemUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newFilesystemUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Reports a filesystem's space usage across different states."),
+	metric.WithUnit("By"),
+}
+
+// NewFilesystemUsageObservable returns a new FilesystemUsageObservable
+// instrument.
+func NewFilesystemUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (FilesystemUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return FilesystemUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newFilesystemUsageObservableOpts
+	} else {
+		opt = append(opt, newFilesystemUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.filesystem.usage",
+		opt...,
+	)
+	if err != nil {
+		return FilesystemUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return FilesystemUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m FilesystemUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (FilesystemUsageObservable) Name() string {
+	return "system.filesystem.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (FilesystemUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (FilesystemUsageObservable) Description() string {
+	return "Reports a filesystem's space usage across different states."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the identifier for the device where the filesystem
+// resides.
+func (FilesystemUsageObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// AttrFilesystemMode returns an optional attribute for the
+// "system.filesystem.mode" semantic convention. It represents the filesystem
+// mode.
+func (FilesystemUsageObservable) AttrFilesystemMode(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mode", val)
+}
+
+// AttrFilesystemMountpoint returns an optional attribute for the
+// "system.filesystem.mountpoint" semantic convention. It represents the
+// filesystem mount path.
+func (FilesystemUsageObservable) AttrFilesystemMountpoint(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mountpoint", val)
+}
+
+// AttrFilesystemState returns an optional attribute for the
+// "system.filesystem.state" semantic convention. It represents the filesystem
+// state.
+func (FilesystemUsageObservable) AttrFilesystemState(val FilesystemStateAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.state", string(val))
+}
+
+// AttrFilesystemType returns an optional attribute for the
+// "system.filesystem.type" semantic convention. It represents the filesystem
+// type.
+func (FilesystemUsageObservable) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.type", string(val))
+}
+
 // FilesystemUtilization is an instrument used to record metric values conforming
 // to the "system.filesystem.utilization" semantic conventions. It represents the
 // fraction of filesystem bytes used.
@@ -2011,6 +2859,100 @@ func (FilesystemUtilization) AttrFilesystemType(val FilesystemTypeAttr) attribut
 	return attribute.String("system.filesystem.type", string(val))
 }
 
+// FilesystemUtilizationObservable is an instrument used to record metric values
+// conforming to the "system.filesystem.utilization" semantic conventions. It
+// represents the fraction of filesystem bytes used.
+type FilesystemUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newFilesystemUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Fraction of filesystem bytes used."),
+	metric.WithUnit("1"),
+}
+
+// NewFilesystemUtilizationObservable returns a new
+// FilesystemUtilizationObservable instrument.
+func NewFilesystemUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (FilesystemUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return FilesystemUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newFilesystemUtilizationObservableOpts
+	} else {
+		opt = append(opt, newFilesystemUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"system.filesystem.utilization",
+		opt...,
+	)
+	if err != nil {
+		return FilesystemUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return FilesystemUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m FilesystemUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (FilesystemUtilizationObservable) Name() string {
+	return "system.filesystem.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (FilesystemUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (FilesystemUtilizationObservable) Description() string {
+	return "Fraction of filesystem bytes used."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the identifier for the device where the filesystem
+// resides.
+func (FilesystemUtilizationObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// AttrFilesystemMode returns an optional attribute for the
+// "system.filesystem.mode" semantic convention. It represents the filesystem
+// mode.
+func (FilesystemUtilizationObservable) AttrFilesystemMode(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mode", val)
+}
+
+// AttrFilesystemMountpoint returns an optional attribute for the
+// "system.filesystem.mountpoint" semantic convention. It represents the
+// filesystem mount path.
+func (FilesystemUtilizationObservable) AttrFilesystemMountpoint(val string) attribute.KeyValue {
+	return attribute.String("system.filesystem.mountpoint", val)
+}
+
+// AttrFilesystemState returns an optional attribute for the
+// "system.filesystem.state" semantic convention. It represents the filesystem
+// state.
+func (FilesystemUtilizationObservable) AttrFilesystemState(val FilesystemStateAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.state", string(val))
+}
+
+// AttrFilesystemType returns an optional attribute for the
+// "system.filesystem.type" semantic convention. It represents the filesystem
+// type.
+func (FilesystemUtilizationObservable) AttrFilesystemType(val FilesystemTypeAttr) attribute.KeyValue {
+	return attribute.String("system.filesystem.type", string(val))
+}
+
 // MemoryLimit is an instrument used to record metric values conforming to the
 // "system.memory.limit" semantic conventions. It represents the total virtual
 // memory available in the system.
@@ -2109,6 +3051,64 @@ func (m MemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// MemoryLimitObservable is an instrument used to record metric values conforming
+// to the "system.memory.limit" semantic conventions. It represents the total
+// virtual memory available in the system.
+type MemoryLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Total virtual memory available in the system."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryLimitObservable returns a new MemoryLimitObservable instrument.
+func NewMemoryLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLimitObservableOpts
+	} else {
+		opt = append(opt, newMemoryLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.limit",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLimitObservable) Name() string {
+	return "system.memory.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLimitObservable) Description() string {
+	return "Total virtual memory available in the system."
 }
 
 // MemoryLinuxAvailable is an instrument used to record metric values conforming
@@ -2232,6 +3232,66 @@ func (m MemoryLinuxAvailable) AddSet(ctx context.Context, incr int64, set attrib
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// MemoryLinuxAvailableObservable is an instrument used to record metric values
+// conforming to the "system.memory.linux.available" semantic conventions. It
+// represents an estimate of how much memory is available for starting new
+// applications, without causing swapping.
+type MemoryLinuxAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("An estimate of how much memory is available for starting new applications, without causing swapping."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryLinuxAvailableObservable returns a new MemoryLinuxAvailableObservable
+// instrument.
+func NewMemoryLinuxAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxAvailableObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.available",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxAvailableObservable) Name() string {
+	return "system.memory.linux.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxAvailableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxAvailableObservable) Description() string {
+	return "An estimate of how much memory is available for starting new applications, without causing swapping."
+}
+
 // MemoryLinuxHugepagesLimit is an instrument used to record metric values
 // conforming to the "system.memory.linux.hugepages.limit" semantic conventions.
 // It represents the total number of hugepages available.
@@ -2333,6 +3393,65 @@ func (m MemoryLinuxHugepagesLimit) AddSet(ctx context.Context, incr int64, set a
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// MemoryLinuxHugepagesLimitObservable is an instrument used to record metric
+// values conforming to the "system.memory.linux.hugepages.limit" semantic
+// conventions. It represents the total number of hugepages available.
+type MemoryLinuxHugepagesLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxHugepagesLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Total number of hugepages available."),
+	metric.WithUnit("{page}"),
+}
+
+// NewMemoryLinuxHugepagesLimitObservable returns a new
+// MemoryLinuxHugepagesLimitObservable instrument.
+func NewMemoryLinuxHugepagesLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxHugepagesLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxHugepagesLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxHugepagesLimitObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxHugepagesLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.hugepages.limit",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxHugepagesLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxHugepagesLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxHugepagesLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxHugepagesLimitObservable) Name() string {
+	return "system.memory.linux.hugepages.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxHugepagesLimitObservable) Unit() string {
+	return "{page}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxHugepagesLimitObservable) Description() string {
+	return "Total number of hugepages available."
+}
+
 // MemoryLinuxHugepagesPageSize is an instrument used to record metric values
 // conforming to the "system.memory.linux.hugepages.page_size" semantic
 // conventions. It represents the system hugepage size in bytes.
@@ -2432,6 +3551,65 @@ func (m MemoryLinuxHugepagesPageSize) AddSet(ctx context.Context, incr int64, se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// MemoryLinuxHugepagesPageSizeObservable is an instrument used to record metric
+// values conforming to the "system.memory.linux.hugepages.page_size" semantic
+// conventions. It represents the system hugepage size in bytes.
+type MemoryLinuxHugepagesPageSizeObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxHugepagesPageSizeObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("System hugepage size in bytes."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryLinuxHugepagesPageSizeObservable returns a new
+// MemoryLinuxHugepagesPageSizeObservable instrument.
+func NewMemoryLinuxHugepagesPageSizeObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxHugepagesPageSizeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxHugepagesPageSizeObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxHugepagesPageSizeObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxHugepagesPageSizeObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.hugepages.page_size",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxHugepagesPageSizeObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxHugepagesPageSizeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxHugepagesPageSizeObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxHugepagesPageSizeObservable) Name() string {
+	return "system.memory.linux.hugepages.page_size"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxHugepagesPageSizeObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxHugepagesPageSizeObservable) Description() string {
+	return "System hugepage size in bytes."
 }
 
 // MemoryLinuxHugepagesReserved is an instrument used to record metric values
@@ -2549,6 +3727,65 @@ func (m MemoryLinuxHugepagesReserved) AddSet(ctx context.Context, incr int64, se
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// MemoryLinuxHugepagesReservedObservable is an instrument used to record metric
+// values conforming to the "system.memory.linux.hugepages.reserved" semantic
+// conventions. It represents the number of reserved hugepages.
+type MemoryLinuxHugepagesReservedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxHugepagesReservedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of reserved hugepages."),
+	metric.WithUnit("{page}"),
+}
+
+// NewMemoryLinuxHugepagesReservedObservable returns a new
+// MemoryLinuxHugepagesReservedObservable instrument.
+func NewMemoryLinuxHugepagesReservedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxHugepagesReservedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxHugepagesReservedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxHugepagesReservedObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxHugepagesReservedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.hugepages.reserved",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxHugepagesReservedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxHugepagesReservedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxHugepagesReservedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxHugepagesReservedObservable) Name() string {
+	return "system.memory.linux.hugepages.reserved"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxHugepagesReservedObservable) Unit() string {
+	return "{page}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxHugepagesReservedObservable) Description() string {
+	return "Number of reserved hugepages."
+}
+
 // MemoryLinuxHugepagesSurplus is an instrument used to record metric values
 // conforming to the "system.memory.linux.hugepages.surplus" semantic
 // conventions. It represents the number of surplus hugepages.
@@ -2660,6 +3897,65 @@ func (m MemoryLinuxHugepagesSurplus) AddSet(ctx context.Context, incr int64, set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// MemoryLinuxHugepagesSurplusObservable is an instrument used to record metric
+// values conforming to the "system.memory.linux.hugepages.surplus" semantic
+// conventions. It represents the number of surplus hugepages.
+type MemoryLinuxHugepagesSurplusObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxHugepagesSurplusObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of surplus hugepages."),
+	metric.WithUnit("{page}"),
+}
+
+// NewMemoryLinuxHugepagesSurplusObservable returns a new
+// MemoryLinuxHugepagesSurplusObservable instrument.
+func NewMemoryLinuxHugepagesSurplusObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxHugepagesSurplusObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxHugepagesSurplusObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxHugepagesSurplusObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxHugepagesSurplusObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.hugepages.surplus",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxHugepagesSurplusObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxHugepagesSurplusObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxHugepagesSurplusObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxHugepagesSurplusObservable) Name() string {
+	return "system.memory.linux.hugepages.surplus"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxHugepagesSurplusObservable) Unit() string {
+	return "{page}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxHugepagesSurplusObservable) Description() string {
+	return "Number of surplus hugepages."
 }
 
 // MemoryLinuxHugepagesUsage is an instrument used to record metric values
@@ -2779,6 +4075,72 @@ func (m MemoryLinuxHugepagesUsage) AddSet(ctx context.Context, incr int64, set a
 // "system.memory.linux.hugepages.state" semantic convention. It represents the
 // Linux HugePages memory state.
 func (MemoryLinuxHugepagesUsage) AttrMemoryLinuxHugepagesState(val MemoryLinuxHugepagesStateAttr) attribute.KeyValue {
+	return attribute.String("system.memory.linux.hugepages.state", string(val))
+}
+
+// MemoryLinuxHugepagesUsageObservable is an instrument used to record metric
+// values conforming to the "system.memory.linux.hugepages.usage" semantic
+// conventions. It represents the number of hugepages in use by state.
+type MemoryLinuxHugepagesUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxHugepagesUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of hugepages in use by state."),
+	metric.WithUnit("{page}"),
+}
+
+// NewMemoryLinuxHugepagesUsageObservable returns a new
+// MemoryLinuxHugepagesUsageObservable instrument.
+func NewMemoryLinuxHugepagesUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxHugepagesUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxHugepagesUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxHugepagesUsageObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxHugepagesUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.hugepages.usage",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxHugepagesUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxHugepagesUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxHugepagesUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxHugepagesUsageObservable) Name() string {
+	return "system.memory.linux.hugepages.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxHugepagesUsageObservable) Unit() string {
+	return "{page}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxHugepagesUsageObservable) Description() string {
+	return "Number of hugepages in use by state."
+}
+
+// AttrMemoryLinuxHugepagesState returns an optional attribute for the
+// "system.memory.linux.hugepages.state" semantic convention. It represents the
+// Linux HugePages memory state.
+func (MemoryLinuxHugepagesUsageObservable) AttrMemoryLinuxHugepagesState(val MemoryLinuxHugepagesStateAttr) attribute.KeyValue {
 	return attribute.String("system.memory.linux.hugepages.state", string(val))
 }
 
@@ -2902,6 +4264,73 @@ func (MemoryLinuxHugepagesUtilization) AttrMemoryLinuxHugepagesState(val MemoryL
 	return attribute.String("system.memory.linux.hugepages.state", string(val))
 }
 
+// MemoryLinuxHugepagesUtilizationObservable is an instrument used to record
+// metric values conforming to the "system.memory.linux.hugepages.utilization"
+// semantic conventions. It represents the percentage of hugepages in use by
+// state.
+type MemoryLinuxHugepagesUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newMemoryLinuxHugepagesUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Percentage of hugepages in use by state."),
+	metric.WithUnit("1"),
+}
+
+// NewMemoryLinuxHugepagesUtilizationObservable returns a new
+// MemoryLinuxHugepagesUtilizationObservable instrument.
+func NewMemoryLinuxHugepagesUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (MemoryLinuxHugepagesUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxHugepagesUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxHugepagesUtilizationObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxHugepagesUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"system.memory.linux.hugepages.utilization",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxHugepagesUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return MemoryLinuxHugepagesUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxHugepagesUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxHugepagesUtilizationObservable) Name() string {
+	return "system.memory.linux.hugepages.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxHugepagesUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxHugepagesUtilizationObservable) Description() string {
+	return "Percentage of hugepages in use by state."
+}
+
+// AttrMemoryLinuxHugepagesState returns an optional attribute for the
+// "system.memory.linux.hugepages.state" semantic convention. It represents the
+// Linux HugePages memory state.
+func (MemoryLinuxHugepagesUtilizationObservable) AttrMemoryLinuxHugepagesState(val MemoryLinuxHugepagesStateAttr) attribute.KeyValue {
+	return attribute.String("system.memory.linux.hugepages.state", string(val))
+}
+
 // MemoryLinuxShared is an instrument used to record metric values conforming to
 // the "system.memory.linux.shared" semantic conventions. It represents the
 // shared memory used (mostly by tmpfs).
@@ -3012,6 +4441,65 @@ func (m MemoryLinuxShared) AddSet(ctx context.Context, incr int64, set attribute
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// MemoryLinuxSharedObservable is an instrument used to record metric values
+// conforming to the "system.memory.linux.shared" semantic conventions. It
+// represents the shared memory used (mostly by tmpfs).
+type MemoryLinuxSharedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxSharedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Shared memory used (mostly by tmpfs)."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryLinuxSharedObservable returns a new MemoryLinuxSharedObservable
+// instrument.
+func NewMemoryLinuxSharedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxSharedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxSharedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxSharedObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxSharedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.shared",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxSharedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxSharedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxSharedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxSharedObservable) Name() string {
+	return "system.memory.linux.shared"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxSharedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxSharedObservable) Description() string {
+	return "Shared memory used (mostly by tmpfs)."
 }
 
 // MemoryLinuxSlabUsage is an instrument used to record metric values conforming
@@ -3149,6 +4637,73 @@ func (m MemoryLinuxSlabUsage) AddSet(ctx context.Context, incr int64, set attrib
 // "system.memory.linux.slab.state" semantic convention. It represents the Linux
 // Slab memory state.
 func (MemoryLinuxSlabUsage) AttrMemoryLinuxSlabState(val MemoryLinuxSlabStateAttr) attribute.KeyValue {
+	return attribute.String("system.memory.linux.slab.state", string(val))
+}
+
+// MemoryLinuxSlabUsageObservable is an instrument used to record metric values
+// conforming to the "system.memory.linux.slab.usage" semantic conventions. It
+// represents the reports the memory used by the Linux kernel for managing caches
+// of frequently used objects.
+type MemoryLinuxSlabUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryLinuxSlabUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Reports the memory used by the Linux kernel for managing caches of frequently used objects."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryLinuxSlabUsageObservable returns a new MemoryLinuxSlabUsageObservable
+// instrument.
+func NewMemoryLinuxSlabUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryLinuxSlabUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryLinuxSlabUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryLinuxSlabUsageObservableOpts
+	} else {
+		opt = append(opt, newMemoryLinuxSlabUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.memory.linux.slab.usage",
+		opt...,
+	)
+	if err != nil {
+		return MemoryLinuxSlabUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryLinuxSlabUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryLinuxSlabUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryLinuxSlabUsageObservable) Name() string {
+	return "system.memory.linux.slab.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryLinuxSlabUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryLinuxSlabUsageObservable) Description() string {
+	return "Reports the memory used by the Linux kernel for managing caches of frequently used objects."
+}
+
+// AttrMemoryLinuxSlabState returns an optional attribute for the
+// "system.memory.linux.slab.state" semantic convention. It represents the Linux
+// Slab memory state.
+func (MemoryLinuxSlabUsageObservable) AttrMemoryLinuxSlabState(val MemoryLinuxSlabStateAttr) attribute.KeyValue {
 	return attribute.String("system.memory.linux.slab.state", string(val))
 }
 
@@ -3416,6 +4971,89 @@ func (NetworkConnectionCount) AttrNetworkTransport(val NetworkTransportAttr) att
 	return attribute.String("network.transport", string(val))
 }
 
+// NetworkConnectionCountObservable is an instrument used to record metric values
+// conforming to the "system.network.connection.count" semantic conventions. It
+// represents the number of connections.
+type NetworkConnectionCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNetworkConnectionCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of connections."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewNetworkConnectionCountObservable returns a new
+// NetworkConnectionCountObservable instrument.
+func NewNetworkConnectionCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NetworkConnectionCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkConnectionCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkConnectionCountObservableOpts
+	} else {
+		opt = append(opt, newNetworkConnectionCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.network.connection.count",
+		opt...,
+	)
+	if err != nil {
+		return NetworkConnectionCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NetworkConnectionCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkConnectionCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkConnectionCountObservable) Name() string {
+	return "system.network.connection.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkConnectionCountObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkConnectionCountObservable) Description() string {
+	return "The number of connections."
+}
+
+// AttrNetworkConnectionState returns an optional attribute for the
+// "network.connection.state" semantic convention. It represents the state of
+// network connection.
+func (NetworkConnectionCountObservable) AttrNetworkConnectionState(val NetworkConnectionStateAttr) attribute.KeyValue {
+	return attribute.String("network.connection.state", string(val))
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (NetworkConnectionCountObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkTransport returns an optional attribute for the "network.transport"
+// semantic convention. It represents the [OSI transport layer] or
+// [inter-process communication method].
+//
+// [OSI transport layer]: https://wikipedia.org/wiki/Transport_layer
+// [inter-process communication method]: https://wikipedia.org/wiki/Inter-process_communication
+func (NetworkConnectionCountObservable) AttrNetworkTransport(val NetworkTransportAttr) attribute.KeyValue {
+	return attribute.String("network.transport", string(val))
+}
+
 // NetworkErrors is an instrument used to record metric values conforming to the
 // "system.network.errors" semantic conventions. It represents the count of
 // network errors detected.
@@ -3561,6 +5199,78 @@ func (NetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue {
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
 func (NetworkErrors) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
+// NetworkErrorsObservable is an instrument used to record metric values
+// conforming to the "system.network.errors" semantic conventions. It represents
+// the count of network errors detected.
+type NetworkErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNetworkErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Count of network errors detected."),
+	metric.WithUnit("{error}"),
+}
+
+// NewNetworkErrorsObservable returns a new NetworkErrorsObservable instrument.
+func NewNetworkErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NetworkErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkErrorsObservableOpts
+	} else {
+		opt = append(opt, newNetworkErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.network.errors",
+		opt...,
+	)
+	if err != nil {
+		return NetworkErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NetworkErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkErrorsObservable) Name() string {
+	return "system.network.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkErrorsObservable) Description() string {
+	return "Count of network errors detected."
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (NetworkErrorsObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkErrorsObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
@@ -3761,6 +5471,78 @@ func (NetworkPacketCount) AttrDevice(val string) attribute.KeyValue {
 	return attribute.String("system.device", val)
 }
 
+// NetworkPacketCountObservable is an instrument used to record metric values
+// conforming to the "system.network.packet.count" semantic conventions. It
+// represents the number of packets transferred.
+type NetworkPacketCountObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNetworkPacketCountObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of packets transferred."),
+	metric.WithUnit("{packet}"),
+}
+
+// NewNetworkPacketCountObservable returns a new NetworkPacketCountObservable
+// instrument.
+func NewNetworkPacketCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NetworkPacketCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkPacketCountObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkPacketCountObservableOpts
+	} else {
+		opt = append(opt, newNetworkPacketCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.network.packet.count",
+		opt...,
+	)
+	if err != nil {
+		return NetworkPacketCountObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NetworkPacketCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkPacketCountObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkPacketCountObservable) Name() string {
+	return "system.network.packet.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkPacketCountObservable) Unit() string {
+	return "{packet}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkPacketCountObservable) Description() string {
+	return "The number of packets transferred."
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkPacketCountObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the device identifier.
+func (NetworkPacketCountObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
 // NetworkPacketDropped is an instrument used to record metric values conforming
 // to the "system.network.packet.dropped" semantic conventions. It represents the
 // count of packets that are dropped or discarded even though there was no error.
@@ -3909,6 +5691,80 @@ func (NetworkPacketDropped) AttrNetworkIODirection(val NetworkIODirectionAttr) a
 	return attribute.String("network.io.direction", string(val))
 }
 
+// NetworkPacketDroppedObservable is an instrument used to record metric values
+// conforming to the "system.network.packet.dropped" semantic conventions. It
+// represents the count of packets that are dropped or discarded even though
+// there was no error.
+type NetworkPacketDroppedObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNetworkPacketDroppedObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Count of packets that are dropped or discarded even though there was no error."),
+	metric.WithUnit("{packet}"),
+}
+
+// NewNetworkPacketDroppedObservable returns a new NetworkPacketDroppedObservable
+// instrument.
+func NewNetworkPacketDroppedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NetworkPacketDroppedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkPacketDroppedObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkPacketDroppedObservableOpts
+	} else {
+		opt = append(opt, newNetworkPacketDroppedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.network.packet.dropped",
+		opt...,
+	)
+	if err != nil {
+		return NetworkPacketDroppedObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NetworkPacketDroppedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkPacketDroppedObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkPacketDroppedObservable) Name() string {
+	return "system.network.packet.dropped"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkPacketDroppedObservable) Unit() string {
+	return "{packet}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkPacketDroppedObservable) Description() string {
+	return "Count of packets that are dropped or discarded even though there was no error."
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (NetworkPacketDroppedObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkPacketDroppedObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
 // PagingFaults is an instrument used to record metric values conforming to the
 // "system.paging.faults" semantic conventions. It represents the number of page
 // faults.
@@ -4025,6 +5881,71 @@ func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set)
 // "system.paging.fault.type" semantic convention. It represents the paging fault
 // type.
 func (PagingFaults) AttrPagingFaultType(val PagingFaultTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.fault.type", string(val))
+}
+
+// PagingFaultsObservable is an instrument used to record metric values
+// conforming to the "system.paging.faults" semantic conventions. It represents
+// the number of page faults.
+type PagingFaultsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPagingFaultsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of page faults."),
+	metric.WithUnit("{fault}"),
+}
+
+// NewPagingFaultsObservable returns a new PagingFaultsObservable instrument.
+func NewPagingFaultsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PagingFaultsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PagingFaultsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPagingFaultsObservableOpts
+	} else {
+		opt = append(opt, newPagingFaultsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.paging.faults",
+		opt...,
+	)
+	if err != nil {
+		return PagingFaultsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PagingFaultsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PagingFaultsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PagingFaultsObservable) Name() string {
+	return "system.paging.faults"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PagingFaultsObservable) Unit() string {
+	return "{fault}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PagingFaultsObservable) Description() string {
+	return "The number of page faults."
+}
+
+// AttrPagingFaultType returns an optional attribute for the
+// "system.paging.fault.type" semantic convention. It represents the paging fault
+// type.
+func (PagingFaultsObservable) AttrPagingFaultType(val PagingFaultTypeAttr) attribute.KeyValue {
 	return attribute.String("system.paging.fault.type", string(val))
 }
 
@@ -4154,6 +6075,79 @@ func (PagingOperations) AttrPagingFaultType(val PagingFaultTypeAttr) attribute.K
 	return attribute.String("system.paging.fault.type", string(val))
 }
 
+// PagingOperationsObservable is an instrument used to record metric values
+// conforming to the "system.paging.operations" semantic conventions. It
+// represents the number of paging operations.
+type PagingOperationsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPagingOperationsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of paging operations."),
+	metric.WithUnit("{operation}"),
+}
+
+// NewPagingOperationsObservable returns a new PagingOperationsObservable
+// instrument.
+func NewPagingOperationsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PagingOperationsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PagingOperationsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPagingOperationsObservableOpts
+	} else {
+		opt = append(opt, newPagingOperationsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.paging.operations",
+		opt...,
+	)
+	if err != nil {
+		return PagingOperationsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PagingOperationsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PagingOperationsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PagingOperationsObservable) Name() string {
+	return "system.paging.operations"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PagingOperationsObservable) Unit() string {
+	return "{operation}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PagingOperationsObservable) Description() string {
+	return "The number of paging operations."
+}
+
+// AttrPagingDirection returns an optional attribute for the
+// "system.paging.direction" semantic convention. It represents the paging access
+// direction.
+func (PagingOperationsObservable) AttrPagingDirection(val PagingDirectionAttr) attribute.KeyValue {
+	return attribute.String("system.paging.direction", string(val))
+}
+
+// AttrPagingFaultType returns an optional attribute for the
+// "system.paging.fault.type" semantic convention. It represents the paging fault
+// type.
+func (PagingOperationsObservable) AttrPagingFaultType(val PagingFaultTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.fault.type", string(val))
+}
+
 // PagingUsage is an instrument used to record metric values conforming to the
 // "system.paging.usage" semantic conventions. It represents the unix swap or
 // windows pagefile usage.
@@ -4276,6 +6270,77 @@ func (PagingUsage) AttrDevice(val string) attribute.KeyValue {
 // AttrPagingState returns an optional attribute for the "system.paging.state"
 // semantic convention. It represents the memory paging state.
 func (PagingUsage) AttrPagingState(val PagingStateAttr) attribute.KeyValue {
+	return attribute.String("system.paging.state", string(val))
+}
+
+// PagingUsageObservable is an instrument used to record metric values conforming
+// to the "system.paging.usage" semantic conventions. It represents the unix swap
+// or windows pagefile usage.
+type PagingUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPagingUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Unix swap or windows pagefile usage."),
+	metric.WithUnit("By"),
+}
+
+// NewPagingUsageObservable returns a new PagingUsageObservable instrument.
+func NewPagingUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PagingUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PagingUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPagingUsageObservableOpts
+	} else {
+		opt = append(opt, newPagingUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.paging.usage",
+		opt...,
+	)
+	if err != nil {
+		return PagingUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PagingUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PagingUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PagingUsageObservable) Name() string {
+	return "system.paging.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PagingUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PagingUsageObservable) Description() string {
+	return "Unix swap or windows pagefile usage."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the unique identifier for the device responsible for
+// managing paging operations.
+func (PagingUsageObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// AttrPagingState returns an optional attribute for the "system.paging.state"
+// semantic convention. It represents the memory paging state.
+func (PagingUsageObservable) AttrPagingState(val PagingStateAttr) attribute.KeyValue {
 	return attribute.String("system.paging.state", string(val))
 }
 
@@ -4404,6 +6469,78 @@ func (PagingUtilization) AttrPagingState(val PagingStateAttr) attribute.KeyValue
 	return attribute.String("system.paging.state", string(val))
 }
 
+// PagingUtilizationObservable is an instrument used to record metric values
+// conforming to the "system.paging.utilization" semantic conventions. It
+// represents the swap (unix) or pagefile (windows) utilization.
+type PagingUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPagingUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Swap (unix) or pagefile (windows) utilization."),
+	metric.WithUnit("1"),
+}
+
+// NewPagingUtilizationObservable returns a new PagingUtilizationObservable
+// instrument.
+func NewPagingUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PagingUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PagingUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPagingUtilizationObservableOpts
+	} else {
+		opt = append(opt, newPagingUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"system.paging.utilization",
+		opt...,
+	)
+	if err != nil {
+		return PagingUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PagingUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PagingUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PagingUtilizationObservable) Name() string {
+	return "system.paging.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PagingUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PagingUtilizationObservable) Description() string {
+	return "Swap (unix) or pagefile (windows) utilization."
+}
+
+// AttrDevice returns an optional attribute for the "system.device" semantic
+// convention. It represents the unique identifier for the device responsible for
+// managing paging operations.
+func (PagingUtilizationObservable) AttrDevice(val string) attribute.KeyValue {
+	return attribute.String("system.device", val)
+}
+
+// AttrPagingState returns an optional attribute for the "system.paging.state"
+// semantic convention. It represents the memory paging state.
+func (PagingUtilizationObservable) AttrPagingState(val PagingStateAttr) attribute.KeyValue {
+	return attribute.String("system.paging.state", string(val))
+}
+
 // ProcessCount is an instrument used to record metric values conforming to the
 // "system.process.count" semantic conventions. It represents the total number of
 // processes in each state.
@@ -4525,6 +6662,73 @@ func (ProcessCount) AttrProcessState(val ProcessStateAttr) attribute.KeyValue {
 	return attribute.String("process.state", string(val))
 }
 
+// ProcessCountObservable is an instrument used to record metric values
+// conforming to the "system.process.count" semantic conventions. It represents
+// the total number of processes in each state.
+type ProcessCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newProcessCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Total number of processes in each state."),
+	metric.WithUnit("{process}"),
+}
+
+// NewProcessCountObservable returns a new ProcessCountObservable instrument.
+func NewProcessCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ProcessCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ProcessCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newProcessCountObservableOpts
+	} else {
+		opt = append(opt, newProcessCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"system.process.count",
+		opt...,
+	)
+	if err != nil {
+		return ProcessCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ProcessCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ProcessCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ProcessCountObservable) Name() string {
+	return "system.process.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ProcessCountObservable) Unit() string {
+	return "{process}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ProcessCountObservable) Description() string {
+	return "Total number of processes in each state."
+}
+
+// AttrProcessState returns an optional attribute for the "process.state"
+// semantic convention. It represents the process state, e.g.,
+// [Linux Process State Codes].
+//
+// [Linux Process State Codes]: https://man7.org/linux/man-pages/man1/ps.1.html#PROCESS_STATE_CODES
+func (ProcessCountObservable) AttrProcessState(val ProcessStateAttr) attribute.KeyValue {
+	return attribute.String("process.state", string(val))
+}
+
 // ProcessCreated is an instrument used to record metric values conforming to the
 // "system.process.created" semantic conventions. It represents the total number
 // of processes created over uptime of the host.
@@ -4623,6 +6827,64 @@ func (m ProcessCreated) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// ProcessCreatedObservable is an instrument used to record metric values
+// conforming to the "system.process.created" semantic conventions. It represents
+// the total number of processes created over uptime of the host.
+type ProcessCreatedObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newProcessCreatedObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Total number of processes created over uptime of the host."),
+	metric.WithUnit("{process}"),
+}
+
+// NewProcessCreatedObservable returns a new ProcessCreatedObservable instrument.
+func NewProcessCreatedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ProcessCreatedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ProcessCreatedObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newProcessCreatedObservableOpts
+	} else {
+		opt = append(opt, newProcessCreatedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"system.process.created",
+		opt...,
+	)
+	if err != nil {
+		return ProcessCreatedObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ProcessCreatedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ProcessCreatedObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ProcessCreatedObservable) Name() string {
+	return "system.process.created"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ProcessCreatedObservable) Unit() string {
+	return "{process}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ProcessCreatedObservable) Description() string {
+	return "Total number of processes created over uptime of the host."
 }
 
 // Uptime is an instrument used to record metric values conforming to the
@@ -4731,4 +6993,62 @@ func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// UptimeObservable is an instrument used to record metric values conforming to
+// the "system.uptime" semantic conventions. It represents the time the system
+// has been running.
+type UptimeObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newUptimeObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The time the system has been running."),
+	metric.WithUnit("s"),
+}
+
+// NewUptimeObservable returns a new UptimeObservable instrument.
+func NewUptimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (UptimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return UptimeObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newUptimeObservableOpts
+	} else {
+		opt = append(opt, newUptimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"system.uptime",
+		opt...,
+	)
+	if err != nil {
+		return UptimeObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return UptimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m UptimeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (UptimeObservable) Name() string {
+	return "system.uptime"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (UptimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (UptimeObservable) Description() string {
+	return "The time the system has been running."
 }

@@ -348,6 +348,106 @@ func (BatteryCharge) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// BatteryChargeObservable is an instrument used to record metric values
+// conforming to the "hw.battery.charge" semantic conventions. It represents the
+// remaining fraction of battery charge.
+type BatteryChargeObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newBatteryChargeObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Remaining fraction of battery charge."),
+	metric.WithUnit("1"),
+}
+
+// NewBatteryChargeObservable returns a new BatteryChargeObservable instrument.
+func NewBatteryChargeObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (BatteryChargeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return BatteryChargeObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newBatteryChargeObservableOpts
+	} else {
+		opt = append(opt, newBatteryChargeObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.battery.charge",
+		opt...,
+	)
+	if err != nil {
+		return BatteryChargeObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return BatteryChargeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m BatteryChargeObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (BatteryChargeObservable) Name() string {
+	return "hw.battery.charge"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (BatteryChargeObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (BatteryChargeObservable) Description() string {
+	return "Remaining fraction of battery charge."
+}
+
+// AttrBatteryCapacity returns an optional attribute for the
+// "hw.battery.capacity" semantic convention. It represents the design capacity
+// in Watts-hours or Ampere-hours.
+func (BatteryChargeObservable) AttrBatteryCapacity(val string) attribute.KeyValue {
+	return attribute.String("hw.battery.capacity", val)
+}
+
+// AttrBatteryChemistry returns an optional attribute for the
+// "hw.battery.chemistry" semantic convention. It represents the battery
+// [chemistry], e.g. Lithium-Ion, Nickel-Cadmium, etc.
+//
+// [chemistry]: https://schemas.dmtf.org/wbem/cim-html/2.31.0/CIM_Battery.html
+func (BatteryChargeObservable) AttrBatteryChemistry(val string) attribute.KeyValue {
+	return attribute.String("hw.battery.chemistry", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (BatteryChargeObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (BatteryChargeObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (BatteryChargeObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (BatteryChargeObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // BatteryChargeLimit is an instrument used to record metric values conforming to
 // the "hw.battery.charge.limit" semantic conventions. It represents the lower
 // limit of battery charge fraction to ensure proper operation.
@@ -518,6 +618,118 @@ func (BatteryChargeLimit) AttrParent(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (BatteryChargeLimit) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// BatteryChargeLimitObservable is an instrument used to record metric values
+// conforming to the "hw.battery.charge.limit" semantic conventions. It
+// represents the lower limit of battery charge fraction to ensure proper
+// operation.
+type BatteryChargeLimitObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newBatteryChargeLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Lower limit of battery charge fraction to ensure proper operation."),
+	metric.WithUnit("1"),
+}
+
+// NewBatteryChargeLimitObservable returns a new BatteryChargeLimitObservable
+// instrument.
+func NewBatteryChargeLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (BatteryChargeLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return BatteryChargeLimitObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newBatteryChargeLimitObservableOpts
+	} else {
+		opt = append(opt, newBatteryChargeLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.battery.charge.limit",
+		opt...,
+	)
+	if err != nil {
+		return BatteryChargeLimitObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return BatteryChargeLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m BatteryChargeLimitObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (BatteryChargeLimitObservable) Name() string {
+	return "hw.battery.charge.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (BatteryChargeLimitObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (BatteryChargeLimitObservable) Description() string {
+	return "Lower limit of battery charge fraction to ensure proper operation."
+}
+
+// AttrBatteryCapacity returns an optional attribute for the
+// "hw.battery.capacity" semantic convention. It represents the design capacity
+// in Watts-hours or Ampere-hours.
+func (BatteryChargeLimitObservable) AttrBatteryCapacity(val string) attribute.KeyValue {
+	return attribute.String("hw.battery.capacity", val)
+}
+
+// AttrBatteryChemistry returns an optional attribute for the
+// "hw.battery.chemistry" semantic convention. It represents the battery
+// [chemistry], e.g. Lithium-Ion, Nickel-Cadmium, etc.
+//
+// [chemistry]: https://schemas.dmtf.org/wbem/cim-html/2.31.0/CIM_Battery.html
+func (BatteryChargeLimitObservable) AttrBatteryChemistry(val string) attribute.KeyValue {
+	return attribute.String("hw.battery.chemistry", val)
+}
+
+// AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
+// convention. It represents the represents battery charge level thresholds
+// relevant to device operation and health. Each `limit_type` denotes a specific
+// charge limit such as the minimum or maximum optimal charge, the shutdown
+// threshold, or energy-saving thresholds. These values are typically provided by
+// the hardware or firmware to guide safe and efficient battery usage.
+func (BatteryChargeLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.limit_type", string(val))
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (BatteryChargeLimitObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (BatteryChargeLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (BatteryChargeLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (BatteryChargeLimitObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -695,6 +907,113 @@ func (BatteryTimeLeft) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// BatteryTimeLeftObservable is an instrument used to record metric values
+// conforming to the "hw.battery.time_left" semantic conventions. It represents
+// the time left before battery is completely charged or discharged.
+type BatteryTimeLeftObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newBatteryTimeLeftObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("Time left before battery is completely charged or discharged."),
+	metric.WithUnit("s"),
+}
+
+// NewBatteryTimeLeftObservable returns a new BatteryTimeLeftObservable
+// instrument.
+func NewBatteryTimeLeftObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (BatteryTimeLeftObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return BatteryTimeLeftObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newBatteryTimeLeftObservableOpts
+	} else {
+		opt = append(opt, newBatteryTimeLeftObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"hw.battery.time_left",
+		opt...,
+	)
+	if err != nil {
+		return BatteryTimeLeftObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return BatteryTimeLeftObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m BatteryTimeLeftObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (BatteryTimeLeftObservable) Name() string {
+	return "hw.battery.time_left"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (BatteryTimeLeftObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (BatteryTimeLeftObservable) Description() string {
+	return "Time left before battery is completely charged or discharged."
+}
+
+// AttrBatteryState returns an optional attribute for the "hw.battery.state"
+// semantic convention. It represents the current state of the battery.
+func (BatteryTimeLeftObservable) AttrBatteryState(val BatteryStateAttr) attribute.KeyValue {
+	return attribute.String("hw.battery.state", string(val))
+}
+
+// AttrBatteryCapacity returns an optional attribute for the
+// "hw.battery.capacity" semantic convention. It represents the design capacity
+// in Watts-hours or Ampere-hours.
+func (BatteryTimeLeftObservable) AttrBatteryCapacity(val string) attribute.KeyValue {
+	return attribute.String("hw.battery.capacity", val)
+}
+
+// AttrBatteryChemistry returns an optional attribute for the
+// "hw.battery.chemistry" semantic convention. It represents the battery
+// [chemistry], e.g. Lithium-Ion, Nickel-Cadmium, etc.
+//
+// [chemistry]: https://schemas.dmtf.org/wbem/cim-html/2.31.0/CIM_Battery.html
+func (BatteryTimeLeftObservable) AttrBatteryChemistry(val string) attribute.KeyValue {
+	return attribute.String("hw.battery.chemistry", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (BatteryTimeLeftObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (BatteryTimeLeftObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (BatteryTimeLeftObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (BatteryTimeLeftObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // CPUSpeed is an instrument used to record metric values conforming to the
 // "hw.cpu.speed" semantic conventions. It represents the CPU current frequency.
 type CPUSpeed struct {
@@ -838,6 +1157,90 @@ func (CPUSpeed) AttrParent(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (CPUSpeed) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// CPUSpeedObservable is an instrument used to record metric values conforming to
+// the "hw.cpu.speed" semantic conventions. It represents the CPU current
+// frequency.
+type CPUSpeedObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newCPUSpeedObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("CPU current frequency."),
+	metric.WithUnit("Hz"),
+}
+
+// NewCPUSpeedObservable returns a new CPUSpeedObservable instrument.
+func NewCPUSpeedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (CPUSpeedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPUSpeedObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPUSpeedObservableOpts
+	} else {
+		opt = append(opt, newCPUSpeedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.cpu.speed",
+		opt...,
+	)
+	if err != nil {
+		return CPUSpeedObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return CPUSpeedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPUSpeedObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPUSpeedObservable) Name() string {
+	return "hw.cpu.speed"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPUSpeedObservable) Unit() string {
+	return "Hz"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPUSpeedObservable) Description() string {
+	return "CPU current frequency."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (CPUSpeedObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (CPUSpeedObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (CPUSpeedObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (CPUSpeedObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -994,6 +1397,96 @@ func (CPUSpeedLimit) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// CPUSpeedLimitObservable is an instrument used to record metric values
+// conforming to the "hw.cpu.speed.limit" semantic conventions. It represents the
+// CPU maximum frequency.
+type CPUSpeedLimitObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newCPUSpeedLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("CPU maximum frequency."),
+	metric.WithUnit("Hz"),
+}
+
+// NewCPUSpeedLimitObservable returns a new CPUSpeedLimitObservable instrument.
+func NewCPUSpeedLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (CPUSpeedLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPUSpeedLimitObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPUSpeedLimitObservableOpts
+	} else {
+		opt = append(opt, newCPUSpeedLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.cpu.speed.limit",
+		opt...,
+	)
+	if err != nil {
+		return CPUSpeedLimitObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return CPUSpeedLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPUSpeedLimitObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPUSpeedLimitObservable) Name() string {
+	return "hw.cpu.speed.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPUSpeedLimitObservable) Unit() string {
+	return "Hz"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPUSpeedLimitObservable) Description() string {
+	return "CPU maximum frequency."
+}
+
+// AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
+// convention. It represents the type of limit for hardware components.
+func (CPUSpeedLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.limit_type", string(val))
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (CPUSpeedLimitObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (CPUSpeedLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (CPUSpeedLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (CPUSpeedLimitObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // Energy is an instrument used to record metric values conforming to the
 // "hw.energy" semantic conventions. It represents the energy consumed by the
 // component.
@@ -1130,6 +1623,77 @@ func (Energy) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (Energy) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// EnergyObservable is an instrument used to record metric values conforming to
+// the "hw.energy" semantic conventions. It represents the energy consumed by the
+// component.
+type EnergyObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newEnergyObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Energy consumed by the component."),
+	metric.WithUnit("J"),
+}
+
+// NewEnergyObservable returns a new EnergyObservable instrument.
+func NewEnergyObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (EnergyObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return EnergyObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newEnergyObservableOpts
+	} else {
+		opt = append(opt, newEnergyObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.energy",
+		opt...,
+	)
+	if err != nil {
+		return EnergyObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return EnergyObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m EnergyObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (EnergyObservable) Name() string {
+	return "hw.energy"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (EnergyObservable) Unit() string {
+	return "J"
+}
+
+// Description returns the semantic convention description of the instrument
+func (EnergyObservable) Description() string {
+	return "Energy consumed by the component."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (EnergyObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (EnergyObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -1285,6 +1849,90 @@ func (Errors) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyVa
 	return attribute.String("network.io.direction", string(val))
 }
 
+// ErrorsObservable is an instrument used to record metric values conforming to
+// the "hw.errors" semantic conventions. It represents the number of errors
+// encountered by the component.
+type ErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of errors encountered by the component."),
+	metric.WithUnit("{error}"),
+}
+
+// NewErrorsObservable returns a new ErrorsObservable instrument.
+func NewErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newErrorsObservableOpts
+	} else {
+		opt = append(opt, newErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.errors",
+		opt...,
+	)
+	if err != nil {
+		return ErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ErrorsObservable) Name() string {
+	return "hw.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ErrorsObservable) Description() string {
+	return "Number of errors encountered by the component."
+}
+
+// AttrErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the type of error encountered by the component.
+func (ErrorsObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (ErrorsObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (ErrorsObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the direction of
+// network traffic for network errors.
+func (ErrorsObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
 // FanSpeed is an instrument used to record metric values conforming to the
 // "hw.fan.speed" semantic conventions. It represents the fan speed in
 // revolutions per minute.
@@ -1422,6 +2070,83 @@ func (FanSpeed) AttrParent(val string) attribute.KeyValue {
 // AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
 // semantic convention. It represents the location of the sensor.
 func (FanSpeed) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
+// FanSpeedObservable is an instrument used to record metric values conforming to
+// the "hw.fan.speed" semantic conventions. It represents the fan speed in
+// revolutions per minute.
+type FanSpeedObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newFanSpeedObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Fan speed in revolutions per minute."),
+	metric.WithUnit("rpm"),
+}
+
+// NewFanSpeedObservable returns a new FanSpeedObservable instrument.
+func NewFanSpeedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (FanSpeedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return FanSpeedObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newFanSpeedObservableOpts
+	} else {
+		opt = append(opt, newFanSpeedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.fan.speed",
+		opt...,
+	)
+	if err != nil {
+		return FanSpeedObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return FanSpeedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m FanSpeedObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (FanSpeedObservable) Name() string {
+	return "hw.fan.speed"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (FanSpeedObservable) Unit() string {
+	return "rpm"
+}
+
+// Description returns the semantic convention description of the instrument
+func (FanSpeedObservable) Description() string {
+	return "Fan speed in revolutions per minute."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (FanSpeedObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (FanSpeedObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (FanSpeedObservable) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
@@ -1571,6 +2296,89 @@ func (FanSpeedLimit) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
+// FanSpeedLimitObservable is an instrument used to record metric values
+// conforming to the "hw.fan.speed.limit" semantic conventions. It represents the
+// speed limit in rpm.
+type FanSpeedLimitObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newFanSpeedLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Speed limit in rpm."),
+	metric.WithUnit("rpm"),
+}
+
+// NewFanSpeedLimitObservable returns a new FanSpeedLimitObservable instrument.
+func NewFanSpeedLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (FanSpeedLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return FanSpeedLimitObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newFanSpeedLimitObservableOpts
+	} else {
+		opt = append(opt, newFanSpeedLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.fan.speed.limit",
+		opt...,
+	)
+	if err != nil {
+		return FanSpeedLimitObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return FanSpeedLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m FanSpeedLimitObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (FanSpeedLimitObservable) Name() string {
+	return "hw.fan.speed.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (FanSpeedLimitObservable) Unit() string {
+	return "rpm"
+}
+
+// Description returns the semantic convention description of the instrument
+func (FanSpeedLimitObservable) Description() string {
+	return "Speed limit in rpm."
+}
+
+// AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
+// convention. It represents the type of limit for hardware components.
+func (FanSpeedLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.limit_type", string(val))
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (FanSpeedLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (FanSpeedLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (FanSpeedLimitObservable) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
 // FanSpeedRatio is an instrument used to record metric values conforming to the
 // "hw.fan.speed_ratio" semantic conventions. It represents the fan speed
 // expressed as a fraction of its maximum speed.
@@ -1708,6 +2516,83 @@ func (FanSpeedRatio) AttrParent(val string) attribute.KeyValue {
 // AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
 // semantic convention. It represents the location of the sensor.
 func (FanSpeedRatio) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
+// FanSpeedRatioObservable is an instrument used to record metric values
+// conforming to the "hw.fan.speed_ratio" semantic conventions. It represents the
+// fan speed expressed as a fraction of its maximum speed.
+type FanSpeedRatioObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newFanSpeedRatioObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Fan speed expressed as a fraction of its maximum speed."),
+	metric.WithUnit("1"),
+}
+
+// NewFanSpeedRatioObservable returns a new FanSpeedRatioObservable instrument.
+func NewFanSpeedRatioObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (FanSpeedRatioObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return FanSpeedRatioObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newFanSpeedRatioObservableOpts
+	} else {
+		opt = append(opt, newFanSpeedRatioObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.fan.speed_ratio",
+		opt...,
+	)
+	if err != nil {
+		return FanSpeedRatioObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return FanSpeedRatioObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m FanSpeedRatioObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (FanSpeedRatioObservable) Name() string {
+	return "hw.fan.speed_ratio"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (FanSpeedRatioObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (FanSpeedRatioObservable) Description() string {
+	return "Fan speed expressed as a fraction of its maximum speed."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (FanSpeedRatioObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (FanSpeedRatioObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (FanSpeedRatioObservable) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
@@ -1884,6 +2769,111 @@ func (GpuIO) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// GpuIOObservable is an instrument used to record metric values conforming to
+// the "hw.gpu.io" semantic conventions. It represents the received and
+// transmitted bytes by the GPU.
+type GpuIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newGpuIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Received and transmitted bytes by the GPU."),
+	metric.WithUnit("By"),
+}
+
+// NewGpuIOObservable returns a new GpuIOObservable instrument.
+func NewGpuIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (GpuIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return GpuIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newGpuIOObservableOpts
+	} else {
+		opt = append(opt, newGpuIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.gpu.io",
+		opt...,
+	)
+	if err != nil {
+		return GpuIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return GpuIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m GpuIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (GpuIOObservable) Name() string {
+	return "hw.gpu.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (GpuIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (GpuIOObservable) Description() string {
+	return "Received and transmitted bytes by the GPU."
+}
+
+// AttrDriverVersion returns an optional attribute for the "hw.driver_version"
+// semantic convention. It represents the driver version for the hardware
+// component.
+func (GpuIOObservable) AttrDriverVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.driver_version", val)
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (GpuIOObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (GpuIOObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (GpuIOObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (GpuIOObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (GpuIOObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (GpuIOObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // GpuMemoryLimit is an instrument used to record metric values conforming to the
 // "hw.gpu.memory.limit" semantic conventions. It represents the size of the GPU
 // memory.
@@ -2049,6 +3039,111 @@ func (GpuMemoryLimit) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (GpuMemoryLimit) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// GpuMemoryLimitObservable is an instrument used to record metric values
+// conforming to the "hw.gpu.memory.limit" semantic conventions. It represents
+// the size of the GPU memory.
+type GpuMemoryLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newGpuMemoryLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Size of the GPU memory."),
+	metric.WithUnit("By"),
+}
+
+// NewGpuMemoryLimitObservable returns a new GpuMemoryLimitObservable instrument.
+func NewGpuMemoryLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (GpuMemoryLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return GpuMemoryLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newGpuMemoryLimitObservableOpts
+	} else {
+		opt = append(opt, newGpuMemoryLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.gpu.memory.limit",
+		opt...,
+	)
+	if err != nil {
+		return GpuMemoryLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return GpuMemoryLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m GpuMemoryLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (GpuMemoryLimitObservable) Name() string {
+	return "hw.gpu.memory.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (GpuMemoryLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (GpuMemoryLimitObservable) Description() string {
+	return "Size of the GPU memory."
+}
+
+// AttrDriverVersion returns an optional attribute for the "hw.driver_version"
+// semantic convention. It represents the driver version for the hardware
+// component.
+func (GpuMemoryLimitObservable) AttrDriverVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.driver_version", val)
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (GpuMemoryLimitObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (GpuMemoryLimitObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (GpuMemoryLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (GpuMemoryLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (GpuMemoryLimitObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (GpuMemoryLimitObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -2219,6 +3314,111 @@ func (GpuMemoryUsage) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// GpuMemoryUsageObservable is an instrument used to record metric values
+// conforming to the "hw.gpu.memory.usage" semantic conventions. It represents
+// the GPU memory used.
+type GpuMemoryUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newGpuMemoryUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("GPU memory used."),
+	metric.WithUnit("By"),
+}
+
+// NewGpuMemoryUsageObservable returns a new GpuMemoryUsageObservable instrument.
+func NewGpuMemoryUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (GpuMemoryUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return GpuMemoryUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newGpuMemoryUsageObservableOpts
+	} else {
+		opt = append(opt, newGpuMemoryUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.gpu.memory.usage",
+		opt...,
+	)
+	if err != nil {
+		return GpuMemoryUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return GpuMemoryUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m GpuMemoryUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (GpuMemoryUsageObservable) Name() string {
+	return "hw.gpu.memory.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (GpuMemoryUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (GpuMemoryUsageObservable) Description() string {
+	return "GPU memory used."
+}
+
+// AttrDriverVersion returns an optional attribute for the "hw.driver_version"
+// semantic convention. It represents the driver version for the hardware
+// component.
+func (GpuMemoryUsageObservable) AttrDriverVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.driver_version", val)
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (GpuMemoryUsageObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (GpuMemoryUsageObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (GpuMemoryUsageObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (GpuMemoryUsageObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (GpuMemoryUsageObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (GpuMemoryUsageObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // GpuMemoryUtilization is an instrument used to record metric values conforming
 // to the "hw.gpu.memory.utilization" semantic conventions. It represents the
 // fraction of GPU memory used.
@@ -2384,6 +3584,112 @@ func (GpuMemoryUtilization) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (GpuMemoryUtilization) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// GpuMemoryUtilizationObservable is an instrument used to record metric values
+// conforming to the "hw.gpu.memory.utilization" semantic conventions. It
+// represents the fraction of GPU memory used.
+type GpuMemoryUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newGpuMemoryUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Fraction of GPU memory used."),
+	metric.WithUnit("1"),
+}
+
+// NewGpuMemoryUtilizationObservable returns a new GpuMemoryUtilizationObservable
+// instrument.
+func NewGpuMemoryUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (GpuMemoryUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return GpuMemoryUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newGpuMemoryUtilizationObservableOpts
+	} else {
+		opt = append(opt, newGpuMemoryUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.gpu.memory.utilization",
+		opt...,
+	)
+	if err != nil {
+		return GpuMemoryUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return GpuMemoryUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m GpuMemoryUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (GpuMemoryUtilizationObservable) Name() string {
+	return "hw.gpu.memory.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (GpuMemoryUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (GpuMemoryUtilizationObservable) Description() string {
+	return "Fraction of GPU memory used."
+}
+
+// AttrDriverVersion returns an optional attribute for the "hw.driver_version"
+// semantic convention. It represents the driver version for the hardware
+// component.
+func (GpuMemoryUtilizationObservable) AttrDriverVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.driver_version", val)
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (GpuMemoryUtilizationObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (GpuMemoryUtilizationObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (GpuMemoryUtilizationObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (GpuMemoryUtilizationObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (GpuMemoryUtilizationObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (GpuMemoryUtilizationObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -2561,6 +3867,117 @@ func (GpuUtilization) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// GpuUtilizationObservable is an instrument used to record metric values
+// conforming to the "hw.gpu.utilization" semantic conventions. It represents the
+// fraction of time spent in a specific task.
+type GpuUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newGpuUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Fraction of time spent in a specific task."),
+	metric.WithUnit("1"),
+}
+
+// NewGpuUtilizationObservable returns a new GpuUtilizationObservable instrument.
+func NewGpuUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (GpuUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return GpuUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newGpuUtilizationObservableOpts
+	} else {
+		opt = append(opt, newGpuUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.gpu.utilization",
+		opt...,
+	)
+	if err != nil {
+		return GpuUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return GpuUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m GpuUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (GpuUtilizationObservable) Name() string {
+	return "hw.gpu.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (GpuUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (GpuUtilizationObservable) Description() string {
+	return "Fraction of time spent in a specific task."
+}
+
+// AttrDriverVersion returns an optional attribute for the "hw.driver_version"
+// semantic convention. It represents the driver version for the hardware
+// component.
+func (GpuUtilizationObservable) AttrDriverVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.driver_version", val)
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (GpuUtilizationObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrGpuTask returns an optional attribute for the "hw.gpu.task" semantic
+// convention. It represents the type of task the GPU is performing.
+func (GpuUtilizationObservable) AttrGpuTask(val GpuTaskAttr) attribute.KeyValue {
+	return attribute.String("hw.gpu.task", string(val))
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (GpuUtilizationObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (GpuUtilizationObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (GpuUtilizationObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (GpuUtilizationObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (GpuUtilizationObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // HostAmbientTemperature is an instrument used to record metric values
 // conforming to the "hw.host.ambient_temperature" semantic conventions. It
 // represents the ambient (external) temperature of the physical host.
@@ -2692,6 +4109,78 @@ func (HostAmbientTemperature) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (HostAmbientTemperature) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// HostAmbientTemperatureObservable is an instrument used to record metric values
+// conforming to the "hw.host.ambient_temperature" semantic conventions. It
+// represents the ambient (external) temperature of the physical host.
+type HostAmbientTemperatureObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newHostAmbientTemperatureObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Ambient (external) temperature of the physical host."),
+	metric.WithUnit("Cel"),
+}
+
+// NewHostAmbientTemperatureObservable returns a new
+// HostAmbientTemperatureObservable instrument.
+func NewHostAmbientTemperatureObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (HostAmbientTemperatureObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HostAmbientTemperatureObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHostAmbientTemperatureObservableOpts
+	} else {
+		opt = append(opt, newHostAmbientTemperatureObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.host.ambient_temperature",
+		opt...,
+	)
+	if err != nil {
+		return HostAmbientTemperatureObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return HostAmbientTemperatureObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HostAmbientTemperatureObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HostAmbientTemperatureObservable) Name() string {
+	return "hw.host.ambient_temperature"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HostAmbientTemperatureObservable) Unit() string {
+	return "Cel"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HostAmbientTemperatureObservable) Description() string {
+	return "Ambient (external) temperature of the physical host."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostAmbientTemperatureObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostAmbientTemperatureObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -2839,6 +4328,77 @@ func (HostEnergy) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
+// HostEnergyObservable is an instrument used to record metric values conforming
+// to the "hw.host.energy" semantic conventions. It represents the total energy
+// consumed by the entire physical host, in joules.
+type HostEnergyObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newHostEnergyObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Total energy consumed by the entire physical host, in joules."),
+	metric.WithUnit("J"),
+}
+
+// NewHostEnergyObservable returns a new HostEnergyObservable instrument.
+func NewHostEnergyObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (HostEnergyObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HostEnergyObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHostEnergyObservableOpts
+	} else {
+		opt = append(opt, newHostEnergyObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.host.energy",
+		opt...,
+	)
+	if err != nil {
+		return HostEnergyObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return HostEnergyObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HostEnergyObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HostEnergyObservable) Name() string {
+	return "hw.host.energy"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HostEnergyObservable) Unit() string {
+	return "J"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HostEnergyObservable) Description() string {
+	return "Total energy consumed by the entire physical host, in joules."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostEnergyObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostEnergyObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
 // HostHeatingMargin is an instrument used to record metric values conforming to
 // the "hw.host.heating_margin" semantic conventions. It represents the by how
 // many degrees Celsius the temperature of the physical host can be increased,
@@ -2971,6 +4531,79 @@ func (HostHeatingMargin) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (HostHeatingMargin) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// HostHeatingMarginObservable is an instrument used to record metric values
+// conforming to the "hw.host.heating_margin" semantic conventions. It represents
+// the by how many degrees Celsius the temperature of the physical host can be
+// increased, before reaching a warning threshold on one of the internal sensors.
+type HostHeatingMarginObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newHostHeatingMarginObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."),
+	metric.WithUnit("Cel"),
+}
+
+// NewHostHeatingMarginObservable returns a new HostHeatingMarginObservable
+// instrument.
+func NewHostHeatingMarginObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (HostHeatingMarginObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HostHeatingMarginObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHostHeatingMarginObservableOpts
+	} else {
+		opt = append(opt, newHostHeatingMarginObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.host.heating_margin",
+		opt...,
+	)
+	if err != nil {
+		return HostHeatingMarginObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return HostHeatingMarginObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HostHeatingMarginObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HostHeatingMarginObservable) Name() string {
+	return "hw.host.heating_margin"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HostHeatingMarginObservable) Unit() string {
+	return "Cel"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HostHeatingMarginObservable) Description() string {
+	return "By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostHeatingMarginObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostHeatingMarginObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -3118,6 +4751,78 @@ func (HostPower) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
+// HostPowerObservable is an instrument used to record metric values conforming
+// to the "hw.host.power" semantic conventions. It represents the instantaneous
+// power consumed by the entire physical host in Watts (`hw.host.energy` is
+// preferred).
+type HostPowerObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newHostPowerObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."),
+	metric.WithUnit("W"),
+}
+
+// NewHostPowerObservable returns a new HostPowerObservable instrument.
+func NewHostPowerObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (HostPowerObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HostPowerObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHostPowerObservableOpts
+	} else {
+		opt = append(opt, newHostPowerObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.host.power",
+		opt...,
+	)
+	if err != nil {
+		return HostPowerObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return HostPowerObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HostPowerObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HostPowerObservable) Name() string {
+	return "hw.host.power"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HostPowerObservable) Unit() string {
+	return "W"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HostPowerObservable) Description() string {
+	return "Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (HostPowerObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (HostPowerObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
 // LogicalDiskLimit is an instrument used to record metric values conforming to
 // the "hw.logical_disk.limit" semantic conventions. It represents the size of
 // the logical disk.
@@ -3256,6 +4961,85 @@ func (LogicalDiskLimit) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (LogicalDiskLimit) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// LogicalDiskLimitObservable is an instrument used to record metric values
+// conforming to the "hw.logical_disk.limit" semantic conventions. It represents
+// the size of the logical disk.
+type LogicalDiskLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newLogicalDiskLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Size of the logical disk."),
+	metric.WithUnit("By"),
+}
+
+// NewLogicalDiskLimitObservable returns a new LogicalDiskLimitObservable
+// instrument.
+func NewLogicalDiskLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (LogicalDiskLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return LogicalDiskLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newLogicalDiskLimitObservableOpts
+	} else {
+		opt = append(opt, newLogicalDiskLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.logical_disk.limit",
+		opt...,
+	)
+	if err != nil {
+		return LogicalDiskLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return LogicalDiskLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m LogicalDiskLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (LogicalDiskLimitObservable) Name() string {
+	return "hw.logical_disk.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (LogicalDiskLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (LogicalDiskLimitObservable) Description() string {
+	return "Size of the logical disk."
+}
+
+// AttrLogicalDiskRaidLevel returns an optional attribute for the
+// "hw.logical_disk.raid_level" semantic convention. It represents the RAID Level
+// of the logical disk.
+func (LogicalDiskLimitObservable) AttrLogicalDiskRaidLevel(val string) attribute.KeyValue {
+	return attribute.String("hw.logical_disk.raid_level", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (LogicalDiskLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (LogicalDiskLimitObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -3405,6 +5189,85 @@ func (LogicalDiskUsage) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
+// LogicalDiskUsageObservable is an instrument used to record metric values
+// conforming to the "hw.logical_disk.usage" semantic conventions. It represents
+// the logical disk space usage.
+type LogicalDiskUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newLogicalDiskUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Logical disk space usage."),
+	metric.WithUnit("By"),
+}
+
+// NewLogicalDiskUsageObservable returns a new LogicalDiskUsageObservable
+// instrument.
+func NewLogicalDiskUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (LogicalDiskUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return LogicalDiskUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newLogicalDiskUsageObservableOpts
+	} else {
+		opt = append(opt, newLogicalDiskUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.logical_disk.usage",
+		opt...,
+	)
+	if err != nil {
+		return LogicalDiskUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return LogicalDiskUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m LogicalDiskUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (LogicalDiskUsageObservable) Name() string {
+	return "hw.logical_disk.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (LogicalDiskUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (LogicalDiskUsageObservable) Description() string {
+	return "Logical disk space usage."
+}
+
+// AttrLogicalDiskRaidLevel returns an optional attribute for the
+// "hw.logical_disk.raid_level" semantic convention. It represents the RAID Level
+// of the logical disk.
+func (LogicalDiskUsageObservable) AttrLogicalDiskRaidLevel(val string) attribute.KeyValue {
+	return attribute.String("hw.logical_disk.raid_level", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (LogicalDiskUsageObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (LogicalDiskUsageObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
 // LogicalDiskUtilization is an instrument used to record metric values
 // conforming to the "hw.logical_disk.utilization" semantic conventions. It
 // represents the logical disk space utilization as a fraction.
@@ -3548,6 +5411,85 @@ func (LogicalDiskUtilization) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (LogicalDiskUtilization) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// LogicalDiskUtilizationObservable is an instrument used to record metric values
+// conforming to the "hw.logical_disk.utilization" semantic conventions. It
+// represents the logical disk space utilization as a fraction.
+type LogicalDiskUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newLogicalDiskUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Logical disk space utilization as a fraction."),
+	metric.WithUnit("1"),
+}
+
+// NewLogicalDiskUtilizationObservable returns a new
+// LogicalDiskUtilizationObservable instrument.
+func NewLogicalDiskUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (LogicalDiskUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return LogicalDiskUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newLogicalDiskUtilizationObservableOpts
+	} else {
+		opt = append(opt, newLogicalDiskUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.logical_disk.utilization",
+		opt...,
+	)
+	if err != nil {
+		return LogicalDiskUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return LogicalDiskUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m LogicalDiskUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (LogicalDiskUtilizationObservable) Name() string {
+	return "hw.logical_disk.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (LogicalDiskUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (LogicalDiskUtilizationObservable) Description() string {
+	return "Logical disk space utilization as a fraction."
+}
+
+// AttrLogicalDiskRaidLevel returns an optional attribute for the
+// "hw.logical_disk.raid_level" semantic convention. It represents the RAID Level
+// of the logical disk.
+func (LogicalDiskUtilizationObservable) AttrLogicalDiskRaidLevel(val string) attribute.KeyValue {
+	return attribute.String("hw.logical_disk.raid_level", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (LogicalDiskUtilizationObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (LogicalDiskUtilizationObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -3708,6 +5650,103 @@ func (MemorySize) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (MemorySize) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// MemorySizeObservable is an instrument used to record metric values conforming
+// to the "hw.memory.size" semantic conventions. It represents the size of the
+// memory module.
+type MemorySizeObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemorySizeObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Size of the memory module."),
+	metric.WithUnit("By"),
+}
+
+// NewMemorySizeObservable returns a new MemorySizeObservable instrument.
+func NewMemorySizeObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemorySizeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemorySizeObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemorySizeObservableOpts
+	} else {
+		opt = append(opt, newMemorySizeObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.memory.size",
+		opt...,
+	)
+	if err != nil {
+		return MemorySizeObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemorySizeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemorySizeObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemorySizeObservable) Name() string {
+	return "hw.memory.size"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemorySizeObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemorySizeObservable) Description() string {
+	return "Size of the memory module."
+}
+
+// AttrMemoryType returns an optional attribute for the "hw.memory.type" semantic
+// convention. It represents the type of the memory module.
+func (MemorySizeObservable) AttrMemoryType(val string) attribute.KeyValue {
+	return attribute.String("hw.memory.type", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (MemorySizeObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (MemorySizeObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (MemorySizeObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (MemorySizeObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (MemorySizeObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -3879,6 +5918,112 @@ func (NetworkBandwidthLimit) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// NetworkBandwidthLimitObservable is an instrument used to record metric values
+// conforming to the "hw.network.bandwidth.limit" semantic conventions. It
+// represents the link speed.
+type NetworkBandwidthLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNetworkBandwidthLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Link speed."),
+	metric.WithUnit("By/s"),
+}
+
+// NewNetworkBandwidthLimitObservable returns a new
+// NetworkBandwidthLimitObservable instrument.
+func NewNetworkBandwidthLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NetworkBandwidthLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkBandwidthLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkBandwidthLimitObservableOpts
+	} else {
+		opt = append(opt, newNetworkBandwidthLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.network.bandwidth.limit",
+		opt...,
+	)
+	if err != nil {
+		return NetworkBandwidthLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NetworkBandwidthLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkBandwidthLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkBandwidthLimitObservable) Name() string {
+	return "hw.network.bandwidth.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkBandwidthLimitObservable) Unit() string {
+	return "By/s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkBandwidthLimitObservable) Description() string {
+	return "Link speed."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (NetworkBandwidthLimitObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (NetworkBandwidthLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrNetworkLogicalAddresses returns an optional attribute for the
+// "hw.network.logical_addresses" semantic convention. It represents the logical
+// addresses of the adapter (e.g. IP address, or WWPN).
+func (NetworkBandwidthLimitObservable) AttrNetworkLogicalAddresses(val ...string) attribute.KeyValue {
+	return attribute.StringSlice("hw.network.logical_addresses", val)
+}
+
+// AttrNetworkPhysicalAddress returns an optional attribute for the
+// "hw.network.physical_address" semantic convention. It represents the physical
+// address of the adapter (e.g. MAC address, or WWNN).
+func (NetworkBandwidthLimitObservable) AttrNetworkPhysicalAddress(val string) attribute.KeyValue {
+	return attribute.String("hw.network.physical_address", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (NetworkBandwidthLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (NetworkBandwidthLimitObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (NetworkBandwidthLimitObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // NetworkBandwidthUtilization is an instrument used to record metric values
 // conforming to the "hw.network.bandwidth.utilization" semantic conventions. It
 // represents the utilization of the network bandwidth as a fraction.
@@ -4045,6 +6190,113 @@ func (NetworkBandwidthUtilization) AttrSerialNumber(val string) attribute.KeyVal
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (NetworkBandwidthUtilization) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// NetworkBandwidthUtilizationObservable is an instrument used to record metric
+// values conforming to the "hw.network.bandwidth.utilization" semantic
+// conventions. It represents the utilization of the network bandwidth as a
+// fraction.
+type NetworkBandwidthUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newNetworkBandwidthUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Utilization of the network bandwidth as a fraction."),
+	metric.WithUnit("1"),
+}
+
+// NewNetworkBandwidthUtilizationObservable returns a new
+// NetworkBandwidthUtilizationObservable instrument.
+func NewNetworkBandwidthUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (NetworkBandwidthUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkBandwidthUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkBandwidthUtilizationObservableOpts
+	} else {
+		opt = append(opt, newNetworkBandwidthUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.network.bandwidth.utilization",
+		opt...,
+	)
+	if err != nil {
+		return NetworkBandwidthUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return NetworkBandwidthUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkBandwidthUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkBandwidthUtilizationObservable) Name() string {
+	return "hw.network.bandwidth.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkBandwidthUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkBandwidthUtilizationObservable) Description() string {
+	return "Utilization of the network bandwidth as a fraction."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (NetworkBandwidthUtilizationObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (NetworkBandwidthUtilizationObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrNetworkLogicalAddresses returns an optional attribute for the
+// "hw.network.logical_addresses" semantic convention. It represents the logical
+// addresses of the adapter (e.g. IP address, or WWPN).
+func (NetworkBandwidthUtilizationObservable) AttrNetworkLogicalAddresses(val ...string) attribute.KeyValue {
+	return attribute.StringSlice("hw.network.logical_addresses", val)
+}
+
+// AttrNetworkPhysicalAddress returns an optional attribute for the
+// "hw.network.physical_address" semantic convention. It represents the physical
+// address of the adapter (e.g. MAC address, or WWNN).
+func (NetworkBandwidthUtilizationObservable) AttrNetworkPhysicalAddress(val string) attribute.KeyValue {
+	return attribute.String("hw.network.physical_address", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (NetworkBandwidthUtilizationObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (NetworkBandwidthUtilizationObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (NetworkBandwidthUtilizationObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -4221,6 +6473,111 @@ func (NetworkIO) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// NetworkIOObservable is an instrument used to record metric values conforming
+// to the "hw.network.io" semantic conventions. It represents the received and
+// transmitted network traffic in bytes.
+type NetworkIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNetworkIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Received and transmitted network traffic in bytes."),
+	metric.WithUnit("By"),
+}
+
+// NewNetworkIOObservable returns a new NetworkIOObservable instrument.
+func NewNetworkIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NetworkIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkIOObservableOpts
+	} else {
+		opt = append(opt, newNetworkIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.network.io",
+		opt...,
+	)
+	if err != nil {
+		return NetworkIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NetworkIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkIOObservable) Name() string {
+	return "hw.network.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkIOObservable) Description() string {
+	return "Received and transmitted network traffic in bytes."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (NetworkIOObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (NetworkIOObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrNetworkLogicalAddresses returns an optional attribute for the
+// "hw.network.logical_addresses" semantic convention. It represents the logical
+// addresses of the adapter (e.g. IP address, or WWPN).
+func (NetworkIOObservable) AttrNetworkLogicalAddresses(val ...string) attribute.KeyValue {
+	return attribute.StringSlice("hw.network.logical_addresses", val)
+}
+
+// AttrNetworkPhysicalAddress returns an optional attribute for the
+// "hw.network.physical_address" semantic convention. It represents the physical
+// address of the adapter (e.g. MAC address, or WWNN).
+func (NetworkIOObservable) AttrNetworkPhysicalAddress(val string) attribute.KeyValue {
+	return attribute.String("hw.network.physical_address", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (NetworkIOObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (NetworkIOObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (NetworkIOObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // NetworkPackets is an instrument used to record metric values conforming to the
 // "hw.network.packets" semantic conventions. It represents the received and
 // transmitted network traffic in packets (or frames).
@@ -4394,6 +6751,111 @@ func (NetworkPackets) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// NetworkPacketsObservable is an instrument used to record metric values
+// conforming to the "hw.network.packets" semantic conventions. It represents the
+// received and transmitted network traffic in packets (or frames).
+type NetworkPacketsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNetworkPacketsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Received and transmitted network traffic in packets (or frames)."),
+	metric.WithUnit("{packet}"),
+}
+
+// NewNetworkPacketsObservable returns a new NetworkPacketsObservable instrument.
+func NewNetworkPacketsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NetworkPacketsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkPacketsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkPacketsObservableOpts
+	} else {
+		opt = append(opt, newNetworkPacketsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.network.packets",
+		opt...,
+	)
+	if err != nil {
+		return NetworkPacketsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NetworkPacketsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkPacketsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkPacketsObservable) Name() string {
+	return "hw.network.packets"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkPacketsObservable) Unit() string {
+	return "{packet}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkPacketsObservable) Description() string {
+	return "Received and transmitted network traffic in packets (or frames)."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (NetworkPacketsObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (NetworkPacketsObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrNetworkLogicalAddresses returns an optional attribute for the
+// "hw.network.logical_addresses" semantic convention. It represents the logical
+// addresses of the adapter (e.g. IP address, or WWPN).
+func (NetworkPacketsObservable) AttrNetworkLogicalAddresses(val ...string) attribute.KeyValue {
+	return attribute.StringSlice("hw.network.logical_addresses", val)
+}
+
+// AttrNetworkPhysicalAddress returns an optional attribute for the
+// "hw.network.physical_address" semantic convention. It represents the physical
+// address of the adapter (e.g. MAC address, or WWNN).
+func (NetworkPacketsObservable) AttrNetworkPhysicalAddress(val string) attribute.KeyValue {
+	return attribute.String("hw.network.physical_address", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (NetworkPacketsObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (NetworkPacketsObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (NetworkPacketsObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // NetworkUp is an instrument used to record metric values conforming to the
 // "hw.network.up" semantic conventions. It represents the link status: `1` (up)
 // or `0` (down).
@@ -4559,6 +7021,111 @@ func (NetworkUp) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (NetworkUp) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// NetworkUpObservable is an instrument used to record metric values conforming
+// to the "hw.network.up" semantic conventions. It represents the link status:
+// `1` (up) or `0` (down).
+type NetworkUpObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNetworkUpObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Link status: `1` (up) or `0` (down)."),
+	metric.WithUnit("1"),
+}
+
+// NewNetworkUpObservable returns a new NetworkUpObservable instrument.
+func NewNetworkUpObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NetworkUpObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkUpObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkUpObservableOpts
+	} else {
+		opt = append(opt, newNetworkUpObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.network.up",
+		opt...,
+	)
+	if err != nil {
+		return NetworkUpObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NetworkUpObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkUpObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkUpObservable) Name() string {
+	return "hw.network.up"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkUpObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkUpObservable) Description() string {
+	return "Link status: `1` (up) or `0` (down)."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (NetworkUpObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (NetworkUpObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrNetworkLogicalAddresses returns an optional attribute for the
+// "hw.network.logical_addresses" semantic convention. It represents the logical
+// addresses of the adapter (e.g. IP address, or WWPN).
+func (NetworkUpObservable) AttrNetworkLogicalAddresses(val ...string) attribute.KeyValue {
+	return attribute.StringSlice("hw.network.logical_addresses", val)
+}
+
+// AttrNetworkPhysicalAddress returns an optional attribute for the
+// "hw.network.physical_address" semantic convention. It represents the physical
+// address of the adapter (e.g. MAC address, or WWNN).
+func (NetworkUpObservable) AttrNetworkPhysicalAddress(val string) attribute.KeyValue {
+	return attribute.String("hw.network.physical_address", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (NetworkUpObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (NetworkUpObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (NetworkUpObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -4736,6 +7303,112 @@ func (PhysicalDiskEnduranceUtilization) AttrVendor(val string) attribute.KeyValu
 	return attribute.String("hw.vendor", val)
 }
 
+// PhysicalDiskEnduranceUtilizationObservable is an instrument used to record
+// metric values conforming to the "hw.physical_disk.endurance_utilization"
+// semantic conventions. It represents the endurance remaining for this SSD disk.
+type PhysicalDiskEnduranceUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPhysicalDiskEnduranceUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Endurance remaining for this SSD disk."),
+	metric.WithUnit("1"),
+}
+
+// NewPhysicalDiskEnduranceUtilizationObservable returns a new
+// PhysicalDiskEnduranceUtilizationObservable instrument.
+func NewPhysicalDiskEnduranceUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PhysicalDiskEnduranceUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PhysicalDiskEnduranceUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPhysicalDiskEnduranceUtilizationObservableOpts
+	} else {
+		opt = append(opt, newPhysicalDiskEnduranceUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.physical_disk.endurance_utilization",
+		opt...,
+	)
+	if err != nil {
+		return PhysicalDiskEnduranceUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PhysicalDiskEnduranceUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PhysicalDiskEnduranceUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PhysicalDiskEnduranceUtilizationObservable) Name() string {
+	return "hw.physical_disk.endurance_utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PhysicalDiskEnduranceUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PhysicalDiskEnduranceUtilizationObservable) Description() string {
+	return "Endurance remaining for this SSD disk."
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PhysicalDiskEnduranceUtilizationObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrPhysicalDiskType returns an optional attribute for the
+// "hw.physical_disk.type" semantic convention. It represents the type of the
+// physical disk.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrPhysicalDiskType(val string) attribute.KeyValue {
+	return attribute.String("hw.physical_disk.type", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // PhysicalDiskSize is an instrument used to record metric values conforming to
 // the "hw.physical_disk.size" semantic conventions. It represents the size of
 // the disk.
@@ -4901,6 +7574,112 @@ func (PhysicalDiskSize) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (PhysicalDiskSize) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// PhysicalDiskSizeObservable is an instrument used to record metric values
+// conforming to the "hw.physical_disk.size" semantic conventions. It represents
+// the size of the disk.
+type PhysicalDiskSizeObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPhysicalDiskSizeObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Size of the disk."),
+	metric.WithUnit("By"),
+}
+
+// NewPhysicalDiskSizeObservable returns a new PhysicalDiskSizeObservable
+// instrument.
+func NewPhysicalDiskSizeObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PhysicalDiskSizeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PhysicalDiskSizeObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPhysicalDiskSizeObservableOpts
+	} else {
+		opt = append(opt, newPhysicalDiskSizeObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.physical_disk.size",
+		opt...,
+	)
+	if err != nil {
+		return PhysicalDiskSizeObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PhysicalDiskSizeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PhysicalDiskSizeObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PhysicalDiskSizeObservable) Name() string {
+	return "hw.physical_disk.size"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PhysicalDiskSizeObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PhysicalDiskSizeObservable) Description() string {
+	return "Size of the disk."
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (PhysicalDiskSizeObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (PhysicalDiskSizeObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PhysicalDiskSizeObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PhysicalDiskSizeObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrPhysicalDiskType returns an optional attribute for the
+// "hw.physical_disk.type" semantic convention. It represents the type of the
+// physical disk.
+func (PhysicalDiskSizeObservable) AttrPhysicalDiskType(val string) attribute.KeyValue {
+	return attribute.String("hw.physical_disk.type", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (PhysicalDiskSizeObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (PhysicalDiskSizeObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -5085,6 +7864,125 @@ func (PhysicalDiskSmart) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// PhysicalDiskSmartObservable is an instrument used to record metric values
+// conforming to the "hw.physical_disk.smart" semantic conventions. It represents
+// the value of the corresponding [S.M.A.R.T.] (Self-Monitoring, Analysis, and
+// Reporting Technology) attribute.
+//
+// [S.M.A.R.T.]: https://wikipedia.org/wiki/S.M.A.R.T.
+type PhysicalDiskSmartObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPhysicalDiskSmartObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Value of the corresponding [S.M.A.R.T.](https://wikipedia.org/wiki/S.M.A.R.T.) (Self-Monitoring, Analysis, and Reporting Technology) attribute."),
+	metric.WithUnit("1"),
+}
+
+// NewPhysicalDiskSmartObservable returns a new PhysicalDiskSmartObservable
+// instrument.
+func NewPhysicalDiskSmartObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PhysicalDiskSmartObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PhysicalDiskSmartObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPhysicalDiskSmartObservableOpts
+	} else {
+		opt = append(opt, newPhysicalDiskSmartObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.physical_disk.smart",
+		opt...,
+	)
+	if err != nil {
+		return PhysicalDiskSmartObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PhysicalDiskSmartObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PhysicalDiskSmartObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PhysicalDiskSmartObservable) Name() string {
+	return "hw.physical_disk.smart"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PhysicalDiskSmartObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PhysicalDiskSmartObservable) Description() string {
+	return "Value of the corresponding [S.M.A.R.T.](https://wikipedia.org/wiki/S.M.A.R.T.) (Self-Monitoring, Analysis, and Reporting Technology) attribute."
+}
+
+// AttrFirmwareVersion returns an optional attribute for the
+// "hw.firmware_version" semantic convention. It represents the firmware version
+// of the hardware component.
+func (PhysicalDiskSmartObservable) AttrFirmwareVersion(val string) attribute.KeyValue {
+	return attribute.String("hw.firmware_version", val)
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (PhysicalDiskSmartObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PhysicalDiskSmartObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PhysicalDiskSmartObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrPhysicalDiskSmartAttribute returns an optional attribute for the
+// "hw.physical_disk.smart_attribute" semantic convention. It represents the
+// [S.M.A.R.T.] (Self-Monitoring, Analysis, and Reporting Technology) attribute
+// of the physical disk.
+//
+// [S.M.A.R.T.]: https://wikipedia.org/wiki/S.M.A.R.T.
+func (PhysicalDiskSmartObservable) AttrPhysicalDiskSmartAttribute(val string) attribute.KeyValue {
+	return attribute.String("hw.physical_disk.smart_attribute", val)
+}
+
+// AttrPhysicalDiskType returns an optional attribute for the
+// "hw.physical_disk.type" semantic convention. It represents the type of the
+// physical disk.
+func (PhysicalDiskSmartObservable) AttrPhysicalDiskType(val string) attribute.KeyValue {
+	return attribute.String("hw.physical_disk.type", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (PhysicalDiskSmartObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (PhysicalDiskSmartObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // Power is an instrument used to record metric values conforming to the
 // "hw.power" semantic conventions. It represents the instantaneous power
 // consumed by the component.
@@ -5225,6 +8123,77 @@ func (Power) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (Power) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// PowerObservable is an instrument used to record metric values conforming to
+// the "hw.power" semantic conventions. It represents the instantaneous power
+// consumed by the component.
+type PowerObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPowerObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Instantaneous power consumed by the component."),
+	metric.WithUnit("W"),
+}
+
+// NewPowerObservable returns a new PowerObservable instrument.
+func NewPowerObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PowerObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PowerObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPowerObservableOpts
+	} else {
+		opt = append(opt, newPowerObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.power",
+		opt...,
+	)
+	if err != nil {
+		return PowerObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PowerObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PowerObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PowerObservable) Name() string {
+	return "hw.power"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PowerObservable) Unit() string {
+	return "W"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PowerObservable) Description() string {
+	return "Instantaneous power consumed by the component."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PowerObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PowerObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -5388,6 +8357,104 @@ func (PowerSupplyLimit) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// PowerSupplyLimitObservable is an instrument used to record metric values
+// conforming to the "hw.power_supply.limit" semantic conventions. It represents
+// the maximum power output of the power supply.
+type PowerSupplyLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPowerSupplyLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum power output of the power supply."),
+	metric.WithUnit("W"),
+}
+
+// NewPowerSupplyLimitObservable returns a new PowerSupplyLimitObservable
+// instrument.
+func NewPowerSupplyLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PowerSupplyLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PowerSupplyLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPowerSupplyLimitObservableOpts
+	} else {
+		opt = append(opt, newPowerSupplyLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.power_supply.limit",
+		opt...,
+	)
+	if err != nil {
+		return PowerSupplyLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PowerSupplyLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PowerSupplyLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PowerSupplyLimitObservable) Name() string {
+	return "hw.power_supply.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PowerSupplyLimitObservable) Unit() string {
+	return "W"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PowerSupplyLimitObservable) Description() string {
+	return "Maximum power output of the power supply."
+}
+
+// AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
+// convention. It represents the type of limit for hardware components.
+func (PowerSupplyLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.limit_type", string(val))
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (PowerSupplyLimitObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PowerSupplyLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PowerSupplyLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (PowerSupplyLimitObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (PowerSupplyLimitObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // PowerSupplyUsage is an instrument used to record metric values conforming to
 // the "hw.power_supply.usage" semantic conventions. It represents the current
 // power output of the power supply.
@@ -5539,6 +8606,98 @@ func (PowerSupplyUsage) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (PowerSupplyUsage) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// PowerSupplyUsageObservable is an instrument used to record metric values
+// conforming to the "hw.power_supply.usage" semantic conventions. It represents
+// the current power output of the power supply.
+type PowerSupplyUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPowerSupplyUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Current power output of the power supply."),
+	metric.WithUnit("W"),
+}
+
+// NewPowerSupplyUsageObservable returns a new PowerSupplyUsageObservable
+// instrument.
+func NewPowerSupplyUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PowerSupplyUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PowerSupplyUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPowerSupplyUsageObservableOpts
+	} else {
+		opt = append(opt, newPowerSupplyUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.power_supply.usage",
+		opt...,
+	)
+	if err != nil {
+		return PowerSupplyUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PowerSupplyUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PowerSupplyUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PowerSupplyUsageObservable) Name() string {
+	return "hw.power_supply.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PowerSupplyUsageObservable) Unit() string {
+	return "W"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PowerSupplyUsageObservable) Description() string {
+	return "Current power output of the power supply."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (PowerSupplyUsageObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PowerSupplyUsageObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PowerSupplyUsageObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (PowerSupplyUsageObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (PowerSupplyUsageObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -5694,6 +8853,99 @@ func (PowerSupplyUtilization) AttrSerialNumber(val string) attribute.KeyValue {
 // AttrVendor returns an optional attribute for the "hw.vendor" semantic
 // convention. It represents the vendor name of the hardware component.
 func (PowerSupplyUtilization) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
+// PowerSupplyUtilizationObservable is an instrument used to record metric values
+// conforming to the "hw.power_supply.utilization" semantic conventions. It
+// represents the utilization of the power supply as a fraction of its maximum
+// output.
+type PowerSupplyUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPowerSupplyUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Utilization of the power supply as a fraction of its maximum output."),
+	metric.WithUnit("1"),
+}
+
+// NewPowerSupplyUtilizationObservable returns a new
+// PowerSupplyUtilizationObservable instrument.
+func NewPowerSupplyUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PowerSupplyUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PowerSupplyUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPowerSupplyUtilizationObservableOpts
+	} else {
+		opt = append(opt, newPowerSupplyUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.power_supply.utilization",
+		opt...,
+	)
+	if err != nil {
+		return PowerSupplyUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PowerSupplyUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PowerSupplyUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PowerSupplyUtilizationObservable) Name() string {
+	return "hw.power_supply.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PowerSupplyUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PowerSupplyUtilizationObservable) Description() string {
+	return "Utilization of the power supply as a fraction of its maximum output."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (PowerSupplyUtilizationObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (PowerSupplyUtilizationObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (PowerSupplyUtilizationObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (PowerSupplyUtilizationObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (PowerSupplyUtilizationObservable) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
@@ -5854,6 +9106,77 @@ func (Status) AttrName(val string) attribute.KeyValue {
 // convention. It represents the unique identifier of the parent component
 // (typically the `hw.id` attribute of the enclosure, or disk controller).
 func (Status) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// StatusObservable is an instrument used to record metric values conforming to
+// the "hw.status" semantic conventions. It represents the operational status:
+// `1` (true) or `0` (false) for each of the possible states.
+type StatusObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newStatusObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Operational status: `1` (true) or `0` (false) for each of the possible states."),
+	metric.WithUnit("1"),
+}
+
+// NewStatusObservable returns a new StatusObservable instrument.
+func NewStatusObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (StatusObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return StatusObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newStatusObservableOpts
+	} else {
+		opt = append(opt, newStatusObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"hw.status",
+		opt...,
+	)
+	if err != nil {
+		return StatusObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return StatusObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m StatusObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (StatusObservable) Name() string {
+	return "hw.status"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (StatusObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (StatusObservable) Description() string {
+	return "Operational status: `1` (true) or `0` (false) for each of the possible states."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (StatusObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (StatusObservable) AttrParent(val string) attribute.KeyValue {
 	return attribute.String("hw.parent", val)
 }
 
@@ -6018,6 +9341,105 @@ func (TapeDriveOperations) AttrVendor(val string) attribute.KeyValue {
 	return attribute.String("hw.vendor", val)
 }
 
+// TapeDriveOperationsObservable is an instrument used to record metric values
+// conforming to the "hw.tape_drive.operations" semantic conventions. It
+// represents the operations performed by the tape drive.
+type TapeDriveOperationsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newTapeDriveOperationsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Operations performed by the tape drive."),
+	metric.WithUnit("{operation}"),
+}
+
+// NewTapeDriveOperationsObservable returns a new TapeDriveOperationsObservable
+// instrument.
+func NewTapeDriveOperationsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (TapeDriveOperationsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return TapeDriveOperationsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newTapeDriveOperationsObservableOpts
+	} else {
+		opt = append(opt, newTapeDriveOperationsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"hw.tape_drive.operations",
+		opt...,
+	)
+	if err != nil {
+		return TapeDriveOperationsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return TapeDriveOperationsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m TapeDriveOperationsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (TapeDriveOperationsObservable) Name() string {
+	return "hw.tape_drive.operations"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (TapeDriveOperationsObservable) Unit() string {
+	return "{operation}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (TapeDriveOperationsObservable) Description() string {
+	return "Operations performed by the tape drive."
+}
+
+// AttrModel returns an optional attribute for the "hw.model" semantic
+// convention. It represents the descriptive model name of the hardware
+// component.
+func (TapeDriveOperationsObservable) AttrModel(val string) attribute.KeyValue {
+	return attribute.String("hw.model", val)
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (TapeDriveOperationsObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (TapeDriveOperationsObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSerialNumber returns an optional attribute for the "hw.serial_number"
+// semantic convention. It represents the serial number of the hardware
+// component.
+func (TapeDriveOperationsObservable) AttrSerialNumber(val string) attribute.KeyValue {
+	return attribute.String("hw.serial_number", val)
+}
+
+// AttrTapeDriveOperationType returns an optional attribute for the
+// "hw.tape_drive.operation_type" semantic convention. It represents the type of
+// tape drive operation.
+func (TapeDriveOperationsObservable) AttrTapeDriveOperationType(val TapeDriveOperationTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.tape_drive.operation_type", string(val))
+}
+
+// AttrVendor returns an optional attribute for the "hw.vendor" semantic
+// convention. It represents the vendor name of the hardware component.
+func (TapeDriveOperationsObservable) AttrVendor(val string) attribute.KeyValue {
+	return attribute.String("hw.vendor", val)
+}
+
 // Temperature is an instrument used to record metric values conforming to the
 // "hw.temperature" semantic conventions. It represents the temperature in
 // degrees Celsius.
@@ -6155,6 +9577,83 @@ func (Temperature) AttrParent(val string) attribute.KeyValue {
 // AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
 // semantic convention. It represents the location of the sensor.
 func (Temperature) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
+// TemperatureObservable is an instrument used to record metric values conforming
+// to the "hw.temperature" semantic conventions. It represents the temperature in
+// degrees Celsius.
+type TemperatureObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newTemperatureObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Temperature in degrees Celsius."),
+	metric.WithUnit("Cel"),
+}
+
+// NewTemperatureObservable returns a new TemperatureObservable instrument.
+func NewTemperatureObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (TemperatureObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return TemperatureObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newTemperatureObservableOpts
+	} else {
+		opt = append(opt, newTemperatureObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.temperature",
+		opt...,
+	)
+	if err != nil {
+		return TemperatureObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return TemperatureObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m TemperatureObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (TemperatureObservable) Name() string {
+	return "hw.temperature"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (TemperatureObservable) Unit() string {
+	return "Cel"
+}
+
+// Description returns the semantic convention description of the instrument
+func (TemperatureObservable) Description() string {
+	return "Temperature in degrees Celsius."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (TemperatureObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (TemperatureObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (TemperatureObservable) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
@@ -6304,6 +9803,90 @@ func (TemperatureLimit) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
+// TemperatureLimitObservable is an instrument used to record metric values
+// conforming to the "hw.temperature.limit" semantic conventions. It represents
+// the temperature limit in degrees Celsius.
+type TemperatureLimitObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newTemperatureLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Temperature limit in degrees Celsius."),
+	metric.WithUnit("Cel"),
+}
+
+// NewTemperatureLimitObservable returns a new TemperatureLimitObservable
+// instrument.
+func NewTemperatureLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (TemperatureLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return TemperatureLimitObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newTemperatureLimitObservableOpts
+	} else {
+		opt = append(opt, newTemperatureLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.temperature.limit",
+		opt...,
+	)
+	if err != nil {
+		return TemperatureLimitObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return TemperatureLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m TemperatureLimitObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (TemperatureLimitObservable) Name() string {
+	return "hw.temperature.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (TemperatureLimitObservable) Unit() string {
+	return "Cel"
+}
+
+// Description returns the semantic convention description of the instrument
+func (TemperatureLimitObservable) Description() string {
+	return "Temperature limit in degrees Celsius."
+}
+
+// AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
+// convention. It represents the type of limit for hardware components.
+func (TemperatureLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.limit_type", string(val))
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (TemperatureLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (TemperatureLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (TemperatureLimitObservable) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
 // Voltage is an instrument used to record metric values conforming to the
 // "hw.voltage" semantic conventions. It represents the voltage measured by the
 // sensor.
@@ -6441,6 +10024,83 @@ func (Voltage) AttrParent(val string) attribute.KeyValue {
 // AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
 // semantic convention. It represents the location of the sensor.
 func (Voltage) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
+// VoltageObservable is an instrument used to record metric values conforming to
+// the "hw.voltage" semantic conventions. It represents the voltage measured by
+// the sensor.
+type VoltageObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newVoltageObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Voltage measured by the sensor."),
+	metric.WithUnit("V"),
+}
+
+// NewVoltageObservable returns a new VoltageObservable instrument.
+func NewVoltageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (VoltageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return VoltageObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newVoltageObservableOpts
+	} else {
+		opt = append(opt, newVoltageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.voltage",
+		opt...,
+	)
+	if err != nil {
+		return VoltageObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return VoltageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m VoltageObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (VoltageObservable) Name() string {
+	return "hw.voltage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (VoltageObservable) Unit() string {
+	return "V"
+}
+
+// Description returns the semantic convention description of the instrument
+func (VoltageObservable) Description() string {
+	return "Voltage measured by the sensor."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (VoltageObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (VoltageObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (VoltageObservable) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
@@ -6590,6 +10250,89 @@ func (VoltageLimit) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }
 
+// VoltageLimitObservable is an instrument used to record metric values
+// conforming to the "hw.voltage.limit" semantic conventions. It represents the
+// voltage limit in Volts.
+type VoltageLimitObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newVoltageLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Voltage limit in Volts."),
+	metric.WithUnit("V"),
+}
+
+// NewVoltageLimitObservable returns a new VoltageLimitObservable instrument.
+func NewVoltageLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (VoltageLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return VoltageLimitObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newVoltageLimitObservableOpts
+	} else {
+		opt = append(opt, newVoltageLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.voltage.limit",
+		opt...,
+	)
+	if err != nil {
+		return VoltageLimitObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return VoltageLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m VoltageLimitObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (VoltageLimitObservable) Name() string {
+	return "hw.voltage.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (VoltageLimitObservable) Unit() string {
+	return "V"
+}
+
+// Description returns the semantic convention description of the instrument
+func (VoltageLimitObservable) Description() string {
+	return "Voltage limit in Volts."
+}
+
+// AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
+// convention. It represents the type of limit for hardware components.
+func (VoltageLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
+	return attribute.String("hw.limit_type", string(val))
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (VoltageLimitObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (VoltageLimitObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (VoltageLimitObservable) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
 // VoltageNominal is an instrument used to record metric values conforming to the
 // "hw.voltage.nominal" semantic conventions. It represents the nominal
 // (expected) voltage.
@@ -6727,5 +10470,82 @@ func (VoltageNominal) AttrParent(val string) attribute.KeyValue {
 // AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
 // semantic convention. It represents the location of the sensor.
 func (VoltageNominal) AttrSensorLocation(val string) attribute.KeyValue {
+	return attribute.String("hw.sensor_location", val)
+}
+
+// VoltageNominalObservable is an instrument used to record metric values
+// conforming to the "hw.voltage.nominal" semantic conventions. It represents the
+// nominal (expected) voltage.
+type VoltageNominalObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newVoltageNominalObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Nominal (expected) voltage."),
+	metric.WithUnit("V"),
+}
+
+// NewVoltageNominalObservable returns a new VoltageNominalObservable instrument.
+func NewVoltageNominalObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (VoltageNominalObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return VoltageNominalObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newVoltageNominalObservableOpts
+	} else {
+		opt = append(opt, newVoltageNominalObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"hw.voltage.nominal",
+		opt...,
+	)
+	if err != nil {
+		return VoltageNominalObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return VoltageNominalObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m VoltageNominalObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (VoltageNominalObservable) Name() string {
+	return "hw.voltage.nominal"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (VoltageNominalObservable) Unit() string {
+	return "V"
+}
+
+// Description returns the semantic convention description of the instrument
+func (VoltageNominalObservable) Description() string {
+	return "Nominal (expected) voltage."
+}
+
+// AttrName returns an optional attribute for the "hw.name" semantic convention.
+// It represents an easily-recognizable name for the hardware component.
+func (VoltageNominalObservable) AttrName(val string) attribute.KeyValue {
+	return attribute.String("hw.name", val)
+}
+
+// AttrParent returns an optional attribute for the "hw.parent" semantic
+// convention. It represents the unique identifier of the parent component
+// (typically the `hw.id` attribute of the enclosure, or disk controller).
+func (VoltageNominalObservable) AttrParent(val string) attribute.KeyValue {
+	return attribute.String("hw.parent", val)
+}
+
+// AttrSensorLocation returns an optional attribute for the "hw.sensor_location"
+// semantic convention. It represents the location of the sensor.
+func (VoltageNominalObservable) AttrSensorLocation(val string) attribute.KeyValue {
 	return attribute.String("hw.sensor_location", val)
 }

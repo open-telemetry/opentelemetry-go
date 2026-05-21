@@ -284,6 +284,121 @@ func (ClientConsumedMessages) AttrServerPort(val int) attribute.KeyValue {
 	return attribute.Int("server.port", val)
 }
 
+// ClientConsumedMessagesObservable is an instrument used to record metric values
+// conforming to the "messaging.client.consumed.messages" semantic conventions.
+// It represents the number of messages that were delivered to the application.
+type ClientConsumedMessagesObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newClientConsumedMessagesObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of messages that were delivered to the application."),
+	metric.WithUnit("{message}"),
+}
+
+// NewClientConsumedMessagesObservable returns a new
+// ClientConsumedMessagesObservable instrument.
+func NewClientConsumedMessagesObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ClientConsumedMessagesObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConsumedMessagesObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConsumedMessagesObservableOpts
+	} else {
+		opt = append(opt, newClientConsumedMessagesObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"messaging.client.consumed.messages",
+		opt...,
+	)
+	if err != nil {
+		return ClientConsumedMessagesObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ClientConsumedMessagesObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConsumedMessagesObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConsumedMessagesObservable) Name() string {
+	return "messaging.client.consumed.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConsumedMessagesObservable) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConsumedMessagesObservable) Description() string {
+	return "Number of messages that were delivered to the application."
+}
+
+// AttrErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientConsumedMessagesObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
+// AttrConsumerGroupName returns an optional attribute for the
+// "messaging.consumer.group.name" semantic convention. It represents the name of
+// the consumer group with which a consumer is associated.
+func (ClientConsumedMessagesObservable) AttrConsumerGroupName(val string) attribute.KeyValue {
+	return attribute.String("messaging.consumer.group.name", val)
+}
+
+// AttrDestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientConsumedMessagesObservable) AttrDestinationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.name", val)
+}
+
+// AttrDestinationSubscriptionName returns an optional attribute for the
+// "messaging.destination.subscription.name" semantic convention. It represents
+// the name of the destination subscription from which a message is consumed.
+func (ClientConsumedMessagesObservable) AttrDestinationSubscriptionName(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.subscription.name", val)
+}
+
+// AttrDestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientConsumedMessagesObservable) AttrDestinationTemplate(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.template", val)
+}
+
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientConsumedMessagesObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
+// AttrDestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientConsumedMessagesObservable) AttrDestinationPartitionID(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.partition.id", val)
+}
+
+// AttrServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientConsumedMessagesObservable) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
+}
+
 // ClientOperationDuration is an instrument used to record metric values
 // conforming to the "messaging.client.operation.duration" semantic conventions.
 // It represents the duration of messaging operation initiated by a producer or
@@ -651,6 +766,107 @@ func (ClientSentMessages) AttrDestinationPartitionID(val string) attribute.KeyVa
 // AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
 func (ClientSentMessages) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
+}
+
+// ClientSentMessagesObservable is an instrument used to record metric values
+// conforming to the "messaging.client.sent.messages" semantic conventions. It
+// represents the number of messages producer attempted to send to the broker.
+type ClientSentMessagesObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newClientSentMessagesObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of messages producer attempted to send to the broker."),
+	metric.WithUnit("{message}"),
+}
+
+// NewClientSentMessagesObservable returns a new ClientSentMessagesObservable
+// instrument.
+func NewClientSentMessagesObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ClientSentMessagesObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientSentMessagesObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientSentMessagesObservableOpts
+	} else {
+		opt = append(opt, newClientSentMessagesObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"messaging.client.sent.messages",
+		opt...,
+	)
+	if err != nil {
+		return ClientSentMessagesObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ClientSentMessagesObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientSentMessagesObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientSentMessagesObservable) Name() string {
+	return "messaging.client.sent.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientSentMessagesObservable) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientSentMessagesObservable) Description() string {
+	return "Number of messages producer attempted to send to the broker."
+}
+
+// AttrErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientSentMessagesObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
+// AttrDestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientSentMessagesObservable) AttrDestinationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.name", val)
+}
+
+// AttrDestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientSentMessagesObservable) AttrDestinationTemplate(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.template", val)
+}
+
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientSentMessagesObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
+// AttrDestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientSentMessagesObservable) AttrDestinationPartitionID(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.partition.id", val)
+}
+
+// AttrServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientSentMessagesObservable) AttrServerPort(val int) attribute.KeyValue {
 	return attribute.Int("server.port", val)
 }
 

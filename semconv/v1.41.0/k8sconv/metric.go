@@ -432,6 +432,66 @@ func (m ContainerCPULimitCurrent) AddSet(ctx context.Context, incr int64, set at
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerCPULimitCurrentObservable is an instrument used to record metric
+// values conforming to the "k8s.container.cpu.limit.current" semantic
+// conventions. It represents the maximum CPU resource limit currently configured
+// for a running container.
+type ContainerCPULimitCurrentObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerCPULimitCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum CPU resource limit currently configured for a running container."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewContainerCPULimitCurrentObservable returns a new
+// ContainerCPULimitCurrentObservable instrument.
+func NewContainerCPULimitCurrentObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerCPULimitCurrentObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerCPULimitCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerCPULimitCurrentObservableOpts
+	} else {
+		opt = append(opt, newContainerCPULimitCurrentObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.cpu.limit.current",
+		opt...,
+	)
+	if err != nil {
+		return ContainerCPULimitCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerCPULimitCurrentObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerCPULimitCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerCPULimitCurrentObservable) Name() string {
+	return "k8s.container.cpu.limit.current"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerCPULimitCurrentObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerCPULimitCurrentObservable) Description() string {
+	return "Maximum CPU resource limit currently configured for a running container."
+}
+
 // ContainerCPULimitDesired is an instrument used to record metric values
 // conforming to the "k8s.container.cpu.limit.desired" semantic conventions. It
 // represents the maximum CPU resource limit as defined by the container spec.
@@ -556,6 +616,66 @@ func (m ContainerCPULimitDesired) AddSet(ctx context.Context, incr int64, set at
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerCPULimitDesiredObservable is an instrument used to record metric
+// values conforming to the "k8s.container.cpu.limit.desired" semantic
+// conventions. It represents the maximum CPU resource limit as defined by the
+// container spec.
+type ContainerCPULimitDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerCPULimitDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum CPU resource limit as defined by the container spec."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewContainerCPULimitDesiredObservable returns a new
+// ContainerCPULimitDesiredObservable instrument.
+func NewContainerCPULimitDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerCPULimitDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerCPULimitDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerCPULimitDesiredObservableOpts
+	} else {
+		opt = append(opt, newContainerCPULimitDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.cpu.limit.desired",
+		opt...,
+	)
+	if err != nil {
+		return ContainerCPULimitDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerCPULimitDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerCPULimitDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerCPULimitDesiredObservable) Name() string {
+	return "k8s.container.cpu.limit.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerCPULimitDesiredObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerCPULimitDesiredObservable) Description() string {
+	return "Maximum CPU resource limit as defined by the container spec."
+}
+
 // ContainerCPULimitUtilization is an instrument used to record metric values
 // conforming to the "k8s.container.cpu.limit.utilization" semantic conventions.
 // It represents the ratio of container CPU usage to its current CPU limit.
@@ -675,6 +795,66 @@ func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val int64, 
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// ContainerCPULimitUtilizationObservable is an instrument used to record metric
+// values conforming to the "k8s.container.cpu.limit.utilization" semantic
+// conventions. It represents the ratio of container CPU usage to its current CPU
+// limit.
+type ContainerCPULimitUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newContainerCPULimitUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("The ratio of container CPU usage to its current CPU limit."),
+	metric.WithUnit("1"),
+}
+
+// NewContainerCPULimitUtilizationObservable returns a new
+// ContainerCPULimitUtilizationObservable instrument.
+func NewContainerCPULimitUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (ContainerCPULimitUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerCPULimitUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerCPULimitUtilizationObservableOpts
+	} else {
+		opt = append(opt, newContainerCPULimitUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.container.cpu.limit.utilization",
+		opt...,
+	)
+	if err != nil {
+		return ContainerCPULimitUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return ContainerCPULimitUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerCPULimitUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerCPULimitUtilizationObservable) Name() string {
+	return "k8s.container.cpu.limit.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerCPULimitUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerCPULimitUtilizationObservable) Description() string {
+	return "The ratio of container CPU usage to its current CPU limit."
 }
 
 // ContainerCPURequestCurrent is an instrument used to record metric values
@@ -803,6 +983,66 @@ func (m ContainerCPURequestCurrent) AddSet(ctx context.Context, incr int64, set 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerCPURequestCurrentObservable is an instrument used to record metric
+// values conforming to the "k8s.container.cpu.request.current" semantic
+// conventions. It represents the CPU resource requested currently configured for
+// a running container.
+type ContainerCPURequestCurrentObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerCPURequestCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("CPU resource requested currently configured for a running container."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewContainerCPURequestCurrentObservable returns a new
+// ContainerCPURequestCurrentObservable instrument.
+func NewContainerCPURequestCurrentObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerCPURequestCurrentObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerCPURequestCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerCPURequestCurrentObservableOpts
+	} else {
+		opt = append(opt, newContainerCPURequestCurrentObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.cpu.request.current",
+		opt...,
+	)
+	if err != nil {
+		return ContainerCPURequestCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerCPURequestCurrentObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerCPURequestCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerCPURequestCurrentObservable) Name() string {
+	return "k8s.container.cpu.request.current"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerCPURequestCurrentObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerCPURequestCurrentObservable) Description() string {
+	return "CPU resource requested currently configured for a running container."
+}
+
 // ContainerCPURequestDesired is an instrument used to record metric values
 // conforming to the "k8s.container.cpu.request.desired" semantic conventions. It
 // represents the CPU resource requested as defined by the container spec.
@@ -928,6 +1168,66 @@ func (m ContainerCPURequestDesired) AddSet(ctx context.Context, incr int64, set 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerCPURequestDesiredObservable is an instrument used to record metric
+// values conforming to the "k8s.container.cpu.request.desired" semantic
+// conventions. It represents the CPU resource requested as defined by the
+// container spec.
+type ContainerCPURequestDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerCPURequestDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("CPU resource requested as defined by the container spec."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewContainerCPURequestDesiredObservable returns a new
+// ContainerCPURequestDesiredObservable instrument.
+func NewContainerCPURequestDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerCPURequestDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerCPURequestDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerCPURequestDesiredObservableOpts
+	} else {
+		opt = append(opt, newContainerCPURequestDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.cpu.request.desired",
+		opt...,
+	)
+	if err != nil {
+		return ContainerCPURequestDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerCPURequestDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerCPURequestDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerCPURequestDesiredObservable) Name() string {
+	return "k8s.container.cpu.request.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerCPURequestDesiredObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerCPURequestDesiredObservable) Description() string {
+	return "CPU resource requested as defined by the container spec."
+}
+
 // ContainerCPURequestUtilization is an instrument used to record metric values
 // conforming to the "k8s.container.cpu.request.utilization" semantic
 // conventions. It represents the ratio of container CPU usage to its current CPU
@@ -1050,6 +1350,66 @@ func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val int64
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
+// ContainerCPURequestUtilizationObservable is an instrument used to record
+// metric values conforming to the "k8s.container.cpu.request.utilization"
+// semantic conventions. It represents the ratio of container CPU usage to its
+// current CPU request.
+type ContainerCPURequestUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newContainerCPURequestUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("The ratio of container CPU usage to its current CPU request."),
+	metric.WithUnit("1"),
+}
+
+// NewContainerCPURequestUtilizationObservable returns a new
+// ContainerCPURequestUtilizationObservable instrument.
+func NewContainerCPURequestUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (ContainerCPURequestUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerCPURequestUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerCPURequestUtilizationObservableOpts
+	} else {
+		opt = append(opt, newContainerCPURequestUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.container.cpu.request.utilization",
+		opt...,
+	)
+	if err != nil {
+		return ContainerCPURequestUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return ContainerCPURequestUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerCPURequestUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerCPURequestUtilizationObservable) Name() string {
+	return "k8s.container.cpu.request.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerCPURequestUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerCPURequestUtilizationObservable) Description() string {
+	return "The ratio of container CPU usage to its current CPU request."
+}
+
 // ContainerEphemeralStorageLimit is an instrument used to record metric values
 // conforming to the "k8s.container.ephemeral_storage.limit" semantic
 // conventions. It represents the maximum ephemeral storage resource limit set
@@ -1160,6 +1520,66 @@ func (m ContainerEphemeralStorageLimit) AddSet(ctx context.Context, incr int64, 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerEphemeralStorageLimitObservable is an instrument used to record
+// metric values conforming to the "k8s.container.ephemeral_storage.limit"
+// semantic conventions. It represents the maximum ephemeral storage resource
+// limit set for the container.
+type ContainerEphemeralStorageLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerEphemeralStorageLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum ephemeral storage resource limit set for the container."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerEphemeralStorageLimitObservable returns a new
+// ContainerEphemeralStorageLimitObservable instrument.
+func NewContainerEphemeralStorageLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerEphemeralStorageLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerEphemeralStorageLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerEphemeralStorageLimitObservableOpts
+	} else {
+		opt = append(opt, newContainerEphemeralStorageLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.ephemeral_storage.limit",
+		opt...,
+	)
+	if err != nil {
+		return ContainerEphemeralStorageLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerEphemeralStorageLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerEphemeralStorageLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerEphemeralStorageLimitObservable) Name() string {
+	return "k8s.container.ephemeral_storage.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerEphemeralStorageLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerEphemeralStorageLimitObservable) Description() string {
+	return "Maximum ephemeral storage resource limit set for the container."
+}
+
 // ContainerEphemeralStorageRequest is an instrument used to record metric values
 // conforming to the "k8s.container.ephemeral_storage.request" semantic
 // conventions. It represents the ephemeral storage resource requested for the
@@ -1268,6 +1688,66 @@ func (m ContainerEphemeralStorageRequest) AddSet(ctx context.Context, incr int64
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ContainerEphemeralStorageRequestObservable is an instrument used to record
+// metric values conforming to the "k8s.container.ephemeral_storage.request"
+// semantic conventions. It represents the ephemeral storage resource requested
+// for the container.
+type ContainerEphemeralStorageRequestObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerEphemeralStorageRequestObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Ephemeral storage resource requested for the container."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerEphemeralStorageRequestObservable returns a new
+// ContainerEphemeralStorageRequestObservable instrument.
+func NewContainerEphemeralStorageRequestObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerEphemeralStorageRequestObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerEphemeralStorageRequestObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerEphemeralStorageRequestObservableOpts
+	} else {
+		opt = append(opt, newContainerEphemeralStorageRequestObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.ephemeral_storage.request",
+		opt...,
+	)
+	if err != nil {
+		return ContainerEphemeralStorageRequestObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerEphemeralStorageRequestObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerEphemeralStorageRequestObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerEphemeralStorageRequestObservable) Name() string {
+	return "k8s.container.ephemeral_storage.request"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerEphemeralStorageRequestObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerEphemeralStorageRequestObservable) Description() string {
+	return "Ephemeral storage resource requested for the container."
 }
 
 // ContainerMemoryLimitCurrent is an instrument used to record metric values
@@ -1396,6 +1876,66 @@ func (m ContainerMemoryLimitCurrent) AddSet(ctx context.Context, incr int64, set
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerMemoryLimitCurrentObservable is an instrument used to record metric
+// values conforming to the "k8s.container.memory.limit.current" semantic
+// conventions. It represents the maximum memory resource limit currently
+// configured for a running container.
+type ContainerMemoryLimitCurrentObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerMemoryLimitCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum memory resource limit currently configured for a running container."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerMemoryLimitCurrentObservable returns a new
+// ContainerMemoryLimitCurrentObservable instrument.
+func NewContainerMemoryLimitCurrentObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerMemoryLimitCurrentObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerMemoryLimitCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerMemoryLimitCurrentObservableOpts
+	} else {
+		opt = append(opt, newContainerMemoryLimitCurrentObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.memory.limit.current",
+		opt...,
+	)
+	if err != nil {
+		return ContainerMemoryLimitCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerMemoryLimitCurrentObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerMemoryLimitCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerMemoryLimitCurrentObservable) Name() string {
+	return "k8s.container.memory.limit.current"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerMemoryLimitCurrentObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerMemoryLimitCurrentObservable) Description() string {
+	return "Maximum memory resource limit currently configured for a running container."
+}
+
 // ContainerMemoryLimitDesired is an instrument used to record metric values
 // conforming to the "k8s.container.memory.limit.desired" semantic conventions.
 // It represents the maximum memory resource limit as defined by the container
@@ -1520,6 +2060,66 @@ func (m ContainerMemoryLimitDesired) AddSet(ctx context.Context, incr int64, set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ContainerMemoryLimitDesiredObservable is an instrument used to record metric
+// values conforming to the "k8s.container.memory.limit.desired" semantic
+// conventions. It represents the maximum memory resource limit as defined by the
+// container spec.
+type ContainerMemoryLimitDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerMemoryLimitDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum memory resource limit as defined by the container spec."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerMemoryLimitDesiredObservable returns a new
+// ContainerMemoryLimitDesiredObservable instrument.
+func NewContainerMemoryLimitDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerMemoryLimitDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerMemoryLimitDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerMemoryLimitDesiredObservableOpts
+	} else {
+		opt = append(opt, newContainerMemoryLimitDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.memory.limit.desired",
+		opt...,
+	)
+	if err != nil {
+		return ContainerMemoryLimitDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerMemoryLimitDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerMemoryLimitDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerMemoryLimitDesiredObservable) Name() string {
+	return "k8s.container.memory.limit.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerMemoryLimitDesiredObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerMemoryLimitDesiredObservable) Description() string {
+	return "Maximum memory resource limit as defined by the container spec."
 }
 
 // ContainerMemoryRequestCurrent is an instrument used to record metric values
@@ -1648,6 +2248,66 @@ func (m ContainerMemoryRequestCurrent) AddSet(ctx context.Context, incr int64, s
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerMemoryRequestCurrentObservable is an instrument used to record metric
+// values conforming to the "k8s.container.memory.request.current" semantic
+// conventions. It represents the memory resource request currently configured
+// for a running container.
+type ContainerMemoryRequestCurrentObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerMemoryRequestCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Memory resource request currently configured for a running container."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerMemoryRequestCurrentObservable returns a new
+// ContainerMemoryRequestCurrentObservable instrument.
+func NewContainerMemoryRequestCurrentObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerMemoryRequestCurrentObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerMemoryRequestCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerMemoryRequestCurrentObservableOpts
+	} else {
+		opt = append(opt, newContainerMemoryRequestCurrentObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.memory.request.current",
+		opt...,
+	)
+	if err != nil {
+		return ContainerMemoryRequestCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerMemoryRequestCurrentObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerMemoryRequestCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerMemoryRequestCurrentObservable) Name() string {
+	return "k8s.container.memory.request.current"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerMemoryRequestCurrentObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerMemoryRequestCurrentObservable) Description() string {
+	return "Memory resource request currently configured for a running container."
+}
+
 // ContainerMemoryRequestDesired is an instrument used to record metric values
 // conforming to the "k8s.container.memory.request.desired" semantic conventions.
 // It represents the memory resource requested as defined by the container spec.
@@ -1773,6 +2433,66 @@ func (m ContainerMemoryRequestDesired) AddSet(ctx context.Context, incr int64, s
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerMemoryRequestDesiredObservable is an instrument used to record metric
+// values conforming to the "k8s.container.memory.request.desired" semantic
+// conventions. It represents the memory resource requested as defined by the
+// container spec.
+type ContainerMemoryRequestDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerMemoryRequestDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Memory resource requested as defined by the container spec."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerMemoryRequestDesiredObservable returns a new
+// ContainerMemoryRequestDesiredObservable instrument.
+func NewContainerMemoryRequestDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerMemoryRequestDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerMemoryRequestDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerMemoryRequestDesiredObservableOpts
+	} else {
+		opt = append(opt, newContainerMemoryRequestDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.memory.request.desired",
+		opt...,
+	)
+	if err != nil {
+		return ContainerMemoryRequestDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerMemoryRequestDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerMemoryRequestDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerMemoryRequestDesiredObservable) Name() string {
+	return "k8s.container.memory.request.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerMemoryRequestDesiredObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerMemoryRequestDesiredObservable) Description() string {
+	return "Memory resource requested as defined by the container spec."
+}
+
 // ContainerReady is an instrument used to record metric values conforming to the
 // "k8s.container.ready" semantic conventions. It represents the indicates
 // whether the container is currently marked as ready to accept traffic, based on
@@ -1882,6 +2602,65 @@ func (m ContainerReady) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ContainerReadyObservable is an instrument used to record metric values
+// conforming to the "k8s.container.ready" semantic conventions. It represents
+// the indicates whether the container is currently marked as ready to accept
+// traffic, based on its readiness probe (1 = ready, 0 = not ready).
+type ContainerReadyObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerReadyObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Indicates whether the container is currently marked as ready to accept traffic, based on its readiness probe (1 = ready, 0 = not ready)."),
+	metric.WithUnit("{container}"),
+}
+
+// NewContainerReadyObservable returns a new ContainerReadyObservable instrument.
+func NewContainerReadyObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerReadyObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerReadyObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerReadyObservableOpts
+	} else {
+		opt = append(opt, newContainerReadyObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.ready",
+		opt...,
+	)
+	if err != nil {
+		return ContainerReadyObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerReadyObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerReadyObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerReadyObservable) Name() string {
+	return "k8s.container.ready"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerReadyObservable) Unit() string {
+	return "{container}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerReadyObservable) Description() string {
+	return "Indicates whether the container is currently marked as ready to accept traffic, based on its readiness probe (1 = ready, 0 = not ready)."
 }
 
 // ContainerRestartCount is an instrument used to record metric values conforming
@@ -2003,6 +2782,66 @@ func (m ContainerRestartCount) AddSet(ctx context.Context, incr int64, set attri
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ContainerRestartCountObservable is an instrument used to record metric values
+// conforming to the "k8s.container.restart.count" semantic conventions. It
+// represents the describes how many times the container has restarted (since the
+// last counter reset).
+type ContainerRestartCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerRestartCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes how many times the container has restarted (since the last counter reset)."),
+	metric.WithUnit("{restart}"),
+}
+
+// NewContainerRestartCountObservable returns a new
+// ContainerRestartCountObservable instrument.
+func NewContainerRestartCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerRestartCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerRestartCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerRestartCountObservableOpts
+	} else {
+		opt = append(opt, newContainerRestartCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.restart.count",
+		opt...,
+	)
+	if err != nil {
+		return ContainerRestartCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerRestartCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerRestartCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerRestartCountObservable) Name() string {
+	return "k8s.container.restart.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerRestartCountObservable) Unit() string {
+	return "{restart}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerRestartCountObservable) Description() string {
+	return "Describes how many times the container has restarted (since the last counter reset)."
 }
 
 // ContainerStatusReason is an instrument used to record metric values conforming
@@ -2137,6 +2976,66 @@ func (m ContainerStatusReason) AddSet(ctx context.Context, incr int64, set attri
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerStatusReasonObservable is an instrument used to record metric values
+// conforming to the "k8s.container.status.reason" semantic conventions. It
+// represents the describes the number of K8s containers that are currently in a
+// state for a given reason.
+type ContainerStatusReasonObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerStatusReasonObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes the number of K8s containers that are currently in a state for a given reason."),
+	metric.WithUnit("{container}"),
+}
+
+// NewContainerStatusReasonObservable returns a new
+// ContainerStatusReasonObservable instrument.
+func NewContainerStatusReasonObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerStatusReasonObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerStatusReasonObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerStatusReasonObservableOpts
+	} else {
+		opt = append(opt, newContainerStatusReasonObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.status.reason",
+		opt...,
+	)
+	if err != nil {
+		return ContainerStatusReasonObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerStatusReasonObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerStatusReasonObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerStatusReasonObservable) Name() string {
+	return "k8s.container.status.reason"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerStatusReasonObservable) Unit() string {
+	return "{container}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerStatusReasonObservable) Description() string {
+	return "Describes the number of K8s containers that are currently in a state for a given reason."
+}
+
 // ContainerStatusState is an instrument used to record metric values conforming
 // to the "k8s.container.status.state" semantic conventions. It represents the
 // describes the number of K8s containers that are currently in a given state.
@@ -2266,6 +3165,66 @@ func (m ContainerStatusState) AddSet(ctx context.Context, incr int64, set attrib
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerStatusStateObservable is an instrument used to record metric values
+// conforming to the "k8s.container.status.state" semantic conventions. It
+// represents the describes the number of K8s containers that are currently in a
+// given state.
+type ContainerStatusStateObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerStatusStateObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes the number of K8s containers that are currently in a given state."),
+	metric.WithUnit("{container}"),
+}
+
+// NewContainerStatusStateObservable returns a new ContainerStatusStateObservable
+// instrument.
+func NewContainerStatusStateObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerStatusStateObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerStatusStateObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerStatusStateObservableOpts
+	} else {
+		opt = append(opt, newContainerStatusStateObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.status.state",
+		opt...,
+	)
+	if err != nil {
+		return ContainerStatusStateObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerStatusStateObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerStatusStateObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerStatusStateObservable) Name() string {
+	return "k8s.container.status.state"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerStatusStateObservable) Unit() string {
+	return "{container}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerStatusStateObservable) Description() string {
+	return "Describes the number of K8s containers that are currently in a given state."
+}
+
 // ContainerStorageLimit is an instrument used to record metric values conforming
 // to the "k8s.container.storage.limit" semantic conventions. It represents the
 // maximum storage resource limit set for the container.
@@ -2372,6 +3331,65 @@ func (m ContainerStorageLimit) AddSet(ctx context.Context, incr int64, set attri
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ContainerStorageLimitObservable is an instrument used to record metric values
+// conforming to the "k8s.container.storage.limit" semantic conventions. It
+// represents the maximum storage resource limit set for the container.
+type ContainerStorageLimitObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerStorageLimitObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Maximum storage resource limit set for the container."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerStorageLimitObservable returns a new
+// ContainerStorageLimitObservable instrument.
+func NewContainerStorageLimitObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerStorageLimitObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerStorageLimitObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerStorageLimitObservableOpts
+	} else {
+		opt = append(opt, newContainerStorageLimitObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.storage.limit",
+		opt...,
+	)
+	if err != nil {
+		return ContainerStorageLimitObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerStorageLimitObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerStorageLimitObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerStorageLimitObservable) Name() string {
+	return "k8s.container.storage.limit"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerStorageLimitObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerStorageLimitObservable) Description() string {
+	return "Maximum storage resource limit set for the container."
 }
 
 // ContainerStorageRequest is an instrument used to record metric values
@@ -2482,6 +3500,65 @@ func (m ContainerStorageRequest) AddSet(ctx context.Context, incr int64, set att
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ContainerStorageRequestObservable is an instrument used to record metric
+// values conforming to the "k8s.container.storage.request" semantic conventions.
+// It represents the storage resource requested for the container.
+type ContainerStorageRequestObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newContainerStorageRequestObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Storage resource requested for the container."),
+	metric.WithUnit("By"),
+}
+
+// NewContainerStorageRequestObservable returns a new
+// ContainerStorageRequestObservable instrument.
+func NewContainerStorageRequestObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ContainerStorageRequestObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContainerStorageRequestObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContainerStorageRequestObservableOpts
+	} else {
+		opt = append(opt, newContainerStorageRequestObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.container.storage.request",
+		opt...,
+	)
+	if err != nil {
+		return ContainerStorageRequestObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ContainerStorageRequestObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContainerStorageRequestObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContainerStorageRequestObservable) Name() string {
+	return "k8s.container.storage.request"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContainerStorageRequestObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContainerStorageRequestObservable) Description() string {
+	return "Storage resource requested for the container."
+}
+
 // CronJobJobActive is an instrument used to record metric values conforming to
 // the "k8s.cronjob.job.active" semantic conventions. It represents the number of
 // actively running jobs for a cronjob.
@@ -2590,6 +3667,65 @@ func (m CronJobJobActive) AddSet(ctx context.Context, incr int64, set attribute.
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// CronJobJobActiveObservable is an instrument used to record metric values
+// conforming to the "k8s.cronjob.job.active" semantic conventions. It represents
+// the number of actively running jobs for a cronjob.
+type CronJobJobActiveObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newCronJobJobActiveObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of actively running jobs for a cronjob."),
+	metric.WithUnit("{job}"),
+}
+
+// NewCronJobJobActiveObservable returns a new CronJobJobActiveObservable
+// instrument.
+func NewCronJobJobActiveObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (CronJobJobActiveObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CronJobJobActiveObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCronJobJobActiveObservableOpts
+	} else {
+		opt = append(opt, newCronJobJobActiveObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.cronjob.job.active",
+		opt...,
+	)
+	if err != nil {
+		return CronJobJobActiveObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return CronJobJobActiveObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CronJobJobActiveObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CronJobJobActiveObservable) Name() string {
+	return "k8s.cronjob.job.active"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CronJobJobActiveObservable) Unit() string {
+	return "{job}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CronJobJobActiveObservable) Description() string {
+	return "The number of actively running jobs for a cronjob."
 }
 
 // DaemonSetNodeCurrentScheduled is an instrument used to record metric values
@@ -2704,6 +3840,66 @@ func (m DaemonSetNodeCurrentScheduled) AddSet(ctx context.Context, incr int64, s
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// DaemonSetNodeCurrentScheduledObservable is an instrument used to record metric
+// values conforming to the "k8s.daemonset.node.current_scheduled" semantic
+// conventions. It represents the number of nodes that are running at least 1
+// daemon pod and are supposed to run the daemon pod.
+type DaemonSetNodeCurrentScheduledObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDaemonSetNodeCurrentScheduledObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of nodes that are running at least 1 daemon pod and are supposed to run the daemon pod."),
+	metric.WithUnit("{node}"),
+}
+
+// NewDaemonSetNodeCurrentScheduledObservable returns a new
+// DaemonSetNodeCurrentScheduledObservable instrument.
+func NewDaemonSetNodeCurrentScheduledObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DaemonSetNodeCurrentScheduledObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DaemonSetNodeCurrentScheduledObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDaemonSetNodeCurrentScheduledObservableOpts
+	} else {
+		opt = append(opt, newDaemonSetNodeCurrentScheduledObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.daemonset.node.current_scheduled",
+		opt...,
+	)
+	if err != nil {
+		return DaemonSetNodeCurrentScheduledObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DaemonSetNodeCurrentScheduledObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DaemonSetNodeCurrentScheduledObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DaemonSetNodeCurrentScheduledObservable) Name() string {
+	return "k8s.daemonset.node.current_scheduled"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DaemonSetNodeCurrentScheduledObservable) Unit() string {
+	return "{node}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DaemonSetNodeCurrentScheduledObservable) Description() string {
+	return "Number of nodes that are running at least 1 daemon pod and are supposed to run the daemon pod."
+}
+
 // DaemonSetNodeDesiredScheduled is an instrument used to record metric values
 // conforming to the "k8s.daemonset.node.desired_scheduled" semantic conventions.
 // It represents the number of nodes that should be running the daemon pod
@@ -2814,6 +4010,66 @@ func (m DaemonSetNodeDesiredScheduled) AddSet(ctx context.Context, incr int64, s
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// DaemonSetNodeDesiredScheduledObservable is an instrument used to record metric
+// values conforming to the "k8s.daemonset.node.desired_scheduled" semantic
+// conventions. It represents the number of nodes that should be running the
+// daemon pod (including nodes currently running the daemon pod).
+type DaemonSetNodeDesiredScheduledObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDaemonSetNodeDesiredScheduledObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of nodes that should be running the daemon pod (including nodes currently running the daemon pod)."),
+	metric.WithUnit("{node}"),
+}
+
+// NewDaemonSetNodeDesiredScheduledObservable returns a new
+// DaemonSetNodeDesiredScheduledObservable instrument.
+func NewDaemonSetNodeDesiredScheduledObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DaemonSetNodeDesiredScheduledObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DaemonSetNodeDesiredScheduledObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDaemonSetNodeDesiredScheduledObservableOpts
+	} else {
+		opt = append(opt, newDaemonSetNodeDesiredScheduledObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.daemonset.node.desired_scheduled",
+		opt...,
+	)
+	if err != nil {
+		return DaemonSetNodeDesiredScheduledObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DaemonSetNodeDesiredScheduledObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DaemonSetNodeDesiredScheduledObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DaemonSetNodeDesiredScheduledObservable) Name() string {
+	return "k8s.daemonset.node.desired_scheduled"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DaemonSetNodeDesiredScheduledObservable) Unit() string {
+	return "{node}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DaemonSetNodeDesiredScheduledObservable) Description() string {
+	return "Number of nodes that should be running the daemon pod (including nodes currently running the daemon pod)."
 }
 
 // DaemonSetNodeMisscheduled is an instrument used to record metric values
@@ -2928,6 +4184,66 @@ func (m DaemonSetNodeMisscheduled) AddSet(ctx context.Context, incr int64, set a
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// DaemonSetNodeMisscheduledObservable is an instrument used to record metric
+// values conforming to the "k8s.daemonset.node.misscheduled" semantic
+// conventions. It represents the number of nodes that are running the daemon
+// pod, but are not supposed to run the daemon pod.
+type DaemonSetNodeMisscheduledObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDaemonSetNodeMisscheduledObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of nodes that are running the daemon pod, but are not supposed to run the daemon pod."),
+	metric.WithUnit("{node}"),
+}
+
+// NewDaemonSetNodeMisscheduledObservable returns a new
+// DaemonSetNodeMisscheduledObservable instrument.
+func NewDaemonSetNodeMisscheduledObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DaemonSetNodeMisscheduledObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DaemonSetNodeMisscheduledObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDaemonSetNodeMisscheduledObservableOpts
+	} else {
+		opt = append(opt, newDaemonSetNodeMisscheduledObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.daemonset.node.misscheduled",
+		opt...,
+	)
+	if err != nil {
+		return DaemonSetNodeMisscheduledObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DaemonSetNodeMisscheduledObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DaemonSetNodeMisscheduledObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DaemonSetNodeMisscheduledObservable) Name() string {
+	return "k8s.daemonset.node.misscheduled"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DaemonSetNodeMisscheduledObservable) Unit() string {
+	return "{node}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DaemonSetNodeMisscheduledObservable) Description() string {
+	return "Number of nodes that are running the daemon pod, but are not supposed to run the daemon pod."
+}
+
 // DaemonSetNodeReady is an instrument used to record metric values conforming to
 // the "k8s.daemonset.node.ready" semantic conventions. It represents the number
 // of nodes that should be running the daemon pod and have one or more of the
@@ -3037,6 +4353,66 @@ func (m DaemonSetNodeReady) AddSet(ctx context.Context, incr int64, set attribut
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// DaemonSetNodeReadyObservable is an instrument used to record metric values
+// conforming to the "k8s.daemonset.node.ready" semantic conventions. It
+// represents the number of nodes that should be running the daemon pod and have
+// one or more of the daemon pod running and ready.
+type DaemonSetNodeReadyObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDaemonSetNodeReadyObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of nodes that should be running the daemon pod and have one or more of the daemon pod running and ready."),
+	metric.WithUnit("{node}"),
+}
+
+// NewDaemonSetNodeReadyObservable returns a new DaemonSetNodeReadyObservable
+// instrument.
+func NewDaemonSetNodeReadyObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DaemonSetNodeReadyObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DaemonSetNodeReadyObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDaemonSetNodeReadyObservableOpts
+	} else {
+		opt = append(opt, newDaemonSetNodeReadyObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.daemonset.node.ready",
+		opt...,
+	)
+	if err != nil {
+		return DaemonSetNodeReadyObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DaemonSetNodeReadyObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DaemonSetNodeReadyObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DaemonSetNodeReadyObservable) Name() string {
+	return "k8s.daemonset.node.ready"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DaemonSetNodeReadyObservable) Unit() string {
+	return "{node}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DaemonSetNodeReadyObservable) Description() string {
+	return "Number of nodes that should be running the daemon pod and have one or more of the daemon pod running and ready."
 }
 
 // DeploymentPodAvailable is an instrument used to record metric values
@@ -3150,6 +4526,66 @@ func (m DeploymentPodAvailable) AddSet(ctx context.Context, incr int64, set attr
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// DeploymentPodAvailableObservable is an instrument used to record metric values
+// conforming to the "k8s.deployment.pod.available" semantic conventions. It
+// represents the total number of available replica pods (ready for at least
+// minReadySeconds) targeted by this deployment.
+type DeploymentPodAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDeploymentPodAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this deployment."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewDeploymentPodAvailableObservable returns a new
+// DeploymentPodAvailableObservable instrument.
+func NewDeploymentPodAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DeploymentPodAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DeploymentPodAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDeploymentPodAvailableObservableOpts
+	} else {
+		opt = append(opt, newDeploymentPodAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.deployment.pod.available",
+		opt...,
+	)
+	if err != nil {
+		return DeploymentPodAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DeploymentPodAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DeploymentPodAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DeploymentPodAvailableObservable) Name() string {
+	return "k8s.deployment.pod.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DeploymentPodAvailableObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DeploymentPodAvailableObservable) Description() string {
+	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this deployment."
+}
+
 // DeploymentPodDesired is an instrument used to record metric values conforming
 // to the "k8s.deployment.pod.desired" semantic conventions. It represents the
 // number of desired replica pods in this deployment.
@@ -3258,6 +4694,65 @@ func (m DeploymentPodDesired) AddSet(ctx context.Context, incr int64, set attrib
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// DeploymentPodDesiredObservable is an instrument used to record metric values
+// conforming to the "k8s.deployment.pod.desired" semantic conventions. It
+// represents the number of desired replica pods in this deployment.
+type DeploymentPodDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newDeploymentPodDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this deployment."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewDeploymentPodDesiredObservable returns a new DeploymentPodDesiredObservable
+// instrument.
+func NewDeploymentPodDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (DeploymentPodDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DeploymentPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDeploymentPodDesiredObservableOpts
+	} else {
+		opt = append(opt, newDeploymentPodDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.deployment.pod.desired",
+		opt...,
+	)
+	if err != nil {
+		return DeploymentPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return DeploymentPodDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DeploymentPodDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DeploymentPodDesiredObservable) Name() string {
+	return "k8s.deployment.pod.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DeploymentPodDesiredObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DeploymentPodDesiredObservable) Description() string {
+	return "Number of desired replica pods in this deployment."
 }
 
 // HPAMetricTargetCPUAverageUtilization is an instrument used to record metric
@@ -3404,6 +4899,82 @@ func (HPAMetricTargetCPUAverageUtilization) AttrContainerName(val string) attrib
 // semantic convention. It represents the type of metric source for the
 // horizontal pod autoscaler.
 func (HPAMetricTargetCPUAverageUtilization) AttrHPAMetricType(val string) attribute.KeyValue {
+	return attribute.String("k8s.hpa.metric.type", val)
+}
+
+// HPAMetricTargetCPUAverageUtilizationObservable is an instrument used to record
+// metric values conforming to the
+// "k8s.hpa.metric.target.cpu.average_utilization" semantic conventions. It
+// represents the target average utilization, in percentage, for CPU resource in
+// HPA config.
+type HPAMetricTargetCPUAverageUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newHPAMetricTargetCPUAverageUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Target average utilization, in percentage, for CPU resource in HPA config."),
+	metric.WithUnit("1"),
+}
+
+// NewHPAMetricTargetCPUAverageUtilizationObservable returns a new
+// HPAMetricTargetCPUAverageUtilizationObservable instrument.
+func NewHPAMetricTargetCPUAverageUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (HPAMetricTargetCPUAverageUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAMetricTargetCPUAverageUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAMetricTargetCPUAverageUtilizationObservableOpts
+	} else {
+		opt = append(opt, newHPAMetricTargetCPUAverageUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.hpa.metric.target.cpu.average_utilization",
+		opt...,
+	)
+	if err != nil {
+		return HPAMetricTargetCPUAverageUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return HPAMetricTargetCPUAverageUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAMetricTargetCPUAverageUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAMetricTargetCPUAverageUtilizationObservable) Name() string {
+	return "k8s.hpa.metric.target.cpu.average_utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAMetricTargetCPUAverageUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAMetricTargetCPUAverageUtilizationObservable) Description() string {
+	return "Target average utilization, in percentage, for CPU resource in HPA config."
+}
+
+// AttrContainerName returns an optional attribute for the "k8s.container.name"
+// semantic convention. It represents the name of the Container from Pod
+// specification, must be unique within a Pod. Container runtime usually uses
+// different globally unique name (`container.name`).
+func (HPAMetricTargetCPUAverageUtilizationObservable) AttrContainerName(val string) attribute.KeyValue {
+	return attribute.String("k8s.container.name", val)
+}
+
+// AttrHPAMetricType returns an optional attribute for the "k8s.hpa.metric.type"
+// semantic convention. It represents the type of metric source for the
+// horizontal pod autoscaler.
+func (HPAMetricTargetCPUAverageUtilizationObservable) AttrHPAMetricType(val string) attribute.KeyValue {
 	return attribute.String("k8s.hpa.metric.type", val)
 }
 
@@ -3554,6 +5125,81 @@ func (HPAMetricTargetCPUAverageValue) AttrHPAMetricType(val string) attribute.Ke
 	return attribute.String("k8s.hpa.metric.type", val)
 }
 
+// HPAMetricTargetCPUAverageValueObservable is an instrument used to record
+// metric values conforming to the "k8s.hpa.metric.target.cpu.average_value"
+// semantic conventions. It represents the target average value for CPU resource
+// in HPA config.
+type HPAMetricTargetCPUAverageValueObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newHPAMetricTargetCPUAverageValueObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Target average value for CPU resource in HPA config."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewHPAMetricTargetCPUAverageValueObservable returns a new
+// HPAMetricTargetCPUAverageValueObservable instrument.
+func NewHPAMetricTargetCPUAverageValueObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (HPAMetricTargetCPUAverageValueObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAMetricTargetCPUAverageValueObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAMetricTargetCPUAverageValueObservableOpts
+	} else {
+		opt = append(opt, newHPAMetricTargetCPUAverageValueObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.hpa.metric.target.cpu.average_value",
+		opt...,
+	)
+	if err != nil {
+		return HPAMetricTargetCPUAverageValueObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return HPAMetricTargetCPUAverageValueObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAMetricTargetCPUAverageValueObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAMetricTargetCPUAverageValueObservable) Name() string {
+	return "k8s.hpa.metric.target.cpu.average_value"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAMetricTargetCPUAverageValueObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAMetricTargetCPUAverageValueObservable) Description() string {
+	return "Target average value for CPU resource in HPA config."
+}
+
+// AttrContainerName returns an optional attribute for the "k8s.container.name"
+// semantic convention. It represents the name of the Container from Pod
+// specification, must be unique within a Pod. Container runtime usually uses
+// different globally unique name (`container.name`).
+func (HPAMetricTargetCPUAverageValueObservable) AttrContainerName(val string) attribute.KeyValue {
+	return attribute.String("k8s.container.name", val)
+}
+
+// AttrHPAMetricType returns an optional attribute for the "k8s.hpa.metric.type"
+// semantic convention. It represents the type of metric source for the
+// horizontal pod autoscaler.
+func (HPAMetricTargetCPUAverageValueObservable) AttrHPAMetricType(val string) attribute.KeyValue {
+	return attribute.String("k8s.hpa.metric.type", val)
+}
+
 // HPAMetricTargetCPUValue is an instrument used to record metric values
 // conforming to the "k8s.hpa.metric.target.cpu.value" semantic conventions. It
 // represents the target value for CPU resource in HPA config.
@@ -3699,6 +5345,80 @@ func (HPAMetricTargetCPUValue) AttrHPAMetricType(val string) attribute.KeyValue 
 	return attribute.String("k8s.hpa.metric.type", val)
 }
 
+// HPAMetricTargetCPUValueObservable is an instrument used to record metric
+// values conforming to the "k8s.hpa.metric.target.cpu.value" semantic
+// conventions. It represents the target value for CPU resource in HPA config.
+type HPAMetricTargetCPUValueObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newHPAMetricTargetCPUValueObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Target value for CPU resource in HPA config."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewHPAMetricTargetCPUValueObservable returns a new
+// HPAMetricTargetCPUValueObservable instrument.
+func NewHPAMetricTargetCPUValueObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (HPAMetricTargetCPUValueObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAMetricTargetCPUValueObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAMetricTargetCPUValueObservableOpts
+	} else {
+		opt = append(opt, newHPAMetricTargetCPUValueObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.hpa.metric.target.cpu.value",
+		opt...,
+	)
+	if err != nil {
+		return HPAMetricTargetCPUValueObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return HPAMetricTargetCPUValueObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAMetricTargetCPUValueObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAMetricTargetCPUValueObservable) Name() string {
+	return "k8s.hpa.metric.target.cpu.value"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAMetricTargetCPUValueObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAMetricTargetCPUValueObservable) Description() string {
+	return "Target value for CPU resource in HPA config."
+}
+
+// AttrContainerName returns an optional attribute for the "k8s.container.name"
+// semantic convention. It represents the name of the Container from Pod
+// specification, must be unique within a Pod. Container runtime usually uses
+// different globally unique name (`container.name`).
+func (HPAMetricTargetCPUValueObservable) AttrContainerName(val string) attribute.KeyValue {
+	return attribute.String("k8s.container.name", val)
+}
+
+// AttrHPAMetricType returns an optional attribute for the "k8s.hpa.metric.type"
+// semantic convention. It represents the type of metric source for the
+// horizontal pod autoscaler.
+func (HPAMetricTargetCPUValueObservable) AttrHPAMetricType(val string) attribute.KeyValue {
+	return attribute.String("k8s.hpa.metric.type", val)
+}
+
 // HPAPodCurrent is an instrument used to record metric values conforming to the
 // "k8s.hpa.pod.current" semantic conventions. It represents the current number
 // of replica pods managed by this horizontal pod autoscaler, as last seen by the
@@ -3808,6 +5528,65 @@ func (m HPAPodCurrent) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// HPAPodCurrentObservable is an instrument used to record metric values
+// conforming to the "k8s.hpa.pod.current" semantic conventions. It represents
+// the current number of replica pods managed by this horizontal pod autoscaler,
+// as last seen by the autoscaler.
+type HPAPodCurrentObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newHPAPodCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewHPAPodCurrentObservable returns a new HPAPodCurrentObservable instrument.
+func NewHPAPodCurrentObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (HPAPodCurrentObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAPodCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAPodCurrentObservableOpts
+	} else {
+		opt = append(opt, newHPAPodCurrentObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.hpa.pod.current",
+		opt...,
+	)
+	if err != nil {
+		return HPAPodCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return HPAPodCurrentObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAPodCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAPodCurrentObservable) Name() string {
+	return "k8s.hpa.pod.current"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAPodCurrentObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAPodCurrentObservable) Description() string {
+	return "Current number of replica pods managed by this horizontal pod autoscaler, as last seen by the autoscaler."
 }
 
 // HPAPodDesired is an instrument used to record metric values conforming to the
@@ -3921,6 +5700,65 @@ func (m HPAPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// HPAPodDesiredObservable is an instrument used to record metric values
+// conforming to the "k8s.hpa.pod.desired" semantic conventions. It represents
+// the desired number of replica pods managed by this horizontal pod autoscaler,
+// as last calculated by the autoscaler.
+type HPAPodDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newHPAPodDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewHPAPodDesiredObservable returns a new HPAPodDesiredObservable instrument.
+func NewHPAPodDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (HPAPodDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAPodDesiredObservableOpts
+	} else {
+		opt = append(opt, newHPAPodDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.hpa.pod.desired",
+		opt...,
+	)
+	if err != nil {
+		return HPAPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return HPAPodDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAPodDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAPodDesiredObservable) Name() string {
+	return "k8s.hpa.pod.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAPodDesiredObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAPodDesiredObservable) Description() string {
+	return "Desired number of replica pods managed by this horizontal pod autoscaler, as last calculated by the autoscaler."
+}
+
 // HPAPodMax is an instrument used to record metric values conforming to the
 // "k8s.hpa.pod.max" semantic conventions. It represents the upper limit for the
 // number of replica pods to which the autoscaler can scale up.
@@ -4029,6 +5867,64 @@ func (m HPAPodMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// HPAPodMaxObservable is an instrument used to record metric values conforming
+// to the "k8s.hpa.pod.max" semantic conventions. It represents the upper limit
+// for the number of replica pods to which the autoscaler can scale up.
+type HPAPodMaxObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newHPAPodMaxObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The upper limit for the number of replica pods to which the autoscaler can scale up."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewHPAPodMaxObservable returns a new HPAPodMaxObservable instrument.
+func NewHPAPodMaxObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (HPAPodMaxObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAPodMaxObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAPodMaxObservableOpts
+	} else {
+		opt = append(opt, newHPAPodMaxObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.hpa.pod.max",
+		opt...,
+	)
+	if err != nil {
+		return HPAPodMaxObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return HPAPodMaxObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAPodMaxObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAPodMaxObservable) Name() string {
+	return "k8s.hpa.pod.max"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAPodMaxObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAPodMaxObservable) Description() string {
+	return "The upper limit for the number of replica pods to which the autoscaler can scale up."
 }
 
 // HPAPodMin is an instrument used to record metric values conforming to the
@@ -4141,6 +6037,64 @@ func (m HPAPodMin) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// HPAPodMinObservable is an instrument used to record metric values conforming
+// to the "k8s.hpa.pod.min" semantic conventions. It represents the lower limit
+// for the number of replica pods to which the autoscaler can scale down.
+type HPAPodMinObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newHPAPodMinObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The lower limit for the number of replica pods to which the autoscaler can scale down."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewHPAPodMinObservable returns a new HPAPodMinObservable instrument.
+func NewHPAPodMinObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (HPAPodMinObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return HPAPodMinObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newHPAPodMinObservableOpts
+	} else {
+		opt = append(opt, newHPAPodMinObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.hpa.pod.min",
+		opt...,
+	)
+	if err != nil {
+		return HPAPodMinObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return HPAPodMinObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m HPAPodMinObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (HPAPodMinObservable) Name() string {
+	return "k8s.hpa.pod.min"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (HPAPodMinObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (HPAPodMinObservable) Description() string {
+	return "The lower limit for the number of replica pods to which the autoscaler can scale down."
+}
+
 // JobPodActive is an instrument used to record metric values conforming to the
 // "k8s.job.pod.active" semantic conventions. It represents the number of pending
 // and actively running pods for a job.
@@ -4249,6 +6203,64 @@ func (m JobPodActive) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// JobPodActiveObservable is an instrument used to record metric values
+// conforming to the "k8s.job.pod.active" semantic conventions. It represents the
+// number of pending and actively running pods for a job.
+type JobPodActiveObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newJobPodActiveObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of pending and actively running pods for a job."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewJobPodActiveObservable returns a new JobPodActiveObservable instrument.
+func NewJobPodActiveObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (JobPodActiveObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return JobPodActiveObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newJobPodActiveObservableOpts
+	} else {
+		opt = append(opt, newJobPodActiveObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.job.pod.active",
+		opt...,
+	)
+	if err != nil {
+		return JobPodActiveObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return JobPodActiveObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m JobPodActiveObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (JobPodActiveObservable) Name() string {
+	return "k8s.job.pod.active"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (JobPodActiveObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (JobPodActiveObservable) Description() string {
+	return "The number of pending and actively running pods for a job."
 }
 
 // JobPodDesiredSuccessful is an instrument used to record metric values
@@ -4362,6 +6374,66 @@ func (m JobPodDesiredSuccessful) AddSet(ctx context.Context, incr int64, set att
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// JobPodDesiredSuccessfulObservable is an instrument used to record metric
+// values conforming to the "k8s.job.pod.desired_successful" semantic
+// conventions. It represents the desired number of successfully finished pods
+// the job should be run with.
+type JobPodDesiredSuccessfulObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newJobPodDesiredSuccessfulObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The desired number of successfully finished pods the job should be run with."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewJobPodDesiredSuccessfulObservable returns a new
+// JobPodDesiredSuccessfulObservable instrument.
+func NewJobPodDesiredSuccessfulObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (JobPodDesiredSuccessfulObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return JobPodDesiredSuccessfulObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newJobPodDesiredSuccessfulObservableOpts
+	} else {
+		opt = append(opt, newJobPodDesiredSuccessfulObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.job.pod.desired_successful",
+		opt...,
+	)
+	if err != nil {
+		return JobPodDesiredSuccessfulObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return JobPodDesiredSuccessfulObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m JobPodDesiredSuccessfulObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (JobPodDesiredSuccessfulObservable) Name() string {
+	return "k8s.job.pod.desired_successful"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (JobPodDesiredSuccessfulObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (JobPodDesiredSuccessfulObservable) Description() string {
+	return "The desired number of successfully finished pods the job should be run with."
+}
+
 // JobPodFailed is an instrument used to record metric values conforming to the
 // "k8s.job.pod.failed" semantic conventions. It represents the number of pods
 // which reached phase Failed for a job.
@@ -4470,6 +6542,64 @@ func (m JobPodFailed) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// JobPodFailedObservable is an instrument used to record metric values
+// conforming to the "k8s.job.pod.failed" semantic conventions. It represents the
+// number of pods which reached phase Failed for a job.
+type JobPodFailedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newJobPodFailedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of pods which reached phase Failed for a job."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewJobPodFailedObservable returns a new JobPodFailedObservable instrument.
+func NewJobPodFailedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (JobPodFailedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return JobPodFailedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newJobPodFailedObservableOpts
+	} else {
+		opt = append(opt, newJobPodFailedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.job.pod.failed",
+		opt...,
+	)
+	if err != nil {
+		return JobPodFailedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return JobPodFailedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m JobPodFailedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (JobPodFailedObservable) Name() string {
+	return "k8s.job.pod.failed"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (JobPodFailedObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (JobPodFailedObservable) Description() string {
+	return "The number of pods which reached phase Failed for a job."
 }
 
 // JobPodMaxParallel is an instrument used to record metric values conforming to
@@ -4582,6 +6712,66 @@ func (m JobPodMaxParallel) AddSet(ctx context.Context, incr int64, set attribute
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// JobPodMaxParallelObservable is an instrument used to record metric values
+// conforming to the "k8s.job.pod.max_parallel" semantic conventions. It
+// represents the max desired number of pods the job should run at any given
+// time.
+type JobPodMaxParallelObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newJobPodMaxParallelObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The max desired number of pods the job should run at any given time."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewJobPodMaxParallelObservable returns a new JobPodMaxParallelObservable
+// instrument.
+func NewJobPodMaxParallelObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (JobPodMaxParallelObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return JobPodMaxParallelObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newJobPodMaxParallelObservableOpts
+	} else {
+		opt = append(opt, newJobPodMaxParallelObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.job.pod.max_parallel",
+		opt...,
+	)
+	if err != nil {
+		return JobPodMaxParallelObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return JobPodMaxParallelObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m JobPodMaxParallelObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (JobPodMaxParallelObservable) Name() string {
+	return "k8s.job.pod.max_parallel"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (JobPodMaxParallelObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (JobPodMaxParallelObservable) Description() string {
+	return "The max desired number of pods the job should run at any given time."
+}
+
 // JobPodSuccessful is an instrument used to record metric values conforming to
 // the "k8s.job.pod.successful" semantic conventions. It represents the number of
 // pods which reached phase Succeeded for a job.
@@ -4690,6 +6880,65 @@ func (m JobPodSuccessful) AddSet(ctx context.Context, incr int64, set attribute.
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// JobPodSuccessfulObservable is an instrument used to record metric values
+// conforming to the "k8s.job.pod.successful" semantic conventions. It represents
+// the number of pods which reached phase Succeeded for a job.
+type JobPodSuccessfulObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newJobPodSuccessfulObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of pods which reached phase Succeeded for a job."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewJobPodSuccessfulObservable returns a new JobPodSuccessfulObservable
+// instrument.
+func NewJobPodSuccessfulObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (JobPodSuccessfulObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return JobPodSuccessfulObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newJobPodSuccessfulObservableOpts
+	} else {
+		opt = append(opt, newJobPodSuccessfulObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.job.pod.successful",
+		opt...,
+	)
+	if err != nil {
+		return JobPodSuccessfulObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return JobPodSuccessfulObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m JobPodSuccessfulObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (JobPodSuccessfulObservable) Name() string {
+	return "k8s.job.pod.successful"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (JobPodSuccessfulObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (JobPodSuccessfulObservable) Description() string {
+	return "The number of pods which reached phase Succeeded for a job."
 }
 
 // NamespacePhase is an instrument used to record metric values conforming to the
@@ -4808,6 +7057,64 @@ func (m NamespacePhase) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NamespacePhaseObservable is an instrument used to record metric values
+// conforming to the "k8s.namespace.phase" semantic conventions. It represents
+// the describes number of K8s namespaces that are currently in a given phase.
+type NamespacePhaseObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNamespacePhaseObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes number of K8s namespaces that are currently in a given phase."),
+	metric.WithUnit("{namespace}"),
+}
+
+// NewNamespacePhaseObservable returns a new NamespacePhaseObservable instrument.
+func NewNamespacePhaseObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NamespacePhaseObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NamespacePhaseObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNamespacePhaseObservableOpts
+	} else {
+		opt = append(opt, newNamespacePhaseObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.namespace.phase",
+		opt...,
+	)
+	if err != nil {
+		return NamespacePhaseObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NamespacePhaseObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NamespacePhaseObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NamespacePhaseObservable) Name() string {
+	return "k8s.namespace.phase"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NamespacePhaseObservable) Unit() string {
+	return "{namespace}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NamespacePhaseObservable) Description() string {
+	return "Describes number of K8s namespaces that are currently in a given phase."
 }
 
 // NodeConditionStatus is an instrument used to record metric values conforming
@@ -4942,6 +7249,65 @@ func (m NodeConditionStatus) AddSet(ctx context.Context, incr int64, set attribu
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// NodeConditionStatusObservable is an instrument used to record metric values
+// conforming to the "k8s.node.condition.status" semantic conventions. It
+// represents the describes the condition of a particular Node.
+type NodeConditionStatusObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeConditionStatusObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes the condition of a particular Node."),
+	metric.WithUnit("{node}"),
+}
+
+// NewNodeConditionStatusObservable returns a new NodeConditionStatusObservable
+// instrument.
+func NewNodeConditionStatusObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeConditionStatusObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeConditionStatusObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeConditionStatusObservableOpts
+	} else {
+		opt = append(opt, newNodeConditionStatusObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.condition.status",
+		opt...,
+	)
+	if err != nil {
+		return NodeConditionStatusObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeConditionStatusObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeConditionStatusObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeConditionStatusObservable) Name() string {
+	return "k8s.node.condition.status"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeConditionStatusObservable) Unit() string {
+	return "{node}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeConditionStatusObservable) Description() string {
+	return "Describes the condition of a particular Node."
+}
+
 // NodeCPUAllocatable is an instrument used to record metric values conforming to
 // the "k8s.node.cpu.allocatable" semantic conventions. It represents the amount
 // of cpu allocatable on the node.
@@ -5040,6 +7406,65 @@ func (m NodeCPUAllocatable) AddSet(ctx context.Context, incr int64, set attribut
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodeCPUAllocatableObservable is an instrument used to record metric values
+// conforming to the "k8s.node.cpu.allocatable" semantic conventions. It
+// represents the amount of cpu allocatable on the node.
+type NodeCPUAllocatableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeCPUAllocatableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Amount of cpu allocatable on the node."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewNodeCPUAllocatableObservable returns a new NodeCPUAllocatableObservable
+// instrument.
+func NewNodeCPUAllocatableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeCPUAllocatableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeCPUAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeCPUAllocatableObservableOpts
+	} else {
+		opt = append(opt, newNodeCPUAllocatableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.cpu.allocatable",
+		opt...,
+	)
+	if err != nil {
+		return NodeCPUAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeCPUAllocatableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeCPUAllocatableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeCPUAllocatableObservable) Name() string {
+	return "k8s.node.cpu.allocatable"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeCPUAllocatableObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeCPUAllocatableObservable) Description() string {
+	return "Amount of cpu allocatable on the node."
 }
 
 // NodeCPUTime is an instrument used to record metric values conforming to the
@@ -5144,6 +7569,64 @@ func (m NodeCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
+}
+
+// NodeCPUTimeObservable is an instrument used to record metric values conforming
+// to the "k8s.node.cpu.time" semantic conventions. It represents the total CPU
+// time consumed.
+type NodeCPUTimeObservable struct {
+	metric.Float64ObservableCounter
+}
+
+var newNodeCPUTimeObservableOpts = []metric.Float64ObservableCounterOption{
+	metric.WithDescription("Total CPU time consumed."),
+	metric.WithUnit("s"),
+}
+
+// NewNodeCPUTimeObservable returns a new NodeCPUTimeObservable instrument.
+func NewNodeCPUTimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableCounterOption,
+) (NodeCPUTimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeCPUTimeObservable{noop.Float64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeCPUTimeObservableOpts
+	} else {
+		opt = append(opt, newNodeCPUTimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableCounter(
+		"k8s.node.cpu.time",
+		opt...,
+	)
+	if err != nil {
+		return NodeCPUTimeObservable{noop.Float64ObservableCounter{}}, err
+	}
+	return NodeCPUTimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeCPUTimeObservable) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeCPUTimeObservable) Name() string {
+	return "k8s.node.cpu.time"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeCPUTimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeCPUTimeObservable) Description() string {
+	return "Total CPU time consumed."
 }
 
 // NodeCPUUsage is an instrument used to record metric values conforming to the
@@ -5252,6 +7735,65 @@ func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Se
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
+// NodeCPUUsageObservable is an instrument used to record metric values
+// conforming to the "k8s.node.cpu.usage" semantic conventions. It represents the
+// node's CPU usage, measured in cpus. Range from 0 to the number of allocatable
+// CPUs.
+type NodeCPUUsageObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newNodeCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Node's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewNodeCPUUsageObservable returns a new NodeCPUUsageObservable instrument.
+func NewNodeCPUUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (NodeCPUUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeCPUUsageObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeCPUUsageObservableOpts
+	} else {
+		opt = append(opt, newNodeCPUUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.node.cpu.usage",
+		opt...,
+	)
+	if err != nil {
+		return NodeCPUUsageObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return NodeCPUUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeCPUUsageObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeCPUUsageObservable) Name() string {
+	return "k8s.node.cpu.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeCPUUsageObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeCPUUsageObservable) Description() string {
+	return "Node's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."
+}
+
 // NodeEphemeralStorageAllocatable is an instrument used to record metric values
 // conforming to the "k8s.node.ephemeral_storage.allocatable" semantic
 // conventions. It represents the amount of ephemeral-storage allocatable on the
@@ -5352,6 +7894,66 @@ func (m NodeEphemeralStorageAllocatable) AddSet(ctx context.Context, incr int64,
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodeEphemeralStorageAllocatableObservable is an instrument used to record
+// metric values conforming to the "k8s.node.ephemeral_storage.allocatable"
+// semantic conventions. It represents the amount of ephemeral-storage
+// allocatable on the node.
+type NodeEphemeralStorageAllocatableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeEphemeralStorageAllocatableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Amount of ephemeral-storage allocatable on the node."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeEphemeralStorageAllocatableObservable returns a new
+// NodeEphemeralStorageAllocatableObservable instrument.
+func NewNodeEphemeralStorageAllocatableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeEphemeralStorageAllocatableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeEphemeralStorageAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeEphemeralStorageAllocatableObservableOpts
+	} else {
+		opt = append(opt, newNodeEphemeralStorageAllocatableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.ephemeral_storage.allocatable",
+		opt...,
+	)
+	if err != nil {
+		return NodeEphemeralStorageAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeEphemeralStorageAllocatableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeEphemeralStorageAllocatableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeEphemeralStorageAllocatableObservable) Name() string {
+	return "k8s.node.ephemeral_storage.allocatable"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeEphemeralStorageAllocatableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeEphemeralStorageAllocatableObservable) Description() string {
+	return "Amount of ephemeral-storage allocatable on the node."
 }
 
 // NodeFilesystemAvailable is an instrument used to record metric values
@@ -5470,6 +8072,65 @@ func (m NodeFilesystemAvailable) AddSet(ctx context.Context, incr int64, set att
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// NodeFilesystemAvailableObservable is an instrument used to record metric
+// values conforming to the "k8s.node.filesystem.available" semantic conventions.
+// It represents the node filesystem available bytes.
+type NodeFilesystemAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeFilesystemAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node filesystem available bytes."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeFilesystemAvailableObservable returns a new
+// NodeFilesystemAvailableObservable instrument.
+func NewNodeFilesystemAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeFilesystemAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeFilesystemAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeFilesystemAvailableObservableOpts
+	} else {
+		opt = append(opt, newNodeFilesystemAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.filesystem.available",
+		opt...,
+	)
+	if err != nil {
+		return NodeFilesystemAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeFilesystemAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeFilesystemAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeFilesystemAvailableObservable) Name() string {
+	return "k8s.node.filesystem.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeFilesystemAvailableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeFilesystemAvailableObservable) Description() string {
+	return "Node filesystem available bytes."
+}
+
 // NodeFilesystemCapacity is an instrument used to record metric values
 // conforming to the "k8s.node.filesystem.capacity" semantic conventions. It
 // represents the node filesystem capacity.
@@ -5584,6 +8245,65 @@ func (m NodeFilesystemCapacity) AddSet(ctx context.Context, incr int64, set attr
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodeFilesystemCapacityObservable is an instrument used to record metric values
+// conforming to the "k8s.node.filesystem.capacity" semantic conventions. It
+// represents the node filesystem capacity.
+type NodeFilesystemCapacityObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeFilesystemCapacityObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node filesystem capacity."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeFilesystemCapacityObservable returns a new
+// NodeFilesystemCapacityObservable instrument.
+func NewNodeFilesystemCapacityObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeFilesystemCapacityObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeFilesystemCapacityObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeFilesystemCapacityObservableOpts
+	} else {
+		opt = append(opt, newNodeFilesystemCapacityObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.filesystem.capacity",
+		opt...,
+	)
+	if err != nil {
+		return NodeFilesystemCapacityObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeFilesystemCapacityObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeFilesystemCapacityObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeFilesystemCapacityObservable) Name() string {
+	return "k8s.node.filesystem.capacity"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeFilesystemCapacityObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeFilesystemCapacityObservable) Description() string {
+	return "Node filesystem capacity."
 }
 
 // NodeFilesystemUsage is an instrument used to record metric values conforming
@@ -5706,6 +8426,65 @@ func (m NodeFilesystemUsage) AddSet(ctx context.Context, incr int64, set attribu
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// NodeFilesystemUsageObservable is an instrument used to record metric values
+// conforming to the "k8s.node.filesystem.usage" semantic conventions. It
+// represents the node filesystem usage.
+type NodeFilesystemUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeFilesystemUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node filesystem usage."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeFilesystemUsageObservable returns a new NodeFilesystemUsageObservable
+// instrument.
+func NewNodeFilesystemUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeFilesystemUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeFilesystemUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeFilesystemUsageObservableOpts
+	} else {
+		opt = append(opt, newNodeFilesystemUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.filesystem.usage",
+		opt...,
+	)
+	if err != nil {
+		return NodeFilesystemUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeFilesystemUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeFilesystemUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeFilesystemUsageObservable) Name() string {
+	return "k8s.node.filesystem.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeFilesystemUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeFilesystemUsageObservable) Description() string {
+	return "Node filesystem usage."
+}
+
 // NodeMemoryAllocatable is an instrument used to record metric values conforming
 // to the "k8s.node.memory.allocatable" semantic conventions. It represents the
 // amount of memory allocatable on the node.
@@ -5804,6 +8583,65 @@ func (m NodeMemoryAllocatable) AddSet(ctx context.Context, incr int64, set attri
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodeMemoryAllocatableObservable is an instrument used to record metric values
+// conforming to the "k8s.node.memory.allocatable" semantic conventions. It
+// represents the amount of memory allocatable on the node.
+type NodeMemoryAllocatableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeMemoryAllocatableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Amount of memory allocatable on the node."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeMemoryAllocatableObservable returns a new
+// NodeMemoryAllocatableObservable instrument.
+func NewNodeMemoryAllocatableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeMemoryAllocatableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeMemoryAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeMemoryAllocatableObservableOpts
+	} else {
+		opt = append(opt, newNodeMemoryAllocatableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.memory.allocatable",
+		opt...,
+	)
+	if err != nil {
+		return NodeMemoryAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeMemoryAllocatableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeMemoryAllocatableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeMemoryAllocatableObservable) Name() string {
+	return "k8s.node.memory.allocatable"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeMemoryAllocatableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeMemoryAllocatableObservable) Description() string {
+	return "Amount of memory allocatable on the node."
 }
 
 // NodeMemoryAvailable is an instrument used to record metric values conforming
@@ -5920,6 +8758,65 @@ func (m NodeMemoryAvailable) AddSet(ctx context.Context, incr int64, set attribu
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodeMemoryAvailableObservable is an instrument used to record metric values
+// conforming to the "k8s.node.memory.available" semantic conventions. It
+// represents the node memory available.
+type NodeMemoryAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeMemoryAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node memory available."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeMemoryAvailableObservable returns a new NodeMemoryAvailableObservable
+// instrument.
+func NewNodeMemoryAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeMemoryAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeMemoryAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeMemoryAvailableObservableOpts
+	} else {
+		opt = append(opt, newNodeMemoryAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.memory.available",
+		opt...,
+	)
+	if err != nil {
+		return NodeMemoryAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeMemoryAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeMemoryAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeMemoryAvailableObservable) Name() string {
+	return "k8s.node.memory.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeMemoryAvailableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeMemoryAvailableObservable) Description() string {
+	return "Node memory available."
 }
 
 // NodeMemoryPagingFaults is an instrument used to record metric values
@@ -6059,6 +8956,72 @@ func (NodeMemoryPagingFaults) AttrSystemPagingFaultType(val SystemPagingFaultTyp
 	return attribute.String("system.paging.fault.type", string(val))
 }
 
+// NodeMemoryPagingFaultsObservable is an instrument used to record metric values
+// conforming to the "k8s.node.memory.paging.faults" semantic conventions. It
+// represents the node memory paging faults.
+type NodeMemoryPagingFaultsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNodeMemoryPagingFaultsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Node memory paging faults."),
+	metric.WithUnit("{fault}"),
+}
+
+// NewNodeMemoryPagingFaultsObservable returns a new
+// NodeMemoryPagingFaultsObservable instrument.
+func NewNodeMemoryPagingFaultsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NodeMemoryPagingFaultsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeMemoryPagingFaultsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeMemoryPagingFaultsObservableOpts
+	} else {
+		opt = append(opt, newNodeMemoryPagingFaultsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"k8s.node.memory.paging.faults",
+		opt...,
+	)
+	if err != nil {
+		return NodeMemoryPagingFaultsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NodeMemoryPagingFaultsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeMemoryPagingFaultsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeMemoryPagingFaultsObservable) Name() string {
+	return "k8s.node.memory.paging.faults"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeMemoryPagingFaultsObservable) Unit() string {
+	return "{fault}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeMemoryPagingFaultsObservable) Description() string {
+	return "Node memory paging faults."
+}
+
+// AttrSystemPagingFaultType returns an optional attribute for the
+// "system.paging.fault.type" semantic convention. It represents the paging fault
+// type.
+func (NodeMemoryPagingFaultsObservable) AttrSystemPagingFaultType(val SystemPagingFaultTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.fault.type", string(val))
+}
+
 // NodeMemoryRss is an instrument used to record metric values conforming to the
 // "k8s.node.memory.rss" semantic conventions. It represents the node memory RSS.
 type NodeMemoryRss struct {
@@ -6174,6 +9137,64 @@ func (m NodeMemoryRss) AddSet(ctx context.Context, incr int64, set attribute.Set
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// NodeMemoryRssObservable is an instrument used to record metric values
+// conforming to the "k8s.node.memory.rss" semantic conventions. It represents
+// the node memory RSS.
+type NodeMemoryRssObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeMemoryRssObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node memory RSS."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeMemoryRssObservable returns a new NodeMemoryRssObservable instrument.
+func NewNodeMemoryRssObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeMemoryRssObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeMemoryRssObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeMemoryRssObservableOpts
+	} else {
+		opt = append(opt, newNodeMemoryRssObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.memory.rss",
+		opt...,
+	)
+	if err != nil {
+		return NodeMemoryRssObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeMemoryRssObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeMemoryRssObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeMemoryRssObservable) Name() string {
+	return "k8s.node.memory.rss"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeMemoryRssObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeMemoryRssObservable) Description() string {
+	return "Node memory RSS."
+}
+
 // NodeMemoryUsage is an instrument used to record metric values conforming to
 // the "k8s.node.memory.usage" semantic conventions. It represents the memory
 // usage of the Node.
@@ -6276,6 +9297,65 @@ func (m NodeMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// NodeMemoryUsageObservable is an instrument used to record metric values
+// conforming to the "k8s.node.memory.usage" semantic conventions. It represents
+// the memory usage of the Node.
+type NodeMemoryUsageObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newNodeMemoryUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Memory usage of the Node."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeMemoryUsageObservable returns a new NodeMemoryUsageObservable
+// instrument.
+func NewNodeMemoryUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (NodeMemoryUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeMemoryUsageObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeMemoryUsageObservableOpts
+	} else {
+		opt = append(opt, newNodeMemoryUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.node.memory.usage",
+		opt...,
+	)
+	if err != nil {
+		return NodeMemoryUsageObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return NodeMemoryUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeMemoryUsageObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeMemoryUsageObservable) Name() string {
+	return "k8s.node.memory.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeMemoryUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeMemoryUsageObservable) Description() string {
+	return "Memory usage of the Node."
 }
 
 // NodeMemoryWorkingSet is an instrument used to record metric values conforming
@@ -6392,6 +9472,65 @@ func (m NodeMemoryWorkingSet) AddSet(ctx context.Context, incr int64, set attrib
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodeMemoryWorkingSetObservable is an instrument used to record metric values
+// conforming to the "k8s.node.memory.working_set" semantic conventions. It
+// represents the node memory working set.
+type NodeMemoryWorkingSetObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeMemoryWorkingSetObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node memory working set."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeMemoryWorkingSetObservable returns a new NodeMemoryWorkingSetObservable
+// instrument.
+func NewNodeMemoryWorkingSetObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeMemoryWorkingSetObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeMemoryWorkingSetObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeMemoryWorkingSetObservableOpts
+	} else {
+		opt = append(opt, newNodeMemoryWorkingSetObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.memory.working_set",
+		opt...,
+	)
+	if err != nil {
+		return NodeMemoryWorkingSetObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeMemoryWorkingSetObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeMemoryWorkingSetObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeMemoryWorkingSetObservable) Name() string {
+	return "k8s.node.memory.working_set"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeMemoryWorkingSetObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeMemoryWorkingSetObservable) Description() string {
+	return "Node memory working set."
 }
 
 // NodeNetworkErrors is an instrument used to record metric values conforming to
@@ -6517,6 +9656,79 @@ func (NodeNetworkErrors) AttrNetworkInterfaceName(val string) attribute.KeyValue
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
 func (NodeNetworkErrors) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
+// NodeNetworkErrorsObservable is an instrument used to record metric values
+// conforming to the "k8s.node.network.errors" semantic conventions. It
+// represents the node network errors.
+type NodeNetworkErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNodeNetworkErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Node network errors."),
+	metric.WithUnit("{error}"),
+}
+
+// NewNodeNetworkErrorsObservable returns a new NodeNetworkErrorsObservable
+// instrument.
+func NewNodeNetworkErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NodeNetworkErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeNetworkErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeNetworkErrorsObservableOpts
+	} else {
+		opt = append(opt, newNodeNetworkErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"k8s.node.network.errors",
+		opt...,
+	)
+	if err != nil {
+		return NodeNetworkErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NodeNetworkErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeNetworkErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeNetworkErrorsObservable) Name() string {
+	return "k8s.node.network.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeNetworkErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeNetworkErrorsObservable) Description() string {
+	return "Node network errors."
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (NodeNetworkErrorsObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NodeNetworkErrorsObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
@@ -6646,6 +9858,78 @@ func (NodeNetworkIO) AttrNetworkIODirection(val NetworkIODirectionAttr) attribut
 	return attribute.String("network.io.direction", string(val))
 }
 
+// NodeNetworkIOObservable is an instrument used to record metric values
+// conforming to the "k8s.node.network.io" semantic conventions. It represents
+// the network bytes for the Node.
+type NodeNetworkIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNodeNetworkIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Network bytes for the Node."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeNetworkIOObservable returns a new NodeNetworkIOObservable instrument.
+func NewNodeNetworkIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NodeNetworkIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeNetworkIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeNetworkIOObservableOpts
+	} else {
+		opt = append(opt, newNodeNetworkIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"k8s.node.network.io",
+		opt...,
+	)
+	if err != nil {
+		return NodeNetworkIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NodeNetworkIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeNetworkIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeNetworkIOObservable) Name() string {
+	return "k8s.node.network.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeNetworkIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeNetworkIOObservable) Description() string {
+	return "Network bytes for the Node."
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (NodeNetworkIOObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NodeNetworkIOObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
 // NodePodAllocatable is an instrument used to record metric values conforming to
 // the "k8s.node.pod.allocatable" semantic conventions. It represents the amount
 // of pods allocatable on the node.
@@ -6744,6 +10028,65 @@ func (m NodePodAllocatable) AddSet(ctx context.Context, incr int64, set attribut
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// NodePodAllocatableObservable is an instrument used to record metric values
+// conforming to the "k8s.node.pod.allocatable" semantic conventions. It
+// represents the amount of pods allocatable on the node.
+type NodePodAllocatableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodePodAllocatableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Amount of pods allocatable on the node."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewNodePodAllocatableObservable returns a new NodePodAllocatableObservable
+// instrument.
+func NewNodePodAllocatableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodePodAllocatableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodePodAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodePodAllocatableObservableOpts
+	} else {
+		opt = append(opt, newNodePodAllocatableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.pod.allocatable",
+		opt...,
+	)
+	if err != nil {
+		return NodePodAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodePodAllocatableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodePodAllocatableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodePodAllocatableObservable) Name() string {
+	return "k8s.node.pod.allocatable"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodePodAllocatableObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodePodAllocatableObservable) Description() string {
+	return "Amount of pods allocatable on the node."
 }
 
 // NodeSystemContainerCPUTime is an instrument used to record metric values
@@ -6861,6 +10204,65 @@ func (m NodeSystemContainerCPUTime) AddSet(ctx context.Context, incr float64, se
 	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
+// NodeSystemContainerCPUTimeObservable is an instrument used to record metric
+// values conforming to the "k8s.node.system_container.cpu.time" semantic
+// conventions. It represents the node's system container CPU time.
+type NodeSystemContainerCPUTimeObservable struct {
+	metric.Float64ObservableCounter
+}
+
+var newNodeSystemContainerCPUTimeObservableOpts = []metric.Float64ObservableCounterOption{
+	metric.WithDescription("Node's system container CPU time."),
+	metric.WithUnit("s"),
+}
+
+// NewNodeSystemContainerCPUTimeObservable returns a new
+// NodeSystemContainerCPUTimeObservable instrument.
+func NewNodeSystemContainerCPUTimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableCounterOption,
+) (NodeSystemContainerCPUTimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeSystemContainerCPUTimeObservable{noop.Float64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeSystemContainerCPUTimeObservableOpts
+	} else {
+		opt = append(opt, newNodeSystemContainerCPUTimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableCounter(
+		"k8s.node.system_container.cpu.time",
+		opt...,
+	)
+	if err != nil {
+		return NodeSystemContainerCPUTimeObservable{noop.Float64ObservableCounter{}}, err
+	}
+	return NodeSystemContainerCPUTimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeSystemContainerCPUTimeObservable) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeSystemContainerCPUTimeObservable) Name() string {
+	return "k8s.node.system_container.cpu.time"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeSystemContainerCPUTimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeSystemContainerCPUTimeObservable) Description() string {
+	return "Node's system container CPU time."
+}
+
 // NodeSystemContainerCPUUsage is an instrument used to record metric values
 // conforming to the "k8s.node.system_container.cpu.usage" semantic conventions.
 // It represents the node's system container CPU usage, measured in cpus.
@@ -6974,6 +10376,66 @@ func (m NodeSystemContainerCPUUsage) RecordSet(ctx context.Context, val int64, s
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// NodeSystemContainerCPUUsageObservable is an instrument used to record metric
+// values conforming to the "k8s.node.system_container.cpu.usage" semantic
+// conventions. It represents the node's system container CPU usage, measured in
+// cpus.
+type NodeSystemContainerCPUUsageObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newNodeSystemContainerCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Node's system container CPU usage, measured in cpus."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewNodeSystemContainerCPUUsageObservable returns a new
+// NodeSystemContainerCPUUsageObservable instrument.
+func NewNodeSystemContainerCPUUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (NodeSystemContainerCPUUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeSystemContainerCPUUsageObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeSystemContainerCPUUsageObservableOpts
+	} else {
+		opt = append(opt, newNodeSystemContainerCPUUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.node.system_container.cpu.usage",
+		opt...,
+	)
+	if err != nil {
+		return NodeSystemContainerCPUUsageObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return NodeSystemContainerCPUUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeSystemContainerCPUUsageObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeSystemContainerCPUUsageObservable) Name() string {
+	return "k8s.node.system_container.cpu.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeSystemContainerCPUUsageObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeSystemContainerCPUUsageObservable) Description() string {
+	return "Node's system container CPU usage, measured in cpus."
 }
 
 // NodeSystemContainerMemoryUsage is an instrument used to record metric values
@@ -7091,6 +10553,65 @@ func (m NodeSystemContainerMemoryUsage) AddSet(ctx context.Context, incr int64, 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// NodeSystemContainerMemoryUsageObservable is an instrument used to record
+// metric values conforming to the "k8s.node.system_container.memory.usage"
+// semantic conventions. It represents the node's system container memory usage.
+type NodeSystemContainerMemoryUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeSystemContainerMemoryUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Node's system container memory usage."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeSystemContainerMemoryUsageObservable returns a new
+// NodeSystemContainerMemoryUsageObservable instrument.
+func NewNodeSystemContainerMemoryUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeSystemContainerMemoryUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeSystemContainerMemoryUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeSystemContainerMemoryUsageObservableOpts
+	} else {
+		opt = append(opt, newNodeSystemContainerMemoryUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.system_container.memory.usage",
+		opt...,
+	)
+	if err != nil {
+		return NodeSystemContainerMemoryUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeSystemContainerMemoryUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeSystemContainerMemoryUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeSystemContainerMemoryUsageObservable) Name() string {
+	return "k8s.node.system_container.memory.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeSystemContainerMemoryUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeSystemContainerMemoryUsageObservable) Description() string {
+	return "Node's system container memory usage."
+}
+
 // NodeSystemContainerMemoryWorkingSet is an instrument used to record metric
 // values conforming to the "k8s.node.system_container.memory.working_set"
 // semantic conventions. It represents the amount of working set memory.
@@ -7206,6 +10727,65 @@ func (m NodeSystemContainerMemoryWorkingSet) AddSet(ctx context.Context, incr in
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// NodeSystemContainerMemoryWorkingSetObservable is an instrument used to record
+// metric values conforming to the "k8s.node.system_container.memory.working_set"
+// semantic conventions. It represents the amount of working set memory.
+type NodeSystemContainerMemoryWorkingSetObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newNodeSystemContainerMemoryWorkingSetObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The amount of working set memory."),
+	metric.WithUnit("By"),
+}
+
+// NewNodeSystemContainerMemoryWorkingSetObservable returns a new
+// NodeSystemContainerMemoryWorkingSetObservable instrument.
+func NewNodeSystemContainerMemoryWorkingSetObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (NodeSystemContainerMemoryWorkingSetObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeSystemContainerMemoryWorkingSetObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeSystemContainerMemoryWorkingSetObservableOpts
+	} else {
+		opt = append(opt, newNodeSystemContainerMemoryWorkingSetObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.node.system_container.memory.working_set",
+		opt...,
+	)
+	if err != nil {
+		return NodeSystemContainerMemoryWorkingSetObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return NodeSystemContainerMemoryWorkingSetObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeSystemContainerMemoryWorkingSetObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeSystemContainerMemoryWorkingSetObservable) Name() string {
+	return "k8s.node.system_container.memory.working_set"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeSystemContainerMemoryWorkingSetObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeSystemContainerMemoryWorkingSetObservable) Description() string {
+	return "The amount of working set memory."
+}
+
 // NodeUptime is an instrument used to record metric values conforming to the
 // "k8s.node.uptime" semantic conventions. It represents the time the Node has
 // been running.
@@ -7312,6 +10892,64 @@ func (m NodeUptime) RecordSet(ctx context.Context, val float64, set attribute.Se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// NodeUptimeObservable is an instrument used to record metric values conforming
+// to the "k8s.node.uptime" semantic conventions. It represents the time the Node
+// has been running.
+type NodeUptimeObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newNodeUptimeObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The time the Node has been running."),
+	metric.WithUnit("s"),
+}
+
+// NewNodeUptimeObservable returns a new NodeUptimeObservable instrument.
+func NewNodeUptimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (NodeUptimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NodeUptimeObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNodeUptimeObservableOpts
+	} else {
+		opt = append(opt, newNodeUptimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"k8s.node.uptime",
+		opt...,
+	)
+	if err != nil {
+		return NodeUptimeObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return NodeUptimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NodeUptimeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NodeUptimeObservable) Name() string {
+	return "k8s.node.uptime"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NodeUptimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NodeUptimeObservable) Description() string {
+	return "The time the Node has been running."
 }
 
 // PersistentvolumeStatusPhase is an instrument used to record metric values
@@ -7447,6 +11085,65 @@ func (m PersistentvolumeStatusPhase) AddSet(ctx context.Context, incr int64, set
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PersistentvolumeStatusPhaseObservable is an instrument used to record metric
+// values conforming to the "k8s.persistentvolume.status.phase" semantic
+// conventions. It represents the number of PersistentVolumes in a given phase.
+type PersistentvolumeStatusPhaseObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPersistentvolumeStatusPhaseObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of PersistentVolumes in a given phase."),
+	metric.WithUnit("{persistentvolume}"),
+}
+
+// NewPersistentvolumeStatusPhaseObservable returns a new
+// PersistentvolumeStatusPhaseObservable instrument.
+func NewPersistentvolumeStatusPhaseObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PersistentvolumeStatusPhaseObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PersistentvolumeStatusPhaseObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPersistentvolumeStatusPhaseObservableOpts
+	} else {
+		opt = append(opt, newPersistentvolumeStatusPhaseObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.persistentvolume.status.phase",
+		opt...,
+	)
+	if err != nil {
+		return PersistentvolumeStatusPhaseObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PersistentvolumeStatusPhaseObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PersistentvolumeStatusPhaseObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PersistentvolumeStatusPhaseObservable) Name() string {
+	return "k8s.persistentvolume.status.phase"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PersistentvolumeStatusPhaseObservable) Unit() string {
+	return "{persistentvolume}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PersistentvolumeStatusPhaseObservable) Description() string {
+	return "Number of PersistentVolumes in a given phase."
+}
+
 // PersistentvolumeStorageCapacity is an instrument used to record metric values
 // conforming to the "k8s.persistentvolume.storage.capacity" semantic
 // conventions. It represents the storage capacity of the PersistentVolume.
@@ -7556,6 +11253,66 @@ func (m PersistentvolumeStorageCapacity) AddSet(ctx context.Context, incr int64,
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// PersistentvolumeStorageCapacityObservable is an instrument used to record
+// metric values conforming to the "k8s.persistentvolume.storage.capacity"
+// semantic conventions. It represents the storage capacity of the
+// PersistentVolume.
+type PersistentvolumeStorageCapacityObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPersistentvolumeStorageCapacityObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The storage capacity of the PersistentVolume."),
+	metric.WithUnit("By"),
+}
+
+// NewPersistentvolumeStorageCapacityObservable returns a new
+// PersistentvolumeStorageCapacityObservable instrument.
+func NewPersistentvolumeStorageCapacityObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PersistentvolumeStorageCapacityObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PersistentvolumeStorageCapacityObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPersistentvolumeStorageCapacityObservableOpts
+	} else {
+		opt = append(opt, newPersistentvolumeStorageCapacityObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.persistentvolume.storage.capacity",
+		opt...,
+	)
+	if err != nil {
+		return PersistentvolumeStorageCapacityObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PersistentvolumeStorageCapacityObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PersistentvolumeStorageCapacityObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PersistentvolumeStorageCapacityObservable) Name() string {
+	return "k8s.persistentvolume.storage.capacity"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PersistentvolumeStorageCapacityObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PersistentvolumeStorageCapacityObservable) Description() string {
+	return "The storage capacity of the PersistentVolume."
 }
 
 // PersistentvolumeclaimStatusPhase is an instrument used to record metric values
@@ -7693,6 +11450,66 @@ func (m PersistentvolumeclaimStatusPhase) AddSet(ctx context.Context, incr int64
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PersistentvolumeclaimStatusPhaseObservable is an instrument used to record
+// metric values conforming to the "k8s.persistentvolumeclaim.status.phase"
+// semantic conventions. It represents the number of PersistentVolumeClaims in a
+// given phase.
+type PersistentvolumeclaimStatusPhaseObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPersistentvolumeclaimStatusPhaseObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of PersistentVolumeClaims in a given phase."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
+// NewPersistentvolumeclaimStatusPhaseObservable returns a new
+// PersistentvolumeclaimStatusPhaseObservable instrument.
+func NewPersistentvolumeclaimStatusPhaseObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PersistentvolumeclaimStatusPhaseObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PersistentvolumeclaimStatusPhaseObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPersistentvolumeclaimStatusPhaseObservableOpts
+	} else {
+		opt = append(opt, newPersistentvolumeclaimStatusPhaseObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.persistentvolumeclaim.status.phase",
+		opt...,
+	)
+	if err != nil {
+		return PersistentvolumeclaimStatusPhaseObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PersistentvolumeclaimStatusPhaseObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PersistentvolumeclaimStatusPhaseObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PersistentvolumeclaimStatusPhaseObservable) Name() string {
+	return "k8s.persistentvolumeclaim.status.phase"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PersistentvolumeclaimStatusPhaseObservable) Unit() string {
+	return "{persistentvolumeclaim}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PersistentvolumeclaimStatusPhaseObservable) Description() string {
+	return "Number of PersistentVolumeClaims in a given phase."
+}
+
 // PersistentvolumeclaimStorageCapacity is an instrument used to record metric
 // values conforming to the "k8s.persistentvolumeclaim.storage.capacity" semantic
 // conventions. It represents the actual storage capacity provisioned for the
@@ -7809,6 +11626,66 @@ func (m PersistentvolumeclaimStorageCapacity) AddSet(ctx context.Context, incr i
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PersistentvolumeclaimStorageCapacityObservable is an instrument used to record
+// metric values conforming to the "k8s.persistentvolumeclaim.storage.capacity"
+// semantic conventions. It represents the actual storage capacity provisioned
+// for the PersistentVolumeClaim.
+type PersistentvolumeclaimStorageCapacityObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPersistentvolumeclaimStorageCapacityObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The actual storage capacity provisioned for the PersistentVolumeClaim."),
+	metric.WithUnit("By"),
+}
+
+// NewPersistentvolumeclaimStorageCapacityObservable returns a new
+// PersistentvolumeclaimStorageCapacityObservable instrument.
+func NewPersistentvolumeclaimStorageCapacityObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PersistentvolumeclaimStorageCapacityObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PersistentvolumeclaimStorageCapacityObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPersistentvolumeclaimStorageCapacityObservableOpts
+	} else {
+		opt = append(opt, newPersistentvolumeclaimStorageCapacityObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.persistentvolumeclaim.storage.capacity",
+		opt...,
+	)
+	if err != nil {
+		return PersistentvolumeclaimStorageCapacityObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PersistentvolumeclaimStorageCapacityObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PersistentvolumeclaimStorageCapacityObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PersistentvolumeclaimStorageCapacityObservable) Name() string {
+	return "k8s.persistentvolumeclaim.storage.capacity"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PersistentvolumeclaimStorageCapacityObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PersistentvolumeclaimStorageCapacityObservable) Description() string {
+	return "The actual storage capacity provisioned for the PersistentVolumeClaim."
+}
+
 // PersistentvolumeclaimStorageRequest is an instrument used to record metric
 // values conforming to the "k8s.persistentvolumeclaim.storage.request" semantic
 // conventions. It represents the storage requested by the PersistentVolumeClaim.
@@ -7920,6 +11797,66 @@ func (m PersistentvolumeclaimStorageRequest) AddSet(ctx context.Context, incr in
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PersistentvolumeclaimStorageRequestObservable is an instrument used to record
+// metric values conforming to the "k8s.persistentvolumeclaim.storage.request"
+// semantic conventions. It represents the storage requested by the
+// PersistentVolumeClaim.
+type PersistentvolumeclaimStorageRequestObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPersistentvolumeclaimStorageRequestObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The storage requested by the PersistentVolumeClaim."),
+	metric.WithUnit("By"),
+}
+
+// NewPersistentvolumeclaimStorageRequestObservable returns a new
+// PersistentvolumeclaimStorageRequestObservable instrument.
+func NewPersistentvolumeclaimStorageRequestObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PersistentvolumeclaimStorageRequestObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PersistentvolumeclaimStorageRequestObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPersistentvolumeclaimStorageRequestObservableOpts
+	} else {
+		opt = append(opt, newPersistentvolumeclaimStorageRequestObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.persistentvolumeclaim.storage.request",
+		opt...,
+	)
+	if err != nil {
+		return PersistentvolumeclaimStorageRequestObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PersistentvolumeclaimStorageRequestObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PersistentvolumeclaimStorageRequestObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PersistentvolumeclaimStorageRequestObservable) Name() string {
+	return "k8s.persistentvolumeclaim.storage.request"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PersistentvolumeclaimStorageRequestObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PersistentvolumeclaimStorageRequestObservable) Description() string {
+	return "The storage requested by the PersistentVolumeClaim."
+}
+
 // PodCPUTime is an instrument used to record metric values conforming to the
 // "k8s.pod.cpu.time" semantic conventions. It represents the total CPU time
 // consumed.
@@ -8022,6 +11959,64 @@ func (m PodCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Counter.Add(ctx, incr, *o...)
+}
+
+// PodCPUTimeObservable is an instrument used to record metric values conforming
+// to the "k8s.pod.cpu.time" semantic conventions. It represents the total CPU
+// time consumed.
+type PodCPUTimeObservable struct {
+	metric.Float64ObservableCounter
+}
+
+var newPodCPUTimeObservableOpts = []metric.Float64ObservableCounterOption{
+	metric.WithDescription("Total CPU time consumed."),
+	metric.WithUnit("s"),
+}
+
+// NewPodCPUTimeObservable returns a new PodCPUTimeObservable instrument.
+func NewPodCPUTimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableCounterOption,
+) (PodCPUTimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodCPUTimeObservable{noop.Float64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodCPUTimeObservableOpts
+	} else {
+		opt = append(opt, newPodCPUTimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableCounter(
+		"k8s.pod.cpu.time",
+		opt...,
+	)
+	if err != nil {
+		return PodCPUTimeObservable{noop.Float64ObservableCounter{}}, err
+	}
+	return PodCPUTimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodCPUTimeObservable) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodCPUTimeObservable) Name() string {
+	return "k8s.pod.cpu.time"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodCPUTimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodCPUTimeObservable) Description() string {
+	return "Total CPU time consumed."
 }
 
 // PodCPUUsage is an instrument used to record metric values conforming to the
@@ -8128,6 +12123,64 @@ func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// PodCPUUsageObservable is an instrument used to record metric values conforming
+// to the "k8s.pod.cpu.usage" semantic conventions. It represents the pod's CPU
+// usage, measured in cpus. Range from 0 to the number of allocatable CPUs.
+type PodCPUUsageObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPodCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Pod's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewPodCPUUsageObservable returns a new PodCPUUsageObservable instrument.
+func NewPodCPUUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PodCPUUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodCPUUsageObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodCPUUsageObservableOpts
+	} else {
+		opt = append(opt, newPodCPUUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.pod.cpu.usage",
+		opt...,
+	)
+	if err != nil {
+		return PodCPUUsageObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PodCPUUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodCPUUsageObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodCPUUsageObservable) Name() string {
+	return "k8s.pod.cpu.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodCPUUsageObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodCPUUsageObservable) Description() string {
+	return "Pod's CPU usage, measured in cpus. Range from 0 to the number of allocatable CPUs."
 }
 
 // PodFilesystemAvailable is an instrument used to record metric values
@@ -8246,6 +12299,65 @@ func (m PodFilesystemAvailable) AddSet(ctx context.Context, incr int64, set attr
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PodFilesystemAvailableObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.filesystem.available" semantic conventions. It
+// represents the pod filesystem available bytes.
+type PodFilesystemAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodFilesystemAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod filesystem available bytes."),
+	metric.WithUnit("By"),
+}
+
+// NewPodFilesystemAvailableObservable returns a new
+// PodFilesystemAvailableObservable instrument.
+func NewPodFilesystemAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodFilesystemAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodFilesystemAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodFilesystemAvailableObservableOpts
+	} else {
+		opt = append(opt, newPodFilesystemAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.filesystem.available",
+		opt...,
+	)
+	if err != nil {
+		return PodFilesystemAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodFilesystemAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodFilesystemAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodFilesystemAvailableObservable) Name() string {
+	return "k8s.pod.filesystem.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodFilesystemAvailableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodFilesystemAvailableObservable) Description() string {
+	return "Pod filesystem available bytes."
+}
+
 // PodFilesystemCapacity is an instrument used to record metric values conforming
 // to the "k8s.pod.filesystem.capacity" semantic conventions. It represents the
 // pod filesystem capacity.
@@ -8360,6 +12472,65 @@ func (m PodFilesystemCapacity) AddSet(ctx context.Context, incr int64, set attri
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// PodFilesystemCapacityObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.filesystem.capacity" semantic conventions. It
+// represents the pod filesystem capacity.
+type PodFilesystemCapacityObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodFilesystemCapacityObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod filesystem capacity."),
+	metric.WithUnit("By"),
+}
+
+// NewPodFilesystemCapacityObservable returns a new
+// PodFilesystemCapacityObservable instrument.
+func NewPodFilesystemCapacityObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodFilesystemCapacityObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodFilesystemCapacityObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodFilesystemCapacityObservableOpts
+	} else {
+		opt = append(opt, newPodFilesystemCapacityObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.filesystem.capacity",
+		opt...,
+	)
+	if err != nil {
+		return PodFilesystemCapacityObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodFilesystemCapacityObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodFilesystemCapacityObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodFilesystemCapacityObservable) Name() string {
+	return "k8s.pod.filesystem.capacity"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodFilesystemCapacityObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodFilesystemCapacityObservable) Description() string {
+	return "Pod filesystem capacity."
 }
 
 // PodFilesystemUsage is an instrument used to record metric values conforming to
@@ -8482,6 +12653,65 @@ func (m PodFilesystemUsage) AddSet(ctx context.Context, incr int64, set attribut
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PodFilesystemUsageObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.filesystem.usage" semantic conventions. It
+// represents the pod filesystem usage.
+type PodFilesystemUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodFilesystemUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod filesystem usage."),
+	metric.WithUnit("By"),
+}
+
+// NewPodFilesystemUsageObservable returns a new PodFilesystemUsageObservable
+// instrument.
+func NewPodFilesystemUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodFilesystemUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodFilesystemUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodFilesystemUsageObservableOpts
+	} else {
+		opt = append(opt, newPodFilesystemUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.filesystem.usage",
+		opt...,
+	)
+	if err != nil {
+		return PodFilesystemUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodFilesystemUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodFilesystemUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodFilesystemUsageObservable) Name() string {
+	return "k8s.pod.filesystem.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodFilesystemUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodFilesystemUsageObservable) Description() string {
+	return "Pod filesystem usage."
+}
+
 // PodMemoryAvailable is an instrument used to record metric values conforming to
 // the "k8s.pod.memory.available" semantic conventions. It represents the pod
 // memory available.
@@ -8596,6 +12826,65 @@ func (m PodMemoryAvailable) AddSet(ctx context.Context, incr int64, set attribut
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// PodMemoryAvailableObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.memory.available" semantic conventions. It
+// represents the pod memory available.
+type PodMemoryAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodMemoryAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod memory available."),
+	metric.WithUnit("By"),
+}
+
+// NewPodMemoryAvailableObservable returns a new PodMemoryAvailableObservable
+// instrument.
+func NewPodMemoryAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodMemoryAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodMemoryAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodMemoryAvailableObservableOpts
+	} else {
+		opt = append(opt, newPodMemoryAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.memory.available",
+		opt...,
+	)
+	if err != nil {
+		return PodMemoryAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodMemoryAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodMemoryAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodMemoryAvailableObservable) Name() string {
+	return "k8s.pod.memory.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodMemoryAvailableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodMemoryAvailableObservable) Description() string {
+	return "Pod memory available."
 }
 
 // PodMemoryPagingFaults is an instrument used to record metric values conforming
@@ -8735,6 +13024,72 @@ func (PodMemoryPagingFaults) AttrSystemPagingFaultType(val SystemPagingFaultType
 	return attribute.String("system.paging.fault.type", string(val))
 }
 
+// PodMemoryPagingFaultsObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.memory.paging.faults" semantic conventions. It
+// represents the pod memory paging faults.
+type PodMemoryPagingFaultsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPodMemoryPagingFaultsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Pod memory paging faults."),
+	metric.WithUnit("{fault}"),
+}
+
+// NewPodMemoryPagingFaultsObservable returns a new
+// PodMemoryPagingFaultsObservable instrument.
+func NewPodMemoryPagingFaultsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PodMemoryPagingFaultsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodMemoryPagingFaultsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodMemoryPagingFaultsObservableOpts
+	} else {
+		opt = append(opt, newPodMemoryPagingFaultsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"k8s.pod.memory.paging.faults",
+		opt...,
+	)
+	if err != nil {
+		return PodMemoryPagingFaultsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PodMemoryPagingFaultsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodMemoryPagingFaultsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodMemoryPagingFaultsObservable) Name() string {
+	return "k8s.pod.memory.paging.faults"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodMemoryPagingFaultsObservable) Unit() string {
+	return "{fault}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodMemoryPagingFaultsObservable) Description() string {
+	return "Pod memory paging faults."
+}
+
+// AttrSystemPagingFaultType returns an optional attribute for the
+// "system.paging.fault.type" semantic convention. It represents the paging fault
+// type.
+func (PodMemoryPagingFaultsObservable) AttrSystemPagingFaultType(val SystemPagingFaultTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.fault.type", string(val))
+}
+
 // PodMemoryRss is an instrument used to record metric values conforming to the
 // "k8s.pod.memory.rss" semantic conventions. It represents the pod memory RSS.
 type PodMemoryRss struct {
@@ -8850,6 +13205,64 @@ func (m PodMemoryRss) AddSet(ctx context.Context, incr int64, set attribute.Set)
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PodMemoryRssObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.memory.rss" semantic conventions. It represents the
+// pod memory RSS.
+type PodMemoryRssObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodMemoryRssObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod memory RSS."),
+	metric.WithUnit("By"),
+}
+
+// NewPodMemoryRssObservable returns a new PodMemoryRssObservable instrument.
+func NewPodMemoryRssObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodMemoryRssObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodMemoryRssObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodMemoryRssObservableOpts
+	} else {
+		opt = append(opt, newPodMemoryRssObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.memory.rss",
+		opt...,
+	)
+	if err != nil {
+		return PodMemoryRssObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodMemoryRssObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodMemoryRssObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodMemoryRssObservable) Name() string {
+	return "k8s.pod.memory.rss"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodMemoryRssObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodMemoryRssObservable) Description() string {
+	return "Pod memory RSS."
+}
+
 // PodMemoryUsage is an instrument used to record metric values conforming to the
 // "k8s.pod.memory.usage" semantic conventions. It represents the memory usage of
 // the Pod.
@@ -8952,6 +13365,64 @@ func (m PodMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// PodMemoryUsageObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.memory.usage" semantic conventions. It represents
+// the memory usage of the Pod.
+type PodMemoryUsageObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newPodMemoryUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Memory usage of the Pod."),
+	metric.WithUnit("By"),
+}
+
+// NewPodMemoryUsageObservable returns a new PodMemoryUsageObservable instrument.
+func NewPodMemoryUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (PodMemoryUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodMemoryUsageObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodMemoryUsageObservableOpts
+	} else {
+		opt = append(opt, newPodMemoryUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.pod.memory.usage",
+		opt...,
+	)
+	if err != nil {
+		return PodMemoryUsageObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return PodMemoryUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodMemoryUsageObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodMemoryUsageObservable) Name() string {
+	return "k8s.pod.memory.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodMemoryUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodMemoryUsageObservable) Description() string {
+	return "Memory usage of the Pod."
 }
 
 // PodMemoryWorkingSet is an instrument used to record metric values conforming
@@ -9068,6 +13539,65 @@ func (m PodMemoryWorkingSet) AddSet(ctx context.Context, incr int64, set attribu
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// PodMemoryWorkingSetObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.memory.working_set" semantic conventions. It
+// represents the pod memory working set.
+type PodMemoryWorkingSetObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodMemoryWorkingSetObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod memory working set."),
+	metric.WithUnit("By"),
+}
+
+// NewPodMemoryWorkingSetObservable returns a new PodMemoryWorkingSetObservable
+// instrument.
+func NewPodMemoryWorkingSetObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodMemoryWorkingSetObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodMemoryWorkingSetObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodMemoryWorkingSetObservableOpts
+	} else {
+		opt = append(opt, newPodMemoryWorkingSetObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.memory.working_set",
+		opt...,
+	)
+	if err != nil {
+		return PodMemoryWorkingSetObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodMemoryWorkingSetObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodMemoryWorkingSetObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodMemoryWorkingSetObservable) Name() string {
+	return "k8s.pod.memory.working_set"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodMemoryWorkingSetObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodMemoryWorkingSetObservable) Description() string {
+	return "Pod memory working set."
 }
 
 // PodNetworkErrors is an instrument used to record metric values conforming to
@@ -9196,6 +13726,79 @@ func (PodNetworkErrors) AttrNetworkIODirection(val NetworkIODirectionAttr) attri
 	return attribute.String("network.io.direction", string(val))
 }
 
+// PodNetworkErrorsObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.network.errors" semantic conventions. It represents
+// the pod network errors.
+type PodNetworkErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPodNetworkErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Pod network errors."),
+	metric.WithUnit("{error}"),
+}
+
+// NewPodNetworkErrorsObservable returns a new PodNetworkErrorsObservable
+// instrument.
+func NewPodNetworkErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PodNetworkErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodNetworkErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodNetworkErrorsObservableOpts
+	} else {
+		opt = append(opt, newPodNetworkErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"k8s.pod.network.errors",
+		opt...,
+	)
+	if err != nil {
+		return PodNetworkErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PodNetworkErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodNetworkErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodNetworkErrorsObservable) Name() string {
+	return "k8s.pod.network.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodNetworkErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodNetworkErrorsObservable) Description() string {
+	return "Pod network errors."
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (PodNetworkErrorsObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (PodNetworkErrorsObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
 // PodNetworkIO is an instrument used to record metric values conforming to the
 // "k8s.pod.network.io" semantic conventions. It represents the network bytes for
 // the Pod.
@@ -9319,6 +13922,78 @@ func (PodNetworkIO) AttrNetworkInterfaceName(val string) attribute.KeyValue {
 // "network.io.direction" semantic convention. It represents the network IO
 // operation direction.
 func (PodNetworkIO) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
+// PodNetworkIOObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.network.io" semantic conventions. It represents the
+// network bytes for the Pod.
+type PodNetworkIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPodNetworkIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Network bytes for the Pod."),
+	metric.WithUnit("By"),
+}
+
+// NewPodNetworkIOObservable returns a new PodNetworkIOObservable instrument.
+func NewPodNetworkIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PodNetworkIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodNetworkIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodNetworkIOObservableOpts
+	} else {
+		opt = append(opt, newPodNetworkIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"k8s.pod.network.io",
+		opt...,
+	)
+	if err != nil {
+		return PodNetworkIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PodNetworkIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodNetworkIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodNetworkIOObservable) Name() string {
+	return "k8s.pod.network.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodNetworkIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodNetworkIOObservable) Description() string {
+	return "Network bytes for the Pod."
+}
+
+// AttrNetworkInterfaceName returns an optional attribute for the
+// "network.interface.name" semantic convention. It represents the network
+// interface name.
+func (PodNetworkIOObservable) AttrNetworkInterfaceName(val string) attribute.KeyValue {
+	return attribute.String("network.interface.name", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (PodNetworkIOObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
 	return attribute.String("network.io.direction", string(val))
 }
 
@@ -9451,6 +14126,64 @@ func (m PodStatusPhase) AddSet(ctx context.Context, incr int64, set attribute.Se
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PodStatusPhaseObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.status.phase" semantic conventions. It represents
+// the describes number of K8s Pods that are currently in a given phase.
+type PodStatusPhaseObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodStatusPhaseObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes number of K8s Pods that are currently in a given phase."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewPodStatusPhaseObservable returns a new PodStatusPhaseObservable instrument.
+func NewPodStatusPhaseObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodStatusPhaseObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodStatusPhaseObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodStatusPhaseObservableOpts
+	} else {
+		opt = append(opt, newPodStatusPhaseObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.status.phase",
+		opt...,
+	)
+	if err != nil {
+		return PodStatusPhaseObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodStatusPhaseObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodStatusPhaseObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodStatusPhaseObservable) Name() string {
+	return "k8s.pod.status.phase"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodStatusPhaseObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodStatusPhaseObservable) Description() string {
+	return "Describes number of K8s Pods that are currently in a given phase."
+}
+
 // PodStatusReason is an instrument used to record metric values conforming to
 // the "k8s.pod.status.reason" semantic conventions. It represents the describes
 // the number of K8s Pods that are currently in a state for a given reason.
@@ -9580,6 +14313,66 @@ func (m PodStatusReason) AddSet(ctx context.Context, incr int64, set attribute.S
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// PodStatusReasonObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.status.reason" semantic conventions. It represents
+// the describes the number of K8s Pods that are currently in a state for a given
+// reason.
+type PodStatusReasonObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodStatusReasonObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Describes the number of K8s Pods that are currently in a state for a given reason."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewPodStatusReasonObservable returns a new PodStatusReasonObservable
+// instrument.
+func NewPodStatusReasonObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodStatusReasonObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodStatusReasonObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodStatusReasonObservableOpts
+	} else {
+		opt = append(opt, newPodStatusReasonObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.status.reason",
+		opt...,
+	)
+	if err != nil {
+		return PodStatusReasonObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodStatusReasonObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodStatusReasonObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodStatusReasonObservable) Name() string {
+	return "k8s.pod.status.reason"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodStatusReasonObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodStatusReasonObservable) Description() string {
+	return "Describes the number of K8s Pods that are currently in a state for a given reason."
+}
+
 // PodUptime is an instrument used to record metric values conforming to the
 // "k8s.pod.uptime" semantic conventions. It represents the time the Pod has been
 // running.
@@ -9686,6 +14479,64 @@ func (m PodUptime) RecordSet(ctx context.Context, val float64, set attribute.Set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// PodUptimeObservable is an instrument used to record metric values conforming
+// to the "k8s.pod.uptime" semantic conventions. It represents the time the Pod
+// has been running.
+type PodUptimeObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newPodUptimeObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The time the Pod has been running."),
+	metric.WithUnit("s"),
+}
+
+// NewPodUptimeObservable returns a new PodUptimeObservable instrument.
+func NewPodUptimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (PodUptimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodUptimeObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodUptimeObservableOpts
+	} else {
+		opt = append(opt, newPodUptimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"k8s.pod.uptime",
+		opt...,
+	)
+	if err != nil {
+		return PodUptimeObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return PodUptimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodUptimeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodUptimeObservable) Name() string {
+	return "k8s.pod.uptime"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodUptimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodUptimeObservable) Description() string {
+	return "The time the Pod has been running."
 }
 
 // PodVolumeAvailable is an instrument used to record metric values conforming to
@@ -9827,6 +14678,71 @@ func (m PodVolumeAvailable) AddSet(ctx context.Context, incr int64, set attribut
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
 // semantic convention. It represents the type of the K8s volume.
 func (PodVolumeAvailable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.volume.type", string(val))
+}
+
+// PodVolumeAvailableObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.volume.available" semantic conventions. It
+// represents the pod volume storage space available.
+type PodVolumeAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodVolumeAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod volume storage space available."),
+	metric.WithUnit("By"),
+}
+
+// NewPodVolumeAvailableObservable returns a new PodVolumeAvailableObservable
+// instrument.
+func NewPodVolumeAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodVolumeAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodVolumeAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodVolumeAvailableObservableOpts
+	} else {
+		opt = append(opt, newPodVolumeAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.volume.available",
+		opt...,
+	)
+	if err != nil {
+		return PodVolumeAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodVolumeAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodVolumeAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodVolumeAvailableObservable) Name() string {
+	return "k8s.pod.volume.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodVolumeAvailableObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodVolumeAvailableObservable) Description() string {
+	return "Pod volume storage space available."
+}
+
+// AttrVolumeType returns an optional attribute for the "k8s.volume.type"
+// semantic convention. It represents the type of the K8s volume.
+func (PodVolumeAvailableObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
 	return attribute.String("k8s.volume.type", string(val))
 }
 
@@ -9972,6 +14888,71 @@ func (PodVolumeCapacity) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
 	return attribute.String("k8s.volume.type", string(val))
 }
 
+// PodVolumeCapacityObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.volume.capacity" semantic conventions. It
+// represents the pod volume total capacity.
+type PodVolumeCapacityObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodVolumeCapacityObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod volume total capacity."),
+	metric.WithUnit("By"),
+}
+
+// NewPodVolumeCapacityObservable returns a new PodVolumeCapacityObservable
+// instrument.
+func NewPodVolumeCapacityObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodVolumeCapacityObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodVolumeCapacityObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodVolumeCapacityObservableOpts
+	} else {
+		opt = append(opt, newPodVolumeCapacityObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.volume.capacity",
+		opt...,
+	)
+	if err != nil {
+		return PodVolumeCapacityObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodVolumeCapacityObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodVolumeCapacityObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodVolumeCapacityObservable) Name() string {
+	return "k8s.pod.volume.capacity"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodVolumeCapacityObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodVolumeCapacityObservable) Description() string {
+	return "Pod volume total capacity."
+}
+
+// AttrVolumeType returns an optional attribute for the "k8s.volume.type"
+// semantic convention. It represents the type of the K8s volume.
+func (PodVolumeCapacityObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.volume.type", string(val))
+}
+
 // PodVolumeInodeCount is an instrument used to record metric values conforming
 // to the "k8s.pod.volume.inode.count" semantic conventions. It represents the
 // total inodes in the filesystem of the Pod's volume.
@@ -10114,6 +15095,71 @@ func (PodVolumeInodeCount) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue
 	return attribute.String("k8s.volume.type", string(val))
 }
 
+// PodVolumeInodeCountObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.volume.inode.count" semantic conventions. It
+// represents the total inodes in the filesystem of the Pod's volume.
+type PodVolumeInodeCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodVolumeInodeCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The total inodes in the filesystem of the Pod's volume."),
+	metric.WithUnit("{inode}"),
+}
+
+// NewPodVolumeInodeCountObservable returns a new PodVolumeInodeCountObservable
+// instrument.
+func NewPodVolumeInodeCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodVolumeInodeCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodVolumeInodeCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodVolumeInodeCountObservableOpts
+	} else {
+		opt = append(opt, newPodVolumeInodeCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.volume.inode.count",
+		opt...,
+	)
+	if err != nil {
+		return PodVolumeInodeCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodVolumeInodeCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodVolumeInodeCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodVolumeInodeCountObservable) Name() string {
+	return "k8s.pod.volume.inode.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodVolumeInodeCountObservable) Unit() string {
+	return "{inode}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodVolumeInodeCountObservable) Description() string {
+	return "The total inodes in the filesystem of the Pod's volume."
+}
+
+// AttrVolumeType returns an optional attribute for the "k8s.volume.type"
+// semantic convention. It represents the type of the K8s volume.
+func (PodVolumeInodeCountObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.volume.type", string(val))
+}
+
 // PodVolumeInodeFree is an instrument used to record metric values conforming to
 // the "k8s.pod.volume.inode.free" semantic conventions. It represents the free
 // inodes in the filesystem of the Pod's volume.
@@ -10253,6 +15299,71 @@ func (m PodVolumeInodeFree) AddSet(ctx context.Context, incr int64, set attribut
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
 // semantic convention. It represents the type of the K8s volume.
 func (PodVolumeInodeFree) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.volume.type", string(val))
+}
+
+// PodVolumeInodeFreeObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.volume.inode.free" semantic conventions. It
+// represents the free inodes in the filesystem of the Pod's volume.
+type PodVolumeInodeFreeObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodVolumeInodeFreeObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The free inodes in the filesystem of the Pod's volume."),
+	metric.WithUnit("{inode}"),
+}
+
+// NewPodVolumeInodeFreeObservable returns a new PodVolumeInodeFreeObservable
+// instrument.
+func NewPodVolumeInodeFreeObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodVolumeInodeFreeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodVolumeInodeFreeObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodVolumeInodeFreeObservableOpts
+	} else {
+		opt = append(opt, newPodVolumeInodeFreeObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.volume.inode.free",
+		opt...,
+	)
+	if err != nil {
+		return PodVolumeInodeFreeObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodVolumeInodeFreeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodVolumeInodeFreeObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodVolumeInodeFreeObservable) Name() string {
+	return "k8s.pod.volume.inode.free"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodVolumeInodeFreeObservable) Unit() string {
+	return "{inode}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodVolumeInodeFreeObservable) Description() string {
+	return "The free inodes in the filesystem of the Pod's volume."
+}
+
+// AttrVolumeType returns an optional attribute for the "k8s.volume.type"
+// semantic convention. It represents the type of the K8s volume.
+func (PodVolumeInodeFreeObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
 	return attribute.String("k8s.volume.type", string(val))
 }
 
@@ -10404,6 +15515,71 @@ func (PodVolumeInodeUsed) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue 
 	return attribute.String("k8s.volume.type", string(val))
 }
 
+// PodVolumeInodeUsedObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.volume.inode.used" semantic conventions. It
+// represents the inodes used by the filesystem of the Pod's volume.
+type PodVolumeInodeUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodVolumeInodeUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The inodes used by the filesystem of the Pod's volume."),
+	metric.WithUnit("{inode}"),
+}
+
+// NewPodVolumeInodeUsedObservable returns a new PodVolumeInodeUsedObservable
+// instrument.
+func NewPodVolumeInodeUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodVolumeInodeUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodVolumeInodeUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodVolumeInodeUsedObservableOpts
+	} else {
+		opt = append(opt, newPodVolumeInodeUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.volume.inode.used",
+		opt...,
+	)
+	if err != nil {
+		return PodVolumeInodeUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodVolumeInodeUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodVolumeInodeUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodVolumeInodeUsedObservable) Name() string {
+	return "k8s.pod.volume.inode.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodVolumeInodeUsedObservable) Unit() string {
+	return "{inode}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodVolumeInodeUsedObservable) Description() string {
+	return "The inodes used by the filesystem of the Pod's volume."
+}
+
+// AttrVolumeType returns an optional attribute for the "k8s.volume.type"
+// semantic convention. It represents the type of the K8s volume.
+func (PodVolumeInodeUsedObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.volume.type", string(val))
+}
+
 // PodVolumeUsage is an instrument used to record metric values conforming to the
 // "k8s.pod.volume.usage" semantic conventions. It represents the pod volume
 // usage.
@@ -10550,6 +15726,70 @@ func (PodVolumeUsage) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
 	return attribute.String("k8s.volume.type", string(val))
 }
 
+// PodVolumeUsageObservable is an instrument used to record metric values
+// conforming to the "k8s.pod.volume.usage" semantic conventions. It represents
+// the pod volume usage.
+type PodVolumeUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPodVolumeUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Pod volume usage."),
+	metric.WithUnit("By"),
+}
+
+// NewPodVolumeUsageObservable returns a new PodVolumeUsageObservable instrument.
+func NewPodVolumeUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PodVolumeUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PodVolumeUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPodVolumeUsageObservableOpts
+	} else {
+		opt = append(opt, newPodVolumeUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.pod.volume.usage",
+		opt...,
+	)
+	if err != nil {
+		return PodVolumeUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PodVolumeUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PodVolumeUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PodVolumeUsageObservable) Name() string {
+	return "k8s.pod.volume.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PodVolumeUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PodVolumeUsageObservable) Description() string {
+	return "Pod volume usage."
+}
+
+// AttrVolumeType returns an optional attribute for the "k8s.volume.type"
+// semantic convention. It represents the type of the K8s volume.
+func (PodVolumeUsageObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.volume.type", string(val))
+}
+
 // ReplicaSetPodAvailable is an instrument used to record metric values
 // conforming to the "k8s.replicaset.pod.available" semantic conventions. It
 // represents the total number of available replica pods (ready for at least
@@ -10661,6 +15901,66 @@ func (m ReplicaSetPodAvailable) AddSet(ctx context.Context, incr int64, set attr
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ReplicaSetPodAvailableObservable is an instrument used to record metric values
+// conforming to the "k8s.replicaset.pod.available" semantic conventions. It
+// represents the total number of available replica pods (ready for at least
+// minReadySeconds) targeted by this replicaset.
+type ReplicaSetPodAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newReplicaSetPodAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this replicaset."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewReplicaSetPodAvailableObservable returns a new
+// ReplicaSetPodAvailableObservable instrument.
+func NewReplicaSetPodAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ReplicaSetPodAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ReplicaSetPodAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newReplicaSetPodAvailableObservableOpts
+	} else {
+		opt = append(opt, newReplicaSetPodAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.replicaset.pod.available",
+		opt...,
+	)
+	if err != nil {
+		return ReplicaSetPodAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ReplicaSetPodAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ReplicaSetPodAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ReplicaSetPodAvailableObservable) Name() string {
+	return "k8s.replicaset.pod.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ReplicaSetPodAvailableObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ReplicaSetPodAvailableObservable) Description() string {
+	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this replicaset."
+}
+
 // ReplicaSetPodDesired is an instrument used to record metric values conforming
 // to the "k8s.replicaset.pod.desired" semantic conventions. It represents the
 // number of desired replica pods in this replicaset.
@@ -10769,6 +16069,65 @@ func (m ReplicaSetPodDesired) AddSet(ctx context.Context, incr int64, set attrib
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ReplicaSetPodDesiredObservable is an instrument used to record metric values
+// conforming to the "k8s.replicaset.pod.desired" semantic conventions. It
+// represents the number of desired replica pods in this replicaset.
+type ReplicaSetPodDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newReplicaSetPodDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this replicaset."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewReplicaSetPodDesiredObservable returns a new ReplicaSetPodDesiredObservable
+// instrument.
+func NewReplicaSetPodDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ReplicaSetPodDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ReplicaSetPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newReplicaSetPodDesiredObservableOpts
+	} else {
+		opt = append(opt, newReplicaSetPodDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.replicaset.pod.desired",
+		opt...,
+	)
+	if err != nil {
+		return ReplicaSetPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ReplicaSetPodDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ReplicaSetPodDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ReplicaSetPodDesiredObservable) Name() string {
+	return "k8s.replicaset.pod.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ReplicaSetPodDesiredObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ReplicaSetPodDesiredObservable) Description() string {
+	return "Number of desired replica pods in this replicaset."
 }
 
 // ReplicationControllerPodAvailable is an instrument used to record metric
@@ -10883,6 +16242,66 @@ func (m ReplicationControllerPodAvailable) AddSet(ctx context.Context, incr int6
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ReplicationControllerPodAvailableObservable is an instrument used to record
+// metric values conforming to the "k8s.replicationcontroller.pod.available"
+// semantic conventions. It represents the total number of available replica pods
+// (ready for at least minReadySeconds) targeted by this replication controller.
+type ReplicationControllerPodAvailableObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newReplicationControllerPodAvailableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Total number of available replica pods (ready for at least minReadySeconds) targeted by this replication controller."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewReplicationControllerPodAvailableObservable returns a new
+// ReplicationControllerPodAvailableObservable instrument.
+func NewReplicationControllerPodAvailableObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ReplicationControllerPodAvailableObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ReplicationControllerPodAvailableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newReplicationControllerPodAvailableObservableOpts
+	} else {
+		opt = append(opt, newReplicationControllerPodAvailableObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.replicationcontroller.pod.available",
+		opt...,
+	)
+	if err != nil {
+		return ReplicationControllerPodAvailableObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ReplicationControllerPodAvailableObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ReplicationControllerPodAvailableObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ReplicationControllerPodAvailableObservable) Name() string {
+	return "k8s.replicationcontroller.pod.available"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ReplicationControllerPodAvailableObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ReplicationControllerPodAvailableObservable) Description() string {
+	return "Total number of available replica pods (ready for at least minReadySeconds) targeted by this replication controller."
+}
+
 // ReplicationControllerPodDesired is an instrument used to record metric values
 // conforming to the "k8s.replicationcontroller.pod.desired" semantic
 // conventions. It represents the number of desired replica pods in this
@@ -10993,6 +16412,66 @@ func (m ReplicationControllerPodDesired) AddSet(ctx context.Context, incr int64,
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ReplicationControllerPodDesiredObservable is an instrument used to record
+// metric values conforming to the "k8s.replicationcontroller.pod.desired"
+// semantic conventions. It represents the number of desired replica pods in this
+// replication controller.
+type ReplicationControllerPodDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newReplicationControllerPodDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this replication controller."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewReplicationControllerPodDesiredObservable returns a new
+// ReplicationControllerPodDesiredObservable instrument.
+func NewReplicationControllerPodDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ReplicationControllerPodDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ReplicationControllerPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newReplicationControllerPodDesiredObservableOpts
+	} else {
+		opt = append(opt, newReplicationControllerPodDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.replicationcontroller.pod.desired",
+		opt...,
+	)
+	if err != nil {
+		return ReplicationControllerPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ReplicationControllerPodDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ReplicationControllerPodDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ReplicationControllerPodDesiredObservable) Name() string {
+	return "k8s.replicationcontroller.pod.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ReplicationControllerPodDesiredObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ReplicationControllerPodDesiredObservable) Description() string {
+	return "Number of desired replica pods in this replication controller."
 }
 
 // ResourceQuotaCPULimitHard is an instrument used to record metric values
@@ -11108,6 +16587,67 @@ func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set a
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaCPULimitHardObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.cpu.limit.hard" semantic
+// conventions. It represents the CPU limits in a specific namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaCPULimitHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaCPULimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewResourceQuotaCPULimitHardObservable returns a new
+// ResourceQuotaCPULimitHardObservable instrument.
+func NewResourceQuotaCPULimitHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaCPULimitHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPULimitHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPULimitHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.cpu.limit.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaCPULimitHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaCPULimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaCPULimitHardObservable) Name() string {
+	return "k8s.resourcequota.cpu.limit.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaCPULimitHardObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaCPULimitHardObservable) Description() string {
+	return "The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaCPULimitUsed is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.cpu.limit.used" semantic conventions. It
 // represents the CPU limits in a specific namespace.
@@ -11219,6 +16759,67 @@ func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set a
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaCPULimitUsedObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.cpu.limit.used" semantic
+// conventions. It represents the CPU limits in a specific namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaCPULimitUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaCPULimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewResourceQuotaCPULimitUsedObservable returns a new
+// ResourceQuotaCPULimitUsedObservable instrument.
+func NewResourceQuotaCPULimitUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaCPULimitUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPULimitUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPULimitUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.cpu.limit.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaCPULimitUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaCPULimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaCPULimitUsedObservable) Name() string {
+	return "k8s.resourcequota.cpu.limit.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaCPULimitUsedObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaCPULimitUsedObservable) Description() string {
+	return "The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // ResourceQuotaCPURequestHard is an instrument used to record metric values
@@ -11334,6 +16935,67 @@ func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaCPURequestHardObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.cpu.request.hard" semantic
+// conventions. It represents the CPU requests in a specific namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaCPURequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaCPURequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewResourceQuotaCPURequestHardObservable returns a new
+// ResourceQuotaCPURequestHardObservable instrument.
+func NewResourceQuotaCPURequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaCPURequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPURequestHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPURequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.cpu.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaCPURequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaCPURequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaCPURequestHardObservable) Name() string {
+	return "k8s.resourcequota.cpu.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaCPURequestHardObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaCPURequestHardObservable) Description() string {
+	return "The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaCPURequestUsed is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.cpu.request.used" semantic conventions.
 // It represents the CPU requests in a specific namespace.
@@ -11445,6 +17107,67 @@ func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaCPURequestUsedObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.cpu.request.used" semantic
+// conventions. It represents the CPU requests in a specific namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaCPURequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaCPURequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewResourceQuotaCPURequestUsedObservable returns a new
+// ResourceQuotaCPURequestUsedObservable instrument.
+func NewResourceQuotaCPURequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaCPURequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaCPURequestUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaCPURequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.cpu.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaCPURequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaCPURequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaCPURequestUsedObservable) Name() string {
+	return "k8s.resourcequota.cpu.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaCPURequestUsedObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaCPURequestUsedObservable) Description() string {
+	return "The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // ResourceQuotaEphemeralStorageLimitHard is an instrument used to record metric
@@ -11561,6 +17284,68 @@ func (m ResourceQuotaEphemeralStorageLimitHard) AddSet(ctx context.Context, incr
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaEphemeralStorageLimitHardObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.ephemeral_storage.limit.hard" semantic conventions. It
+// represents the sum of local ephemeral storage limits in the namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaEphemeralStorageLimitHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaEphemeralStorageLimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaEphemeralStorageLimitHardObservable returns a new
+// ResourceQuotaEphemeralStorageLimitHardObservable instrument.
+func NewResourceQuotaEphemeralStorageLimitHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaEphemeralStorageLimitHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaEphemeralStorageLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageLimitHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageLimitHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.ephemeral_storage.limit.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaEphemeralStorageLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaEphemeralStorageLimitHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaEphemeralStorageLimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaEphemeralStorageLimitHardObservable) Name() string {
+	return "k8s.resourcequota.ephemeral_storage.limit.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaEphemeralStorageLimitHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaEphemeralStorageLimitHardObservable) Description() string {
+	return "The sum of local ephemeral storage limits in the namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaEphemeralStorageLimitUsed is an instrument used to record metric
 // values conforming to the "k8s.resourcequota.ephemeral_storage.limit.used"
 // semantic conventions. It represents the sum of local ephemeral storage limits
@@ -11673,6 +17458,68 @@ func (m ResourceQuotaEphemeralStorageLimitUsed) AddSet(ctx context.Context, incr
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaEphemeralStorageLimitUsedObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.ephemeral_storage.limit.used" semantic conventions. It
+// represents the sum of local ephemeral storage limits in the namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaEphemeralStorageLimitUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaEphemeralStorageLimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaEphemeralStorageLimitUsedObservable returns a new
+// ResourceQuotaEphemeralStorageLimitUsedObservable instrument.
+func NewResourceQuotaEphemeralStorageLimitUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaEphemeralStorageLimitUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaEphemeralStorageLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageLimitUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageLimitUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.ephemeral_storage.limit.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaEphemeralStorageLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaEphemeralStorageLimitUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaEphemeralStorageLimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaEphemeralStorageLimitUsedObservable) Name() string {
+	return "k8s.resourcequota.ephemeral_storage.limit.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaEphemeralStorageLimitUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaEphemeralStorageLimitUsedObservable) Description() string {
+	return "The sum of local ephemeral storage limits in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // ResourceQuotaEphemeralStorageRequestHard is an instrument used to record
@@ -11789,6 +17636,68 @@ func (m ResourceQuotaEphemeralStorageRequestHard) AddSet(ctx context.Context, in
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaEphemeralStorageRequestHardObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.ephemeral_storage.request.hard" semantic conventions. It
+// represents the sum of local ephemeral storage requests in the namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaEphemeralStorageRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaEphemeralStorageRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaEphemeralStorageRequestHardObservable returns a new
+// ResourceQuotaEphemeralStorageRequestHardObservable instrument.
+func NewResourceQuotaEphemeralStorageRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaEphemeralStorageRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaEphemeralStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageRequestHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.ephemeral_storage.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaEphemeralStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaEphemeralStorageRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaEphemeralStorageRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaEphemeralStorageRequestHardObservable) Name() string {
+	return "k8s.resourcequota.ephemeral_storage.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaEphemeralStorageRequestHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaEphemeralStorageRequestHardObservable) Description() string {
+	return "The sum of local ephemeral storage requests in the namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaEphemeralStorageRequestUsed is an instrument used to record
 // metric values conforming to the
 // "k8s.resourcequota.ephemeral_storage.request.used" semantic conventions. It
@@ -11901,6 +17810,68 @@ func (m ResourceQuotaEphemeralStorageRequestUsed) AddSet(ctx context.Context, in
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaEphemeralStorageRequestUsedObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.ephemeral_storage.request.used" semantic conventions. It
+// represents the sum of local ephemeral storage requests in the namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaEphemeralStorageRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaEphemeralStorageRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaEphemeralStorageRequestUsedObservable returns a new
+// ResourceQuotaEphemeralStorageRequestUsedObservable instrument.
+func NewResourceQuotaEphemeralStorageRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaEphemeralStorageRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaEphemeralStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaEphemeralStorageRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaEphemeralStorageRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.ephemeral_storage.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaEphemeralStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaEphemeralStorageRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaEphemeralStorageRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaEphemeralStorageRequestUsedObservable) Name() string {
+	return "k8s.resourcequota.ephemeral_storage.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaEphemeralStorageRequestUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaEphemeralStorageRequestUsedObservable) Description() string {
+	return "The sum of local ephemeral storage requests in the namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // ResourceQuotaHugepageCountRequestHard is an instrument used to record metric
@@ -12035,6 +18006,68 @@ func (m ResourceQuotaHugepageCountRequestHard) AddSet(ctx context.Context, incr 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaHugepageCountRequestHardObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.hugepage_count.request.hard" semantic conventions. It
+// represents the huge page requests in a specific namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaHugepageCountRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaHugepageCountRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{hugepage}"),
+}
+
+// NewResourceQuotaHugepageCountRequestHardObservable returns a new
+// ResourceQuotaHugepageCountRequestHardObservable instrument.
+func NewResourceQuotaHugepageCountRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaHugepageCountRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaHugepageCountRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaHugepageCountRequestHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaHugepageCountRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.hugepage_count.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaHugepageCountRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaHugepageCountRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaHugepageCountRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaHugepageCountRequestHardObservable) Name() string {
+	return "k8s.resourcequota.hugepage_count.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaHugepageCountRequestHardObservable) Unit() string {
+	return "{hugepage}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaHugepageCountRequestHardObservable) Description() string {
+	return "The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaHugepageCountRequestUsed is an instrument used to record metric
 // values conforming to the "k8s.resourcequota.hugepage_count.request.used"
 // semantic conventions. It represents the huge page requests in a specific
@@ -12167,6 +18200,68 @@ func (m ResourceQuotaHugepageCountRequestUsed) AddSet(ctx context.Context, incr 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaHugepageCountRequestUsedObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.hugepage_count.request.used" semantic conventions. It
+// represents the huge page requests in a specific namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaHugepageCountRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaHugepageCountRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{hugepage}"),
+}
+
+// NewResourceQuotaHugepageCountRequestUsedObservable returns a new
+// ResourceQuotaHugepageCountRequestUsedObservable instrument.
+func NewResourceQuotaHugepageCountRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaHugepageCountRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaHugepageCountRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaHugepageCountRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaHugepageCountRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.hugepage_count.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaHugepageCountRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaHugepageCountRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaHugepageCountRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaHugepageCountRequestUsedObservable) Name() string {
+	return "k8s.resourcequota.hugepage_count.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaHugepageCountRequestUsedObservable) Unit() string {
+	return "{hugepage}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaHugepageCountRequestUsedObservable) Description() string {
+	return "The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
+}
+
 // ResourceQuotaMemoryLimitHard is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.memory.limit.hard" semantic conventions.
 // It represents the memory limits in a specific namespace.
@@ -12278,6 +18373,67 @@ func (m ResourceQuotaMemoryLimitHard) AddSet(ctx context.Context, incr int64, se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaMemoryLimitHardObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.memory.limit.hard" semantic
+// conventions. It represents the memory limits in a specific namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaMemoryLimitHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaMemoryLimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaMemoryLimitHardObservable returns a new
+// ResourceQuotaMemoryLimitHardObservable instrument.
+func NewResourceQuotaMemoryLimitHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaMemoryLimitHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaMemoryLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryLimitHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryLimitHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.memory.limit.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaMemoryLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaMemoryLimitHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaMemoryLimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaMemoryLimitHardObservable) Name() string {
+	return "k8s.resourcequota.memory.limit.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaMemoryLimitHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaMemoryLimitHardObservable) Description() string {
+	return "The memory limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
 // ResourceQuotaMemoryLimitUsed is an instrument used to record metric values
@@ -12393,6 +18549,67 @@ func (m ResourceQuotaMemoryLimitUsed) AddSet(ctx context.Context, incr int64, se
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaMemoryLimitUsedObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.memory.limit.used" semantic
+// conventions. It represents the memory limits in a specific namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaMemoryLimitUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaMemoryLimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaMemoryLimitUsedObservable returns a new
+// ResourceQuotaMemoryLimitUsedObservable instrument.
+func NewResourceQuotaMemoryLimitUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaMemoryLimitUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaMemoryLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryLimitUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryLimitUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.memory.limit.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaMemoryLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaMemoryLimitUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaMemoryLimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaMemoryLimitUsedObservable) Name() string {
+	return "k8s.resourcequota.memory.limit.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaMemoryLimitUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaMemoryLimitUsedObservable) Description() string {
+	return "The memory limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
+}
+
 // ResourceQuotaMemoryRequestHard is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.memory.request.hard" semantic
 // conventions. It represents the memory requests in a specific namespace.
@@ -12506,6 +18723,68 @@ func (m ResourceQuotaMemoryRequestHard) AddSet(ctx context.Context, incr int64, 
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaMemoryRequestHardObservable is an instrument used to record
+// metric values conforming to the "k8s.resourcequota.memory.request.hard"
+// semantic conventions. It represents the memory requests in a specific
+// namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaMemoryRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaMemoryRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaMemoryRequestHardObservable returns a new
+// ResourceQuotaMemoryRequestHardObservable instrument.
+func NewResourceQuotaMemoryRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaMemoryRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaMemoryRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryRequestHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.memory.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaMemoryRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaMemoryRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaMemoryRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaMemoryRequestHardObservable) Name() string {
+	return "k8s.resourcequota.memory.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaMemoryRequestHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaMemoryRequestHardObservable) Description() string {
+	return "The memory requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaMemoryRequestUsed is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.memory.request.used" semantic
 // conventions. It represents the memory requests in a specific namespace.
@@ -12617,6 +18896,68 @@ func (m ResourceQuotaMemoryRequestUsed) AddSet(ctx context.Context, incr int64, 
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaMemoryRequestUsedObservable is an instrument used to record
+// metric values conforming to the "k8s.resourcequota.memory.request.used"
+// semantic conventions. It represents the memory requests in a specific
+// namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaMemoryRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaMemoryRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaMemoryRequestUsedObservable returns a new
+// ResourceQuotaMemoryRequestUsedObservable instrument.
+func NewResourceQuotaMemoryRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaMemoryRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaMemoryRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaMemoryRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaMemoryRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.memory.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaMemoryRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaMemoryRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaMemoryRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaMemoryRequestUsedObservable) Name() string {
+	return "k8s.resourcequota.memory.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaMemoryRequestUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaMemoryRequestUsedObservable) Description() string {
+	return "The memory requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // ResourceQuotaObjectCountHard is an instrument used to record metric values
@@ -12751,6 +19092,67 @@ func (m ResourceQuotaObjectCountHard) AddSet(ctx context.Context, incr int64, se
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ResourceQuotaObjectCountHardObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.object_count.hard" semantic
+// conventions. It represents the object count limits in a specific namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaObjectCountHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaObjectCountHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{object}"),
+}
+
+// NewResourceQuotaObjectCountHardObservable returns a new
+// ResourceQuotaObjectCountHardObservable instrument.
+func NewResourceQuotaObjectCountHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaObjectCountHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaObjectCountHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaObjectCountHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaObjectCountHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.object_count.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaObjectCountHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaObjectCountHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaObjectCountHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaObjectCountHardObservable) Name() string {
+	return "k8s.resourcequota.object_count.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaObjectCountHardObservable) Unit() string {
+	return "{object}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaObjectCountHardObservable) Description() string {
+	return "The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
 // ResourceQuotaObjectCountUsed is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.object_count.used" semantic conventions.
 // It represents the object count limits in a specific namespace.
@@ -12881,6 +19283,67 @@ func (m ResourceQuotaObjectCountUsed) AddSet(ctx context.Context, incr int64, se
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ResourceQuotaObjectCountUsedObservable is an instrument used to record metric
+// values conforming to the "k8s.resourcequota.object_count.used" semantic
+// conventions. It represents the object count limits in a specific namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaObjectCountUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaObjectCountUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{object}"),
+}
+
+// NewResourceQuotaObjectCountUsedObservable returns a new
+// ResourceQuotaObjectCountUsedObservable instrument.
+func NewResourceQuotaObjectCountUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaObjectCountUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaObjectCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaObjectCountUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaObjectCountUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.object_count.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaObjectCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaObjectCountUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaObjectCountUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaObjectCountUsedObservable) Name() string {
+	return "k8s.resourcequota.object_count.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaObjectCountUsedObservable) Unit() string {
+	return "{object}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaObjectCountUsedObservable) Description() string {
+	return "The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
 }
 
 // ResourceQuotaPersistentvolumeclaimCountHard is an instrument used to record
@@ -13024,6 +19487,78 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context,
 //
 // [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
 func (ResourceQuotaPersistentvolumeclaimCountHard) AttrStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
+// ResourceQuotaPersistentvolumeclaimCountHardObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.persistentvolumeclaim_count.hard" semantic conventions. It
+// represents the total number of PersistentVolumeClaims that can exist in the
+// namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaPersistentvolumeclaimCountHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaPersistentvolumeclaimCountHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
+// NewResourceQuotaPersistentvolumeclaimCountHardObservable returns a new
+// ResourceQuotaPersistentvolumeclaimCountHardObservable instrument.
+func NewResourceQuotaPersistentvolumeclaimCountHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaPersistentvolumeclaimCountHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaPersistentvolumeclaimCountHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaPersistentvolumeclaimCountHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.persistentvolumeclaim_count.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaPersistentvolumeclaimCountHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaPersistentvolumeclaimCountHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaPersistentvolumeclaimCountHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaPersistentvolumeclaimCountHardObservable) Name() string {
+	return "k8s.resourcequota.persistentvolumeclaim_count.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaPersistentvolumeclaimCountHardObservable) Unit() string {
+	return "{persistentvolumeclaim}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaPersistentvolumeclaimCountHardObservable) Description() string {
+	return "The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
+// AttrStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ResourceQuotaPersistentvolumeclaimCountHardObservable) AttrStorageclassName(val string) attribute.KeyValue {
 	return attribute.String("k8s.storageclass.name", val)
 }
 
@@ -13171,6 +19706,78 @@ func (ResourceQuotaPersistentvolumeclaimCountUsed) AttrStorageclassName(val stri
 	return attribute.String("k8s.storageclass.name", val)
 }
 
+// ResourceQuotaPersistentvolumeclaimCountUsedObservable is an instrument used to
+// record metric values conforming to the
+// "k8s.resourcequota.persistentvolumeclaim_count.used" semantic conventions. It
+// represents the total number of PersistentVolumeClaims that can exist in the
+// namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaPersistentvolumeclaimCountUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaPersistentvolumeclaimCountUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
+// NewResourceQuotaPersistentvolumeclaimCountUsedObservable returns a new
+// ResourceQuotaPersistentvolumeclaimCountUsedObservable instrument.
+func NewResourceQuotaPersistentvolumeclaimCountUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaPersistentvolumeclaimCountUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaPersistentvolumeclaimCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaPersistentvolumeclaimCountUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.persistentvolumeclaim_count.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaPersistentvolumeclaimCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaPersistentvolumeclaimCountUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaPersistentvolumeclaimCountUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaPersistentvolumeclaimCountUsedObservable) Name() string {
+	return "k8s.resourcequota.persistentvolumeclaim_count.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaPersistentvolumeclaimCountUsedObservable) Unit() string {
+	return "{persistentvolumeclaim}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaPersistentvolumeclaimCountUsedObservable) Description() string {
+	return "The total number of PersistentVolumeClaims that can exist in the namespace. The value represents the current observed total usage of the resource in the namespace."
+}
+
+// AttrStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ResourceQuotaPersistentvolumeclaimCountUsedObservable) AttrStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
 // ResourceQuotaStorageRequestHard is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.storage.request.hard" semantic
 // conventions. It represents the storage requests in a specific namespace.
@@ -13313,6 +19920,77 @@ func (ResourceQuotaStorageRequestHard) AttrStorageclassName(val string) attribut
 	return attribute.String("k8s.storageclass.name", val)
 }
 
+// ResourceQuotaStorageRequestHardObservable is an instrument used to record
+// metric values conforming to the "k8s.resourcequota.storage.request.hard"
+// semantic conventions. It represents the storage requests in a specific
+// namespace.
+// The value represents the configured quota limit of the resource in the
+// namespace.
+type ResourceQuotaStorageRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaStorageRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaStorageRequestHardObservable returns a new
+// ResourceQuotaStorageRequestHardObservable instrument.
+func NewResourceQuotaStorageRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaStorageRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaStorageRequestHardObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaStorageRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.storage.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaStorageRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaStorageRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaStorageRequestHardObservable) Name() string {
+	return "k8s.resourcequota.storage.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaStorageRequestHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaStorageRequestHardObservable) Description() string {
+	return "The storage requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
+}
+
+// AttrStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ResourceQuotaStorageRequestHardObservable) AttrStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
 // ResourceQuotaStorageRequestUsed is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.storage.request.used" semantic
 // conventions. It represents the storage requests in a specific namespace.
@@ -13452,6 +20130,77 @@ func (m ResourceQuotaStorageRequestUsed) AddSet(ctx context.Context, incr int64,
 //
 // [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
 func (ResourceQuotaStorageRequestUsed) AttrStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
+// ResourceQuotaStorageRequestUsedObservable is an instrument used to record
+// metric values conforming to the "k8s.resourcequota.storage.request.used"
+// semantic conventions. It represents the storage requests in a specific
+// namespace.
+// The value represents the current observed total usage of the resource in the
+// namespace.
+type ResourceQuotaStorageRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newResourceQuotaStorageRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
+	metric.WithUnit("By"),
+}
+
+// NewResourceQuotaStorageRequestUsedObservable returns a new
+// ResourceQuotaStorageRequestUsedObservable instrument.
+func NewResourceQuotaStorageRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ResourceQuotaStorageRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ResourceQuotaStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newResourceQuotaStorageRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newResourceQuotaStorageRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.resourcequota.storage.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ResourceQuotaStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ResourceQuotaStorageRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ResourceQuotaStorageRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ResourceQuotaStorageRequestUsedObservable) Name() string {
+	return "k8s.resourcequota.storage.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ResourceQuotaStorageRequestUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ResourceQuotaStorageRequestUsedObservable) Description() string {
+	return "The storage requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
+}
+
+// AttrStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ResourceQuotaStorageRequestUsedObservable) AttrStorageclassName(val string) attribute.KeyValue {
 	return attribute.String("k8s.storageclass.name", val)
 }
 
@@ -13648,6 +20397,73 @@ func (ServiceEndpointCount) AttrServiceEndpointZone(val string) attribute.KeyVal
 	return attribute.String("k8s.service.endpoint.zone", val)
 }
 
+// ServiceEndpointCountObservable is an instrument used to record metric values
+// conforming to the "k8s.service.endpoint.count" semantic conventions. It
+// represents the number of endpoints for a service by condition and address
+// type.
+type ServiceEndpointCountObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newServiceEndpointCountObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Number of endpoints for a service by condition and address type."),
+	metric.WithUnit("{endpoint}"),
+}
+
+// NewServiceEndpointCountObservable returns a new ServiceEndpointCountObservable
+// instrument.
+func NewServiceEndpointCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (ServiceEndpointCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ServiceEndpointCountObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newServiceEndpointCountObservableOpts
+	} else {
+		opt = append(opt, newServiceEndpointCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.service.endpoint.count",
+		opt...,
+	)
+	if err != nil {
+		return ServiceEndpointCountObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return ServiceEndpointCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ServiceEndpointCountObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ServiceEndpointCountObservable) Name() string {
+	return "k8s.service.endpoint.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ServiceEndpointCountObservable) Unit() string {
+	return "{endpoint}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ServiceEndpointCountObservable) Description() string {
+	return "Number of endpoints for a service by condition and address type."
+}
+
+// AttrServiceEndpointZone returns an optional attribute for the
+// "k8s.service.endpoint.zone" semantic convention. It represents the zone of the
+// service endpoint.
+func (ServiceEndpointCountObservable) AttrServiceEndpointZone(val string) attribute.KeyValue {
+	return attribute.String("k8s.service.endpoint.zone", val)
+}
+
 // ServiceLoadBalancerIngressCount is an instrument used to record metric values
 // conforming to the "k8s.service.load_balancer.ingress.count" semantic
 // conventions. It represents the number of load balancer ingress points
@@ -13790,6 +20606,66 @@ func (m ServiceLoadBalancerIngressCount) RecordSet(ctx context.Context, val int6
 	m.Int64Gauge.Record(ctx, val, *o...)
 }
 
+// ServiceLoadBalancerIngressCountObservable is an instrument used to record
+// metric values conforming to the "k8s.service.load_balancer.ingress.count"
+// semantic conventions. It represents the number of load balancer ingress points
+// (external IPs/hostnames) assigned to the service.
+type ServiceLoadBalancerIngressCountObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newServiceLoadBalancerIngressCountObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Number of load balancer ingress points (external IPs/hostnames) assigned to the service."),
+	metric.WithUnit("{ingress}"),
+}
+
+// NewServiceLoadBalancerIngressCountObservable returns a new
+// ServiceLoadBalancerIngressCountObservable instrument.
+func NewServiceLoadBalancerIngressCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (ServiceLoadBalancerIngressCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ServiceLoadBalancerIngressCountObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newServiceLoadBalancerIngressCountObservableOpts
+	} else {
+		opt = append(opt, newServiceLoadBalancerIngressCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"k8s.service.load_balancer.ingress.count",
+		opt...,
+	)
+	if err != nil {
+		return ServiceLoadBalancerIngressCountObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return ServiceLoadBalancerIngressCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ServiceLoadBalancerIngressCountObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ServiceLoadBalancerIngressCountObservable) Name() string {
+	return "k8s.service.load_balancer.ingress.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ServiceLoadBalancerIngressCountObservable) Unit() string {
+	return "{ingress}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ServiceLoadBalancerIngressCountObservable) Description() string {
+	return "Number of load balancer ingress points (external IPs/hostnames) assigned to the service."
+}
+
 // StatefulSetPodCurrent is an instrument used to record metric values conforming
 // to the "k8s.statefulset.pod.current" semantic conventions. It represents the
 // number of replica pods created by the statefulset controller from the
@@ -13899,6 +20775,66 @@ func (m StatefulSetPodCurrent) AddSet(ctx context.Context, incr int64, set attri
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// StatefulSetPodCurrentObservable is an instrument used to record metric values
+// conforming to the "k8s.statefulset.pod.current" semantic conventions. It
+// represents the number of replica pods created by the statefulset controller
+// from the statefulset version indicated by currentRevision.
+type StatefulSetPodCurrentObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newStatefulSetPodCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of replica pods created by the statefulset controller from the statefulset version indicated by currentRevision."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewStatefulSetPodCurrentObservable returns a new
+// StatefulSetPodCurrentObservable instrument.
+func NewStatefulSetPodCurrentObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (StatefulSetPodCurrentObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return StatefulSetPodCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newStatefulSetPodCurrentObservableOpts
+	} else {
+		opt = append(opt, newStatefulSetPodCurrentObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.statefulset.pod.current",
+		opt...,
+	)
+	if err != nil {
+		return StatefulSetPodCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return StatefulSetPodCurrentObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m StatefulSetPodCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (StatefulSetPodCurrentObservable) Name() string {
+	return "k8s.statefulset.pod.current"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (StatefulSetPodCurrentObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (StatefulSetPodCurrentObservable) Description() string {
+	return "The number of replica pods created by the statefulset controller from the statefulset version indicated by currentRevision."
 }
 
 // StatefulSetPodDesired is an instrument used to record metric values conforming
@@ -14011,6 +20947,65 @@ func (m StatefulSetPodDesired) AddSet(ctx context.Context, incr int64, set attri
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// StatefulSetPodDesiredObservable is an instrument used to record metric values
+// conforming to the "k8s.statefulset.pod.desired" semantic conventions. It
+// represents the number of desired replica pods in this statefulset.
+type StatefulSetPodDesiredObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newStatefulSetPodDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of desired replica pods in this statefulset."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewStatefulSetPodDesiredObservable returns a new
+// StatefulSetPodDesiredObservable instrument.
+func NewStatefulSetPodDesiredObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (StatefulSetPodDesiredObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return StatefulSetPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newStatefulSetPodDesiredObservableOpts
+	} else {
+		opt = append(opt, newStatefulSetPodDesiredObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.statefulset.pod.desired",
+		opt...,
+	)
+	if err != nil {
+		return StatefulSetPodDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return StatefulSetPodDesiredObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m StatefulSetPodDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (StatefulSetPodDesiredObservable) Name() string {
+	return "k8s.statefulset.pod.desired"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (StatefulSetPodDesiredObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (StatefulSetPodDesiredObservable) Description() string {
+	return "Number of desired replica pods in this statefulset."
+}
+
 // StatefulSetPodReady is an instrument used to record metric values conforming
 // to the "k8s.statefulset.pod.ready" semantic conventions. It represents the
 // number of replica pods created for this statefulset with a Ready Condition.
@@ -14119,6 +21114,66 @@ func (m StatefulSetPodReady) AddSet(ctx context.Context, incr int64, set attribu
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// StatefulSetPodReadyObservable is an instrument used to record metric values
+// conforming to the "k8s.statefulset.pod.ready" semantic conventions. It
+// represents the number of replica pods created for this statefulset with a
+// Ready Condition.
+type StatefulSetPodReadyObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newStatefulSetPodReadyObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of replica pods created for this statefulset with a Ready Condition."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewStatefulSetPodReadyObservable returns a new StatefulSetPodReadyObservable
+// instrument.
+func NewStatefulSetPodReadyObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (StatefulSetPodReadyObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return StatefulSetPodReadyObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newStatefulSetPodReadyObservableOpts
+	} else {
+		opt = append(opt, newStatefulSetPodReadyObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.statefulset.pod.ready",
+		opt...,
+	)
+	if err != nil {
+		return StatefulSetPodReadyObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return StatefulSetPodReadyObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m StatefulSetPodReadyObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (StatefulSetPodReadyObservable) Name() string {
+	return "k8s.statefulset.pod.ready"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (StatefulSetPodReadyObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (StatefulSetPodReadyObservable) Description() string {
+	return "The number of replica pods created for this statefulset with a Ready Condition."
 }
 
 // StatefulSetPodUpdated is an instrument used to record metric values conforming
@@ -14230,4 +21285,64 @@ func (m StatefulSetPodUpdated) AddSet(ctx context.Context, incr int64, set attri
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// StatefulSetPodUpdatedObservable is an instrument used to record metric values
+// conforming to the "k8s.statefulset.pod.updated" semantic conventions. It
+// represents the number of replica pods created by the statefulset controller
+// from the statefulset version indicated by updateRevision.
+type StatefulSetPodUpdatedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newStatefulSetPodUpdatedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of replica pods created by the statefulset controller from the statefulset version indicated by updateRevision."),
+	metric.WithUnit("{pod}"),
+}
+
+// NewStatefulSetPodUpdatedObservable returns a new
+// StatefulSetPodUpdatedObservable instrument.
+func NewStatefulSetPodUpdatedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (StatefulSetPodUpdatedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return StatefulSetPodUpdatedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newStatefulSetPodUpdatedObservableOpts
+	} else {
+		opt = append(opt, newStatefulSetPodUpdatedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"k8s.statefulset.pod.updated",
+		opt...,
+	)
+	if err != nil {
+		return StatefulSetPodUpdatedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return StatefulSetPodUpdatedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m StatefulSetPodUpdatedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (StatefulSetPodUpdatedObservable) Name() string {
+	return "k8s.statefulset.pod.updated"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (StatefulSetPodUpdatedObservable) Unit() string {
+	return "{pod}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (StatefulSetPodUpdatedObservable) Description() string {
+	return "Number of replica pods created by the statefulset controller from the statefulset version indicated by updateRevision."
 }
