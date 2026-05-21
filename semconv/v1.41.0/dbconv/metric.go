@@ -404,6 +404,26 @@ func (ClientConnectionCountObservable) Description() string {
 	return "The number of connections that are currently in state described by the `state` attribute."
 }
 
+// AttrClientConnectionPoolName returns an optional attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionCountObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
+}
+
+// AttrClientConnectionState returns an optional attribute for the
+// "db.client.connection.state" semantic convention. It represents the state of a
+// connection in the pool.
+func (ClientConnectionCountObservable) AttrClientConnectionState(val ClientConnectionStateAttr) attribute.KeyValue {
+	return attribute.String("db.client.connection.state", string(val))
+}
+
 // ClientConnectionCreateTime is an instrument used to record metric values
 // conforming to the "db.client.connection.create_time" semantic conventions. It
 // represents the time it took to create a new connection.
@@ -708,6 +728,19 @@ func (ClientConnectionIdleMaxObservable) Description() string {
 	return "The maximum number of idle open connections allowed."
 }
 
+// AttrClientConnectionPoolName returns an optional attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionIdleMaxObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
+}
+
 // ClientConnectionIdleMin is an instrument used to record metric values
 // conforming to the "db.client.connection.idle.min" semantic conventions. It
 // represents the minimum number of idle open connections allowed.
@@ -889,6 +922,19 @@ func (ClientConnectionIdleMinObservable) Description() string {
 	return "The minimum number of idle open connections allowed."
 }
 
+// AttrClientConnectionPoolName returns an optional attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionIdleMinObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
+}
+
 // ClientConnectionMax is an instrument used to record metric values conforming
 // to the "db.client.connection.max" semantic conventions. It represents the
 // maximum number of open connections allowed.
@@ -1068,6 +1114,19 @@ func (ClientConnectionMaxObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ClientConnectionMaxObservable) Description() string {
 	return "The maximum number of open connections allowed."
+}
+
+// AttrClientConnectionPoolName returns an optional attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionMaxObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionPendingRequests is an instrument used to record metric values
@@ -1254,6 +1313,19 @@ func (ClientConnectionPendingRequestsObservable) Description() string {
 	return "The number of current pending requests for an open connection."
 }
 
+// AttrClientConnectionPoolName returns an optional attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionPendingRequestsObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
+}
+
 // ClientConnectionTimeouts is an instrument used to record metric values
 // conforming to the "db.client.connection.timeouts" semantic conventions. It
 // represents the number of connection timeouts that have occurred trying to
@@ -1435,6 +1507,19 @@ func (ClientConnectionTimeoutsObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ClientConnectionTimeoutsObservable) Description() string {
 	return "The number of connection timeouts that have occurred trying to obtain a connection from the pool."
+}
+
+// AttrClientConnectionPoolName returns an optional attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionTimeoutsObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionUseTime is an instrument used to record metric values

@@ -341,6 +341,20 @@ func (ClientConsumedMessagesObservable) Description() string {
 	return "Number of messages that were delivered to the application."
 }
 
+// AttrOperationName returns an optional attribute for the
+// "messaging.operation.name" semantic convention. It represents the
+// system-specific name of the messaging operation.
+func (ClientConsumedMessagesObservable) AttrOperationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.operation.name", val)
+}
+
+// AttrSystem returns an optional attribute for the "messaging.system" semantic
+// convention. It represents the messaging system as identified by the client
+// instrumentation.
+func (ClientConsumedMessagesObservable) AttrSystem(val SystemAttr) attribute.KeyValue {
+	return attribute.String("messaging.system", string(val))
+}
+
 // AttrErrorType returns an optional attribute for the "error.type" semantic
 // convention. It represents the describes a class of error the operation ended
 // with.
@@ -820,6 +834,20 @@ func (ClientSentMessagesObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ClientSentMessagesObservable) Description() string {
 	return "Number of messages producer attempted to send to the broker."
+}
+
+// AttrOperationName returns an optional attribute for the
+// "messaging.operation.name" semantic convention. It represents the
+// system-specific name of the messaging operation.
+func (ClientSentMessagesObservable) AttrOperationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.operation.name", val)
+}
+
+// AttrSystem returns an optional attribute for the "messaging.system" semantic
+// convention. It represents the messaging system as identified by the client
+// instrumentation.
+func (ClientSentMessagesObservable) AttrSystem(val SystemAttr) attribute.KeyValue {
+	return attribute.String("messaging.system", string(val))
 }
 
 // AttrErrorType returns an optional attribute for the "error.type" semantic

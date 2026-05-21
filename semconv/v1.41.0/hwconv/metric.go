@@ -404,6 +404,13 @@ func (BatteryChargeObservable) Description() string {
 	return "Remaining fraction of battery charge."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (BatteryChargeObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrBatteryCapacity returns an optional attribute for the
 // "hw.battery.capacity" semantic convention. It represents the design capacity
 // in Watts-hours or Ampere-hours.
@@ -675,6 +682,13 @@ func (BatteryChargeLimitObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (BatteryChargeLimitObservable) Description() string {
 	return "Lower limit of battery charge fraction to ensure proper operation."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (BatteryChargeLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrBatteryCapacity returns an optional attribute for the
@@ -960,6 +974,19 @@ func (BatteryTimeLeftObservable) Description() string {
 	return "Time left before battery is completely charged or discharged."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (BatteryTimeLeftObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrState returns an optional attribute for the "hw.state" semantic
+// convention. It represents the current state of the component.
+func (BatteryTimeLeftObservable) AttrState(val StateAttr) attribute.KeyValue {
+	return attribute.String("hw.state", string(val))
+}
+
 // AttrBatteryState returns an optional attribute for the "hw.battery.state"
 // semantic convention. It represents the current state of the battery.
 func (BatteryTimeLeftObservable) AttrBatteryState(val BatteryStateAttr) attribute.KeyValue {
@@ -1210,6 +1237,13 @@ func (CPUSpeedObservable) Description() string {
 	return "CPU current frequency."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (CPUSpeedObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrModel returns an optional attribute for the "hw.model" semantic
 // convention. It represents the descriptive model name of the hardware
 // component.
@@ -1445,6 +1479,13 @@ func (CPUSpeedLimitObservable) Description() string {
 	return "CPU maximum frequency."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (CPUSpeedLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
 // convention. It represents the type of limit for hardware components.
 func (CPUSpeedLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
@@ -1672,6 +1713,19 @@ func (EnergyObservable) Description() string {
 	return "Energy consumed by the component."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (EnergyObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrType returns an optional attribute for the "hw.type" semantic convention.
+// It represents the type of the component.
+func (EnergyObservable) AttrType(val TypeAttr) attribute.KeyValue {
+	return attribute.String("hw.type", string(val))
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (EnergyObservable) AttrName(val string) attribute.KeyValue {
@@ -1891,6 +1945,19 @@ func (ErrorsObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ErrorsObservable) Description() string {
 	return "Number of errors encountered by the component."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (ErrorsObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrType returns an optional attribute for the "hw.type" semantic convention.
+// It represents the type of the component.
+func (ErrorsObservable) AttrType(val TypeAttr) attribute.KeyValue {
+	return attribute.String("hw.type", string(val))
 }
 
 // AttrErrorType returns an optional attribute for the "error.type" semantic
@@ -2115,6 +2182,13 @@ func (FanSpeedObservable) Description() string {
 	return "Fan speed in revolutions per minute."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (FanSpeedObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (FanSpeedObservable) AttrName(val string) attribute.KeyValue {
@@ -2336,6 +2410,13 @@ func (FanSpeedLimitObservable) Description() string {
 	return "Speed limit in rpm."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (FanSpeedLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
 // convention. It represents the type of limit for hardware components.
 func (FanSpeedLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
@@ -2555,6 +2636,13 @@ func (FanSpeedRatioObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (FanSpeedRatioObservable) Description() string {
 	return "Fan speed expressed as a fraction of its maximum speed."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (FanSpeedRatioObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -2803,6 +2891,20 @@ func (GpuIOObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (GpuIOObservable) Description() string {
 	return "Received and transmitted bytes by the GPU."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (GpuIOObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (GpuIOObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
@@ -3076,6 +3178,13 @@ func (GpuMemoryLimitObservable) Description() string {
 	return "Size of the GPU memory."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (GpuMemoryLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
 // semantic convention. It represents the driver version for the hardware
 // component.
@@ -3344,6 +3453,13 @@ func (GpuMemoryUsageObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (GpuMemoryUsageObservable) Description() string {
 	return "GPU memory used."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (GpuMemoryUsageObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
@@ -3616,6 +3732,13 @@ func (GpuMemoryUtilizationObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (GpuMemoryUtilizationObservable) Description() string {
 	return "Fraction of GPU memory used."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (GpuMemoryUtilizationObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
@@ -3895,6 +4018,13 @@ func (GpuUtilizationObservable) Description() string {
 	return "Fraction of time spent in a specific task."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (GpuUtilizationObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
 // semantic convention. It represents the driver version for the hardware
 // component.
@@ -4139,6 +4269,13 @@ func (HostAmbientTemperatureObservable) Description() string {
 	return "Ambient (external) temperature of the physical host."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (HostAmbientTemperatureObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (HostAmbientTemperatureObservable) AttrName(val string) attribute.KeyValue {
@@ -4352,6 +4489,13 @@ func (HostEnergyObservable) Description() string {
 	return "Total energy consumed by the entire physical host, in joules."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (HostEnergyObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (HostEnergyObservable) AttrName(val string) attribute.KeyValue {
@@ -4556,6 +4700,13 @@ func (HostHeatingMarginObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (HostHeatingMarginObservable) Description() string {
 	return "By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (HostHeatingMarginObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -4772,6 +4923,13 @@ func (HostPowerObservable) Description() string {
 	return "Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (HostPowerObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (HostPowerObservable) AttrName(val string) attribute.KeyValue {
@@ -4981,6 +5139,13 @@ func (LogicalDiskLimitObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (LogicalDiskLimitObservable) Description() string {
 	return "Size of the logical disk."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (LogicalDiskLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrLogicalDiskRaidLevel returns an optional attribute for the
@@ -5206,6 +5371,20 @@ func (LogicalDiskUsageObservable) Description() string {
 	return "Logical disk space usage."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (LogicalDiskUsageObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrLogicalDiskState returns an optional attribute for the
+// "hw.logical_disk.state" semantic convention. It represents the state of the
+// logical disk space usage.
+func (LogicalDiskUsageObservable) AttrLogicalDiskState(val LogicalDiskStateAttr) attribute.KeyValue {
+	return attribute.String("hw.logical_disk.state", string(val))
+}
+
 // AttrLogicalDiskRaidLevel returns an optional attribute for the
 // "hw.logical_disk.raid_level" semantic convention. It represents the RAID Level
 // of the logical disk.
@@ -5427,6 +5606,20 @@ func (LogicalDiskUtilizationObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (LogicalDiskUtilizationObservable) Description() string {
 	return "Logical disk space utilization as a fraction."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (LogicalDiskUtilizationObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrLogicalDiskState returns an optional attribute for the
+// "hw.logical_disk.state" semantic convention. It represents the state of the
+// logical disk space usage.
+func (LogicalDiskUtilizationObservable) AttrLogicalDiskState(val LogicalDiskStateAttr) attribute.KeyValue {
+	return attribute.String("hw.logical_disk.state", string(val))
 }
 
 // AttrLogicalDiskRaidLevel returns an optional attribute for the
@@ -5663,6 +5856,13 @@ func (MemorySizeObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (MemorySizeObservable) Description() string {
 	return "Size of the memory module."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (MemorySizeObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrMemoryType returns an optional attribute for the "hw.memory.type" semantic
@@ -5927,6 +6127,13 @@ func (NetworkBandwidthLimitObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (NetworkBandwidthLimitObservable) Description() string {
 	return "Link speed."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (NetworkBandwidthLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -6201,6 +6408,13 @@ func (NetworkBandwidthUtilizationObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (NetworkBandwidthUtilizationObservable) Description() string {
 	return "Utilization of the network bandwidth as a fraction."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (NetworkBandwidthUtilizationObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -6479,6 +6693,20 @@ func (NetworkIOObservable) Description() string {
 	return "Received and transmitted network traffic in bytes."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (NetworkIOObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkIOObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
 // AttrModel returns an optional attribute for the "hw.model" semantic
 // convention. It represents the descriptive model name of the hardware
 // component.
@@ -6755,6 +6983,20 @@ func (NetworkPacketsObservable) Description() string {
 	return "Received and transmitted network traffic in packets (or frames)."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (NetworkPacketsObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrNetworkIODirection returns an optional attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkPacketsObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
+}
+
 // AttrModel returns an optional attribute for the "hw.model" semantic
 // convention. It represents the descriptive model name of the hardware
 // component.
@@ -7024,6 +7266,13 @@ func (NetworkUpObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (NetworkUpObservable) Description() string {
 	return "Link status: `1` (up) or `0` (down)."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (NetworkUpObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -7304,6 +7553,20 @@ func (PhysicalDiskEnduranceUtilizationObservable) Description() string {
 	return "Endurance remaining for this SSD disk."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrPhysicalDiskState returns an optional attribute for the
+// "hw.physical_disk.state" semantic convention. It represents the state of the
+// physical disk endurance utilization.
+func (PhysicalDiskEnduranceUtilizationObservable) AttrPhysicalDiskState(val PhysicalDiskStateAttr) attribute.KeyValue {
+	return attribute.String("hw.physical_disk.state", string(val))
+}
+
 // AttrFirmwareVersion returns an optional attribute for the
 // "hw.firmware_version" semantic convention. It represents the firmware version
 // of the hardware component.
@@ -7574,6 +7837,13 @@ func (PhysicalDiskSizeObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PhysicalDiskSizeObservable) Description() string {
 	return "Size of the disk."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PhysicalDiskSizeObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrFirmwareVersion returns an optional attribute for the
@@ -7864,6 +8134,13 @@ func (PhysicalDiskSmartObservable) Description() string {
 	return "Value of the corresponding [S.M.A.R.T.](https://wikipedia.org/wiki/S.M.A.R.T.) (Self-Monitoring, Analysis, and Reporting Technology) attribute."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PhysicalDiskSmartObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrFirmwareVersion returns an optional attribute for the
 // "hw.firmware_version" semantic convention. It represents the firmware version
 // of the hardware component.
@@ -8120,6 +8397,19 @@ func (PowerObservable) Description() string {
 	return "Instantaneous power consumed by the component."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PowerObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrType returns an optional attribute for the "hw.type" semantic convention.
+// It represents the type of the component.
+func (PowerObservable) AttrType(val TypeAttr) attribute.KeyValue {
+	return attribute.String("hw.type", string(val))
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (PowerObservable) AttrName(val string) attribute.KeyValue {
@@ -8348,6 +8638,13 @@ func (PowerSupplyLimitObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PowerSupplyLimitObservable) Description() string {
 	return "Maximum power output of the power supply."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PowerSupplyLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
@@ -8600,6 +8897,13 @@ func (PowerSupplyUsageObservable) Description() string {
 	return "Current power output of the power supply."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PowerSupplyUsageObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrModel returns an optional attribute for the "hw.model" semantic
 // convention. It represents the descriptive model name of the hardware
 // component.
@@ -8844,6 +9148,13 @@ func (PowerSupplyUtilizationObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PowerSupplyUtilizationObservable) Description() string {
 	return "Utilization of the power supply as a fraction of its maximum output."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (PowerSupplyUtilizationObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -9095,6 +9406,25 @@ func (StatusObservable) Description() string {
 	return "Operational status: `1` (true) or `0` (false) for each of the possible states."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (StatusObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
+// AttrState returns an optional attribute for the "hw.state" semantic
+// convention. It represents the current state of the component.
+func (StatusObservable) AttrState(val StateAttr) attribute.KeyValue {
+	return attribute.String("hw.state", string(val))
+}
+
+// AttrType returns an optional attribute for the "hw.type" semantic convention.
+// It represents the type of the component.
+func (StatusObservable) AttrType(val TypeAttr) attribute.KeyValue {
+	return attribute.String("hw.type", string(val))
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (StatusObservable) AttrName(val string) attribute.KeyValue {
@@ -9324,6 +9654,13 @@ func (TapeDriveOperationsObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (TapeDriveOperationsObservable) Description() string {
 	return "Operations performed by the tape drive."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (TapeDriveOperationsObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -9562,6 +9899,13 @@ func (TemperatureObservable) Description() string {
 	return "Temperature in degrees Celsius."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (TemperatureObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (TemperatureObservable) AttrName(val string) attribute.KeyValue {
@@ -9782,6 +10126,13 @@ func (TemperatureLimitObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (TemperatureLimitObservable) Description() string {
 	return "Temperature limit in degrees Celsius."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (TemperatureLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
@@ -10005,6 +10356,13 @@ func (VoltageObservable) Description() string {
 	return "Voltage measured by the sensor."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (VoltageObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
 // It represents an easily-recognizable name for the hardware component.
 func (VoltageObservable) AttrName(val string) attribute.KeyValue {
@@ -10226,6 +10584,13 @@ func (VoltageLimitObservable) Description() string {
 	return "Voltage limit in Volts."
 }
 
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (VoltageLimitObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
+}
+
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
 // convention. It represents the type of limit for hardware components.
 func (VoltageLimitObservable) AttrLimitType(val LimitTypeAttr) attribute.KeyValue {
@@ -10445,6 +10810,13 @@ func (VoltageNominalObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (VoltageNominalObservable) Description() string {
 	return "Nominal (expected) voltage."
+}
+
+// AttrID returns an optional attribute for the "hw.id" semantic convention. It
+// represents an identifier for the hardware component, unique within the
+// monitored host.
+func (VoltageNominalObservable) AttrID(val string) attribute.KeyValue {
+	return attribute.String("hw.id", val)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.

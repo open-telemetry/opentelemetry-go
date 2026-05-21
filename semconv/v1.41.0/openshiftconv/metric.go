@@ -1624,6 +1624,12 @@ func (ClusterquotaHugepageCountRequestHardObservable) Description() string {
 	return "The enforced hard limit of the resource across all projects."
 }
 
+// AttrK8SHugepageSize returns an optional attribute for the "k8s.hugepage.size"
+// semantic convention. It represents the size (identifier) of the K8s huge page.
+func (ClusterquotaHugepageCountRequestHardObservable) AttrK8SHugepageSize(val string) attribute.KeyValue {
+	return attribute.String("k8s.hugepage.size", val)
+}
+
 // ClusterquotaHugepageCountRequestUsed is an instrument used to record metric
 // values conforming to the "openshift.clusterquota.hugepage_count.request.used"
 // semantic conventions. It represents the current observed total usage of the
@@ -1817,6 +1823,12 @@ func (ClusterquotaHugepageCountRequestUsedObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ClusterquotaHugepageCountRequestUsedObservable) Description() string {
 	return "The current observed total usage of the resource across all projects."
+}
+
+// AttrK8SHugepageSize returns an optional attribute for the "k8s.hugepage.size"
+// semantic convention. It represents the size (identifier) of the K8s huge page.
+func (ClusterquotaHugepageCountRequestUsedObservable) AttrK8SHugepageSize(val string) attribute.KeyValue {
+	return attribute.String("k8s.hugepage.size", val)
 }
 
 // ClusterquotaMemoryLimitHard is an instrument used to record metric values
@@ -2718,6 +2730,13 @@ func (ClusterquotaObjectCountHardObservable) Description() string {
 	return "The enforced hard limit of the resource across all projects."
 }
 
+// AttrK8SResourceQuotaResourceName returns an optional attribute for the
+// "k8s.resourcequota.resource_name" semantic convention. It represents the name
+// of the K8s resource a resource quota defines.
+func (ClusterquotaObjectCountHardObservable) AttrK8SResourceQuotaResourceName(val string) attribute.KeyValue {
+	return attribute.String("k8s.resourcequota.resource_name", val)
+}
+
 // ClusterquotaObjectCountUsed is an instrument used to record metric values
 // conforming to the "openshift.clusterquota.object_count.used" semantic
 // conventions. It represents the current observed total usage of the resource
@@ -2911,6 +2930,13 @@ func (ClusterquotaObjectCountUsedObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ClusterquotaObjectCountUsedObservable) Description() string {
 	return "The current observed total usage of the resource across all projects."
+}
+
+// AttrK8SResourceQuotaResourceName returns an optional attribute for the
+// "k8s.resourcequota.resource_name" semantic convention. It represents the name
+// of the K8s resource a resource quota defines.
+func (ClusterquotaObjectCountUsedObservable) AttrK8SResourceQuotaResourceName(val string) attribute.KeyValue {
+	return attribute.String("k8s.resourcequota.resource_name", val)
 }
 
 // ClusterquotaPersistentvolumeclaimCountHard is an instrument used to record
