@@ -145,6 +145,7 @@ func (m ClientNetCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -174,6 +175,7 @@ func (m ClientNetCount) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -335,6 +337,7 @@ func (m ClientNetTCPConnectionAccepted) Add(ctx context.Context, incr int64, att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -357,6 +360,7 @@ func (m ClientNetTCPConnectionAccepted) AddSet(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -501,6 +505,7 @@ func (m ClientOperationCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -527,6 +532,7 @@ func (m ClientOperationCount) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -694,6 +700,7 @@ func (m ClientProcedureCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -720,6 +727,7 @@ func (m ClientProcedureCount) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -887,6 +895,7 @@ func (m ClientRPCAuthrefreshCount) Add(ctx context.Context, incr int64, attrs ..
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -909,6 +918,7 @@ func (m ClientRPCAuthrefreshCount) AddSet(ctx context.Context, incr int64, set a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1050,6 +1060,7 @@ func (m ClientRPCCount) Add(ctx context.Context, incr int64, attrs ...attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1072,6 +1083,7 @@ func (m ClientRPCCount) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1211,6 +1223,7 @@ func (m ClientRPCRetransmitCount) Add(ctx context.Context, incr int64, attrs ...
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1233,6 +1246,7 @@ func (m ClientRPCRetransmitCount) AddSet(ctx context.Context, incr int64, set at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1374,6 +1388,7 @@ func (m ServerFhStaleCount) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1397,6 +1412,7 @@ func (m ServerFhStaleCount) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1544,6 +1560,7 @@ func (m ServerIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1573,6 +1590,7 @@ func (m ServerIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1733,6 +1751,7 @@ func (m ServerNetCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1762,6 +1781,7 @@ func (m ServerNetCount) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1923,6 +1943,7 @@ func (m ServerNetTCPConnectionAccepted) Add(ctx context.Context, incr int64, att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1945,6 +1966,7 @@ func (m ServerNetTCPConnectionAccepted) AddSet(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2089,6 +2111,7 @@ func (m ServerOperationCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2115,6 +2138,7 @@ func (m ServerOperationCount) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2282,6 +2306,7 @@ func (m ServerProcedureCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2308,6 +2333,7 @@ func (m ServerProcedureCount) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2478,6 +2504,7 @@ func (m ServerRepcacheRequests) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2504,6 +2531,7 @@ func (m ServerRepcacheRequests) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2669,6 +2697,7 @@ func (m ServerRPCCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2700,6 +2729,7 @@ func (m ServerRPCCount) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2852,6 +2882,7 @@ func (m ServerThreadCount) Add(ctx context.Context, incr int64, attrs ...attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2874,6 +2905,7 @@ func (m ServerThreadCount) AddSet(ctx context.Context, incr int64, set attribute
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()

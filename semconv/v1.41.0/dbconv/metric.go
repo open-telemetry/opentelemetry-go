@@ -306,6 +306,7 @@ func (m ClientConnectionCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -336,6 +337,7 @@ func (m ClientConnectionCount) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -490,6 +492,7 @@ func (m ClientConnectionCreateTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -519,6 +522,7 @@ func (m ClientConnectionCreateTime) RecordSet(ctx context.Context, val float64, 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -612,6 +616,7 @@ func (m ClientConnectionIdleMax) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -641,6 +646,7 @@ func (m ClientConnectionIdleMax) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -793,6 +799,7 @@ func (m ClientConnectionIdleMin) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -822,6 +829,7 @@ func (m ClientConnectionIdleMin) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -974,6 +982,7 @@ func (m ClientConnectionMax) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1003,6 +1012,7 @@ func (m ClientConnectionMax) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1157,6 +1167,7 @@ func (m ClientConnectionPendingRequests) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1186,6 +1197,7 @@ func (m ClientConnectionPendingRequests) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1340,6 +1352,7 @@ func (m ClientConnectionTimeouts) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1369,6 +1382,7 @@ func (m ClientConnectionTimeouts) AddSet(ctx context.Context, incr int64, set at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1523,6 +1537,7 @@ func (m ClientConnectionUseTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1552,6 +1567,7 @@ func (m ClientConnectionUseTime) RecordSet(ctx context.Context, val float64, set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1645,6 +1661,7 @@ func (m ClientConnectionWaitTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1674,6 +1691,7 @@ func (m ClientConnectionWaitTime) RecordSet(ctx context.Context, val float64, se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1766,6 +1784,7 @@ func (m ClientOperationDuration) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1797,6 +1816,7 @@ func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1969,6 +1989,7 @@ func (m ClientResponseReturnedRows) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1998,6 +2019,7 @@ func (m ClientResponseReturnedRows) RecordSet(ctx context.Context, val int64, se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()

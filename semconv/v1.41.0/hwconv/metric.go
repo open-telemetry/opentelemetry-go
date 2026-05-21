@@ -267,6 +267,7 @@ func (m BatteryCharge) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -296,6 +297,7 @@ func (m BatteryCharge) RecordSet(ctx context.Context, val int64, set attribute.S
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -528,6 +530,7 @@ func (m BatteryChargeLimit) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -557,6 +560,7 @@ func (m BatteryChargeLimit) RecordSet(ctx context.Context, val int64, set attrib
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -815,6 +819,7 @@ func (m BatteryTimeLeft) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -845,6 +850,7 @@ func (m BatteryTimeLeft) RecordSet(ctx context.Context, val float64, set attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1089,6 +1095,7 @@ func (m CPUSpeed) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1118,6 +1125,7 @@ func (m CPUSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1318,6 +1326,7 @@ func (m CPUSpeedLimit) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1347,6 +1356,7 @@ func (m CPUSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.S
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1563,6 +1573,7 @@ func (m Energy) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1593,6 +1604,7 @@ func (m Energy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1771,6 +1783,7 @@ func (m Errors) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1801,6 +1814,7 @@ func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2001,6 +2015,7 @@ func (m FanSpeed) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2030,6 +2045,7 @@ func (m FanSpeed) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2216,6 +2232,7 @@ func (m FanSpeedLimit) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2245,6 +2262,7 @@ func (m FanSpeedLimit) RecordSet(ctx context.Context, val int64, set attribute.S
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2443,6 +2461,7 @@ func (m FanSpeedRatio) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2472,6 +2491,7 @@ func (m FanSpeedRatio) RecordSet(ctx context.Context, val int64, set attribute.S
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -2662,6 +2682,7 @@ func (m GpuIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2692,6 +2713,7 @@ func (m GpuIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2934,6 +2956,7 @@ func (m GpuMemoryLimit) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2963,6 +2986,7 @@ func (m GpuMemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3204,6 +3228,7 @@ func (m GpuMemoryUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3233,6 +3258,7 @@ func (m GpuMemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3475,6 +3501,7 @@ func (m GpuMemoryUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -3504,6 +3531,7 @@ func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val int64, set attr
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -3747,6 +3775,7 @@ func (m GpuUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -3776,6 +3805,7 @@ func (m GpuUtilization) RecordSet(ctx context.Context, val int64, set attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4030,6 +4060,7 @@ func (m HostAmbientTemperature) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4059,6 +4090,7 @@ func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set at
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4239,6 +4271,7 @@ func (m HostEnergy) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4273,6 +4306,7 @@ func (m HostEnergy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4448,6 +4482,7 @@ func (m HostHeatingMargin) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4477,6 +4512,7 @@ func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4658,6 +4694,7 @@ func (m HostPower) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4692,6 +4729,7 @@ func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4867,6 +4905,7 @@ func (m LogicalDiskLimit) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4896,6 +4935,7 @@ func (m LogicalDiskLimit) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5089,6 +5129,7 @@ func (m LogicalDiskUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5119,6 +5160,7 @@ func (m LogicalDiskUsage) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5312,6 +5354,7 @@ func (m LogicalDiskUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5342,6 +5385,7 @@ func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val int64, set at
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5531,6 +5575,7 @@ func (m MemorySize) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5560,6 +5605,7 @@ func (m MemorySize) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5786,6 +5832,7 @@ func (m NetworkBandwidthLimit) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5815,6 +5862,7 @@ func (m NetworkBandwidthLimit) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6059,6 +6107,7 @@ func (m NetworkBandwidthUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -6088,6 +6137,7 @@ func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val int64, s
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -6336,6 +6386,7 @@ func (m NetworkIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6366,6 +6417,7 @@ func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6612,6 +6664,7 @@ func (m NetworkPackets) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6642,6 +6695,7 @@ func (m NetworkPackets) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6884,6 +6938,7 @@ func (m NetworkUp) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6913,6 +6968,7 @@ func (m NetworkUp) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7160,6 +7216,7 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -7190,6 +7247,7 @@ func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val int
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -7433,6 +7491,7 @@ func (m PhysicalDiskSize) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7462,6 +7521,7 @@ func (m PhysicalDiskSize) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7708,6 +7768,7 @@ func (m PhysicalDiskSmart) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -7737,6 +7798,7 @@ func (m PhysicalDiskSmart) RecordSet(ctx context.Context, val int64, set attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -8009,6 +8071,7 @@ func (m Power) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -8041,6 +8104,7 @@ func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -8215,6 +8279,7 @@ func (m PowerSupplyLimit) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8244,6 +8309,7 @@ func (m PowerSupplyLimit) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8471,6 +8537,7 @@ func (m PowerSupplyUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8500,6 +8567,7 @@ func (m PowerSupplyUsage) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8716,6 +8784,7 @@ func (m PowerSupplyUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -8745,6 +8814,7 @@ func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val int64, set at
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -8977,6 +9047,7 @@ func (m Status) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9016,6 +9087,7 @@ func (m Status) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9190,6 +9262,7 @@ func (m TapeDriveOperations) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9219,6 +9292,7 @@ func (m TapeDriveOperations) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9448,6 +9522,7 @@ func (m Temperature) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9477,6 +9552,7 @@ func (m Temperature) RecordSet(ctx context.Context, val int64, set attribute.Set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9663,6 +9739,7 @@ func (m TemperatureLimit) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9692,6 +9769,7 @@ func (m TemperatureLimit) RecordSet(ctx context.Context, val int64, set attribut
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9891,6 +9969,7 @@ func (m Voltage) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9920,6 +9999,7 @@ func (m Voltage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10106,6 +10186,7 @@ func (m VoltageLimit) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10135,6 +10216,7 @@ func (m VoltageLimit) RecordSet(ctx context.Context, val int64, set attribute.Se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10333,6 +10415,7 @@ func (m VoltageNominal) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10362,6 +10445,7 @@ func (m VoltageNominal) RecordSet(ctx context.Context, val int64, set attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()

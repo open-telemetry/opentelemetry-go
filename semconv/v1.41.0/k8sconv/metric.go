@@ -390,6 +390,7 @@ func (m ContainerCPULimitCurrent) Add(ctx context.Context, incr int64, attrs ...
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -422,6 +423,7 @@ func (m ContainerCPULimitCurrent) AddSet(ctx context.Context, incr int64, set at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -572,6 +574,7 @@ func (m ContainerCPULimitDesired) Add(ctx context.Context, incr int64, attrs ...
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -604,6 +607,7 @@ func (m ContainerCPULimitDesired) AddSet(ctx context.Context, incr int64, set at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -753,6 +757,7 @@ func (m ContainerCPULimitUtilization) Record(ctx context.Context, val int64, att
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -783,6 +788,7 @@ func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val int64, 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -935,6 +941,7 @@ func (m ContainerCPURequestCurrent) Add(ctx context.Context, incr int64, attrs .
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -967,6 +974,7 @@ func (m ContainerCPURequestCurrent) AddSet(ctx context.Context, incr int64, set 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1118,6 +1126,7 @@ func (m ContainerCPURequestDesired) Add(ctx context.Context, incr int64, attrs .
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1150,6 +1159,7 @@ func (m ContainerCPURequestDesired) AddSet(ctx context.Context, incr int64, set 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1300,6 +1310,7 @@ func (m ContainerCPURequestUtilization) Record(ctx context.Context, val int64, a
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1330,6 +1341,7 @@ func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val int64
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1474,6 +1486,7 @@ func (m ContainerEphemeralStorageLimit) Add(ctx context.Context, incr int64, att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1498,6 +1511,7 @@ func (m ContainerEphemeralStorageLimit) AddSet(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1642,6 +1656,7 @@ func (m ContainerEphemeralStorageRequest) Add(ctx context.Context, incr int64, a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1666,6 +1681,7 @@ func (m ContainerEphemeralStorageRequest) AddSet(ctx context.Context, incr int64
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1818,6 +1834,7 @@ func (m ContainerMemoryLimitCurrent) Add(ctx context.Context, incr int64, attrs 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1850,6 +1867,7 @@ func (m ContainerMemoryLimitCurrent) AddSet(ctx context.Context, incr int64, set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2002,6 +2020,7 @@ func (m ContainerMemoryLimitDesired) Add(ctx context.Context, incr int64, attrs 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2034,6 +2053,7 @@ func (m ContainerMemoryLimitDesired) AddSet(ctx context.Context, incr int64, set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2186,6 +2206,7 @@ func (m ContainerMemoryRequestCurrent) Add(ctx context.Context, incr int64, attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2218,6 +2239,7 @@ func (m ContainerMemoryRequestCurrent) AddSet(ctx context.Context, incr int64, s
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2369,6 +2391,7 @@ func (m ContainerMemoryRequestDesired) Add(ctx context.Context, incr int64, attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2401,6 +2424,7 @@ func (m ContainerMemoryRequestDesired) AddSet(ctx context.Context, incr int64, s
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2545,6 +2569,7 @@ func (m ContainerReady) Add(ctx context.Context, incr int64, attrs ...attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2570,6 +2595,7 @@ func (m ContainerReady) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2718,6 +2744,7 @@ func (m ContainerRestartCount) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2748,6 +2775,7 @@ func (m ContainerRestartCount) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2905,6 +2933,7 @@ func (m ContainerStatusReason) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -2938,6 +2967,7 @@ func (m ContainerStatusReason) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3092,6 +3122,7 @@ func (m ContainerStatusState) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3125,6 +3156,7 @@ func (m ContainerStatusState) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3267,6 +3299,7 @@ func (m ContainerStorageLimit) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3291,6 +3324,7 @@ func (m ContainerStorageLimit) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3432,6 +3466,7 @@ func (m ContainerStorageRequest) Add(ctx context.Context, incr int64, attrs ...a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3456,6 +3491,7 @@ func (m ContainerStorageRequest) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3598,6 +3634,7 @@ func (m CronJobJobActive) Add(ctx context.Context, incr int64, attrs ...attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3623,6 +3660,7 @@ func (m CronJobJobActive) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3767,6 +3805,7 @@ func (m DaemonSetNodeCurrentScheduled) Add(ctx context.Context, incr int64, attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3792,6 +3831,7 @@ func (m DaemonSetNodeCurrentScheduled) AddSet(ctx context.Context, incr int64, s
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3937,6 +3977,7 @@ func (m DaemonSetNodeDesiredScheduled) Add(ctx context.Context, incr int64, attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -3962,6 +4003,7 @@ func (m DaemonSetNodeDesiredScheduled) AddSet(ctx context.Context, incr int64, s
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4107,6 +4149,7 @@ func (m DaemonSetNodeMisscheduled) Add(ctx context.Context, incr int64, attrs ..
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4132,6 +4175,7 @@ func (m DaemonSetNodeMisscheduled) AddSet(ctx context.Context, incr int64, set a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4276,6 +4320,7 @@ func (m DaemonSetNodeReady) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4301,6 +4346,7 @@ func (m DaemonSetNodeReady) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4445,6 +4491,7 @@ func (m DeploymentPodAvailable) Add(ctx context.Context, incr int64, attrs ...at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4470,6 +4517,7 @@ func (m DeploymentPodAvailable) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4613,6 +4661,7 @@ func (m DeploymentPodDesired) Add(ctx context.Context, incr int64, attrs ...attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4638,6 +4687,7 @@ func (m DeploymentPodDesired) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -4792,6 +4842,7 @@ func (m HPAMetricTargetCPUAverageUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -4827,6 +4878,7 @@ func (m HPAMetricTargetCPUAverageUtilization) RecordSet(ctx context.Context, val
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5013,6 +5065,7 @@ func (m HPAMetricTargetCPUAverageValue) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5048,6 +5101,7 @@ func (m HPAMetricTargetCPUAverageValue) RecordSet(ctx context.Context, val int64
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5231,6 +5285,7 @@ func (m HPAMetricTargetCPUValue) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5266,6 +5321,7 @@ func (m HPAMetricTargetCPUValue) RecordSet(ctx context.Context, val int64, set a
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -5439,6 +5495,7 @@ func (m HPAPodCurrent) Add(ctx context.Context, incr int64, attrs ...attribute.K
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5464,6 +5521,7 @@ func (m HPAPodCurrent) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5607,6 +5665,7 @@ func (m HPAPodDesired) Add(ctx context.Context, incr int64, attrs ...attribute.K
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5632,6 +5691,7 @@ func (m HPAPodDesired) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5774,6 +5834,7 @@ func (m HPAPodMax) Add(ctx context.Context, incr int64, attrs ...attribute.KeyVa
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5799,6 +5860,7 @@ func (m HPAPodMax) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5940,6 +6002,7 @@ func (m HPAPodMin) Add(ctx context.Context, incr int64, attrs ...attribute.KeyVa
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -5965,6 +6028,7 @@ func (m HPAPodMin) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6106,6 +6170,7 @@ func (m JobPodActive) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6131,6 +6196,7 @@ func (m JobPodActive) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6273,6 +6339,7 @@ func (m JobPodDesiredSuccessful) Add(ctx context.Context, incr int64, attrs ...a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6298,6 +6365,7 @@ func (m JobPodDesiredSuccessful) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6441,6 +6509,7 @@ func (m JobPodFailed) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6466,6 +6535,7 @@ func (m JobPodFailed) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6607,6 +6677,7 @@ func (m JobPodMaxParallel) Add(ctx context.Context, incr int64, attrs ...attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6632,6 +6703,7 @@ func (m JobPodMaxParallel) AddSet(ctx context.Context, incr int64, set attribute
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6775,6 +6847,7 @@ func (m JobPodSuccessful) Add(ctx context.Context, incr int64, attrs ...attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6800,6 +6873,7 @@ func (m JobPodSuccessful) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6946,6 +7020,7 @@ func (m NamespacePhase) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -6975,6 +7050,7 @@ func (m NamespacePhase) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7129,6 +7205,7 @@ func (m NodeConditionStatus) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7163,6 +7240,7 @@ func (m NodeConditionStatus) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7300,6 +7378,7 @@ func (m NodeCPUAllocatable) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7320,6 +7399,7 @@ func (m NodeCPUAllocatable) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7459,6 +7539,7 @@ func (m NodeCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.K
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7481,6 +7562,7 @@ func (m NodeCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7620,6 +7702,7 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -7643,6 +7726,7 @@ func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -7782,6 +7866,7 @@ func (m NodeEphemeralStorageAllocatable) Add(ctx context.Context, incr int64, at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7802,6 +7887,7 @@ func (m NodeEphemeralStorageAllocatable) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7948,6 +8034,7 @@ func (m NodeFilesystemAvailable) Add(ctx context.Context, incr int64, attrs ...a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -7976,6 +8063,7 @@ func (m NodeFilesystemAvailable) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8121,6 +8209,7 @@ func (m NodeFilesystemCapacity) Add(ctx context.Context, incr int64, attrs ...at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8149,6 +8238,7 @@ func (m NodeFilesystemCapacity) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8296,6 +8386,7 @@ func (m NodeFilesystemUsage) Add(ctx context.Context, incr int64, attrs ...attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8326,6 +8417,7 @@ func (m NodeFilesystemUsage) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8463,6 +8555,7 @@ func (m NodeMemoryAllocatable) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8483,6 +8576,7 @@ func (m NodeMemoryAllocatable) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8628,6 +8722,7 @@ func (m NodeMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8656,6 +8751,7 @@ func (m NodeMemoryAvailable) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8808,6 +8904,7 @@ func (m NodeMemoryPagingFaults) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -8843,6 +8940,7 @@ func (m NodeMemoryPagingFaults) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9001,6 +9099,7 @@ func (m NodeMemoryRss) Add(ctx context.Context, incr int64, attrs ...attribute.K
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9029,6 +9128,7 @@ func (m NodeMemoryRss) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9167,6 +9267,7 @@ func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9189,6 +9290,7 @@ func (m NodeMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -9334,6 +9436,7 @@ func (m NodeMemoryWorkingSet) Add(ctx context.Context, incr int64, attrs ...attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9362,6 +9465,7 @@ func (m NodeMemoryWorkingSet) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9505,6 +9609,7 @@ func (m NodeNetworkErrors) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9531,6 +9636,7 @@ func (m NodeNetworkErrors) AddSet(ctx context.Context, incr int64, set attribute
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9702,6 +9808,7 @@ func (m NodeNetworkIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9728,6 +9835,7 @@ func (m NodeNetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9892,6 +10000,7 @@ func (m NodePodAllocatable) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -9912,6 +10021,7 @@ func (m NodePodAllocatable) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10057,6 +10167,7 @@ func (m NodeSystemContainerCPUTime) Add(ctx context.Context, incr float64, attrs
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10084,6 +10195,7 @@ func (m NodeSystemContainerCPUTime) AddSet(ctx context.Context, incr float64, se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10229,6 +10341,7 @@ func (m NodeSystemContainerCPUUsage) Record(ctx context.Context, val int64, attr
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10256,6 +10369,7 @@ func (m NodeSystemContainerCPUUsage) RecordSet(ctx context.Context, val int64, s
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10402,6 +10516,7 @@ func (m NodeSystemContainerMemoryUsage) Add(ctx context.Context, incr int64, att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10429,6 +10544,7 @@ func (m NodeSystemContainerMemoryUsage) AddSet(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10574,6 +10690,7 @@ func (m NodeSystemContainerMemoryWorkingSet) Add(ctx context.Context, incr int64
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10601,6 +10718,7 @@ func (m NodeSystemContainerMemoryWorkingSet) AddSet(ctx context.Context, incr in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10742,6 +10860,7 @@ func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10766,6 +10885,7 @@ func (m NodeUptime) RecordSet(ctx context.Context, val float64, set attribute.Se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -10919,6 +11039,7 @@ func (m PersistentvolumeStatusPhase) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -10955,6 +11076,7 @@ func (m PersistentvolumeStatusPhase) AddSet(ctx context.Context, incr int64, set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11098,6 +11220,7 @@ func (m PersistentvolumeStorageCapacity) Add(ctx context.Context, incr int64, at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11123,6 +11246,7 @@ func (m PersistentvolumeStorageCapacity) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11280,6 +11404,7 @@ func (m PersistentvolumeclaimStatusPhase) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11316,6 +11441,7 @@ func (m PersistentvolumeclaimStatusPhase) AddSet(ctx context.Context, incr int64
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11463,6 +11589,7 @@ func (m PersistentvolumeclaimStorageCapacity) Add(ctx context.Context, incr int6
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11490,6 +11617,7 @@ func (m PersistentvolumeclaimStorageCapacity) AddSet(ctx context.Context, incr i
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11634,6 +11762,7 @@ func (m PersistentvolumeclaimStorageRequest) Add(ctx context.Context, incr int64
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11659,6 +11788,7 @@ func (m PersistentvolumeclaimStorageRequest) AddSet(ctx context.Context, incr in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11799,6 +11929,7 @@ func (m PodCPUTime) Add(ctx context.Context, incr float64, attrs ...attribute.Ke
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11821,6 +11952,7 @@ func (m PodCPUTime) AddSet(ctx context.Context, incr float64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -11960,6 +12092,7 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -11983,6 +12116,7 @@ func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -12127,6 +12261,7 @@ func (m PodFilesystemAvailable) Add(ctx context.Context, incr int64, attrs ...at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12155,6 +12290,7 @@ func (m PodFilesystemAvailable) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12300,6 +12436,7 @@ func (m PodFilesystemCapacity) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12328,6 +12465,7 @@ func (m PodFilesystemCapacity) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12475,6 +12613,7 @@ func (m PodFilesystemUsage) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12505,6 +12644,7 @@ func (m PodFilesystemUsage) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12650,6 +12790,7 @@ func (m PodMemoryAvailable) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12678,6 +12819,7 @@ func (m PodMemoryAvailable) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12830,6 +12972,7 @@ func (m PodMemoryPagingFaults) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -12865,6 +13008,7 @@ func (m PodMemoryPagingFaults) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13023,6 +13167,7 @@ func (m PodMemoryRss) Add(ctx context.Context, incr int64, attrs ...attribute.Ke
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13051,6 +13196,7 @@ func (m PodMemoryRss) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13189,6 +13335,7 @@ func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribut
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -13211,6 +13358,7 @@ func (m PodMemoryUsage) RecordSet(ctx context.Context, val int64, set attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -13355,6 +13503,7 @@ func (m PodMemoryWorkingSet) Add(ctx context.Context, incr int64, attrs ...attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13383,6 +13532,7 @@ func (m PodMemoryWorkingSet) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13526,6 +13676,7 @@ func (m PodNetworkErrors) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13552,6 +13703,7 @@ func (m PodNetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13723,6 +13875,7 @@ func (m PodNetworkIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13749,6 +13902,7 @@ func (m PodNetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13929,6 +14083,7 @@ func (m PodStatusPhase) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -13962,6 +14117,7 @@ func (m PodStatusPhase) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14114,6 +14270,7 @@ func (m PodStatusReason) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14147,6 +14304,7 @@ func (m PodStatusReason) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14289,6 +14447,7 @@ func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.K
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -14313,6 +14472,7 @@ func (m PodUptime) RecordSet(ctx context.Context, val float64, set attribute.Set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -14468,6 +14628,7 @@ func (m PodVolumeAvailable) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14505,6 +14666,7 @@ func (m PodVolumeAvailable) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14673,6 +14835,7 @@ func (m PodVolumeCapacity) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14710,6 +14873,7 @@ func (m PodVolumeCapacity) AddSet(ctx context.Context, incr int64, set attribute
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14878,6 +15042,7 @@ func (m PodVolumeInodeCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -14915,6 +15080,7 @@ func (m PodVolumeInodeCount) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15083,6 +15249,7 @@ func (m PodVolumeInodeFree) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15120,6 +15287,7 @@ func (m PodVolumeInodeFree) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15291,6 +15459,7 @@ func (m PodVolumeInodeUsed) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15331,6 +15500,7 @@ func (m PodVolumeInodeUsed) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15501,6 +15671,7 @@ func (m PodVolumeUsage) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15540,6 +15711,7 @@ func (m PodVolumeUsage) AddSet(ctx context.Context, incr int64, set attribute.Se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15694,6 +15866,7 @@ func (m ReplicaSetPodAvailable) Add(ctx context.Context, incr int64, attrs ...at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15719,6 +15892,7 @@ func (m ReplicaSetPodAvailable) AddSet(ctx context.Context, incr int64, set attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15862,6 +16036,7 @@ func (m ReplicaSetPodDesired) Add(ctx context.Context, incr int64, attrs ...attr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -15887,6 +16062,7 @@ func (m ReplicaSetPodDesired) AddSet(ctx context.Context, incr int64, set attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16031,6 +16207,7 @@ func (m ReplicationControllerPodAvailable) Add(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16056,6 +16233,7 @@ func (m ReplicationControllerPodAvailable) AddSet(ctx context.Context, incr int6
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16201,6 +16379,7 @@ func (m ReplicationControllerPodDesired) Add(ctx context.Context, incr int64, at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16226,6 +16405,7 @@ func (m ReplicationControllerPodDesired) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16372,6 +16552,7 @@ func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ..
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16397,6 +16578,7 @@ func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16544,6 +16726,7 @@ func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ..
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16569,6 +16752,7 @@ func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16716,6 +16900,7 @@ func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16741,6 +16926,7 @@ func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16888,6 +17074,7 @@ func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -16913,6 +17100,7 @@ func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17061,6 +17249,7 @@ func (m ResourceQuotaEphemeralStorageLimitHard) Add(ctx context.Context, incr in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17086,6 +17275,7 @@ func (m ResourceQuotaEphemeralStorageLimitHard) AddSet(ctx context.Context, incr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17235,6 +17425,7 @@ func (m ResourceQuotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17260,6 +17451,7 @@ func (m ResourceQuotaEphemeralStorageLimitUsed) AddSet(ctx context.Context, incr
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17409,6 +17601,7 @@ func (m ResourceQuotaEphemeralStorageRequestHard) Add(ctx context.Context, incr 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17434,6 +17627,7 @@ func (m ResourceQuotaEphemeralStorageRequestHard) AddSet(ctx context.Context, in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17583,6 +17777,7 @@ func (m ResourceQuotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17608,6 +17803,7 @@ func (m ResourceQuotaEphemeralStorageRequestUsed) AddSet(ctx context.Context, in
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17766,6 +17962,7 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17800,6 +17997,7 @@ func (m ResourceQuotaHugepageCountRequestHard) AddSet(ctx context.Context, incr 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17958,6 +18156,7 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -17992,6 +18191,7 @@ func (m ResourceQuotaHugepageCountRequestUsed) AddSet(ctx context.Context, incr 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18140,6 +18340,7 @@ func (m ResourceQuotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18165,6 +18366,7 @@ func (m ResourceQuotaMemoryLimitHard) AddSet(ctx context.Context, incr int64, se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18312,6 +18514,7 @@ func (m ResourceQuotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18337,6 +18540,7 @@ func (m ResourceQuotaMemoryLimitUsed) AddSet(ctx context.Context, incr int64, se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18484,6 +18688,7 @@ func (m ResourceQuotaMemoryRequestHard) Add(ctx context.Context, incr int64, att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18509,6 +18714,7 @@ func (m ResourceQuotaMemoryRequestHard) AddSet(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18657,6 +18863,7 @@ func (m ResourceQuotaMemoryRequestUsed) Add(ctx context.Context, incr int64, att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18682,6 +18889,7 @@ func (m ResourceQuotaMemoryRequestUsed) AddSet(ctx context.Context, incr int64, 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18840,6 +19048,7 @@ func (m ResourceQuotaObjectCountHard) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -18874,6 +19083,7 @@ func (m ResourceQuotaObjectCountHard) AddSet(ctx context.Context, incr int64, se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19031,6 +19241,7 @@ func (m ResourceQuotaObjectCountUsed) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19065,6 +19276,7 @@ func (m ResourceQuotaObjectCountUsed) AddSet(ctx context.Context, incr int64, se
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19224,6 +19436,7 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19259,6 +19472,7 @@ func (m ResourceQuotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19438,6 +19652,7 @@ func (m ResourceQuotaPersistentvolumeclaimCountUsed) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19473,6 +19688,7 @@ func (m ResourceQuotaPersistentvolumeclaimCountUsed) AddSet(ctx context.Context,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19650,6 +19866,7 @@ func (m ResourceQuotaStorageRequestHard) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19685,6 +19902,7 @@ func (m ResourceQuotaStorageRequestHard) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19861,6 +20079,7 @@ func (m ResourceQuotaStorageRequestUsed) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -19896,6 +20115,7 @@ func (m ResourceQuotaStorageRequestUsed) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -20100,6 +20320,7 @@ func (m ServiceEndpointCount) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -20160,6 +20381,7 @@ func (m ServiceEndpointCount) RecordSet(ctx context.Context, val int64, set attr
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -20334,6 +20556,7 @@ func (m ServiceLoadBalancerIngressCount) Record(ctx context.Context, val int64, 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -20374,6 +20597,7 @@ func (m ServiceLoadBalancerIngressCount) RecordSet(ctx context.Context, val int6
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -20518,6 +20742,7 @@ func (m StatefulSetPodCurrent) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -20543,6 +20768,7 @@ func (m StatefulSetPodCurrent) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -20686,6 +20912,7 @@ func (m StatefulSetPodDesired) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -20711,6 +20938,7 @@ func (m StatefulSetPodDesired) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -20853,6 +21081,7 @@ func (m StatefulSetPodReady) Add(ctx context.Context, incr int64, attrs ...attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -20878,6 +21107,7 @@ func (m StatefulSetPodReady) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -21022,6 +21252,7 @@ func (m StatefulSetPodUpdated) Add(ctx context.Context, incr int64, attrs ...att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -21047,6 +21278,7 @@ func (m StatefulSetPodUpdated) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()

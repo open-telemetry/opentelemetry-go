@@ -129,6 +129,7 @@ func (m CosmosDBClientActiveInstanceCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -155,6 +156,7 @@ func (m CosmosDBClientActiveInstanceCount) AddSet(ctx context.Context, incr int6
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -332,6 +334,7 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -361,6 +364,7 @@ func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
