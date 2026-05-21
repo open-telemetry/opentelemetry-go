@@ -302,6 +302,12 @@ func (CPUTimeObservable) Description() string {
 	return "Estimated CPU time spent by the Go runtime."
 }
 
+// AttrCPUState returns a required attribute for the "go.cpu.state" semantic
+// convention. It represents the state of the CPU.
+func (CPUTimeObservable) AttrCPUState(val CPUStateAttr) attribute.KeyValue {
+	return attribute.String("go.cpu.state", string(val))
+}
+
 // AttrCPUDetailedState returns an optional attribute for the
 // "go.cpu.detailed_state" semantic convention. It represents the detailed state
 // of the CPU.
