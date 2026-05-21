@@ -182,6 +182,81 @@ func (ServerActiveConnections) AttrTransport(val TransportAttr) attribute.KeyVal
 	return attribute.String("signalr.transport", string(val))
 }
 
+// ServerActiveConnectionsObservable is an instrument used to record metric
+// values conforming to the "signalr.server.active_connections" semantic
+// conventions. It represents the number of connections that are currently active
+// on the server.
+type ServerActiveConnectionsObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newServerActiveConnectionsObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of connections that are currently active on the server."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewServerActiveConnectionsObservable returns a new
+// ServerActiveConnectionsObservable instrument.
+func NewServerActiveConnectionsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ServerActiveConnectionsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ServerActiveConnectionsObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newServerActiveConnectionsObservableOpts
+	} else {
+		opt = append(opt, newServerActiveConnectionsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"signalr.server.active_connections",
+		opt...,
+	)
+	if err != nil {
+		return ServerActiveConnectionsObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ServerActiveConnectionsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ServerActiveConnectionsObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ServerActiveConnectionsObservable) Name() string {
+	return "signalr.server.active_connections"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ServerActiveConnectionsObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ServerActiveConnectionsObservable) Description() string {
+	return "Number of connections that are currently active on the server."
+}
+
+// AttrConnectionStatus returns an optional attribute for the
+// "signalr.connection.status" semantic convention. It represents the signalR
+// HTTP connection closure status.
+func (ServerActiveConnectionsObservable) AttrConnectionStatus(val ConnectionStatusAttr) attribute.KeyValue {
+	return attribute.String("signalr.connection.status", string(val))
+}
+
+// AttrTransport returns an optional attribute for the "signalr.transport"
+// semantic convention. It represents the [SignalR transport type].
+//
+// [SignalR transport type]: https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/TransportProtocols.md
+func (ServerActiveConnectionsObservable) AttrTransport(val TransportAttr) attribute.KeyValue {
+	return attribute.String("signalr.transport", string(val))
+}
+
 // ServerConnectionDuration is an instrument used to record metric values
 // conforming to the "signalr.server.connection.duration" semantic conventions.
 // It represents the duration of connections on the server.

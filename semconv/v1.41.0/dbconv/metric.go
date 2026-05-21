@@ -344,6 +344,66 @@ func (m ClientConnectionCount) AddSet(ctx context.Context, incr int64, set attri
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ClientConnectionCountObservable is an instrument used to record metric values
+// conforming to the "db.client.connection.count" semantic conventions. It
+// represents the number of connections that are currently in state described by
+// the `state` attribute.
+type ClientConnectionCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of connections that are currently in state described by the `state` attribute."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionCountObservable returns a new
+// ClientConnectionCountObservable instrument.
+func NewClientConnectionCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionCountObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.count",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionCountObservable) Name() string {
+	return "db.client.connection.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionCountObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionCountObservable) Description() string {
+	return "The number of connections that are currently in state described by the `state` attribute."
+}
+
 // ClientConnectionCreateTime is an instrument used to record metric values
 // conforming to the "db.client.connection.create_time" semantic conventions. It
 // represents the time it took to create a new connection.
@@ -589,6 +649,65 @@ func (m ClientConnectionIdleMax) AddSet(ctx context.Context, incr int64, set att
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ClientConnectionIdleMaxObservable is an instrument used to record metric
+// values conforming to the "db.client.connection.idle.max" semantic conventions.
+// It represents the maximum number of idle open connections allowed.
+type ClientConnectionIdleMaxObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionIdleMaxObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The maximum number of idle open connections allowed."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionIdleMaxObservable returns a new
+// ClientConnectionIdleMaxObservable instrument.
+func NewClientConnectionIdleMaxObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionIdleMaxObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionIdleMaxObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionIdleMaxObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionIdleMaxObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.idle.max",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionIdleMaxObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionIdleMaxObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionIdleMaxObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionIdleMaxObservable) Name() string {
+	return "db.client.connection.idle.max"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionIdleMaxObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionIdleMaxObservable) Description() string {
+	return "The maximum number of idle open connections allowed."
+}
+
 // ClientConnectionIdleMin is an instrument used to record metric values
 // conforming to the "db.client.connection.idle.min" semantic conventions. It
 // represents the minimum number of idle open connections allowed.
@@ -711,6 +830,65 @@ func (m ClientConnectionIdleMin) AddSet(ctx context.Context, incr int64, set att
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ClientConnectionIdleMinObservable is an instrument used to record metric
+// values conforming to the "db.client.connection.idle.min" semantic conventions.
+// It represents the minimum number of idle open connections allowed.
+type ClientConnectionIdleMinObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionIdleMinObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The minimum number of idle open connections allowed."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionIdleMinObservable returns a new
+// ClientConnectionIdleMinObservable instrument.
+func NewClientConnectionIdleMinObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionIdleMinObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionIdleMinObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionIdleMinObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionIdleMinObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.idle.min",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionIdleMinObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionIdleMinObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionIdleMinObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionIdleMinObservable) Name() string {
+	return "db.client.connection.idle.min"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionIdleMinObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionIdleMinObservable) Description() string {
+	return "The minimum number of idle open connections allowed."
+}
+
 // ClientConnectionMax is an instrument used to record metric values conforming
 // to the "db.client.connection.max" semantic conventions. It represents the
 // maximum number of open connections allowed.
@@ -831,6 +1009,65 @@ func (m ClientConnectionMax) AddSet(ctx context.Context, incr int64, set attribu
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionMaxObservable is an instrument used to record metric values
+// conforming to the "db.client.connection.max" semantic conventions. It
+// represents the maximum number of open connections allowed.
+type ClientConnectionMaxObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionMaxObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The maximum number of open connections allowed."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionMaxObservable returns a new ClientConnectionMaxObservable
+// instrument.
+func NewClientConnectionMaxObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionMaxObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionMaxObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionMaxObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionMaxObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.max",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionMaxObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionMaxObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionMaxObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionMaxObservable) Name() string {
+	return "db.client.connection.max"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionMaxObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionMaxObservable) Description() string {
+	return "The maximum number of open connections allowed."
 }
 
 // ClientConnectionPendingRequests is an instrument used to record metric values
@@ -957,6 +1194,66 @@ func (m ClientConnectionPendingRequests) AddSet(ctx context.Context, incr int64,
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
 }
 
+// ClientConnectionPendingRequestsObservable is an instrument used to record
+// metric values conforming to the "db.client.connection.pending_requests"
+// semantic conventions. It represents the number of current pending requests for
+// an open connection.
+type ClientConnectionPendingRequestsObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionPendingRequestsObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of current pending requests for an open connection."),
+	metric.WithUnit("{request}"),
+}
+
+// NewClientConnectionPendingRequestsObservable returns a new
+// ClientConnectionPendingRequestsObservable instrument.
+func NewClientConnectionPendingRequestsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionPendingRequestsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionPendingRequestsObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionPendingRequestsObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionPendingRequestsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.pending_requests",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionPendingRequestsObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionPendingRequestsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionPendingRequestsObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionPendingRequestsObservable) Name() string {
+	return "db.client.connection.pending_requests"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionPendingRequestsObservable) Unit() string {
+	return "{request}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionPendingRequestsObservable) Description() string {
+	return "The number of current pending requests for an open connection."
+}
+
 // ClientConnectionTimeouts is an instrument used to record metric values
 // conforming to the "db.client.connection.timeouts" semantic conventions. It
 // represents the number of connection timeouts that have occurred trying to
@@ -1078,6 +1375,66 @@ func (m ClientConnectionTimeouts) AddSet(ctx context.Context, incr int64, set at
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionTimeoutsObservable is an instrument used to record metric
+// values conforming to the "db.client.connection.timeouts" semantic conventions.
+// It represents the number of connection timeouts that have occurred trying to
+// obtain a connection from the pool.
+type ClientConnectionTimeoutsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newClientConnectionTimeoutsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of connection timeouts that have occurred trying to obtain a connection from the pool."),
+	metric.WithUnit("{timeout}"),
+}
+
+// NewClientConnectionTimeoutsObservable returns a new
+// ClientConnectionTimeoutsObservable instrument.
+func NewClientConnectionTimeoutsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ClientConnectionTimeoutsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionTimeoutsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionTimeoutsObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionTimeoutsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"db.client.connection.timeouts",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionTimeoutsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ClientConnectionTimeoutsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionTimeoutsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionTimeoutsObservable) Name() string {
+	return "db.client.connection.timeouts"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionTimeoutsObservable) Unit() string {
+	return "{timeout}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionTimeoutsObservable) Description() string {
+	return "The number of connection timeouts that have occurred trying to obtain a connection from the pool."
 }
 
 // ClientConnectionUseTime is an instrument used to record metric values
