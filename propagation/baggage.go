@@ -5,6 +5,8 @@ package propagation // import "go.opentelemetry.io/otel/propagation"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/internal/errorhandler"
@@ -13,9 +15,12 @@ import (
 const (
 	baggageHeader = "baggage"
 
+	maxParseErrors = 5
+
 	// W3C Baggage specification limits.
 	// https://www.w3.org/TR/baggage/#limits
-	maxMembers = 64
+	maxMembers               = 64
+	maxBytesPerBaggageString = 8192
 )
 
 // Baggage is a propagator that supports the W3C Baggage format.
@@ -72,24 +77,56 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 	}
 
 	var members []baggage.Member
-	for _, bStr := range bVals {
-		currBag, err := baggage.Parse(bStr)
-		if err != nil {
-			errorhandler.GetErrorHandler().Handle(err)
+	var totalBytes int
+	var parseErrors int
+	var truncateErr error
+	for i, bStr := range bVals {
+		if i > 0 {
+			totalBytes++ // comma separator between combined header values
 		}
-		if currBag.Len() == 0 {
-			continue
+		totalBytes += len(bStr)
+		if totalBytes > maxBytesPerBaggageString {
+			// Per the W3C Baggage spec, the byte limit applies to the
+			// combination of all baggage headers, not each header
+			// individually. Mirror the single-header behavior of
+			// reporting the error and returning the parent context
+			// with no baggage attached.
+			errorhandler.GetErrorHandler().Handle(fmt.Errorf(
+				"baggage: aggregate header size %d exceeds %d byte limit",
+				totalBytes,
+				maxBytesPerBaggageString,
+			))
+			return parent
 		}
-		members = append(members, currBag.Members()...)
-		if len(members) >= maxMembers {
-			break
+
+		// If members exceed the limit, stop parsing baggage.
+		if len(members) <= maxMembers {
+			currBag, err := baggage.Parse(bStr)
+			if err != nil {
+				parseErrors++
+				if parseErrors <= maxParseErrors {
+					truncateErr = errors.Join(truncateErr, err)
+				}
+			}
+			if currBag.Len() == 0 {
+				continue
+			}
+			members = append(members, currBag.Members()...)
 		}
+	}
+
+	if dropped := parseErrors - maxParseErrors; dropped > 0 {
+		truncateErr = errors.Join(truncateErr, fmt.Errorf("and %d more error(s)", dropped))
 	}
 
 	b, err := baggage.New(members...)
 	if err != nil {
-		errorhandler.GetErrorHandler().Handle(err)
+		truncateErr = errors.Join(truncateErr, err)
 	}
+	if truncateErr != nil {
+		errorhandler.GetErrorHandler().Handle(truncateErr)
+	}
+
 	if b.Len() == 0 {
 		return parent
 	}
