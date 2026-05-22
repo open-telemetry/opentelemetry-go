@@ -20,7 +20,7 @@ import (
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 func Example() {
@@ -78,7 +78,7 @@ func Example() {
 	// Output:
 	// # HELP bar_total a simple counter
 	// # TYPE bar_total counter
-	// bar_total{otel_scope_name="example-global",otel_scope_schema_url="https://opentelemetry.io/schemas/1.40.0",otel_scope_version="v1.0.0"} 10
+	// bar_total{otel_scope_name="example-global",otel_scope_schema_url="https://opentelemetry.io/schemas/1.41.0",otel_scope_version="v1.0.0"} 10
 }
 
 func Example_customRegistry() {
@@ -135,7 +135,7 @@ func Example_customRegistry() {
 	// Output:
 	// # HELP foo_total another counter
 	// # TYPE foo_total counter
-	// foo_total{otel_scope_name="example-custom",otel_scope_schema_url="https://opentelemetry.io/schemas/1.40.0",otel_scope_version="v1.0.0"} 5
+	// foo_total{otel_scope_name="example-custom",otel_scope_schema_url="https://opentelemetry.io/schemas/1.41.0",otel_scope_version="v1.0.0"} 5
 }
 
 func Example_noTranslation() {
@@ -198,5 +198,5 @@ func Example_noTranslation() {
 	// Output:
 	// # HELP "my.metric" a counter without translation
 	// # TYPE "my.metric" counter
-	// {"my.metric",otel_scope_name="example-no-translation",otel_scope_schema_url="https://opentelemetry.io/schemas/1.40.0",otel_scope_version="v1.0.0"} 5
+	// {"my.metric",otel_scope_name="example-no-translation",otel_scope_schema_url="https://opentelemetry.io/schemas/1.41.0",otel_scope_version="v1.0.0"} 5
 }

@@ -7,9 +7,9 @@ package decls // import "go.opentelemetry.io/otel/internal/tools/semconvkit/decl
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 // GetNames parses the Go source code in the specified package path and returns
@@ -20,15 +20,18 @@ import (
 // lowercased form of the name and the values are the original format of the
 // name.
 func GetNames(pkgPath string, f Parser) (Names, error) {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, pkgPath, nil, 0)
+	cfg := &packages.Config{
+		Mode: packages.NeedSyntax | packages.NeedFiles,
+		Dir:  pkgPath,
+	}
+	pkgs, err := packages.Load(cfg, ".")
 	if err != nil {
 		return nil, err
 	}
 
 	out := make(Names)
 	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
+		for _, file := range pkg.Syntax {
 			for _, decl := range file.Decls {
 				for _, name := range f(decl) {
 					out[NewCanonicalName(name)] = Name(name)
