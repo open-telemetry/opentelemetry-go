@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -886,7 +886,8 @@ func assertObsScopeMetrics(
 	}
 
 	if len(wantProcessedDataPoints) > 0 {
-		wantMetrics = append(wantMetrics,
+		wantMetrics = append(
+			wantMetrics,
 			metricdata.Metrics{
 				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
 				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),

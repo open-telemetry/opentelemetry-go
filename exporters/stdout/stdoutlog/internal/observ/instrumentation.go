@@ -18,8 +18,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 const (
@@ -71,6 +71,7 @@ func get[T any](pool *sync.Pool) *[]T {
 }
 
 func put[T any](pool *sync.Pool, value *[]T) {
+	clear(*value) // erase elements to allow GC to collect what they refer to.
 	*value = (*value)[:0]
 	pool.Put(value)
 }

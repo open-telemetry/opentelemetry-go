@@ -26,6 +26,7 @@ func ParseFile(schemaFilePath string) (*ast.Schema, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	return Parse(file)
 }
 
