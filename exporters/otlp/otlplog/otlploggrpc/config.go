@@ -27,7 +27,7 @@ import (
 var (
 	defaultEndpoint       = "localhost:4317"
 	defaultTimeout        = 10 * time.Second
-	defaultMaxRequestSize = 32 * 1024 * 1024
+	defaultMaxRequestSize = 64 * 1024 * 1024
 	defaultRetryCfg       = retry.DefaultConfig
 )
 
