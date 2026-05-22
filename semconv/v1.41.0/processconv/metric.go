@@ -278,6 +278,14 @@ func (ContextSwitchesObservable) Description() string {
 	return "Number of times the process has been context switched."
 }
 
+// AttrContextSwitchType returns a required attribute for the
+// "process.context_switch.type" semantic convention. It represents the specifies
+// whether the context switches for this data point were voluntary or
+// involuntary.
+func (ContextSwitchesObservable) AttrContextSwitchType(val ContextSwitchTypeAttr) attribute.KeyValue {
+	return attribute.String("process.context_switch.type", string(val))
+}
+
 // CPUTime is an instrument used to record metric values conforming to the
 // "process.cpu.time" semantic conventions. It represents the total CPU seconds
 // broken down by different CPU modes.
@@ -334,6 +342,12 @@ func (CPUTime) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (CPUTime) Description() string {
 	return "Total CPU seconds broken down by different CPU modes."
+}
+
+// AttrCPUMode returns a required attribute for the "cpu.mode" semantic
+// convention. It represents the CPU mode for this data point.
+func (CPUTime) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }
 
 // CPUUtilization is an instrument used to record metric values conforming to the
@@ -514,6 +528,12 @@ func (CPUUtilizationObservable) Description() string {
 	return "Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."
 }
 
+// AttrCPUMode returns a required attribute for the "cpu.mode" semantic
+// convention. It represents the CPU mode for this data point.
+func (CPUUtilizationObservable) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
+}
+
 // DiskIO is an instrument used to record metric values conforming to the
 // "process.disk.io" semantic conventions. It represents the disk bytes
 // transferred.
@@ -688,6 +708,12 @@ func (DiskIOObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (DiskIOObservable) Description() string {
 	return "Disk bytes transferred."
+}
+
+// AttrDiskIODirection returns a required attribute for the "disk.io.direction"
+// semantic convention. It represents the disk IO operation direction.
+func (DiskIOObservable) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
 // MemoryUsage is an instrument used to record metric values conforming to the
@@ -1180,6 +1206,13 @@ func (NetworkIOObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (NetworkIOObservable) Description() string {
 	return "Network bytes transferred."
+}
+
+// AttrNetworkIODirection returns a required attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkIOObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // PagingFaults is an instrument used to record metric values conforming to the

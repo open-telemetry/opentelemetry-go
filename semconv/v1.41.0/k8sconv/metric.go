@@ -3036,6 +3036,17 @@ func (ContainerStatusReasonObservable) Description() string {
 	return "Describes the number of K8s containers that are currently in a state for a given reason."
 }
 
+// AttrContainerStatusReason returns a required attribute for the
+// "k8s.container.status.reason" semantic convention. It represents the reason
+// for the container state. Corresponds to the `reason` field of the:
+// [K8s ContainerStateWaiting] or [K8s ContainerStateTerminated].
+//
+// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
+// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
+func (ContainerStatusReasonObservable) AttrContainerStatusReason(val ContainerStatusReasonAttr) attribute.KeyValue {
+	return attribute.String("k8s.container.status.reason", string(val))
+}
+
 // ContainerStatusState is an instrument used to record metric values conforming
 // to the "k8s.container.status.state" semantic conventions. It represents the
 // describes the number of K8s containers that are currently in a given state.
@@ -3223,6 +3234,15 @@ func (ContainerStatusStateObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ContainerStatusStateObservable) Description() string {
 	return "Describes the number of K8s containers that are currently in a given state."
+}
+
+// AttrContainerStatusState returns a required attribute for the
+// "k8s.container.status.state" semantic convention. It represents the state of
+// the container. [K8s ContainerState].
+//
+// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
+func (ContainerStatusStateObservable) AttrContainerStatusState(val ContainerStatusStateAttr) attribute.KeyValue {
+	return attribute.String("k8s.container.status.state", string(val))
 }
 
 // ContainerStorageLimit is an instrument used to record metric values conforming
@@ -7117,6 +7137,12 @@ func (NamespacePhaseObservable) Description() string {
 	return "Describes number of K8s namespaces that are currently in a given phase."
 }
 
+// AttrNamespacePhase returns a required attribute for the "k8s.namespace.phase"
+// semantic convention. It represents the phase of the K8s namespace.
+func (NamespacePhaseObservable) AttrNamespacePhase(val NamespacePhaseAttr) attribute.KeyValue {
+	return attribute.String("k8s.namespace.phase", string(val))
+}
+
 // NodeConditionStatus is an instrument used to record metric values conforming
 // to the "k8s.node.condition.status" semantic conventions. It represents the
 // describes the condition of a particular Node.
@@ -7306,6 +7332,20 @@ func (NodeConditionStatusObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (NodeConditionStatusObservable) Description() string {
 	return "Describes the condition of a particular Node."
+}
+
+// AttrNodeConditionStatus returns a required attribute for the
+// "k8s.node.condition.status" semantic convention. It represents the status of
+// the condition, one of True, False, Unknown.
+func (NodeConditionStatusObservable) AttrNodeConditionStatus(val NodeConditionStatusAttr) attribute.KeyValue {
+	return attribute.String("k8s.node.condition.status", string(val))
+}
+
+// AttrNodeConditionType returns a required attribute for the
+// "k8s.node.condition.type" semantic convention. It represents the condition
+// type of a K8s Node.
+func (NodeConditionStatusObservable) AttrNodeConditionType(val NodeConditionTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.node.condition.type", string(val))
 }
 
 // NodeCPUAllocatable is an instrument used to record metric values conforming to
@@ -11144,6 +11184,13 @@ func (PersistentvolumeStatusPhaseObservable) Description() string {
 	return "Number of PersistentVolumes in a given phase."
 }
 
+// AttrPersistentvolumeStatusPhase returns a required attribute for the
+// "k8s.persistentvolume.status.phase" semantic convention. It represents the
+// phase of the PersistentVolume.
+func (PersistentvolumeStatusPhaseObservable) AttrPersistentvolumeStatusPhase(val PersistentvolumeStatusPhaseAttr) attribute.KeyValue {
+	return attribute.String("k8s.persistentvolume.status.phase", string(val))
+}
+
 // PersistentvolumeStorageCapacity is an instrument used to record metric values
 // conforming to the "k8s.persistentvolume.storage.capacity" semantic
 // conventions. It represents the storage capacity of the PersistentVolume.
@@ -11508,6 +11555,13 @@ func (PersistentvolumeclaimStatusPhaseObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PersistentvolumeclaimStatusPhaseObservable) Description() string {
 	return "Number of PersistentVolumeClaims in a given phase."
+}
+
+// AttrPersistentvolumeclaimStatusPhase returns a required attribute for the
+// "k8s.persistentvolumeclaim.status.phase" semantic convention. It represents
+// the phase of the PersistentVolumeClaim.
+func (PersistentvolumeclaimStatusPhaseObservable) AttrPersistentvolumeclaimStatusPhase(val PersistentvolumeclaimStatusPhaseAttr) attribute.KeyValue {
+	return attribute.String("k8s.persistentvolumeclaim.status.phase", string(val))
 }
 
 // PersistentvolumeclaimStorageCapacity is an instrument used to record metric
@@ -14184,6 +14238,15 @@ func (PodStatusPhaseObservable) Description() string {
 	return "Describes number of K8s Pods that are currently in a given phase."
 }
 
+// AttrPodStatusPhase returns a required attribute for the "k8s.pod.status.phase"
+// semantic convention. It represents the phase for the pod. Corresponds to the
+// `phase` field of the: [K8s PodStatus].
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
+func (PodStatusPhaseObservable) AttrPodStatusPhase(val PodStatusPhaseAttr) attribute.KeyValue {
+	return attribute.String("k8s.pod.status.phase", string(val))
+}
+
 // PodStatusReason is an instrument used to record metric values conforming to
 // the "k8s.pod.status.reason" semantic conventions. It represents the describes
 // the number of K8s Pods that are currently in a state for a given reason.
@@ -14371,6 +14434,15 @@ func (PodStatusReasonObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PodStatusReasonObservable) Description() string {
 	return "Describes the number of K8s Pods that are currently in a state for a given reason."
+}
+
+// AttrPodStatusReason returns a required attribute for the
+// "k8s.pod.status.reason" semantic convention. It represents the reason for the
+// pod state. Corresponds to the `reason` field of the: [K8s PodStatus].
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
+func (PodStatusReasonObservable) AttrPodStatusReason(val PodStatusReasonAttr) attribute.KeyValue {
+	return attribute.String("k8s.pod.status.reason", string(val))
 }
 
 // PodUptime is an instrument used to record metric values conforming to the
@@ -14740,6 +14812,12 @@ func (PodVolumeAvailableObservable) Description() string {
 	return "Pod volume storage space available."
 }
 
+// AttrVolumeName returns a required attribute for the "k8s.volume.name" semantic
+// convention. It represents the name of the K8s volume.
+func (PodVolumeAvailableObservable) AttrVolumeName(val string) attribute.KeyValue {
+	return attribute.String("k8s.volume.name", val)
+}
+
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
 // semantic convention. It represents the type of the K8s volume.
 func (PodVolumeAvailableObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
@@ -14945,6 +15023,12 @@ func (PodVolumeCapacityObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PodVolumeCapacityObservable) Description() string {
 	return "Pod volume total capacity."
+}
+
+// AttrVolumeName returns a required attribute for the "k8s.volume.name" semantic
+// convention. It represents the name of the K8s volume.
+func (PodVolumeCapacityObservable) AttrVolumeName(val string) attribute.KeyValue {
+	return attribute.String("k8s.volume.name", val)
 }
 
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
@@ -15154,6 +15238,12 @@ func (PodVolumeInodeCountObservable) Description() string {
 	return "The total inodes in the filesystem of the Pod's volume."
 }
 
+// AttrVolumeName returns a required attribute for the "k8s.volume.name" semantic
+// convention. It represents the name of the K8s volume.
+func (PodVolumeInodeCountObservable) AttrVolumeName(val string) attribute.KeyValue {
+	return attribute.String("k8s.volume.name", val)
+}
+
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
 // semantic convention. It represents the type of the K8s volume.
 func (PodVolumeInodeCountObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
@@ -15359,6 +15449,12 @@ func (PodVolumeInodeFreeObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PodVolumeInodeFreeObservable) Description() string {
 	return "The free inodes in the filesystem of the Pod's volume."
+}
+
+// AttrVolumeName returns a required attribute for the "k8s.volume.name" semantic
+// convention. It represents the name of the K8s volume.
+func (PodVolumeInodeFreeObservable) AttrVolumeName(val string) attribute.KeyValue {
+	return attribute.String("k8s.volume.name", val)
 }
 
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
@@ -15574,6 +15670,12 @@ func (PodVolumeInodeUsedObservable) Description() string {
 	return "The inodes used by the filesystem of the Pod's volume."
 }
 
+// AttrVolumeName returns a required attribute for the "k8s.volume.name" semantic
+// convention. It represents the name of the K8s volume.
+func (PodVolumeInodeUsedObservable) AttrVolumeName(val string) attribute.KeyValue {
+	return attribute.String("k8s.volume.name", val)
+}
+
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
 // semantic convention. It represents the type of the K8s volume.
 func (PodVolumeInodeUsedObservable) AttrVolumeType(val VolumeTypeAttr) attribute.KeyValue {
@@ -15782,6 +15884,12 @@ func (PodVolumeUsageObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (PodVolumeUsageObservable) Description() string {
 	return "Pod volume usage."
+}
+
+// AttrVolumeName returns a required attribute for the "k8s.volume.name" semantic
+// convention. It represents the name of the K8s volume.
+func (PodVolumeUsageObservable) AttrVolumeName(val string) attribute.KeyValue {
+	return attribute.String("k8s.volume.name", val)
 }
 
 // AttrVolumeType returns an optional attribute for the "k8s.volume.type"
@@ -18068,6 +18176,12 @@ func (ResourceQuotaHugepageCountRequestHardObservable) Description() string {
 	return "The huge page requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
+// AttrHugepageSize returns a required attribute for the "k8s.hugepage.size"
+// semantic convention. It represents the size (identifier) of the K8s huge page.
+func (ResourceQuotaHugepageCountRequestHardObservable) AttrHugepageSize(val string) attribute.KeyValue {
+	return attribute.String("k8s.hugepage.size", val)
+}
+
 // ResourceQuotaHugepageCountRequestUsed is an instrument used to record metric
 // values conforming to the "k8s.resourcequota.hugepage_count.request.used"
 // semantic conventions. It represents the huge page requests in a specific
@@ -18260,6 +18374,12 @@ func (ResourceQuotaHugepageCountRequestUsedObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaHugepageCountRequestUsedObservable) Description() string {
 	return "The huge page requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
+}
+
+// AttrHugepageSize returns a required attribute for the "k8s.hugepage.size"
+// semantic convention. It represents the size (identifier) of the K8s huge page.
+func (ResourceQuotaHugepageCountRequestUsedObservable) AttrHugepageSize(val string) attribute.KeyValue {
+	return attribute.String("k8s.hugepage.size", val)
 }
 
 // ResourceQuotaMemoryLimitHard is an instrument used to record metric values
@@ -19153,6 +19273,13 @@ func (ResourceQuotaObjectCountHardObservable) Description() string {
 	return "The object count limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."
 }
 
+// AttrResourceQuotaResourceName returns a required attribute for the
+// "k8s.resourcequota.resource_name" semantic convention. It represents the name
+// of the K8s resource a resource quota defines.
+func (ResourceQuotaObjectCountHardObservable) AttrResourceQuotaResourceName(val string) attribute.KeyValue {
+	return attribute.String("k8s.resourcequota.resource_name", val)
+}
+
 // ResourceQuotaObjectCountUsed is an instrument used to record metric values
 // conforming to the "k8s.resourcequota.object_count.used" semantic conventions.
 // It represents the object count limits in a specific namespace.
@@ -19344,6 +19471,13 @@ func (ResourceQuotaObjectCountUsedObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ResourceQuotaObjectCountUsedObservable) Description() string {
 	return "The object count limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."
+}
+
+// AttrResourceQuotaResourceName returns a required attribute for the
+// "k8s.resourcequota.resource_name" semantic convention. It represents the name
+// of the K8s resource a resource quota defines.
+func (ResourceQuotaObjectCountUsedObservable) AttrResourceQuotaResourceName(val string) attribute.KeyValue {
+	return attribute.String("k8s.resourcequota.resource_name", val)
 }
 
 // ResourceQuotaPersistentvolumeclaimCountHard is an instrument used to record
@@ -20455,6 +20589,20 @@ func (ServiceEndpointCountObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ServiceEndpointCountObservable) Description() string {
 	return "Number of endpoints for a service by condition and address type."
+}
+
+// AttrServiceEndpointAddressType returns a required attribute for the
+// "k8s.service.endpoint.address_type" semantic convention. It represents the
+// address type of the service endpoint.
+func (ServiceEndpointCountObservable) AttrServiceEndpointAddressType(val ServiceEndpointAddressTypeAttr) attribute.KeyValue {
+	return attribute.String("k8s.service.endpoint.address_type", string(val))
+}
+
+// AttrServiceEndpointCondition returns a required attribute for the
+// "k8s.service.endpoint.condition" semantic convention. It represents the
+// condition of the service endpoint.
+func (ServiceEndpointCountObservable) AttrServiceEndpointCondition(val ServiceEndpointConditionAttr) attribute.KeyValue {
+	return attribute.String("k8s.service.endpoint.condition", string(val))
 }
 
 // AttrServiceEndpointZone returns an optional attribute for the
