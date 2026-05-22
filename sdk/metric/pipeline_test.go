@@ -153,7 +153,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
 				readerAggregation := i.readerDefaultAggregation(inst.Kind)
-				got, err := i.Instrument(inst, readerAggregation)
+				got, err := i.Instrument(inst, nil, readerAggregation)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
@@ -402,7 +402,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 }
 
 func TestExemplars(t *testing.T) {
-	nCPU := runtime.NumCPU()
+	nCPU := max(runtime.GOMAXPROCS(0), 1)
 	setup := func(name string) (metric.Meter, Reader) {
 		r := NewManualReader()
 		v := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
@@ -553,7 +553,8 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 			func(_ context.Context, o metric.Observer) error {
 				o.ObserveInt64(oc1, 2)
 				return nil
-			}, oc1)
+			}, oc1,
+		)
 		require.NoError(t, err)
 	})
 
@@ -581,7 +582,8 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(oc, val.Load())
 			return nil
-		}, oc)
+		}, oc,
+	)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
 	ctx := t.Context()

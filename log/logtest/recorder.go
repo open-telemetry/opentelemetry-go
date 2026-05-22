@@ -88,6 +88,7 @@ type Record struct {
 	Severity          log.Severity
 	SeverityText      string
 	Body              log.Value
+	Error             error
 	Attributes        []log.KeyValue
 }
 
@@ -219,6 +220,7 @@ func (l *logger) Emit(ctx context.Context, record log.Record) {
 		Severity:          record.Severity(),
 		SeverityText:      record.SeverityText(),
 		Body:              record.Body(),
+		Error:             record.Err(),
 		Attributes:        attrs,
 	}
 

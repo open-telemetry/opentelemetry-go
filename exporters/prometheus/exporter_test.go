@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -41,7 +41,7 @@ type producerFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
 func (f producerFunc) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) { return f(ctx) }
 
 // Helper: scrape with ContinueOnError and return body + status.
-func scrapeWithContinueOnError(reg *prometheus.Registry) (int, string) {
+func scrapeWithContinueOnError(ctx context.Context, reg *prometheus.Registry) (int, string) {
 	h := promhttp.HandlerFor(
 		reg,
 		promhttp.HandlerOpts{
@@ -50,10 +50,31 @@ func scrapeWithContinueOnError(reg *prometheus.Registry) (int, string) {
 	)
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/metrics", http.NoBody)
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/metrics", http.NoBody)
 	h.ServeHTTP(rr, req)
 
 	return rr.Code, rr.Body.String()
+}
+
+func TestGetAttrs(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.BoolSlice("bools", []bool{true, false}),
+		attribute.Float64("float", math.Inf(1)),
+		attribute.StringSlice("strings", []string{"foo", "bar"}),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: true})
+	require.NoError(t, err)
+	require.Equal(t, []string{"bools", "float", "strings"}, keys)
+	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
+}
+
+func TestAttributesToLabels(t *testing.T) {
+	labels, err := attributesToLabels([]attribute.KeyValue{
+		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
+	}, otlptranslator.LabelNamer{})
+	require.NoError(t, err)
+	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
 }
 
 func TestPrometheusExporter(t *testing.T) {
@@ -692,7 +713,8 @@ func TestPrometheusExporter(t *testing.T) {
 			if tc.emptyResource {
 				res = resource.Empty()
 			} else {
-				res, err = resource.New(ctx,
+				res, err = resource.New(
+					ctx,
 					// always specify service.name because the default depends on the running OS
 					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 					// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
@@ -708,12 +730,13 @@ func TestPrometheusExporter(t *testing.T) {
 			provider := metric.NewMeterProvider(
 				metric.WithResource(res),
 				metric.WithReader(exporter),
-				metric.WithView(metric.NewView(
-					metric.Instrument{Name: "histogram_*"},
-					metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
-						Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
-					}},
-				),
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "histogram_*"},
+						metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
+							Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+						}},
+					),
 					metric.NewView(
 						metric.Instrument{Name: "exponential_histogram_*"},
 						metric.Stream{Aggregation: metric.AggregationBase2ExponentialHistogram{
@@ -758,7 +781,8 @@ func TestMultiScopes(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		// always specify service.name because the default depends on the running OS
 		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
@@ -777,7 +801,8 @@ func TestMultiScopes(t *testing.T) {
 		Int64Counter(
 			"foo",
 			otelmetric.WithUnit("s"),
-			otelmetric.WithDescription("meter foo counter"))
+			otelmetric.WithDescription("meter foo counter"),
+		)
 	assert.NoError(t, err)
 	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
 
@@ -785,7 +810,8 @@ func TestMultiScopes(t *testing.T) {
 		Int64Counter(
 			"bar",
 			otelmetric.WithUnit("s"),
-			otelmetric.WithDescription("meter bar counter"))
+			otelmetric.WithDescription("meter bar counter"),
+		)
 	assert.NoError(t, err)
 	barCounter.Add(ctx, 200, otelmetric.WithAttributes(attribute.String("type", "bar")))
 
@@ -795,6 +821,52 @@ func TestMultiScopes(t *testing.T) {
 
 	err = testutil.GatherAndCompare(registry, file)
 	require.NoError(t, err)
+}
+
+func TestScopeAttributeConflictsDropped(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+	)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter(
+		"scope-name",
+		otelmetric.WithInstrumentationVersion("scope-version"),
+		otelmetric.WithSchemaURL("https://example.com/schema"),
+		otelmetric.WithInstrumentationAttributes(
+			attribute.String("name", "dropped-name"),
+			attribute.String("version", "dropped-version"),
+			attribute.String("schema_url", "dropped-schema-url"),
+			attribute.String("schema.url", "dropped-translated-schema-url"),
+			attribute.String("custom.scope", "kept"),
+		),
+	)
+
+	counter, err := meter.Int64Counter("scope_conflict")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	got, err := registry.Gather()
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Metric, 1)
+
+	labels := map[string]string{}
+	for _, label := range got[0].Metric[0].Label {
+		labels[label.GetName()] = label.GetValue()
+	}
+
+	assert.Equal(t, map[string]string{
+		"otel_scope_custom_scope": "kept",
+		"otel_scope_name":         "scope-name",
+		"otel_scope_schema_url":   "https://example.com/schema",
+		"otel_scope_version":      "scope-version",
+	}, labels)
 }
 
 func TestBridgeScopeIgnored(t *testing.T) {
@@ -809,7 +881,8 @@ func TestBridgeScopeIgnored(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		// always specify service.name because the default depends on the running OS
 		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
@@ -828,7 +901,8 @@ func TestBridgeScopeIgnored(t *testing.T) {
 		Int64Counter(
 			"foo",
 			otelmetric.WithUnit("s"),
-			otelmetric.WithDescription("meter foo counter"))
+			otelmetric.WithDescription("meter foo counter"),
+		)
 	assert.NoError(t, err)
 	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
 
@@ -1084,7 +1158,8 @@ func TestDuplicateMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			// initialize resource
-			res, err := resource.New(ctx,
+			res, err := resource.New(
+				ctx,
 				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
 			)
@@ -1113,7 +1188,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				// 2) Also assert what users will see if they opt into ContinueOnError.
 				// Compare the HTTP body to an expected file that contains only the valid series
 				// (e.g., "target_info" and any non-conflicting families).
-				status, body := scrapeWithContinueOnError(registry)
+				status, body := scrapeWithContinueOnError(t.Context(), registry)
 				require.Equal(t, http.StatusOK, status)
 
 				matched := false
@@ -1171,6 +1246,45 @@ func TestCollectorConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
+func TestCollectorWithResourceAsConstantLabelsConcurrentSafe(t *testing.T) {
+	// This test makes sure resource label initialization is concurrent safe
+	// when using WithResourceAsConstantLabels.
+	ctx := t.Context()
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName("prometheus_test")))
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+	t.Cleanup(func() {
+		assert.NoError(t, provider.Shutdown(ctx))
+	})
+
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	var wg sync.WaitGroup
+	const concurrencyLevel = 10
+	for range concurrencyLevel {
+		wg.Go(func() {
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
+		})
+	}
+	wg.Wait()
+}
+
 func TestShutdownExporter(t *testing.T) {
 	var handledError error
 	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
@@ -1184,7 +1298,8 @@ func TestShutdownExporter(t *testing.T) {
 		require.NoError(t, err)
 		provider := metric.NewMeterProvider(
 			metric.WithResource(resource.Default()),
-			metric.WithReader(exporter))
+			metric.WithReader(exporter),
+		)
 		meter := provider.Meter("testmeter")
 		cnt, err := meter.Int64Counter("foo")
 		require.NoError(t, err)
@@ -1303,7 +1418,8 @@ func TestExemplars(t *testing.T) {
 			require.NoError(t, err)
 
 			// initialize resource
-			res, err := resource.New(ctx,
+			res, err := resource.New(
+				ctx,
 				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
 			)
@@ -1315,24 +1431,26 @@ func TestExemplars(t *testing.T) {
 			provider := metric.NewMeterProvider(
 				metric.WithReader(exporter),
 				metric.WithResource(res),
-				metric.WithView(metric.NewView(
-					metric.Instrument{Name: "foo"},
-					metric.Stream{
-						// filter out all attributes so they are added as filtered
-						// attributes to the exemplar
-						AttributeFilter: attribute.NewAllowKeysFilter(),
-					},
-				),
-				),
-				metric.WithView(metric.NewView(
-					metric.Instrument{Name: "exponential_histogram"},
-					metric.Stream{
-						Aggregation: metric.AggregationBase2ExponentialHistogram{
-							MaxSize: 20,
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "foo"},
+						metric.Stream{
+							// filter out all attributes so they are added as filtered
+							// attributes to the exemplar
+							AttributeFilter: attribute.NewAllowKeysFilter(),
 						},
-						AttributeFilter: attribute.NewAllowKeysFilter(),
-					},
+					),
 				),
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "exponential_histogram"},
+						metric.Stream{
+							Aggregation: metric.AggregationBase2ExponentialHistogram{
+								MaxSize: 20,
+							},
+							AttributeFilter: attribute.NewAllowKeysFilter(),
+						},
+					),
 				),
 			)
 			meter := provider.Meter("meter", otelmetric.WithInstrumentationVersion("v0.1.0"))
@@ -2319,7 +2437,8 @@ func TestEscapingErrorHandling(t *testing.T) {
 			}
 			require.NoError(t, err)
 			if !tc.skipInstrument {
-				res, err := resource.New(ctx,
+				res, err := resource.New(
+					ctx,
 					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
 					resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
 					resource.WithAttributes(tc.customResourceAttrs...),
@@ -2341,7 +2460,8 @@ func TestEscapingErrorHandling(t *testing.T) {
 					fooCounter, err := meter.Int64Counter(
 						tc.counterName,
 						otelmetric.WithUnit("s"),
-						otelmetric.WithDescription(fmt.Sprintf(`meter %q counter`, tc.counterName)))
+						otelmetric.WithDescription(fmt.Sprintf(`meter %q counter`, tc.counterName)),
+					)
 					if tc.expectMetricErr != "" {
 						require.ErrorContains(t, err, tc.expectMetricErr)
 						return

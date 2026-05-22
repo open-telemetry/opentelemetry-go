@@ -176,32 +176,40 @@ func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
 }
 
 func TestMeterProviderCardinalityLimit(t *testing.T) {
-	const uniqueAttributesCount = 10
-
 	tests := []struct {
-		name           string
-		options        []Option
-		wantDataPoints int
+		name                  string
+		options               []Option
+		uniqueAttributesCount int
+		wantDataPoints        int
+		wantOverflowPoints    int
 	}{
 		{
-			name:           "no limit (default)",
-			options:        nil,
-			wantDataPoints: uniqueAttributesCount,
+			name:                  "default limit",
+			options:               nil,
+			uniqueAttributesCount: defaultCardinalityLimit + 5,
+			wantDataPoints:        defaultCardinalityLimit,
+			wantOverflowPoints:    1,
 		},
 		{
-			name:           "no limit (limit=0)",
-			options:        []Option{WithCardinalityLimit(0)},
-			wantDataPoints: uniqueAttributesCount,
+			name:                  "no limit (limit=0)",
+			options:               []Option{WithCardinalityLimit(0)},
+			uniqueAttributesCount: 10,
+			wantDataPoints:        10,
+			wantOverflowPoints:    0,
 		},
 		{
-			name:           "no limit (negative)",
-			options:        []Option{WithCardinalityLimit(-5)},
-			wantDataPoints: uniqueAttributesCount,
+			name:                  "no limit (negative)",
+			options:               []Option{WithCardinalityLimit(-5)},
+			uniqueAttributesCount: 10,
+			wantDataPoints:        10,
+			wantOverflowPoints:    0,
 		},
 		{
-			name:           "limit=5",
-			options:        []Option{WithCardinalityLimit(5)},
-			wantDataPoints: 5,
+			name:                  "limit=5",
+			options:               []Option{WithCardinalityLimit(5)},
+			uniqueAttributesCount: 10,
+			wantDataPoints:        5,
+			wantOverflowPoints:    1,
 		},
 	}
 
@@ -216,7 +224,7 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 			counter, err := meter.Int64Counter("metric")
 			require.NoError(t, err, "failed to create counter")
 
-			for i := range uniqueAttributesCount {
+			for i := range tt.uniqueAttributesCount {
 				counter.Add(
 					t.Context(),
 					1,
@@ -241,6 +249,244 @@ func TestMeterProviderCardinalityLimit(t *testing.T) {
 				tt.wantDataPoints,
 				"unexpected number of data points",
 			)
+
+			overflow := attribute.NewSet(attribute.Bool("otel.metric.overflow", true))
+			var overflowPoints int
+			for _, dp := range sumData.DataPoints {
+				attrs := dp.Attributes
+				if attrs.Equals(&overflow) {
+					overflowPoints++
+				}
+			}
+			assert.Equal(t, tt.wantOverflowPoints, overflowPoints, "unexpected overflow data points")
+		})
+	}
+}
+
+func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
+	const uniqueAttributesCount = 10
+
+	type metricCase struct {
+		name        string
+		selector    CardinalityLimitSelector
+		globalLimit int
+		build       func(t *testing.T, meter api.Meter)
+		wantPoints  int
+	}
+
+	testCases := []metricCase{
+		{
+			name: "counter uses counter-specific limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindCounter {
+					return 3, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				counter, err := meter.Int64Counter("counter-metric")
+				require.NoError(t, err)
+				for i := range uniqueAttributesCount {
+					counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+				}
+			},
+			wantPoints: 3,
+		},
+		{
+			name: "histogram uses histogram-specific limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindHistogram {
+					return 4, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				histogram, err := meter.Int64Histogram("histogram-metric")
+				require.NoError(t, err)
+				for i := range uniqueAttributesCount {
+					histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+				}
+			},
+			wantPoints: 4,
+		},
+		{
+			name: "gauge uses gauge-specific limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindGauge {
+					return 5, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				gauge, err := meter.Int64Gauge("gauge-metric")
+				require.NoError(t, err)
+				for i := range uniqueAttributesCount {
+					gauge.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+				}
+			},
+			wantPoints: 5,
+		},
+		{
+			name: "up down counter uses updowncounter-specific limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindUpDownCounter {
+					return 2, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				upDownCounter, err := meter.Int64UpDownCounter("updowncounter-metric")
+				require.NoError(t, err)
+				for i := range uniqueAttributesCount {
+					upDownCounter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+				}
+			},
+			wantPoints: 2,
+		},
+		{
+			name: "observable counter uses observable-counter-specific limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindObservableCounter {
+					return 4, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				obs, err := meter.Int64ObservableCounter(
+					"observable-counter-metric",
+					api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+						for i := range uniqueAttributesCount {
+							o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+						}
+						return nil
+					}),
+				)
+				require.NoError(t, err)
+				require.NotNil(t, obs)
+			},
+			wantPoints: 4,
+		},
+		{
+			name: "observable gauge uses observable-gauge-specific limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindObservableGauge {
+					return 5, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				obs, err := meter.Int64ObservableGauge(
+					"observable-gauge-metric",
+					api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+						for i := range uniqueAttributesCount {
+							o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+						}
+						return nil
+					}),
+				)
+				require.NoError(t, err)
+				require.NotNil(t, obs)
+			},
+			wantPoints: 5,
+		},
+		{
+			name: "observable up down counter uses limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindObservableUpDownCounter {
+					return 3, false
+				}
+				return 0, true
+			},
+			globalLimit: 8,
+			build: func(t *testing.T, meter api.Meter) {
+				obs, err := meter.Int64ObservableUpDownCounter(
+					"observable-updowncounter-metric",
+					api.WithInt64Callback(func(_ context.Context, o api.Int64Observer) error {
+						for i := range uniqueAttributesCount {
+							o.Observe(int64(i), api.WithAttributes(attribute.Int("key", i)))
+						}
+						return nil
+					}),
+				)
+				require.NoError(t, err)
+				require.NotNil(t, obs)
+			},
+			wantPoints: 3,
+		},
+		{
+			name: "instrument without specific limit falls back to global limit",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindCounter {
+					return 3, false
+				}
+				return 0, true // fall back to global limit for other kinds
+			},
+			globalLimit: 6,
+			build: func(t *testing.T, meter api.Meter) {
+				histogram, err := meter.Int64Histogram("histogram-metric")
+				require.NoError(t, err)
+				for i := range uniqueAttributesCount {
+					histogram.Record(t.Context(), int64(i), api.WithAttributes(attribute.Int("key", i)))
+				}
+			},
+			wantPoints: 6,
+		},
+		{
+			name: "selector can set specific kind to unlimited while global limit is nonzero (limited)",
+			selector: func(kind InstrumentKind) (int, bool) {
+				if kind == InstrumentKindCounter {
+					return 0, false // unlimited for counter only
+				}
+				return 0, true // fallback to global limit
+			},
+			globalLimit: 3,
+			build: func(t *testing.T, meter api.Meter) {
+				counter, err := meter.Int64Counter("counter-metric")
+				require.NoError(t, err)
+				for i := range uniqueAttributesCount {
+					counter.Add(t.Context(), 1, api.WithAttributes(attribute.Int("key", i)))
+				}
+			},
+			wantPoints: uniqueAttributesCount,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := NewManualReader(
+				WithCardinalityLimitSelector(tc.selector),
+			)
+			mp := NewMeterProvider(
+				WithReader(reader),
+				WithCardinalityLimit(tc.globalLimit),
+			)
+
+			meter := mp.Meter("test-meter")
+			tc.build(t, meter)
+
+			var rm metricdata.ResourceMetrics
+			err := reader.Collect(t.Context(), &rm)
+			require.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+			switch data := rm.ScopeMetrics[0].Metrics[0].Data.(type) {
+			case metricdata.Sum[int64]:
+				assert.Len(t, data.DataPoints, tc.wantPoints, tc.name)
+			case metricdata.Histogram[int64]:
+				assert.Len(t, data.DataPoints, tc.wantPoints, tc.name)
+			case metricdata.Gauge[int64]:
+				assert.Len(t, data.DataPoints, tc.wantPoints, tc.name)
+			default:
+				t.Fatalf("unexpected data type %T", data)
+			}
 		})
 	}
 }

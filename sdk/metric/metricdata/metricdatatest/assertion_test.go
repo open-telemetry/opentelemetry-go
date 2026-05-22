@@ -724,6 +724,152 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("QuantileValues", testDatatype(quantileValueA, quantileValueB, equalQuantileValue))
 }
 
+func TestEqualKeyValue(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		a    attribute.KeyValue
+		b    attribute.KeyValue
+		want bool
+	}{
+		{
+			name: "different key",
+			a:    attribute.Bool("a", true),
+			b:    attribute.Bool("b", true),
+			want: false,
+		},
+		{
+			name: "different type",
+			a:    attribute.Bool("key", true),
+			b:    attribute.String("key", "true"),
+			want: false,
+		},
+		{
+			name: "bool equal",
+			a:    attribute.Bool("key", true),
+			b:    attribute.Bool("key", true),
+			want: true,
+		},
+		{
+			name: "bool different value",
+			a:    attribute.Bool("key", true),
+			b:    attribute.Bool("key", false),
+			want: false,
+		},
+		{
+			name: "int64 equal",
+			a:    attribute.Int64("key", 1),
+			b:    attribute.Int64("key", 1),
+			want: true,
+		},
+		{
+			name: "int64 different value",
+			a:    attribute.Int64("key", 1),
+			b:    attribute.Int64("key", 2),
+			want: false,
+		},
+		{
+			name: "float64 equal",
+			a:    attribute.Float64("key", 1.5),
+			b:    attribute.Float64("key", 1.5),
+			want: true,
+		},
+		{
+			name: "float64 different value",
+			a:    attribute.Float64("key", 1.5),
+			b:    attribute.Float64("key", 2.5),
+			want: false,
+		},
+		{
+			name: "string equal",
+			a:    attribute.String("key", "value"),
+			b:    attribute.String("key", "value"),
+			want: true,
+		},
+		{
+			name: "string different value",
+			a:    attribute.String("key", "value"),
+			b:    attribute.String("key", "other"),
+			want: false,
+		},
+		{
+			name: "bool slice equal",
+			a:    attribute.BoolSlice("key", []bool{true, false}),
+			b:    attribute.BoolSlice("key", []bool{true, false}),
+			want: true,
+		},
+		{
+			name: "bool slice different value",
+			a:    attribute.BoolSlice("key", []bool{true, false}),
+			b:    attribute.BoolSlice("key", []bool{false, true}),
+			want: false,
+		},
+		{
+			name: "int64 slice equal",
+			a:    attribute.Int64Slice("key", []int64{1, 2}),
+			b:    attribute.Int64Slice("key", []int64{1, 2}),
+			want: true,
+		},
+		{
+			name: "int64 slice different value",
+			a:    attribute.Int64Slice("key", []int64{1, 2}),
+			b:    attribute.Int64Slice("key", []int64{1, 3}),
+			want: false,
+		},
+		{
+			name: "float64 slice equal",
+			a:    attribute.Float64Slice("key", []float64{1.5, 2.5}),
+			b:    attribute.Float64Slice("key", []float64{1.5, 2.5}),
+			want: true,
+		},
+		{
+			name: "float64 slice different value",
+			a:    attribute.Float64Slice("key", []float64{1.5, 2.5}),
+			b:    attribute.Float64Slice("key", []float64{1.5, 3.5}),
+			want: false,
+		},
+		{
+			name: "string slice equal",
+			a:    attribute.StringSlice("key", []string{"a", "b"}),
+			b:    attribute.StringSlice("key", []string{"a", "b"}),
+			want: true,
+		},
+		{
+			name: "string slice different value",
+			a:    attribute.StringSlice("key", []string{"a", "b"}),
+			b:    attribute.StringSlice("key", []string{"a", "c"}),
+			want: false,
+		},
+		{
+			name: "byte slice equal",
+			a:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			b:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			want: true,
+		},
+		{
+			name: "byte slice different value",
+			a:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			b:    attribute.ByteSlice("bytes", []byte{1, 2, 4}),
+			want: false,
+		},
+		{
+			name: "empty",
+			a:    attribute.KeyValue{},
+			b:    attribute.KeyValue{},
+			want: true,
+		},
+		{
+			name: "empty and non-empty",
+			a:    attribute.KeyValue{},
+			b:    attribute.Bool("key", true),
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, equalKeyValue(tt.a, tt.b))
+		})
+	}
+}
+
 func TestAssertEqualIgnoreTime(t *testing.T) {
 	t.Run("ResourceMetrics", testDatatypeIgnoreTime(resourceMetricsA, resourceMetricsC, equalResourceMetrics))
 	t.Run("ScopeMetrics", testDatatypeIgnoreTime(scopeMetricsA, scopeMetricsC, equalScopeMetrics))

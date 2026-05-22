@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -395,6 +395,26 @@ func TestBatchSpanProcessorShutdown(t *testing.T) {
 	}
 	assert.Equal(t, 1, bp.shutdownCount)
 }
+
+// TestBatchSpanProcessorShutdownErrorPropagated verifies that an error
+// returned by SpanExporter.Shutdown is propagated to the caller of
+// BatchSpanProcessor.Shutdown. Regression test for #6878.
+func TestBatchSpanProcessorShutdownErrorPropagated(t *testing.T) {
+	wantErr := errors.New("exporter shutdown failed")
+	exporter := &errorShutdownExporter{err: wantErr}
+	bsp := NewBatchSpanProcessor(exporter)
+
+	err := bsp.Shutdown(t.Context())
+	assert.ErrorIs(t, err, wantErr)
+}
+
+// errorShutdownExporter is a SpanExporter whose Shutdown always returns err.
+type errorShutdownExporter struct {
+	err error
+}
+
+func (*errorShutdownExporter) ExportSpans(context.Context, []ReadOnlySpan) error { return nil }
+func (e *errorShutdownExporter) Shutdown(context.Context) error                  { return e.err }
 
 func TestBatchSpanProcessorPostShutdown(t *testing.T) {
 	tp := basicTracerProvider(t)
@@ -866,7 +886,8 @@ func assertObsScopeMetrics(
 	}
 
 	if len(wantProcessedDataPoints) > 0 {
-		wantMetrics = append(wantMetrics,
+		wantMetrics = append(
+			wantMetrics,
 			metricdata.Metrics{
 				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
 				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),

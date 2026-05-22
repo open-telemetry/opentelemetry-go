@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -22,9 +23,32 @@ func TestLastValue(t *testing.T) {
 	t.Run("Float64/DeltaLastValue", testDeltaLastValue[float64]())
 	c.Reset()
 
-	t.Run("Int64/CumulativeLastValue", testCumulativeLastValue[int64]())
+	t.Run("Int64/CumulativeLastValue", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeLastValue[int64]()(t)
+	})
 	c.Reset()
-	t.Run("Float64/CumulativeLastValue", testCumulativeLastValue[float64]())
+
+	t.Run("Int64/CumulativeLastValue/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeLastValue[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeLastValue", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeLastValue[float64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeLastValue/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeLastValue[float64]()(t)
+	})
 	c.Reset()
 
 	t.Run("Int64/DeltaPrecomputedLastValue", testDeltaPrecomputedLastValue[int64]())
@@ -64,13 +88,13 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(1),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(4),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  y2kPlus(1),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(4),
 							Value:      -10,
 						},
 					},
@@ -91,14 +115,14 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(3),
-							Time:       y2kPlus(4),
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(8),
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(3),
-							Time:       y2kPlus(4),
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(8),
 							Value:      3,
 						},
 					},
@@ -118,20 +142,20 @@ func testDeltaLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(4),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(8),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(4),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(8),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(4),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(8),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 					},
@@ -147,6 +171,17 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.LastValue()
+
+	aliceStartTime := y2kPlus(0)
+	bobStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	if x.PerSeriesStartTimestamps.Enabled() {
+		aliceStartTime = y2kPlus(2)
+		bobStartTime = y2kPlus(3)
+		overflowStartTime = y2kPlus(7)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -167,14 +202,14 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(4),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							StartTime:  bobStartTime,
+							Time:       y2kPlus(4),
 							Value:      -10,
 						},
 					},
@@ -189,14 +224,14 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(5),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(3),
+							StartTime:  bobStartTime,
+							Time:       y2kPlus(5),
 							Value:      -10,
 						},
 					},
@@ -213,14 +248,14 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(6),
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							StartTime:  bobStartTime,
+							Time:       y2kPlus(6),
 							Value:      3,
 						},
 					},
@@ -240,20 +275,20 @@ func testCumulativeLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(8),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  bobStartTime,
+							Time:       y2kPlus(8),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							StartTime:  overflowStartTime,
+							Time:       y2kPlus(8),
 							Value:      1,
 						},
 					},
@@ -290,13 +325,13 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(1),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(4),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  y2kPlus(1),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(4),
 							Value:      -10,
 						},
 					},
@@ -317,14 +352,14 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(3),
-							Time:       y2kPlus(4),
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(8),
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(3),
-							Time:       y2kPlus(4),
+							StartTime:  y2kPlus(5),
+							Time:       y2kPlus(8),
 							Value:      3,
 						},
 					},
@@ -344,20 +379,20 @@ func testDeltaPrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(4),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(8),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(4),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(8),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(4),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(8),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 					},
@@ -394,13 +429,13 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(4),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(4),
 							Value:      -10,
 						},
 					},
@@ -422,13 +457,13 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							Time:       y2kPlus(8),
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(4),
+							Time:       y2kPlus(8),
 							Value:      3,
 						},
 					},
@@ -449,19 +484,19 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							Time:       y2kPlus(12),
 							Value:      1,
 						},
 					},

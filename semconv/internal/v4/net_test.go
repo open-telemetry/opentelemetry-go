@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"context"
 	"net"
 	"strconv"
 	"testing"
@@ -74,12 +75,12 @@ func TestNetServerNilAddr(t *testing.T) {
 	assert.ElementsMatch(t, expected, got)
 }
 
-func newTCPListener() (net.Listener, error) {
-	return net.Listen("tcp4", "127.0.0.1:0")
+func newTCPListener(ctx context.Context) (net.Listener, error) {
+	return (&net.ListenConfig{}).Listen(ctx, "tcp4", "127.0.0.1:0")
 }
 
 func TestNetServerTCP(t *testing.T) {
-	ln, err := newTCPListener()
+	ln, err := newTCPListener(t.Context())
 	require.NoError(t, err)
 	defer func() { require.NoError(t, ln.Close()) }()
 
@@ -145,13 +146,13 @@ func TestNetClientNilAddr(t *testing.T) {
 	assert.ElementsMatch(t, expected, got)
 }
 
-func newTCPConn() (net.Conn, net.Listener, error) {
-	ln, err := newTCPListener()
+func newTCPConn(ctx context.Context) (net.Conn, net.Listener, error) {
+	ln, err := newTCPListener(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	conn, err := net.Dial("tcp4", ln.Addr().String())
+	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp4", ln.Addr().String())
 	if err != nil {
 		_ = ln.Close()
 		return nil, nil, err
@@ -161,7 +162,7 @@ func newTCPConn() (net.Conn, net.Listener, error) {
 }
 
 func TestNetClientTCP(t *testing.T) {
-	conn, ln, err := newTCPConn()
+	conn, ln, err := newTCPConn(t.Context())
 	require.NoError(t, err)
 	defer func() { require.NoError(t, ln.Close()) }()
 	defer func() { require.NoError(t, conn.Close()) }()
@@ -196,7 +197,7 @@ type remoteOnlyConn struct{ net.Conn }
 func (remoteOnlyConn) LocalAddr() net.Addr { return nil }
 
 func TestNetClientTCPNilLocal(t *testing.T) {
-	conn, ln, err := newTCPConn()
+	conn, ln, err := newTCPConn(t.Context())
 	require.NoError(t, err)
 	defer func() { require.NoError(t, ln.Close()) }()
 	defer func() { require.NoError(t, conn.Close()) }()

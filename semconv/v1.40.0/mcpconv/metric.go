@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // GenAIOperationNameAttr is an attribute conforming to the gen_ai.operation.name
 // semantic conventions. It represents the name of the GenAI operation being
@@ -228,6 +226,9 @@ func (m ClientOperationDuration) Record(
 	methodName MethodNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("mcp.method.name", string(methodName)),
@@ -256,6 +257,9 @@ func (m ClientOperationDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -430,6 +434,9 @@ func (m ClientSessionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -453,6 +460,9 @@ func (m ClientSessionDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ClientSessionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -598,6 +608,9 @@ func (m ServerOperationDuration) Record(
 	methodName MethodNameAttr,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("mcp.method.name", string(methodName)),
@@ -626,6 +639,9 @@ func (m ServerOperationDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -787,6 +803,9 @@ func (m ServerSessionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -810,6 +829,9 @@ func (m ServerSessionDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m ServerSessionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

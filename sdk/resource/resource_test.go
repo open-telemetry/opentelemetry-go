@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 var (
@@ -62,7 +62,8 @@ func TestNewWithAttributes(t *testing.T) {
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
-				cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				cmp.AllowUnexported(attribute.Value{}),
+			); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
 		})
@@ -189,7 +190,8 @@ func TestMerge(t *testing.T) {
 			if diff := cmp.Diff(
 				res.Attributes(),
 				c.want,
-				cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				cmp.AllowUnexported(attribute.Value{}),
+			); diff != "" {
 				t.Fatalf("unwanted result: diff %+v,", diff)
 			}
 		})
@@ -247,6 +249,20 @@ func TestDefault(t *testing.T) {
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(sdk.Version()))
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
+}
+
+func TestDefaultWithContext(t *testing.T) {
+	ctx := t.Context()
+	res1 := resource.DefaultWithContext(ctx)
+	res2 := resource.DefaultWithContext(ctx)
+	assert.Same(t, res1, res2)
+}
+
+func TestEnvironmentWithContext(t *testing.T) {
+	t.Setenv(envVar, "key=value")
+	ctx := t.Context()
+	res := resource.EnvironmentWithContext(ctx)
+	assert.Equal(t, map[string]string{"key": "value"}, toMap(res))
 }
 
 func TestEquivalentStability(t *testing.T) {
@@ -527,7 +543,8 @@ func TestWithHostID(t *testing.T) {
 
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithHostID(),
 	)
 
@@ -543,7 +560,8 @@ func TestWithHostIDError(t *testing.T) {
 
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithHostID(),
 	)
 
@@ -557,7 +575,8 @@ func TestWithOSType(t *testing.T) {
 
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithOSType(),
 	)
 
@@ -573,7 +592,8 @@ func TestWithOSDescription(t *testing.T) {
 
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithOSDescription(),
 	)
 
@@ -589,7 +609,8 @@ func TestWithOS(t *testing.T) {
 
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithOS(),
 	)
 
@@ -604,7 +625,8 @@ func TestWithProcessPID(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessPID(),
 	)
 
@@ -618,7 +640,8 @@ func TestWithProcessExecutableName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessExecutableName(),
 	)
 
@@ -632,7 +655,8 @@ func TestWithProcessExecutablePath(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessExecutablePath(),
 	)
 
@@ -646,7 +670,8 @@ func TestWithProcessCommandArgs(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessCommandArgs(),
 	)
 
@@ -661,7 +686,8 @@ func TestWithProcessOwner(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessOwner(),
 	)
 
@@ -675,7 +701,8 @@ func TestWithProcessRuntimeName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessRuntimeName(),
 	)
 
@@ -689,7 +716,8 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessRuntimeVersion(),
 	)
 
@@ -703,7 +731,8 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessRuntimeDescription(),
 	)
 
@@ -717,7 +746,8 @@ func TestWithProcess(t *testing.T) {
 	mockProcessAttributesProviders()
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcess(),
 	)
 
@@ -738,7 +768,7 @@ func TestWithProcess(t *testing.T) {
 func toMap(res *resource.Resource) map[string]string {
 	m := map[string]string{}
 	for _, attr := range res.Attributes() {
-		m[string(attr.Key)] = attr.Value.Emit()
+		m[string(attr.Key)] = attr.Value.String()
 	}
 	return m
 }
@@ -792,7 +822,8 @@ func TestWithContainerID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			resource.SetContainerProviders(tc.containerIDProvider)
 
-			res, err := resource.New(t.Context(),
+			res, err := resource.New(
+				t.Context(),
 				resource.WithContainerID(),
 			)
 
@@ -812,7 +843,8 @@ func TestWithContainer(t *testing.T) {
 		return fakeContainerID, nil
 	})
 
-	res, err := resource.New(t.Context(),
+	res, err := resource.New(
+		t.Context(),
 		resource.WithContainer(),
 	)
 
@@ -823,7 +855,8 @@ func TestWithContainer(t *testing.T) {
 }
 
 func TestWithService(t *testing.T) {
-	res, err := resource.New(t.Context(),
+	res, err := resource.New(
+		t.Context(),
 		resource.WithService(),
 	)
 

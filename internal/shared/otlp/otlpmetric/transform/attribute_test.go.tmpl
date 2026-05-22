@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/attribute"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -25,8 +27,14 @@ var (
 	attrFloat64      = attribute.Float64("float64", 1)
 	attrFloat64Slice = attribute.Float64Slice("float64 slice", []float64{-1, 1})
 	attrString       = attribute.String("string", "o")
-	attrStringSlice  = attribute.StringSlice("string slice", []string{"o", "n"})
-	attrEmpty        = attribute.KeyValue{
+	attrBytes        = attribute.ByteSlice("bytes", []byte("otlp"))
+	attrSlice        = attribute.Slice("slice",
+		attribute.BoolValue(true),
+		attribute.ByteSliceValue([]byte("otlp")),
+		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+	)
+	attrStringSlice = attribute.StringSlice("string slice", []string{"o", "n"})
+	attrEmpty       = attribute.KeyValue{
 		Key:   attribute.Key("empty"),
 		Value: attribute.Value{},
 	}
@@ -39,6 +47,7 @@ var (
 		},
 	}}
 	valIntOne   = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: 1}}
+	valIntTwo   = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: 2}}
 	valIntNOne  = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: -1}}
 	valIntSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
@@ -52,7 +61,21 @@ var (
 			Values: []*cpb.AnyValue{valDblNOne, valDblOne},
 		},
 	}}
-	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valStrO  = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valBytes = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
+	valSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+		ArrayValue: &cpb.ArrayValue{
+			Values: []*cpb.AnyValue{
+				valBoolTrue,
+				valBytes,
+				{Value: &cpb.AnyValue_ArrayValue{
+					ArrayValue: &cpb.ArrayValue{
+						Values: []*cpb.AnyValue{valIntTwo, {}},
+					},
+				}},
+			},
+		},
+	}}
 	valStrN     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "n"}}
 	valStrSlice = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
@@ -69,6 +92,8 @@ var (
 	kvFloat64      = &cpb.KeyValue{Key: "float64", Value: valDblOne}
 	kvFloat64Slice = &cpb.KeyValue{Key: "float64 slice", Value: valDblSlice}
 	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
+	kvBytes        = &cpb.KeyValue{Key: "bytes", Value: valBytes}
+	kvSlice        = &cpb.KeyValue{Key: "slice", Value: valSlice}
 	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
 	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
@@ -134,6 +159,16 @@ func TestAttributeTransforms(t *testing.T) {
 			[]*cpb.KeyValue{kvString},
 		},
 		{
+			"bytes",
+			[]attribute.KeyValue{attrBytes},
+			[]*cpb.KeyValue{kvBytes},
+		},
+		{
+			"slice",
+			[]attribute.KeyValue{attrSlice},
+			[]*cpb.KeyValue{kvSlice},
+		},
+		{
 			"string slice",
 			[]attribute.KeyValue{attrStringSlice},
 			[]*cpb.KeyValue{kvStringSlice},
@@ -150,6 +185,8 @@ func TestAttributeTransforms(t *testing.T) {
 				attrFloat64,
 				attrFloat64Slice,
 				attrString,
+				attrBytes,
+				attrSlice,
 				attrStringSlice,
 				attrEmpty,
 			},
@@ -163,6 +200,8 @@ func TestAttributeTransforms(t *testing.T) {
 				kvFloat64,
 				kvFloat64Slice,
 				kvString,
+				kvBytes,
+				kvSlice,
 				kvStringSlice,
 				kvEmpty,
 			},
@@ -170,12 +209,45 @@ func TestAttributeTransforms(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Run("KeyValues", func(t *testing.T) {
-				assert.ElementsMatch(t, test.want, KeyValues(test.in))
+				assertKeyValueSlicesEqual(t, test.want, KeyValues(test.in))
 			})
 			t.Run("AttrIter", func(t *testing.T) {
 				s := attribute.NewSet(test.in...)
-				assert.ElementsMatch(t, test.want, AttrIter(s.Iter()))
+				assertKeyValueSlicesEqual(t, test.want, AttrIter(s.Iter()))
 			})
 		})
+	}
+}
+
+func TestKeyValuesPreserveDuplicateKeys(t *testing.T) {
+	want := []*cpb.KeyValue{
+		{Key: "dup", Value: valBoolTrue},
+		{Key: "dup", Value: valStrO},
+	}
+
+	assertKeyValueSlicesEqual(t, want, KeyValues([]attribute.KeyValue{
+		attribute.Bool("dup", true),
+		attribute.String("dup", "o"),
+	}))
+}
+
+func assertKeyValueSlicesEqual(t *testing.T, want, got []*cpb.KeyValue) {
+	t.Helper()
+	require.Len(t, got, len(want))
+
+	used := make([]bool, len(got))
+	for i, wantKV := range want {
+		matched := false
+		for j, gotKV := range got {
+			if used[j] {
+				continue
+			}
+			if proto.Equal(wantKV, gotKV) {
+				used[j] = true
+				matched = true
+				break
+			}
+		}
+		assert.Truef(t, matched, "missing match for want[%d] = %#v in got = %#v", i, wantKV, got)
 	}
 }

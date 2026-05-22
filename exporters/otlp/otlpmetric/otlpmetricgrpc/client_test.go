@@ -252,4 +252,20 @@ func TestConfig(t *testing.T) {
 		got := coll.Headers()
 		assert.Contains(t, got[key][0], customerUserAgent)
 	})
+
+	t.Run("WithMaxRequestSize", func(t *testing.T) {
+		exp, coll := factoryFunc(
+			nil,
+			WithMaxRequestSize(1),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		t.Cleanup(coll.Shutdown)
+
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
+		assert.ErrorContains(t, err, "request message too large")
+		assert.Empty(t, coll.Collect().Dump(), "oversized request must fail before sending")
+	})
 }
