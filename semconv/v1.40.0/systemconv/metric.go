@@ -314,6 +314,9 @@ func (m CPUFrequency) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -337,6 +340,9 @@ func (m CPUFrequency) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CPUFrequency) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -423,6 +429,9 @@ func (CPULogicalCount) Description() string {
 // Calculated by multiplying the number of sockets by the number of cores per
 // socket, and then by the number of threads per core
 func (m CPULogicalCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -443,6 +452,9 @@ func (m CPULogicalCount) Add(ctx context.Context, incr int64, attrs ...attribute
 // Calculated by multiplying the number of sockets by the number of cores per
 // socket, and then by the number of threads per core
 func (m CPULogicalCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -521,6 +533,9 @@ func (CPUPhysicalCount) Description() string {
 // Calculated by multiplying the number of sockets by the number of cores per
 // socket
 func (m CPUPhysicalCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -541,6 +556,9 @@ func (m CPUPhysicalCount) Add(ctx context.Context, incr int64, attrs ...attribut
 // Calculated by multiplying the number of sockets by the number of cores per
 // socket
 func (m CPUPhysicalCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -694,6 +712,9 @@ func (m CPUUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -717,6 +738,9 @@ func (m CPUUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -811,6 +835,9 @@ func (m DiskIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -834,6 +861,9 @@ func (m DiskIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -931,7 +961,6 @@ func (DiskIOTime) Description() string {
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
 func (m DiskIOTime) Add(
@@ -939,6 +968,9 @@ func (m DiskIOTime) Add(
 	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -970,10 +1002,12 @@ func (m DiskIOTime) Add(
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
 func (m DiskIOTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -1061,6 +1095,9 @@ func (m DiskLimit) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1084,6 +1121,9 @@ func (m DiskLimit) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m DiskLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1171,6 +1211,9 @@ func (m DiskMerged) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1194,6 +1237,9 @@ func (m DiskMerged) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m DiskMerged) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1290,13 +1336,15 @@ func (DiskOperationTime) Description() string {
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) Add(
 	ctx context.Context,
 	incr float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -1327,9 +1375,11 @@ func (m DiskOperationTime) Add(
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Counter.Add(ctx, incr)
 		return
@@ -1423,6 +1473,9 @@ func (m DiskOperations) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1446,6 +1499,9 @@ func (m DiskOperations) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m DiskOperations) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1539,6 +1595,9 @@ func (m FilesystemLimit) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1562,6 +1621,9 @@ func (m FilesystemLimit) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m FilesystemLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1676,6 +1738,9 @@ func (m FilesystemUsage) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1704,6 +1769,9 @@ func (m FilesystemUsage) Add(
 // SHOULD equal the total storage capacity of the filesystem, that is
 // `system.filesystem.limit`.
 func (m FilesystemUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1820,6 +1888,9 @@ func (m FilesystemUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1843,6 +1914,9 @@ func (m FilesystemUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m FilesystemUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -1953,6 +2027,9 @@ func (MemoryLimit) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m MemoryLimit) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1970,6 +2047,9 @@ func (m MemoryLimit) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 
 // AddSet adds incr to the existing count for set.
 func (m MemoryLimit) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2056,6 +2136,9 @@ func (MemoryLinuxAvailable) Description() string {
 // [here]: https://superuser.com/a/980821
 // [/proc/meminfo]: https://man7.org/linux/man-pages/man5/proc.5.html
 func (m MemoryLinuxAvailable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2083,6 +2166,9 @@ func (m MemoryLinuxAvailable) Add(ctx context.Context, incr int64, attrs ...attr
 // [here]: https://superuser.com/a/980821
 // [/proc/meminfo]: https://man7.org/linux/man-pages/man5/proc.5.html
 func (m MemoryLinuxAvailable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2164,6 +2250,9 @@ func (MemoryLinuxShared) Description() string {
 // [`free` command]: https://man7.org/linux/man-pages/man1/free.1.html
 // [`/proc/meminfo`]: https://man7.org/linux/man-pages/man5/proc.5.html
 func (m MemoryLinuxShared) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2187,6 +2276,9 @@ func (m MemoryLinuxShared) Add(ctx context.Context, incr int64, attrs ...attribu
 // [`free` command]: https://man7.org/linux/man-pages/man1/free.1.html
 // [`/proc/meminfo`]: https://man7.org/linux/man-pages/man5/proc.5.html
 func (m MemoryLinuxShared) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2278,6 +2370,9 @@ func (m MemoryLinuxSlabUsage) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2310,6 +2405,9 @@ func (m MemoryLinuxSlabUsage) Add(
 // [Slab allocator]: https://blogs.oracle.com/linux/post/understanding-linux-kernel-memory-statistics
 // [/proc/meminfo]: https://man7.org/linux/man-pages/man5/proc.5.html
 func (m MemoryLinuxSlabUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2526,6 +2624,9 @@ func (m NetworkConnectionCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2549,6 +2650,9 @@ func (m NetworkConnectionCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkConnectionCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2656,7 +2760,6 @@ func (NetworkErrors) Description() string {
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -2665,6 +2768,9 @@ func (m NetworkErrors) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2694,11 +2800,13 @@ func (m NetworkErrors) Add(
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
 func (m NetworkErrors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2866,6 +2974,9 @@ func (m NetworkPacketCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2889,6 +3000,9 @@ func (m NetworkPacketCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkPacketCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -2985,7 +3099,6 @@ func (NetworkPacketDropped) Description() string {
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -2994,6 +3107,9 @@ func (m NetworkPacketDropped) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3023,11 +3139,13 @@ func (m NetworkPacketDropped) Add(
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
 func (m NetworkPacketDropped) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3123,6 +3241,9 @@ func (m PagingFaults) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3146,6 +3267,9 @@ func (m PagingFaults) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3234,6 +3358,9 @@ func (m PagingOperations) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3257,6 +3384,9 @@ func (m PagingOperations) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PagingOperations) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3352,6 +3482,9 @@ func (m PagingUsage) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3375,6 +3508,9 @@ func (m PagingUsage) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PagingUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3469,6 +3605,9 @@ func (m PagingUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -3492,6 +3631,9 @@ func (m PagingUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m PagingUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -3586,6 +3728,9 @@ func (m ProcessCount) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3609,6 +3754,9 @@ func (m ProcessCount) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ProcessCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -3693,6 +3841,9 @@ func (ProcessCreated) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m ProcessCreated) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3710,6 +3861,9 @@ func (m ProcessCreated) Add(ctx context.Context, incr int64, attrs ...attribute.
 
 // AddSet adds incr to the existing count for set.
 func (m ProcessCreated) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -3789,6 +3943,9 @@ func (Uptime) Description() string {
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -3810,6 +3967,9 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return

@@ -107,6 +107,9 @@ func (m Coldstarts) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -130,6 +133,9 @@ func (m Coldstarts) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m Coldstarts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -218,6 +224,9 @@ func (m CPUUsage) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -241,6 +250,9 @@ func (m CPUUsage) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -329,6 +341,9 @@ func (m Errors) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -352,6 +367,9 @@ func (m Errors) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -440,6 +458,9 @@ func (m InitDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -463,6 +484,9 @@ func (m InitDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m InitDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -551,6 +575,9 @@ func (m Invocations) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -574,6 +601,9 @@ func (m Invocations) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m Invocations) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -662,6 +692,9 @@ func (m InvokeDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -685,6 +718,9 @@ func (m InvokeDuration) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m InvokeDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -773,6 +809,9 @@ func (m MemUsage) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -796,6 +835,9 @@ func (m MemUsage) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m MemUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -884,6 +926,9 @@ func (m NetIO) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -907,6 +952,9 @@ func (m NetIO) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m NetIO) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
 		return
@@ -995,6 +1043,9 @@ func (m Timeouts) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -1018,6 +1069,9 @@ func (m Timeouts) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m Timeouts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return

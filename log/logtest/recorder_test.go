@@ -5,6 +5,7 @@ package logtest
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -102,6 +103,7 @@ func TestLoggerEnabledFnUnset(t *testing.T) {
 func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	rec := NewRecorder()
 	ts := time.Now()
+	errBoom := errors.New("boom")
 
 	l := rec.Logger(t.Name())
 	ctx := t.Context()
@@ -109,6 +111,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	r.SetTimestamp(ts)
 	r.SetSeverity(log.SeverityInfo)
 	r.SetBody(log.StringValue("Hello there"))
+	r.SetErr(errBoom)
 	r.AddAttributes(log.Int("n", 1))
 	r.AddAttributes(log.String("foo", "bar"))
 	l.Emit(ctx, r)
@@ -125,6 +128,7 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 				Timestamp: ts,
 				Severity:  log.SeverityInfo,
 				Body:      log.StringValue("Hello there"),
+				Error:     errBoom,
 				Attributes: []log.KeyValue{
 					log.Int("n", 1),
 					log.String("foo", "bar"),

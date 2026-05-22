@@ -38,7 +38,8 @@ func TestFailAssertEqual(t *testing.T) {
 	t.Run("DataPointFloat64", testFailDatatype(dataPointFloat64A, dataPointFloat64B))
 	t.Run("ExemplarInt64", testFailDatatype(exemplarInt64A, exemplarInt64B))
 	t.Run("ExemplarFloat64", testFailDatatype(exemplarFloat64A, exemplarFloat64B))
-	t.Run("Extrema", testFailDatatype(minA, minB))
+	t.Run("ExtremaInt64", testFailDatatype(minInt64A, minInt64B))
+	t.Run("ExtremaFloat64", testFailDatatype(minFloat64A, minFloat64B))
 }
 
 func TestFailAssertAggregationsEqual(t *testing.T) {

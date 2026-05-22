@@ -165,6 +165,9 @@ func (m ContextSwitches) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -188,6 +191,9 @@ func (m ContextSwitches) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m ContextSwitches) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -343,6 +349,9 @@ func (m CPUUtilization) Record(
 	val int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -366,6 +375,9 @@ func (m CPUUtilization) Record(
 
 // RecordSet records val to the current distribution for set.
 func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
+	if !m.Int64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
 		return
@@ -454,6 +466,9 @@ func (m DiskIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -477,6 +492,9 @@ func (m DiskIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -558,6 +576,9 @@ func (MemoryUsage) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -575,6 +596,9 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 
 // AddSet adds incr to the existing count for set.
 func (m MemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -650,6 +674,9 @@ func (MemoryVirtual) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -667,6 +694,9 @@ func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.K
 
 // AddSet adds incr to the existing count for set.
 func (m MemoryVirtual) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -748,6 +778,9 @@ func (m NetworkIO) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -771,6 +804,9 @@ func (m NetworkIO) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -859,6 +895,9 @@ func (m PagingFaults) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -882,6 +921,9 @@ func (m PagingFaults) Add(
 
 // AddSet adds incr to the existing count for set.
 func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64Counter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64Counter.Add(ctx, incr)
 		return
@@ -964,6 +1006,9 @@ func (ThreadCount) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -981,6 +1026,9 @@ func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 
 // AddSet adds incr to the existing count for set.
 func (m ThreadCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1056,6 +1104,9 @@ func (UnixFileDescriptorCount) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m UnixFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1073,6 +1124,9 @@ func (m UnixFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...a
 
 // AddSet adds incr to the existing count for set.
 func (m UnixFileDescriptorCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1152,6 +1206,9 @@ func (Uptime) Description() string {
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -1173,6 +1230,9 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 // seconds as a floating point number with the highest precision available.
 // The actual accuracy would depend on the instrumentation and operating system.
 func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
 		return
@@ -1248,6 +1308,9 @@ func (WindowsHandleCount) Description() string {
 
 // Add adds incr to the existing count for attrs.
 func (m WindowsHandleCount) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1265,6 +1328,9 @@ func (m WindowsHandleCount) Add(ctx context.Context, incr int64, attrs ...attrib
 
 // AddSet adds incr to the existing count for set.
 func (m WindowsHandleCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return

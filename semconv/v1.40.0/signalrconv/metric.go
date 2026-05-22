@@ -120,6 +120,9 @@ func (m ServerActiveConnections) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -146,6 +149,9 @@ func (m ServerActiveConnections) Add(
 // Meter name: `Microsoft.AspNetCore.Http.Connections`; Added in: ASP.NET Core
 // 8.0
 func (m ServerActiveConnections) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -245,6 +251,9 @@ func (m ServerConnectionDuration) Record(
 	val float64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return
@@ -271,6 +280,9 @@ func (m ServerConnectionDuration) Record(
 // Meter name: `Microsoft.AspNetCore.Http.Connections`; Added in: ASP.NET Core
 // 8.0
 func (m ServerConnectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
 		return

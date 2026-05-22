@@ -168,6 +168,10 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	ctx, cancel := c.contextWithStop(ctx)
 	defer cancel()
 
+	if maxSize := c.cfg.MaxRequestSize; maxSize > 0 && len(rawRequest) > maxSize {
+		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
+	}
+
 	request, err := c.newRequest(rawRequest)
 	if err != nil {
 		return err
@@ -175,7 +179,13 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 	var statusCode int
 	if c.inst != nil {
-		op := c.inst.ExportSpans(ctx, len(protoSpans))
+		var spanCount int
+		for _, rs := range protoSpans {
+			for _, ss := range rs.ScopeSpans {
+				spanCount += len(ss.Spans)
+			}
+		}
+		op := c.inst.ExportSpans(ctx, spanCount)
 		defer func() { op.End(uploadErr, statusCode) }()
 	}
 
@@ -186,6 +196,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		default:
 		}
 
+		statusCode = 0
 		request.reset(ctx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.client.Do(request.Request)
@@ -299,7 +310,10 @@ func (c *client) newRequest(body []byte) (request, error) {
 		r.Header.Set("Content-Encoding", "gzip")
 
 		gz := gzPool.Get().(*gzip.Writer)
-		defer gzPool.Put(gz)
+		defer func() {
+			gz.Reset(io.Discard)
+			gzPool.Put(gz)
+		}()
 
 		var b bytes.Buffer
 		gz.Reset(&b)
