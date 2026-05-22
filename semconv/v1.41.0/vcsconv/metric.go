@@ -236,6 +236,7 @@ func (m ChangeCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -266,6 +267,7 @@ func (m ChangeCount) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -292,6 +294,103 @@ func (ChangeCount) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (ChangeCount) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// ChangeCountObservable is an instrument used to record metric values conforming
+// to the "vcs.change.count" semantic conventions. It represents the number of
+// changes (pull requests/merge requests/changelists) in a repository,
+// categorized by their state (e.g. open or merged).
+type ChangeCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newChangeCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of changes (pull requests/merge requests/changelists) in a repository, categorized by their state (e.g. open or merged)."),
+	metric.WithUnit("{change}"),
+}
+
+// NewChangeCountObservable returns a new ChangeCountObservable instrument.
+func NewChangeCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ChangeCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ChangeCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newChangeCountObservableOpts
+	} else {
+		opt = append(opt, newChangeCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"vcs.change.count",
+		opt...,
+	)
+	if err != nil {
+		return ChangeCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ChangeCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ChangeCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ChangeCountObservable) Name() string {
+	return "vcs.change.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ChangeCountObservable) Unit() string {
+	return "{change}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ChangeCountObservable) Description() string {
+	return "The number of changes (pull requests/merge requests/changelists) in a repository, categorized by their state (e.g. open or merged)."
+}
+
+// AttrChangeState returns a required attribute for the "vcs.change.state"
+// semantic convention. It represents the state of the change (pull request/merge
+// request/changelist).
+func (ChangeCountObservable) AttrChangeState(val ChangeStateAttr) attribute.KeyValue {
+	return attribute.String("vcs.change.state", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeCountObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (ChangeCountObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (ChangeCountObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (ChangeCountObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -391,6 +490,7 @@ func (m ChangeDuration) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -422,6 +522,7 @@ func (m ChangeDuration) RecordSet(ctx context.Context, val float64, set attribut
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -448,6 +549,112 @@ func (ChangeDuration) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (ChangeDuration) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// ChangeDurationObservable is an instrument used to record metric values
+// conforming to the "vcs.change.duration" semantic conventions. It represents
+// the time duration a change (pull request/merge request/changelist) has been in
+// a given state.
+type ChangeDurationObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newChangeDurationObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The time duration a change (pull request/merge request/changelist) has been in a given state."),
+	metric.WithUnit("s"),
+}
+
+// NewChangeDurationObservable returns a new ChangeDurationObservable instrument.
+func NewChangeDurationObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (ChangeDurationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ChangeDurationObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newChangeDurationObservableOpts
+	} else {
+		opt = append(opt, newChangeDurationObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"vcs.change.duration",
+		opt...,
+	)
+	if err != nil {
+		return ChangeDurationObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return ChangeDurationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ChangeDurationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ChangeDurationObservable) Name() string {
+	return "vcs.change.duration"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ChangeDurationObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ChangeDurationObservable) Description() string {
+	return "The time duration a change (pull request/merge request/changelist) has been in a given state."
+}
+
+// AttrChangeState returns a required attribute for the "vcs.change.state"
+// semantic convention. It represents the state of the change (pull request/merge
+// request/changelist).
+func (ChangeDurationObservable) AttrChangeState(val ChangeStateAttr) attribute.KeyValue {
+	return attribute.String("vcs.change.state", string(val))
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeDurationObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeDurationObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (ChangeDurationObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (ChangeDurationObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (ChangeDurationObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -543,6 +750,7 @@ func (m ChangeTimeToApproval) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -573,6 +781,7 @@ func (m ChangeTimeToApproval) RecordSet(ctx context.Context, val float64, set at
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -628,6 +837,135 @@ func (ChangeTimeToApproval) AttrRefBaseRevision(val string) attribute.KeyValue {
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
 func (ChangeTimeToApproval) AttrRefHeadRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.revision", val)
+}
+
+// ChangeTimeToApprovalObservable is an instrument used to record metric values
+// conforming to the "vcs.change.time_to_approval" semantic conventions. It
+// represents the amount of time since its creation it took a change (pull
+// request/merge request/changelist) to get the first approval.
+type ChangeTimeToApprovalObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newChangeTimeToApprovalObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."),
+	metric.WithUnit("s"),
+}
+
+// NewChangeTimeToApprovalObservable returns a new ChangeTimeToApprovalObservable
+// instrument.
+func NewChangeTimeToApprovalObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (ChangeTimeToApprovalObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ChangeTimeToApprovalObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newChangeTimeToApprovalObservableOpts
+	} else {
+		opt = append(opt, newChangeTimeToApprovalObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"vcs.change.time_to_approval",
+		opt...,
+	)
+	if err != nil {
+		return ChangeTimeToApprovalObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return ChangeTimeToApprovalObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ChangeTimeToApprovalObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ChangeTimeToApprovalObservable) Name() string {
+	return "vcs.change.time_to_approval"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ChangeTimeToApprovalObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ChangeTimeToApprovalObservable) Description() string {
+	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeTimeToApprovalObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeTimeToApprovalObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (ChangeTimeToApprovalObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRefBaseName returns an optional attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeTimeToApprovalObservable) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (ChangeTimeToApprovalObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (ChangeTimeToApprovalObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// AttrRefBaseRevision returns an optional attribute for the
+// "vcs.ref.base.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
+//
+// [revised version]: https://www.merriam-webster.com/dictionary/revision
+func (ChangeTimeToApprovalObservable) AttrRefBaseRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.revision", val)
+}
+
+// AttrRefHeadRevision returns an optional attribute for the
+// "vcs.ref.head.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
+//
+// [revised version]: https://www.merriam-webster.com/dictionary/revision
+func (ChangeTimeToApprovalObservable) AttrRefHeadRevision(val string) attribute.KeyValue {
 	return attribute.String("vcs.ref.head.revision", val)
 }
 
@@ -723,6 +1061,7 @@ func (m ChangeTimeToMerge) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -753,6 +1092,7 @@ func (m ChangeTimeToMerge) RecordSet(ctx context.Context, val float64, set attri
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -808,6 +1148,135 @@ func (ChangeTimeToMerge) AttrRefBaseRevision(val string) attribute.KeyValue {
 //
 // [revised version]: https://www.merriam-webster.com/dictionary/revision
 func (ChangeTimeToMerge) AttrRefHeadRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.revision", val)
+}
+
+// ChangeTimeToMergeObservable is an instrument used to record metric values
+// conforming to the "vcs.change.time_to_merge" semantic conventions. It
+// represents the amount of time since its creation it took a change (pull
+// request/merge request/changelist) to get merged into the target(base) ref.
+type ChangeTimeToMergeObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newChangeTimeToMergeObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."),
+	metric.WithUnit("s"),
+}
+
+// NewChangeTimeToMergeObservable returns a new ChangeTimeToMergeObservable
+// instrument.
+func NewChangeTimeToMergeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (ChangeTimeToMergeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ChangeTimeToMergeObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newChangeTimeToMergeObservableOpts
+	} else {
+		opt = append(opt, newChangeTimeToMergeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"vcs.change.time_to_merge",
+		opt...,
+	)
+	if err != nil {
+		return ChangeTimeToMergeObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return ChangeTimeToMergeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ChangeTimeToMergeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ChangeTimeToMergeObservable) Name() string {
+	return "vcs.change.time_to_merge"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ChangeTimeToMergeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ChangeTimeToMergeObservable) Description() string {
+	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeTimeToMergeObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeTimeToMergeObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (ChangeTimeToMergeObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRefBaseName returns an optional attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeTimeToMergeObservable) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (ChangeTimeToMergeObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (ChangeTimeToMergeObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// AttrRefBaseRevision returns an optional attribute for the
+// "vcs.ref.base.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
+//
+// [revised version]: https://www.merriam-webster.com/dictionary/revision
+func (ChangeTimeToMergeObservable) AttrRefBaseRevision(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.revision", val)
+}
+
+// AttrRefHeadRevision returns an optional attribute for the
+// "vcs.ref.head.revision" semantic convention. It represents the revision,
+// literally [revised version], The revision most often refers to a commit object
+// in Git, or a revision number in SVN.
+//
+// [revised version]: https://www.merriam-webster.com/dictionary/revision
+func (ChangeTimeToMergeObservable) AttrRefHeadRevision(val string) attribute.KeyValue {
 	return attribute.String("vcs.ref.head.revision", val)
 }
 
@@ -896,6 +1365,7 @@ func (m ContributorCount) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -925,6 +1395,7 @@ func (m ContributorCount) RecordSet(ctx context.Context, val int64, set attribut
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -951,6 +1422,96 @@ func (ContributorCount) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (ContributorCount) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// ContributorCountObservable is an instrument used to record metric values
+// conforming to the "vcs.contributor.count" semantic conventions. It represents
+// the number of unique contributors to a repository.
+type ContributorCountObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newContributorCountObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("The number of unique contributors to a repository."),
+	metric.WithUnit("{contributor}"),
+}
+
+// NewContributorCountObservable returns a new ContributorCountObservable
+// instrument.
+func NewContributorCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (ContributorCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContributorCountObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContributorCountObservableOpts
+	} else {
+		opt = append(opt, newContributorCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"vcs.contributor.count",
+		opt...,
+	)
+	if err != nil {
+		return ContributorCountObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return ContributorCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContributorCountObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContributorCountObservable) Name() string {
+	return "vcs.contributor.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContributorCountObservable) Unit() string {
+	return "{contributor}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContributorCountObservable) Description() string {
+	return "The number of unique contributors to a repository."
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ContributorCountObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (ContributorCountObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (ContributorCountObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (ContributorCountObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -1044,6 +1605,7 @@ func (m RefCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1074,6 +1636,7 @@ func (m RefCount) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1100,6 +1663,103 @@ func (RefCount) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (RefCount) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// RefCountObservable is an instrument used to record metric values conforming to
+// the "vcs.ref.count" semantic conventions. It represents the number of refs of
+// type branch or tag in a repository.
+type RefCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newRefCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of refs of type branch or tag in a repository."),
+	metric.WithUnit("{ref}"),
+}
+
+// NewRefCountObservable returns a new RefCountObservable instrument.
+func NewRefCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (RefCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return RefCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newRefCountObservableOpts
+	} else {
+		opt = append(opt, newRefCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"vcs.ref.count",
+		opt...,
+	)
+	if err != nil {
+		return RefCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return RefCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m RefCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (RefCountObservable) Name() string {
+	return "vcs.ref.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (RefCountObservable) Unit() string {
+	return "{ref}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (RefCountObservable) Description() string {
+	return "The number of refs of type branch or tag in a repository."
+}
+
+// AttrRefType returns a required attribute for the "vcs.ref.type" semantic
+// convention. It represents the type of the [reference] in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefCountObservable) AttrRefType(val RefTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefCountObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (RefCountObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (RefCountObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (RefCountObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -1223,6 +1883,7 @@ func (m RefLinesDelta) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1264,6 +1925,7 @@ func (m RefLinesDelta) RecordSet(ctx context.Context, val int64, set attribute.S
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1298,6 +1960,147 @@ func (RefLinesDelta) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (RefLinesDelta) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// RefLinesDeltaObservable is an instrument used to record metric values
+// conforming to the "vcs.ref.lines_delta" semantic conventions. It represents
+// the number of lines added/removed in a ref (branch) relative to the ref from
+// the `vcs.ref.base.name` attribute.
+type RefLinesDeltaObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newRefLinesDeltaObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."),
+	metric.WithUnit("{line}"),
+}
+
+// NewRefLinesDeltaObservable returns a new RefLinesDeltaObservable instrument.
+func NewRefLinesDeltaObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (RefLinesDeltaObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return RefLinesDeltaObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newRefLinesDeltaObservableOpts
+	} else {
+		opt = append(opt, newRefLinesDeltaObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"vcs.ref.lines_delta",
+		opt...,
+	)
+	if err != nil {
+		return RefLinesDeltaObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return RefLinesDeltaObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m RefLinesDeltaObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (RefLinesDeltaObservable) Name() string {
+	return "vcs.ref.lines_delta"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (RefLinesDeltaObservable) Unit() string {
+	return "{line}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (RefLinesDeltaObservable) Description() string {
+	return "The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."
+}
+
+// AttrLineChangeType returns a required attribute for the "vcs.line_change.type"
+// semantic convention. It represents the type of line change being measured on a
+// branch or change.
+func (RefLinesDeltaObservable) AttrLineChangeType(val LineChangeTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.line_change.type", string(val))
+}
+
+// AttrRefBaseName returns a required attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
+}
+
+// AttrRefBaseType returns a required attribute for the "vcs.ref.base.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefBaseType(val RefBaseTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.type", string(val))
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRefHeadType returns a required attribute for the "vcs.ref.head.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefHeadType(val RefHeadTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefLinesDeltaObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrChangeID returns an optional attribute for the "vcs.change.id" semantic
+// convention. It represents the ID of the change (pull request/merge
+// request/changelist) if applicable. This is usually a unique (within
+// repository) identifier generated by the VCS system.
+func (RefLinesDeltaObservable) AttrChangeID(val string) attribute.KeyValue {
+	return attribute.String("vcs.change.id", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (RefLinesDeltaObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (RefLinesDeltaObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (RefLinesDeltaObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -1418,6 +2221,7 @@ func (m RefRevisionsDelta) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1457,6 +2261,7 @@ func (m RefRevisionsDelta) RecordSet(ctx context.Context, val int64, set attribu
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1491,6 +2296,148 @@ func (RefRevisionsDelta) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (RefRevisionsDelta) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// RefRevisionsDeltaObservable is an instrument used to record metric values
+// conforming to the "vcs.ref.revisions_delta" semantic conventions. It
+// represents the number of revisions (commits) a ref (branch) is ahead/behind
+// the branch from the `vcs.ref.base.name` attribute.
+type RefRevisionsDeltaObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newRefRevisionsDeltaObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute."),
+	metric.WithUnit("{revision}"),
+}
+
+// NewRefRevisionsDeltaObservable returns a new RefRevisionsDeltaObservable
+// instrument.
+func NewRefRevisionsDeltaObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (RefRevisionsDeltaObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return RefRevisionsDeltaObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newRefRevisionsDeltaObservableOpts
+	} else {
+		opt = append(opt, newRefRevisionsDeltaObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"vcs.ref.revisions_delta",
+		opt...,
+	)
+	if err != nil {
+		return RefRevisionsDeltaObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return RefRevisionsDeltaObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m RefRevisionsDeltaObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (RefRevisionsDeltaObservable) Name() string {
+	return "vcs.ref.revisions_delta"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (RefRevisionsDeltaObservable) Unit() string {
+	return "{revision}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (RefRevisionsDeltaObservable) Description() string {
+	return "The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute."
+}
+
+// AttrRefBaseName returns a required attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
+}
+
+// AttrRefBaseType returns a required attribute for the "vcs.ref.base.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefBaseType(val RefBaseTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.type", string(val))
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRefHeadType returns a required attribute for the "vcs.ref.head.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefHeadType(val RefHeadTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefRevisionsDeltaObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrRevisionDeltaDirection returns a required attribute for the
+// "vcs.revision_delta.direction" semantic convention. It represents the type of
+// revision comparison.
+func (RefRevisionsDeltaObservable) AttrRevisionDeltaDirection(val RevisionDeltaDirectionAttr) attribute.KeyValue {
+	return attribute.String("vcs.revision_delta.direction", string(val))
+}
+
+// AttrChangeID returns an optional attribute for the "vcs.change.id" semantic
+// convention. It represents the ID of the change (pull request/merge
+// request/changelist) if applicable. This is usually a unique (within
+// repository) identifier generated by the VCS system.
+func (RefRevisionsDeltaObservable) AttrChangeID(val string) attribute.KeyValue {
+	return attribute.String("vcs.change.id", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (RefRevisionsDeltaObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (RefRevisionsDeltaObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (RefRevisionsDeltaObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -1591,6 +2538,7 @@ func (m RefTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1622,6 +2570,7 @@ func (m RefTime) RecordSet(ctx context.Context, val float64, set attribute.Set) 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1648,6 +2597,114 @@ func (RefTime) AttrRepositoryName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (RefTime) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// RefTimeObservable is an instrument used to record metric values conforming to
+// the "vcs.ref.time" semantic conventions. It represents the time a ref (branch)
+// created from the default branch (trunk) has existed. The `ref.type` attribute
+// will always be `branch`.
+type RefTimeObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newRefTimeObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`."),
+	metric.WithUnit("s"),
+}
+
+// NewRefTimeObservable returns a new RefTimeObservable instrument.
+func NewRefTimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (RefTimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return RefTimeObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newRefTimeObservableOpts
+	} else {
+		opt = append(opt, newRefTimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"vcs.ref.time",
+		opt...,
+	)
+	if err != nil {
+		return RefTimeObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return RefTimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m RefTimeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (RefTimeObservable) Name() string {
+	return "vcs.ref.time"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (RefTimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (RefTimeObservable) Description() string {
+	return "Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`."
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefTimeObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRefHeadType returns a required attribute for the "vcs.ref.head.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefTimeObservable) AttrRefHeadType(val RefHeadTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefTimeObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (RefTimeObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrRepositoryName returns an optional attribute for the "vcs.repository.name"
+// semantic convention. It represents the human readable name of the repository.
+// It SHOULD NOT include any additional identifier like Group/SubGroup in GitLab
+// or organization in GitHub.
+func (RefTimeObservable) AttrRepositoryName(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (RefTimeObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
 
@@ -1727,6 +2784,7 @@ func (m RepositoryCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1753,6 +2811,7 @@ func (m RepositoryCount) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1771,5 +2830,77 @@ func (RepositoryCount) AttrOwnerName(val string) attribute.KeyValue {
 // semantic convention. It represents the name of the version control system
 // provider.
 func (RepositoryCount) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
+	return attribute.String("vcs.provider.name", string(val))
+}
+
+// RepositoryCountObservable is an instrument used to record metric values
+// conforming to the "vcs.repository.count" semantic conventions. It represents
+// the number of repositories in an organization.
+type RepositoryCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newRepositoryCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of repositories in an organization."),
+	metric.WithUnit("{repository}"),
+}
+
+// NewRepositoryCountObservable returns a new RepositoryCountObservable
+// instrument.
+func NewRepositoryCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (RepositoryCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return RepositoryCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newRepositoryCountObservableOpts
+	} else {
+		opt = append(opt, newRepositoryCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"vcs.repository.count",
+		opt...,
+	)
+	if err != nil {
+		return RepositoryCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return RepositoryCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m RepositoryCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (RepositoryCountObservable) Name() string {
+	return "vcs.repository.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (RepositoryCountObservable) Unit() string {
+	return "{repository}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (RepositoryCountObservable) Description() string {
+	return "The number of repositories in an organization."
+}
+
+// AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
+// convention. It represents the group owner within the version control system.
+func (RepositoryCountObservable) AttrOwnerName(val string) attribute.KeyValue {
+	return attribute.String("vcs.owner.name", val)
+}
+
+// AttrProviderName returns an optional attribute for the "vcs.provider.name"
+// semantic convention. It represents the name of the version control system
+// provider.
+func (RepositoryCountObservable) AttrProviderName(val ProviderNameAttr) attribute.KeyValue {
 	return attribute.String("vcs.provider.name", string(val))
 }
