@@ -24,7 +24,7 @@
 // View. Views allow users that run OpenTelemetry instrumented code to modify
 // the generated data of that instrumentation.
 //
-// Note: Attributes filtered out by a View may still appear on Exemplars,
+// Note that attributes filtered out by a View may still appear on Exemplars,
 // because Exemplars are recorded with the dropped measurement attributes
 // when View attribute filtering is applied.
 //
