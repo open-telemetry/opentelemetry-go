@@ -399,6 +399,7 @@ func (i *inserter[N]) cachedAggregator(
 		b := aggregate.Builder[N]{
 			Temporality: i.pipeline.reader.temporality(kind),
 			ReservoirFunc: reservoirFunc[N](
+				kind,
 				stream.ExemplarReservoirProviderSelector(stream.Aggregation),
 				i.pipeline.exemplarFilter,
 			),

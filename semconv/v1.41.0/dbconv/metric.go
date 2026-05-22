@@ -306,6 +306,7 @@ func (m ClientConnectionCount) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -336,12 +337,93 @@ func (m ClientConnectionCount) AddSet(ctx context.Context, incr int64, set attri
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionCountObservable is an instrument used to record metric values
+// conforming to the "db.client.connection.count" semantic conventions. It
+// represents the number of connections that are currently in state described by
+// the `state` attribute.
+type ClientConnectionCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of connections that are currently in state described by the `state` attribute."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionCountObservable returns a new
+// ClientConnectionCountObservable instrument.
+func NewClientConnectionCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionCountObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.count",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionCountObservable) Name() string {
+	return "db.client.connection.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionCountObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionCountObservable) Description() string {
+	return "The number of connections that are currently in state described by the `state` attribute."
+}
+
+// AttrClientConnectionPoolName returns a required attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionCountObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
+}
+
+// AttrClientConnectionState returns a required attribute for the
+// "db.client.connection.state" semantic convention. It represents the state of a
+// connection in the pool.
+func (ClientConnectionCountObservable) AttrClientConnectionState(val ClientConnectionStateAttr) attribute.KeyValue {
+	return attribute.String("db.client.connection.state", string(val))
 }
 
 // ClientConnectionCreateTime is an instrument used to record metric values
@@ -430,6 +512,7 @@ func (m ClientConnectionCreateTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -459,6 +542,7 @@ func (m ClientConnectionCreateTime) RecordSet(ctx context.Context, val float64, 
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -552,6 +636,7 @@ func (m ClientConnectionIdleMax) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -581,12 +666,85 @@ func (m ClientConnectionIdleMax) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionIdleMaxObservable is an instrument used to record metric
+// values conforming to the "db.client.connection.idle.max" semantic conventions.
+// It represents the maximum number of idle open connections allowed.
+type ClientConnectionIdleMaxObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionIdleMaxObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The maximum number of idle open connections allowed."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionIdleMaxObservable returns a new
+// ClientConnectionIdleMaxObservable instrument.
+func NewClientConnectionIdleMaxObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionIdleMaxObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionIdleMaxObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionIdleMaxObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionIdleMaxObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.idle.max",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionIdleMaxObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionIdleMaxObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionIdleMaxObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionIdleMaxObservable) Name() string {
+	return "db.client.connection.idle.max"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionIdleMaxObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionIdleMaxObservable) Description() string {
+	return "The maximum number of idle open connections allowed."
+}
+
+// AttrClientConnectionPoolName returns a required attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionIdleMaxObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionIdleMin is an instrument used to record metric values
@@ -674,6 +832,7 @@ func (m ClientConnectionIdleMin) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -703,12 +862,85 @@ func (m ClientConnectionIdleMin) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionIdleMinObservable is an instrument used to record metric
+// values conforming to the "db.client.connection.idle.min" semantic conventions.
+// It represents the minimum number of idle open connections allowed.
+type ClientConnectionIdleMinObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionIdleMinObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The minimum number of idle open connections allowed."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionIdleMinObservable returns a new
+// ClientConnectionIdleMinObservable instrument.
+func NewClientConnectionIdleMinObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionIdleMinObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionIdleMinObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionIdleMinObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionIdleMinObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.idle.min",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionIdleMinObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionIdleMinObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionIdleMinObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionIdleMinObservable) Name() string {
+	return "db.client.connection.idle.min"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionIdleMinObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionIdleMinObservable) Description() string {
+	return "The minimum number of idle open connections allowed."
+}
+
+// AttrClientConnectionPoolName returns a required attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionIdleMinObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionMax is an instrument used to record metric values conforming
@@ -796,6 +1028,7 @@ func (m ClientConnectionMax) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -825,12 +1058,85 @@ func (m ClientConnectionMax) AddSet(ctx context.Context, incr int64, set attribu
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionMaxObservable is an instrument used to record metric values
+// conforming to the "db.client.connection.max" semantic conventions. It
+// represents the maximum number of open connections allowed.
+type ClientConnectionMaxObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionMaxObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The maximum number of open connections allowed."),
+	metric.WithUnit("{connection}"),
+}
+
+// NewClientConnectionMaxObservable returns a new ClientConnectionMaxObservable
+// instrument.
+func NewClientConnectionMaxObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionMaxObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionMaxObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionMaxObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionMaxObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.max",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionMaxObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionMaxObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionMaxObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionMaxObservable) Name() string {
+	return "db.client.connection.max"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionMaxObservable) Unit() string {
+	return "{connection}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionMaxObservable) Description() string {
+	return "The maximum number of open connections allowed."
+}
+
+// AttrClientConnectionPoolName returns a required attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionMaxObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionPendingRequests is an instrument used to record metric values
@@ -920,6 +1226,7 @@ func (m ClientConnectionPendingRequests) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -949,12 +1256,86 @@ func (m ClientConnectionPendingRequests) AddSet(ctx context.Context, incr int64,
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionPendingRequestsObservable is an instrument used to record
+// metric values conforming to the "db.client.connection.pending_requests"
+// semantic conventions. It represents the number of current pending requests for
+// an open connection.
+type ClientConnectionPendingRequestsObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClientConnectionPendingRequestsObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of current pending requests for an open connection."),
+	metric.WithUnit("{request}"),
+}
+
+// NewClientConnectionPendingRequestsObservable returns a new
+// ClientConnectionPendingRequestsObservable instrument.
+func NewClientConnectionPendingRequestsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClientConnectionPendingRequestsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionPendingRequestsObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionPendingRequestsObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionPendingRequestsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"db.client.connection.pending_requests",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionPendingRequestsObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClientConnectionPendingRequestsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionPendingRequestsObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionPendingRequestsObservable) Name() string {
+	return "db.client.connection.pending_requests"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionPendingRequestsObservable) Unit() string {
+	return "{request}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionPendingRequestsObservable) Description() string {
+	return "The number of current pending requests for an open connection."
+}
+
+// AttrClientConnectionPoolName returns a required attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionPendingRequestsObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionTimeouts is an instrument used to record metric values
@@ -1043,6 +1424,7 @@ func (m ClientConnectionTimeouts) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1072,12 +1454,86 @@ func (m ClientConnectionTimeouts) AddSet(ctx context.Context, incr int64, set at
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// ClientConnectionTimeoutsObservable is an instrument used to record metric
+// values conforming to the "db.client.connection.timeouts" semantic conventions.
+// It represents the number of connection timeouts that have occurred trying to
+// obtain a connection from the pool.
+type ClientConnectionTimeoutsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newClientConnectionTimeoutsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of connection timeouts that have occurred trying to obtain a connection from the pool."),
+	metric.WithUnit("{timeout}"),
+}
+
+// NewClientConnectionTimeoutsObservable returns a new
+// ClientConnectionTimeoutsObservable instrument.
+func NewClientConnectionTimeoutsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ClientConnectionTimeoutsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConnectionTimeoutsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConnectionTimeoutsObservableOpts
+	} else {
+		opt = append(opt, newClientConnectionTimeoutsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"db.client.connection.timeouts",
+		opt...,
+	)
+	if err != nil {
+		return ClientConnectionTimeoutsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ClientConnectionTimeoutsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConnectionTimeoutsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConnectionTimeoutsObservable) Name() string {
+	return "db.client.connection.timeouts"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConnectionTimeoutsObservable) Unit() string {
+	return "{timeout}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConnectionTimeoutsObservable) Description() string {
+	return "The number of connection timeouts that have occurred trying to obtain a connection from the pool."
+}
+
+// AttrClientConnectionPoolName returns a required attribute for the
+// "db.client.connection.pool.name" semantic convention. It represents the name
+// of the connection pool; unique within the instrumented application. In case
+// the connection pool implementation doesn't provide a name, instrumentation
+// SHOULD use a combination of parameters that would make the name unique, for
+// example, combining attributes `server.address`, `server.port`, and
+// `db.namespace`, formatted as `server.address:server.port/db.namespace`.
+// Instrumentations that generate connection pool name following different
+// patterns SHOULD document it.
+func (ClientConnectionTimeoutsObservable) AttrClientConnectionPoolName(val string) attribute.KeyValue {
+	return attribute.String("db.client.connection.pool.name", val)
 }
 
 // ClientConnectionUseTime is an instrument used to record metric values
@@ -1166,6 +1622,7 @@ func (m ClientConnectionUseTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1195,6 +1652,7 @@ func (m ClientConnectionUseTime) RecordSet(ctx context.Context, val float64, set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1288,6 +1746,7 @@ func (m ClientConnectionWaitTime) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1317,6 +1776,7 @@ func (m ClientConnectionWaitTime) RecordSet(ctx context.Context, val float64, se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1409,6 +1869,7 @@ func (m ClientOperationDuration) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1440,6 +1901,7 @@ func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1612,6 +2074,7 @@ func (m ClientResponseReturnedRows) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1641,6 +2104,7 @@ func (m ClientResponseReturnedRows) RecordSet(ctx context.Context, val int64, se
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
