@@ -928,7 +928,8 @@ func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
 					)
 					meter = provider.Meter("BenchmarkAsyncMeasureNewAttributeSet")
 
-					_, err := meter.Int64ObservableCounter("int64-observable-counter",
+					_, err := meter.Int64ObservableCounter(
+						"int64-observable-counter",
 						metric.WithInt64Callback(func(_ context.Context, obs metric.Int64Observer) error {
 							obs.Observe(1, metric.WithAttributes(attribute.Int("id", count)))
 							return nil
