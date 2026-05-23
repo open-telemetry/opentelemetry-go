@@ -43,6 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
 - Add Observable variants of instruments to `go.opentelemetry.io/otel/semconv/v1.41.0` package. (#8350)
 - Generate explicit histogram bucket boundaries from weaver configuration for HTTP and RPC duration instruments in `go.opentelemetry.io/otel/semconv/v1.41.0`. (#8002)
+- Add invariant test to `go.opentelemetry.io/otel/internal/tools/semconvkit` asserting that no `HistogramObservable` or `ObservableObservable` types appear in generated semconv metric files. (#8353)
 
 ### Changed
 
