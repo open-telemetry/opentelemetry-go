@@ -356,6 +356,23 @@ func (ChangeCountObservable) Description() string {
 	return "The number of changes (pull requests/merge requests/changelists) in a repository, categorized by their state (e.g. open or merged)."
 }
 
+// AttrChangeState returns a required attribute for the "vcs.change.state"
+// semantic convention. It represents the state of the change (pull request/merge
+// request/changelist).
+func (ChangeCountObservable) AttrChangeState(val ChangeStateAttr) attribute.KeyValue {
+	return attribute.String("vcs.change.state", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeCountObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
 // convention. It represents the group owner within the version control system.
 func (ChangeCountObservable) AttrOwnerName(val string) attribute.KeyValue {
@@ -592,6 +609,32 @@ func (ChangeDurationObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ChangeDurationObservable) Description() string {
 	return "The time duration a change (pull request/merge request/changelist) has been in a given state."
+}
+
+// AttrChangeState returns a required attribute for the "vcs.change.state"
+// semantic convention. It represents the state of the change (pull request/merge
+// request/changelist).
+func (ChangeDurationObservable) AttrChangeState(val ChangeStateAttr) attribute.KeyValue {
+	return attribute.String("vcs.change.state", string(val))
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeDurationObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeDurationObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
 }
 
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
@@ -855,6 +898,25 @@ func (ChangeTimeToApprovalObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ChangeTimeToApprovalObservable) Description() string {
 	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get the first approval."
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeTimeToApprovalObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeTimeToApprovalObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
 }
 
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
@@ -1149,6 +1211,25 @@ func (ChangeTimeToMergeObservable) Description() string {
 	return "The amount of time since its creation it took a change (pull request/merge request/changelist) to get merged into the target(base) ref."
 }
 
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (ChangeTimeToMergeObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ChangeTimeToMergeObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
 // convention. It represents the group owner within the version control system.
 func (ChangeTimeToMergeObservable) AttrOwnerName(val string) attribute.KeyValue {
@@ -1403,6 +1484,16 @@ func (ContributorCountObservable) Description() string {
 	return "The number of unique contributors to a repository."
 }
 
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (ContributorCountObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
 // convention. It represents the group owner within the version control system.
 func (ContributorCountObservable) AttrOwnerName(val string) attribute.KeyValue {
@@ -1631,6 +1722,24 @@ func (RefCountObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (RefCountObservable) Description() string {
 	return "The number of refs of type branch or tag in a repository."
+}
+
+// AttrRefType returns a required attribute for the "vcs.ref.type" semantic
+// convention. It represents the type of the [reference] in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefCountObservable) AttrRefType(val RefTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefCountObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
 }
 
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic
@@ -1911,6 +2020,59 @@ func (RefLinesDeltaObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (RefLinesDeltaObservable) Description() string {
 	return "The number of lines added/removed in a ref (branch) relative to the ref from the `vcs.ref.base.name` attribute."
+}
+
+// AttrLineChangeType returns a required attribute for the "vcs.line_change.type"
+// semantic convention. It represents the type of line change being measured on a
+// branch or change.
+func (RefLinesDeltaObservable) AttrLineChangeType(val LineChangeTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.line_change.type", string(val))
+}
+
+// AttrRefBaseName returns a required attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
+}
+
+// AttrRefBaseType returns a required attribute for the "vcs.ref.base.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefBaseType(val RefBaseTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.type", string(val))
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRefHeadType returns a required attribute for the "vcs.ref.head.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefLinesDeltaObservable) AttrRefHeadType(val RefHeadTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefLinesDeltaObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
 }
 
 // AttrChangeID returns an optional attribute for the "vcs.change.id" semantic
@@ -2197,6 +2359,59 @@ func (RefRevisionsDeltaObservable) Description() string {
 	return "The number of revisions (commits) a ref (branch) is ahead/behind the branch from the `vcs.ref.base.name` attribute."
 }
 
+// AttrRefBaseName returns a required attribute for the "vcs.ref.base.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefBaseName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.name", val)
+}
+
+// AttrRefBaseType returns a required attribute for the "vcs.ref.base.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefBaseType(val RefBaseTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.base.type", string(val))
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRefHeadType returns a required attribute for the "vcs.ref.head.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefRevisionsDeltaObservable) AttrRefHeadType(val RefHeadTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefRevisionsDeltaObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
+}
+
+// AttrRevisionDeltaDirection returns a required attribute for the
+// "vcs.revision_delta.direction" semantic convention. It represents the type of
+// revision comparison.
+func (RefRevisionsDeltaObservable) AttrRevisionDeltaDirection(val RevisionDeltaDirectionAttr) attribute.KeyValue {
+	return attribute.String("vcs.revision_delta.direction", string(val))
+}
+
 // AttrChangeID returns an optional attribute for the "vcs.change.id" semantic
 // convention. It represents the ID of the change (pull request/merge
 // request/changelist) if applicable. This is usually a unique (within
@@ -2442,6 +2657,34 @@ func (RefTimeObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (RefTimeObservable) Description() string {
 	return "Time a ref (branch) created from the default branch (trunk) has existed. The `ref.type` attribute will always be `branch`."
+}
+
+// AttrRefHeadName returns a required attribute for the "vcs.ref.head.name"
+// semantic convention. It represents the name of the [reference] such as
+// **branch** or **tag** in the repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefTimeObservable) AttrRefHeadName(val string) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.name", val)
+}
+
+// AttrRefHeadType returns a required attribute for the "vcs.ref.head.type"
+// semantic convention. It represents the type of the [reference] in the
+// repository.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+func (RefTimeObservable) AttrRefHeadType(val RefHeadTypeAttr) attribute.KeyValue {
+	return attribute.String("vcs.ref.head.type", string(val))
+}
+
+// AttrRepositoryURLFull returns a required attribute for the
+// "vcs.repository.url.full" semantic convention. It represents the
+// [canonical URL] of the repository providing the complete HTTP(S) address in
+// order to locate and identify the repository through a browser.
+//
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+func (RefTimeObservable) AttrRepositoryURLFull(val string) attribute.KeyValue {
+	return attribute.String("vcs.repository.url.full", val)
 }
 
 // AttrOwnerName returns an optional attribute for the "vcs.owner.name" semantic

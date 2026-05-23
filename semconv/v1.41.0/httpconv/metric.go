@@ -295,6 +295,19 @@ func (ClientActiveRequestsObservable) Description() string {
 	return "Number of active HTTP requests."
 }
 
+// AttrServerAddress returns a required attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientActiveRequestsObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
+// AttrServerPort returns a required attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientActiveRequestsObservable) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
+}
+
 // AttrURLTemplate returns an optional attribute for the "url.template" semantic
 // convention. It represents the low-cardinality template of an
 // [absolute path reference].
@@ -683,6 +696,26 @@ func (ClientOpenConnectionsObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ClientOpenConnectionsObservable) Description() string {
 	return "Number of outbound HTTP connections that are currently active or idle on the client."
+}
+
+// AttrConnectionState returns a required attribute for the
+// "http.connection.state" semantic convention. It represents the state of the
+// HTTP connection in the HTTP connection pool.
+func (ClientOpenConnectionsObservable) AttrConnectionState(val ConnectionStateAttr) attribute.KeyValue {
+	return attribute.String("http.connection.state", string(val))
+}
+
+// AttrServerAddress returns a required attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientOpenConnectionsObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
+// AttrServerPort returns a required attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientOpenConnectionsObservable) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
 }
 
 // AttrNetworkPeerAddress returns an optional attribute for the
@@ -1478,6 +1511,21 @@ func (ServerActiveRequestsObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (ServerActiveRequestsObservable) Description() string {
 	return "Number of active HTTP server requests."
+}
+
+// AttrRequestMethod returns a required attribute for the "http.request.method"
+// semantic convention. It represents the HTTP request method.
+func (ServerActiveRequestsObservable) AttrRequestMethod(val RequestMethodAttr) attribute.KeyValue {
+	return attribute.String("http.request.method", string(val))
+}
+
+// AttrURLScheme returns a required attribute for the "url.scheme" semantic
+// convention. It represents the [URI scheme] component identifying the used
+// protocol.
+//
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
+func (ServerActiveRequestsObservable) AttrURLScheme(val string) attribute.KeyValue {
+	return attribute.String("url.scheme", val)
 }
 
 // AttrServerAddress returns an optional attribute for the "server.address"
