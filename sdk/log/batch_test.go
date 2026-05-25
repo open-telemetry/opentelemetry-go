@@ -30,8 +30,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 type concurrentBuffer struct {
@@ -760,7 +760,8 @@ func TestBatchProcessorMetrics(t *testing.T) {
 		return e.ExportN() > 0
 	}, 2*time.Second, time.Microsecond, "export not started")
 
-	assertBLPMetrics(t, reader,
+	assertBLPMetrics(
+		t, reader,
 		blpQCap(1),
 		blpQSize(0),
 		blpProcessed(blpDPt(blpSet(), 1)),
@@ -779,7 +780,8 @@ func TestBatchProcessorMetrics(t *testing.T) {
 		return strings.Contains(buf.String(), wantMsg)
 	}, 2*time.Second, time.Microsecond, "drop not detected")
 
-	assertBLPMetrics(t, reader,
+	assertBLPMetrics(
+		t, reader,
 		blpQCap(1),
 		blpQSize(1),
 		blpProcessed(
