@@ -20,10 +20,17 @@ type ExemplarReservoirProviderSelector func(Aggregation) exemplar.ReservoirProvi
 // reservoirFunc returns the appropriately configured exemplar reservoir
 // creation func based on the passed InstrumentKind and filter configuration.
 func reservoirFunc[N int64 | float64](
+	kind InstrumentKind,
 	provider exemplar.ReservoirProvider,
 	filter exemplar.Filter,
 ) func(attribute.Set) aggregate.FilteredExemplarReservoir[N] {
 	if reflect.ValueOf(filter).Pointer() == reflect.ValueOf(exemplar.AlwaysOffFilter).Pointer() {
+		return aggregate.DropReservoir[N]
+	}
+	if (kind == InstrumentKindObservableCounter || kind == InstrumentKindObservableUpDownCounter || kind == InstrumentKindObservableGauge) &&
+		reflect.ValueOf(filter).Pointer() == reflect.ValueOf(exemplar.TraceBasedFilter).Pointer() {
+		// Asynchronous instruments do not accept context, so TraceBasedFilter
+		// will never record any exemplars.
 		return aggregate.DropReservoir[N]
 	}
 	return func(attrs attribute.Set) aggregate.FilteredExemplarReservoir[N] {

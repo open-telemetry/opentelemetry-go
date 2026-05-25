@@ -275,6 +275,20 @@ func (PipelineRunActiveObservable) Description() string {
 	return "The number of pipeline runs currently active in the system by state."
 }
 
+// AttrPipelineName returns a required attribute for the "cicd.pipeline.name"
+// semantic convention. It represents the human readable name of the pipeline
+// within a CI/CD system.
+func (PipelineRunActiveObservable) AttrPipelineName(val string) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.name", val)
+}
+
+// AttrPipelineRunState returns a required attribute for the
+// "cicd.pipeline.run.state" semantic convention. It represents the pipeline run
+// goes through these states during its lifecycle.
+func (PipelineRunActiveObservable) AttrPipelineRunState(val PipelineRunStateAttr) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.run.state", string(val))
+}
+
 // PipelineRunDuration is an instrument used to record metric values conforming
 // to the "cicd.pipeline.run.duration" semantic conventions. It represents the
 // duration of a pipeline run grouped by pipeline, state and result.
@@ -610,6 +624,20 @@ func (PipelineRunErrorsObservable) Description() string {
 	return "The number of errors encountered in pipeline runs (eg. compile, test failures)."
 }
 
+// AttrPipelineName returns a required attribute for the "cicd.pipeline.name"
+// semantic convention. It represents the human readable name of the pipeline
+// within a CI/CD system.
+func (PipelineRunErrorsObservable) AttrPipelineName(val string) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.name", val)
+}
+
+// AttrErrorType returns a required attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (PipelineRunErrorsObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
 // SystemErrors is an instrument used to record metric values conforming to the
 // "cicd.system.errors" semantic conventions. It represents the number of errors
 // in a component of the CICD system (eg. controller, scheduler, agent).
@@ -798,6 +826,20 @@ func (SystemErrorsObservable) Description() string {
 	return "The number of errors in a component of the CICD system (eg. controller, scheduler, agent)."
 }
 
+// AttrSystemComponent returns a required attribute for the
+// "cicd.system.component" semantic convention. It represents the name of a
+// component of the CICD system.
+func (SystemErrorsObservable) AttrSystemComponent(val string) attribute.KeyValue {
+	return attribute.String("cicd.system.component", val)
+}
+
+// AttrErrorType returns a required attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (SystemErrorsObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
 // WorkerCount is an instrument used to record metric values conforming to the
 // "cicd.worker.count" semantic conventions. It represents the number of workers
 // on the CICD system by state.
@@ -972,4 +1014,10 @@ func (WorkerCountObservable) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (WorkerCountObservable) Description() string {
 	return "The number of workers on the CICD system by state."
+}
+
+// AttrWorkerState returns a required attribute for the "cicd.worker.state"
+// semantic convention. It represents the state of a CICD worker / agent.
+func (WorkerCountObservable) AttrWorkerState(val WorkerStateAttr) attribute.KeyValue {
+	return attribute.String("cicd.worker.state", string(val))
 }
