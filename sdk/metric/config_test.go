@@ -42,6 +42,7 @@ func (r *reader) aggregation(
 
 func (r *reader) register(p sdkProducer)      { r.producer = p }
 func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
+
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
 }
@@ -337,6 +338,12 @@ func TestWithCardinalityLimit(t *testing.T) {
 			envValue:      "1234",
 			options:       []Option{},
 			expectedLimit: 1234,
+		},
+		{
+			name:          "zero cardinality limit from env disables limit",
+			envValue:      "0",
+			options:       []Option{},
+			expectedLimit: 0,
 		},
 		{
 			name:          "invalid env value uses default",

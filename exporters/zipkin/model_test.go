@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
 	semconv138 "go.opentelemetry.io/otel/semconv/v1.38.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -989,6 +989,18 @@ func TestAttributeToStringPairByteSlice(t *testing.T) {
 
 	assert.Equal(t, "bytes", k)
 	assert.Equal(t, "[1,2,3]", v)
+}
+
+func TestAttributeToStringPairSlice(t *testing.T) {
+	k, v := attributeToStringPair(attribute.Slice(
+		"slice",
+		attribute.BoolValue(true),
+		attribute.ByteSliceValue([]byte("bin")),
+		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+	))
+
+	assert.Equal(t, "slice", k)
+	assert.Equal(t, `[true,"Ymlu",[2,null]]`, v)
 }
 
 func zkmodelIDPtr(n uint64) *zkmodel.ID {

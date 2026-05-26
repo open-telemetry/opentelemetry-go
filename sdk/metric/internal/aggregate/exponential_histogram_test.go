@@ -1028,7 +1028,8 @@ func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metric
 		}
 		require.LessOrEqual(t, len(s.DataPoints), 3, "AggregationLimit of 3 exceeded in a single cycle")
 		for _, dp := range s.DataPoints {
-			assert.False(t,
+			assert.False(
+				t,
 				dp.Time.Before(dp.StartTime),
 				"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
 			)

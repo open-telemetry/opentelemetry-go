@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -23,13 +24,13 @@ var excludedDirs = []string{
 
 const readmeFilename = "README.md"
 
-// verifyReadme is a [os.WalkFunc] that checks if a README.md exists in the same directory as the go.mod file.
-func verifyReadme(path string, info os.FileInfo, err error) error {
+// verifyReadme is a [fs.WalkDirFunc] that checks if a README.md exists in the same directory as the go.mod file.
+func verifyReadme(path string, d fs.DirEntry, err error) error {
 	if err != nil {
 		return err
 	}
 
-	if !info.Mode().IsRegular() || info.Name() != "go.mod" {
+	if !d.Type().IsRegular() || d.Name() != "go.mod" {
 		return nil
 	}
 
@@ -43,7 +44,7 @@ func verifyReadme(path string, info os.FileInfo, err error) error {
 	readme := filepath.Join(filepath.Dir(path), readmeFilename)
 	_, err = os.Stat(readme)
 	if os.IsNotExist(err) {
-		err = fmt.Errorf("couldn't find %s for %q", readmeFilename, filepath.Dir(path))
+		return fmt.Errorf("couldn't find %s for %q", readmeFilename, filepath.Dir(path))
 	}
 
 	return err
@@ -60,19 +61,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Clean the path to prevent path traversal issues
+	root = filepath.Clean(root)
+
 	fmt.Println("Verifying READMEs in", root)
 
-	var errs []string
-	filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
-		if err := verifyReadme(path, info, err); err != nil {
-			errs = append(errs, err.Error())
+	var errs []error
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err := verifyReadme(path, d, err); err != nil {
+			errs = append(errs, err)
 		}
 		return nil // continue walking
 	})
 
-	if len(errs) > 0 {
+	if err := errors.Join(errs...); err != nil {
 		fmt.Println("Some readme files couldn't be found.")
-		fmt.Println(strings.Join(errs, "\n"))
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }

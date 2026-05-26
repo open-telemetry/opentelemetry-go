@@ -79,7 +79,17 @@ func TestConfigs(t *testing.T) {
 				}
 				assert.Equal(t, NoCompression, c.Metrics.Compression)
 				assert.Equal(t, map[string]string(nil), c.Metrics.Headers)
+				assert.Equal(t, DefaultMaxRequestSize, c.Metrics.MaxRequestSize)
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
+			},
+		},
+		{
+			name: "Test With Max Request Size",
+			opts: []GenericOption{
+				WithMaxRequestSize(1),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				assert.Equal(t, 1, c.Metrics.MaxRequestSize)
 			},
 		},
 

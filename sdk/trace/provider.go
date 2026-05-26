@@ -317,7 +317,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 }
 
 func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
-	return *(p.spanProcessors.Load())
+	return *p.spanProcessors.Load()
 }
 
 // TracerProviderOption configures a TracerProvider.
