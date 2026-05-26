@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.44.0/0.66.0/0.20.0/0.0.17] 2026-05-27
+
 ### Added
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
@@ -3704,7 +3706,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.43.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.44.0...HEAD
+[1.44.0/0.66.0/0.20.0/0.0.17]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.44.0
 [1.43.0/0.65.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.43.0
 [1.42.0/0.64.0/0.18.0/0.0.16]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.42.0
 [1.41.0/0.63.0/0.17.0/0.0.15]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.41.0
