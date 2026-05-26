@@ -77,7 +77,7 @@ func TestConfigs(t *testing.T) {
 				}
 				assert.Equal(t, NoCompression, c.Traces.Compression)
 				assert.Equal(t, map[string]string(nil), c.Traces.Headers)
-				assert.Equal(t, DefaultMaxRequestSize, c.Traces.MaxRequestSize)
+				assert.Equal(t, 64*1024*1024, c.Traces.MaxRequestSize)
 				assert.Equal(t, 10*time.Second, c.Traces.Timeout)
 			},
 		},

@@ -67,18 +67,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` to safely handle zero size.
   A capacity check in the constructor initializes the reservoir safely and skips initialization for zero-cap; early returns in `Offer()` and `Collect()` ensure no-op behavior. (#8295)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8135)
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8152)
 - `go.opentelemetry.io/otel/exporters/prometheus` now uses `Value.String` formatting for label values following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8170)
