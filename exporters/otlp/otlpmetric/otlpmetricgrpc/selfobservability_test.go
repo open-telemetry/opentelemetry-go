@@ -176,7 +176,9 @@ func TestSelfObservability(t *testing.T) {
 									Attributes: attribute.NewSet(
 										append(
 											[]attribute.KeyValue{semconv.RPCResponseStatusCode("Unavailable")},
-											errorAttrs...)...),
+											errorAttrs...,
+										)...,
+									),
 									Count: 1,
 								},
 							},
@@ -368,14 +370,16 @@ func assertScopeMetricsEqual(t *testing.T, want, got metricdata.ScopeMetrics) {
 
 	for i := range want.Metrics {
 		if isHistogramMetric(want.Metrics[i]) {
-			metricdatatest.AssertEqual(t, want.Metrics[i], got.Metrics[i],
+			metricdatatest.AssertEqual(
+				t, want.Metrics[i], got.Metrics[i],
 				metricdatatest.IgnoreTimestamp(),
 				metricdatatest.IgnoreValue(),
 			)
 			continue
 		}
 
-		metricdatatest.AssertEqual(t, want.Metrics[i], got.Metrics[i],
+		metricdatatest.AssertEqual(
+			t, want.Metrics[i], got.Metrics[i],
 			metricdatatest.IgnoreTimestamp(),
 		)
 	}
