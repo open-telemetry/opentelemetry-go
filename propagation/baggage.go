@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/internal/errorhandler"
@@ -22,6 +23,10 @@ const (
 	maxMembers               = 64
 	maxBytesPerBaggageString = 8192
 )
+
+// handleExtractErrOnce limits error reporting for attacker-controlled baggage headers
+// to one process-wide emission, preventing repeated extraction from flooding logs.
+var handleExtractErrOnce sync.Once
 
 // Baggage is a propagator that supports the W3C Baggage format.
 //
@@ -62,7 +67,9 @@ func extractSingleBaggage(parent context.Context, carrier TextMapCarrier) contex
 
 	bag, err := baggage.Parse(bStr)
 	if err != nil {
-		errorhandler.GetErrorHandler().Handle(err)
+		handleExtractErrOnce.Do(func() {
+			errorhandler.GetErrorHandler().Handle(err)
+		})
 	}
 	if bag.Len() == 0 {
 		return parent
@@ -91,11 +98,13 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 			// individually. Mirror the single-header behavior of
 			// reporting the error and returning the parent context
 			// with no baggage attached.
-			errorhandler.GetErrorHandler().Handle(fmt.Errorf(
-				"baggage: aggregate header size %d exceeds %d byte limit",
-				totalBytes,
-				maxBytesPerBaggageString,
-			))
+			handleExtractErrOnce.Do(func() {
+				errorhandler.GetErrorHandler().Handle(fmt.Errorf(
+					"baggage: aggregate header size %d exceeds %d byte limit",
+					totalBytes,
+					maxBytesPerBaggageString,
+				))
+			})
 			return parent
 		}
 
@@ -124,7 +133,9 @@ func extractMultiBaggage(parent context.Context, carrier ValuesGetter) context.C
 		truncateErr = errors.Join(truncateErr, err)
 	}
 	if truncateErr != nil {
-		errorhandler.GetErrorHandler().Handle(truncateErr)
+		handleExtractErrOnce.Do(func() {
+			errorhandler.GetErrorHandler().Handle(truncateErr)
+		})
 	}
 
 	if b.Len() == 0 {
