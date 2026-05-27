@@ -125,7 +125,8 @@ func TestRuntimeArch(t *testing.T) {
 func testWithProcessExecutablePathError(t *testing.T) {
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessExecutablePath(),
 	)
 
@@ -136,7 +137,8 @@ func testWithProcessExecutablePathError(t *testing.T) {
 func testWithProcessOwnerError(t *testing.T) {
 	ctx := t.Context()
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithProcessOwner(),
 	)
 

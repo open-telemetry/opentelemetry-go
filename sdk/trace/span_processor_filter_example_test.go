@@ -51,7 +51,9 @@ type InstrumentationBlacklist struct {
 func (f InstrumentationBlacklist) OnStart(parent context.Context, s ReadWriteSpan) {
 	f.Next.OnStart(parent, s)
 }
+
 func (f InstrumentationBlacklist) Shutdown(ctx context.Context) error { return f.Next.Shutdown(ctx) }
+
 func (f InstrumentationBlacklist) ForceFlush(ctx context.Context) error {
 	return f.Next.ForceFlush(ctx)
 }

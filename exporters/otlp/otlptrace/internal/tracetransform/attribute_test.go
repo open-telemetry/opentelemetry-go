@@ -27,7 +27,8 @@ func TestAttributes(t *testing.T) {
 				attribute.Float64("float64 to double", 1.61),
 				attribute.String("string to string", "string"),
 				attribute.ByteSlice("bytes to bytes", []byte("bytes")),
-				attribute.Slice("slice to array",
+				attribute.Slice(
+					"slice to array",
 					attribute.BoolValue(true),
 					attribute.ByteSliceValue([]byte("bytes")),
 					attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),

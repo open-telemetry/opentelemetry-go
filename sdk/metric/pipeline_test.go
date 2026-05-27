@@ -553,7 +553,8 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 			func(_ context.Context, o metric.Observer) error {
 				o.ObserveInt64(oc1, 2)
 				return nil
-			}, oc1)
+			}, oc1,
+		)
 		require.NoError(t, err)
 	})
 
@@ -581,7 +582,8 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(oc, val.Load())
 			return nil
-		}, oc)
+		}, oc,
+	)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
 	ctx := t.Context()
