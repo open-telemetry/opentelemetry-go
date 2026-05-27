@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -950,4 +951,23 @@ func (e *blockingExporter) waitForSpans(ctx context.Context, n int32) error {
 		runtime.Gosched()
 	}
 	return nil
+}
+
+func TestBatchSpanProcessorMarshalLog(t *testing.T) {
+	exporter := &testBatchExporter{}
+	bsp := NewBatchSpanProcessor(exporter)
+	defer func() {
+		if err := bsp.Shutdown(t.Context()); err != nil {
+			t.Errorf("failed to shutdown processor: %v", err)
+		}
+	}()
+
+	concrete := bsp.(*batchSpanProcessor)
+
+	got := concrete.MarshalLog()
+	v := reflect.ValueOf(got)
+
+	assert.Equal(t, "BatchSpanProcessor", v.FieldByName("Type").String())
+	assert.Equal(t, exporter, v.FieldByName("SpanExporter").Interface())
+	assert.Equal(t, concrete.o, v.FieldByName("Config").Interface())
 }
