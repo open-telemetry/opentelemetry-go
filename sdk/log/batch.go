@@ -101,6 +101,14 @@ type BatchProcessor struct {
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
+// BytesSizer reports the serialized size, in bytes, of an export batch.
+//
+// Exporters can implement this interface to enable byte-based batching when
+// [WithExportMaxBatchBytes] is configured.
+type BytesSizer interface {
+	ExportSize([]Record) int
+}
+
 // NewBatchProcessor decorates the provided exporter
 // so that the log records are batched before exporting.
 //
@@ -111,24 +119,48 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
+	bytesSizer := resolveBatchExportBytesSizer(exporter, &cfg)
+	if bytesSizer == nil {
+		cfg.expMaxBatchBytes = setting[int]{}
+	}
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
 	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
 	exporter = newTimeoutExporter(exporter, cfg.expTimeout.Value)
-	// Use a chunkExporter to ensure ForceFlush and Shutdown calls are batched
+	// Wrap export to ensure ForceFlush and Shutdown calls are batched
 	// appropriately on export.
-	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
+	if cfg.expMaxBatchBytes.Value > 0 {
+		exporter = newSizedExporter(exporter, cfg.expMaxBatchBytes.Value, bytesSizer)
+	} else {
+		exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
+	}
 
+	batchSize := cfg.expMaxBatchSize.Value
+	if cfg.expMaxBatchBytes.Value > 0 {
+		batchSize = cfg.maxQSize.Value
+	}
 	b := &BatchProcessor{
 		exporter: newBufferExporter(exporter, cfg.expBufferSize.Value),
 
 		q:           newQueue(cfg.maxQSize.Value),
-		batchSize:   cfg.expMaxBatchSize.Value,
+		batchSize:   batchSize,
 		pollTrigger: make(chan struct{}, 1),
 		pollKill:    make(chan struct{}),
 	}
 	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
+}
+
+func resolveBatchExportBytesSizer(exporter Exporter, cfg *batchConfig) BytesSizer {
+	if cfg.expMaxBatchBytes.Value > 0 {
+		if sizer, ok := exporter.(BytesSizer); ok {
+			return sizer
+		}
+		global.Warn(
+			"byte batch sizing requested, exporter does not provide byte sizing support; falling back to item sizing",
+		)
+	}
+	return nil
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
@@ -364,15 +396,16 @@ func (q *queue) Flush() []Record {
 }
 
 type batchConfig struct {
-	maxQSize        setting[int]
-	expInterval     setting[time.Duration]
-	expTimeout      setting[time.Duration]
-	expMaxBatchSize setting[int]
-	expBufferSize   setting[int]
+	maxQSize         setting[int]
+	expInterval      setting[time.Duration]
+	expTimeout       setting[time.Duration]
+	expMaxBatchSize  setting[int]
+	expMaxBatchBytes setting[int]
+	expBufferSize    setting[int]
 }
 
 func newBatchConfig(options []BatchProcessorOption) batchConfig {
-	var c batchConfig
+	c := batchConfig{}
 	for _, o := range options {
 		c = o.apply(c)
 	}
@@ -479,6 +512,17 @@ func WithExportTimeout(d time.Duration) BatchProcessorOption {
 func WithExportMaxBatchSize(size int) BatchProcessorOption {
 	return batchOptionFunc(func(cfg batchConfig) batchConfig {
 		cfg.expMaxBatchSize = newSetting(size)
+		return cfg
+	})
+}
+
+// WithExportMaxBatchBytes sets the maximum serialized batch size of every
+// export, in bytes.
+func WithExportMaxBatchBytes(size int) BatchProcessorOption {
+	return batchOptionFunc(func(cfg batchConfig) batchConfig {
+		if size > 0 {
+			cfg.expMaxBatchBytes = newSetting(size)
+		}
 		return cfg
 	})
 }

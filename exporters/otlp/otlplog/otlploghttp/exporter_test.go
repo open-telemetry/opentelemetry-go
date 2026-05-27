@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
+	apilog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -59,6 +60,16 @@ func TestExporterExport(t *testing.T) {
 
 	assert.Equal(t, 1, uploads, "client UploadLogs calls")
 	assert.Equal(t, want, got, "transformed log records")
+}
+
+func TestExporterExportSize(t *testing.T) {
+	e, err := newExporter(newNoopClient(), config{})
+	require.NoError(t, err)
+
+	var record log.Record
+	record.SetBody(apilog.StringValue("span"))
+
+	assert.Positive(t, e.ExportSize([]log.Record{record}))
 }
 
 func TestExporterShutdown(t *testing.T) {

@@ -5,7 +5,11 @@ package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/o
 
 import (
 	"context"
+	math_bits "math/bits"
 	"sync/atomic"
+
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -54,6 +58,25 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 	return e.client.Load().UploadLogs(ctx, otlp)
+}
+
+// ExportSize returns the size, in bytes, of the serialized OTLP log export
+// request for records.
+func (*Exporter) ExportSize(records []log.Record) int {
+	return resourceLogsRequestSize(transformResourceLogs(records))
+}
+
+func resourceLogsRequestSize(rls []*logpb.ResourceLogs) int {
+	size := 0
+	for _, rl := range rls {
+		rlSize := proto.Size(rl)
+		size += 1 + rlSize + sov(rlSize)
+	}
+	return size
+}
+
+func sov(x int) int {
+	return (math_bits.Len(uint(x)|1) + 6) / 7
 }
 
 // Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform

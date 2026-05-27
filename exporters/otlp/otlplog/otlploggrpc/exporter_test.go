@@ -95,6 +95,11 @@ func TestExporterExport(t *testing.T) {
 	}
 }
 
+func TestExporterExportSize(t *testing.T) {
+	e := newExporter(&mockClient{})
+	assert.Positive(t, e.ExportSize(records[:1]))
+}
+
 func TestExporterShutdown(t *testing.T) {
 	ctx := t.Context()
 	e, err := New(ctx)

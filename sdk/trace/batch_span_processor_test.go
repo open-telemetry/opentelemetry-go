@@ -24,6 +24,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
@@ -43,6 +44,7 @@ type testBatchExporter struct {
 	droppedCount  int
 	idx           int
 	err           error
+	exportSize    func([]ReadOnlySpan) int
 }
 
 func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
@@ -72,6 +74,13 @@ func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpa
 func (t *testBatchExporter) Shutdown(context.Context) error {
 	t.shutdownCount++
 	return nil
+}
+
+func (t *testBatchExporter) ExportSize(spans []ReadOnlySpan) int {
+	if t.exportSize == nil {
+		return 0
+	}
+	return t.exportSize(spans)
 }
 
 func (t *testBatchExporter) len() int {
@@ -299,6 +308,109 @@ func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 	}
 }
 
+func TestBatchSpanProcessorMaxExportBatchBytes(t *testing.T) {
+	t.Run("Split", func(t *testing.T) {
+		te := testBatchExporter{}
+		te.exportSize = func(spans []ReadOnlySpan) int {
+			size := 0
+			for _, span := range spans {
+				size += len(span.Name())
+			}
+			return size
+		}
+		tp := basicTracerProvider(t)
+		bsp := NewBatchSpanProcessor(
+			&te,
+			WithBatchTimeout(time.Hour),
+			WithMaxQueueSize(10),
+			WithMaxExportBatchBytes(5),
+		)
+		tp.RegisterSpanProcessor(bsp)
+		tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytes")
+
+		for _, name := range []string{"aa", "bbb", "c", "dddd"} {
+			_, span := tr.Start(t.Context(), name)
+			span.End()
+		}
+
+		require.NoError(t, bsp.ForceFlush(t.Context()))
+
+		assert.Equal(t, 4, te.len())
+		assert.Equal(t, []int{2, 2}, te.sizes)
+	})
+
+	t.Run("DropOversized", func(t *testing.T) {
+		orig := otel.GetErrorHandler()
+		t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+		var errs []error
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			errs = append(errs, err)
+		}))
+
+		te := testBatchExporter{}
+		te.exportSize = func(spans []ReadOnlySpan) int {
+			size := 0
+			for _, span := range spans {
+				size += len(span.Name())
+			}
+			return size
+		}
+		tp := basicTracerProvider(t)
+		bsp := NewBatchSpanProcessor(
+			&te,
+			WithBatchTimeout(time.Hour),
+			WithMaxQueueSize(10),
+			WithMaxExportBatchBytes(3),
+		)
+		tp.RegisterSpanProcessor(bsp)
+		tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytesOversized")
+
+		for _, name := range []string{"four", "a", "bb"} {
+			_, span := tr.Start(t.Context(), name)
+			span.End()
+		}
+
+		require.NoError(t, bsp.ForceFlush(t.Context()))
+
+		assert.Equal(t, 2, te.len())
+		assert.Equal(t, []int{2}, te.sizes)
+		require.Len(t, errs, 1)
+		assert.Contains(t, errs[0].Error(), "dropping span larger than max export batch size")
+	})
+}
+
+func TestBatchSpanProcessorMaxExportBatchBytesConfigured(t *testing.T) {
+	te := testBatchExporter{
+		exportSize: func(spans []ReadOnlySpan) int {
+			size := 0
+			for _, span := range spans {
+				size += len(span.Name())
+			}
+			return size
+		},
+	}
+	tp := basicTracerProvider(t)
+	bsp := NewBatchSpanProcessor(
+		&te,
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(10),
+		WithMaxExportBatchBytes(5),
+	)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("BatchSpanProcessorMaxExportBatchBytesConfigured")
+
+	for _, name := range []string{"aa", "bbb", "c", "dddd"} {
+		_, span := tr.Start(t.Context(), name)
+		span.End()
+	}
+
+	require.NoError(t, bsp.ForceFlush(t.Context()))
+
+	assert.Equal(t, 4, te.len())
+	assert.Equal(t, []int{2, 2}, te.sizes)
+}
+
 type stuckExporter struct {
 	testBatchExporter
 }
@@ -328,6 +440,161 @@ func TestBatchSpanProcessorExportTimeout(t *testing.T) {
 	if !errors.Is(exp.err, context.DeadlineExceeded) {
 		t.Errorf("context deadline error not returned: got %+v", exp.err)
 	}
+}
+
+func BenchmarkBatchSpanProcessorAddSpanToBatchBytes(b *testing.B) {
+	spans := benchmarkBatchSpanProcessorSpans(512)
+	limit := benchmarkTraceBytesExporter{}.ExportSize(spans[:32])
+
+	b.Run("IncrementalTracker", func(b *testing.B) {
+		benchmarkBatchSpanProcessorByteSizing(b, incrementalBenchmarkTraceBytesExporter{}, spans, limit)
+	})
+
+	b.Run("FullBatchSizer", func(b *testing.B) {
+		benchmarkBatchSpanProcessorByteSizing(b, benchmarkTraceBytesExporter{}, spans, limit)
+	})
+}
+
+func benchmarkBatchSpanProcessorByteSizing(b *testing.B, exporter SpanExporter, spans []ReadOnlySpan, limit int) {
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		bsp := newBenchmarkBatchSpanProcessor(exporter, limit, len(spans))
+		for _, span := range spans {
+			sd := span
+			for sd != nil {
+				shouldExport, overflow, err := bsp.addSpanToBatch(sd)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if !shouldExport {
+					break
+				}
+				clear(bsp.batch)
+				bsp.batch = bsp.batch[:0]
+				bsp.batchBytes = 0
+				bsp.resetSizeTracker()
+				sd = overflow
+			}
+		}
+	}
+}
+
+func newBenchmarkBatchSpanProcessor(exporter SpanExporter, limit, capacity int) *batchSpanProcessor {
+	o := BatchSpanProcessorOptions{
+		MaxExportBatchSize:  capacity,
+		MaxExportBatchBytes: limit,
+	}
+	resolveBatchSpanProcessorBytesSizer(exporter, &o)
+	bsp := &batchSpanProcessor{
+		e:     exporter,
+		o:     o,
+		batch: make([]ReadOnlySpan, 0, capacity),
+	}
+	bsp.byteSizer, _ = exporter.(BytesSizer)
+	bsp.sizeTrackerMaker, _ = exporter.(IncrementalBytesSizer)
+	bsp.resetSizeTracker()
+	return bsp
+}
+
+func benchmarkBatchSpanProcessorSpans(n int) []ReadOnlySpan {
+	spans := make([]ReadOnlySpan, n)
+	for i := range spans {
+		var tid trace.TraceID
+		binary.BigEndian.PutUint64(tid[8:], uint64(i+1))
+		var sid trace.SpanID
+		binary.BigEndian.PutUint64(sid[:], uint64(i+1))
+		spans[i] = benchmarkReadOnlySpan{
+			name:      fmt.Sprintf("span-%d", i),
+			startTime: time.Unix(0, int64(i+1)),
+			endTime:   time.Unix(0, int64(i+2)),
+			spanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    tid,
+				SpanID:     sid,
+				TraceFlags: trace.FlagsSampled,
+			}),
+		}
+	}
+	return spans
+}
+
+type benchmarkReadOnlySpan struct {
+	ReadOnlySpan
+	name        string
+	spanContext trace.SpanContext
+	startTime   time.Time
+	endTime     time.Time
+}
+
+func (benchmarkReadOnlySpan) private() {}
+
+func (s benchmarkReadOnlySpan) Name() string { return s.name }
+
+func (s benchmarkReadOnlySpan) SpanContext() trace.SpanContext { return s.spanContext }
+
+func (benchmarkReadOnlySpan) Parent() trace.SpanContext { return trace.SpanContext{} }
+
+func (benchmarkReadOnlySpan) SpanKind() trace.SpanKind { return trace.SpanKindInternal }
+
+func (s benchmarkReadOnlySpan) StartTime() time.Time { return s.startTime }
+
+func (s benchmarkReadOnlySpan) EndTime() time.Time { return s.endTime }
+
+func (benchmarkReadOnlySpan) Attributes() []attribute.KeyValue { return nil }
+
+func (benchmarkReadOnlySpan) Links() []Link { return nil }
+
+func (benchmarkReadOnlySpan) Events() []Event { return nil }
+
+func (benchmarkReadOnlySpan) Status() Status { return Status{} }
+
+func (benchmarkReadOnlySpan) InstrumentationScope() instrumentation.Scope {
+	return instrumentation.Scope{}
+}
+
+func (benchmarkReadOnlySpan) InstrumentationLibrary() instrumentation.Library { //nolint:staticcheck // Compatibility method required by ReadOnlySpan.
+	return instrumentation.Scope{}
+}
+
+func (benchmarkReadOnlySpan) Resource() *resource.Resource { return resource.Empty() }
+
+func (benchmarkReadOnlySpan) DroppedAttributes() int { return 0 }
+
+func (benchmarkReadOnlySpan) DroppedLinks() int { return 0 }
+
+func (benchmarkReadOnlySpan) DroppedEvents() int { return 0 }
+
+func (benchmarkReadOnlySpan) ChildSpanCount() int { return 0 }
+
+type benchmarkTraceBytesExporter struct{}
+
+func (benchmarkTraceBytesExporter) ExportSpans(context.Context, []ReadOnlySpan) error { return nil }
+
+func (benchmarkTraceBytesExporter) Shutdown(context.Context) error { return nil }
+
+func (benchmarkTraceBytesExporter) ExportSize(spans []ReadOnlySpan) int {
+	size := 0
+	for _, span := range spans {
+		size += len(span.Name()) + 2
+	}
+	return size
+}
+
+type incrementalBenchmarkTraceBytesExporter struct {
+	benchmarkTraceBytesExporter
+}
+
+func (incrementalBenchmarkTraceBytesExporter) NewExportSizeTracker() ExportSizeTracker {
+	return &benchmarkTraceSizeTracker{}
+}
+
+type benchmarkTraceSizeTracker struct {
+	size int
+}
+
+func (t *benchmarkTraceSizeTracker) Add(span ReadOnlySpan) int {
+	t.size += len(span.Name()) + 2
+	return t.size
 }
 
 func createAndRegisterBatchSP(option testOption, te *testBatchExporter) SpanProcessor {

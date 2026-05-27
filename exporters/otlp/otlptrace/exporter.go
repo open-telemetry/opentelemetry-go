@@ -7,7 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	math_bits "math/bits"
 	"sync"
+
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
@@ -38,6 +42,31 @@ func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) 
 		return fmt.Errorf("traces export: %w", err)
 	}
 	return nil
+}
+
+// ExportSize returns the size, in bytes, of the serialized OTLP trace export
+// request for spans.
+func (*Exporter) ExportSize(spans []tracesdk.ReadOnlySpan) int {
+	return resourceSpansRequestSize(tracetransform.Spans(spans))
+}
+
+// NewExportSizeTracker returns an exact incremental byte-size tracker for OTLP
+// trace export requests.
+func (*Exporter) NewExportSizeTracker() tracesdk.ExportSizeTracker {
+	return tracetransform.NewSizeTracker()
+}
+
+func resourceSpansRequestSize(rss []*tracepb.ResourceSpans) int {
+	size := 0
+	for _, rs := range rss {
+		rsSize := proto.Size(rs)
+		size += 1 + rsSize + sov(rsSize)
+	}
+	return size
+}
+
+func sov(x int) int {
+	return (math_bits.Len(uint(x)|1) + 6) / 7
 }
 
 // Start establishes a connection to the receiving endpoint.
@@ -75,7 +104,10 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-var _ tracesdk.SpanExporter = (*Exporter)(nil)
+var (
+	_ tracesdk.SpanExporter          = (*Exporter)(nil)
+	_ tracesdk.IncrementalBytesSizer = (*Exporter)(nil)
+)
 
 // New constructs a new Exporter and starts it.
 func New(ctx context.Context, client Client) (*Exporter, error) {

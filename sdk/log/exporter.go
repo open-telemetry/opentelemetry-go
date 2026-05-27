@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -94,6 +95,64 @@ func (c chunkExporter) Export(ctx context.Context, records []Record) error {
 		if err := c.Exporter.Export(ctx, records[i:j]); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// sizedExporter wraps an Exporter's Export method so it is called with export
+// payloads that do not exceed a maximum configured size in the selected unit.
+type sizedExporter struct {
+	Exporter
+
+	size  int
+	sizer BytesSizer
+}
+
+func newSizedExporter(exporter Exporter, size int, sizer BytesSizer) Exporter {
+	if size <= 0 || sizer == nil {
+		return exporter
+	}
+	return &sizedExporter{Exporter: exporter, size: size, sizer: sizer}
+}
+
+func (e *sizedExporter) Export(ctx context.Context, records []Record) error {
+	for start := 0; start < len(records); {
+		if itemSize := e.sizer.ExportSize(records[start : start+1]); itemSize > e.size {
+			otel.Handle(
+				fmt.Errorf(
+					"dropping log record larger than max export batch size: %d %s > %d %s",
+					itemSize,
+					"bytes",
+					e.size,
+					"bytes",
+				),
+			)
+			start++
+			continue
+		}
+
+		end := start + 1
+		if remaining := len(records) - start; remaining > 1 {
+			fit := 1
+			step := 1
+			for fit+step <= remaining && e.sizer.ExportSize(records[start:start+fit+step]) <= e.size {
+				fit += step
+				step *= 2
+			}
+
+			maxFit := min(remaining, fit+step)
+			overflow := sort.Search(maxFit-fit, func(i int) bool {
+				return e.sizer.ExportSize(records[start:start+fit+i+1]) > e.size
+			})
+			end = start + fit + overflow
+			if overflow == maxFit-fit {
+				end = start + maxFit
+			}
+		}
+		if err := e.Exporter.Export(ctx, records[start:end]); err != nil {
+			return err
+		}
+		start = end
 	}
 	return nil
 }

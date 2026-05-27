@@ -6,6 +6,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -54,6 +55,10 @@ type BatchSpanProcessorOptions struct {
 	// The default value of MaxExportBatchSize is 512.
 	MaxExportBatchSize int
 
+	// MaxExportBatchBytes is the maximum serialized size, in bytes, of a batch.
+	// If zero, MaxExportBatchSize is used instead.
+	MaxExportBatchBytes int
+
 	// BlockOnQueueFull blocks onEnd() and onStart() method if the queue is full
 	// AND if BlockOnQueueFull is set to true.
 	// Blocking option should be used carefully as it can severely affect the performance of an
@@ -61,11 +66,40 @@ type BatchSpanProcessorOptions struct {
 	BlockOnQueueFull bool
 }
 
+// BytesSizer reports the serialized size, in bytes, of an export batch.
+//
+// Exporters can implement this interface to enable byte-based batching when
+// [WithMaxExportBatchBytes] is configured.
+type BytesSizer interface {
+	ExportSize([]ReadOnlySpan) int
+}
+
+// IncrementalBytesSizer creates exact byte-size trackers for export batches.
+//
+// Exporters can implement this interface to let the batch span processor size
+// byte-limited batches incrementally instead of recomputing the size of the
+// whole batch after every appended span.
+type IncrementalBytesSizer interface {
+	NewExportSizeTracker() ExportSizeTracker
+}
+
+// ExportSizeTracker incrementally tracks the serialized size, in bytes, of the
+// current export batch.
+type ExportSizeTracker interface {
+	// Add includes span in the tracked batch and returns the new batch size.
+	Add(ReadOnlySpan) int
+}
+
 // batchSpanProcessor is a SpanProcessor that batches asynchronously-received
 // spans and sends them to a trace.Exporter when complete.
 type batchSpanProcessor struct {
 	e SpanExporter
 	o BatchSpanProcessorOptions
+
+	byteSizer        BytesSizer
+	sizeTrackerMaker IncrementalBytesSizer
+	sizeTracker      ExportSizeTracker
+	batchBytes       int
 
 	queue   chan ReadOnlySpan
 	dropped atomic.Uint32
@@ -96,14 +130,19 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	}
 
 	o := BatchSpanProcessorOptions{
-		BatchTimeout:       time.Duration(env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay)) * time.Millisecond,
-		ExportTimeout:      time.Duration(env.BatchSpanProcessorExportTimeout(DefaultExportTimeout)) * time.Millisecond,
+		BatchTimeout: time.Duration(
+			env.BatchSpanProcessorScheduleDelay(DefaultScheduleDelay),
+		) * time.Millisecond,
+		ExportTimeout: time.Duration(
+			env.BatchSpanProcessorExportTimeout(DefaultExportTimeout),
+		) * time.Millisecond,
 		MaxQueueSize:       maxQueueSize,
 		MaxExportBatchSize: maxExportBatchSize,
 	}
 	for _, opt := range options {
 		opt(&o)
 	}
+	resolveBatchSpanProcessorBytesSizer(exporter, &o)
 	bsp := &batchSpanProcessor{
 		e:      exporter,
 		o:      o,
@@ -111,6 +150,11 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 		timer:  time.NewTimer(o.BatchTimeout),
 		queue:  make(chan ReadOnlySpan, o.MaxQueueSize),
 		stopCh: make(chan struct{}),
+	}
+	if o.MaxExportBatchBytes > 0 {
+		bsp.byteSizer, _ = exporter.(BytesSizer)
+		bsp.sizeTrackerMaker, _ = exporter.(IncrementalBytesSizer)
+		bsp.resetSizeTracker()
 	}
 
 	var err error
@@ -129,6 +173,18 @@ func NewBatchSpanProcessor(exporter SpanExporter, options ...BatchSpanProcessorO
 	})
 
 	return bsp
+}
+
+func resolveBatchSpanProcessorBytesSizer(exporter SpanExporter, o *BatchSpanProcessorOptions) {
+	if o.MaxExportBatchBytes > 0 {
+		if _, ok := exporter.(BytesSizer); ok {
+			return
+		}
+		global.Warn(
+			"byte batch sizing requested, exporter does not provide byte sizing support; falling back to item sizing",
+		)
+		o.MaxExportBatchBytes = 0
+	}
 }
 
 var processorIDCounter atomic.Int64
@@ -254,6 +310,17 @@ func WithMaxExportBatchSize(size int) BatchSpanProcessorOption {
 	}
 }
 
+// WithMaxExportBatchBytes returns a BatchSpanProcessorOption that configures
+// the maximum serialized batch size, in bytes, allowed for a
+// BatchSpanProcessor.
+func WithMaxExportBatchBytes(size int) BatchSpanProcessorOption {
+	return func(o *BatchSpanProcessorOptions) {
+		if size > 0 {
+			o.MaxExportBatchBytes = size
+		}
+	}
+}
+
 // WithBatchTimeout returns a BatchSpanProcessorOption that configures the
 // maximum delay allowed for a BatchSpanProcessor before it will export any
 // held span (whether the queue is full or not).
@@ -307,6 +374,8 @@ func (bsp *batchSpanProcessor) exportSpans(ctx context.Context) error {
 		// to be exported, since it is specific to the protocol and backend being sent to.
 		clear(bsp.batch) // Erase elements to let GC collect objects
 		bsp.batch = bsp.batch[:0]
+		bsp.batchBytes = 0
+		bsp.resetSizeTracker()
 
 		if err != nil {
 			return err
@@ -336,21 +405,8 @@ func (bsp *batchSpanProcessor) processQueue() {
 				close(ffs.flushed)
 				continue
 			}
-			bsp.batchMutex.Lock()
-			bsp.batch = append(bsp.batch, sd)
-			shouldExport := len(bsp.batch) >= bsp.o.MaxExportBatchSize
-			bsp.batchMutex.Unlock()
-			if shouldExport {
-				if !bsp.timer.Stop() {
-					// Handle both GODEBUG=asynctimerchan=[0|1] properly.
-					select {
-					case <-bsp.timer.C:
-					default:
-					}
-				}
-				if err := bsp.exportSpans(ctx); err != nil {
-					otel.Handle(err)
-				}
+			if err := bsp.enqueueBatch(ctx, sd); err != nil {
+				otel.Handle(err)
 			}
 		}
 	}
@@ -368,16 +424,8 @@ func (bsp *batchSpanProcessor) drainQueue() {
 				// Ignore flush requests as they are not valid spans.
 				continue
 			}
-
-			bsp.batchMutex.Lock()
-			bsp.batch = append(bsp.batch, sd)
-			shouldExport := len(bsp.batch) == bsp.o.MaxExportBatchSize
-			bsp.batchMutex.Unlock()
-
-			if shouldExport {
-				if err := bsp.exportSpans(ctx); err != nil {
-					otel.Handle(err)
-				}
+			if err := bsp.enqueueBatch(ctx, sd); err != nil {
+				otel.Handle(err)
 			}
 		default:
 			// There are no more enqueued spans. Make final export.
@@ -387,6 +435,115 @@ func (bsp *batchSpanProcessor) drainQueue() {
 			return
 		}
 	}
+}
+
+func (bsp *batchSpanProcessor) enqueueBatch(ctx context.Context, sd ReadOnlySpan) error {
+	for sd != nil {
+		shouldExport, overflow, err := bsp.addSpanToBatch(sd)
+		if err != nil {
+			return err
+		}
+		if !shouldExport {
+			return nil
+		}
+		if !bsp.timer.Stop() {
+			// Handle both GODEBUG=asynctimerchan=[0|1] properly.
+			select {
+			case <-bsp.timer.C:
+			default:
+			}
+		}
+		if err := bsp.exportSpans(ctx); err != nil {
+			return err
+		}
+		sd = overflow
+	}
+	return nil
+}
+
+func (bsp *batchSpanProcessor) addSpanToBatch(sd ReadOnlySpan) (bool, ReadOnlySpan, error) {
+	bsp.batchMutex.Lock()
+	defer bsp.batchMutex.Unlock()
+
+	prevSize := bsp.batchBytes
+	bsp.batch = append(bsp.batch, sd)
+	size := bsp.batchSizeAfterAppend(sd)
+	if size < bsp.maxExportBatchLimit() {
+		return false, nil, nil
+	}
+	if size == bsp.maxExportBatchLimit() {
+		return true, nil, nil
+	}
+
+	last := len(bsp.batch) - 1
+	overflow := bsp.batch[last]
+	bsp.batch[last] = nil
+	bsp.batch = bsp.batch[:last]
+	if len(bsp.batch) == 0 {
+		bsp.batchBytes = 0
+		bsp.resetSizeTracker()
+		return false, nil, bsp.oversizedSpanError(overflow)
+	}
+	bsp.batchBytes = prevSize
+
+	return true, overflow, nil
+}
+
+func (bsp *batchSpanProcessor) oversizedSpanError(sd ReadOnlySpan) error {
+	size := bsp.itemSize(sd)
+	limit := bsp.maxExportBatchLimit()
+	unit := "spans"
+	if bsp.o.MaxExportBatchBytes > 0 {
+		unit = "bytes"
+	}
+	return fmt.Errorf(
+		"dropping span larger than max export batch size: %d %s > %d %s",
+		size,
+		unit,
+		limit,
+		unit,
+	)
+}
+
+func (bsp *batchSpanProcessor) maxExportBatchLimit() int {
+	if bsp.o.MaxExportBatchBytes > 0 {
+		return bsp.o.MaxExportBatchBytes
+	}
+	return bsp.o.MaxExportBatchSize
+}
+
+func (bsp *batchSpanProcessor) batchSize(spans []ReadOnlySpan) int {
+	if bsp.o.MaxExportBatchBytes > 0 && bsp.byteSizer != nil {
+		return bsp.byteSizer.ExportSize(spans)
+	}
+	return len(spans)
+}
+
+func (bsp *batchSpanProcessor) batchSizeAfterAppend(span ReadOnlySpan) int {
+	if bsp.o.MaxExportBatchBytes > 0 {
+		if bsp.sizeTracker != nil {
+			bsp.batchBytes = bsp.sizeTracker.Add(span)
+			return bsp.batchBytes
+		}
+		bsp.batchBytes = bsp.batchSize(bsp.batch)
+		return bsp.batchBytes
+	}
+	return len(bsp.batch)
+}
+
+func (bsp *batchSpanProcessor) itemSize(span ReadOnlySpan) int {
+	if bsp.o.MaxExportBatchBytes > 0 && bsp.byteSizer != nil {
+		return bsp.byteSizer.ExportSize([]ReadOnlySpan{span})
+	}
+	return 1
+}
+
+func (bsp *batchSpanProcessor) resetSizeTracker() {
+	if bsp.sizeTrackerMaker == nil {
+		bsp.sizeTracker = nil
+		return
+	}
+	bsp.sizeTracker = bsp.sizeTrackerMaker.NewExportSizeTracker()
 }
 
 func (bsp *batchSpanProcessor) enqueue(sd ReadOnlySpan) {
