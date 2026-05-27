@@ -373,13 +373,7 @@ func (b *expoBuckets) downscale(delta int32) {
 	b.startBin >>= delta
 }
 
-func (b *expoBuckets) count() uint64 {
-	var total uint64
-	for i := range b.counts {
-		total += b.counts[i].Load()
-	}
-	return total
-}
+
 
 // newExponentialHistogram returns an Aggregator that summarizes a set of
 // measurements as an exponential histogram. Each histogram is scoped by attributes
@@ -596,6 +590,144 @@ func (e *expoHistogram[N]) cumulative(
 		// sets that become "stale" need to be forgotten so this will not
 		// overload the system.
 	}
+
+	h.DataPoints = hDPts
+	*dest = h
+	return n
+}
+
+// newDeltaExpoHistogram returns an Aggregator that summarizes a set of
+// measurements as a delta exponential histogram.
+func newDeltaExpoHistogram[N int64 | float64](
+	maxSize, maxScale int32,
+	noMinMax, noSum bool,
+	limit int,
+	r func(attribute.Set) FilteredExemplarReservoir[N],
+) *deltaExpoHistogram[N] {
+	return &deltaExpoHistogram[N]{
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		maxSize:  int(maxSize),
+		maxScale: maxScale,
+
+		newRes: r,
+		hotColdValMap: [2]limitedSyncMap{
+			{aggLimit: limit},
+			{aggLimit: limit},
+		},
+
+		start: now(),
+	}
+}
+
+// deltaExpoHistogram summarizes a set of measurements as an histogram with exponentially
+// defined buckets.
+type deltaExpoHistogram[N int64 | float64] struct {
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int32
+
+	newRes        func(attribute.Set) FilteredExemplarReservoir[N]
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap
+
+	start time.Time
+}
+
+func (e *deltaExpoHistogram[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
+	hotIdx := e.hcwg.start()
+	defer e.hcwg.done(hotIdx)
+
+	v := e.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		vp := newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
+		vp.res = e.newRes(attr)
+		_, isDrop := vp.res.(*dropRes[N])
+		vp.dropExemplars = isDrop
+		return vp
+	}).(*expoHistogramDataPoint[N])
+
+	v.record(value)
+	if !v.dropExemplars {
+		v.res.Offer(ctx, value, droppedAttr)
+	}
+}
+
+func (e *deltaExpoHistogram[N]) collect(
+	dest *metricdata.Aggregation, // nolint:gocritic // dest is an interface pointer used to avoid allocations
+) int {
+	t := now()
+
+	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
+	// In that case, use the zero-value h and hope for better alignment next cycle.
+	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
+	h.Temporality = metricdata.DeltaTemporality
+
+	coldIdx := e.hcwg.swapHotAndWait()
+
+	n := e.hotColdValMap[coldIdx].Len()
+	hDPts := reset(h.DataPoints, n, n)
+
+	var i int
+	e.hotColdValMap[coldIdx].Range(func(_, value any) bool {
+		val := value.(*expoHistogramDataPoint[N])
+
+		hDPts[i].Attributes = val.attrs
+		hDPts[i].StartTime = e.start
+		hDPts[i].Time = t
+		hDPts[i].Count = val.count()
+		hDPts[i].Scale = val.scale.Load()
+		hDPts[i].ZeroCount = val.zeroCount.Load()
+		hDPts[i].ZeroThreshold = 0.0
+
+		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
+		hDPts[i].PositiveBucket.Counts = reset(
+			hDPts[i].PositiveBucket.Counts,
+			len(val.posBuckets.counts),
+			len(val.posBuckets.counts),
+		)
+		for j := range val.posBuckets.counts {
+			hDPts[i].PositiveBucket.Counts[j] = val.posBuckets.counts[j].Load()
+		}
+
+		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
+		hDPts[i].NegativeBucket.Counts = reset(
+			hDPts[i].NegativeBucket.Counts,
+			len(val.negBuckets.counts),
+			len(val.negBuckets.counts),
+		)
+		for j := range val.negBuckets.counts {
+			hDPts[i].NegativeBucket.Counts[j] = val.negBuckets.counts[j].Load()
+		}
+
+		if !e.noSum {
+			hDPts[i].Sum = val.sum.load()
+		}
+		if !e.noMinMax {
+			if val.minMax.set.Load() {
+				hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+				hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+			}
+		}
+
+		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+
+		i++
+		return true
+	})
+
+	e.start = t
+	e.hotColdValMap[coldIdx].Clear()
 
 	h.DataPoints = hDPts
 	*dest = h
