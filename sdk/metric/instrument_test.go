@@ -257,7 +257,8 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			name:     "Int64ObservableCounter",
 			instName: "aint",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Int64ObservableCounter("aint",
+				_, err := m.Int64ObservableCounter(
+					"aint",
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, x.WithUnsafeAttributes(k1.String("alice"), k2.String("bob")))
 						return nil
@@ -277,7 +278,8 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			name:     "Float64ObservableCounter",
 			instName: "afloat",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Float64ObservableCounter("afloat",
+				_, err := m.Float64ObservableCounter(
+					"afloat",
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4.5, x.WithUnsafeAttributes(k1.String("alice"), k2.String("bob")))
 						return nil
@@ -411,7 +413,8 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			name:     "Int64ObservableUpDownCounter",
 			instName: "audint",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Int64ObservableUpDownCounter("audint",
+				_, err := m.Int64ObservableUpDownCounter(
+					"audint",
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(-4, x.WithUnsafeAttributes(k1.String("alice"), k2.String("bob")))
 						return nil
@@ -431,7 +434,8 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			name:     "Float64ObservableUpDownCounter",
 			instName: "audfloat",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Float64ObservableUpDownCounter("audfloat",
+				_, err := m.Float64ObservableUpDownCounter(
+					"audfloat",
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(-4.5, x.WithUnsafeAttributes(k1.String("alice"), k2.String("bob")))
 						return nil
@@ -451,7 +455,8 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			name:     "Int64ObservableGauge",
 			instName: "agint",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Int64ObservableGauge("agint",
+				_, err := m.Int64ObservableGauge(
+					"agint",
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(10, x.WithUnsafeAttributes(k1.String("alice"), k2.String("bob")))
 						return nil
@@ -469,7 +474,8 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			name:     "Float64ObservableGauge",
 			instName: "agfloat",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Float64ObservableGauge("agfloat",
+				_, err := m.Float64ObservableGauge(
+					"agfloat",
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(10.5, x.WithUnsafeAttributes(k1.String("alice"), k2.String("bob")))
 						return nil
