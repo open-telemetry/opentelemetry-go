@@ -37,20 +37,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithMaxRequestSize` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8157)
 - Add `WithMaxRequestSize` option in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8157)
 - Add `WithMaxRequestSize` option in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8157)
+- Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
+  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x` for feature documentation. (#8192)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
+  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/x` for feature documentation. (#8194)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
+  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  See `go.opentelemetry.io/otel/stdout/stdoutlog/internal/x` for feature documentation. (#8263)
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
-- Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
-- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
 - Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
   The package contains semantic conventions from the `v1.41.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
-- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#8263)
 - Add Observable variants of instruments to `go.opentelemetry.io/otel/semconv/v1.41.0` package. (#8350)
 - Generate explicit histogram bucket boundaries from weaver configuration for HTTP and RPC duration instruments in `go.opentelemetry.io/otel/semconv/v1.41.0`. (#8002)
-- Add experimental self-observability metrics to OTLP metric exporters in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
-  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable. (#8192)
 
 ### Changed
 
