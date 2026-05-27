@@ -165,12 +165,14 @@ func TestEquivalence(t *testing.T) {
 			attribute.ByteSlice("ByteSlice", []byte("one")),
 		},
 		{
-			attribute.Slice("Slice",
+			attribute.Slice(
+				"Slice",
 				attribute.BoolValue(true),
 				attribute.IntValue(42),
 				attribute.SliceValue(attribute.StringValue("nested")),
 			),
-			attribute.Slice("Slice",
+			attribute.Slice(
+				"Slice",
 				attribute.BoolValue(true),
 				attribute.IntValue(42),
 				attribute.SliceValue(attribute.StringValue("nested")),

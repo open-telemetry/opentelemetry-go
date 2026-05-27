@@ -461,7 +461,8 @@ func BenchmarkExemplars(b *testing.B) {
 		mp := NewMeterProvider(WithReader(r), WithView(v))
 		return mp.Meter(name), r
 	}
-	nCPU := runtime.NumCPU() // Size of the fixed reservoir used.
+	// Reads number of logical CPUs but respects GOMAXPROCS.
+	nCPU := runtime.GOMAXPROCS(0) // Size of the fixed reservoir used.
 
 	b.Setenv("OTEL_GO_X_EXEMPLAR", "true")
 
@@ -476,7 +477,7 @@ func BenchmarkExemplars(b *testing.B) {
 				{Exemplars: make([]metricdata.Exemplar[int64], 0, nCPU)},
 			},
 		})
-		e := &(rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Exemplars)
+		e := &rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Exemplars
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -501,7 +502,7 @@ func BenchmarkExemplars(b *testing.B) {
 				{Exemplars: make([]metricdata.Exemplar[int64], 0, 1)},
 			},
 		})
-		e := &(rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64]).DataPoints[0].Exemplars)
+		e := &rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64]).DataPoints[0].Exemplars
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -641,12 +642,14 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 								func() {
 									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
 									defer func() {
+										clear(*attrsSlice)
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
+										clear(*addOpt)
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
@@ -685,12 +688,14 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 								func() {
 									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
 									defer func() {
+										clear(*attrsSlice)
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
+										clear(*addOpt)
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
@@ -736,11 +741,13 @@ func attributes(number int) []attribute.KeyValue {
 func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue {
 	switch number {
 	case 1:
-		return append(kvs,
+		return append(
+			kvs,
 			attribute.String("a", "a"),
 		)
 	case 5:
-		return append(kvs,
+		return append(
+			kvs,
 			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
@@ -748,7 +755,8 @@ func appendAttributes(kvs []attribute.KeyValue, number int) []attribute.KeyValue
 			attribute.String("e", "e"),
 		)
 	case 10:
-		return append(kvs,
+		return append(
+			kvs,
 			attribute.String("a", "a"),
 			attribute.String("b", "b"),
 			attribute.String("c", "c"),
@@ -885,6 +893,54 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 						record(n)
 					}
 				})
+			}
+		})
+	}
+}
+
+func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
+	ctx := b.Context()
+
+	for _, filterName := range []string{"AlwaysOn", "TraceBased"} {
+		var filter exemplar.Filter
+		if filterName == "AlwaysOn" {
+			filter = exemplar.AlwaysOnFilter
+		} else {
+			filter = exemplar.TraceBasedFilter
+		}
+
+		b.Run(filterName, func(b *testing.B) {
+			var rdr Reader
+			var meter metric.Meter
+			var count int
+			out := new(metricdata.ResourceMetrics)
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for n := 0; n < b.N; n++ {
+				if n%10000 == 0 {
+					b.StopTimer()
+					rdr = NewManualReader()
+					provider := NewMeterProvider(
+						WithReader(rdr),
+						WithExemplarFilter(filter),
+					)
+					meter = provider.Meter("BenchmarkAsyncMeasureNewAttributeSet")
+
+					_, err := meter.Int64ObservableCounter(
+						"int64-observable-counter",
+						metric.WithInt64Callback(func(_ context.Context, obs metric.Int64Observer) error {
+							obs.Observe(1, metric.WithAttributes(attribute.Int("id", count)))
+							return nil
+						}),
+					)
+					assert.NoError(b, err)
+					b.StartTimer()
+				}
+
+				_ = rdr.Collect(ctx, out)
+				count++
 			}
 		})
 	}

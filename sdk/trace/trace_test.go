@@ -29,8 +29,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -402,7 +402,8 @@ func TestStartSpanNewRootNotSampled(t *testing.T) {
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
-	span := startSpan(tp,
+	span := startSpan(
+		tp,
 		"StartSpanAttribute",
 		trace.WithAttributes(attribute.String("key1", "value1")),
 		trace.WithAttributes(attribute.String("key2", "value2")),
@@ -806,7 +807,8 @@ func TestLinksOverLimit(t *testing.T) {
 	sl.LinkCountLimit = 2
 	tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
-	span := startSpan(tp, "LinksOverLimit",
+	span := startSpan(
+		tp, "LinksOverLimit",
 		trace.WithLinks(
 			trace.Link{SpanContext: sc1, Attributes: []attribute.KeyValue{attribute.String("key1", "value1")}},
 			trace.Link{SpanContext: sc2, Attributes: []attribute.KeyValue{attribute.String("key2", "value2")}},
@@ -921,7 +923,8 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 }
 
 func cmpDiff(x, y any) string {
-	return cmp.Diff(x, y,
+	return cmp.Diff(
+		x, y,
 		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(Event{}),

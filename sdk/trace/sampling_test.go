@@ -160,7 +160,8 @@ func TestParentBasedDefaultDescription(t *testing.T) {
 		NeverSample().Description())
 
 	if sampler.Description() != expectedDescription {
-		t.Errorf("Sampler description should be %s, got '%s' instead",
+		t.Errorf(
+			"Sampler description should be %s, got '%s' instead",
 			expectedDescription,
 			sampler.Description(),
 		)
@@ -285,7 +286,8 @@ func TestAlwaysRecordSamplingDecision(t *testing.T) {
 			)
 			samplingResult := sampler.ShouldSample(SamplingParameters{ParentContext: parentCtx})
 			if samplingResult.Decision != tc.expectedDecision {
-				t.Errorf("Sampling decision should be %v, got %v instead",
+				t.Errorf(
+					"Sampling decision should be %v, got %v instead",
 					tc.expectedDecision,
 					samplingResult.Decision,
 				)
@@ -300,7 +302,8 @@ func TestAlwaysRecordDefaultDescription(t *testing.T) {
 	expectedDescription := fmt.Sprintf("AlwaysRecord{root:%s}", NeverSample().Description())
 
 	if sampler.Description() != expectedDescription {
-		t.Errorf("Sampler description should be %s, got '%s' instead",
+		t.Errorf(
+			"Sampler description should be %s, got '%s' instead",
 			expectedDescription,
 			sampler.Description(),
 		)

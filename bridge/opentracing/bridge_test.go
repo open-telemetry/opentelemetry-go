@@ -689,9 +689,11 @@ func TestBridgeCarrierBaggagePropagation(t *testing.T) {
 			t.Run(fmt.Sprintf("%s %s", c.name, tc.name), func(t *testing.T) {
 				mockOtelTracer := newMockTracer()
 				b, _ := NewTracerPair(mockOtelTracer)
-				b.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-					propagation.TraceContext{},
-					propagation.Baggage{}), // Required for baggage propagation.
+				b.SetTextMapPropagator(
+					propagation.NewCompositeTextMapPropagator(
+						propagation.TraceContext{},
+						propagation.Baggage{},
+					), // Required for baggage propagation.
 				)
 
 				// Set baggage items.

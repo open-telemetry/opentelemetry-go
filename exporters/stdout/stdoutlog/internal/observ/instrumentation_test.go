@@ -13,13 +13,13 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 const (
@@ -81,7 +81,7 @@ func TestNewInstrumentation(t *testing.T) {
 func set(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(GetComponentName(ID)),
-		semconv.OTelComponentNameKey.String(ComponentType),
+		semconv.OTelComponentTypeKey.String(ComponentType),
 	}
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))

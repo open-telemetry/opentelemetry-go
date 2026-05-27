@@ -38,6 +38,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
+- Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
+  The package contains semantic conventions from the `v1.41.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#8263)
+- Add Observable variants of instruments to `go.opentelemetry.io/otel/semconv/v1.41.0` package. (#8350)
+- Generate explicit histogram bucket boundaries from weaver configuration for HTTP and RPC duration instruments in `go.opentelemetry.io/otel/semconv/v1.41.0`. (#8002)
 
 ### Changed
 
@@ -50,6 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 - `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
 - Optimize `go.opentelemetry.io/otel/sdk/metric` to return a drop reservoir and short-circuit `Offer` calls to the exemplar reservoir when `exemplar.AlwaysOffFilter` is configured. (#8211) (#8267)
+- Optimize `go.opentelemetry.io/otel/sdk/metric` to return a drop reservoir for asynchronous instruments when `exemplar.TraceBasedFilter` is configured. (#8286)
 
 ### Deprecated
 
@@ -58,18 +65,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
-- Limit OTLP request size to 32 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
-  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157)
+- Fix `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` to safely handle zero size.
+  A capacity check in the constructor initializes the reservoir safely and skips initialization for zero-cap; early returns in `Offer()` and `Collect()` ensure no-op behavior. (#8295)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
+- Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
+  The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8135)
 - Fix gzipped request body replay on redirect in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8152)
 - `go.opentelemetry.io/otel/exporters/prometheus` now uses `Value.String` formatting for label values following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8170)
@@ -79,6 +88,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix race condition in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by reverting #7447. (#8249)
 - Fix counting of spans and logs in self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8254)
 - Drop conflicting scope attributes named `name`, `version`, or `schema_url` from metric labels in `go.opentelemetry.io/otel/exporters/prometheus`, preserving the dedicated `otel_scope_name`, `otel_scope_version`, and `otel_scope_schema_url` labels. (#8264)
+- Close schema files opened by `ParseFile` in `go.opentelemetry.io/otel/schema/v1.0` and `go.opentelemetry.io/otel/schema/v1.1`. ([GHSA-995v-fvrw-c78m](https://github.com/open-telemetry/opentelemetry-go/security/advisories/GHSA-995v-fvrw-c78m))
+- Enforce the 8192-byte baggage size limit during extraction/parsing, changing behavior when the limit is exceeded in `go.opentelemetry.io/otel/baggage` and `go.opentelemetry.io/otel/propagation`. (#8222)
+- Fix `go.opentelemetry.io/otel/semconv/v1.41.0` to include `Attr*` helper methods for required attributes on observable instruments. (#8361)
+- Limit baggage extraction error reporting in `go.opentelemetry.io/otel/propagation` to prevent malformed or oversized baggage headers from flooding logs. ([GHSA-5wrp-cwcj-q835](https://github.com/open-telemetry/opentelemetry-go/security/advisories/GHSA-5wrp-cwcj-q835))
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

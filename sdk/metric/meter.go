@@ -582,7 +582,8 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 
 	if _, registered := r.float64[oImpl.observableID]; !registered {
 		if !oImpl.dropAggregation {
-			global.Error(errUnregObserver, "failed to record",
+			global.Error(
+				errUnregObserver, "failed to record",
 				"name", oImpl.name,
 				"description", oImpl.description,
 				"unit", oImpl.unit,
@@ -612,7 +613,8 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 
 	if _, registered := r.int64[oImpl.observableID]; !registered {
 		if !oImpl.dropAggregation {
-			global.Error(errUnregObserver, "failed to record",
+			global.Error(
+				errUnregObserver, "failed to record",
 				"name", oImpl.name,
 				"description", oImpl.description,
 				"unit", oImpl.unit,
