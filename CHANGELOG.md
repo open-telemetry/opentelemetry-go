@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Interpret HTTP `Retry-After` header values as seconds when retrying OTLP HTTP exports. (#8383)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
