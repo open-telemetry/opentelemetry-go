@@ -26,7 +26,7 @@ var (
 	defaultEndpoint                              = "localhost:4318"
 	defaultPath                                  = "/v1/logs"
 	defaultTimeout                               = 10 * time.Second
-	defaultMaxRequestSize                        = 32 * 1024 * 1024
+	defaultMaxRequestSize                        = 64 * 1024 * 1024
 	defaultProxy          HTTPTransportProxyFunc = http.ProxyFromEnvironment
 	defaultRetryCfg                              = retry.DefaultConfig
 )

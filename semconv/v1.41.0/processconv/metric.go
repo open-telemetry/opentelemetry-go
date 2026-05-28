@@ -180,6 +180,7 @@ func (m ContextSwitches) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -209,12 +210,80 @@ func (m ContextSwitches) AddSet(ctx context.Context, incr int64, set attribute.S
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// ContextSwitchesObservable is an instrument used to record metric values
+// conforming to the "process.context_switches" semantic conventions. It
+// represents the number of times the process has been context switched.
+type ContextSwitchesObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newContextSwitchesObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of times the process has been context switched."),
+	metric.WithUnit("{context_switch}"),
+}
+
+// NewContextSwitchesObservable returns a new ContextSwitchesObservable
+// instrument.
+func NewContextSwitchesObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ContextSwitchesObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ContextSwitchesObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newContextSwitchesObservableOpts
+	} else {
+		opt = append(opt, newContextSwitchesObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"process.context_switches",
+		opt...,
+	)
+	if err != nil {
+		return ContextSwitchesObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ContextSwitchesObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ContextSwitchesObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ContextSwitchesObservable) Name() string {
+	return "process.context_switches"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ContextSwitchesObservable) Unit() string {
+	return "{context_switch}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ContextSwitchesObservable) Description() string {
+	return "Number of times the process has been context switched."
+}
+
+// AttrContextSwitchType returns a required attribute for the
+// "process.context_switch.type" semantic convention. It represents the specifies
+// whether the context switches for this data point were voluntary or
+// involuntary.
+func (ContextSwitchesObservable) AttrContextSwitchType(val ContextSwitchTypeAttr) attribute.KeyValue {
+	return attribute.String("process.context_switch.type", string(val))
 }
 
 // CPUTime is an instrument used to record metric values conforming to the
@@ -273,6 +342,12 @@ func (CPUTime) Unit() string {
 // Description returns the semantic convention description of the instrument
 func (CPUTime) Description() string {
 	return "Total CPU seconds broken down by different CPU modes."
+}
+
+// AttrCPUMode returns a required attribute for the "cpu.mode" semantic
+// convention. It represents the CPU mode for this data point.
+func (CPUTime) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }
 
 // CPUUtilization is an instrument used to record metric values conforming to the
@@ -355,6 +430,7 @@ func (m CPUUtilization) Record(
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -384,12 +460,78 @@ func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Gauge.Record(ctx, val, *o...)
+}
+
+// CPUUtilizationObservable is an instrument used to record metric values
+// conforming to the "process.cpu.utilization" semantic conventions. It
+// represents the difference in process.cpu.time since the last measurement,
+// divided by the elapsed time and number of CPUs available to the process.
+type CPUUtilizationObservable struct {
+	metric.Int64ObservableGauge
+}
+
+var newCPUUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+	metric.WithDescription("Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."),
+	metric.WithUnit("1"),
+}
+
+// NewCPUUtilizationObservable returns a new CPUUtilizationObservable instrument.
+func NewCPUUtilizationObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableGaugeOption,
+) (CPUUtilizationObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return CPUUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newCPUUtilizationObservableOpts
+	} else {
+		opt = append(opt, newCPUUtilizationObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableGauge(
+		"process.cpu.utilization",
+		opt...,
+	)
+	if err != nil {
+		return CPUUtilizationObservable{noop.Int64ObservableGauge{}}, err
+	}
+	return CPUUtilizationObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m CPUUtilizationObservable) Inst() metric.Int64ObservableGauge {
+	return m.Int64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (CPUUtilizationObservable) Name() string {
+	return "process.cpu.utilization"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (CPUUtilizationObservable) Unit() string {
+	return "1"
+}
+
+// Description returns the semantic convention description of the instrument
+func (CPUUtilizationObservable) Description() string {
+	return "Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."
+}
+
+// AttrCPUMode returns a required attribute for the "cpu.mode" semantic
+// convention. It represents the CPU mode for this data point.
+func (CPUUtilizationObservable) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
+	return attribute.String("cpu.mode", string(val))
 }
 
 // DiskIO is an instrument used to record metric values conforming to the
@@ -471,6 +613,7 @@ func (m DiskIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -500,12 +643,77 @@ func (m DiskIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// DiskIOObservable is an instrument used to record metric values conforming to
+// the "process.disk.io" semantic conventions. It represents the disk bytes
+// transferred.
+type DiskIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newDiskIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Disk bytes transferred."),
+	metric.WithUnit("By"),
+}
+
+// NewDiskIOObservable returns a new DiskIOObservable instrument.
+func NewDiskIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (DiskIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return DiskIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newDiskIOObservableOpts
+	} else {
+		opt = append(opt, newDiskIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"process.disk.io",
+		opt...,
+	)
+	if err != nil {
+		return DiskIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return DiskIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m DiskIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (DiskIOObservable) Name() string {
+	return "process.disk.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (DiskIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (DiskIOObservable) Description() string {
+	return "Disk bytes transferred."
+}
+
+// AttrDiskIODirection returns a required attribute for the "disk.io.direction"
+// semantic convention. It represents the disk IO operation direction.
+func (DiskIOObservable) AttrDiskIODirection(val DiskIODirectionAttr) attribute.KeyValue {
+	return attribute.String("disk.io.direction", string(val))
 }
 
 // MemoryUsage is an instrument used to record metric values conforming to the
@@ -578,6 +786,7 @@ func (m MemoryUsage) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -598,12 +807,71 @@ func (m MemoryUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// MemoryUsageObservable is an instrument used to record metric values conforming
+// to the "process.memory.usage" semantic conventions. It represents the amount
+// of physical memory in use.
+type MemoryUsageObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The amount of physical memory in use."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryUsageObservable returns a new MemoryUsageObservable instrument.
+func NewMemoryUsageObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryUsageObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryUsageObservableOpts
+	} else {
+		opt = append(opt, newMemoryUsageObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"process.memory.usage",
+		opt...,
+	)
+	if err != nil {
+		return MemoryUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryUsageObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryUsageObservable) Name() string {
+	return "process.memory.usage"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryUsageObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryUsageObservable) Description() string {
+	return "The amount of physical memory in use."
 }
 
 // MemoryVirtual is an instrument used to record metric values conforming to the
@@ -676,6 +944,7 @@ func (m MemoryVirtual) Add(ctx context.Context, incr int64, attrs ...attribute.K
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -696,12 +965,71 @@ func (m MemoryVirtual) AddSet(ctx context.Context, incr int64, set attribute.Set
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// MemoryVirtualObservable is an instrument used to record metric values
+// conforming to the "process.memory.virtual" semantic conventions. It represents
+// the amount of committed virtual memory.
+type MemoryVirtualObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newMemoryVirtualObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The amount of committed virtual memory."),
+	metric.WithUnit("By"),
+}
+
+// NewMemoryVirtualObservable returns a new MemoryVirtualObservable instrument.
+func NewMemoryVirtualObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (MemoryVirtualObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return MemoryVirtualObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newMemoryVirtualObservableOpts
+	} else {
+		opt = append(opt, newMemoryVirtualObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"process.memory.virtual",
+		opt...,
+	)
+	if err != nil {
+		return MemoryVirtualObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return MemoryVirtualObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m MemoryVirtualObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (MemoryVirtualObservable) Name() string {
+	return "process.memory.virtual"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (MemoryVirtualObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (MemoryVirtualObservable) Description() string {
+	return "The amount of committed virtual memory."
 }
 
 // NetworkIO is an instrument used to record metric values conforming to the
@@ -783,6 +1111,7 @@ func (m NetworkIO) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -812,12 +1141,78 @@ func (m NetworkIO) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// NetworkIOObservable is an instrument used to record metric values conforming
+// to the "process.network.io" semantic conventions. It represents the network
+// bytes transferred.
+type NetworkIOObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newNetworkIOObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Network bytes transferred."),
+	metric.WithUnit("By"),
+}
+
+// NewNetworkIOObservable returns a new NetworkIOObservable instrument.
+func NewNetworkIOObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (NetworkIOObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return NetworkIOObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newNetworkIOObservableOpts
+	} else {
+		opt = append(opt, newNetworkIOObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"process.network.io",
+		opt...,
+	)
+	if err != nil {
+		return NetworkIOObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return NetworkIOObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m NetworkIOObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (NetworkIOObservable) Name() string {
+	return "process.network.io"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (NetworkIOObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (NetworkIOObservable) Description() string {
+	return "Network bytes transferred."
+}
+
+// AttrNetworkIODirection returns a required attribute for the
+// "network.io.direction" semantic convention. It represents the network IO
+// operation direction.
+func (NetworkIOObservable) AttrNetworkIODirection(val NetworkIODirectionAttr) attribute.KeyValue {
+	return attribute.String("network.io.direction", string(val))
 }
 
 // PagingFaults is an instrument used to record metric values conforming to the
@@ -896,6 +1291,7 @@ func (m PagingFaults) Add(
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -922,6 +1318,7 @@ func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set)
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -936,6 +1333,73 @@ func (m PagingFaults) AddSet(ctx context.Context, incr int64, set attribute.Set)
 // reported without this attribute, it should be the sum of major and minor page
 // faults.
 func (PagingFaults) AttrSystemPagingFaultType(val SystemPagingFaultTypeAttr) attribute.KeyValue {
+	return attribute.String("system.paging.fault.type", string(val))
+}
+
+// PagingFaultsObservable is an instrument used to record metric values
+// conforming to the "process.paging.faults" semantic conventions. It represents
+// the number of page faults the process has made.
+type PagingFaultsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPagingFaultsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of page faults the process has made."),
+	metric.WithUnit("{fault}"),
+}
+
+// NewPagingFaultsObservable returns a new PagingFaultsObservable instrument.
+func NewPagingFaultsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PagingFaultsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PagingFaultsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPagingFaultsObservableOpts
+	} else {
+		opt = append(opt, newPagingFaultsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"process.paging.faults",
+		opt...,
+	)
+	if err != nil {
+		return PagingFaultsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PagingFaultsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PagingFaultsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PagingFaultsObservable) Name() string {
+	return "process.paging.faults"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PagingFaultsObservable) Unit() string {
+	return "{fault}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PagingFaultsObservable) Description() string {
+	return "Number of page faults the process has made."
+}
+
+// AttrSystemPagingFaultType returns an optional attribute for the
+// "system.paging.fault.type" semantic convention. It represents the type of
+// paging fault. Value MUST be either `major` or `minor`. If the metric is
+// reported without this attribute, it should be the sum of major and minor page
+// faults.
+func (PagingFaultsObservable) AttrSystemPagingFaultType(val SystemPagingFaultTypeAttr) attribute.KeyValue {
 	return attribute.String("system.paging.fault.type", string(val))
 }
 
@@ -1009,6 +1473,7 @@ func (m ThreadCount) Add(ctx context.Context, incr int64, attrs ...attribute.Key
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1029,12 +1494,71 @@ func (m ThreadCount) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ThreadCountObservable is an instrument used to record metric values conforming
+// to the "process.thread.count" semantic conventions. It represents the process
+// threads count.
+type ThreadCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newThreadCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Process threads count."),
+	metric.WithUnit("{thread}"),
+}
+
+// NewThreadCountObservable returns a new ThreadCountObservable instrument.
+func NewThreadCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ThreadCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ThreadCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newThreadCountObservableOpts
+	} else {
+		opt = append(opt, newThreadCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"process.thread.count",
+		opt...,
+	)
+	if err != nil {
+		return ThreadCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ThreadCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ThreadCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ThreadCountObservable) Name() string {
+	return "process.thread.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ThreadCountObservable) Unit() string {
+	return "{thread}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ThreadCountObservable) Description() string {
+	return "Process threads count."
 }
 
 // UnixFileDescriptorCount is an instrument used to record metric values
@@ -1107,6 +1631,7 @@ func (m UnixFileDescriptorCount) Add(ctx context.Context, incr int64, attrs ...a
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1127,12 +1652,73 @@ func (m UnixFileDescriptorCount) AddSet(ctx context.Context, incr int64, set att
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// UnixFileDescriptorCountObservable is an instrument used to record metric
+// values conforming to the "process.unix.file_descriptor.count" semantic
+// conventions. It represents the number of unix file descriptors in use by the
+// process.
+type UnixFileDescriptorCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newUnixFileDescriptorCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of unix file descriptors in use by the process."),
+	metric.WithUnit("{file_descriptor}"),
+}
+
+// NewUnixFileDescriptorCountObservable returns a new
+// UnixFileDescriptorCountObservable instrument.
+func NewUnixFileDescriptorCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (UnixFileDescriptorCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return UnixFileDescriptorCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newUnixFileDescriptorCountObservableOpts
+	} else {
+		opt = append(opt, newUnixFileDescriptorCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"process.unix.file_descriptor.count",
+		opt...,
+	)
+	if err != nil {
+		return UnixFileDescriptorCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return UnixFileDescriptorCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m UnixFileDescriptorCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (UnixFileDescriptorCountObservable) Name() string {
+	return "process.unix.file_descriptor.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (UnixFileDescriptorCountObservable) Unit() string {
+	return "{file_descriptor}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (UnixFileDescriptorCountObservable) Description() string {
+	return "Number of unix file descriptors in use by the process."
 }
 
 // Uptime is an instrument used to record metric values conforming to the
@@ -1209,6 +1795,7 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
@@ -1233,12 +1820,71 @@ func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		recOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Gauge.Record(ctx, val, *o...)
+}
+
+// UptimeObservable is an instrument used to record metric values conforming to
+// the "process.uptime" semantic conventions. It represents the time the process
+// has been running.
+type UptimeObservable struct {
+	metric.Float64ObservableGauge
+}
+
+var newUptimeObservableOpts = []metric.Float64ObservableGaugeOption{
+	metric.WithDescription("The time the process has been running."),
+	metric.WithUnit("s"),
+}
+
+// NewUptimeObservable returns a new UptimeObservable instrument.
+func NewUptimeObservable(
+	m metric.Meter,
+	opt ...metric.Float64ObservableGaugeOption,
+) (UptimeObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return UptimeObservable{noop.Float64ObservableGauge{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newUptimeObservableOpts
+	} else {
+		opt = append(opt, newUptimeObservableOpts...)
+	}
+
+	i, err := m.Float64ObservableGauge(
+		"process.uptime",
+		opt...,
+	)
+	if err != nil {
+		return UptimeObservable{noop.Float64ObservableGauge{}}, err
+	}
+	return UptimeObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m UptimeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
+}
+
+// Name returns the semantic convention name of the instrument.
+func (UptimeObservable) Name() string {
+	return "process.uptime"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (UptimeObservable) Unit() string {
+	return "s"
+}
+
+// Description returns the semantic convention description of the instrument
+func (UptimeObservable) Description() string {
+	return "The time the process has been running."
 }
 
 // WindowsHandleCount is an instrument used to record metric values conforming to
@@ -1311,6 +1957,7 @@ func (m WindowsHandleCount) Add(ctx context.Context, incr int64, attrs ...attrib
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
@@ -1331,10 +1978,70 @@ func (m WindowsHandleCount) AddSet(ctx context.Context, incr int64, set attribut
 
 	o := addOptPool.Get().(*[]metric.AddOption)
 	defer func() {
+		clear(*o)
 		*o = (*o)[:0]
 		addOptPool.Put(o)
 	}()
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// WindowsHandleCountObservable is an instrument used to record metric values
+// conforming to the "process.windows.handle.count" semantic conventions. It
+// represents the number of handles held by the process.
+type WindowsHandleCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newWindowsHandleCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("Number of handles held by the process."),
+	metric.WithUnit("{handle}"),
+}
+
+// NewWindowsHandleCountObservable returns a new WindowsHandleCountObservable
+// instrument.
+func NewWindowsHandleCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (WindowsHandleCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return WindowsHandleCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newWindowsHandleCountObservableOpts
+	} else {
+		opt = append(opt, newWindowsHandleCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"process.windows.handle.count",
+		opt...,
+	)
+	if err != nil {
+		return WindowsHandleCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return WindowsHandleCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m WindowsHandleCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (WindowsHandleCountObservable) Name() string {
+	return "process.windows.handle.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (WindowsHandleCountObservable) Unit() string {
+	return "{handle}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (WindowsHandleCountObservable) Description() string {
+	return "Number of handles held by the process."
 }
