@@ -642,12 +642,14 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 								func() {
 									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
 									defer func() {
+										clear(*attrsSlice)
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
+										clear(*addOpt)
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
@@ -686,12 +688,14 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 								func() {
 									attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
 									defer func() {
+										clear(*attrsSlice)
 										*attrsSlice = (*attrsSlice)[:0] // Reset.
 										attrPool.Put(attrsSlice)
 									}()
 									*attrsSlice = appendAttributes(*attrsSlice, attrsLen)
 									addOpt := addOptPool.Get().(*[]metric.AddOption)
 									defer func() {
+										clear(*addOpt)
 										*addOpt = (*addOpt)[:0]
 										addOptPool.Put(addOpt)
 									}()
@@ -889,6 +893,54 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 						record(n)
 					}
 				})
+			}
+		})
+	}
+}
+
+func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
+	ctx := b.Context()
+
+	for _, filterName := range []string{"AlwaysOn", "TraceBased"} {
+		var filter exemplar.Filter
+		if filterName == "AlwaysOn" {
+			filter = exemplar.AlwaysOnFilter
+		} else {
+			filter = exemplar.TraceBasedFilter
+		}
+
+		b.Run(filterName, func(b *testing.B) {
+			var rdr Reader
+			var meter metric.Meter
+			var count int
+			out := new(metricdata.ResourceMetrics)
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for n := 0; n < b.N; n++ {
+				if n%10000 == 0 {
+					b.StopTimer()
+					rdr = NewManualReader()
+					provider := NewMeterProvider(
+						WithReader(rdr),
+						WithExemplarFilter(filter),
+					)
+					meter = provider.Meter("BenchmarkAsyncMeasureNewAttributeSet")
+
+					_, err := meter.Int64ObservableCounter(
+						"int64-observable-counter",
+						metric.WithInt64Callback(func(_ context.Context, obs metric.Int64Observer) error {
+							obs.Observe(1, metric.WithAttributes(attribute.Int("id", count)))
+							return nil
+						}),
+					)
+					assert.NoError(b, err)
+					b.StartTimer()
+				}
+
+				_ = rdr.Collect(ctx, out)
+				count++
 			}
 		})
 	}
