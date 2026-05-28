@@ -10,6 +10,11 @@ on:
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Run benchmarks for every module, ignoring the affected-module diff."
+        type: boolean
+        default: false
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -25,12 +30,29 @@ jobs:
       shards: ${{ steps.sharding.outputs.shards }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Need history so the affected-module detector can diff
+          # against the prior commit.
+          fetch-depth: 0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
       - id: sharding
+        env:
+          # `before` is the previous commit on main for push events; empty for
+          # workflow_dispatch. The detector falls back to the full module
+          # list when the ref is missing.
+          BASE_REF: ${{ github.event.before }}
+          ARGS: ${{ inputs.full && '-all' || '' }}
         run: |
-          echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
+          echo "shards=$(make print-affected-benchmarks)" >> $GITHUB_OUTPUT
 
   benchmark:
     needs: sharding-benchmark
+    # Skip the matrix entirely when nothing benchmark-relevant changed.
+    if: needs.sharding-benchmark.outputs.shards != '[]'
     permissions:
       contents: write # required for pushing to gh-pages branch
     name: Benchmarks
