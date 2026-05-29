@@ -23,7 +23,7 @@ func TestOwningModule(t *testing.T) {
 		"./bridge/opencensus",
 		"./bridge/opencensus/test",
 	}
-	sortByLenDesc(mods)
+	sort.Slice(mods, func(i, j int) bool { return len(mods[i]) > len(mods[j]) })
 
 	tests := []struct {
 		name    string
@@ -107,8 +107,4 @@ func TestOwningModule(t *testing.T) {
 			}
 		})
 	}
-}
-
-func sortByLenDesc(s []string) {
-	sort.Slice(s, func(i, j int) bool { return len(s[i]) > len(s[j]) })
 }
