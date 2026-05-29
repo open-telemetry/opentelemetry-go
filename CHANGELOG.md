@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix memory leak in `go.opentelemetry.io/otel/sdk/metric/exemplar` Reservoir where full `context.Context` was stored, pinning large objects like gRPC transport buffers. (#8389)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
