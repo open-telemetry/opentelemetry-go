@@ -48,7 +48,7 @@ For docs-only, test-only, or review-only tasks, still start with the required re
 - Keep docs aligned with actual behavior. Do not leave stale comments, stale examples, or stale package documentation behind.
 - For user-visible changes, update `CHANGELOG.md` under the appropriate `Added`, `Changed`, `Deprecated`, `Fixed`, or `Removed` section within `## [Unreleased]`.
   - Always put the PR number at the end of the line (e.g., `(#1234)`), NOT the issue number.
-  - When initially pushing the change (before the PR is created), use `(#TODO)` for the PR number. Update it to the actual PR number once the PR has been created.
+  - If the PR number is not yet known, omit it until the PR is created, then update the changelog entry before merging.
   - Always use references to the go module that is updated (e.g., `go.opentelemetry.io/otel/sdk/metric`), instead of just the path (e.g., `sdk/metric`).
 
 ## Repository habits
