@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// TODO: REMOVE THIS COMMENT
 // TextMapCarrier is the storage medium used by a TextMapPropagator.
 // See ValuesGetter for how a TextMapCarrier can get multiple values for a key.
 type TextMapCarrier interface {
