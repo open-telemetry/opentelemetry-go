@@ -210,8 +210,8 @@ print-sharded-benchmarks:
 # Override the diff base via BASE_REF, or pass ARGS=-all to emit the full list.
 BASE_REF ?= main
 .PHONY: print-affected-benchmarks
-print-affected-benchmarks: $(AFFECTEDMODS)
-	@$(MAKE) -s print-sharded-benchmarks | $(AFFECTEDMODS) -base=$(BASE_REF) $(ARGS)
+print-affected-benchmarks:
+	@$(MAKE) -s print-sharded-benchmarks | $(GO) -C $(TOOLS_MOD_DIR) run ./affectedmods -base=$(BASE_REF) $(ARGS)
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
