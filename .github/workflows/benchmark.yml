@@ -43,10 +43,21 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - id: sharding
         env:
-          # `before` is the previous commit on main for push events;
-          # empty (and unused) for workflow_dispatch, where the Makefile
-          # default base ref applies.
-          BASE_REF: ${{ github.event.before }}
+          # We want to diff HEAD against whatever "before this change"
+          # means for the current event.
+          #
+          # For a PR, that's the commit on main the PR branched from --
+          # we want every commit in the PR, not just the latest push.
+          # (Tempting to use github.event.before here, but on PRs it's
+          # the previous tip of the PR branch, so it'd miss earlier
+          # commits in the same PR.)
+          #
+          # For a push to main, it's the commit that was at the tip
+          # before this push -- exactly the new work this push brings.
+          #
+          # For a manual workflow_dispatch run, neither field is set,
+          # and the Makefile's default base ref kicks in.
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
           ARGS: ${{ inputs.full && '-all' || '' }}
         run: |
           echo "shards=$(make print-affected-benchmarks)" >> $GITHUB_OUTPUT
