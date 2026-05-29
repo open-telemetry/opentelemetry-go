@@ -41,9 +41,9 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - id: sharding
         env:
-          # `before` is the previous commit on main for push events; empty for
-          # workflow_dispatch. The detector falls back to the full module
-          # list when the ref is missing.
+          # `before` is the previous commit on main for push events;
+          # empty (and unused) for workflow_dispatch, where the Makefile
+          # default base ref applies.
           BASE_REF: ${{ github.event.before }}
           ARGS: ${{ inputs.full && '-all' || '' }}
         run: |
@@ -69,7 +69,14 @@ jobs:
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
-          cache-dependency-path: "**/go.sum"
+          # Disable setup-go's GOMODCACHE/GOCACHE caching on the bare-metal
+          # runner. The runner is persistent, so ~/go/pkg/mod and
+          # ~/.cache/go-build already survive between jobs locally. The
+          # Actions cache for this key reaches multiple GB across the matrix,
+          # which makes every shard pay ~1-2 min on either the restore
+          # (download + tar -xf) or the post-step save (tar + upload), with
+          # no benefit over the on-disk caches.
+          cache: false
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@3194d9a39c4d46684cb44bf7207fc56626aad8fd # v4.15.1
         with:
