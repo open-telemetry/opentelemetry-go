@@ -12,8 +12,14 @@ import (
 )
 
 var (
-	addOptionsPool = sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptionsPool = sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	addOptionsPool = sync.Pool{New: func() any {
+		o := make([]metric.AddOption, 0, 8)
+		return &o
+	}}
+	recOptionsPool = sync.Pool{New: func() any {
+		o := make([]metric.RecordOption, 0, 8)
+		return &o
+	}}
 )
 
 // AddOptions returns a pooled AddOption slice.
