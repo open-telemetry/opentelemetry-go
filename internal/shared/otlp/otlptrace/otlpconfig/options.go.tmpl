@@ -388,7 +388,9 @@ func WithProtocol(protocol Protocol) GenericOption {
 		},
 		// For OTLP/gRPC endpoints, it's always "grpc".
 		func(cfg Config) Config {
-			global.Debug("Protocol option is ignored for OTLP/gRPC and set to grpc")
+			if protocol != ProtocolGRPC {
+				global.Debug("protocol option is ignored for OTLP/gRPC and is set to grpc")
+			}
 			cfg.Traces.Protocol = ProtocolGRPC
 			return cfg
 		},

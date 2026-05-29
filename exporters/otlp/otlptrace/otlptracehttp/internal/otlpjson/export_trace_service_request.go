@@ -534,7 +534,7 @@ func (i *Uint64) UnmarshalJSON(data []byte) error {
 
 const base16Alphabets = "0123456789ABCDEF"
 
-// TraceID encodes a 16-byte trace ID as an case-insensitive hex-encoded string.
+// TraceID encodes a 16-byte trace ID as a case-insensitive hex-encoded string.
 type TraceID [16]byte
 
 func (t TraceID) MarshalJSON() ([]byte, error) {
@@ -564,7 +564,7 @@ func (t *TraceID) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SpanID encodes an 8-byte span ID as an case-insensitive hex-encoded string.
+// SpanID encodes an 8-byte span ID as a case-insensitive hex-encoded string.
 type SpanID [8]byte
 
 func (s SpanID) MarshalJSON() ([]byte, error) {

@@ -1,14 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otlpjson implements OTLP JSON Protobuf encoding for trace data.
-//
-// The encoding conforms to the OTLP specs
-// (https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding):
-//   - trace ID and span ID byte arrays are encoded as case-insensitive hex-encoded strings
-//   - enum values encoded as integers
-//   - field names in lowerCamelCase
-//   - 64-bit integers encoded as quoted decimal strings (ProtoJSON specs)
 package otlpjson // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
 
 import (
