@@ -13,11 +13,11 @@ import (
 
 var (
 	addOptionsPool = sync.Pool{New: func() any {
-		o := make([]metric.AddOption, 0, 8)
+		o := make([]metric.AddOption, 0, 1)
 		return &o
 	}}
 	recOptionsPool = sync.Pool{New: func() any {
-		o := make([]metric.RecordOption, 0, 8)
+		o := make([]metric.RecordOption, 0, 1)
 		return &o
 	}}
 )
