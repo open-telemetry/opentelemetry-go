@@ -41,7 +41,7 @@ require (
 	github.com/MirrexOne/unqueryvet v1.5.4 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
-	github.com/alecthomas/chroma/v2 v2.24.1 // indirect
+	github.com/alecthomas/chroma/v2 v2.26.1 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
 	github.com/alexkohler/prealloc v1.1.0 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/dave/dst v0.27.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/denis-tingaikin/go-header v0.5.0 // indirect
-	github.com/dlclark/regexp2 v1.12.0 // indirect
+	github.com/dlclark/regexp2/v2 v2.1.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
@@ -130,7 +130,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
-	github.com/jgautheron/goconst v1.10.1 // indirect
+	github.com/jgautheron/goconst v1.10.2 // indirect
 	github.com/jjti/go-spancheck v0.6.5 // indirect
 	github.com/julz/importas v0.2.0 // indirect
 	github.com/karamaru-alpha/copyloopvar v1.2.2 // indirect
@@ -181,7 +181,7 @@ require (
 	github.com/quasilyte/stdinfo v0.0.0-20220114132959-f7386bf02567 // indirect
 	github.com/raeperd/recvcheck v0.3.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/ryancurrah/gomodguard v1.4.1 // indirect
 	github.com/ryancurrah/gomodguard/v2 v2.1.3 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.6.0 // indirect

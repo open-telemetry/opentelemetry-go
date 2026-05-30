@@ -9,16 +9,11 @@ package messagingconv
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
 )
 
 // ErrorTypeAttr is an attribute conforming to the error.type semantic
@@ -179,12 +174,8 @@ func (m ClientConsumedMessages) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -217,12 +208,8 @@ func (m ClientConsumedMessages) AddSet(ctx context.Context, incr int64, set attr
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -501,12 +488,8 @@ func (m ClientOperationDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -535,12 +518,8 @@ func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
@@ -696,12 +675,8 @@ func (m ClientSentMessages) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -730,12 +705,8 @@ func (m ClientSentMessages) AddSet(ctx context.Context, incr int64, set attribut
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -985,12 +956,8 @@ func (m ProcessDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -1019,12 +986,8 @@ func (m ProcessDuration) RecordSet(ctx context.Context, val float64, set attribu
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		clear(*o)
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
