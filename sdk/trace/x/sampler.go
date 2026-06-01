@@ -26,7 +26,6 @@ const (
 	randomnessMask = maxAdjustedCount - 1
 
 	probabilityZeroThreshold = 1 / float64(maxAdjustedCount)
-	probabilityOneThreshold  = 1 - 0x1p-52
 )
 
 // probabilitySampler is the sdktrace.Sampler implementation used by
@@ -99,14 +98,14 @@ func ProbabilitySampler(probability float64) sdktrace.Sampler {
 		defp  = defaultSamplingPrecision
 		hbits = 4
 	)
-	if probability > probabilityOneThreshold {
+	if probability >= 1.0 {
 		return &probabilitySampler{
 			threshold:   0,
 			thkv:        "th:0",
 			description: "ProbabilitySampler{1}",
 		}
 	}
-	if probability < probabilityZeroThreshold {
+	if math.IsNaN(probability) || probability < probabilityZeroThreshold {
 		return sdktrace.NeverSample()
 	}
 

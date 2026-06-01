@@ -6,6 +6,7 @@ package x
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	mrand "math/rand"
 	"strings"
 	"testing"
@@ -63,6 +64,25 @@ func TestProbabilitySampler(t *testing.T) {
 				require.Equal(t, "ProbabilitySampler{1}", sampler.Description())
 			})
 		}
+	})
+
+	t.Run("probability just below one rounds to one", func(t *testing.T) {
+		// 1 - 2^-54 falls exactly halfway between the two adjacent float64
+		// values 1 - 2^-53 and 1.0; round-to-nearest-even yields 1.0, so the
+		// sampler treats it as probability one.
+		const prob = 1 - 0x1p-54
+		require.Equal(t, 1.0, prob, "1 - 2^-54 should round to 1.0 in float64")
+
+		sampler := ProbabilitySampler(prob).(*probabilitySampler)
+		require.Equal(t, uint64(0), sampler.threshold)
+		require.Equal(t, "th:0", sampler.thkv)
+		require.Equal(t, "ProbabilitySampler{1}", sampler.Description())
+	})
+
+	t.Run("NaN probability uses NeverSample", func(t *testing.T) {
+		sampler := ProbabilitySampler(math.NaN())
+		require.Equal(t, sdktrace.NeverSample(), sampler)
+		require.Equal(t, "AlwaysOffSampler", sampler.Description())
 	})
 
 	t.Run("probability one always samples including zero randomness", func(t *testing.T) {
